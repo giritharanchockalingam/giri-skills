@@ -1,154 +1,212 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { ScoreRow, Verdict, Misroute, FailedItem } from "@/lib/data";
+import type { ScoreRow, Misroute, FailedItem } from "@/lib/data";
 import { skillHref } from "@/lib/data";
+import { isVerdictFilter, matchesVerdictFilter, verdictSeverity, type VerdictFilter } from "@/lib/verdict";
 import { VerdictBadge, Lift, Trig } from "./Badge";
-import { Chips } from "./Chips";
+import { DomainFilter, VerdictFilterControl } from "./FilterBar";
+import { Drawer } from "./Drawer";
+import { COL_TIPS } from "./DomainTable";
 
-export interface ScorecardDrill { misroutes: Misroute[]; failed: FailedItem[] }
+export interface ScorecardDrill { misroutes: Misroute[]; failed: FailedItem[]; finding: number | null; cases: number }
 
-type Key = keyof ScoreRow;
-const COLS: { key: Key; label: string; num?: boolean }[] = [
+type SortKey = "severity" | "name" | "domain" | "triggerAcc" | "fpRate" | "without" | "with" | "lift";
+const COLS: { key: SortKey; label: string; num?: boolean; wide?: boolean; title?: string }[] = [
   { key: "name", label: "Skill" },
   { key: "domain", label: "Domain" },
-  { key: "verdict", label: "Verdict" },
-  { key: "triggerAcc", label: "Trigger", num: true },
-  { key: "fpRate", label: "FP rate", num: true },
-  { key: "without", label: "Without", num: true },
-  { key: "with", label: "With", num: true },
-  { key: "lift", label: "Lift", num: true },
+  { key: "severity", label: "Verdict" },
+  { key: "triggerAcc", label: "Trigger", num: true, title: COL_TIPS.trigger },
+  { key: "fpRate", label: "FP rate", num: true, wide: true, title: COL_TIPS.fp },
+  { key: "without", label: "Without", num: true, wide: true, title: COL_TIPS.without },
+  { key: "with", label: "With", num: true, wide: true, title: COL_TIPS.with },
+  { key: "lift", label: "Lift", num: true, title: COL_TIPS.lift },
 ];
-const VORDER: Record<Verdict, number> = { OK: 0, DESC: 1, BODY: 2, BOTH: 3 };
 
-export function ScorecardTable({ rows, domains, verdicts, drill }: {
-  rows: ScoreRow[]; domains: string[]; verdicts: Verdict[]; drill: Record<string, ScorecardDrill>;
-}) {
-  const [sortKey, setSortKey] = useState<Key>("lift");
+/** Reads `#scorecard?verdict=…&domain=…` so summary cards can deep-link a filter. */
+const readHash = (): { verdict?: VerdictFilter; domain?: string } => {
+  if (typeof window === "undefined") return {};
+  const h = window.location.hash;
+  if (!h.startsWith("#scorecard")) return {};
+  const q = new URLSearchParams(h.split("?")[1] ?? "");
+  const v = q.get("verdict");
+  return { verdict: isVerdictFilter(v) ? v : undefined, domain: q.get("domain") ?? undefined };
+};
+
+export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; domains: string[]; drill: Record<string, ScorecardDrill> }) {
+  const [sortKey, setSortKey] = useState<SortKey>("severity");
   const [asc, setAsc] = useState(true);
-  const [dom, setDom] = useState<Set<string>>(new Set());
-  const [ver, setVer] = useState<Set<Verdict>>(new Set());
-  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [dom, setDom] = useState<string>("all");
+  const [ver, setVer] = useState<VerdictFilter>("all");
+  const [q, setQ] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const apply = () => {
+      const h = readHash();
+      if (!window.location.hash.startsWith("#scorecard")) return;
+      setVer(h.verdict ?? "all");
+      if (h.domain && domains.includes(h.domain)) setDom(h.domain);
+      document.getElementById("scorecard")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, [domains]);
 
   const sorted = useMemo(() => {
-    const f = rows.filter((r) => (dom.size === 0 || dom.has(r.domain)) && (ver.size === 0 || ver.has(r.verdict)));
+    const needle = q.trim().toLowerCase();
+    const f = rows.filter((r) => (dom === "all" || r.domain === dom) && matchesVerdictFilter(ver, r.verdict) && (!needle || r.name.toLowerCase().includes(needle)));
     const cmp = (a: ScoreRow, b: ScoreRow) => {
-      const x = a[sortKey], y = b[sortKey];
       let c = 0;
-      if (sortKey === "verdict") c = VORDER[a.verdict] - VORDER[b.verdict];
-      else if (typeof x === "number" && typeof y === "number") c = x - y;
-      else c = String(x).localeCompare(String(y));
+      if (sortKey === "severity") c = verdictSeverity(a.verdict) - verdictSeverity(b.verdict) || a.lift - b.lift;
+      else if (sortKey === "name" || sortKey === "domain") c = a[sortKey].localeCompare(b[sortKey]);
+      else c = a[sortKey] - b[sortKey];
       return (c || a.skill.localeCompare(b.skill)) * (asc ? 1 : -1);
     };
     return [...f].sort(cmp);
-  }, [rows, dom, ver, sortKey, asc]);
+  }, [rows, dom, ver, q, sortKey, asc]);
 
-  const onSort = (k: Key) => { if (k === sortKey) setAsc(!asc); else { setSortKey(k); setAsc(true); } };
-  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const onSort = (k: SortKey) => { if (k === sortKey) setAsc(!asc); else { setSortKey(k); setAsc(true); } };
+  const close = useCallback(() => setOpenId(null), []);
+  const openRow = sorted.find((r) => r.skill === openId) ?? rows.find((r) => r.skill === openId) ?? null;
 
   return (
     <div className="flex flex-col gap-5">
       <div className="card toolbar">
-        <Chips label="domain" options={domains} value={dom} onChange={setDom} />
-        <Chips label="verdict" options={verdicts} value={ver} onChange={setVer} />
-        <span className="toolbar-count">{sorted.length} of {rows.length} · click a row to drill</span>
+        <input className="input" type="search" placeholder="Search skills" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search skills" />
+        <DomainFilter id="sc-domain" domains={domains} value={dom} onChange={setDom} />
+        <VerdictFilterControl id="sc-verdict" value={ver} onChange={setVer} />
+        <span className="toolbar-count">{sorted.length} of {rows.length} skills · worst first</span>
       </div>
-      <div className="card tbl-wrap">
-        <table className="tbl">
+
+      <div className="card">
+        <table className="tbl only-desktop">
           <thead>
             <tr>
-              <th style={{ width: 36 }} aria-label="expand"></th>
               {COLS.map((c) => (
-                <th key={c.key} className={`sortable ${c.num ? "num" : ""}`} onClick={() => onSort(c.key)} aria-sort={sortKey === c.key ? (asc ? "ascending" : "descending") : "none"}>
+                <th key={c.key} title={c.title} className={`sortable ${c.num ? "num" : ""} ${c.wide ? "col-wide" : ""}`} onClick={() => onSort(c.key)}
+                  aria-sort={sortKey === c.key ? (asc ? "ascending" : "descending") : "none"}>
                   {c.label}{sortKey === c.key && <span className="sort-ind" aria-hidden="true">{asc ? "▲" : "▼"}</span>}
                 </th>
               ))}
-              <th className="num">Misrouted</th>
-              <th className="num">With-fails</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r) => {
-              const d = drill[r.skill] ?? { misroutes: [], failed: [] };
-              const isOpen = open.has(r.skill);
-              const failTotal = d.failed.reduce((a, f) => a + f.fails, 0);
-              return (
-                <RowGroup key={r.skill} isOpen={isOpen} onToggle={() => toggle(r.skill)} detail={<td colSpan={11}><Drill d={d} /></td>}>
-                  <td><span className={`caret ${isOpen ? "open" : ""}`} aria-hidden="true">▶</span></td>
-                  <td><Link href={skillHref(r.skill)} className="cell-name" onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
-                  <td><span className="tag">{r.domain}</span></td>
-                  <td><VerdictBadge v={r.verdict} /></td>
-                  <td className="num"><Trig n={r.triggerAcc} /></td>
-                  <td className={`num ${r.fpRate > 0 ? "num-neg" : ""}`}>{r.fpRate.toFixed(2)}</td>
-                  <td className="num">{r.without.toFixed(2)}</td>
-                  <td className="num">{r.with.toFixed(2)}</td>
-                  <td className="num"><Lift n={r.lift} /></td>
-                  <td className="num">{d.misroutes.length || <span className="muted">0</span>}</td>
-                  <td className="num">{failTotal || <span className="muted">0</span>}</td>
-                </RowGroup>
-              );
-            })}
-            {sorted.length === 0 && <tr><td colSpan={11} className="none">No skills match.</td></tr>}
+            {sorted.map((r) => (
+              <tr key={r.skill} className="clickable" onClick={() => setOpenId(r.skill)} tabIndex={0} aria-haspopup="dialog"
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenId(r.skill); } }}>
+                <td><span className="cell-name">{r.name}</span></td>
+                <td><span className="domain-tag">{r.domain}</span></td>
+                <td><VerdictBadge v={r.verdict} /></td>
+                <td className="num"><Trig n={r.triggerAcc} /></td>
+                <td className={`num col-wide ${r.fpRate > 0 ? "num-neg" : ""}`}>{r.fpRate.toFixed(2)}</td>
+                <td className="num col-wide">{r.without.toFixed(2)}</td>
+                <td className="num col-wide">{r.with.toFixed(2)}</td>
+                <td className="num"><Lift n={r.lift} /></td>
+              </tr>
+            ))}
+            {sorted.length === 0 && <tr><td colSpan={8} className="none">No skills match.</td></tr>}
           </tbody>
         </table>
+
+        <div className="row-list only-mobile">
+          {sorted.map((r) => (
+            <button key={r.skill} type="button" className="row-card" onClick={() => setOpenId(r.skill)} aria-haspopup="dialog">
+              <div className="row-card-top">
+                <span className="row-card-name">{r.name}</span>
+                <VerdictBadge v={r.verdict} small />
+              </div>
+              <div className="row-card-meta">
+                <span>{r.domain}</span>
+                <span>Lift <b><Lift n={r.lift} /></b></span>
+                <span>Trigger <b><Trig n={r.triggerAcc} /></b></span>
+              </div>
+            </button>
+          ))}
+          {sorted.length === 0 && <div className="row-card none">No skills match.</div>}
+        </div>
       </div>
+
+      <Drawer open={!!openRow} onClose={close} titleId="scorecard-drawer-title"
+        title={openRow && (
+          <>
+            <div className="caption">{openRow.domain}</div>
+            <div id="scorecard-drawer-title" className="drawer-title mt-1">{openRow.name}</div>
+            <div className="mt-3"><VerdictBadge v={openRow.verdict} /></div>
+          </>
+        )}
+        foot={openRow && (
+          <>
+            <Link href={skillHref(openRow.skill)} className="btn btn-primary">Open skill page</Link>
+            {drill[openRow.skill]?.finding != null && (
+              <Link href={`/findings/#${drill[openRow.skill].finding}`} className="btn btn-secondary">Finding #{drill[openRow.skill].finding}</Link>
+            )}
+          </>
+        )}>
+        {openRow && <DrawerBody r={openRow} d={drill[openRow.skill] ?? { misroutes: [], failed: [], finding: null, cases: 0 }} />}
+      </Drawer>
     </div>
   );
 }
 
-function RowGroup({ isOpen, onToggle, children, detail }: { isOpen: boolean; onToggle: () => void; children: React.ReactNode; detail: React.ReactNode }) {
+const groupByCase = (ms: Misroute[]) => {
+  const out: { caseId: string; prompt: string; runs: Misroute[] }[] = [];
+  for (const m of ms) {
+    const g = out.find((x) => x.caseId === m.caseId);
+    if (g) g.runs.push(m); else out.push({ caseId: m.caseId, prompt: m.prompt, runs: [m] });
+  }
+  return out;
+};
+
+function DrawerBody({ r, d }: { r: ScoreRow; d: ScorecardDrill }) {
+  const stat = (label: string, value: React.ReactNode, title: string) => (
+    <div className="drawer-stat" title={title}><div className="v">{value}</div><div className="l">{label}</div></div>
+  );
   return (
     <>
-      <tr className="clickable" onClick={onToggle} tabIndex={0} aria-expanded={isOpen}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}>
-        {children}
-      </tr>
-      {isOpen && <tr className="detail">{detail}</tr>}
-    </>
-  );
-}
+      <div className="drawer-stats">
+        {stat("Trigger", <Trig n={r.triggerAcc} />, COL_TIPS.trigger)}
+        {stat("FP rate", <span className={r.fpRate > 0 ? "num-neg" : ""}>{r.fpRate.toFixed(2)}</span>, COL_TIPS.fp)}
+        {stat("Lift", <Lift n={r.lift} />, COL_TIPS.lift)}
+        {stat("Without", r.without.toFixed(2), COL_TIPS.without)}
+        {stat("With", r.with.toFixed(2), COL_TIPS.with)}
+        {stat("Cases", d.cases, "Eval cases for this skill")}
+      </div>
 
-function Drill({ d }: { d: ScorecardDrill }) {
-  return (
-    <div className="subpanel grid grid-safe gap-6 lg:grid-cols-2">
-      <div>
-        <div className="eyebrow mb-2">Misrouted prompts ({d.misroutes.length})</div>
-        {d.misroutes.length === 0 ? <div className="none">None — every case routed correctly.</div> : (
-          <table className="mini">
-            <thead><tr><th>Case</th><th>Run</th><th>Selected</th><th>Prompt</th></tr></thead>
-            <tbody>
-              {d.misroutes.map((m, i) => (
-                <tr key={i}>
-                  <td className="mono whitespace-nowrap">{m.caseId}</td>
-                  <td className="mono">{m.run}</td>
-                  <td className="mono fail whitespace-nowrap">{m.selected}</td>
-                  <td className="ink-2">{m.prompt}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section>
+        <h3 className="h3">Misrouted prompts <span className="muted font-normal">({d.misroutes.length})</span></h3>
+        <p className="caption mt-1">Prompts written for this skill where the router picked something else.</p>
+        {d.misroutes.length === 0 ? <p className="none mt-3">None — every prompt routed here.</p> : (
+          <div className="mt-2">
+            {groupByCase(d.misroutes).map((g) => (
+              <div key={g.caseId} className="item">
+                <div className="item-head"><span>{g.caseId}</span><span>{g.runs.length === 1 ? `run ${g.runs[0].run}` : `${g.runs.length} runs`}</span></div>
+                <div className="item-text">{g.prompt}</div>
+                {g.runs.map((m) => (
+                  <div key={m.run} className="item-sub">Run {m.run} picked <span className="fail">{m.selected}</span></div>
+                ))}
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-      <div>
-        <div className="eyebrow mb-2">Most-failed expected items · with-mode (top {d.failed.length})</div>
-        {d.failed.length === 0 ? <div className="none">None — all expected items passed with SKILL.md.</div> : (
-          <table className="mini">
-            <thead><tr><th>Fails</th><th>Case</th><th>Expected · evidence</th></tr></thead>
-            <tbody>
-              {d.failed.map((f, i) => (
-                <tr key={i}>
-                  <td className="mono fail whitespace-nowrap">{f.fails}/{f.total}</td>
-                  <td className="mono whitespace-nowrap">{f.caseId} <span className="muted">[{f.expectedIdx}]</span></td>
-                  <td>
-                    <div>{f.expected}</div>
-                    <div className="mt-1 text-[12.5px] text-ink-3">{f.evidence}</div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      </section>
+
+      <section>
+        <h3 className="h3">Most-failed expected items <span className="muted font-normal">({d.failed.length})</span></h3>
+        <p className="caption mt-1">Judged with the skill loaded. Fail count across runs, then one line of evidence.</p>
+        {d.failed.length === 0 ? <p className="none mt-3">None — every expected item passed with the skill loaded.</p> : (
+          <div className="mt-2">
+            {d.failed.map((f, i) => (
+              <div key={i} className="item">
+                <div className="item-head"><span>{f.caseId} · item {f.expectedIdx + 1}</span><span className="fail">{f.fails} of {f.total} failed</span></div>
+                <div className="item-text">{f.expected}</div>
+                {f.evidence && <div className="item-sub">{f.evidence}</div>}
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-    </div>
+      </section>
+    </>
   );
 }

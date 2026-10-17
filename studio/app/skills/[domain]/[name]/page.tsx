@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { skills, scoreFor, proposalFor, trigger, quality, fmt } from "@/lib/data";
+import { verdictInfo } from "@/lib/verdict";
 import { VerdictBadge, Lift, Trig } from "@/components/Badge";
 import { CaseEvals } from "@/components/CaseEvals";
+import { COL_TIPS } from "@/components/DomainTable";
 import { SectionHead, StatStrip } from "@/components/PageHead";
 
 export function generateStaticParams() {
@@ -25,29 +27,31 @@ export default async function SkillPage({ params }: { params: Promise<{ domain: 
   const trig = trigger.filter((t) => t.skill === id);
   const qual = quality.filter((q) => q.skill === id);
   const fileCount = skill.files.references.length + skill.files.assets.length + skill.files.scripts.length;
+  const info = verdictInfo(sc?.verdict);
 
   return (
     <>
       <div className="page-head">
-        <nav className="mono text-[12px] text-ink-3" aria-label="Breadcrumb">
-          <Link href="/" className="hover:text-ink">Skills</Link> <span aria-hidden="true">›</span> {domain}
+        <nav className="caption" aria-label="Breadcrumb">
+          <Link href="/" className="link">Skills</Link> <span aria-hidden="true">›</span> {domain}
         </nav>
         <div className="eyebrow mt-5">{skill.name}{skill.metadata.version && <> · v{skill.metadata.version}</>}</div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <h1 className="h1" style={{ marginBottom: 0 }}>{skill.name.replace(/-/g, " ")}</h1>
+        <h1 className="h1" style={{ marginBottom: 12 }}>{skill.name.replace(/-/g, " ")}</h1>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <VerdictBadge v={sc?.verdict} />
+          <span className="caption">{info.explanation}</span>
         </div>
         <p className="lead mt-5">{skill.description}</p>
       </div>
 
       <div className="card card-pad">
         <StatStrip stats={[
-          { label: "trigger acc", value: <Trig n={sc?.triggerAcc} /> },
-          { label: "FP rate", value: fmt(sc?.fpRate) },
-          { label: "without", value: fmt(sc?.without) },
-          { label: "with", value: fmt(sc?.with) },
-          { label: "lift", value: <Lift n={sc?.lift} /> },
-          { label: "eval cases", value: skill.cases.length },
+          { label: "Trigger", value: <Trig n={sc?.triggerAcc} />, title: COL_TIPS.trigger },
+          { label: "FP rate", value: fmt(sc?.fpRate), title: COL_TIPS.fp },
+          { label: "Without", value: fmt(sc?.without), title: COL_TIPS.without },
+          { label: "With", value: fmt(sc?.with), title: COL_TIPS.with },
+          { label: "Lift", value: <Lift n={sc?.lift} />, title: COL_TIPS.lift },
+          { label: "Eval cases", value: skill.cases.length },
         ]} />
       </div>
 
@@ -57,11 +61,18 @@ export default async function SkillPage({ params }: { params: Promise<{ domain: 
           <div className="prose" dangerouslySetInnerHTML={{ __html: skill.bodyHtml }} />
         </div>
         <aside className="sidebar">
+          {prop && (
+            <Link href={`/findings/#${prop.number}`} className="card card-link card-pad block">
+              <div className="eyebrow mb-2">Finding</div>
+              <div className="serif text-[22px] leading-tight">Fix proposal #{prop.number} <span className="text-flame">→</span></div>
+              <div className="caption tnum mt-2">{prop.stats}</div>
+            </Link>
+          )}
           <div className="card card-pad">
-            <div className="eyebrow mb-3">Files · {fileCount}</div>
+            <div className="h3 mb-3">Files <span className="muted font-normal">({fileCount})</span></div>
             {(["references", "assets", "scripts"] as const).map((k) => (
               <div key={k} className="mb-4 last:mb-0">
-                <div className="h3 text-[13px]">{k} <span className="tag">({skill.files[k].length})</span></div>
+                <div className="caption capitalize">{k} ({skill.files[k].length})</div>
                 {skill.files[k].length === 0 ? (
                   <div className="none text-[14px]">none</div>
                 ) : (
@@ -70,21 +81,12 @@ export default async function SkillPage({ params }: { params: Promise<{ domain: 
               </div>
             ))}
           </div>
-          {prop && (
-            <Link href={`/findings/#${prop.number}`} className="card card-link card-pad block">
-              <div className="eyebrow mb-2">Finding</div>
-              <div className="serif text-[22px] leading-tight">Fix proposal #{prop.number} <span className="text-flame">→</span></div>
-              <div className="mono mt-2 text-[12px] text-ink-3">{prop.stats}</div>
-            </Link>
-          )}
-          {skill.license && (
-            <div className="tag px-1">license · {skill.license}</div>
-          )}
+          {skill.license && <div className="caption px-1">License · {skill.license}</div>}
         </aside>
       </div>
 
       <section className="section">
-        <SectionHead eyebrow={`${skill.cases.length} cases · ${trig.length} router picks · ${qual.length} judge verdicts`} title="Eval" em="cases" />
+        <SectionHead title="Eval" em="cases" caption={`${skill.cases.length} cases · ${trig.length} router picks · ${qual.length} judge verdicts`} />
         <CaseEvals cases={skill.cases} trigger={trig} quality={qual} skillName={skill.name} />
       </section>
     </>

@@ -1,52 +1,44 @@
-import { findings, skills, DOMAINS, VERDICTS, meta } from "@/lib/data";
+import { findings, scorecard, domainSummaries, meta } from "@/lib/data";
+import { summarize, conclusionSentence } from "@/lib/verdict";
 import { FindingsList } from "@/components/FindingsList";
 import { Collapsible } from "@/components/Collapsible";
+import { DomainTable } from "@/components/DomainTable";
 import { PageHead, SectionHead } from "@/components/PageHead";
+import { DOMAINS } from "@/lib/data";
 
 export const metadata = { title: "Findings · giri-skills" };
 
 export default function FindingsPage() {
   const f = findings;
+  const s = summarize(scorecard.map((r) => r.verdict));
+  const { rows, total } = domainSummaries();
   return (
     <>
       <PageHead
-        eyebrow="giri-skills · eval findings"
+        eyebrow="giri-skills · fix list"
         title="The"
         em="fix"
         after=" list."
-        sub={<>{f.proposals.length} ranked proposals from the {meta.date} run · {skills.length} skills · {skills.reduce((a, s) => a + s.cases.length, 0)} cases · {meta.runs} runs · {meta.model}</>}
+        lead={<>{conclusionSentence(s)} Below: {f.proposals.length} proposals, worst first, each with a paste-ready description.</>}
+        caption={<>From the {meta.date} run · {meta.model} · {meta.runs} runs</>}
       />
 
-      <Collapsible title="Read before acting on any proposal" defaultOpen={false}>
+      <Collapsible title="Read before acting on any proposal" caption="How the verdicts were produced and what they cannot tell you." defaultOpen={false}>
         <div className="prose" dangerouslySetInnerHTML={{ __html: f.caveatsHtml }} />
       </Collapsible>
 
       <section className="section">
-        <SectionHead eyebrow="By domain" title="Verdict" em="counts" />
-        <div className="grid grid-safe gap-6 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)] lg:items-start">
-          <div className="card tbl-wrap">
-            <table className="tbl">
-              <thead><tr><th>Domain</th><th className="num">OK</th><th className="num">DESC</th><th className="num">BODY</th><th className="num">BOTH</th></tr></thead>
-              <tbody>
-                {f.verdictCounts.map((r) => (
-                  <tr key={r.domain} className={r.domain.startsWith("Total") ? "total" : ""}>
-                    <td className={r.domain.startsWith("Total") ? "" : "cell-name"}>{r.domain}</td>
-                    <td className="num">{r.OK}</td><td className="num">{r.DESC}</td><td className="num">{r.BODY}</td><td className="num">{r.BOTH}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="card card-pad">
-            <div className="eyebrow mb-3">Notes</div>
-            <div className="prose text-[14px]" dangerouslySetInnerHTML={{ __html: f.verdictNotesHtml }} />
-          </div>
+        <SectionHead title="By" em="domain" caption="Where the proposals cluster." />
+        <DomainTable rows={rows} total={total} showAverages={false} />
+        <div className="card card-pad mt-5">
+          <div className="h3 mb-2">Notes on the counts</div>
+          <div className="prose" dangerouslySetInnerHTML={{ __html: f.verdictNotesHtml }} />
         </div>
       </section>
 
       <section className="section">
-        <SectionHead eyebrow={`${f.proposals.length} proposals · ranked by severity`} title="Ranked" em="proposals" />
-        <FindingsList proposals={f.proposals} domains={DOMAINS} verdicts={VERDICTS} />
+        <SectionHead title="Ranked" em="proposals" caption={`${f.proposals.length} skills with a proposed fix, most severe first.`} />
+        <FindingsList proposals={f.proposals} domains={DOMAINS} />
       </section>
     </>
   );

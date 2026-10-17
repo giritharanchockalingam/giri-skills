@@ -13,7 +13,7 @@ export function CopyButton({ text }: { text: string }) {
     setTimeout(() => setState("idle"), 1500);
   };
   return (
-    <button type="button" className={`btn btn-secondary btn-sm ${state === "ok" ? "is-ok" : state === "err" ? "is-err" : ""}`} onClick={copy} aria-live="polite">
+    <button type="button" className={`btn btn-secondary ${state === "ok" ? "is-ok" : state === "err" ? "is-err" : ""}`} onClick={copy} aria-live="polite">
       {state === "ok" ? "Copied" : state === "err" ? "Copy failed" : "Copy"}
     </button>
   );

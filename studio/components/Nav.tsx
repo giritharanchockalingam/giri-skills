@@ -27,7 +27,7 @@ export function Nav({ meta }: { meta: Meta }) {
             </Link>
           ))}
         </nav>
-        <div className="topmeta" title={`results: ${meta.resultsDir}`}>
+        <div className="topmeta" title={`Results: ${meta.resultsDir}`}>
           {meta.model} · {meta.runs} runs · {meta.date} · {meta.spend}
         </div>
       </div>

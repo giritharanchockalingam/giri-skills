@@ -1,20 +1,22 @@
-import { catalogRows, DOMAINS, VERDICTS, scorecard, meta } from "@/lib/data";
+import { catalogRows, DOMAINS, meta } from "@/lib/data";
+import { summarize } from "@/lib/verdict";
 import { CatalogTable } from "@/components/CatalogTable";
 import { PageHead } from "@/components/PageHead";
 
 export default function CatalogPage() {
   const rows = catalogRows();
-  const ok = scorecard.filter((r) => r.verdict === "OK").length;
+  const s = summarize(rows.map((r) => r.verdict));
   const cases = rows.reduce((a, r) => a + r.cases, 0);
   return (
     <>
       <PageHead
-        eyebrow="giri-skills · skills factory"
+        eyebrow="giri-skills · skill catalog"
         title="Forty skills,"
         em="measured"
-        sub={<>{rows.length} skills across {DOMAINS.length} domains · {cases} eval cases · {ok} OK, {rows.length - ok} need work · {meta.model}, {meta.runs} runs</>}
+        lead={<>{s.total} skills across {DOMAINS.length} domains. {s.healthy} are healthy; {s.needsWork} need work.</>}
+        caption={<>{cases} eval cases · {meta.model} · {meta.runs} runs · {meta.date}</>}
       />
-      <CatalogTable rows={rows} domains={DOMAINS} verdicts={VERDICTS} />
+      <CatalogTable rows={rows} domains={DOMAINS} />
     </>
   );
 }

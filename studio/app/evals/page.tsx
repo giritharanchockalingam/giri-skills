@@ -1,107 +1,75 @@
-import { scorecard, skills, DOMAINS, VERDICTS, misroutesFor, failedWithItemsFor, meta } from "@/lib/data";
-import type { Verdict } from "@/lib/data";
+import { scorecard, skills, DOMAINS, domainSummaries, misroutesFor, failedWithItemsFor, proposalFor, meta } from "@/lib/data";
+import { summarize, conclusionSentence, VERDICTS_FOR_LEGEND, verdictInfo, type VerdictFilter } from "@/lib/verdict";
 import { ScorecardTable, type ScorecardDrill } from "@/components/ScorecardTable";
-import { Lift, VerdictBadge } from "@/components/Badge";
-import { PageHead, SectionHead, StatStrip } from "@/components/PageHead";
+import { DomainTable } from "@/components/DomainTable";
+import { PageHead, SectionHead } from "@/components/PageHead";
 
 export const metadata = { title: "Evals · giri-skills" };
 
 export default function EvalsPage() {
-  const counts = Object.fromEntries(VERDICTS.map((v) => [v, scorecard.filter((r) => r.verdict === v).length])) as Record<Verdict, number>;
-  const total = scorecard.length;
-  const avgLift = scorecard.reduce((a, r) => a + r.lift, 0) / total;
-  const avgTrig = scorecard.reduce((a, r) => a + r.triggerAcc, 0) / total;
-  const perDomain = DOMAINS.map((d) => {
-    const rows = scorecard.filter((r) => r.domain === d);
-    const avg = (k: "triggerAcc" | "lift") => rows.reduce((a, r) => a + r[k], 0) / (rows.length || 1);
-    return {
-      domain: d, n: rows.length,
-      ...Object.fromEntries(VERDICTS.map((v) => [v, rows.filter((r) => r.verdict === v).length])) as Record<Verdict, number>,
-      avgTrigger: avg("triggerAcc"), avgLift: avg("lift"),
-    };
-  });
+  const s = summarize(scorecard.map((r) => r.verdict));
+  const { rows: perDomain, total } = domainSummaries();
+  const cases = skills.reduce((a, sk) => a + sk.cases.length, 0);
   const drill: Record<string, ScorecardDrill> = Object.fromEntries(
-    scorecard.map((r) => [r.skill, { misroutes: misroutesFor(r.skill), failed: failedWithItemsFor(r.skill, 5) }]),
+    scorecard.map((r) => [r.skill, {
+      misroutes: misroutesFor(r.skill), failed: failedWithItemsFor(r.skill, 5),
+      finding: proposalFor(r.skill)?.number ?? null, cases: skills.find((sk) => sk.id === r.skill)?.cases.length ?? 0,
+    }]),
   );
-  const cases = skills.reduce((a, s) => a + s.cases.length, 0);
+
+  const cards: { value: number; label: React.ReactNode; filter: VerdictFilter }[] = [
+    { value: s.total, label: "skills evaluated", filter: "all" },
+    { value: s.healthy, label: <><span className="tone">healthy</span> — no action needed</>, filter: "OK" },
+    { value: s.needsDesc, label: <>need a <span className="tone">better description</span></>, filter: "needs-desc" },
+    { value: s.needsBody, label: <>need <span className="tone">stronger instructions</span></>, filter: "needs-body" },
+  ];
 
   return (
     <>
       <PageHead
-        eyebrow="giri-skills · eval dashboard"
+        eyebrow="giri-skills · eval results"
         title="What the evals"
         em="found"
-        sub={<>{meta.model} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.spend} spend (est.)</>}
+        lead={conclusionSentence(s)}
+        caption={<>{meta.model} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.spend} spend (est.) · {meta.date}</>}
       />
 
-      <div className="card card-pad">
-        <StatStrip stats={[
-          { label: "skills", value: total },
-          { label: "OK", value: counts.OK },
-          { label: "DESC", value: counts.DESC },
-          { label: "BODY", value: counts.BODY },
-          { label: "BOTH", value: counts.BOTH },
-          { label: "avg lift", value: <Lift n={avgLift} /> },
-        ]} />
-      </div>
-
-      <div className="mt-6 grid grid-safe gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
-        <div className="card card-pad">
-          <div className="eyebrow">Verdict distribution · {total} skills</div>
-          <div className="vbar mt-4" role="img" aria-label={VERDICTS.map((v) => `${v} ${counts[v]}`).join(", ")}>
-            {VERDICTS.map((v) => counts[v] > 0 && (
-              <span key={v} className={`vbar-${v}`} style={{ width: `${(counts[v] / total) * 100}%` }} title={`${v}: ${counts[v]}`} />
-            ))}
-          </div>
-          <div className="vlegend">
-            {VERDICTS.map((v) => (
-              <div key={v}>
-                <span className={`vswatch vbar-${v}`} aria-hidden="true" /><span className="tag">{v}</span>
-                <div className="v-count">{counts[v]}</div>
-                <div className="v-pct">{((counts[v] / total) * 100).toFixed(0)}%</div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-5 text-[13px] leading-relaxed text-ink-3">
-            <VerdictBadge v="OK" /> trigger ≥ 0.8 and lift ≥ +0.2 · <VerdictBadge v="DESC" /> trigger &lt; 0.8 · <VerdictBadge v="BODY" /> lift &lt; +0.2 · <VerdictBadge v="BOTH" /> both
-          </p>
-        </div>
-
-        <div className="card">
-          <div className="card-head"><span className="card-title">Per domain</span><span className="tag">{meta.counts.trigger} trigger rows · {meta.counts.quality} quality rows</span></div>
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Domain</th><th className="num">Skills</th>
-                  {VERDICTS.map((v) => <th key={v} className="num">{v}</th>)}
-                  <th className="num">Avg trigger</th><th className="num">Avg lift</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perDomain.map((d) => (
-                  <tr key={d.domain}>
-                    <td className="cell-name">{d.domain}</td><td className="num">{d.n}</td>
-                    {VERDICTS.map((v) => <td key={v} className="num">{d[v] || <span className="muted">0</span>}</td>)}
-                    <td className="num">{d.avgTrigger.toFixed(2)}</td>
-                    <td className="num"><Lift n={d.avgLift} /></td>
-                  </tr>
-                ))}
-                <tr className="total">
-                  <td>Total</td><td className="num">{total}</td>
-                  {VERDICTS.map((v) => <td key={v} className="num">{counts[v]}</td>)}
-                  <td className="num">{avgTrig.toFixed(2)}</td>
-                  <td className="num"><Lift n={avgLift} /></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="summary-grid">
+        {cards.map((c) => (
+          <a key={c.filter} href={`#scorecard?verdict=${c.filter}`} className="card card-link summary" aria-label={`Show ${c.value} skills in the scorecard`}>
+            <div className="summary-value">{c.value}</div>
+            <div className="summary-label">{c.label}</div>
+          </a>
+        ))}
       </div>
 
       <section className="section">
-        <SectionHead eyebrow="Per skill" title="Scorecard" right={<span className="tag">results {meta.resultsDir}</span>} />
-        <ScorecardTable rows={scorecard} domains={DOMAINS} verdicts={VERDICTS} drill={drill} />
+        <SectionHead title="Where the" em="work is" caption="A skill can need both fixes, so the four groups below add up to 40; the two “need” counts above do not." />
+        <div className="card card-pad">
+          <div className="vbar" role="img" aria-label={VERDICTS_FOR_LEGEND.map((v) => `${verdictInfo(v).label} ${s.counts[v]}`).join(", ")}>
+            {VERDICTS_FOR_LEGEND.map((v) => s.counts[v] > 0 && (
+              <span key={v} className={`vbar-${v}`} style={{ width: `${(s.counts[v] / s.total) * 100}%` }} title={`${verdictInfo(v).label}: ${s.counts[v]}`} />
+            ))}
+          </div>
+          <div className="vlegend">
+            {VERDICTS_FOR_LEGEND.map((v) => (
+              <div key={v} className="vlegend-item" title={`${v} — ${verdictInfo(v).explanation}`}>
+                <span className={`vswatch swatch-${v}`} aria-hidden="true" />
+                <span>{verdictInfo(v).label} <b>{s.counts[v]}</b> <span className="muted">· {Math.round((s.counts[v] / s.total) * 100)}%</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <SectionHead title="By" em="domain" caption="Where the healthy skills are, and where the fixes cluster." />
+        <DomainTable rows={perDomain} total={total} />
+      </section>
+
+      <section className="section" id="scorecard" style={{ scrollMarginTop: 76 }}>
+        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts and the items the judge failed." />
+        <ScorecardTable rows={scorecard} domains={DOMAINS} drill={drill} />
       </section>
     </>
   );

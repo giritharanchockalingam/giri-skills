@@ -103,3 +103,18 @@ export const failedWithItemsFor = (id: string, limit = 5): FailedItem[] => {
 
 export const fmt = (n: number | null | undefined, digits = 2) => (n == null || Number.isNaN(n) ? "—" : n.toFixed(digits));
 export const fmtLift = (n: number | null | undefined) => (n == null ? "—" : (n > 0 ? "+" : "") + n.toFixed(2));
+
+/** Per-domain roll-up of the scorecard (verdict counts, average trigger and lift). */
+export interface DomainSummary {
+  domain: string; n: number; counts: Record<Verdict, number>; needsWork: number; avgTrigger: number; avgLift: number;
+}
+const rollup = (domain: string, rows: ScoreRow[]): DomainSummary => {
+  const counts: Record<Verdict, number> = { OK: 0, DESC: 0, BODY: 0, BOTH: 0 };
+  for (const r of rows) counts[r.verdict]++;
+  const avg = (k: "triggerAcc" | "lift") => (rows.length ? rows.reduce((a, r) => a + r[k], 0) / rows.length : 0);
+  return { domain, n: rows.length, counts, needsWork: rows.length - counts.OK, avgTrigger: avg("triggerAcc"), avgLift: avg("lift") };
+};
+export const domainSummaries = (): { rows: DomainSummary[]; total: DomainSummary } => ({
+  rows: DOMAINS.map((d) => rollup(d, scorecard.filter((r) => r.domain === d))),
+  total: rollup("All domains", scorecard),
+});
