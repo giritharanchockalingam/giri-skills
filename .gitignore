@@ -6,3 +6,5 @@ skills/presales/effort-estimator/assets/rate-card.csv
 skills/career/resume-tailor/assets/master-resume.md
 skills/career/interview-prep/assets/story-bank.md
 skills/career/jd-fit-scorer/assets/profile-keywords.txt
+# behavioral eval audit logs (prompts + raw model outputs) stay local
+evals/results/*/raw/
