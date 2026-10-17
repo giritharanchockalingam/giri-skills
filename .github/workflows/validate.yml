@@ -11,6 +11,8 @@ jobs:
         with: { python-version: "3.12" }
       - name: Repo validator
         run: python3 scripts/validate.py
+      - name: Script tests
+        run: pip install -q pytest pandas openpyxl python-docx pypdf && python3 -m pytest -q tests/
       - name: Spec validator (agentskills.io skills-ref)
         continue-on-error: true
         run: |
