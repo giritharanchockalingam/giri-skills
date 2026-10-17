@@ -1,0 +1,28 @@
+{
+ "provider": "openai",
+ "model": "gpt-4.1-mini",
+ "runs": 2,
+ "seed": 42,
+ "date": "2026-10-17",
+ "spend": "$11.84",
+ "resultsDir": "evals/results/full-openai",
+ "counts": {
+  "skills": 40,
+  "scorecard": 40,
+  "trigger": 250,
+  "quality": 1900,
+  "findings": 25
+ },
+ "domains": [
+  "presales",
+  "build",
+  "ai-platform",
+  "career"
+ ],
+ "verdicts": [
+  "OK",
+  "DESC",
+  "BODY",
+  "BOTH"
+ ]
+}

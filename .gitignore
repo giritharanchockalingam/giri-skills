@@ -8,3 +8,8 @@ skills/career/interview-prep/assets/story-bank.md
 skills/career/jd-fit-scorer/assets/profile-keywords.txt
 # behavioral eval audit logs (prompts + raw model outputs) stay local
 evals/results/*/raw/
+
+# studio (Next.js dashboard) — build artifacts; studio/data/ stays committed
+studio/node_modules/
+studio/.next/
+studio/out/

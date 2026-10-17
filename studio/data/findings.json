@@ -1,0 +1,319 @@
+{
+ "intro": "Full run completed 2026-10-17: **40 skills, 120 cases, 2 runs, gpt-4.1-mini** (`--provider openai --model gpt-4.1-mini`). Scorecard: `evals/results/full-openai/scorecard.md`. Raw audit logs (git-ignored): `evals/results/full-openai/raw/calls.jsonl`. Pilot (presales only): `evals/results/pilot-openai/scorecard.md`.",
+ "caveatsHtml": "<ol><li><strong>The generator is gpt-4.1-mini, not Claude.</strong> Lift numbers are a lower bound: a mini follows long SKILL.md bodies less faithfully, so BODY verdicts partly measure the model, not just the skill. Relative ranking across skills is the reliable signal.</li><li><strong>Small sample</strong>: 3 cases × 2 runs. Lifts within ±0.1 are noise.</li><li><strong>The judge is also the mini.</strong> Spot-checked: its evidence quotes are specific and well-reasoned, but borderline calls vary run to run.</li><li>Presales evals are the strictest in the repo (many <code>expected[]</code> items demand exact tables, templates, and <code>[TO BE BASELINED]</code> markers) — that domain's low lifts partly reflect eval strictness.</li></ol>",
+ "verdictCounts": [
+  {
+   "domain": "presales (13)",
+   "OK": 1,
+   "DESC": 1,
+   "BODY": 8,
+   "BOTH": 3
+  },
+  {
+   "domain": "build (12)",
+   "OK": 6,
+   "DESC": 2,
+   "BODY": 2,
+   "BOTH": 2
+  },
+  {
+   "domain": "ai-platform (9)",
+   "OK": 7,
+   "DESC": 1,
+   "BODY": 1,
+   "BOTH": 0
+  },
+  {
+   "domain": "career (6)",
+   "OK": 1,
+   "DESC": 1,
+   "BODY": 4,
+   "BOTH": 0
+  },
+  {
+   "domain": "Total (40)",
+   "OK": 15,
+   "DESC": 5,
+   "BODY": 15,
+   "BOTH": 5
+  }
+ ],
+ "verdictNotesHtml": "<p>OK skills (no action): proposal-writer, handoff-and-thread-close, multi-tenant-saas-patterns, product-spec-prd, project-bootstrap, supabase-schema-rls, test-strategy-tdd, agent-architecture, ai-governance-risk, ai-strategy-coe, llm-eval-harness, mcp-server-builder, rag-pipeline-design, slm-demo-builder, resume-tailor.</p>\n<p>FP rates are 0.00 everywhere except slm-demo-builder (0.10 — one generic prompt misrouted; not worth a description change).</p>",
+ "proposals": [
+  {
+   "number": 1,
+   "skill": "presales/effort-estimator",
+   "name": "effort-estimator",
+   "domain": "presales",
+   "verdict": "BOTH",
+   "stats": "trigger 0.67, lift 0.00",
+   "evidence": "The worst score in the repo. Happy-path WBS case routed to integration-migration-assessor both runs; with-SKILL outputs failed 6/6 on the WBS CSV, the P80 quote, and the staffing table — the skill's three headline artifacts never materialized.",
+   "descriptionProposal": "Use when the user asks to size, estimate, or price a services engagement: build a WBS with 3-point estimates, run PERT/Monte Carlo for P50/P80/P90 effort and duration, and produce a staffing table by role and phase with onshore/offshore mix. Never invents rate-card rates. Not for migration assessments (integration-migration-assessor), business-case benefits (value-case-builder), or proposal narrative (proposal-writer).",
+   "bodyProposal": "make the output skeleton mandatory and ordered — WBS CSV first, then P80 quote with rationale, then staffing table — and require invoking the bundled PERT/Monte Carlo script rather than describing it."
+  },
+  {
+   "number": 2,
+   "skill": "presales/exec-deck-redline",
+   "name": "exec-deck-redline",
+   "domain": "presales",
+   "verdict": "BOTH",
+   "stats": "trigger 0.67, lift −0.07",
+   "evidence": "Adversarial savings/dates case routed to value-case-builder both runs; slide verdicts (`[KEEP]/[SHARPEN]/…`) missing 6/6, numbers never checked against memos.",
+   "descriptionProposal": "Use when the user asks to redline, sharpen, or review an EXISTING executive deck, steering-committee pack, or pitch deck — slide-by-slide verdicts ([KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD]), rewritten slide titles as assertions, speaker notes, and [TO BE BASELINED — owner: ___] markers for every unsourced number. Keeps the original storyline; never replaces it. Not for savings/numbers analysis (value-case-builder), building a deck from scratch (proposal-writer), or document redlines (sow-drafter).",
+   "bodyProposal": "require the verdict ledger as the first output block before any prose; add a numbers-trace step (each figure → source memo or `[TO BE BASELINED]`)."
+  },
+  {
+   "number": 3,
+   "skill": "presales/discovery-interview",
+   "name": "discovery-interview",
+   "domain": "presales",
+   "verdict": "BOTH",
+   "stats": "trigger 0.67, lift 0.19, just under the bar",
+   "evidence": "Fabrication case routed to client-research-brief / value-case-builder across runs; time budget (~20% for client questions) and persona/hypothesis tagging missed ~50%.",
+   "descriptionProposal": "Use when the user asks to prepare for, run, or synthesize a client discovery call or scoping workshop: a vertical-specific question bank (EdTech, Retail, Manufacturing, Travel) with persona and hypothesis tags, a time budget reserving ~20% for the client's questions, a pain/impact/urgency matrix, and the five closes (decision owner, budget state, timeline driver, incumbents, success measure). Feeds proposal-writer and effort-estimator. Not for background research (client-research-brief) or fabricated-answer drills (orals-prep).",
+   "bodyProposal": "harden the time-budget rule and the five-closes checklist into a required closing section."
+  },
+  {
+   "number": 4,
+   "skill": "presales/orals-prep",
+   "name": "orals-prep",
+   "domain": "presales",
+   "verdict": "DESC",
+   "stats": "trigger 0.67, lift +0.31 — body is fine",
+   "evidence": "The answers-with-new-numbers case went to competitive-positioning both runs.",
+   "descriptionProposal": "Use when the user asks to prepare the TEAM for a pitch presentation, orals, bid defense, or steering-committee readout: timed script with speaker assignments, a likely-questions bank with sourced answers (no new numbers — every figure traceable to the proposal), red-team objections with responses, and a rehearsal plan with scoring rubric. Not for competitive analysis (competitive-positioning) or deck content rework (exec-deck-redline); both feed this skill.",
+   "bodyProposal": null
+  },
+  {
+   "number": 5,
+   "skill": "presales/integration-migration-assessor",
+   "name": "integration-migration-assessor",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift −0.12",
+   "evidence": "TCO lines never cite the contract summary; readout never follows the assessment template or hands off to effort-estimator / solution-architecture-doc (100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "make the readout template the output skeleton (not a reference to consult); add a TCO citation rule — every cost line names its source or is marked `[TO BE BASELINED]`."
+  },
+  {
+   "number": 6,
+   "skill": "presales/solution-architecture-doc",
+   "name": "solution-architecture-doc",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift −0.11",
+   "evidence": "Target-state diagrams never use the mermaid C4 templates; integration map never groups interfaces by pattern; NFR table missing (all 100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "lead with the three mandatory artifacts (C4 diagrams from template, integration map by pattern with waves, NFR table with measurable targets); undecided products as `[TO BE BASELINED]` placeholders."
+  },
+  {
+   "number": 7,
+   "skill": "presales/value-case-builder",
+   "name": "value-case-builder",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift −0.10",
+   "evidence": "Delivery costs at P80, NPV at the sourced discount rate, and sensitivity/break-even analysis all missing (100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "require a CFO-grade calculation block — costs (delivery P80 citing the estimate memo, run, dual-run, decommission timing), NPV with sourced rate, sensitivity on top-3 assumptions with break-even values."
+  },
+  {
+   "number": 8,
+   "skill": "presales/competitive-positioning",
+   "name": "competitive-positioning",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift +0.04",
+   "evidence": "Wedge never identified at the intersection of independent baseline and the CIO's stated concern; objection handling never demonstrates acknowledge/reframe/proof/ask-back; card never marked INTERNAL (all 100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "turn the wedge formula into a worked example; make the objection framework a fill-in structure rather than a named concept."
+  },
+  {
+   "number": 9,
+   "skill": "presales/account-plan",
+   "name": "account-plan",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift +0.08",
+   "evidence": "Stakeholder map with departure exposure, white-space matrix, and 90-day plays with owners all missing (100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "open with a \"minimum viable output\" checklist — stakeholder map, white-space matrix, 90-day plays — each a required section, not optional depth."
+  },
+  {
+   "number": 10,
+   "skill": "presales/rfp-compliance-matrix",
+   "name": "rfp-compliance-matrix",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift +0.07",
+   "evidence": "No-C-without-evidence rule never applied; bid review never opens with BID/BID-WITH-CONDITIONS/NO-BID; clarification questions never reference clause IDs (all 100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "fix the output order — bid verdict with three drivers first, then the compliance matrix with the evidence-citation rule enforced per row."
+  },
+  {
+   "number": 11,
+   "skill": "presales/client-research-brief",
+   "name": "client-research-brief",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift +0.10",
+   "evidence": "Initiatives never labeled hypotheses with signal tiers; sources appendix never lists URLs with access dates and tiers (100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "make the sources appendix and hypothesis labeling required sections with an explicit schema, not closing niceties."
+  },
+  {
+   "number": 12,
+   "skill": "presales/sow-drafter",
+   "name": "sow-drafter",
+   "domain": "presales",
+   "verdict": "BODY",
+   "stats": "lift +0.14",
+   "evidence": "Estimate quantities never appear as assumptions with consequences; client dependencies lack dates; RACI never enforces one-A-per-row (all 100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "add an SOW clause checklist as mandatory sections — assumptions with consequences and change-control triggers, dated client dependencies, RACI with exactly one A per row."
+  },
+  {
+   "number": 13,
+   "skill": "build/nextjs-enterprise-conventions",
+   "name": "nextjs-enterprise-conventions",
+   "domain": "build",
+   "verdict": "DESC",
+   "stats": "trigger 0.33 — worst routing in the repo, lift +0.30 so the body works",
+   "evidence": "Happy-path code writing went to spec-to-plan and the conventions-violation review went to safe-fix, both runs. The description reads as generic \"writing or reviewing code.\"",
+   "descriptionProposal": "Use to check code against the enterprise Next.js conventions checklist — server/client component rules, data-access layering, zod at boundaries, typed Result<T,E> errors, structured logging, naming and folder conventions — when writing new code or reviewing a diff for conventions violations. Produces compliant code plus a checklist result. Not for planning work (spec-to-plan), bug fixing (safe-fix), or security audits (security-review).",
+   "bodyProposal": null
+  },
+  {
+   "number": 14,
+   "skill": "build/spec-to-plan",
+   "name": "spec-to-plan",
+   "domain": "build",
+   "verdict": "BOTH",
+   "stats": "trigger 0.67, lift −0.20",
+   "evidence": "The \"too-big\" case went to multi-tenant-saas-patterns both runs; with-SKILL outputs skip the pre-plan discipline (read SPEC/CLAUDE.md/HANDOFF, one round of ≤5 clarifying questions with defaults).",
+   "descriptionProposal": "Use when a feature request, ticket, or SPEC section must be decomposed into an executable plan before any code is written — including oversized specs that need splitting. Produces a task-gated plan (docs/plans/<slug>.md) with files to touch, acceptance criteria, test list, rollback, and explicit plan→approve→build→test→verify gates. Starts by reading SPEC, CLAUDE.md, and HANDOFF, then asks at most 5 clarifying questions with defaults in one round. Not for bug fixes (safe-fix) or product definition (product-spec-prd).",
+   "bodyProposal": "move the pre-plan checklist (read the three docs, one question round) to a hard preamble the model must show its work for."
+  },
+  {
+   "number": 15,
+   "skill": "build/security-review",
+   "name": "security-review",
+   "domain": "build",
+   "verdict": "DESC",
+   "stats": "trigger 0.67, lift +0.56 — body is strong",
+   "evidence": "Happy-path review went to safe-fix both runs.",
+   "descriptionProposal": "Use when the user asks to REVIEW a diff, PR, or feature for security defects before merge or release — not to fix a bug. Produces a reasoning-based review (threat model per change: authz, injection, secrets, RLS bypass, SSRF, IDOR, mass assignment, server-action pitfalls) with severity-rated findings and fixes applied in code. For the Next.js + Supabase + Vercel stack. Bug fixing without a security angle belongs to safe-fix.",
+   "bodyProposal": null
+  },
+  {
+   "number": 16,
+   "skill": "build/ci-cd-vercel-github",
+   "name": "ci-cd-vercel-github",
+   "domain": "build",
+   "verdict": "BOTH",
+   "stats": "trigger 0.67, lift +0.10",
+   "evidence": "\"Pipeline is failing\" case went to safe-fix both runs despite the description naming it.",
+   "descriptionProposal": "Use for CI/CD pipeline work on a Next.js + Supabase app deployed to Vercel via GitHub Actions — set up CI, preview deploys, prod deploys, rollback, and FAILING PIPELINE runs (yaml, runners, secrets, gates). Produces ci.yml, preview.yml, prod.yml, the environment/secret matrix, and a rollback runbook. A failing pipeline is a workflow problem and belongs here; failing application code belongs to safe-fix. Not for test authoring (test-strategy-tdd) or alerting (observability-setup).",
+   "bodyProposal": "require the three workflow files plus the rollback runbook as the output list; prod.yml must show tag-on-main verification, staging→prod migration behind the Environment gate, and health-endpoint smoke tests."
+  },
+  {
+   "number": 17,
+   "skill": "build/safe-fix",
+   "name": "safe-fix",
+   "domain": "build",
+   "verdict": "BODY",
+   "stats": "lift 0.00",
+   "evidence": "Root cause as one sentence with file:line and evidence missing 6/6; diff not limited to the failing path; regression test never shown red-first.",
+   "descriptionProposal": null,
+   "bodyProposal": "make the ritual a numbered mandatory sequence — (1) one-sentence root cause with file:line and evidence, (2) minimal diff on the failing path only, (3) regression test named after the bug, shown failing before the fix."
+  },
+  {
+   "number": 18,
+   "skill": "build/observability-setup",
+   "name": "observability-setup",
+   "domain": "build",
+   "verdict": "BODY",
+   "stats": "lift +0.18",
+   "evidence": "lib/logger.ts with redaction, /api/health endpoints with tests, and alert rules with threshold/window/tier/runbook/owner all missing (100% fail).",
+   "descriptionProposal": null,
+   "bodyProposal": "required output checklist — logger with redaction + request context, both health endpoints with tests, alert rules each with threshold, window, tier, runbook, owner, plus an SLO table per journey."
+  },
+  {
+   "number": 19,
+   "skill": "ai-platform/ai-use-case-canvas",
+   "name": "ai-use-case-canvas",
+   "domain": "ai-platform",
+   "verdict": "DESC",
+   "stats": "trigger 0.67, lift +0.45 — body is strong",
+   "evidence": "The \"should we even use AI\" disqualifier case went to agent-architecture both runs.",
+   "descriptionProposal": "Use when the user wants to qualify — or disqualify — a single AI idea quickly: \"is this a good AI use case\", \"fill the canvas for X\", \"should we build or buy\". Produces a one-page canvas (problem, baseline, AI capability, data readiness, feasibility, value hypothesis, risks, build/buy/partner, next 30-day step), including an explicit NOT-AI verdict when the idea doesn't qualify. Not-AI verdicts stay here. Not for portfolio strategy (ai-strategy-coe), detailed design (agent-architecture, rag-pipeline-design), or full risk review (ai-governance-risk).",
+   "bodyProposal": null
+  },
+  {
+   "number": 20,
+   "skill": "ai-platform/infra-gpu-sizing",
+   "name": "infra-gpu-sizing",
+   "domain": "ai-platform",
+   "verdict": "BODY",
+   "stats": "lift +0.10",
+   "evidence": "Recommendation with revisit triggers missing 100%; monthly cost table with breakeven hours missing 50%+.",
+   "descriptionProposal": null,
+   "bodyProposal": "required output — monthly cost table (rental, self-host, API) with breakeven hours, GPU count with utilization target and spare as stated assumptions, latency check, and a recommendation with revisit triggers."
+  },
+  {
+   "number": 21,
+   "skill": "career/outreach-and-followup",
+   "name": "outreach-and-followup",
+   "domain": "career",
+   "verdict": "DESC",
+   "stats": "trigger 0.67, lift +0.36 — body is strong",
+   "evidence": "Post-interview thank-you-with-repair went to interview-prep both runs.",
+   "descriptionProposal": "Use when the user needs to WRITE or time a job-search message — referral ask, recruiter reply, post-interview thank-you or repair note, status check, decline, negotiation opener — by LinkedIn or email, for senior director / VP / executive IT roles. This skill writes the message (2-3 goal-labelled variants, subject line, follow-up cadence); preparing for the interview itself is interview-prep. Facts come only from the user's inputs; no invented names, dates, or claims.",
+   "bodyProposal": null
+  },
+  {
+   "number": 22,
+   "skill": "career/application-tracker",
+   "name": "application-tracker",
+   "domain": "career",
+   "verdict": "BODY",
+   "stats": "lift 0.00",
+   "evidence": "CSV never actually edited (100% fail — the model just asks for the file); reply length constraint ignored.",
+   "descriptionProposal": null,
+   "bodyProposal": "spell out the exact edit procedure — read CSV, move the row, set last_touch, write back, confirm in ≤50 words showing the updated row. Consider invoking the bundled `tracker.py` script instead of hand-editing."
+  },
+  {
+   "number": 23,
+   "skill": "career/interview-prep",
+   "name": "interview-prep",
+   "domain": "career",
+   "verdict": "BODY",
+   "stats": "lift +0.08",
+   "evidence": "Competency-to-story traceability table with STRONG/ADEQUATE/GAP ratings and the panel question list mapped to story IDs missing 6/6.",
+   "descriptionProposal": null,
+   "bodyProposal": "make the traceability table the centerpiece required section; gaps stated honestly with a handling approach."
+  },
+  {
+   "number": 24,
+   "skill": "career/jd-fit-scorer",
+   "name": "jd-fit-scorer",
+   "domain": "career",
+   "verdict": "BODY",
+   "stats": "lift +0.14",
+   "evidence": "Gap table missing mitigations; red flags missing penalties; verdict line not first.",
+   "descriptionProposal": null,
+   "bodyProposal": "fix the output order — verdict with score/100 on line one, then evidence, then gap table with a mitigation per GAP and red flags with penalties or \"none detected\"."
+  },
+  {
+   "number": 25,
+   "skill": "career/offer-evaluator",
+   "name": "offer-evaluator",
+   "domain": "career",
+   "verdict": "BODY",
+   "stats": "lift +0.08",
+   "evidence": "COL indices cited without source/date (6/6); decision matrix arithmetic hidden behind `[TO BE BASELINED]` markers; negotiation levers missing.",
+   "descriptionProposal": null,
+   "bodyProposal": "require arithmetic shown in the decision matrix (weights sum to 100, weighted totals computed); COL indices must cite source and date, never assumed."
+  }
+ ]
+}
