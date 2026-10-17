@@ -1,4 +1,4 @@
-# Security Review Method — reasoning, not checklist (fallback for sentry:security-review)
+# Security Review Method — reasoning, not checklist (fallback for security-review)
 
 A checklist finds what it lists. A threat model finds what the change actually enables. Do the model first; use the category table only to make sure nothing was skipped.
 

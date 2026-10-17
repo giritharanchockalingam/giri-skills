@@ -1,4 +1,4 @@
-# Next.js App Router Framework Rules (fallback for vercel:react-best-practices / vercel:next-best-practices)
+# Next.js App Router Framework Rules (fallback for vercel-react-best-practices / vercel-composition-patterns)
 
 Target: Next.js 15+ App Router, React 19, TypeScript strict.
 

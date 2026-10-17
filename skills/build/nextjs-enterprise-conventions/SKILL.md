@@ -28,7 +28,7 @@ If a required input is missing, ask for it once; do not guess.
 ## Procedure
 1. Read `../../../shared/stack-conventions.md` and `../../../shared/token-efficiency.md`. Read `package.json` for the Next.js version and existing `lib/result.ts`, `lib/logger.ts`, `lib/env.ts` — reuse, never duplicate.
 2. **Plan.** For a new feature slice, list files by layer (validator → service → action/route → component → page) with the server/client decision per component. For a review, list the files and the rule IDs you will check. Wait for "go" on anything touching >3 files. *(gate: plan→approve)*
-3. **Framework rules.** If the upstream skills `vercel:react-best-practices` and `vercel:next-best-practices` are installed (see VENDORED.md), invoke them for this step; otherwise follow `references/framework-rules.md` (server/client boundaries, caching, data fetching, server actions, routing).
+3. **Framework rules.** If the upstream skills `vercel-react-best-practices` and `vercel-composition-patterns` are installed (see VENDORED.md), invoke them for this step; otherwise follow `references/framework-rules.md` (server/client boundaries, caching, data fetching, server actions, routing).
 4. **Layering and errors.** Apply `references/layering.md` (what lives where, import direction) and `references/error-result-pattern.md` (`Result<T,E>`, error codes, no throws across the boundary).
 5. **Logging.** Apply `references/logging.md`: `lib/logger` only, correlation id from headers, no PII, no `console.log`.
 6. **Build.** Write code in minimal diffs. Each server action: zod parse → auth/tenant check → service call → `Result` → typed response. Each component: server by default; `"use client"` only for interactivity, with the reason in a comment.

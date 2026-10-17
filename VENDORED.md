@@ -5,11 +5,11 @@ Skills in this repo **wrap** upstream skills where a vendor or a top maintainer 
 | Name used in our SKILL.md | Upstream repo | Install | Used by |
 |---|---|---|---|
 | `superpowers:brainstorming`, `superpowers:writing-plans`, `superpowers:executing-plans`, `superpowers:test-driven-development`, `superpowers:systematic-debugging` | obra/superpowers | `/plugin marketplace add obra/superpowers-marketplace` → `/plugin install superpowers@superpowers-marketplace` | spec-to-plan, test-strategy-tdd, safe-fix |
-| `sentry:security-review` | getsentry/skills | `npx skills add getsentry/skills --skill security-review` | security-review |
-| `vercel:react-best-practices`, `vercel:next-best-practices`, `vercel:web-design-guidelines` | vercel-labs/agent-skills | `npx skills add vercel-labs/agent-skills` | nextjs-enterprise-conventions |
-| `supabase` (official) | supabase/agent-skills | `npx skills add supabase/agent-skills` | supabase-schema-rls |
+| `security-review` | getsentry/skills | `npx skills add getsentry/skills --skill security-review` | security-review |
+| `vercel-react-best-practices`, `vercel-composition-patterns`, `web-design-guidelines` | vercel-labs/agent-skills | `npx skills add vercel-labs/agent-skills` | nextjs-enterprise-conventions |
+| `supabase`, `supabase-postgres-best-practices` | supabase/agent-skills | `npx skills add supabase/agent-skills` | supabase-schema-rls |
 | `anthropics:webapp-testing`, `anthropics:mcp-builder`, `anthropics:skill-creator`, docx/pdf/pptx/xlsx | anthropics/skills | `/plugin marketplace add anthropics/skills` | test-strategy-tdd, mcp-server-builder, all document outputs |
-| `karpathy` guardrails | multica-ai/andrej-karpathy-skills | `npx skills add multica-ai/andrej-karpathy-skills` | safe-fix (behavioral baseline) |
+| `karpathy-guidelines` | multica-ai/andrej-karpathy-skills | `npx skills add multica-ai/andrej-karpathy-skills` | safe-fix (behavioral baseline) |
 | `product-management:write-spec` | Anthropic product-management plugin | bundled in Claude (Cowork/Code) | product-spec-prd |
 
 ## Pinning
@@ -17,10 +17,10 @@ To make installs reproducible, pin a commit in `vendor/pins.txt` (`owner/repo@sh
 
 | Upstream | Pinned sha | Date |
 |---|---|---|
-| obra/superpowers | TBD | — |
-| getsentry/skills | TBD | — |
-| vercel-labs/agent-skills | TBD | — |
-| supabase/agent-skills | TBD | — |
+| obra/superpowers | installed via plugin marketplace | 2026-10-16 |
+| getsentry/skills | main | 2026-10-16 |
+| vercel-labs/agent-skills | main (all 9) | 2026-10-16 |
+| supabase/agent-skills | main | 2026-10-16 |
 | anthropics/skills | TBD | — |
 
 ## Rule
