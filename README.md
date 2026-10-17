@@ -6,15 +6,15 @@
 
 ```bash
 # Claude Code (plugin marketplace)
-/plugin marketplace add <your-github-user>/giri-skills
+/plugin marketplace add giritharanchockalingam/giri-skills
 /plugin install presales@giri-skills      # or build, ai-platform, career
 
 # Any agent (universal, via vercel-labs/skills CLI)
-npx skills add <your-github-user>/giri-skills            # install all
-npx skills add <your-github-user>/giri-skills --skill proposal-writer
+npx skills add giritharanchockalingam/giri-skills            # install all
+npx skills add giritharanchockalingam/giri-skills --skill proposal-writer
 
 # Local clone (symlinks; add --copy to copy)
-git clone https://github.com/<your-github-user>/giri-skills.git
+git clone https://github.com/giritharanchockalingam/giri-skills.git
 cd giri-skills && scripts/install.sh claude     # or agents | cursor | codex
 ```
 
