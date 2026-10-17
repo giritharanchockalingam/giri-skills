@@ -9,8 +9,8 @@ export function Chips<T extends string>({ label, options, value, onChange }: {
     onChange(next);
   };
   return (
-    <div className="flex flex-wrap items-center gap-1" role="group" aria-label={label}>
-      <span className="mr-1 text-[11.5px] text-fg-3">{label}</span>
+    <div className="chip-group" role="group" aria-label={label}>
+      <span className="chip-label">{label}</span>
       {options.map((o) => (
         <button key={o} type="button" className="chip" aria-pressed={value.has(o)} onClick={() => toggle(o)}>{o}</button>
       ))}

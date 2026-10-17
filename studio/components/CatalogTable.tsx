@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CatalogRow, Verdict } from "@/lib/data";
 import { skillHref } from "@/lib/data";
-import { VerdictBadge, Lift } from "./Badge";
+import { VerdictBadge, Lift, Trig } from "./Badge";
 import { Chips } from "./Chips";
 
 export function CatalogTable({ rows, domains, verdicts }: { rows: CatalogRow[]; domains: string[]; verdicts: Verdict[] }) {
@@ -22,40 +22,38 @@ export function CatalogTable({ rows, domains, verdicts }: { rows: CatalogRow[]; 
     );
   }, [rows, dom, ver, q]);
 
-  const trunc = (s: string, n = 140) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex flex-col gap-5">
+      <div className="card toolbar">
         <input className="input" type="search" placeholder="search name + description" value={q} onChange={(e) => setQ(e.target.value)} aria-label="search skills" />
         <Chips label="domain" options={domains} value={dom} onChange={setDom} />
         <Chips label="verdict" options={verdicts} value={ver} onChange={setVer} />
-        <span className="mono ml-auto text-[11.5px] text-fg-3">{filtered.length} of {rows.length}</span>
+        <span className="toolbar-count">{filtered.length} of {rows.length}</span>
       </div>
-      <div className="tbl-wrap">
+      <div className="card tbl-wrap">
         <table className="tbl">
           <thead>
             <tr>
-              <th>name</th><th>domain</th><th>verdict</th>
-              <th className="num">trigger</th><th className="num">lift</th><th className="num">cases</th><th className="num">scripts</th>
-              <th className="wrap">description</th>
+              <th>Skill</th><th>Domain</th><th>Verdict</th>
+              <th className="num">Trigger</th><th className="num">Lift</th><th className="num">Cases</th><th className="num">Scripts</th>
+              <th className="wrap" style={{ width: "42%" }}>Description</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((r) => (
               <tr key={r.id} className="clickable" onClick={() => router.push(skillHref(r.id))}>
-                <td className="mono"><Link href={skillHref(r.id)} onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
-                <td className="text-fg-2">{r.domain}</td>
+                <td><Link href={skillHref(r.id)} className="cell-name" onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
+                <td><span className="tag">{r.domain}</span></td>
                 <td><VerdictBadge v={r.verdict} /></td>
-                <td className="num">{r.triggerAcc == null ? "—" : r.triggerAcc.toFixed(2)}</td>
+                <td className="num"><Trig n={r.triggerAcc} /></td>
                 <td className="num"><Lift n={r.lift} /></td>
                 <td className="num">{r.cases}</td>
                 <td className="num">{r.scripts || <span className="muted">0</span>}</td>
-                <td className="wrap min-w-[360px] text-fg-2" title={r.description}>{trunc(r.description)}</td>
+                <td className="truncate-1 ink-2" title={r.description}>{r.description}</td>
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="muted">no skills match</td></tr>
+              <tr><td colSpan={8} className="none">No skills match.</td></tr>
             )}
           </tbody>
         </table>

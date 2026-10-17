@@ -1,15 +1,16 @@
-import { scorecard, DOMAINS, VERDICTS, misroutesFor, failedWithItemsFor, meta } from "@/lib/data";
+import { scorecard, skills, DOMAINS, VERDICTS, misroutesFor, failedWithItemsFor, meta } from "@/lib/data";
 import type { Verdict } from "@/lib/data";
 import { ScorecardTable, type ScorecardDrill } from "@/components/ScorecardTable";
-import { VerdictBadge } from "@/components/Badge";
+import { Lift, VerdictBadge } from "@/components/Badge";
+import { PageHead, SectionHead, StatStrip } from "@/components/PageHead";
 
 export const metadata = { title: "Evals · giri-skills" };
-
-const VCOLOR: Record<Verdict, string> = { OK: "var(--ok)", DESC: "var(--warn)", BODY: "var(--orange)", BOTH: "var(--bad)" };
 
 export default function EvalsPage() {
   const counts = Object.fromEntries(VERDICTS.map((v) => [v, scorecard.filter((r) => r.verdict === v).length])) as Record<Verdict, number>;
   const total = scorecard.length;
+  const avgLift = scorecard.reduce((a, r) => a + r.lift, 0) / total;
+  const avgTrig = scorecard.reduce((a, r) => a + r.triggerAcc, 0) / total;
   const perDomain = DOMAINS.map((d) => {
     const rows = scorecard.filter((r) => r.domain === d);
     const avg = (k: "triggerAcc" | "lift") => rows.reduce((a, r) => a + r[k], 0) / (rows.length || 1);
@@ -22,65 +23,86 @@ export default function EvalsPage() {
   const drill: Record<string, ScorecardDrill> = Object.fromEntries(
     scorecard.map((r) => [r.skill, { misroutes: misroutesFor(r.skill), failed: failedWithItemsFor(r.skill, 5) }]),
   );
+  const cases = skills.reduce((a, s) => a + s.cases.length, 0);
 
   return (
     <>
-      <h1 className="mb-2">Eval dashboard</h1>
-      <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <div className="panel p-3">
-          <div className="mb-2 text-[10.5px] uppercase tracking-wide text-fg-3">verdict distribution · {total} skills</div>
-          <div className="flex h-4 w-full overflow-hidden rounded" role="img" aria-label={VERDICTS.map((v) => `${v} ${counts[v]}`).join(", ")}>
+      <PageHead
+        eyebrow="giri-skills · eval dashboard"
+        title="What the evals"
+        em="found"
+        sub={<>{meta.model} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.spend} spend (est.)</>}
+      />
+
+      <div className="card card-pad">
+        <StatStrip stats={[
+          { label: "skills", value: total },
+          { label: "OK", value: counts.OK },
+          { label: "DESC", value: counts.DESC },
+          { label: "BODY", value: counts.BODY },
+          { label: "BOTH", value: counts.BOTH },
+          { label: "avg lift", value: <Lift n={avgLift} /> },
+        ]} />
+      </div>
+
+      <div className="mt-6 grid grid-safe gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
+        <div className="card card-pad">
+          <div className="eyebrow">Verdict distribution · {total} skills</div>
+          <div className="vbar mt-4" role="img" aria-label={VERDICTS.map((v) => `${v} ${counts[v]}`).join(", ")}>
             {VERDICTS.map((v) => counts[v] > 0 && (
-              <div key={v} style={{ width: `${(counts[v] / total) * 100}%`, background: VCOLOR[v] }} title={`${v}: ${counts[v]}`} />
+              <span key={v} className={`vbar-${v}`} style={{ width: `${(counts[v] / total) * 100}%` }} title={`${v}: ${counts[v]}`} />
             ))}
           </div>
-          <div className="mt-2 grid grid-cols-4 gap-2">
+          <div className="vlegend">
             {VERDICTS.map((v) => (
               <div key={v}>
-                <VerdictBadge v={v} />
-                <div className="mono text-[18px] leading-tight">{counts[v]}</div>
-                <div className="mono text-[11px] text-fg-3">{((counts[v] / total) * 100).toFixed(0)}%</div>
+                <span className={`vswatch vbar-${v}`} aria-hidden="true" /><span className="tag">{v}</span>
+                <div className="v-count">{counts[v]}</div>
+                <div className="v-pct">{((counts[v] / total) * 100).toFixed(0)}%</div>
               </div>
             ))}
           </div>
-          <div className="mt-3 text-[11px] text-fg-3">
-            OK = trigger ≥ 0.8 and lift ≥ +0.2 · DESC = trigger &lt; 0.8 · BODY = lift &lt; 0.2 · BOTH = both
-          </div>
+          <p className="mt-5 text-[13px] leading-relaxed text-ink-3">
+            <VerdictBadge v="OK" /> trigger ≥ 0.8 and lift ≥ +0.2 · <VerdictBadge v="DESC" /> trigger &lt; 0.8 · <VerdictBadge v="BODY" /> lift &lt; +0.2 · <VerdictBadge v="BOTH" /> both
+          </p>
         </div>
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>domain</th><th className="num">skills</th>
-                {VERDICTS.map((v) => <th key={v} className="num">{v}</th>)}
-                <th className="num">avg trigger</th><th className="num">avg lift</th>
-              </tr>
-            </thead>
-            <tbody>
-              {perDomain.map((d) => (
-                <tr key={d.domain}>
-                  <td>{d.domain}</td><td className="num">{d.n}</td>
-                  {VERDICTS.map((v) => <td key={v} className="num">{d[v] || <span className="muted">0</span>}</td>)}
-                  <td className="num">{d.avgTrigger.toFixed(2)}</td>
-                  <td className={`num ${d.avgLift < 0 ? "lift-neg" : d.avgLift >= 0.2 ? "lift-pos" : ""}`}>{(d.avgLift > 0 ? "+" : "") + d.avgLift.toFixed(2)}</td>
+
+        <div className="card">
+          <div className="card-head"><span className="card-title">Per domain</span><span className="tag">{meta.counts.trigger} trigger rows · {meta.counts.quality} quality rows</span></div>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Domain</th><th className="num">Skills</th>
+                  {VERDICTS.map((v) => <th key={v} className="num">{v}</th>)}
+                  <th className="num">Avg trigger</th><th className="num">Avg lift</th>
                 </tr>
-              ))}
-              <tr className="font-semibold">
-                <td>total</td><td className="num">{total}</td>
-                {VERDICTS.map((v) => <td key={v} className="num">{counts[v]}</td>)}
-                <td className="num">{(scorecard.reduce((a, r) => a + r.triggerAcc, 0) / total).toFixed(2)}</td>
-                <td className="num">{(() => { const l = scorecard.reduce((a, r) => a + r.lift, 0) / total; return (l > 0 ? "+" : "") + l.toFixed(2); })()}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="px-2 py-1 text-[11px] text-fg-3">
-            {meta.counts.trigger} trigger rows · {meta.counts.quality} quality rows · results {meta.resultsDir}
+              </thead>
+              <tbody>
+                {perDomain.map((d) => (
+                  <tr key={d.domain}>
+                    <td className="cell-name">{d.domain}</td><td className="num">{d.n}</td>
+                    {VERDICTS.map((v) => <td key={v} className="num">{d[v] || <span className="muted">0</span>}</td>)}
+                    <td className="num">{d.avgTrigger.toFixed(2)}</td>
+                    <td className="num"><Lift n={d.avgLift} /></td>
+                  </tr>
+                ))}
+                <tr className="total">
+                  <td>Total</td><td className="num">{total}</td>
+                  {VERDICTS.map((v) => <td key={v} className="num">{counts[v]}</td>)}
+                  <td className="num">{avgTrig.toFixed(2)}</td>
+                  <td className="num"><Lift n={avgLift} /></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <h2>Scorecard</h2>
-      <ScorecardTable rows={scorecard} domains={DOMAINS} verdicts={VERDICTS} drill={drill} />
+      <section className="section">
+        <SectionHead eyebrow="Per skill" title="Scorecard" right={<span className="tag">results {meta.resultsDir}</span>} />
+        <ScorecardTable rows={scorecard} domains={DOMAINS} verdicts={VERDICTS} drill={drill} />
+      </section>
     </>
   );
 }

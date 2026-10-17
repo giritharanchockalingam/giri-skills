@@ -3,21 +3,21 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ScoreRow, Verdict, Misroute, FailedItem } from "@/lib/data";
 import { skillHref } from "@/lib/data";
-import { VerdictBadge, Lift } from "./Badge";
+import { VerdictBadge, Lift, Trig } from "./Badge";
 import { Chips } from "./Chips";
 
 export interface ScorecardDrill { misroutes: Misroute[]; failed: FailedItem[] }
 
 type Key = keyof ScoreRow;
 const COLS: { key: Key; label: string; num?: boolean }[] = [
-  { key: "name", label: "skill" },
-  { key: "domain", label: "domain" },
-  { key: "verdict", label: "verdict" },
-  { key: "triggerAcc", label: "trigger acc", num: true },
+  { key: "name", label: "Skill" },
+  { key: "domain", label: "Domain" },
+  { key: "verdict", label: "Verdict" },
+  { key: "triggerAcc", label: "Trigger", num: true },
   { key: "fpRate", label: "FP rate", num: true },
-  { key: "without", label: "without", num: true },
-  { key: "with", label: "with", num: true },
-  { key: "lift", label: "lift", num: true },
+  { key: "without", label: "Without", num: true },
+  { key: "with", label: "With", num: true },
+  { key: "lift", label: "Lift", num: true },
 ];
 const VORDER: Record<Verdict, number> = { OK: 0, DESC: 1, BODY: 2, BOTH: 3 };
 
@@ -47,24 +47,24 @@ export function ScorecardTable({ rows, domains, verdicts, drill }: {
   const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="flex flex-col gap-5">
+      <div className="card toolbar">
         <Chips label="domain" options={domains} value={dom} onChange={setDom} />
         <Chips label="verdict" options={verdicts} value={ver} onChange={setVer} />
-        <span className="mono ml-auto text-[11.5px] text-fg-3">{sorted.length} of {rows.length} · sort {sortKey} {asc ? "↑" : "↓"} · click a row to drill</span>
+        <span className="toolbar-count">{sorted.length} of {rows.length} · click a row to drill</span>
       </div>
-      <div className="tbl-wrap">
+      <div className="card tbl-wrap">
         <table className="tbl">
           <thead>
             <tr>
-              <th className="w-6"></th>
+              <th style={{ width: 36 }} aria-label="expand"></th>
               {COLS.map((c) => (
                 <th key={c.key} className={`sortable ${c.num ? "num" : ""}`} onClick={() => onSort(c.key)} aria-sort={sortKey === c.key ? (asc ? "ascending" : "descending") : "none"}>
-                  {c.label}{sortKey === c.key ? (asc ? " ↑" : " ↓") : ""}
+                  {c.label}{sortKey === c.key && <span className="sort-ind" aria-hidden="true">{asc ? "▲" : "▼"}</span>}
                 </th>
               ))}
-              <th className="num">misrouted</th>
-              <th className="num">with-fails</th>
+              <th className="num">Misrouted</th>
+              <th className="num">With-fails</th>
             </tr>
           </thead>
           <tbody>
@@ -74,12 +74,12 @@ export function ScorecardTable({ rows, domains, verdicts, drill }: {
               const failTotal = d.failed.reduce((a, f) => a + f.fails, 0);
               return (
                 <RowGroup key={r.skill} isOpen={isOpen} onToggle={() => toggle(r.skill)} detail={<td colSpan={11}><Drill d={d} /></td>}>
-                  <td className="muted">{isOpen ? "▾" : "▸"}</td>
-                  <td className="mono"><Link href={skillHref(r.skill)} onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
-                  <td className="text-fg-2">{r.domain}</td>
+                  <td><span className={`caret ${isOpen ? "open" : ""}`} aria-hidden="true">▶</span></td>
+                  <td><Link href={skillHref(r.skill)} className="cell-name" onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
+                  <td><span className="tag">{r.domain}</span></td>
                   <td><VerdictBadge v={r.verdict} /></td>
-                  <td className={`num ${r.triggerAcc < 0.8 ? "lift-neg" : ""}`}>{r.triggerAcc.toFixed(2)}</td>
-                  <td className={`num ${r.fpRate > 0 ? "lift-neg" : ""}`}>{r.fpRate.toFixed(2)}</td>
+                  <td className="num"><Trig n={r.triggerAcc} /></td>
+                  <td className={`num ${r.fpRate > 0 ? "num-neg" : ""}`}>{r.fpRate.toFixed(2)}</td>
                   <td className="num">{r.without.toFixed(2)}</td>
                   <td className="num">{r.with.toFixed(2)}</td>
                   <td className="num"><Lift n={r.lift} /></td>
@@ -88,6 +88,7 @@ export function ScorecardTable({ rows, domains, verdicts, drill }: {
                 </RowGroup>
               );
             })}
+            {sorted.length === 0 && <tr><td colSpan={11} className="none">No skills match.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -109,19 +110,19 @@ function RowGroup({ isOpen, onToggle, children, detail }: { isOpen: boolean; onT
 
 function Drill({ d }: { d: ScorecardDrill }) {
   return (
-    <div className="grid gap-3 py-1 lg:grid-cols-2">
+    <div className="subpanel grid grid-safe gap-6 lg:grid-cols-2">
       <div>
-        <div className="mb-1 text-[10.5px] uppercase tracking-wide text-fg-3">misrouted prompts ({d.misroutes.length})</div>
-        {d.misroutes.length === 0 ? <div className="muted text-[12px]">none — every case routed correctly</div> : (
-          <table className="w-full text-[12px]">
-            <thead><tr className="text-fg-3"><th className="pr-2 text-left font-medium">case</th><th className="pr-2 text-left font-medium">run</th><th className="pr-2 text-left font-medium">selected</th><th className="text-left font-medium">prompt</th></tr></thead>
+        <div className="eyebrow mb-2">Misrouted prompts ({d.misroutes.length})</div>
+        {d.misroutes.length === 0 ? <div className="none">None — every case routed correctly.</div> : (
+          <table className="mini">
+            <thead><tr><th>Case</th><th>Run</th><th>Selected</th><th>Prompt</th></tr></thead>
             <tbody>
               {d.misroutes.map((m, i) => (
-                <tr key={i} className="align-top">
-                  <td className="mono whitespace-nowrap pr-2 py-0.5">{m.caseId}</td>
-                  <td className="mono pr-2 py-0.5">{m.run}</td>
-                  <td className="mono fail whitespace-nowrap pr-2 py-0.5">{m.selected}</td>
-                  <td className="py-0.5 whitespace-normal text-fg-2">{m.prompt}</td>
+                <tr key={i}>
+                  <td className="mono whitespace-nowrap">{m.caseId}</td>
+                  <td className="mono">{m.run}</td>
+                  <td className="mono fail whitespace-nowrap">{m.selected}</td>
+                  <td className="ink-2">{m.prompt}</td>
                 </tr>
               ))}
             </tbody>
@@ -129,18 +130,18 @@ function Drill({ d }: { d: ScorecardDrill }) {
         )}
       </div>
       <div>
-        <div className="mb-1 text-[10.5px] uppercase tracking-wide text-fg-3">most-failed expected items, with-mode (top {d.failed.length})</div>
-        {d.failed.length === 0 ? <div className="muted text-[12px]">none — all expected items passed with SKILL.md</div> : (
-          <table className="w-full text-[12px]">
-            <thead><tr className="text-fg-3"><th className="pr-2 text-left font-medium">fails</th><th className="pr-2 text-left font-medium">case</th><th className="text-left font-medium">expected · evidence</th></tr></thead>
+        <div className="eyebrow mb-2">Most-failed expected items · with-mode (top {d.failed.length})</div>
+        {d.failed.length === 0 ? <div className="none">None — all expected items passed with SKILL.md.</div> : (
+          <table className="mini">
+            <thead><tr><th>Fails</th><th>Case</th><th>Expected · evidence</th></tr></thead>
             <tbody>
               {d.failed.map((f, i) => (
-                <tr key={i} className="align-top">
-                  <td className="mono fail whitespace-nowrap pr-2 py-0.5">{f.fails}/{f.total}</td>
-                  <td className="mono whitespace-nowrap pr-2 py-0.5">{f.caseId} <span className="muted">[{f.expectedIdx}]</span></td>
-                  <td className="py-0.5 whitespace-normal">
+                <tr key={i}>
+                  <td className="mono fail whitespace-nowrap">{f.fails}/{f.total}</td>
+                  <td className="mono whitespace-nowrap">{f.caseId} <span className="muted">[{f.expectedIdx}]</span></td>
+                  <td>
                     <div>{f.expected}</div>
-                    <div className="text-fg-3">{f.evidence}</div>
+                    <div className="mt-1 text-[12.5px] text-ink-3">{f.evidence}</div>
                   </td>
                 </tr>
               ))}

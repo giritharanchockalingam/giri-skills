@@ -13,23 +13,22 @@ export function Nav({ meta }: { meta: Meta }) {
   const path = usePathname();
   const active = (href: string) => (href === "/" ? path === "/" || path.startsWith("/skills/") : path.startsWith(href));
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-bg-2">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
-        <Link href="/" className="mono text-[13px] font-semibold text-fg hover:no-underline">giri-skills</Link>
-        <nav className="flex gap-1" aria-label="Views">
+    <header className="topbar">
+      <div className="wrap">
+        <Link href="/" className="brand" aria-label="giri-skills home">
+          <span className="brand-mark" aria-hidden="true">G</span>
+          <span className="brand-name">giri-skills</span>
+          <span className="brand-sub">· skills factory</span>
+        </Link>
+        <nav className="topnav" aria-label="Views">
           {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              aria-current={active(l.href) ? "page" : undefined}
-              className={`rounded px-2 py-0.5 text-[12.5px] hover:no-underline ${active(l.href) ? "bg-bg-3 font-semibold text-fg" : "text-fg-2 hover:text-fg"}`}
-            >
+            <Link key={l.href} href={l.href} aria-current={active(l.href) ? "page" : undefined}>
               {l.label}
             </Link>
           ))}
         </nav>
-        <div className="mono ml-auto text-[11px] text-fg-3" title={`results: ${meta.resultsDir}`}>
-          {meta.provider}/{meta.model} · runs={meta.runs} · seed={meta.seed} · {meta.date} · spend {meta.spend} (est.)
+        <div className="topmeta" title={`results: ${meta.resultsDir}`}>
+          {meta.model} · {meta.runs} runs · {meta.date} · {meta.spend}
         </div>
       </div>
     </header>
