@@ -1,0 +1,46 @@
+# Behavioral eval scorecard
+_provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17_
+_estimated spend: $11.84_
+
+| skill | trigger acc | FP rate | without | with | lift | verdict |
+|---|---|---|---|---|---|---|
+| presales/account-plan | 1.00 | 0.00 | 0.08 | 0.15 | 0.08 | BODY |
+| presales/client-research-brief | 1.00 | 0.00 | 0.33 | 0.43 | 0.10 | BODY |
+| presales/competitive-positioning | 1.00 | 0.00 | 0.35 | 0.38 | 0.04 | BODY |
+| presales/discovery-interview | 0.67 | 0.00 | 0.44 | 0.62 | 0.19 | BOTH |
+| presales/effort-estimator | 0.67 | 0.00 | 0.04 | 0.04 | 0.00 | BOTH |
+| presales/exec-deck-redline | 0.67 | 0.00 | 0.20 | 0.13 | -0.07 | BOTH |
+| presales/integration-migration-assessor | 1.00 | 0.00 | 0.35 | 0.23 | -0.12 | BODY |
+| presales/orals-prep | 0.67 | 0.00 | 0.08 | 0.38 | 0.31 | DESC |
+| presales/proposal-writer | 1.00 | 0.00 | 0.50 | 0.71 | 0.21 | OK |
+| presales/rfp-compliance-matrix | 1.00 | 0.00 | 0.11 | 0.18 | 0.07 | BODY |
+| presales/solution-architecture-doc | 1.00 | 0.00 | 0.25 | 0.14 | -0.11 | BODY |
+| presales/sow-drafter | 1.00 | 0.00 | 0.11 | 0.25 | 0.14 | BODY |
+| presales/value-case-builder | 1.00 | 0.00 | 0.33 | 0.23 | -0.10 | BODY |
+| build/ci-cd-vercel-github | 0.67 | 0.00 | 0.30 | 0.40 | 0.10 | BOTH |
+| build/handoff-and-thread-close | 1.00 | 0.00 | 0.22 | 0.94 | 0.72 | OK |
+| build/multi-tenant-saas-patterns | 0.83 | 0.00 | 0.27 | 0.64 | 0.36 | OK |
+| build/nextjs-enterprise-conventions | 0.33 | 0.00 | 0.50 | 0.80 | 0.30 | DESC |
+| build/observability-setup | 1.00 | 0.00 | 0.14 | 0.32 | 0.18 | BODY |
+| build/product-spec-prd | 1.00 | 0.00 | 0.32 | 0.68 | 0.36 | OK |
+| build/project-bootstrap | 1.00 | 0.00 | 0.05 | 0.27 | 0.23 | OK |
+| build/safe-fix | 1.00 | 0.00 | 0.08 | 0.08 | 0.00 | BODY |
+| build/security-review | 0.67 | 0.00 | 0.19 | 0.75 | 0.56 | DESC |
+| build/spec-to-plan | 0.67 | 0.00 | 0.55 | 0.35 | -0.20 | BOTH |
+| build/supabase-schema-rls | 1.00 | 0.00 | 0.14 | 0.50 | 0.36 | OK |
+| build/test-strategy-tdd | 1.00 | 0.00 | 0.25 | 0.45 | 0.20 | OK |
+| ai-platform/agent-architecture | 1.00 | 0.00 | 0.12 | 0.62 | 0.50 | OK |
+| ai-platform/ai-governance-risk | 1.00 | 0.00 | 0.40 | 0.80 | 0.40 | OK |
+| ai-platform/ai-strategy-coe | 1.00 | 0.00 | 0.35 | 0.62 | 0.27 | OK |
+| ai-platform/ai-use-case-canvas | 0.67 | 0.00 | 0.40 | 0.85 | 0.45 | DESC |
+| ai-platform/infra-gpu-sizing | 1.00 | 0.00 | 0.55 | 0.65 | 0.10 | BODY |
+| ai-platform/llm-eval-harness | 1.00 | 0.00 | 0.20 | 0.75 | 0.55 | OK |
+| ai-platform/mcp-server-builder | 1.00 | 0.00 | 0.14 | 0.36 | 0.23 | OK |
+| ai-platform/rag-pipeline-design | 1.00 | 0.00 | 0.27 | 0.91 | 0.64 | OK |
+| ai-platform/slm-demo-builder | 1.00 | 0.10 | 0.33 | 0.78 | 0.44 | OK |
+| career/application-tracker | 1.00 | 0.00 | 0.23 | 0.23 | 0.00 | BODY |
+| career/interview-prep | 0.83 | 0.00 | 0.08 | 0.17 | 0.08 | BODY |
+| career/jd-fit-scorer | 1.00 | 0.00 | 0.41 | 0.55 | 0.14 | BODY |
+| career/offer-evaluator | 1.00 | 0.00 | 0.29 | 0.38 | 0.08 | BODY |
+| career/outreach-and-followup | 0.67 | 0.00 | 0.32 | 0.68 | 0.36 | DESC |
+| career/resume-tailor | 1.00 | 0.00 | 0.36 | 0.57 | 0.21 | OK |
