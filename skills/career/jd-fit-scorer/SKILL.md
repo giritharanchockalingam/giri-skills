@@ -1,0 +1,65 @@
+---
+name: jd-fit-scorer
+description: Use when the user pastes a job description (JD) or job link and asks whether to apply, how well they fit, or to score/rank roles. Produces a weighted fit score (must-haves 60%, nice-to-haves 25%, culture/logistics 15%, red flags subtract), a gap table, and a go/no-go call for senior director / VP / executive IT roles. Requires the user's profile keywords or master résumé; never invents experience.
+license: MIT
+metadata:
+  domain: career
+  version: 0.1.0
+  author: giri-skills
+---
+
+# JD Fit Scorer
+
+## When to use
+- User pastes a JD, posting URL text, or recruiter summary and asks "should I apply?", "how well do I fit?", "score this", or "rank these roles".
+- User wants a gap list before tailoring a résumé.
+- NOT for: rewriting the résumé (use `resume-tailor`), evaluating an offer (use `offer-evaluator`), or logging the application (use `application-tracker`).
+
+## Inputs required
+| Input | Required | Source |
+|---|---|---|
+| JD full text (title, responsibilities, requirements, location, comp if listed) | yes | user paste or file |
+| Profile keyword file or master résumé | yes | `assets/profile-keywords.example.txt` format; user supplies the real one |
+| Hard constraints (location, travel, remote, comp floor, clearance) | no | user; defaults in `references/scoring-rubric.md` |
+| Target level (Sr Director / VP / CxO) | no | user; default Sr Director |
+
+If the JD or the profile is missing, ask once. Do not score from memory or from a job title alone.
+
+## Procedure
+1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.
+2. Parse the JD into three buckets: **must-haves** (required, "must", years, certifications, degree, clearance), **nice-to-haves** (preferred, "plus", "ideally"), **culture/logistics** (location, remote policy, travel, reporting line, team size, comp band, industry).
+3. Normalize each requirement to a short keyword phrase (≤6 words). Collapse duplicates.
+4. Match each requirement against the profile keyword file. Mark `MATCH`, `PARTIAL` (adjacent skill or older than 7 years), or `GAP`. Cite the profile line for every MATCH/PARTIAL; a match with no citation is a GAP.
+5. Scan the JD against `references/red-flag-catalog.md`. Record each hit with its penalty.
+6. Score using `references/scoring-rubric.md`. Optional: run `scripts/score.py` (`--jd jd.txt --profile profile.txt`) for the deterministic keyword pass, then apply judgement to PARTIALs.
+7. Apply the go/no-go thresholds in `references/go-no-go.md`. Hard-constraint violations force NO-GO regardless of score.
+8. Produce the output below. Run the self-check.
+
+## Output
+Markdown, first line is the verdict. Save as `fit-<company>-<role>.md` if a file is requested.
+
+```
+GO / LEAN GO / LEAN NO / NO-GO — <score>/100 — <one-sentence reason>
+
+| Bucket | Weight | Items | Matched | Partial | Gap | Bucket score |
+| Red flags | — | <n> hits | penalty −<n> |
+
+Gap table: | Requirement | Bucket | Status | Evidence (profile line) | Mitigation |
+Red flags: | Flag | Penalty | JD text |
+Next action: apply via … / tailor résumé / ask recruiter X before applying / pass
+```
+
+## Self-check
+- [ ] Every MATCH/PARTIAL cites a profile line; none inferred from job titles alone
+- [ ] Weights sum to 100 before penalties; math shown
+- [ ] Hard constraints checked before the score is reported
+- [ ] Gap table includes a mitigation or "accept gap" for every GAP
+- [ ] Verdict is the first line; reply ≤50 words outside the artifact
+- [ ] No author personal data pulled from memory; profile comes from the supplied file only
+
+## References
+- `references/scoring-rubric.md` — weights, status values, bucket math
+- `references/red-flag-catalog.md` — penalties and detection phrases
+- `references/go-no-go.md` — thresholds and hard-constraint overrides
+- `scripts/score.py` — offline keyword pass (stdlib only)
+- `assets/profile-keywords.example.txt` — profile file format (EXAMPLE, fictional)

@@ -1,0 +1,34 @@
+{
+  "skill": "rag-pipeline-design",
+  "cases": [
+    {
+      "id": "happy-path-policy-assistant",
+      "prompt": "Design a RAG assistant over 4,000 HR and travel policy PDFs (some scanned), 2,000 employees, ~500 questions/day, answers must respect department-level access. Here are 20 real questions from our help desk.",
+      "expected": [
+        "States why RAG (not direct context or SQL) in one line",
+        "Chunking per document type (text PDF vs scanned) with parent-child and metadata incl. acl_groups",
+        "Hybrid retrieval with pre-filter ACL and a reranker; k values stated as assumptions",
+        "Eval set plan with >=50 queries, recall@k and MRR via the script, faithfulness and abstention gates",
+        "Cost model with every price as a labeled input, no hardcoded prices",
+        "Guardrails include ACL at retrieval, abstention, citations, document injection"
+      ]
+    },
+    {
+      "id": "missing-questions",
+      "prompt": "Set up RAG over our Confluence.",
+      "expected": [
+        "Asks once for corpus description, example questions, users/volume/latency, freshness",
+        "Does not pick an embedding model without an eval set"
+      ]
+    },
+    {
+      "id": "diagnose-wrong-answers",
+      "prompt": "Our RAG retrieves the right document but the answer cites the wrong section and sometimes invents numbers. Dense-only retrieval, 1,000-token chunks, no reranker.",
+      "expected": [
+        "Diagnosis table: chunk size and missing section context; add BM25 and reranker; enforce citations and faithfulness check",
+        "Recommends measuring recall@k before and after each change, one variable at a time",
+        "Short, table-based answer"
+      ]
+    }
+  ]
+}

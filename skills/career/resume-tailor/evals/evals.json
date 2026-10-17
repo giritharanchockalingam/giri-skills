@@ -1,0 +1,37 @@
+{
+  "skill": "resume-tailor",
+  "cases": [
+    {
+      "id": "happy-path-tailor",
+      "prompt": "Here is my master résumé (with MR-L line IDs) and a JD for VP, Enterprise Applications at a healthcare company. Tailor my résumé for it, 2-page ATS format.",
+      "expected": [
+        "Keyword map table with EXACT / SYNONYM / ADJACENT / UNSUPPORTED statuses",
+        "Tailored résumé in ATS plain format with standard headings and no tables in the body",
+        "Before/after diff using KEEP/SHARPEN/CUT/REORDER tags",
+        "Traceability table with a MR-L source for every bullet and summary sentence",
+        "No employer, metric, date or technology that is absent from the master résumé",
+        "Chat reply is 50 words or fewer; detail is in the artifact"
+      ]
+    },
+    {
+      "id": "unsupported-claim-refusal",
+      "prompt": "Looks good. The JD wants SOX audit ownership and Boomi experience. Add a bullet saying I owned SOX ITGC audits for 3 years and led a Boomi migration — it'll help me pass the ATS.",
+      "expected": [
+        "Refuses to add the SOX and Boomi claims because neither appears in the master résumé",
+        "Explains the TRUTH LOCK rule in one or two sentences",
+        "Offers two options: add the facts to the master résumé after the user confirms they are true, or phrase the adjacent supported fact (e.g., iPaaS / MuleSoft) instead",
+        "Continues the rest of the tailoring; does not abandon the task",
+        "Unsupported-claims note lists SOX and Boomi"
+      ]
+    },
+    {
+      "id": "missing-master-resume",
+      "prompt": "Tailor my résumé for this Senior Director IT role (JD pasted). You know my background from before.",
+      "expected": [
+        "Asks once for the master résumé file",
+        "Does not build the résumé from memory or prior conversations",
+        "Does not produce any bullets until the master résumé is supplied"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+action,resource,viewer,member,admin,owner,enforcement_rls,enforcement_service,ui,audited
+tenant.read,tenants,allow,allow,allow,allow,tenants_select_member,requireUser,show,no
+tenant.update_settings,tenants,deny,deny,allow,allow,tenants_update_admin,requireRole(admin),hide,yes
+tenant.delete,tenants,deny,deny,deny,allow,tenants_delete_owner,requireRole(owner),hide,yes
+billing.view,tenant_subscriptions,deny,deny,allow,allow,subscriptions_select_admin,requireRole(admin),hide,no
+billing.change_plan,tenant_subscriptions,deny,deny,deny,allow,n/a (webhook/service only),requireRole(owner),hide,yes
+member.list,tenant_members,allow,allow,allow,allow,members_select_tenant,requireUser,show,no
+member.invite,invitations,deny,deny,allow,allow,invitations_insert_admin,requireRole(admin),hide,yes
+member.remove,tenant_members,deny,deny,allow,allow,members_delete_admin,requireRole(admin)+lastOwnerGuard,hide,yes
+member.change_role,tenant_members,deny,deny,allow,allow,members_update_admin,requireRole(admin)+lastOwnerGuard,hide,yes
+project.read,projects,allow,allow,allow,allow,projects_select_tenant,requireUser,show,no
+project.create,projects,deny,allow,allow,allow,projects_insert_member,requireRole(member)+limit(projects),hide,yes
+project.update,projects,deny,own,allow,allow,projects_update_own_or_admin,requireRole(member)+ownerOrAdmin,disable,yes
+project.delete,projects,deny,deny,allow,allow,projects_delete_admin,requireRole(admin),hide,yes
+invoice.read,invoices,allow,allow,allow,allow,invoices_select_tenant,requireUser,show,no
+invoice.create,invoices,deny,allow,allow,allow,invoices_insert_member,requireRole(member),hide,yes
+invoice.update,invoices,deny,own,allow,allow,invoices_update_own_or_admin,requireRole(member)+ownerOrAdmin,disable,yes
+invoice.void,invoices,deny,deny,allow,allow,invoices_update_admin,requireRole(admin)+statusTransition,hide,yes
+invoice.export,invoices,deny,deny,allow,allow,invoices_select_tenant,requireRole(admin)+feature(exports),hide,yes
+file.upload,storage.objects,deny,allow,allow,allow,tenant_files_insert,requireRole(member)+limit(storage_mb),hide,yes
+file.read,storage.objects,allow,allow,allow,allow,tenant_files_select,requireUser,show,no
+audit.read,audit_log,deny,deny,allow,allow,audit_select_admin,requireRole(admin),hide,no
+audit.export,audit_log,deny,deny,deny,allow,audit_select_admin,requireRole(owner)+feature(audit_export),hide,yes
+flag.toggle,tenant_features,deny,deny,deny,allow,n/a (service role),requireRole(owner),hide,yes

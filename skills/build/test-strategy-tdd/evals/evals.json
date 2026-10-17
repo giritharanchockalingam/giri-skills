@@ -1,0 +1,30 @@
+{
+  "skill": "test-strategy-tdd",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "We're adding invoice creation (validator, service, server action, page). Set up the tests first.",
+      "expected": [
+        "Pyramid table maps each acceptance criterion to unit/integration/e2e with file paths and fixtures",
+        "Negative cases included: invalid input, viewer forbidden, cross-tenant, duplicate number",
+        "Tests written and run red before implementation; full suite run after green",
+        "Coverage >= 80% on server/ reported",
+        "Only I/O boundaries mocked; service under test not mocked"
+      ]
+    },
+    {
+      "id": "no-test-setup",
+      "prompt": "This repo has no vitest or playwright. Add testing for the login flow.",
+      "expected": [
+        "Scaffolds vitest.config.ts, playwright.config.ts, tests/setup.ts, auth.setup.ts from assets without overwriting anything existing",
+        "Adds package.json scripts test / test:e2e",
+        "Login e2e uses accessible selectors and storageState, no waitForTimeout"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Write tests.",
+      "expected": ["Asks once for the feature/change and its acceptance criteria", "Does not generate generic tests"]
+    }
+  ]
+}

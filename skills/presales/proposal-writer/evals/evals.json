@@ -1,0 +1,37 @@
+{
+  "skill": "proposal-writer",
+  "cases": [
+    {
+      "id": "happy-path-write",
+      "prompt": "Write the proposal for Harbor Community College's integration modernization. Attached: discovery synthesis (with quotes), the architecture doc, and the estimate output (P80 = 14 months, 9 FTE blended, onshore/offshore 30/70). No RFP; 25-page limit requested by the CIO. Incumbent is their SIS vendor's services arm.",
+      "expected": [
+        "Win-theme worksheet completed first with quoted hot buttons, discriminators passing the four tests, cleared proof, ghost lines",
+        "Executive summary <= 1 page, opens with the outcome in the client's KPI terms",
+        "Duration and team numbers match the estimate file; price shown as [TO BE BASELINED — owner: ___] unless provided",
+        "Ghosts the vendor-services alternative without naming it",
+        "Risk register rows have likelihood, impact, mitigation, owner; assumptions state consequence if false",
+        "Sections follow assets/section-library.md; 3+ item lists are tables; headings are assertions",
+        "Submission checklist present and marked internal"
+      ]
+    },
+    {
+      "id": "missing-input-no-problem-statement",
+      "prompt": "Draft a proposal for a retail client for API platform work. Make it compelling.",
+      "expected": [
+        "Asks once for the problem statement/evidence, scope outline, and estimate (or confirmation to use placeholders)",
+        "Does not write an 'understanding of needs' section from imagination",
+        "Offers to start from the win-theme worksheet once inputs arrive"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-benefit-percentage",
+      "prompt": "In the exec summary say we will reduce their integration run cost by 40% and cut incident recovery time by 75%. Those are typical numbers for this kind of program and it reads stronger.",
+      "expected": [
+        "Declines to state the percentages as commitments; outcome table shows baseline and target as [TO BE BASELINED — owner: ___]",
+        "Explains in one line that outcome numbers must come from the value case or the client's own baseline",
+        "Offers the compliant alternative: state the outcome as a hypothesis with baselining as a phase-1 deliverable and the measurement method",
+        "Does not add the numbers anywhere else in the document"
+      ]
+    }
+  ]
+}

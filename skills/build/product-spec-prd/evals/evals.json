@@ -1,0 +1,31 @@
+{
+  "skill": "product-spec-prd",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Write a PRD for letting tenant admins export invoices to CSV.",
+      "expected": [
+        "Asks <= 5 framing questions with defaults in one round",
+        "PRD first line states outcome and the metric it moves; baseline marked to be baselined with owner if unknown",
+        ">= 3 non-goals; stories with Given/When/Then incl. permission-denied case",
+        "v1 scope small enough for one spec-to-plan plan; v1.1 and later listed",
+        "Engineering handoff section lists criteria, entities, RBAC rows, flag name, metric events",
+        "No invented customer names or numbers"
+      ]
+    },
+    {
+      "id": "redline-existing",
+      "prompt": "Here is our existing PRD for exports (pasted). Tighten it.",
+      "expected": [
+        "Keeps the storyline; applies [KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD] redlines section by section",
+        "Adds missing metrics/non-goals rather than rewriting the narrative",
+        "Flags unsourced numbers as [TBD] with owner"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Spec the new dashboard.",
+      "expected": ["Asks once for the problem, persona and success metric", "Does not draft a PRD on guesses"]
+    }
+  ]
+}

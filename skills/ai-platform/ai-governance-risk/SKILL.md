@@ -1,0 +1,55 @@
+---
+name: ai-governance-risk
+description: Use when the user asks for an AI compliance or risk review — "assess the risks of this AI use case", "build our AI risk register", "write a model card", "map us to NIST AI RMF / EU AI Act", "what controls do we need before launch". Produces a risk register (bias, privacy, hallucination, IP, security, misuse) with likelihood, impact, controls, and owners; a controls checklist; a model card; and a summary-level mapping to NIST AI RMF functions and EU AI Act risk tiers. Not legal advice; not for strategy (ai-strategy-coe) or agent design (agent-architecture).
+license: MIT
+metadata:
+  domain: ai-platform
+  version: 0.1.0
+  author: giri-skills
+---
+
+# AI Governance & Risk Review
+
+## When to use
+- Pre-launch risk review of an AI use case; building or refreshing the AI risk register; model documentation; regulatory mapping at summary level.
+- NOT for: legal opinions (state this; route to counsel), strategy/CoE (`ai-strategy-coe`), eval mechanics (`llm-eval-harness`).
+
+## Inputs required
+| Input | Required | Source |
+|---|---|---|
+| Use-case description: purpose, users, decisions influenced, autonomy level | yes | user / design doc |
+| Data: categories (PII, special categories, minors, financial, health, education records), sources, jurisdictions | yes | user |
+| Model(s): provider/open-weights, version, fine-tuned?, hosting location | yes | user |
+| Deployment context: internal / employee-facing / customer-facing / regulated decision | yes | user |
+| Existing controls and policies | no | user |
+| Applicable regulations the org already tracks | no | user; otherwise summary mapping only |
+
+If the use case, data categories, or deployment context are missing, ask once.
+
+## Procedure
+1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.
+2. **Classify the use case.** Determine the internal risk tier (low / medium / high) using `references/risk-taxonomy.md` §Tiering, and the summary EU AI Act tier using `references/regulatory-mapping.md`. State both with the criteria met.
+3. **Identify risks.** Walk the taxonomy (bias, privacy, hallucination, IP, security, misuse, operational, transparency). For each applicable risk: scenario, likelihood (1–5), impact (1–5), inherent score, in `assets/risk-register.csv`.
+4. **Select controls** from `references/controls-catalog.md` per risk; record control owner, status (in place / planned / gap), evidence, and residual score. Gaps become next steps with owner and date.
+5. **Write the model card** from `assets/model-card.md`: intended use, out-of-scope use, data, evaluation results (from `llm-eval-harness` where available), limitations, monitoring, contacts.
+6. **Map to frameworks** at summary level with `references/regulatory-mapping.md`: NIST AI RMF Govern/Map/Measure/Manage coverage table; EU AI Act tier and headline obligations; note other regimes the org names. Add the line: "Summary mapping for planning; legal review required for obligations."
+7. **Decide.** Launch recommendation: go / go with conditions / no-go, with the conditions listed as owner + date.
+8. Run the self-check.
+
+## Output
+- `ai-risk-review-<use-case>.md`: tiering, risk register table, controls, model card, framework mapping, decision, next steps.
+- `risk-register.csv` filled.
+
+## Self-check
+- [ ] Both internal tier and EU AI Act summary tier stated with criteria
+- [ ] Every risk has likelihood, impact, control, owner, residual score
+- [ ] Zero gaps without an owner and date
+- [ ] Model card has out-of-scope uses and limitations, not only intended use
+- [ ] Framework mapping is labeled summary-level; legal review line present
+- [ ] No fabricated regulatory citations; cite article/section only when provided by a source
+- [ ] Decision line is first
+
+## References
+- `references/risk-taxonomy.md` — risk categories, scenarios, tiering
+- `references/controls-catalog.md` — controls by risk with evidence expectations
+- `references/regulatory-mapping.md` — NIST AI RMF functions, EU AI Act tiers (summary)

@@ -1,0 +1,15 @@
+{
+  "skill": "skill-name",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "A realistic user request that should trigger this skill.",
+      "expected": ["Output contains X", "Every number is sourced or TBD", "Format is a table"]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "A request missing a required input.",
+      "expected": ["Skill asks for the missing input once", "Does not fabricate"]
+    }
+  ]
+}

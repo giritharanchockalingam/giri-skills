@@ -1,0 +1,31 @@
+{
+  "skill": "multi-tenant-saas-patterns",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Design tenancy for our app: organisations with members, four roles, free/pro plans with a projects limit, and an audit trail.",
+      "expected": [
+        "Asks once about users-in-many-tenants and compliance retention; posts a one-page design and waits for go",
+        "Tenant model: tenants, tenant_members, invitations, profiles; claims in app_metadata; switch and invite flows; stale-claim window stated",
+        "RBAC matrix CSV filled with RLS policy + service enforcement per action; UI hide-only",
+        "Entitlement resolution order and PLAN_LIMIT_REACHED enforced in services with race-safe counter",
+        "Audit log append-only with trigger and app events; retention marked to be baselined with owner",
+        "Hands migration task list to supabase-schema-rls rather than writing final SQL itself"
+      ]
+    },
+    {
+      "id": "role-removal-edge",
+      "prompt": "Admins should be able to remove any member, including owners.",
+      "expected": [
+        "Adds the last-owner guard (service + trigger) so a tenant never has zero owners",
+        "Explains removed members keep a valid token until expiry and chooses is_active_member() check or shorter token lifetime",
+        "Audits the removal"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Add permissions.",
+      "expected": ["Asks once for roles and the list of actions that matter", "Does not invent a role set beyond the default ladder without saying so"]
+    }
+  ]
+}

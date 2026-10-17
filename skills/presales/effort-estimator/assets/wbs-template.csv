@@ -1,0 +1,7 @@
+task_id,phase,work_package,task,role,driver_group,count,unit_o,unit_m,unit_p,optimistic,most_likely,pessimistic,basis,predecessors,notes
+1.1,Phase 1 - Assess,Mobilize,Kick-off and governance setup,Engagement Manager,,,,,,2,3,5,JUD,,"EXAMPLE row — replace"
+1.2,Phase 1 - Assess,Inventory,Interface inventory and complexity scoring,Integration Architect,interfaces,[TO BE BASELINED],0.2,0.3,0.6,,,,PAR,1.1,"per-interface effort; count from assessor"
+2.1,Phase 2 - Build,Wave 1,Migrate simple interfaces,Integration Engineer,interfaces,[TO BE BASELINED],1.5,2.5,5,,,,PAR,1.2,"unit effort from prior actuals ref ___"
+9.1,Cross-phase,PM,Project management,Engagement Manager,,,,,,20,30,45,JUD,,"8-15% of delivery effort"
+9.2,Cross-phase,QA,Test management and automation,Test Lead,,,,,,15,25,40,JUD,,
+9.3,Cross-phase,Cutover,Cutover rehearsal and hypercare,Integration Architect,,,,,,10,15,30,JUD,2.1,

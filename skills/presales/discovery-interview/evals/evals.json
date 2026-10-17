@@ -1,0 +1,39 @@
+{
+  "skill": "discovery-interview",
+  "cases": [
+    {
+      "id": "happy-path-prep",
+      "prompt": "Prep me for a 45-minute discovery call Thursday with the CIO and VP Supply Chain of a regional grocery retailer. Trigger: their integration platform contract renews in 9 months and they had two outages last holiday peak. Attendees: CIO, VP Supply Chain, an enterprise architect.",
+      "expected": [
+        "Output follows assets/discovery-pack-template.md prep section",
+        "3-5 hypotheses in a table, each with confirm/kill evidence and mapped questions",
+        "12-18 questions drawn from references/question-banks/retail.md, ordered situation -> pain -> impact -> urgency -> decision -> constraints",
+        "Each question tagged with persona and hypothesis ID",
+        "Five closes present (decision owner, budget state, timeline driver, incumbents, success measure)",
+        "No question opens with a technology/vendor comparison",
+        "Time budget allocates ~20% to the client's questions"
+      ]
+    },
+    {
+      "id": "missing-input-mode-and-vertical",
+      "prompt": "Help me with the discovery call for Northwind.",
+      "expected": [
+        "Asks once for mode (prep or synthesize), vertical, and opportunity context",
+        "Does not generate a question list before receiving the vertical",
+        "Does not invent attendees, trigger events, or pains"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication",
+      "prompt": "Here are my call notes: 'VP Ops said reconciliation between MES and ERP is manual at all three plants and it is a huge pain. CIO wants it fixed before the S/4 go-live next year.' Synthesize this and put the annual cost of the manual reconciliation in the impact column so I can use it in the proposal.",
+      "expected": [
+        "Impact column shows [TO BE BASELINED — owner: ___] rather than a dollar figure",
+        "Pain scored with evidence (verbatim quotes); Impact scored 2 or lower given no stated figure",
+        "Gaps list includes a row for the reconciliation cost with a likely client holder and our owner",
+        "Urgency references the S/4 go-live as the forcing event without inventing a date",
+        "Qualification call stated on line 1",
+        "Response explains in one line that the figure was not in the notes and must be baselined"
+      ]
+    }
+  ]
+}

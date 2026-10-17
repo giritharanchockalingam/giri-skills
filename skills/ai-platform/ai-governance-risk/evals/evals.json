@@ -1,0 +1,33 @@
+{
+  "skill": "ai-governance-risk",
+  "cases": [
+    {
+      "id": "happy-path-admissions-assistant",
+      "prompt": "Review the risks of an AI assistant that summarizes student applications and suggests a shortlist for admissions officers. Uses applicant essays and transcripts (includes minors), vendor-hosted model in the US, officers make the final call.",
+      "expected": [
+        "Internal tier High and EU AI Act summary tier high-risk (education access) with criteria stated",
+        "Risk register covers bias, privacy (minors, education records), hallucination, security, transparency with likelihood/impact/controls/owners",
+        "Model card includes out-of-scope uses and disaggregated evaluation",
+        "NIST AI RMF coverage table and legal-review disclaimer line present",
+        "Decision line first: go with conditions or no-go, with owners and dates"
+      ]
+    },
+    {
+      "id": "missing-data-categories",
+      "prompt": "Do a risk review on our new chatbot.",
+      "expected": [
+        "Asks once for use case, data categories, model/hosting, deployment context",
+        "Does not assign a tier without that information"
+      ]
+    },
+    {
+      "id": "model-card-only",
+      "prompt": "Write the model card for our internal meeting-notes summarizer (employees only, no customer data, human edits every summary).",
+      "expected": [
+        "Fills the model-card template with intended use, explicit out-of-scope uses, limitations, monitoring",
+        "Tier Low with minimum control set",
+        "Evaluation rows marked TO BE BASELINED with owner where no scorecard exists"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "skill": "agent-architecture",
+  "cases": [
+    {
+      "id": "happy-path-support-agent",
+      "prompt": "Design an agent that triages inbound support emails, looks up the customer in our CRM, drafts a reply, and can issue refunds up to $200. Tools: CRM read API, ticketing API, payments API. Success metric: first-response time under 10 minutes with CSAT unchanged.",
+      "expected": [
+        "Pattern decision states the criterion that ruled out a plain workflow and does not jump to multi-agent",
+        "Typed state table with owner node and reset rule per field",
+        "Tool contracts list side-effect class; refund is two-phase with an idempotency key",
+        "HITL checkpoint before sending the reply and before committing the refund",
+        "Failure-modes table includes prompt injection via email body, loops, context overflow, tool misuse",
+        "Budgets (steps, tokens, wall-clock) set or marked TO BE BASELINED"
+      ]
+    },
+    {
+      "id": "missing-job-statement",
+      "prompt": "Build me a multi-agent system with LangGraph.",
+      "expected": [
+        "Asks once for the job to be done, success metric, and allowed actions",
+        "Does not produce a design for an undefined task",
+        "Notes that multi-agent is not the default"
+      ]
+    },
+    {
+      "id": "push-back-on-multi-agent",
+      "prompt": "We want 6 agents (planner, researcher, writer, critic, formatter, publisher) to produce weekly internal newsletters from Confluence pages.",
+      "expected": [
+        "Recommends a workflow or single agent plus a generate-evaluate step, with the reason",
+        "Keeps the publish step behind HITL",
+        "Explains the cost and failure-surface trade-off in a table"
+      ]
+    }
+  ]
+}

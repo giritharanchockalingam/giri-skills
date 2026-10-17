@@ -1,0 +1,30 @@
+{
+  "skill": "nextjs-enterprise-conventions",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Add a 'create invoice' form page under app/(app)/invoices/new with a server action.",
+      "expected": [
+        "Files placed per layer: validator, service, action, client form component, server page",
+        "Action order: zod parse -> requireRole -> service -> toActionState -> revalidateTag scoped by tenant",
+        "Form uses useActionState; tenant id never read from formData",
+        "No Supabase call in app/ or components/",
+        "Conventions table returned with rule -> pass/fail -> file:line; lint/typecheck/unit run"
+      ]
+    },
+    {
+      "id": "review-violation",
+      "prompt": "Review components/features/invoices/invoice-list.tsx — it calls supabase.from('invoices') inside a useEffect and console.logs the rows.",
+      "expected": [
+        "Flags L1 (data access in component), P1 (useEffect fetch), G1 (console.log)",
+        "Proposes moving the query to lib/db + server component fetch, minimal diff",
+        "Does not rewrite unrelated parts of the file"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Make this component follow our conventions.",
+      "expected": ["Asks once which file/diff", "Does not guess the component"]
+    }
+  ]
+}

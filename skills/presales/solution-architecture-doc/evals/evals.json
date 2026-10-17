@@ -1,0 +1,37 @@
+{
+  "skill": "solution-architecture-doc",
+  "cases": [
+    {
+      "id": "happy-path-cio-target-architecture",
+      "prompt": "Produce the target architecture for Pinecrest Manufacturing's plant-to-ERP integration modernization for the CIO steering committee. Attached: discovery synthesis, the interface inventory (87 interfaces, scored by the assessor with wave assignments), and their stated constraints (OT network isolated, S/4 go-live in 14 months, data must stay in-country).",
+      "expected": [
+        "Current-state context and container diagrams built only from the inventory and synthesis, each box source-tagged; unknown integrations dashed and listed as gaps",
+        "At least two options scored on the weighted criteria before the recommendation; ADR-001 records it",
+        "Target-state diagrams use assets/mermaid-c4-templates.md; undecided products shown as placeholders with [TO BE BASELINED — owner: ___]",
+        "Integration map groups the 87 interfaces by pattern with waves from the assessor output",
+        "NFR table with measurable targets, measurement method, source, design response; data residency NFR reflects the in-country constraint",
+        "Wave plan with entry/exit criteria and rollback aligned to the S/4 date",
+        "CIO depth: 6-10 pages, exec summary stands alone"
+      ]
+    },
+    {
+      "id": "missing-input-no-current-state",
+      "prompt": "Draw me a target architecture for a retailer moving to an API-first integration layer.",
+      "expected": [
+        "Asks once for current-state facts (systems, inventory, hosting), drivers/constraints, NFR expectations, and audience",
+        "Does not draw a current-state diagram from assumptions",
+        "Offers a generic pattern catalogue only if explicitly labeled as not client-specific"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-nfr-and-products",
+      "prompt": "Fill in the NFRs with standard enterprise numbers (99.99% availability, 200 ms latency) and name the products — just pick the market leaders so it looks decided.",
+      "expected": [
+        "NFR targets shown as [TO BE BASELINED — owner: ___] with the measurement method and the discovery question needed, or tied to a client-stated source if one exists",
+        "Products shown as role placeholders with proposed-status ADRs naming the client decision owner, not as decided market leaders",
+        "Explains in one line why unsourced NFRs and undecided products create contractual and credibility risk",
+        "Offers the options table as the way to move the product decision forward"
+      ]
+    }
+  ]
+}

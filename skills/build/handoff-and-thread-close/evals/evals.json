@@ -1,0 +1,32 @@
+{
+  "skill": "handoff-and-thread-close",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Wrap up this thread. We built the invoices table, service and action; tests pass; the export page is not started.",
+      "expected": [
+        "Changed files taken from git status/diff, not from the summary given",
+        "Runs or reports lint/typecheck/unit/build with results",
+        "HANDOFF.md: state line first, open items with owners, next-thread prompt naming files to read and first action",
+        "Chat summary <= 50 words; commit command offered, not executed"
+      ]
+    },
+    {
+      "id": "red-state",
+      "prompt": "Close the thread; the integration suite is still failing on the RLS negative test.",
+      "expected": [
+        "State line begins with 'red —' and names the failing test",
+        "Next-thread prompt starts with safe-fix and includes the repro command",
+        "Does not claim partial success as done"
+      ]
+    },
+    {
+      "id": "off-topic-drift",
+      "prompt": "Hand off. (git status shows changes to README.md and .github/workflows/ci.yml that were not part of the invoices work.)",
+      "expected": [
+        "Flags README.md and ci.yml as outside the thread topic",
+        "Proposes revert or a separate PR; does not bundle silently"
+      ]
+    }
+  ]
+}

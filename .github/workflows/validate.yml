@@ -1,0 +1,22 @@
+name: validate-skills
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Repo validator
+        run: python3 scripts/validate.py
+      - name: Spec validator (agentskills.io skills-ref)
+        continue-on-error: true
+        run: |
+          pip install -q skills-ref || exit 0
+          for d in $(find skills -name SKILL.md -exec dirname {} \;); do skills-ref validate "$d" || true; done
+      - name: Script syntax
+        run: |
+          python3 -m compileall -q skills scripts
+          for f in $(find scripts skills -name '*.sh'); do bash -n "$f"; done

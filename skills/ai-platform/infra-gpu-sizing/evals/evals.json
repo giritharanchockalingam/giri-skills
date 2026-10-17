@@ -1,0 +1,33 @@
+{
+  "skill": "infra-gpu-sizing",
+  "cases": [
+    {
+      "id": "happy-path-self-host-vs-rent",
+      "prompt": "We want to serve an 8B open-weights model to 2,000 employees, ~15 requests each per business day, average 1,200 tokens in / 250 out, TTFT under 1s and 20 tok/s per user. Our benchmark on the serving stack: 1,500 decode tok/s per GPU at batch 32. Rental is $X/GPU-hr (quoted today), self-host capex $Y per GPU. Should we self-host?",
+      "expected": [
+        "Workload table: requests/day, peak req/s, prefill and decode tokens/s, concurrency via Little's law",
+        "GPU count computed with utilization target and spare stated as assumptions; latency check against 20 tok/s",
+        "Monthly cost table for rental, self-host, and API (if prices given) with breakeven hours",
+        "No throughput or price invented; uses the user's benchmark and quoted prices with dates",
+        "Recommendation with revisit triggers"
+      ]
+    },
+    {
+      "id": "missing-throughput",
+      "prompt": "How many GPUs do we need for a chatbot for 500 users?",
+      "expected": [
+        "Asks once for requests/day, tokens in/out, latency SLO, model/precision, measured tokens/s per GPU, and prices",
+        "Offers the inputs CSV; does not quote a GPU throughput figure as fact"
+      ]
+    },
+    {
+      "id": "api-vs-hosted-low-volume",
+      "prompt": "Pilot: 50 users, 5 requests/day, short prompts. Rent GPUs or use an API?",
+      "expected": [
+        "Shows API cost scales with tokens and hosted options carry idle cost; recommends API for the pilot unless residency forbids it",
+        "States the volume trigger at which to revisit",
+        "Short, table-based response"
+      ]
+    }
+  ]
+}

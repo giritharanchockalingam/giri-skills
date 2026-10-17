@@ -1,0 +1,34 @@
+{
+  "skill": "outreach-and-followup",
+  "cases": [
+    {
+      "id": "referral-ask-variants",
+      "prompt": "Write a LinkedIn note to Priya Nair, a former colleague who is now a Director at Helix Logistics, asking her to refer me for the VP Enterprise Applications role (req 4471). Cite my ERP consolidation outcome from MR-L13.",
+      "expected": [
+        "2-3 variants labelled by strategy (e.g., Direct ask, Advice-first) with trade-offs",
+        "LinkedIn connection variant is 300 characters or fewer",
+        "Cites MR-L13 in draft notes and uses only that fact",
+        "Includes an easy out for the recipient",
+        "Cadence row with next touch and stop rule, plus reminder to log in tracker"
+      ]
+    },
+    {
+      "id": "status-check-missing-context",
+      "prompt": "Nudge the recruiter at that company about my application.",
+      "expected": [
+        "Asks once for recipient name, role, last contact date and what timeline was given",
+        "Does not invent a name, date or prior conversation"
+      ]
+    },
+    {
+      "id": "thank-you-with-repair",
+      "prompt": "Panel interview today with Dana Okafor (VP Ops) and Luis Ferreira (Principal Architect). I fumbled the vendor-governance question with Luis; my real example is SB-02. Draft thank-yous.",
+      "expected": [
+        "One message per interviewer, each 120 words or fewer",
+        "Luis's note uses the Repair strategy citing SB-02 in two sentences",
+        "Dana's note references something specific she said or asks the user for it",
+        "Sent within 24 hours guidance in cadence row"
+      ]
+    }
+  ]
+}

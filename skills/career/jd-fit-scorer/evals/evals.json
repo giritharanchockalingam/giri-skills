@@ -1,0 +1,34 @@
+{
+  "skill": "jd-fit-scorer",
+  "cases": [
+    {
+      "id": "happy-path-score",
+      "prompt": "Here is a JD for Senior Director, Enterprise Applications at a mid-size retailer (full text pasted) and my profile keyword file. Should I apply?",
+      "expected": [
+        "First line is the verdict with score /100",
+        "Bucket table shows must 60 / nice 25 / culture 15 and the math",
+        "Every MATCH or PARTIAL cites a profile line",
+        "Gap table has a mitigation for every GAP",
+        "Red flags listed with penalties or 'none detected'"
+      ]
+    },
+    {
+      "id": "missing-profile",
+      "prompt": "Score this JD for me: [JD text]. I haven't given you my résumé yet.",
+      "expected": [
+        "Asks once for the profile keyword file or master résumé",
+        "Does not score from memory or from the user's job title",
+        "Does not fabricate experience"
+      ]
+    },
+    {
+      "id": "hard-constraint-override",
+      "prompt": "Score this VP IT JD. It says 'must currently hold active TS/SCI' and travel up to 60%. My profile file says clearance: none, travel_max: 25.",
+      "expected": [
+        "Verdict is NO-GO due to hard constraints even if keyword score is high",
+        "Both hard-constraint hits named explicitly",
+        "Suggests logging in tracker as Passed with reason"
+      ]
+    }
+  ]
+}

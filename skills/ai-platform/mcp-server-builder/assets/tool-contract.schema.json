@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tool contract template (MCP-style)",
+  "description": "Copy per tool. Fields under x-contract are enforced by the tool server, not the model.",
+  "type": "object",
+  "required": ["name", "description", "inputSchema", "outputSchema", "x-contract"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "examples": ["search_tickets"] },
+    "description": {
+      "type": "string",
+      "examples": ["Search support tickets by status, assignee, and date. Use to find tickets before reading or updating one. Do not use to create tickets."]
+    },
+    "inputSchema": {
+      "type": "object",
+      "examples": [{
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["open", "pending", "closed"], "description": "Ticket status filter" },
+          "assignee": { "type": "string", "description": "Agent id (8-digit numeric)", "pattern": "^[0-9]{8}$" },
+          "since": { "type": "string", "format": "date", "description": "Only tickets updated on/after this date (ISO 8601)" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 },
+          "cursor": { "type": "string", "description": "Pagination cursor from a previous call" }
+        }
+      }]
+    },
+    "outputSchema": {
+      "type": "object",
+      "examples": [{
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["ok", "error"] },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": { "type": "array", "items": { "type": "object" } },
+              "total": { "type": "integer" },
+              "truncated": { "type": "boolean" },
+              "next_cursor": { "type": ["string", "null"] }
+            }
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "enum": ["NOT_FOUND", "INVALID_ARGUMENT", "UNAUTHORIZED", "RATE_LIMITED", "TIMEOUT", "UPSTREAM_ERROR"] },
+              "message": { "type": "string" },
+              "retryable": { "type": "boolean" },
+              "details": { "type": "object" }
+            }
+          }
+        }
+      }]
+    },
+    "x-contract": {
+      "type": "object",
+      "required": ["side_effect", "idempotent", "scopes", "timeout_ms"],
+      "properties": {
+        "version": { "type": "string", "examples": ["1.0.0"] },
+        "side_effect": { "type": "string", "enum": ["read", "write", "irreversible", "external_comm"] },
+        "idempotent": { "type": "boolean" },
+        "idempotency_key_input": { "type": ["string", "null"], "description": "Name of the input property carrying the idempotency key for writes" },
+        "two_phase": { "type": "boolean", "description": "true when a prepare/commit pair is required (irreversible)" },
+        "scopes": { "type": "array", "items": { "type": "string" }, "examples": [["tickets:read"]] },
+        "timeout_ms": { "type": "integer", "examples": [5000] },
+        "rate_limit_per_min": { "type": "integer" },
+        "max_result_bytes": { "type": "integer" },
+        "tenant_scoping": { "type": "string", "enum": ["auth_context"], "default": "auth_context" },
+        "untrusted_output": { "type": "boolean", "description": "true when results contain third-party content (email bodies, web pages)" },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": { "input": { "type": "object" }, "output": { "type": "object" } }
+          }
+        }
+      }
+    }
+  }
+}

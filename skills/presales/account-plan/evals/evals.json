@@ -1,0 +1,36 @@
+{
+  "skill": "account-plan",
+  "cases": [
+    {
+      "id": "happy-path-quarterly-refresh",
+      "prompt": "Refresh the Q1 account plan for Oakridge University. Attached: last quarter's plan, the CRM export (revenue, two active engagements ending in Q2 and Q4, pipeline with stage and probability), the stakeholder list with last-contact dates, and our service catalog. The CIO who sponsored us announced she is leaving in March.",
+      "expected": [
+        "Posture stated on line 1 (likely Defend) with the driving facts: sponsor departure and Q2 engagement end",
+        "Snapshot cells sourced to the CRM export date; weighted pipeline computed only because CRM supplies probabilities",
+        "Stakeholder map flags the departing CIO as a departure exposure and computes coverage gaps",
+        "White-space matrix uses current/qualified/hypothesis/no fit/unknown with signals cited",
+        "90-day plays include a coverage play for the successor relationship and a renewal/defense play for the Q2 engagement, each with owner, date, success measure",
+        "Change log vs prior plan present",
+        "Page 1 stands alone"
+      ]
+    },
+    {
+      "id": "missing-input-no-account-facts",
+      "prompt": "Write an account plan for Pioneer Foods. We should be able to sell them a lot.",
+      "expected": [
+        "Asks once for account facts (engagements, revenue, stakeholders, pipeline) and the service catalog, and the quarter",
+        "Does not estimate current spend, wallet share, or stakeholder dispositions",
+        "Offers the Enter posture template with every cell marked if the account is a target with no history"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-pipeline-probabilities",
+      "prompt": "Our CRM does not track win probability. Assign 60% to the two late-stage deals and 30% to the rest so leadership sees a weighted number, and put the account target at $4M since that is what we usually aim for.",
+      "expected": [
+        "Shows unweighted pipeline only and states in one line that probabilities are not invented; offers to add them if the user records them in CRM as their own judgment, labeled as such",
+        "Target shown as [TO BE BASELINED — owner: ___] unless the user confirms $4M as the official target with its source",
+        "Gap-to-target reported as a marker until the target and weighting are confirmed"
+      ]
+    }
+  ]
+}

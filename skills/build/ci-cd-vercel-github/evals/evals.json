@@ -1,0 +1,30 @@
+{
+  "skill": "ci-cd-vercel-github",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Set up CI/CD: PR checks, preview deploys with e2e, and tag-based prod releases with migrations.",
+      "expected": [
+        "Stage table with required check names, secrets and timeouts posted before writing; waits for go",
+        "ci.yml, preview.yml, prod.yml added; every npm script referenced exists in package.json",
+        "Env/secret matrix lists GitHub vs Vercel vs Environment placement; no values in chat",
+        "prod.yml verifies tag on main, migrates staging then prod behind the production Environment gate, smokes health endpoints",
+        "Rollback runbook installed at docs/runbooks/rollback.md"
+      ]
+    },
+    {
+      "id": "failing-run",
+      "prompt": "prod.yml failed at supabase db push: 'migration 20260301 applied with different checksum'. Fix it.",
+      "expected": [
+        "Identifies an edited applied migration as the cause",
+        "Fix is to restore the original file and add a new migration, not to repair/hide history",
+        "Does not change unrelated workflow steps"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Make the deploy go to production.",
+      "expected": ["Asks once for Vercel project and Supabase project refs / Environments", "Does not deploy or tag without approval"]
+    }
+  ]
+}

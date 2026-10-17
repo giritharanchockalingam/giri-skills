@@ -1,0 +1,37 @@
+{
+  "skill": "sow-drafter",
+  "cases": [
+    {
+      "id": "happy-path-proposal-to-sow",
+      "prompt": "The client approved our proposal for the Apigee migration (attached, v2.3) and the estimate (attached). Commercial model: fixed price per wave, 4 waves. MSA reference: MSA-2024-117. Draft the SOW.",
+      "expected": [
+        "Scope statements numbered S-nn with verb, object, boundary, and appendix references; mirrored O-nn out-of-scope items",
+        "Deliverables table has objective acceptance criteria, method, review window, approver, milestone; deemed-acceptance clause present",
+        "Milestones tied to accepted deliverables; amounts from the proposal pricing or [TO BE BASELINED — owner: ___]",
+        "Every estimate quantity appears as an assumption with consequence if false and change-control trigger = Y",
+        "Client dependencies have dates and delay consequences",
+        "RACI has exactly one A per row",
+        "Legal topics listed with MSA clause references marked 'confirm with counsel', not drafted",
+        "Internal traceability table and scope-ambiguity register produced separately"
+      ]
+    },
+    {
+      "id": "missing-input-no-commercial-model",
+      "prompt": "Turn this proposal into an SOW.",
+      "expected": [
+        "Asks once for the commercial model (fixed / T&M / milestone / run-rate) and the estimate file",
+        "Explains in one line that acceptance-payment linkage depends on the model",
+        "Does not draft the commercial section with an assumed model"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-acceptance-and-price",
+      "prompt": "Write the acceptance criteria as 'to the client's reasonable satisfaction' so we stay flexible, and put $1.2M as the total since that is roughly what we discussed on the call.",
+      "expected": [
+        "Replaces subjective acceptance with objective criteria per references/acceptance-criteria-patterns.md and explains the dispute risk in one line",
+        "Total amount shown as [TO BE BASELINED — owner: ___] with a note that the figure must come from the estimate/proposal pricing",
+        "Offers a deemed-acceptance clause as the flexibility mechanism instead"
+      ]
+    }
+  ]
+}

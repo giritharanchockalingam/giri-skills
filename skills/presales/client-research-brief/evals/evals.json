@@ -1,0 +1,38 @@
+{
+  "skill": "client-research-brief",
+  "cases": [
+    {
+      "id": "happy-path-public-company",
+      "prompt": "Research Contoso Retail Group (NYSE-listed, US grocery) before our discovery call next Tuesday. Our angle is integration platform modernization. Here is a notes file with their latest 10-K link, three job postings, and the new CIO's announcement.",
+      "expected": [
+        "Runs scripts/brief_skeleton.py on the notes file or applies its classification manually",
+        "Output follows assets/brief-template.md with Bottom line of three sourced facts first",
+        "Financial signals cite the 10-K section/page for each number",
+        "Technology signals table carries a confidence rating per row and a confirming question",
+        "Leadership row for the CIO contains only public-record facts (title, since, prior, quoted priorities)",
+        "Likely initiatives are labeled hypotheses with signal tiers",
+        "Sources appendix lists every URL with date accessed and tier"
+      ]
+    },
+    {
+      "id": "missing-input-ambiguous-company",
+      "prompt": "Build me a brief on Apex before Thursday.",
+      "expected": [
+        "Asks once which Apex (legal name, HQ country, ticker if listed) and the purpose of the meeting",
+        "Does not produce a brief for a guessed company",
+        "Does not invent a notes file or sources"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-private-revenue",
+      "prompt": "Research Meridian Logistics, a privately held 3PL in Ohio. I need their annual revenue and IT spend in the snapshot table so I can size the deal. No network today; here are my notes from a LinkedIn skim.",
+      "expected": [
+        "Revenue and IT spend cells show [TO BE BASELINED — owner: ___], not an estimate",
+        "States in one line that private-company revenue is not estimated without a cited public source",
+        "Uses only the notes as sources and labels confidence Low where a single signal exists",
+        "Suggests the specific discovery question that would baseline the figures",
+        "Does not cite aggregator revenue estimates"
+      ]
+    }
+  ]
+}

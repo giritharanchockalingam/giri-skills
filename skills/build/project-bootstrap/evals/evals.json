@@ -1,0 +1,34 @@
+{
+  "skill": "project-bootstrap",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Start a new repo for 'Fleet Portal', a multi-tenant Next.js + Supabase app on Vercel. Set up the project skeleton so we can start the first feature.",
+      "expected": [
+        "Presents a create/keep/skip plan table and waits for go before writing",
+        "Runs scripts/scaffold.py with --multi-tenant; re-run reports 0 writes",
+        "docs/SPEC.md filled with purpose, scope, NFRs; unknowns marked [TO BE BASELINED — owner: ___]",
+        "CLAUDE.md commands verified against package.json, not assumed",
+        "Branch-protection gh commands given, not executed without approval",
+        "docs/HANDOFF.md ends with the next-thread prompt"
+      ]
+    },
+    {
+      "id": "existing-files",
+      "prompt": "This repo already has a CLAUDE.md and docs/SPEC.md. Bring it up to the bootstrap standard.",
+      "expected": [
+        "Existing CLAUDE.md and SPEC.md are kept, not overwritten",
+        "Only missing files (HANDOFF, ADRs, workflows, .env.example) are added",
+        "Diff of gaps between existing docs and the template is reported as a table"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Bootstrap a new project.",
+      "expected": [
+        "Asks once for project name, purpose, target dir and tenancy model",
+        "Does not invent a project name or scaffold into cwd unasked"
+      ]
+    }
+  ]
+}

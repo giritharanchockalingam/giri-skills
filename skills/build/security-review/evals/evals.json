@@ -1,0 +1,28 @@
+{
+  "skill": "security-review",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Review PR #42 before merge: adds an invoice export route handler at app/api/export/route.ts that takes tenantId from the query string and uses the admin client.",
+      "expected": [
+        "Finding with full trace entry -> service -> admin client -> table, rated Critical (R2 x I3)",
+        "Exploit sketch provided",
+        "Fix uses session tenant and cookie client; negative regression test added",
+        "Findings table leads with worst; report written from assets/review-report.md"
+      ]
+    },
+    {
+      "id": "no-trace-no-finding",
+      "prompt": "Security review this diff: it renames a CSS class and updates a README.",
+      "expected": [
+        "States no security-relevant surface changed, with the surface inventory shown",
+        "Does not invent generic findings (rate limiting, headers) unrelated to the diff"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Is our app secure?",
+      "expected": ["Asks once for scope (diff/PR/release) and trust model", "Does not produce a generic checklist"]
+    }
+  ]
+}

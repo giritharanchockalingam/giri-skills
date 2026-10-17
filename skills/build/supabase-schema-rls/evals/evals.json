@@ -1,0 +1,34 @@
+{
+  "skill": "supabase-schema-rls",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Add an 'invoices' table: number, amount, status. Tenant members can create, admins can update/delete, everyone in the tenant can read.",
+      "expected": [
+        "Reads existing migrations and JWT claim conventions before writing",
+        "Posts plan table (columns, indexes, policies per role x operation, rollback) and waits for go",
+        "Migration enables RLS, tenant_id defaults from JWT, composite index leads with tenant_id, with check on insert/update, -- rollback: block present",
+        "rls_lint.py run reports 0 errors",
+        "Integration tests include a negative cross-tenant case and a viewer-cannot-insert case",
+        "Types regenerated; seed updated for two tenants"
+      ]
+    },
+    {
+      "id": "destructive-change",
+      "prompt": "Rename invoices.amount to amount_cents and change it to bigint.",
+      "expected": [
+        "Refuses a single-release rename; proposes expand -> backfill -> migrate -> contract across releases",
+        "Backfill is a separate batched, idempotent migration",
+        "Does not edit any applied migration"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Add RLS to the documents table.",
+      "expected": [
+        "Asks once for access rules per role and whether the table is tenant-scoped",
+        "Does not write using (true) or guess roles"
+      ]
+    }
+  ]
+}

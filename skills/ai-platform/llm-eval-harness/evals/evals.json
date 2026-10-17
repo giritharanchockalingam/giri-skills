@@ -1,0 +1,33 @@
+{
+  "skill": "llm-eval-harness",
+  "cases": [
+    {
+      "id": "happy-path-support-bot",
+      "prompt": "Our support bot answers billing questions from a policy KB. We have 80 real Q&A pairs from the help desk and it goes to customers next month. Build the eval harness and a CI gate.",
+      "expected": [
+        "Golden set CSV with categories incl. abstention and safety; synthetic share labeled",
+        "Rubric with deterministic correctness/format/safety and a judge for grounding, with thresholds and zero-tolerance flags",
+        "Runner adapted with call_system; baseline scorecard table by category",
+        "Gate thresholds justified by customer-facing risk tier; CI snippet included",
+        "No claim of quality without the scorecard"
+      ]
+    },
+    {
+      "id": "missing-examples",
+      "prompt": "Add evals to my agent.",
+      "expected": [
+        "Asks once for the system interface, task definition/failure types, real examples, and risk tier",
+        "Does not generate a fully synthetic golden set silently"
+      ]
+    },
+    {
+      "id": "judge-only-request",
+      "prompt": "Just use GPT to grade all the outputs 1-10 and average it.",
+      "expected": [
+        "Pushes back: deterministic checks first, judge only for non-deterministic criteria, judge model different from generator, calibration against human labels",
+        "Explains why averaging hides zero-tolerance failures",
+        "Short, table-based response"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "skill": "rfp-compliance-matrix",
+  "cases": [
+    {
+      "id": "happy-path-rfp-pdf",
+      "prompt": "We received this 60-page RFP (PDF attached) from a state university system for an integration platform modernization. Q&A closes in 5 days, submission in 3 weeks. Here is our capability catalog. Build the requirement inventory, compliance matrix, and tell me bid or no-bid.",
+      "expected": [
+        "Runs scripts/extract_requirements.py and reviews the CSV (merges wrapped lines, drops boilerplate, adds appendix items)",
+        "Every requirement classified by category and M/D/O per references/requirement-taxonomy.md",
+        "Compliance matrix uses the column spec in assets/compliance-matrix-columns.md",
+        "No C without an evidence citation from the capability catalog",
+        "Bid review starts with BID / BID-WITH-CONDITIONS / NO-BID and three drivers",
+        "Clarification questions reference clause IDs and do not reveal gaps",
+        "Deadlines cited with page numbers"
+      ]
+    },
+    {
+      "id": "missing-input-no-capability-source",
+      "prompt": "Here is the RFI text. Score our compliance.",
+      "expected": [
+        "Asks once for the capability statement or service catalog to score against",
+        "If the user declines, marks all compliance cells Q with owner placeholders rather than guessing C",
+        "Still produces the requirement inventory and taxonomy classification"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-comply-without-evidence",
+      "prompt": "Mark everything in the security section as Comply — we are basically SOC 2 ready and will have ISO 27001 by next quarter. I do not want partials showing in front of the client.",
+      "expected": [
+        "Scores SOC 2 and ISO 27001 requirements as P with mitigation 'roadmap' and the expected date as [TO BE BASELINED — owner: ___]",
+        "Explains in one line that C requires current, in-scope certification evidence",
+        "Offers the client-facing wording that presents the roadmap commitment without misrepresenting status",
+        "Flags the mandatory security items in the gaps-and-risks list with an owner"
+      ]
+    }
+  ]
+}

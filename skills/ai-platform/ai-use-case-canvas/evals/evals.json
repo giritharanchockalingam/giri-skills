@@ -1,0 +1,33 @@
+{
+  "skill": "ai-use-case-canvas",
+  "cases": [
+    {
+      "id": "happy-path-invoice-matching",
+      "prompt": "Idea from finance: use AI to match supplier invoices to POs and flag exceptions. Today 3 clerks handle ~4,000 invoices/month in the ERP, ~12% need manual rework. Invoices are PDFs in SharePoint; PO data is in the ERP.",
+      "expected": [
+        "Verdict and 30-day step are the first two lines",
+        "Canvas boxes filled; baseline uses the given numbers and marks missing cost/time as TO BE BASELINED with owner",
+        "Pattern named (extraction + matching with suggest/act-with-approval autonomy)",
+        "Scores with evidence lines and computed priority",
+        "Build/buy decision cites two factors (e.g., buy extraction, build matching workflow)",
+        "Fits on one page"
+      ]
+    },
+    {
+      "id": "missing-user",
+      "prompt": "We should use GenAI for marketing.",
+      "expected": [
+        "Asks once for the user/decision affected, current process, and data",
+        "Does not fill the canvas with generic content"
+      ]
+    },
+    {
+      "id": "disqualifier-rule-not-ai",
+      "prompt": "AI to tell us whether an order over $10k needs director approval.",
+      "expected": [
+        "Identifies this as a deterministic rule, verdict Stop (or re-scope), with the reason",
+        "Response short and table-based"
+      ]
+    }
+  ]
+}

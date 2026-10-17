@@ -1,0 +1,32 @@
+{
+  "skill": "slm-demo-builder",
+  "cases": [
+    {
+      "id": "happy-path-retail-returns",
+      "prompt": "Build a 10-minute showroom demo for retail ops leaders: a store associate uses an on-prem SLM assistant to resolve a return against policy and trigger a refund with manager approval. No real data.",
+      "expected": [
+        "Demo spec with persona, before/after (illustrative), 3-5 step happy path, two wow moments, a planted out-of-policy return handled by abstention or escalation",
+        "Synthetic data plan: entities, volumes, seeded generator, planted record ids, no real names",
+        "UI stub with mocked POS/refund system and real model call",
+        "Timed talk track with objection handling and the pilot ask",
+        "Readiness checklist incl. reset and offline fallback"
+      ]
+    },
+    {
+      "id": "missing-audience",
+      "prompt": "Make a demo of our agent.",
+      "expected": [
+        "Asks once for audience, scenario/decision, stack constraints, slot/delivery",
+        "Does not default to a feature tour"
+      ]
+    },
+    {
+      "id": "feature-tour-pushback",
+      "prompt": "Show all 9 capabilities of the platform in the demo.",
+      "expected": [
+        "Recommends one decision per demo and proposes a sequence of demos or a menu instead",
+        "Keeps the response short and table-based"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+# ci.yml — lint → typecheck → unit → build on every PR and push to main.
+# Required status check name: "ci / lint-typecheck-test"
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --coverage
+      - name: Coverage gate (server/ >= 80%)
+        run: node -e "const s=require('./coverage/coverage-summary.json').total; if (s.lines.pct<80){console.error('coverage',s.lines.pct);process.exit(1)}"
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  rls-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: RLS lint (fails on tables without RLS or policies without tenant predicate)
+        run: python3 -I scripts/rls_lint.py supabase/migrations --client-dirs app components lib/supabase/browser.ts
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Block committed env files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\.local|\.production|\.staging)?$'; then
+            echo "::error::.env file committed"; exit 1; fi
+      - name: Block NEXT_PUBLIC_ service role
+        run: |
+          if grep -rnE 'NEXT_PUBLIC_[A-Z_]*SERVICE_ROLE' --include='*.ts' --include='*.tsx' --include='*.env.example' . ; then
+            echo "::error::service role key exposed as NEXT_PUBLIC_"; exit 1; fi

@@ -1,0 +1,31 @@
+{
+  "skill": "observability-setup",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "We go live next week. Set up logging, error tracking, health checks and alerts for this Next.js/Supabase app on Vercel.",
+      "expected": [
+        "Asks once for critical journeys, vendor/DSN availability and notification channel",
+        "Plan table posted and approved before changes",
+        "lib/logger.ts with redaction + request context; console.* replaced in minimal diffs; no-console lint rule",
+        "/api/health (no deps) and /api/health/deep (bearer, timeouts, 503 on down) added with tests",
+        "Alert rules each have threshold, window, tier, runbook, owner; SLO table per journey",
+        "Synthetic failure verified to fire an alert on preview"
+      ]
+    },
+    {
+      "id": "existing-partial",
+      "prompt": "We already have Sentry wired. Add health endpoints and alerts only.",
+      "expected": [
+        "Inventories existing Sentry config and keeps it",
+        "Adds only health routes and alert rules; no logger rewrite unless console.* found",
+        "Tags requestId in existing Sentry setup if missing, as a minimal diff"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Add observability.",
+      "expected": ["Asks once for critical journeys and alert channel", "Does not invent SLO numbers; marks them to be baselined with owner"]
+    }
+  ]
+}

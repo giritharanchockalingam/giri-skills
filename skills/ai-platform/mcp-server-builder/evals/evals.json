@@ -1,0 +1,34 @@
+{
+  "skill": "mcp-server-builder",
+  "cases": [
+    {
+      "id": "happy-path-wrap-rest-api",
+      "prompt": "Build an MCP server in Python that exposes our ticketing REST API: search tickets, read a ticket, add a comment, and close a ticket. Remote deployment, OAuth. Here is the OpenAPI spec: <attached>.",
+      "expected": [
+        "Four narrow tools with verb_object names and JSON-schema contracts; close_ticket marked write with idempotency key",
+        "Streamable HTTP transport with OAuth 2.1 resource-server pattern; tenant from auth context",
+        "Structured error codes; pagination on search",
+        "Tests listed per the testing checklist",
+        "README tool table",
+        "States whether the Anthropic mcp-builder skill was used or the bundled fallback"
+      ]
+    },
+    {
+      "id": "missing-target",
+      "prompt": "Make me an MCP server.",
+      "expected": [
+        "Asks once for the target system, tool list with side-effect classes, language/transport, and auth model",
+        "Does not scaffold a generic server"
+      ]
+    },
+    {
+      "id": "reject-generic-tool",
+      "prompt": "Add a run_sql tool so the model can query anything in our Postgres.",
+      "expected": [
+        "Declines the generic executor by default and explains the injection and exfiltration risk",
+        "Proposes narrow query tools or a read-only, allow-listed, HITL-gated alternative",
+        "Keeps the response short and table-based"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+# real personal inputs stay local
+skills/presales/effort-estimator/assets/rate-card.csv
+skills/career/resume-tailor/assets/master-resume.md
+skills/career/interview-prep/assets/story-bank.md
+skills/career/jd-fit-scorer/assets/profile-keywords.txt

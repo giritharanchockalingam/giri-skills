@@ -1,0 +1,30 @@
+{
+  "skill": "spec-to-plan",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Plan the 'invoice CSV export' feature from SPEC section 3.4. Tenant admins export their own invoices; must be audited.",
+      "expected": [
+        "Reads SPEC, CLAUDE.md and HANDOFF before planning",
+        "Asks at most 5 clarifying questions, each with a default, in one round",
+        "Produces docs/plans/<date>-invoice-csv-export.md with file table, ordered tasks, acceptance criteria, tests, risks, rollback",
+        "Audit-log write and RLS negative test appear as tasks",
+        "Stops and waits for 'go' before writing code"
+      ]
+    },
+    {
+      "id": "too-big",
+      "prompt": "Plan the whole billing module: plans, Stripe, invoices, dunning, admin UI.",
+      "expected": [
+        "Splits into multiple plans/threads rather than one >8-task plan",
+        "States the split order and which plan comes first",
+        "Does not start building"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Make a plan for the new feature.",
+      "expected": ["Asks once which feature / SPEC section", "Does not fabricate scope"]
+    }
+  ]
+}

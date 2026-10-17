@@ -1,0 +1,38 @@
+{
+  "name": "giri-skills",
+  "owner": { "name": "Giritharan Chockalingam" },
+  "metadata": {
+    "description": "Presales, enterprise app building, AI platform, and career skills built to a Big 4 / Fortune 50 quality bar.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "presales",
+      "source": "./plugins/presales",
+      "description": "Discovery, client research, RFP compliance, proposals, SOWs, estimation, architecture docs, exec deck redlines, competitive positioning, migration assessment, value cases, account plans, orals prep.",
+      "version": "0.1.0",
+      "skills": ["./skills/presales"]
+    },
+    {
+      "name": "build",
+      "source": "./plugins/build",
+      "description": "Enterprise-grade app building on Next.js/Supabase/Vercel: bootstrap, spec-to-plan, schema+RLS, conventions, TDD, security review, observability, CI/CD, safe-fix, handoff, multi-tenant, PRD.",
+      "version": "0.1.0",
+      "skills": ["./skills/build"]
+    },
+    {
+      "name": "ai-platform",
+      "source": "./plugins/ai-platform",
+      "description": "AI strategy/CoE, agent architecture, MCP servers, RAG design, eval harness, governance, GPU sizing, SLM demos, use-case canvas.",
+      "version": "0.1.0",
+      "skills": ["./skills/ai-platform"]
+    },
+    {
+      "name": "career",
+      "source": "./plugins/career",
+      "description": "JD fit scoring, résumé tailoring, interview prep, outreach, application tracking, offer evaluation.",
+      "version": "0.1.0",
+      "skills": ["./skills/career"]
+    }
+  ]
+}

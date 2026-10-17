@@ -1,0 +1,35 @@
+{
+  "skill": "offer-evaluator",
+  "cases": [
+    {
+      "id": "two-offers-vs-current",
+      "prompt": "Compare Offer A (Austin, base 250K, 30% bonus, 25K sign-on, 120K RSU over 4 yrs, 30K relocation) and Offer B (remote, base 235K, 25% bonus, 15K sign-on) against my current job (Columbus, 215K, 20% bonus). COL indices from my calculator: Columbus 100, Austin 108 (as of Oct 2026).",
+      "expected": [
+        "First line is a recommendation with the deciding number",
+        "Total-comp table with year-1 cash, annual recurring, annualized total, COL-adjusted recurring per option",
+        "COL indices cited with the user's source and date; none assumed",
+        "Negotiation plan with 2-3 levers, ask, justification, fallback",
+        "Decision matrix with weights summing to 100 and arithmetic shown"
+      ]
+    },
+    {
+      "id": "missing-col-index",
+      "prompt": "Evaluate this offer in Raleigh vs my current job in Denver. Figure out the cost of living difference for me.",
+      "expected": [
+        "Does not supply or assume a COL index",
+        "Asks the user for indices with a source, or compares nominal figures with the COL adjustment marked TO BE BASELINED owner user",
+        "Still produces the nominal total-comp table from supplied figures"
+      ]
+    },
+    {
+      "id": "negotiation-plan-only",
+      "prompt": "Offer is below the band midpoint they disclosed (band 230-290K, offer 240K). I'm forfeiting a 35K bonus. What should I negotiate and in what order?",
+      "expected": [
+        "Leads with base (L1) citing the disclosed band, then sign-on (L2) citing the forfeited 35K",
+        "Sequencing follows thank -> call -> one justified counter -> written confirmation",
+        "Asks the user for probability estimates rather than assuming them",
+        "Points to outreach-and-followup for the message draft"
+      ]
+    }
+  ]
+}
