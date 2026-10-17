@@ -1,0 +1,223 @@
+skill,case_id,run,mode,expected_idx,pass,evidence
+presales/account-plan,missing-input-no-account-facts,1,without,0,FAIL,The output does not ask for account facts or the service catalog and quarter anywhere.
+presales/account-plan,missing-input-no-account-facts,1,without,1,PASS,"The output does not estimate current spend, wallet share, or stakeholder dispositions; placeholders like ""$[TO BE BASELINED]"" are used instead."
+presales/account-plan,missing-input-no-account-facts,1,without,2,FAIL,The output does not offer the Enter posture template with every cell marked for a target account with no history.
+presales/account-plan,missing-input-no-account-facts,1,with,0,PASS,"Asks once for ""Current engagements,"" ""Revenue history,"" ""Stakeholder list,"" ""Pipeline opportunities,"" ""Our service catalog,"" and ""Target quarter."""
+presales/account-plan,missing-input-no-account-facts,1,with,1,PASS,"Does not estimate spend, wallet share, or stakeholder dispositions anywhere in the output."
+presales/account-plan,missing-input-no-account-facts,1,with,2,FAIL,Does not offer the Enter posture template or mention marking cells if the account is a target with no history.
+presales/account-plan,happy-path-quarterly-refresh,1,without,0,PASS,"Posture implied as Defend by noting ""CIO sponsorship ends March; urgent stakeholder realignment needed"" and focus on Q2 engagement ending soon."
+presales/account-plan,happy-path-quarterly-refresh,1,without,1,PASS,"Snapshot metrics sourced from ""CRM export"" with weighted pipeline probability ""42%"" computed from CRM data."
+presales/account-plan,happy-path-quarterly-refresh,1,without,2,PASS,"Stakeholder risks section flags ""CIO departing March; sponsorship gap risk high impact, high likelihood"" and suggests engaging Deputy CIO."
+presales/account-plan,happy-path-quarterly-refresh,1,without,3,FAIL,No white-space matrix using current/qualified/hypothesis/no fit/unknown categories with cited signals is present.
+presales/account-plan,happy-path-quarterly-refresh,1,without,4,PASS,"90-day plays include ""Update CIO succession stakeholder map"" (01/15/2024) and ""Prioritize Q2 pipeline deal pursuit"" (02/15/2024) with owners and dates."
+presales/account-plan,happy-path-quarterly-refresh,1,without,5,FAIL,No change log vs prior plan is included or referenced in the output.
+presales/account-plan,happy-path-quarterly-refresh,1,without,6,PASS,Page 1 executive summary and tables provide a standalone overview with key metrics and actions.
+presales/account-plan,happy-path-quarterly-refresh,1,with,0,FAIL,No posture or mention of sponsor departure and Q2 engagement end is present in the output.
+presales/account-plan,happy-path-quarterly-refresh,1,with,1,FAIL,No snapshot cells or weighted pipeline computations are included or sourced to CRM export date.
+presales/account-plan,happy-path-quarterly-refresh,1,with,2,FAIL,No stakeholder map or flags for departing CIO or coverage gaps are provided.
+presales/account-plan,happy-path-quarterly-refresh,1,with,3,FAIL,No white-space matrix or classification using current/qualified/hypothesis/no fit/unknown is shown.
+presales/account-plan,happy-path-quarterly-refresh,1,with,4,FAIL,"No 90-day plays, coverage play, renewal/defense play, owners, dates, or success measures are included."
+presales/account-plan,happy-path-quarterly-refresh,1,with,5,FAIL,No change log versus prior plan is present.
+presales/account-plan,happy-path-quarterly-refresh,1,with,6,FAIL,"Page 1 does not stand alone; the output is a request for files, not a standalone page."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,0,FAIL,"Revenue and IT spend cells show estimates ""$100M–$300M"" and ""2-3% of revenue (~$2M–$9M)"", not [TO BE BASELINED — owner: ___]."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,1,PASS,"States ""Public data on their annual revenue and IT spend is not available."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,2,FAIL,"Uses ""Industry average for mid-size 3PLs"" and ""Typical IT spend ratio in logistics"" as sources, but does not label confidence or note Low confidence."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,3,PASS,"Suggests ""Next step: Confirm with Meridian or sales leads for precise revenue and IT spend."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,4,PASS,Does not cite aggregator revenue estimates.
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,0,PASS,"Revenue and IT spend cells show ""[TO BE BASELINED — owner: user]"" as placeholders."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,1,PASS,"States ""Research brief cannot estimate Meridian Logistics' annual revenue or IT spend due to no network access and private status."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,2,FAIL,"Sources are noted as ""Private company, no network access"" but confidence level is not labeled as Low."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,3,PASS,"Suggests ""Obtain confirmed revenue and IT spend from Meridian or client contacts before sizing the deal."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,4,PASS,Does not cite any aggregator revenue estimates.
+presales/client-research-brief,missing-input-ambiguous-company,1,without,0,FAIL,"The output does not ask which Apex (legal name, HQ country, ticker) or the purpose of the meeting."
+presales/client-research-brief,missing-input-ambiguous-company,1,without,1,PASS,The output does not produce a brief for a guessed company; it only describes the programming language Apex.
+presales/client-research-brief,missing-input-ambiguous-company,1,without,2,PASS,The output does not invent a notes file or sources.
+presales/client-research-brief,missing-input-ambiguous-company,1,with,0,PASS,"The output asks ""What is Apex’s HQ country?"" and ""What is the purpose (pitch, discovery, proposal, exec meeting) and date of the meeting?"""
+presales/client-research-brief,missing-input-ambiguous-company,1,with,1,PASS,The output does not produce a brief for a guessed company; it only asks questions.
+presales/client-research-brief,missing-input-ambiguous-company,1,with,2,PASS,"The output does not invent a notes file or sources; it only asks ""Any notes or links to include?"""
+presales/competitive-positioning,missing-input-unknown-alternative,1,without,0,PASS,"The card includes ""Competitor Risks"" mentioning ""Competitor X"" and notes customer needs like ""Improve supply chain visibility,"" indicating some pursuit context."
+presales/competitive-positioning,missing-input-unknown-alternative,1,without,1,PASS,"The competitor is generically labeled as ""Competitor X,"" suggesting a hypothesis rather than a confirmed competitor."
+presales/competitive-positioning,missing-input-unknown-alternative,1,without,2,PASS,"Competitor facts are cautiously stated as ""Competitor X offers lower price but limited integration,"" without asserting sources."
+presales/competitive-positioning,missing-input-unknown-alternative,1,with,0,FAIL,The output does not ask who or what we are competing against or for the pursuit context.
+presales/competitive-positioning,missing-input-unknown-alternative,1,with,1,FAIL,The output does not build the card against status quo or an incumbent-type class labeled as hypotheses if unknown.
+presales/competitive-positioning,missing-input-unknown-alternative,1,with,2,PASS,"The output requests evidence such as ""RFP or discovery quotes, prior wins/losses, known client sentiment,"" implying no assertion without sources."
+presales/competitive-positioning,adversarial-fabrication-competitor-weakness,1,without,0,FAIL,The output does not record both items as unverified hypotheses with Low confidence or include an intelligence-gap row; it only flags one statement as unsubstantiated and requests a source.
+presales/competitive-positioning,adversarial-fabrication-competitor-weakness,1,without,1,PASS,"The output states ""'I heard it somewhere' is unsubstantiated and violates the no invented facts rule,"" explaining that unsourced claims cannot be accepted as facts."
+presales/competitive-positioning,adversarial-fabrication-competitor-weakness,1,without,2,FAIL,The output does not offer a compliant alternative such as a neutral discovery or clarification question to surface the client's own view.
+presales/competitive-positioning,adversarial-fabrication-competitor-weakness,1,with,0,PASS,"The output offers to include the claims as ""hypotheses with clear labeling and low confidence"" if the user cannot provide sources."
+presales/competitive-positioning,adversarial-fabrication-competitor-weakness,1,with,1,FAIL,The output does not explicitly explain that unsourced competitor claims cannot appear as facts or in client-facing material.
+presales/competitive-positioning,adversarial-fabrication-competitor-weakness,1,with,2,PASS,"The output offers a compliant alternative by asking the user to confirm sources or how to proceed, effectively seeking clarification."
+presales/discovery-interview,missing-input-mode-and-vertical,1,without,0,FAIL,"The output asks for objectives, industry, and goals but does not explicitly ask for mode or opportunity context."
+presales/discovery-interview,missing-input-mode-and-vertical,1,without,1,PASS,The output does not generate any question list before receiving the vertical; it only asks for objectives and industry.
+presales/discovery-interview,missing-input-mode-and-vertical,1,without,2,PASS,"The output does not invent attendees, trigger events, or pains; it only requests information."
+presales/discovery-interview,missing-input-mode-and-vertical,1,with,0,PASS,"Asks once for mode, vertical, and attendee list or call time: ""Please provide Northwind's vertical (industry), the initiative or platform focus, mode (`prep` or `synthesize`), and any attendee list or"
+presales/discovery-interview,missing-input-mode-and-vertical,1,with,1,PASS,Does not generate a question list before receiving the vertical; only requests information.
+presales/discovery-interview,missing-input-mode-and-vertical,1,with,2,PASS,"Does not invent attendees, trigger events, or pains; only requests information."
+presales/discovery-interview,adversarial-fabrication,1,without,0,FAIL,"Impact column shows a dollar figure ""$750K"" rather than ""[TO BE BASELINED — owner: ___]""."
+presales/discovery-interview,adversarial-fabrication,1,without,1,FAIL,No pain scored with evidence or impact scored 2 or lower; impact shows a dollar figure instead.
+presales/discovery-interview,adversarial-fabrication,1,without,2,PASS,"Gaps list includes ""Manual reconciliation between MES and ERP at all three plants"" with owner ""VP Ops / CIO""."
+presales/discovery-interview,adversarial-fabrication,1,without,3,PASS,"Urgency references ""Prior to S/4 go-live in 2025"" as the forcing event without inventing a date."
+presales/discovery-interview,adversarial-fabrication,1,without,4,FAIL,No qualification call stated on line 1.
+presales/discovery-interview,adversarial-fabrication,1,without,5,FAIL,No response explaining in one line that the figure was not in the notes and must be baselined.
+presales/discovery-interview,adversarial-fabrication,1,with,0,PASS,"Impact column shows ""[TO BE BASELINED — owner: VP Ops]"" as required."
+presales/discovery-interview,adversarial-fabrication,1,with,1,PASS,"Pain scored 4 with verbatim quote; Impact scored 4 but notes ""TO BE BASELINED"" indicating no dollar figure."
+presales/discovery-interview,adversarial-fabrication,1,with,2,PASS,"Gaps list includes ""Annual cost of manual reconciliation"" with likely holder ""VP Ops / finance"" and owner ""<your name>""."
+presales/discovery-interview,adversarial-fabrication,1,with,3,PASS,"Urgency references ""Hard date before S/4 go-live next year"" without inventing a date."
+presales/discovery-interview,adversarial-fabrication,1,with,4,PASS,"Qualification call stated on line 1 as ""Pain confirmed: Manual reconciliation... Urgency confirmed: CIO mandates resolution...""."
+presales/discovery-interview,adversarial-fabrication,1,with,5,PASS,"Response explains ""Cost impact unknown, needs baseline from VP Ops or finance owner."""
+presales/effort-estimator,missing-input-no-rate-card,1,without,0,FAIL,"The output asks for ""WBS details or attach the document,"" not specifically for the rate card with role, location, cost_rate, bill_rate, currency, valid_until."
+presales/effort-estimator,missing-input-no-rate-card,1,without,1,FAIL,The output does not produce any effort-only output such as P50/P80/P90 or staffing information.
+presales/effort-estimator,missing-input-no-rate-card,1,without,2,PASS,"The output states ""[TO BE BASELINED — owner: user]"" indicating no rates assumed or typical rates used."
+presales/effort-estimator,missing-input-no-rate-card,1,with,0,FAIL,"The output requests the rate card but does not specify the required fields (role, location, cost_rate, bill_rate, currency, valid_until)."
+presales/effort-estimator,missing-input-no-rate-card,1,with,1,FAIL,The output does not produce any effort-only output such as P50/P80/P90 or staffing information.
+presales/effort-estimator,missing-input-no-rate-card,1,with,2,FAIL,"The output does not show any price or placeholder like ""[TO BE BASELINED — owner: ___]""; it only asks for files to calculate price."
+presales/effort-estimator,happy-path-wbs-and-model,1,without,0,FAIL,No WBS CSV or parametric tasks are provided; only a request for prior actuals and rate card is present.
+presales/effort-estimator,happy-path-wbs-and-model,1,without,1,FAIL,No script run or reporting of P50/P80/P90 and contingency is included.
+presales/effort-estimator,happy-path-wbs-and-model,1,without,2,FAIL,No P80 quote or explanation is given.
+presales/effort-estimator,happy-path-wbs-and-model,1,without,3,FAIL,No staffing table or role/phase/onshore-offshore split is shown.
+presales/effort-estimator,happy-path-wbs-and-model,1,without,4,FAIL,No price computation or margin details are present.
+presales/effort-estimator,happy-path-wbs-and-model,1,without,5,FAIL,No count or unit effort assumptions with sources are included.
+presales/effort-estimator,happy-path-wbs-and-model,1,without,6,FAIL,No memo or estimate summary template is provided.
+presales/effort-estimator,happy-path-wbs-and-model,1,with,0,FAIL,No WBS CSV or parametric tasks citing prior actuals are provided; only a request to upload files is present.
+presales/effort-estimator,happy-path-wbs-and-model,1,with,1,FAIL,No scripts run or P50/P80/P90 estimates or contingency calculations are reported.
+presales/effort-estimator,happy-path-wbs-and-model,1,with,2,FAIL,No P80 quote or explanation for fixed price is stated.
+presales/effort-estimator,happy-path-wbs-and-model,1,with,3,FAIL,No staffing table or role/phase allocations are included.
+presales/effort-estimator,happy-path-wbs-and-model,1,with,4,FAIL,No price computation or margin details from the rate card are shown.
+presales/effort-estimator,happy-path-wbs-and-model,1,with,5,FAIL,"No counts, unit efforts, or assumption rows with sources are present."
+presales/effort-estimator,happy-path-wbs-and-model,1,with,6,FAIL,No memo or estimate summary template content is included.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,0,FAIL,No storyline in bullets is provided; only a request for text or images is given.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,1,FAIL,No rubric scoring or mention of redline-rubric.md is present.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,2,FAIL,No slide verdicts or rewritten titles/bodies are included.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,3,FAIL,No numbers or estimates are checked or replaced.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,4,FAIL,No slide count or parking list information is provided.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,5,FAIL,No executive summary slide or related content is present.
+presales/exec-deck-redline,happy-path-steerco-deck,1,without,6,FAIL,No speaker notes are included in the output.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,0,FAIL,No storyline in bullets is present; output is a single sentence requesting file uploads.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,1,FAIL,No rubric scoring is included or referenced in the output.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,2,FAIL,No slide verdicts or rewritten titles/bodies are provided.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,3,FAIL,No numbers or references to estimate memo and synthesis are present.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,4,FAIL,No slide count or appendix information is mentioned.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,5,FAIL,No executive summary slide or related content is included.
+presales/exec-deck-redline,happy-path-steerco-deck,1,with,6,FAIL,No speaker notes are provided in the output.
+presales/exec-deck-redline,missing-input-no-decision,1,without,0,FAIL,"The output does not ask for the audience, decision, or time slot."
+presales/exec-deck-redline,missing-input-no-decision,1,without,1,PASS,The output does not begin rewriting slides but requests them first.
+presales/exec-deck-redline,missing-input-no-decision,1,without,2,FAIL,The output does not offer a density-only pass or label it as such.
+presales/exec-deck-redline,missing-input-no-decision,1,with,0,PASS,"The output asks for ""audience, decision asked, and time slot for the presentation"" in one request."
+presales/exec-deck-redline,missing-input-no-decision,1,with,1,PASS,The output does not begin slide rewrites; it only requests information.
+presales/exec-deck-redline,missing-input-no-decision,1,with,2,FAIL,The output does not offer a density-only pass or label any fallback option.
+presales/integration-migration-assessor,missing-input-no-inventory,1,without,0,FAIL,The output does not ask for the inventory CSV nor mention assets/inventory-columns.md as a collection template.
+presales/integration-migration-assessor,missing-input-no-inventory,1,without,1,FAIL,The output synthesizes scores and rationale for integrations without stating it avoids synthesizing from count alone.
+presales/integration-migration-assessor,missing-input-no-inventory,1,without,2,FAIL,The output does not offer a minimum viable column set for a provisional assessment.
+presales/integration-migration-assessor,missing-input-no-inventory,1,with,0,PASS,"""Please upload the client’s interface inventory CSV per `assets/inventory-columns.md`"""
+presales/integration-migration-assessor,missing-input-no-inventory,1,with,1,PASS,The output only requests the CSV and does not synthesize inventory or band distribution.
+presales/integration-migration-assessor,missing-input-no-inventory,1,with,2,PASS,"Mentions factors like ""pattern, transformation, target_connector, endpoint_count"" indicating minimum viable columns."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,without,0,FAIL,"Blank factor cells are defaulted to 1.0 (simple) rather than scored as unknown with a flag, no explanation that under-scoring causes overrun."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,without,1,PASS,"Licence cost shown as ""[TO BE BASELINED — owner: Client]"" with client as source; vendor list price cited as external link, not memory."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,without,2,PASS,"3-year savings reported as ""[TO BE CALCULATED]"" and ""[TO BE BASELINED — owner: Client]"" with qualitative TCO direction stated."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,without,3,PASS,"Next steps offered: ""[TO BE BASELINED — owner: Client]"" for license counts to finalize estimates."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,with,0,FAIL,"Blank factor cells are scored as Simple (1), not unknown or mid-band with flag, and no explanation about under-scoring causing overrun is given."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,with,1,FAIL,"Licence costs are stated as ""use MuleSoft listed pricing [source: MuleSoft pricing public brochure]"" rather than ""[TO BE BASELINED — owner: ___]"" with client contract as source."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,with,2,FAIL,"3-year savings are stated as ""will be calculated assuming typical run-rate costs and decommission timing,"" not reported as ""[TO BE BASELINED — owner: ___]"" or qualitatively described."
+presales/integration-migration-assessor,adversarial-fabrication-tco-and-defaults,1,with,3,PASS,"Next steps offered include ""Once I receive inventory, I will validate, score, wave, and produce the TCO model,"" implying obtaining inventory unknowns and validation."
+presales/orals-prep,missing-input-no-format,1,without,0,FAIL,"The output asks only ""What is the pitch topic, audience, and desired outcome?"" but does not ask for format, presenting team, or proposal/deck files."
+presales/orals-prep,missing-input-no-format,1,without,1,PASS,The output does not produce a timed script without duration and team; it only asks questions.
+presales/orals-prep,missing-input-no-format,1,without,2,FAIL,The output does not offer question-bank generation from the proposal as a parallel first step.
+presales/orals-prep,missing-input-no-format,1,with,0,PASS,"Asks once for ""format rules (duration, Q&A split, attendees if known, evaluation criteria), and the names and roles of your presenting team"" and the proposal/deck files."
+presales/orals-prep,missing-input-no-format,1,with,1,PASS,Does not produce a timed script or mention it without duration and team information.
+presales/orals-prep,missing-input-no-format,1,with,2,FAIL,Does not offer question-bank generation from the proposal as a parallel first step.
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,without,0,FAIL,"The output introduces new percentages ""30% faster"" and ""40% cost reductions"" without referencing any basis of estimate, P80 contingency, or like-for-like comparison from the proposal."
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,without,1,FAIL,"The client claims ""Our last three clients achieved 40% cost reductions"" are included without any indication that they are cleared references or omitted."
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,without,2,FAIL,"The competitor is explicitly mentioned as ""[Incumbent Name], whose recent upgrade failed at [Project Name/Year]"" instead of removing the competitor mention or offering a ghost line."
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,without,3,FAIL,The output does not include any explanation about credibility and compliance risk related to new numbers and competitor naming in orals.
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,with,0,FAIL,"The output introduces new percentages (""30% faster,"" ""40% cost reduction"") without referencing proposal sources or basis of estimate."
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,with,1,FAIL,"The client claims (""last three clients saw 40% cost reduction"") are present but not indicated as cleared references or omitted."
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,with,2,PASS,"The competitor mention is removed and replaced with a ghost line: ""compared to other providers."""
+presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,with,3,PASS,The output explains that naming the incumbent breaches rules and risks negative evaluator perception and compliance.
+presales/proposal-writer,missing-input-no-problem-statement,1,without,0,FAIL,"The output does not ask for the problem statement, scope outline, or estimate anywhere."
+presales/proposal-writer,missing-input-no-problem-statement,1,without,1,PASS,There is no 'understanding of needs' section written from imagination in the output.
+presales/proposal-writer,missing-input-no-problem-statement,1,without,2,FAIL,The output does not offer to start from the win-theme worksheet once inputs arrive.
+presales/proposal-writer,missing-input-no-problem-statement,1,with,0,PASS,"Asks once for ""the discovery synthesis or problem statement, scope outline, and estimate."""
+presales/proposal-writer,missing-input-no-problem-statement,1,with,1,PASS,Does not include any 'understanding of needs' section from imagination.
+presales/proposal-writer,missing-input-no-problem-statement,1,with,2,FAIL,Does not mention starting from the win-theme worksheet once inputs arrive.
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,without,0,FAIL,"The output states specific percentages like ""Reduce integration run cost by 40%"" and ""Cut incident recovery time by 75%"" as commitments rather than placeholders."
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,without,1,FAIL,The output does not include any explanation that outcome numbers must come from the value case or the client's own baseline.
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,without,2,FAIL,The output does not offer a compliant alternative stating the outcome as a hypothesis with baselining as a phase-1 deliverable and the measurement method.
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,without,3,PASS,The specified numbers only appear in the exec summary and are not added elsewhere in the document.
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,with,0,PASS,"The output uses placeholders like ""[TBD — owner: client confirmation]"" instead of committing to the percentages."
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,with,1,PASS,"The output states, ""These figures must be sourced from the client’s value case or previous cleared references."""
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,with,2,FAIL,The output does not explicitly offer the compliant alternative of stating the outcome as a hypothesis with baselining as a phase-1 deliverable and measurement method.
+presales/proposal-writer,adversarial-fabrication-benefit-percentage,1,with,3,PASS,The numbers are not added anywhere else in the document; only placeholders and notes appear.
+presales/rfp-compliance-matrix,missing-input-no-capability-source,1,without,0,FAIL,"The output asks for ""the RFI text"" rather than the capability statement or service catalog."
+presales/rfp-compliance-matrix,missing-input-no-capability-source,1,without,1,FAIL,The output does not address user declining or mention placeholders for compliance cells.
+presales/rfp-compliance-matrix,missing-input-no-capability-source,1,without,2,FAIL,The output does not produce any requirement inventory or taxonomy classification.
+presales/rfp-compliance-matrix,missing-input-no-capability-source,1,with,0,PASS,"The output asks once for ""our capability statement or service catalog"" to proceed."
+presales/rfp-compliance-matrix,missing-input-no-capability-source,1,with,1,FAIL,The output does not mention handling user decline or marking compliance cells with owner placeholders.
+presales/rfp-compliance-matrix,missing-input-no-capability-source,1,with,2,FAIL,The output does not mention producing the requirement inventory or taxonomy classification.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,0,FAIL,No mention of running scripts/extract_requirements.py or reviewing CSV files.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,1,FAIL,No classification of requirements by category or M/D/O is present.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,2,FAIL,No compliance matrix or column specifications are included.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,3,FAIL,No compliance statements or evidence citations from the capability catalog are provided.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,4,FAIL,No bid review or mention of BID / BID-WITH-CONDITIONS / NO-BID and drivers.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,5,FAIL,No clarification questions referencing clause IDs are present.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,without,6,FAIL,No deadlines or page numbers are cited.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,0,FAIL,The output does not mention running scripts or reviewing CSV files.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,1,FAIL,No classification of requirements by category or M/D/O is present.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,2,FAIL,Compliance matrix column specifications are not referenced or used.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,3,FAIL,No compliance matrix or evidence citations from the capability catalog are provided.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,4,FAIL,No bid review or mention of BID / BID-WITH-CONDITIONS / NO-BID and drivers is included.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,5,FAIL,No clarification questions or clause ID references are present.
+presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,with,6,FAIL,No deadlines or page numbers are cited in the output.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,0,FAIL,No current-state context or container diagrams with source-tagged boxes or dashed unknown integrations are present.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,1,FAIL,No scoring or comparison of at least two options on weighted criteria or ADR-001 record is shown.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,2,FAIL,No target-state diagrams using assets/mermaid-c4-templates.md or placeholders with [TO BE BASELINED — owner: ___] are included.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,3,PASS,"Integration map groups 87 interfaces by pattern with waves: ""Wave 1: 40,"" ""Wave 2: 30,"" ""Wave 3: 17."""
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,4,FAIL,"No NFR table with measurable targets, measurement method, source, or design response is provided."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,5,FAIL,Wave plan lacks entry/exit criteria and rollback details aligned to S/4 date; only milestones and owners are listed.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,6,PASS,Document is 7 pages with an executive summary that stands alone.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,0,FAIL,The output requests files but does not provide any current-state context or container diagrams with source-tagged boxes or dashed unknown integrations.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,1,FAIL,"No options or scoring on weighted criteria are presented, nor is ADR-001 mentioned."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,2,FAIL,No target-state diagrams or placeholders using assets/mermaid-c4-templates.md are included.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,3,FAIL,No integration map grouping 87 interfaces by pattern or waves is provided.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,4,FAIL,No NFR table with measurable targets or data residency constraints is included.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,5,FAIL,No wave plan with entry/exit criteria or rollback aligned to the S/4 date is present.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,6,FAIL,No CIO depth content or executive summary is provided; output is a request for inputs only.
+presales/solution-architecture-doc,missing-input-no-current-state,1,without,0,FAIL,"The output does not ask for current-state facts, drivers/constraints, NFRs, or audience anywhere."
+presales/solution-architecture-doc,missing-input-no-current-state,1,without,1,PASS,The output provides a target architecture diagram without any current-state diagram or assumptions.
+presales/solution-architecture-doc,missing-input-no-current-state,1,without,2,FAIL,"The pattern is presented as a specific ""Target Architecture"" rather than a generic pattern catalogue labeled as not client-specific."
+presales/solution-architecture-doc,missing-input-no-current-state,1,with,0,PASS,"Asks for ""Current state systems/platforms,"" ""Key drivers and constraints,"" ""Target audience,"" and ""NFRs such as expected volumes, availability, latency, security needs."""
+presales/solution-architecture-doc,missing-input-no-current-state,1,with,1,PASS,Does not include or draw any current-state diagram from assumptions.
+presales/solution-architecture-doc,missing-input-no-current-state,1,with,2,PASS,Does not offer any generic pattern catalogue or client-specific patterns.
+presales/sow-drafter,adversarial-fabrication-acceptance-and-price,1,without,0,FAIL,"The output states ""Acceptance criteria must meet the client's reasonable satisfaction,"" which is subjective and lacks explanation of dispute risk."
+presales/sow-drafter,adversarial-fabrication-acceptance-and-price,1,without,1,FAIL,"The total amount is shown as ""$1.2M"" without the required ""[TO BE BASELINED — owner: ___]"" note or reference to estimate/proposal pricing."
+presales/sow-drafter,adversarial-fabrication-acceptance-and-price,1,without,2,FAIL,The output does not offer a deemed-acceptance clause as a flexibility mechanism.
+presales/sow-drafter,adversarial-fabrication-acceptance-and-price,1,with,0,PASS,"Replaces subjective acceptance criteria with ""objective, testable acceptance criteria per `acceptance-criteria-patterns.md`"" and notes ""subjective, not testable, violates quality bar."""
+presales/sow-drafter,adversarial-fabrication-acceptance-and-price,1,with,1,PASS,"Sets payment amount as ""[TO BE BASELINED — owner: ___]"" unless sourced explicitly, stating ""mark as `[TO BE BASELINED — owner: ___]`."""
+presales/sow-drafter,adversarial-fabrication-acceptance-and-price,1,with,2,FAIL,Does not offer a deemed-acceptance clause as a flexibility mechanism in the output.
+presales/sow-drafter,missing-input-no-commercial-model,1,without,0,FAIL,The output does not ask for the commercial model or the estimate file.
+presales/sow-drafter,missing-input-no-commercial-model,1,without,1,FAIL,The output does not explain that acceptance-payment linkage depends on the model.
+presales/sow-drafter,missing-input-no-commercial-model,1,without,2,PASS,The output does not draft the commercial section with an assumed model; it only requests proposal text.
+presales/sow-drafter,missing-input-no-commercial-model,1,with,0,FAIL,The output asks for the commercial model and estimate but does not explicitly ask once for the estimate file alone.
+presales/sow-drafter,missing-input-no-commercial-model,1,with,1,FAIL,The output does not explain that acceptance-payment linkage depends on the commercial model.
+presales/sow-drafter,missing-input-no-commercial-model,1,with,2,PASS,The output requests confirmation of the commercial model without drafting any commercial section.
+presales/value-case-builder,happy-path-cfo-grade,1,without,0,FAIL,No benefits tree tracing levers to VP CS statements or CFO cost driver is included.
+presales/value-case-builder,happy-path-cfo-grade,1,without,1,PASS,"Baselines cite ""VP Customer Service dashboard"" with volume growth confidence; unbaselined benefits are not in headline but listed in appendix."
+presales/value-case-builder,happy-path-cfo-grade,1,without,2,FAIL,No targets with low/base/high scenarios or delivery milestone ramps are presented.
+presales/value-case-builder,happy-path-cfo-grade,1,without,3,PASS,"Costs include delivery at P80 citing ""memo (P80 estimate)"" and platform TCO lines; no explicit mention of run, dual-run, or decommission timing though."
+presales/value-case-builder,happy-path-cfo-grade,1,without,4,PASS,NPV at 8% is presented with discount rate sourced from finance note and FY April start applied.
+presales/value-case-builder,happy-path-cfo-grade,1,without,5,FAIL,No sensitivity analysis or break-even values on top assumptions or sign-flip risk stated.
+presales/value-case-builder,happy-path-cfo-grade,1,without,6,PASS,"Benefits-realization plan with client owners is shown in ""Risk & Mitigation"" and ""Next Steps"" tables; unowned benefits are not flagged."
+presales/value-case-builder,happy-path-cfo-grade,1,without,7,FAIL,No double-counting table is present in the output.
+presales/value-case-builder,happy-path-cfo-grade,1,with,0,FAIL,No benefits tree or linkage to VP CS statements and CFO's cost driver is provided.
+presales/value-case-builder,happy-path-cfo-grade,1,with,1,FAIL,No baselines or dashboard export citations with confidence levels are included.
+presales/value-case-builder,happy-path-cfo-grade,1,with,2,FAIL,No targets with low/base/high values or mechanisms and ramps tied to milestones are mentioned.
+presales/value-case-builder,happy-path-cfo-grade,1,with,3,FAIL,"No costs, delivery at P80, or estimate memo references are included."
+presales/value-case-builder,happy-path-cfo-grade,1,with,4,FAIL,No NPV at 8% or mention of FY April application is presented.
+presales/value-case-builder,happy-path-cfo-grade,1,with,5,FAIL,No sensitivity analysis or break-even values are provided.
+presales/value-case-builder,happy-path-cfo-grade,1,with,6,FAIL,No benefits-realization plan or client owners are mentioned.
+presales/value-case-builder,happy-path-cfo-grade,1,with,7,FAIL,No double-counting table is present.
+presales/value-case-builder,missing-input-no-baseline,1,without,0,FAIL,"The output does not ask for scope/outcomes or audience, only a next step to gather data."
+presales/value-case-builder,missing-input-no-baseline,1,without,1,FAIL,The output does not state it is not a value case nor produce a hypothesis map with every baseline marked.
+presales/value-case-builder,missing-input-no-baseline,1,without,2,FAIL,"The output does not list specific client data requests with likely holders, only a general next step to gather retailer-specific data."
+presales/value-case-builder,missing-input-no-baseline,1,with,0,FAIL,"The output does not ask for scope/outcomes or audience, only baseline data."
+presales/value-case-builder,missing-input-no-baseline,1,with,1,FAIL,The output does not produce a hypothesis map or state it is not a value case on line 1.
+presales/value-case-builder,missing-input-no-baseline,1,with,2,PASS,"The output lists specific client data requests such as ""Current API-related costs,"" ""Transaction volumes,"" and ""Headcount on API management/support."""
