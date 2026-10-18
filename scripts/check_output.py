@@ -36,10 +36,13 @@ Exit 0 when every check passes, 1 otherwise. Stdlib only.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import io
 import json
+import os
 import re
+import runpy
 import shlex
 import subprocess
 import sys
@@ -47,6 +50,102 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skillmeta  # noqa: E402
+
+
+# ------------------------------------------------------------------ command execution
+# One executor for run_skill.py script steps and `cmd:` checks. Subprocess by default;
+# in-process (runpy) when RUN_SKILL_INPROC=1 or inproc=True — the only path available
+# where subprocess does not exist (Pyodide). Same argv, cwd, captured stdout/stderr and
+# exit code either way, so outputs are byte-identical.
+
+def inproc_enabled() -> bool:
+    return os.environ.get("RUN_SKILL_INPROC") == "1"
+
+
+def subprocess_available() -> bool:
+    """False on Pyodide/Emscripten (no fork/exec) or when RUN_SKILL_NO_SUBPROCESS=1 (tests)."""
+    return sys.platform != "emscripten" and os.environ.get("RUN_SKILL_NO_SUBPROCESS") != "1"
+
+
+def python_argv(tokens: list[str]) -> list[str]:
+    """`python3 ...` -> this interpreter in isolated mode (dedupes a leading -I)."""
+    if tokens and tokens[0] in ("python3", "python"):
+        return [sys.executable or "python3", "-I"] + [t for t in tokens[1:] if t != "-I"]
+    return tokens
+
+
+def _script_argv(argv: list[str]):
+    """argv for the script itself when argv is `<python> [-I] <file.py> ...`, else None."""
+    if not argv or argv[0] not in (sys.executable or "python3", "python3", "python"):
+        return None
+    rest = [a for a in argv[1:] if a != "-I"]
+    if not rest or not rest[0].endswith(".py"):
+        return None  # `-m module`, `-c`, or a non-python command
+    return rest
+
+
+class _Exit(SystemExit):
+    pass
+
+
+def run_inproc(script_argv: list[str], cwd) -> tuple[int, str, str]:
+    """Run `script_argv[0]` as __main__ with sys.argv=script_argv, like a fresh `python -I`.
+
+    Returns (exit_code, stdout, stderr). SystemExit follows the interpreter's rules:
+    None/0 -> 0, int -> that code, anything else -> printed to stderr, exit 1.
+    Uncaught exceptions print a traceback to stderr and exit 1. sys.path[0], cwd and
+    the modules the script imported are restored/removed afterwards.
+    """
+    script = Path(script_argv[0])
+    if cwd and not script.is_absolute():
+        script = Path(cwd) / script
+    script = script.resolve()
+    out, err = io.StringIO(), io.StringIO()
+    saved_argv, saved_path, saved_cwd = sys.argv, list(sys.path), os.getcwd()
+    saved_modules = set(sys.modules)
+    code = 0
+    try:
+        if cwd:
+            os.chdir(str(cwd))
+        sys.argv = list(script_argv)
+        sys.path.insert(0, str(script.parent))
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                runpy.run_path(str(script), run_name="__main__")
+            except SystemExit as e:  # noqa: PERF203
+                c = e.code
+                if c is None:
+                    code = 0
+                elif isinstance(c, int):
+                    code = c
+                else:
+                    print(c, file=sys.stderr)
+                    code = 1
+            except BaseException:  # noqa: BLE001 — a crash is exit 1 with the traceback on stderr
+                import traceback
+                traceback.print_exc()
+                code = 1
+    finally:
+        sys.argv, sys.path = saved_argv, saved_path
+        os.chdir(saved_cwd)
+        for m in set(sys.modules) - saved_modules:
+            sys.modules.pop(m, None)
+    return code, out.getvalue(), err.getvalue()
+
+
+def run_command(argv: list[str], cwd=None, timeout: int = 900, inproc: bool | None = None) -> tuple[int, str, str]:
+    """Run argv; (exit_code, stdout, stderr). In-process: a `python3 <file.py>` command runs via
+    runpy; anything else falls back to a subprocess, or raises where none exists (Pyodide)."""
+    if inproc is None:
+        inproc = inproc_enabled()
+    if inproc:
+        sa = _script_argv(argv)
+        if sa is not None:
+            return run_inproc(sa, cwd)
+        if not subprocess_available():
+            raise RuntimeError("subprocess unavailable in-process (only `python3 <script.py> ...` can run)")
+    r = subprocess.run(argv, capture_output=True, text=True, cwd=str(cwd) if cwd else None, timeout=timeout)
+    return r.returncode, r.stdout, r.stderr
 
 VOCAB = {
     "exists", "json", "csv", "csv_rows", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
@@ -197,15 +296,15 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
     if name == "cmd":
         if not arg:
             return _result(spec, False, "cmd has no command")
-        tokens = shlex.split(str(arg).replace("{path}", str(p)))
-        if tokens and tokens[0] in ("python3", "python"):
-            tokens = [sys.executable, "-I"] + [t for t in tokens[1:] if t != "-I"]
+        tokens = python_argv(shlex.split(str(arg).replace("{path}", str(p))))
+        if inproc_enabled() and _script_argv(tokens) is None and not subprocess_available():
+            return _result(spec, False, "skipped: subprocess unavailable in-process")
         try:
-            r = subprocess.run(tokens, capture_output=True, text=True, cwd=cwd, timeout=600)
+            code, out, err = run_command(tokens, cwd=cwd, timeout=600)
         except Exception as e:  # noqa: BLE001
             return _result(spec, False, f"could not run: {e}")
-        tail = (r.stdout + r.stderr).strip().splitlines()[-1:] or [""]
-        return _result(spec, r.returncode == 0, f"exit {r.returncode}: {tail[0]}")
+        tail = (out + err).strip().splitlines()[-1:] or [""]
+        return _result(spec, code == 0, f"exit {code}: {tail[0]}")
     if not p.is_file():
         return _result(spec, False, f"{p} missing")
     text = _read(p)

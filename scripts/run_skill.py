@@ -27,15 +27,22 @@ Exit codes: 0 all checks pass · 1 a step or check failed · 2 required input mi
 (`{out}/needs_input.json` names it; `--assume name=value` proceeds with a labeled
 assumption) · 3 not an agent skill / bad arguments.
 Stdlib only. API keys are read by the provider from the environment and never written.
+
+In-process mode (`--inproc` or RUN_SKILL_INPROC=1): script steps run via runpy in this
+interpreter instead of a subprocess (same argv, cwd, stdout/stderr capture, exit codes,
+`stdout:` redirection and `expect_exit`). Needed where subprocess does not exist
+(Pyodide in the browser); outputs are byte-identical (tests/test_run_skill_inproc.py).
+`--provider none` runs no LLM: llm steps are skipped with a recorded reason and their
+checks fail honestly. `--provider jsbridge` routes LLM calls to a host-registered callback.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shlex
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -245,9 +252,7 @@ def build_argv(cmd: str, values: dict, arg_types: dict) -> list[str]:
             sub = substitute(tok, values)
             if sub != "" or not m:
                 argv.append(sub)
-    if argv and argv[0] in ("python3", "python"):
-        argv = [sys.executable, "-I"] + [a for a in argv[1:] if a != "-I"]
-    return argv
+    return check_output.python_argv(argv)
 
 
 # ------------------------------------------------------------------ steps
@@ -256,8 +261,7 @@ def run_script_step(step, values, arg_types, skill_dir: Path, logs: Path) -> dic
     argv = build_argv(str(step.get("cmd", "")), values, arg_types)
     t0 = time.time()
     try:
-        r = subprocess.run(argv, capture_output=True, text=True, cwd=str(skill_dir), timeout=900)
-        code, out, err = r.returncode, r.stdout, r.stderr
+        code, out, err = check_output.run_command(argv, cwd=skill_dir, timeout=900)
     except Exception as e:  # noqa: BLE001
         code, out, err = 127, "", f"could not run: {e}"
     dur = round(time.time() - t0, 3)
@@ -313,6 +317,13 @@ def run_llm_step(step, values, assumptions, skill_dir: Path, provider, logs: Pat
     try:
         text = provider.complete(system, user, temperature=0.2, max_tokens=4000)
     except Exception as e:  # noqa: BLE001
+        if "no provider key" in str(e):
+            # --provider none, or jsbridge with no callback registered: the step did not run.
+            # Its output is absent, so the checks on it fail honestly.
+            reason = "no provider key (LLM step not run)"
+            return {"step": name, "kind": "llm", "ok": False, "exit": 1, "provider": provider.name,
+                    "skipped": True, "skipped_reason": reason, "reason": reason,
+                    "duration_s": round(time.time() - t0, 3), "error": f"skipped: {reason}"}
         return {"step": name, "kind": "llm", "ok": False, "exit": 1,
                 "duration_s": round(time.time() - t0, 3), "error": f"provider error: {e}"[:300]}
     text = re.sub(r"^```[a-z]*\n|\n```\s*$", "", text.strip())
@@ -330,8 +341,11 @@ def build_args():
     ap.add_argument("--assume", action="append", default=[], metavar="NAME=VALUE",
                     help="supply a missing input as a labeled assumption")
     ap.add_argument("--out", default="", help="output dir (default: runs/<skill>-<timestamp>)")
-    ap.add_argument("--provider", default="dry", choices=["dry", "anthropic", "openai"])
+    ap.add_argument("--provider", default="dry", choices=["dry", "anthropic", "openai", "jsbridge", "none"],
+                    help="none = run no LLM: llm steps are skipped with a reason; jsbridge = host callback")
     ap.add_argument("--model", default="claude-sonnet-4-5")
+    ap.add_argument("--inproc", action="store_true",
+                    help="run script steps in this interpreter (runpy) instead of a subprocess")
     ap.add_argument("--list", action="store_true", help="list agent skills and their inputs")
     ap.add_argument("--explain", metavar="SKILL", help="print the input contract in plain words")
     ap.add_argument("--demo", metavar="SKILL", help="run the skill on its own happy-path eval fixtures")
@@ -350,6 +364,8 @@ def main() -> int:
         return cmd_explain(args.explain)
     if not args.skill:
         sys.exit("error: give a skill (domain/name), --list or --explain")
+    if args.inproc:
+        os.environ["RUN_SKILL_INPROC"] = "1"
 
     skill_dir = resolve_skill_dir(args.skill)
     skill = skillmeta.load_skill(skill_dir)
@@ -417,7 +433,7 @@ def main() -> int:
 
     ok = all(s["ok"] for s in steps) and all(c["pass"] for c in checks)
     run = {"skill": skill_key(skill_dir), "version": str(skill["metadata"].get("version", "")),
-           "provider": args.provider, "model": args.model if args.provider != "dry" else "",
+           "provider": args.provider, "model": args.model if args.provider in ("anthropic", "openai", "jsbridge") else "",
            "out": str(out_dir),
            "inputs": {k: v for k, v in values.items() if k not in ("out", "skill_dir")},
            "assumptions": assumptions, "steps": steps, "checks": checks, "ok": ok}

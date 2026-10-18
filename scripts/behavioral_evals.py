@@ -158,14 +158,55 @@ class OpenAILLM(LLM):
         return _retry(_call)
 
 
+class NoLLM(LLM):
+    """No model at all: run_skill.py skips llm steps with a recorded reason (used when no key)."""
+
+    name = "none"
+
+    def complete(self, system: str, user: str, temperature: float = 1.0,
+                 max_tokens: int = 1500) -> str:
+        raise RuntimeError("no provider key (LLM step not run)")
+
+
+# Set by the host (e.g. the browser via Pyodide) to a callable
+# (system, user, model, max_tokens, temperature) -> str. Never set from this file.
+JS_LLM_CALLBACK = None
+
+
+class JsBridgeLLM(LLM):
+    """Routes completions to a host-registered callback (behavioral_evals.JS_LLM_CALLBACK).
+
+    The browser registers a JS function that POSTs to the model API with a key held only in
+    page memory; this process never sees the key. No callback -> "no provider key" error, so
+    the runner marks the llm step skipped and its outputs' checks fail honestly.
+    """
+
+    name = "jsbridge"
+
+    def __init__(self, model: str):
+        self.model = model
+
+    def complete(self, system: str, user: str, temperature: float = 1.0,
+                 max_tokens: int = 1500) -> str:
+        cb = JS_LLM_CALLBACK
+        if cb is None:
+            raise RuntimeError("no provider key (no JS_LLM_CALLBACK registered)")
+        text = cb(system, user, self.model, max_tokens, temperature)
+        return str(text)
+
+
 def make_provider(name: str, model: str) -> LLM:
     if name == "dry":
         return DryLLM()
+    if name == "none":
+        return NoLLM()
     if name == "anthropic":
         return AnthropicLLM(model)
     if name == "openai":
         return OpenAILLM(model)
-    sys.exit(f"error: unknown provider '{name}' (anthropic|openai|dry)")
+    if name == "jsbridge":
+        return JsBridgeLLM(model)
+    sys.exit(f"error: unknown provider '{name}' (anthropic|openai|dry|none|jsbridge)")
 
 
 # ---------------------------------------------------------------- data loading

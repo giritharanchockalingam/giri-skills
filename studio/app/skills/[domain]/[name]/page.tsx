@@ -5,6 +5,7 @@ import { verdictInfo, agentVerdictInfo, AGENT_COL_TIP } from "@/lib/verdict";
 import { VerdictBadge, AgentBadge, Lift, Trig } from "@/components/Badge";
 import { CaseEvals } from "@/components/CaseEvals";
 import { AgentCases } from "@/components/AgentCases";
+import { RunPanel } from "@/components/RunPanel";
 import { CopyButton } from "@/components/CopyButton";
 import { COL_TIPS } from "@/components/DomainTable";
 import { SectionHead, StatStrip } from "@/components/PageHead";
@@ -123,6 +124,8 @@ export default async function SkillPage({ params }: { params: Promise<{ domain: 
           <p className="caption">{AGENT_COL_TIP}. Open a case for each check and its evidence.</p>
           <AgentCases cases={agentCases} emptyText="Not wired yet — no agent cases ran for this skill." />
         </div>
+
+        {skill.agent && <RunPanel skillId={id} agent={skill.agent} />}
 
         <div className="card card-pad">
           <div className="eyebrow mb-4">SKILL.md</div>

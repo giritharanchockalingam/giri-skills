@@ -4,9 +4,10 @@
 //      AGENT_RESULTS_DIR (default evals/results/agent-dry) for agent.csv + the agent columns of its scorecard.md.
 //      Both relative to the repo root or absolute.
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdirSync, rmSync, copyFileSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { esc, mdToHtml } from "../lib/markdown.mjs";
 
 const STUDIO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = resolve(STUDIO, "..");
@@ -19,8 +20,6 @@ const DOMAIN_ORDER = ["presales", "build", "ai-platform", "career"];
 const VERDICTS = ["OK", "DESC", "BODY", "BOTH"];
 
 // ---------- helpers ----------
-const esc = (s) =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 function listFiles(dir) {
   if (!existsSync(dir)) return [];
@@ -113,7 +112,7 @@ function parseAgent(rawFm) {
   const lines = rawFm.split(/\r?\n/);
   const start = lines.findIndex((l) => /^  agent:\s*$/.test(l));
   if (start < 0) return null;
-  const agent = { inputs: [], steps: [], outputs: [] };
+  const agent = { inputs: [], steps: [], outputs: [], demo: null };
   let section = null;
   for (let i = start + 1; i < lines.length; i++) {
     const l = lines[i];
@@ -123,7 +122,7 @@ function parseAgent(rawFm) {
     const item = l.match(/^      - (\{[\s\S]*\})\s*$/);
     if (item && section) {
       const o = parseFlow(item[1]);
-      if (section === "inputs") agent.inputs.push({ name: o.name ?? "", type: o.type ?? "", required: o.required === true, from: o.from ?? "", default: o.default ?? null });
+      if (section === "inputs") agent.inputs.push({ name: o.name ?? "", type: o.type ?? "", required: o.required === true, from: o.from ?? "", default: o.default ?? null, flag: o.flag ?? null });
       else if (section === "steps") agent.steps.push({ step: o.step ?? "", kind: o.kind ?? "" });
       else agent.outputs.push({ path: o.path ?? "", checks: (Array.isArray(o.checks) ? o.checks : []).map((c) => (typeof c === "string" ? c : JSON.stringify(c))) });
     }
@@ -135,122 +134,6 @@ const unquote = (v) => {
   if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) return v.slice(1, -1);
   return v;
 };
-
-// ---------- markdown -> safe HTML ----------
-function inline(s) {
-  // s is already HTML-escaped. Code spans first (protect their content).
-  const codes = [];
-  s = s.replace(/`([^`]+)`/g, (_, c) => { codes.push(`<code>${c}</code>`); return `\u0000${codes.length - 1}\u0000`; });
-  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => {
-    const safe = /^(https?:|mailto:|\/|#|\.)/.test(u) ? u : "#";
-    return `<a href="${safe}"${safe.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}>${t}</a>`;
-  });
-  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/__([^_]+)__/g, "<strong>$1</strong>");
-  s = s.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<em>$2</em>").replace(/(^|[^_\w])_([^_\n]+)_(?!\w)/g, "$1<em>$2</em>");
-  s = s.replace(/~~([^~]+)~~/g, "<del>$1</del>");
-  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => codes[+i]);
-}
-
-function mdToHtml(md) {
-  const lines = md.replace(/\r\n/g, "\n").split("\n");
-  const out = [];
-  let i = 0;
-  const isTableSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
-  const splitRow = (l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, "|"));
-
-  while (i < lines.length) {
-    const line = lines[i];
-    if (!line.trim()) { i++; continue; }
-
-    // fenced code
-    const fence = line.match(/^\s*(```+|~~~+)\s*([\w.+-]*)/);
-    if (fence) {
-      const close = fence[1];
-      const buf = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith(close)) buf.push(lines[i++]);
-      i++;
-      out.push(`<pre><code${fence[2] ? ` class="lang-${esc(fence[2])}"` : ""}>${esc(buf.join("\n"))}</code></pre>`);
-      continue;
-    }
-    // heading
-    const h = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
-    if (h) {
-      const lvl = h[1].length;
-      const id = h[2].toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
-      out.push(`<h${lvl} id="${esc(id)}">${inline(esc(h[2]))}</h${lvl}>`);
-      i++; continue;
-    }
-    // hr
-    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push("<hr>"); i++; continue; }
-    // table
-    if (line.includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1])) {
-      const head = splitRow(line);
-      const aligns = splitRow(lines[i + 1]).map((c) => (c.startsWith(":") && c.endsWith(":") ? "center" : c.endsWith(":") ? "right" : c.startsWith(":") ? "left" : ""));
-      i += 2;
-      const rows = [];
-      while (i < lines.length && lines[i].includes("|") && lines[i].trim()) rows.push(splitRow(lines[i++]));
-      const al = (k) => (aligns[k] ? ` style="text-align:${aligns[k]}"` : "");
-      out.push(
-        `<table><thead><tr>${head.map((c, k) => `<th${al(k)}>${inline(esc(c))}</th>`).join("")}</tr></thead><tbody>` +
-          rows.map((r) => `<tr>${head.map((_, k) => `<td${al(k)}>${inline(esc(r[k] ?? ""))}</td>`).join("")}</tr>`).join("") +
-          `</tbody></table>`,
-      );
-      continue;
-    }
-    // blockquote
-    if (/^\s*>/.test(line)) {
-      const buf = [];
-      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
-      out.push(`<blockquote>${mdToHtml(buf.join("\n"))}</blockquote>`);
-      continue;
-    }
-    // lists (with nesting by indentation)
-    const li = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
-    if (li) {
-      out.push(renderList(lines, i, li[1].length));
-      i = renderList.end;
-      continue;
-    }
-    // paragraph
-    const buf = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|\s*(```|~~~)|\s*>|\s*([-*+]|\d+[.)])\s)/.test(lines[i]) &&
-      !(lines[i].includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1]))) buf.push(lines[i++].trim());
-    out.push(`<p>${inline(esc(buf.join(" ")))}</p>`);
-  }
-  return out.join("\n");
-}
-
-function renderList(lines, start, indent) {
-  let i = start;
-  const first = lines[i].match(/^(\s*)([-*+]|\d+[.)])\s+/);
-  const ordered = /\d/.test(first[2]);
-  const items = [];
-  while (i < lines.length) {
-    const m = lines[i].match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
-    if (m && m[1].length === indent && /\d/.test(m[2]) === ordered) {
-      items.push({ text: m[3], children: [] });
-      i++;
-      continue;
-    }
-    if (m && m[1].length > indent && items.length) {
-      const sub = renderList(lines, i, m[1].length);
-      items[items.length - 1].children.push(sub);
-      i = renderList.end;
-      continue;
-    }
-    // continuation line (indented, non-empty, not a list marker)
-    if (!m && lines[i].trim() && /^\s+/.test(lines[i]) && items.length) {
-      items[items.length - 1].text += " " + lines[i].trim();
-      i++;
-      continue;
-    }
-    break;
-  }
-  renderList.end = i;
-  const tag = ordered ? "ol" : "ul";
-  return `<${tag}>${items.map((it) => `<li>${inline(esc(it.text))}${it.children.join("")}</li>`).join("")}</${tag}>`;
-}
 
 // ---------- skills ----------
 const skills = [];
@@ -267,6 +150,15 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
     if (existsSync(evalPath)) {
       try { evals = JSON.parse(readFileSync(evalPath, "utf8")); } catch (e) { console.warn(`bad evals.json: ${evalPath}: ${e.message}`); }
     }
+    const agent = parseAgent(raw || "");
+    if (agent) {
+      // the happy-path eval case the runner's --demo uses (same pick as run_skill.demo_args): fixture paths kept relative to the skill dir
+      const withInputs = (evals.cases || []).filter((c) => c.inputs && Object.keys(c.inputs).length);
+      const demoCase = withInputs.find((c) => String(c.id || "").includes("happy")) || withInputs[0] || null;
+      agent.demo = demoCase
+        ? { caseId: demoCase.id, inputs: Object.fromEntries(Object.entries(demoCase.inputs).map(([k, v]) => [k, String(v)])), assume: Object.fromEntries(Object.entries(demoCase.assume || {}).map(([k, v]) => [k, String(v)])) }
+        : null;
+    }
     skills.push({
       id: `${domain}/${name}`,
       domain,
@@ -274,7 +166,7 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
       description: fm.description || "",
       license: fm.license || null,
       metadata: typeof fm.metadata === "object" ? fm.metadata : {},
-      agent: parseAgent(raw || ""),
+      agent,
       bodyHtml: mdToHtml(body),
       files: {
         references: listFiles(join(sdir, "references")),
@@ -504,6 +396,48 @@ if (existsSync(top50Path) && existsSync(pinsPath)) {
   console.warn(`no upstream catalog at ${top50Path} / ${pinsPath}`);
 }
 
+// ---------- runtime bundle for the in-browser Run view (public/runtime/) ----------
+// The runner (scripts/*.py), shared/*.md and, per wired skill, SKILL.md + scripts/ + assets/ + references/ + evals/fixtures/,
+// copied with their repo-relative paths so run_skill.py finds everything under /repo in Pyodide's virtual FS.
+// Excluded: evals/results, docs, vendor, tests, __pycache__.
+const RUNTIME = join(STUDIO, "public", "runtime");
+rmSync(RUNTIME, { recursive: true, force: true });
+const runtimeFiles = [];
+// never ship what the repo keeps local (.gitignore: personal inputs such as the real master résumé or rate card)
+const ignoreGlobs = existsSync(join(ROOT, ".gitignore"))
+  ? readFileSync(join(ROOT, ".gitignore"), "utf8").split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"))
+  : [];
+const globRe = (g) => new RegExp("^" + g.replace(/^\//, "").replace(/\/$/, "").replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*") + "(/|$)");
+const ignored = (rel) => ignoreGlobs.some((g) => (g.includes("/") ? globRe(g).test(rel) : rel.split("/").some((seg) => globRe(g).test(seg))));
+const copyRel = (rel) => {
+  const src = join(ROOT, rel);
+  if (!existsSync(src) || ignored(rel)) return;
+  if (statSync(src).isDirectory()) { for (const f of listFiles(src)) copyRel(`${rel}/${f}`); return; }
+  const dest = join(RUNTIME, "repo", rel);
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(src, dest);
+  runtimeFiles.push({ path: rel, size: statSync(src).size });
+};
+for (const f of ["run_skill.py", "check_output.py", "skillmeta.py", "behavioral_evals.py"]) copyRel(`scripts/${f}`);
+for (const f of listFiles(join(ROOT, "shared")).filter((f) => f.endsWith(".md"))) copyRel(`shared/${f}`);
+for (const s of skills) {
+  if (!s.agent) continue;
+  copyRel(`skills/${s.id}/SKILL.md`);
+  for (const sub of ["scripts", "assets", "references", "evals/fixtures", "evals/evals.json"]) copyRel(`skills/${s.id}/${sub}`);
+}
+const runtimeBytes = runtimeFiles.reduce((a, f) => a + f.size, 0);
+// one fetch instead of 450: every runtime file's text keyed by its repo-relative path (all are UTF-8 text; the build fails otherwise)
+const bundle = {};
+for (const f of runtimeFiles) {
+  const buf = readFileSync(join(RUNTIME, "repo", f.path));
+  try { bundle[f.path] = new TextDecoder("utf-8", { fatal: true }).decode(buf); } catch { throw new Error(`runtime bundle: ${f.path} is not UTF-8 text`); }
+}
+writeFileSync(join(RUNTIME, "bundle.json"), JSON.stringify(bundle));
+writeFileSync(join(RUNTIME, "manifest.json"), JSON.stringify({
+  generated: new Date().toISOString(), root: "/repo", files: runtimeFiles, bytes: runtimeBytes,
+  pyodide: { version: "0.27.7", url: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js" },
+}, null, 1) + "\n");
+
 // ---------- write ----------
 const w = (f, d) => writeFileSync(join(OUT, f), JSON.stringify(d, null, 1) + "\n");
 w("upstream.json", upstream);
@@ -515,4 +449,5 @@ w("agent.json", agent);
 w("findings.json", findings);
 w("meta.json", { ...meta, counts: { skills: skills.length, scorecard: scorecard.length, trigger: trigger.length, quality: quality.length, findings: findings.proposals.length, agent: agent.length, agentWorks, upstream: upstream.length }, domains: DOMAIN_ORDER, verdicts: VERDICTS, agentVerdicts: AGENT_VERDICTS });
 
+console.log(`ingest: runtime bundle: ${runtimeFiles.length} files, ${(runtimeBytes / 1024).toFixed(0)} KB -> public/runtime/`);
 console.log(`ingest: skills=${skills.length} scorecard=${scorecard.length} trigger=${trigger.length} quality=${quality.length} findings=${findings.proposals.length} agent=${agent.length} agentWorks=${agentWorks} wired=${skills.filter((s) => s.agent).length} upstream=${upstream.length} (results: ${meta.resultsDir}; agent: ${meta.agentResultsDir})`);

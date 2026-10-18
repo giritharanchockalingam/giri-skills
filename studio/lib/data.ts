@@ -10,11 +10,13 @@ import upstreamJson from "@/data/upstream.json";
 export type Verdict = "OK" | "DESC" | "BODY" | "BOTH";
 export type AgentVerdict = "Works" | "Partial" | "Broken";
 
-export interface AgentInput { name: string; type: string; required: boolean; from: string; default: string | null }
+export interface AgentInput { name: string; type: string; required: boolean; from: string; default: string | null; flag: string | null }
 export interface AgentStep { step: string; kind: string }
 export interface AgentOutput { path: string; checks: string[] }
+/** The happy-path eval case `run_skill.py --demo` uses: input values (fixture paths relative to the skill dir) and assumptions. */
+export interface AgentDemo { caseId: string; inputs: Record<string, string>; assume: Record<string, string> }
 /** The `metadata.agent` block of SKILL.md: what run_skill.py needs, runs and checks. */
-export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: AgentOutput[] }
+export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: AgentOutput[]; demo: AgentDemo | null }
 
 export interface EvalCase { id: string; prompt: string; expected: string[] }
 export interface Skill {
@@ -50,7 +52,7 @@ export interface Meta {
   domains: string[]; verdicts: Verdict[]; agentVerdicts: AgentVerdict[];
 }
 
-export const skills = skillsJson as Skill[];
+export const skills = skillsJson as unknown as Skill[]; // demo.inputs is a per-skill map; JSON inference makes it a union of literal shapes
 export const scorecard = scorecardJson as ScoreRow[];
 export const trigger = triggerJson as TriggerRow[];
 export const quality = qualityJson as QualityRow[];
