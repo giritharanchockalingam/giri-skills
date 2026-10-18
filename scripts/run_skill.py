@@ -7,6 +7,7 @@
 
     python3 scripts/run_skill.py --list              # agent skills and their inputs
     python3 scripts/run_skill.py --explain <skill>   # input contract in plain words
+    python3 scripts/run_skill.py --demo <skill>      # run it on its own fixtures
 
 The skill argument is `domain/name` or a path to the skill dir / SKILL.md.
 Reads `metadata.agent` from SKILL.md (see docs/AGENT-REBUILD-PLAN.md §2):
@@ -107,6 +108,27 @@ def cmd_list() -> int:
               f"({len(a.get('run', []))} steps, {len(a.get('outputs', []))} outputs)")
         print("\n".join(describe_inputs(a)))
     return 0
+
+
+def demo_args(arg: str) -> list[str]:
+    """Translate --demo <skill> into a normal run using the skill's own happy-path eval fixtures."""
+    skill_dir = resolve_skill_dir(arg)
+    ev = skill_dir / "evals" / "evals.json"
+    cases = json.loads(ev.read_text(encoding="utf-8")).get("cases", []) if ev.exists() else []
+    case = next((c for c in cases if c.get("inputs") and "happy" in str(c.get("id", ""))), None) \
+        or next((c for c in cases if c.get("inputs")), None)
+    if not case:
+        sys.exit(f"error: {arg} has no eval case with inputs to demo")
+    argv = [skill_key(skill_dir)]
+    for k, v in (case.get("inputs") or {}).items():
+        v = str(v)
+        if v.startswith("evals/"):
+            v = str(skill_dir / v)
+        argv += ["--input", f"{k}={v}"]
+    for k, v in (case.get("assume") or {}).items():
+        argv += ["--assume", f"{k}={v}"]
+    print(f"demo: {skill_key(skill_dir)} on eval case '{case.get('id')}'", file=sys.stderr)
+    return argv
 
 
 def cmd_explain(arg: str) -> int:
@@ -312,7 +334,12 @@ def build_args():
     ap.add_argument("--model", default="claude-sonnet-4-5")
     ap.add_argument("--list", action="store_true", help="list agent skills and their inputs")
     ap.add_argument("--explain", metavar="SKILL", help="print the input contract in plain words")
-    return ap.parse_args()
+    ap.add_argument("--demo", metavar="SKILL", help="run the skill on its own happy-path eval fixtures")
+    argv = sys.argv[1:]
+    if "--demo" in argv:
+        i = argv.index("--demo")
+        argv = demo_args(argv[i + 1]) + argv[:i] + argv[i + 2:]
+    return ap.parse_args(argv)
 
 
 def main() -> int:
