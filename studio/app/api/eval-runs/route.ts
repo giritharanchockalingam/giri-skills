@@ -13,7 +13,8 @@ export async function POST(req: Request) {
   if (!can(ctx.role, "eval.run")) return apiError(403, "forbidden", `Your role (${ctx.role}) cannot run evaluations.`);
   const body = await readJson(req);
   const versionId = String(body?.version_id ?? "");
-  const { data: v } = await ctx.supabase.from("sf_skill_versions").select("id, status, manifest, sf_skills(workspace_id)").eq("id", versionId).maybeSingle();
+  const { data: v, error: ve } = await ctx.supabase.from("sf_skill_versions").select("id, status, manifest, sf_skills!sf_skill_versions_skill_id_fkey(workspace_id)").eq("id", versionId).maybeSingle();
+  if (ve) return apiError(500, "query_failed", ve.message);
   const version = v as (Pick<VersionRow, "id" | "status" | "manifest"> & { sf_skills: { workspace_id: string } }) | null;
   if (!version || version.sf_skills.workspace_id !== ctx.workspace.id) return apiError(404, "not_found", "Version not found.");
   if (version.status === "retired" || version.status === "superseded") return apiError(409, "not_runnable", `Version is ${version.status}.`);

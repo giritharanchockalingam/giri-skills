@@ -16,7 +16,8 @@ export async function POST(req: Request) {
   const body = await readJson(req);
   if (!body) return apiError(400, "bad_request", "Body must be a JSON object.");
   const versionId = String(body.version_id ?? "");
-  const { data: v } = await ctx.supabase.from("sf_skill_versions").select("*, sf_skills(id, slug, workspace_id)").eq("id", versionId).maybeSingle();
+  const { data: v, error: ve } = await ctx.supabase.from("sf_skill_versions").select("*, sf_skills!sf_skill_versions_skill_id_fkey(id, slug, workspace_id)").eq("id", versionId).maybeSingle();
+  if (ve) return apiError(500, "query_failed", ve.message);
   const version = v as (VersionRow & { sf_skills: { id: string; slug: string; workspace_id: string } }) | null;
   if (!version || version.sf_skills.workspace_id !== ctx.workspace.id) return apiError(404, "not_found", "Version not found in this workspace.");
   if (!can(ctx.role, version.status === "published" ? "run.published" : "run.any_version")) return apiError(403, "forbidden", `Your role (${ctx.role}) can only run published versions.`);

@@ -22,7 +22,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const next = evalRun.results.find((r) => r.status === "pending");
   if (!next) return finish(ctx, evalRun);
 
-  const { data: v } = await ctx.supabase.from("sf_skill_versions").select("*, sf_skills(slug, workspace_id)").eq("id", evalRun.version_id).single();
+  const { data: v } = await ctx.supabase.from("sf_skill_versions").select("*, sf_skills!sf_skill_versions_skill_id_fkey(slug, workspace_id)").eq("id", evalRun.version_id).single();
   const version = v as VersionRow & { sf_skills: { slug: string; workspace_id: string } };
   if (version.sf_skills.workspace_id !== ctx.workspace.id) return apiError(404, "not_found", "Version not found.");
   const { data: c } = await ctx.supabase.from("sf_eval_cases").select("*").eq("id", next.case_id).maybeSingle();

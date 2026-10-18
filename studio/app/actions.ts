@@ -111,7 +111,7 @@ export async function saveManifest(_: ActionResult | null, fd: FormData): Promis
     if (!v.ok) return fail("Manifest has problems: " + v.problems.map((p) => `${p.path}: ${p.message}`).join(" · "));
     const hash = manifestHash(v.manifest);
     const { data: row, error } = await ctx.supabase.from("sf_skill_versions").update({ manifest: v.manifest, manifest_hash: hash, change_note: str(fd, "change_note", 500) || undefined })
-      .eq("id", versionId).select("id, skill_id, version, status, sf_skills(slug)").single();
+      .eq("id", versionId).select("id, skill_id, version, status, sf_skills!sf_skill_versions_skill_id_fkey(slug)").single();
     if (error) return fail(error.message.includes("immutable") ? "This version is no longer a draft and cannot be edited. Create a new draft version instead." : error.message);
     // the skill's descriptive fields mirror the draft so the catalog stays in step
     await ctx.supabase.from("sf_skills").update({ purpose: v.manifest.purpose, intended_users: v.manifest.intended_users, usage_guidance: v.manifest.usage_guidance }).eq("id", row.skill_id);
@@ -150,7 +150,7 @@ export async function createDraft(_: ActionResult | null, fd: FormData): Promise
   let slug = "", newVersion = 0;
   const r = await guarded("version.create", async (ctx) => {
     const fromId = str(fd, "from_version_id", 64);
-    const from = must(await ctx.supabase.from("sf_skill_versions").select("*, sf_skills(slug, workspace_id)").eq("id", fromId).single(), "version") as VersionRow & { sf_skills: { slug: string; workspace_id: string } };
+    const from = must(await ctx.supabase.from("sf_skill_versions").select("*, sf_skills!sf_skill_versions_skill_id_fkey(slug, workspace_id)").eq("id", fromId).single(), "version") as VersionRow & { sf_skills: { slug: string; workspace_id: string } };
     if (from.sf_skills.workspace_id !== ctx.workspace.id) return fail("Not in this workspace.");
     slug = from.sf_skills.slug;
     const { data: maxRow } = await ctx.supabase.from("sf_skill_versions").select("version").eq("skill_id", from.skill_id).order("version", { ascending: false }).limit(1).single();

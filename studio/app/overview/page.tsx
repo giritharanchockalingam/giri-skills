@@ -31,7 +31,7 @@ export default async function OverviewPage() {
     sb.from("sf_skills").select("id, slug, name, status").eq("workspace_id", ws.id),
     sb.from("sf_version_release_state").select("*").eq("workspace_id", ws.id).in("status", ["in_review", "approved", "draft"]),
     sb.from("sf_runs").select("status, source, cost_usd").eq("workspace_id", ws.id).gte("created_at", since),
-    sb.from("sf_runs").select("id, status, error, created_at, source, version_id, sf_skill_versions(version, sf_skills(slug, name))").eq("workspace_id", ws.id).in("status", ["failed", "timeout"]).gte("created_at", since).order("created_at", { ascending: false }).limit(8),
+    sb.from("sf_runs").select("id, status, error, created_at, source, version_id, sf_skill_versions(version, sf_skills!sf_skill_versions_skill_id_fkey(slug, name))").eq("workspace_id", ws.id).in("status", ["failed", "timeout"]).gte("created_at", since).order("created_at", { ascending: false }).limit(8),
   ]);
   const skills = (skillsQ.data ?? []) as Pick<SkillRow, "id" | "slug" | "name" | "status">[];
   const bySkill = new Map(skills.map((s) => [s.id, s]));

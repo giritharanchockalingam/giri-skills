@@ -17,7 +17,7 @@ interface Factory { contract?: { ok: boolean; problems: { path: string; message:
 export default async function RunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> }) {
   const { id } = await params; const { from } = await searchParams;
   const ctx = await requireWorkspace();
-  const { data } = await ctx.supabase.from("sf_runs").select("*, sf_skill_versions(version, status, manifest_hash, sf_skills(slug, name))").eq("id", id).eq("workspace_id", ctx.workspace.id).maybeSingle();
+  const { data } = await ctx.supabase.from("sf_runs").select("*, sf_skill_versions(version, status, manifest_hash, sf_skills!sf_skill_versions_skill_id_fkey(slug, name))").eq("id", id).eq("workspace_id", ctx.workspace.id).maybeSingle();
   if (!data) notFound();
   const run = data as RunRow & { sf_skill_versions: Pick<VersionRow, "version" | "status" | "manifest_hash"> & { sf_skills: { slug: string; name: string } } };
   const vinfo = run.sf_skill_versions;

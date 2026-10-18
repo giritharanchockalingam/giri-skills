@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ActivityPage() {
   const ctx = await requireWorkspace();
-  const { data } = await ctx.supabase.from("sf_runs").select("id, status, source, created_at, duration_ms, provider, model, cost_usd, cost_is_estimate, error, sf_skill_versions(version, sf_skills(slug, name))").eq("workspace_id", ctx.workspace.id).order("created_at", { ascending: false }).limit(300);
+  const { data } = await ctx.supabase.from("sf_runs").select("id, status, source, created_at, duration_ms, provider, model, cost_usd, cost_is_estimate, error, sf_skill_versions(version, sf_skills!sf_skill_versions_skill_id_fkey(slug, name))").eq("workspace_id", ctx.workspace.id).order("created_at", { ascending: false }).limit(300);
   type Row = Pick<RunRow, "id" | "status" | "source" | "created_at" | "duration_ms" | "provider" | "model" | "cost_usd" | "cost_is_estimate" | "error"> & { sf_skill_versions: Pick<VersionRow, "version"> & { sf_skills: { slug: string; name: string } } };
   const items: RunListItem[] = ((data ?? []) as unknown as Row[]).map((r) => ({ ...r, skill: r.sf_skill_versions.sf_skills.name, slug: r.sf_skill_versions.sf_skills.slug, version: r.sf_skill_versions.version }));
   const failed = items.filter((r) => r.status === "failed" || r.status === "timeout").length;
