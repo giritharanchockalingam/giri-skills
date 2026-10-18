@@ -27,9 +27,9 @@ export function SectionHead({ id, title, em, caption, right }: { id?: string; ti
   );
 }
 
-export function StatStrip({ stats }: { stats: { label: string; value: React.ReactNode; title?: string }[] }) {
+export function StatStrip({ stats, compact }: { stats: { label: string; value: React.ReactNode; title?: string }[]; compact?: boolean }) {
   return (
-    <div className="stats" role="list">
+    <div className={`stats ${compact ? "stats-compact" : ""}`} role="list">
       {stats.map((s) => (
         <div key={s.label} className="stat" role="listitem" title={s.title}>
           <div className="stat-value">{s.value}</div>

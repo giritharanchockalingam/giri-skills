@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
-import { type FileRow } from "@/lib/factory/db";
+import { mdToHtml } from "@/lib/markdown.mjs";
 import { updateSkill, createDraft } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { VersionBar } from "@/components/factory/VersionBar";
 import { ManifestEditor } from "@/components/factory/ManifestEditor";
-import { FileEditor } from "@/components/factory/FileEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +14,7 @@ export default async function AuthoringPage({ params, searchParams }: { params: 
   const d = await loadSkillPage(slug, v ?? null);
   const canEdit = can(d.ctx.role, "version.edit");
   const editable = canEdit && d.version.status === "draft";
-  const { data: files } = await d.ctx.supabase.from("sf_files").select("path, content, sha256, updated_at").eq("version_id", d.version.id).order("path");
+  const instructions = d.version.manifest.instructions_md.trim();
   return (
     <>
       <VersionBar slug={slug} view="authoring" versions={d.versions} current={d.version}
@@ -25,7 +24,12 @@ export default async function AuthoringPage({ params, searchParams }: { params: 
       {!canEdit && <div className="notice notice-info mb-5">Your role ({d.ctx.role}) can read the contract but not change it. Authors and admins edit drafts.</div>}
       <div className="stack">
         <div className="card card-pad">
-          <div className="h3 mb-3">Skill details</div>
+          <div className="eyebrow mb-4">Instructions · v{d.version.version}</div>
+          {instructions ? <div className="prose" dangerouslySetInnerHTML={{ __html: mdToHtml(instructions) }} /> : <p className="none">No instructions written yet{editable ? " — add them in the contract below (Instructions, Markdown)." : "."}</p>}
+        </div>
+        <details className="disclosure">
+          <summary>Skill details</summary>
+          <div className="card card-pad mt-3">
           <ActionForm action={updateSkill} submit="Save details" hidden={{ skill_id: d.skill.id }} disabled={!canEdit}>
             <div className="form-grid form-grid-2">
               <div className="field span-2"><label htmlFor="s-name">Name</label><input id="s-name" name="name" className="input" defaultValue={d.skill.name} required maxLength={160} disabled={!canEdit} /></div>
@@ -35,7 +39,8 @@ export default async function AuthoringPage({ params, searchParams }: { params: 
             </div>
           </ActionForm>
           <p className="caption mt-3">These describe the skill in the catalog. The contract below is versioned; saving it also mirrors purpose/users/guidance here.</p>
-        </div>
+          </div>
+        </details>
 
         <div className="card card-pad">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -45,19 +50,6 @@ export default async function AuthoringPage({ params, searchParams }: { params: 
           <ManifestEditor versionId={d.version.id} slug={slug} manifest={d.version.manifest} editable={editable} />
         </div>
 
-        {d.version.source.kind === "authored" ? (
-          <div className="card card-pad">
-            <div className="h3 mb-1">Resources</div>
-            <p className="caption mb-4">Scripts, templates and reference files packaged with this version. Steps run <code>python3 scripts/&lt;file&gt;</code> inside the run folder with the environment scrubbed.</p>
-            <FileEditor versionId={d.version.id} slug={slug} files={(files ?? []) as FileRow[]} editable={editable} />
-          </div>
-        ) : (
-          <div className="card card-pad">
-            <div className="h3 mb-1">Resources <span className="muted font-normal">({d.version.manifest.resources.length})</span></div>
-            <p className="caption mb-3">From the repository bundle at build time; read-only here. To change them, edit the repository skill and re-import as a new draft.</p>
-            <ul className="file-list">{d.version.manifest.resources.map((r) => <li key={r}>{r}</li>)}</ul>
-          </div>
-        )}
       </div>
     </>
   );

@@ -28,10 +28,10 @@ function download(name: string, content: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function RunPanel({ skillId, agent }: { skillId: string; agent: AgentSpec }) {
+export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: string; agent: AgentSpec; defaultOpen?: boolean }) {
   const inputs = useMemo(() => [...agent.inputs].sort((a, b) => Number(b.required) - Number(a.required)), [agent.inputs]);
   const demo = agent.demo;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() => {
     const d: Record<string, Draft> = {};
     for (const i of agent.inputs) {

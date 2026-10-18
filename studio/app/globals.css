@@ -627,13 +627,50 @@ table.up-tbl td.desc { max-width: none; }
 .pre-sm { font-size: 12.5px; max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .row-link { display: block; color: inherit; }
 .row-link:hover .name { color: var(--flame); }
+/* ───────────────────────────── Skill detail pages: one-screen header + sticky tab bar ─────────────────────────────
+   Header ≤ 220 px: breadcrumb · name · pills · 2-line description · meta · compact stat strip · one primary action.
+   Everything else lives behind the tabs; only the active tab's content renders. */
+.detail-head { margin-bottom: 0; }
+.detail-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 28px; margin-top: 6px; }
+.detail-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.detail-h1 { font-size: clamp(30px, 3vw, 36px); line-height: 1.1; margin: 0; }
+.detail-desc-wrap { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; max-width: 84ch; }
+.detail-desc { font-size: 15px; color: var(--ink-2); line-height: 1.5; overflow-wrap: anywhere; min-width: 0; }
+.detail-desc.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.btn-more { flex: none; min-height: 24px; font-size: 13px; }
+.detail-meta { margin-top: 4px; }
+.detail-actions { display: flex; flex: none; align-items: center; gap: 10px; padding-top: 2px; }
+.stats-compact { gap: 8px 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule-soft); grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.stats-compact .stat-value { font-size: 22px; line-height: 1.1; display: flex; align-items: center; min-height: 26px; }
+.stats-compact .stat-label { font-size: 12px; margin-top: 3px; color: var(--ink-3); }
+.tabbar { position: sticky; top: 60px; z-index: 20; background: var(--paper); margin: 12px 0 22px; }
+.tab-count { margin-left: 6px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tab-lead { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.detail-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1024px) { .detail-grid { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; } }
+.cmdline { margin-top: 16px; }
+.cmdline > summary { padding: 6px 0; }
+.cmdline .codeblock { margin-top: 10px; }
+@media (max-width: 767px) {
+  .detail-row { flex-direction: column; gap: 12px; }
+  .detail-actions { width: 100%; }
+  .detail-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .detail-h1 { font-size: 28px; }
+  .stats-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
+  .stats-compact .stat-value { font-size: 20px; }
+  .tabbar { margin: 10px 0 18px; }
+  .tabbar a { padding: 0 10px; }
+}
+
 details.disclosure > summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; list-style: none; }
 details.disclosure > summary::-webkit-details-marker { display: none; }
 details.disclosure > summary::before { content: "▶"; font-size: 10px; color: var(--ink-3); }
 details.disclosure[open] > summary::before { content: "▼"; }
 @media (max-width: 767px) {
   .topbar .wrap { gap: 8px; }
-  .topnav { gap: 2px; margin-left: 4px; }
+  /* five areas + the user menu: the nav shrinks and scrolls inside the bar instead of widening the page */
+  .topnav { gap: 2px; margin-left: 4px; flex: 1 1 auto; min-width: 0; }
+  .topbar .user { flex: none; }
   .topnav a { font-size: 13px; padding: 0 6px; min-width: 0; }
   .brand-name { font-size: 15px; }
   .user-chip { display: none; }
