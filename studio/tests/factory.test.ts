@@ -176,3 +176,12 @@ test("import from repo: every wired repo skill yields a valid manifest and its a
   assert.equal(wired, 40);
   assert.ok(llm > 0 && cases > 40, `llm=${llm} cases=${cases}`);
 });
+
+import { publicContract, stripRuntimePaths } from "../lib/factory/publicShape.ts";
+test("consumer API contract drops workspace internals", () => {
+  assert.deepEqual(publicContract({ slug: "x", workspace_id: "w", policy: { a: 1 }, skill_id: "s", version: 1 }), { slug: "x", version: 1 });
+});
+test("consumer API strips runtime paths from checks and steps", () => {
+  const out = stripRuntimePaths({ checks: [{ path: "/tmp/sf/ac84-89/out/sizing.json", evidence: "/tmp/sf/ac84-89/out/sizing.json exists" }], steps: [{ cmd: "/var/lang/bin/python -I scripts/size.py --inputs /tmp/sf/ac84-89/inputs/inputs.txt" }] });
+  assert.deepEqual(out, { checks: [{ path: "sizing.json", evidence: "sizing.json exists" }], steps: [{ cmd: "python -I scripts/size.py --inputs inputs/inputs.txt" }] });
+});

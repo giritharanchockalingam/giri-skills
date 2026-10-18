@@ -4,6 +4,7 @@
  * run was accepted but the runtime could not finish in time (status "timeout" is then visible at GET /runs/{id}).
  * Duplicate submissions: send `Idempotency-Key`; the same key returns the first run. */
 import { authenticateApiKey } from "@/lib/factory/apikey";
+import { stripRuntimePaths } from "@/lib/factory/publicShape";
 import { apiError, json, readJson } from "@/lib/factory/http";
 import { validateInputs, describeInputs } from "@/lib/factory/schema";
 import { sha256 } from "@/lib/factory/hash";
@@ -60,5 +61,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     outputs: row.outputs, checks: (row.run_json?.checks as unknown[]) ?? [], steps: (row.run_json?.steps as unknown[]) ?? [], needs_input: response?.needs_input ?? null,
     contract: (row.run_json as { factory?: { contract?: unknown } } | null)?.factory?.contract ?? null, status_url: statusUrl,
   };
-  return json(result, row.status === "timeout" ? 202 : 200);
+  return json(stripRuntimePaths(result), row.status === "timeout" ? 202 : 200);
 }
