@@ -364,7 +364,13 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
             rp = _resolve(ref, cwd)
             if not rp.is_file():
                 return _result(spec, False, f"reference file missing: {rp}")
-            ref_nums += _all_numbers(_read(rp))
+            raw = _read(rp)
+            if rp.suffix.lower() == ".csv":  # read cells: "12,34" across two cells is two numbers, not 1234
+                import csv as _csv
+                import io as _io
+                ref_nums += [n for row in _csv.reader(_io.StringIO(raw)) for cell in row for n in _all_numbers(cell)]
+            else:
+                ref_nums += _all_numbers(raw)
         missing = sorted({n for n in _numbers(text) if not _number_in(n, ref_nums)})
         return _result(spec, not missing, f"untraced numbers {missing[:8]}" if missing
                        else f"all {len(_numbers(text))} numbers trace")

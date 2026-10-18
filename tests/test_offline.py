@@ -7,9 +7,10 @@ import pytest
 
 from conftest import REPO_ROOT, SCRIPTS
 
-# repo-level tooling is held to the same offline rule
-SCRIPTS = {**SCRIPTS, "run_skill": "scripts/run_skill.py", "check_output": "scripts/check_output.py",
-           "skillmeta": "scripts/skillmeta.py"}
+# every skill script (discovered, so new skills are covered automatically) and the repo-level runner tooling
+SCRIPTS = {**SCRIPTS, **{f"{p.parent.parent.name}/{p.stem}": str(p.relative_to(REPO_ROOT))
+                         for p in sorted(REPO_ROOT.glob("skills/*/*/scripts/*.py"))},
+           "run_skill": "scripts/run_skill.py", "check_output": "scripts/check_output.py", "skillmeta": "scripts/skillmeta.py"}
 
 NETWORK_IMPORT = re.compile(
     r"^\s*(import|from)\s+"

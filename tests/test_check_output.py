@@ -203,3 +203,11 @@ def test_numbers_trace_to_ignores_iso_dates_but_not_derived_percentages(tmp_path
     r_bad = check_output.run_check(f"numbers_trace_to:{ref}", bad, cwd=tmp_path, mode="real")
     assert r_ok["pass"] is True, r_ok
     assert r_bad["pass"] is False and "64" in r_bad["evidence"] and "2026" not in r_bad["evidence"]
+
+
+def test_numbers_trace_to_reads_csv_cells_separately(tmp_path):
+    import check_output
+    ref = tmp_path / "ref.csv"; ref.write_text("a,b\n12,345\n", encoding="utf-8")
+    out = tmp_path / "out.md"; out.write_text("Value 345 and 12%.\n", encoding="utf-8")
+    r = check_output.run_check(f"numbers_trace_to:{ref}", out, cwd=tmp_path, mode="real")
+    assert r["pass"] is True, r

@@ -27,6 +27,9 @@ TIMING_KEYS = {"duration_s"}
 # git commit hashes depend on the commit second: handoff-and-thread-close builds a real throwaway repo,
 # so two runs a second apart legitimately differ there and nowhere else. Normalised, not ignored.
 SHA_RE = re.compile(rb"`[0-9a-f]{7,40}`|\b(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b")
+# skills that create a throwaway git repo: an abbreviated hash can be all digits (~1 in 25 runs), so any 7-40 hex run counts
+GIT_SKILLS = {"build/handoff-and-thread-close", "build/safe-fix"}
+ANY_SHA_RE = re.compile(rb"\b[0-9a-f]{7,40}\b")
 
 
 def run(args: list[str], cwd: Path, env_extra: dict | None = None) -> subprocess.CompletedProcess:
@@ -47,21 +50,23 @@ def _strip_timing(obj):
     return obj
 
 
-def normalise(path: Path, root: Path) -> bytes:
+def normalise(path: Path, root: Path, git: bool = False) -> bytes:
     data = path.read_bytes()
     if path.name == "run.json":
         text = data.decode("utf-8").replace(str(root), "<OUT>")
         text = re.sub(r"in \d+\.\d+s\b", "in <t>s", text)  # a cmd: check's evidence may quote pytest's own timing
         return json.dumps(_strip_timing(json.loads(text)), indent=2, sort_keys=True).encode("utf-8")
     # the out-dir path appears inside some outputs (logs, run summaries): normalise it only
-    return SHA_RE.sub(b"<sha>", data.replace(str(root).encode("utf-8"), b"<OUT>"))
+    data = SHA_RE.sub(b"<sha>", data.replace(str(root).encode("utf-8"), b"<OUT>"))
+    data = re.sub(rb"in \d+\.\d+s\b", b"in <t>s", data)  # outputs that quote a test run's own timing (safe-fix verify.json)
+    return ANY_SHA_RE.sub(b"<sha>", data) if git else data
 
 
-def tree(root: Path) -> dict[str, bytes]:
+def tree(root: Path, git: bool = False) -> dict[str, bytes]:
     out = {}
     for p in sorted(root.rglob("*")):
         if p.is_file() and "__pycache__" not in p.parts and ".git" not in p.parts:
-            out[str(p.relative_to(root))] = normalise(p, root)
+            out[str(p.relative_to(root))] = normalise(p, root, git)
     return out
 
 
@@ -71,7 +76,7 @@ def test_inproc_outputs_are_byte_identical(key: str, tmp_path: Path):
     ra = run(["--demo", key, "--provider", "dry", "--out", str(a)], cwd=tmp_path)
     rb = run(["--demo", key, "--provider", "dry", "--out", str(b), "--inproc"], cwd=tmp_path)
     assert ra.returncode == rb.returncode, f"exit codes differ: {ra.returncode} vs {rb.returncode}\n{ra.stderr}\n{rb.stderr}"
-    ta, tb = tree(a), tree(b)
+    ta, tb = tree(a, key in GIT_SKILLS), tree(b, key in GIT_SKILLS)
     assert set(ta) == set(tb), f"file sets differ: only subprocess={sorted(set(ta) - set(tb))} only inproc={sorted(set(tb) - set(ta))}"
     for rel in ta:
         assert ta[rel] == tb[rel], f"{key}: {rel} differs between subprocess and in-process runs"

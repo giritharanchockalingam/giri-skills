@@ -43,7 +43,8 @@ def make_repo(tmp_path: Path, skills: dict[str, str], with_evals: bool = True) -
 def test_validator_passes_on_real_repo():
     r = run_script("scripts/validate.py")
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "Checked 40 skills" in r.stdout and "0 errors" in r.stdout
+    n = len(list(REPO_ROOT.glob("skills/*/*/SKILL.md")))
+    assert n >= 40 and f"Checked {n} skills" in r.stdout and "0 errors" in r.stdout
 
 
 def test_validator_rejects_bad_name(tmp_path):

@@ -20,28 +20,10 @@ RUNNER = REPO_ROOT / "scripts" / "run_skill.py"
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import skillmeta  # noqa: E402
 
-WIRED = [
-    "presales/effort-estimator", "presales/rfp-compliance-matrix",
-    "presales/integration-migration-assessor", "presales/client-research-brief",
-    "build/project-bootstrap", "build/supabase-schema-rls",
-    "ai-platform/llm-eval-harness", "ai-platform/rag-pipeline-design",
-    "ai-platform/infra-gpu-sizing", "career/jd-fit-scorer",
-    "career/application-tracker", "career/offer-evaluator",
-    # phases 1-2
-    "presales/value-case-builder", "presales/proposal-writer", "presales/sow-drafter",
-    "presales/discovery-interview", "presales/solution-architecture-doc", "presales/exec-deck-redline",
-    "presales/competitive-positioning", "presales/account-plan", "presales/orals-prep",
-    # phase 3
-    "build/safe-fix", "build/nextjs-enterprise-conventions", "build/security-review",
-    "build/observability-setup", "build/ci-cd-vercel-github", "build/handoff-and-thread-close",
-    "build/spec-to-plan", "build/test-strategy-tdd", "build/multi-tenant-saas-patterns",
-    "build/product-spec-prd",
-    # phase 4
-    "ai-platform/ai-strategy-coe", "ai-platform/agent-architecture", "ai-platform/mcp-server-builder",
-    "ai-platform/ai-governance-risk", "ai-platform/ai-use-case-canvas", "ai-platform/slm-demo-builder",
-    # phase 5
-    "career/resume-tailor", "career/interview-prep", "career/outreach-and-followup",
-]
+# every skill that declares metadata.agent (discovered, so new skills are tested automatically; all 40 originals included)
+WIRED = sorted(f"{d.parent.name}/{d.name}" for d in (p.parent for p in REPO_ROOT.glob("skills/*/*/SKILL.md"))
+               if skillmeta.agent_block(skillmeta.load_skill(d)))
+assert len(WIRED) >= 40
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 
 
