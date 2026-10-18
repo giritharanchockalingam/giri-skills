@@ -28,7 +28,7 @@ export default async function TestPage({ params, searchParams }: { params: Promi
       <div className="detail-grid">
         <div className="card card-pad min-w-0">
           <div className="h3">Test skill</div>
-          <p className="caption mt-1 mb-4">Supply a real input. The server validates it against the contract, runs the exact version v{d.version.version} with the repository runner, validates the outputs, and records everything as a run you can inspect.</p>
+          <p className="caption mt-1 mb-4">Real inputs → v{d.version.version} runs on the server → outputs checked → recorded as a run.</p>
           {allowed ? (
             <TestForm versionId={d.version.id} manifest={d.version.manifest} runtimeOk={cfg.ok} runtimeReason={cfg.reason} keyPresent={serverKey} slug={slug} />
           ) : (

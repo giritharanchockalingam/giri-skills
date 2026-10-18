@@ -44,16 +44,16 @@ export function TestForm({ versionId, manifest, runtimeOk, runtimeReason, keyPre
 
   return (
     <form onSubmit={submit} className="stack">
-      {!runtimeOk && <div className="notice notice-err">The server runtime is not available: {runtimeReason}. Runs cannot execute until an administrator fixes this.</div>}
-      {needsLlm && !keyPresent && <div className="notice notice-hold">This version has llm steps but ANTHROPIC_API_KEY is not set on the server. The run will execute its scripts; llm steps are skipped and recorded as such (the run will fail its checks honestly).</div>}
-      {manifest.run.length === 0 && <div className="notice notice-hold">This version has no steps. Define at least one in Authoring before testing.</div>}
+      {!runtimeOk && <div className="notice notice-err">Runtime unavailable: {runtimeReason}</div>}
+      {needsLlm && !keyPresent && <div className="notice notice-hold">No ANTHROPIC_API_KEY on the server: scripts run, llm steps are skipped and recorded — checks on their outputs will fail.</div>}
+      {manifest.run.length === 0 && <div className="notice notice-hold">No steps yet — add one under Instructions.</div>}
       <div className="run-inputs">
         {inputs.map((i) => <Field key={i.name} i={i} d={drafts[i.name]} set={(p) => set(i.name, p)} />)}
         {inputs.length === 0 && <p className="none">This skill declares no inputs.</p>}
       </div>
       <div className="action-row" style={{ marginTop: 4 }}>
         <button type="submit" className="btn btn-primary" disabled={busy || !runtimeOk || manifest.run.length === 0}>{busy ? "Running…" : "Test skill"}</button>
-        <span className="caption">Runs on the server within {manifest.limits.timeout_s} s, is recorded under Activity, and cannot be cancelled once started.</span>
+        <span className="caption">Server run · {manifest.limits.timeout_s}s limit · recorded under Activity</span>
       </div>
       <div role="status" aria-live="polite">
         {msg && <div className={`notice ${msg.ok ? "notice-ok" : "notice-err"}`}>{msg.text}{Array.isArray(msg.details) && <ul style={{ margin: "6px 0 0 18px", listStyle: "disc" }}>{(msg.details as { path: string; message: string }[]).map((p, k) => <li key={k}><code>{p.path}</code> {p.message}</li>)}</ul>}</div>}
