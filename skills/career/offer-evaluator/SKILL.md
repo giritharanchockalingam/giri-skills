@@ -10,7 +10,7 @@ metadata:
     inputs:
       - {name: offers, type: csv, required: true, from: "offer comparison CSV (layout: assets/offer-comparison.csv)"}
       - {name: horizon, type: string, required: false, default: "4"}
-      - {name: col, type: string, required: false, from: "user-supplied COL indices \"Columbus OH=100,Austin TX=108\"; without it, no COL adjustment is made"}
+      - {name: col, type: string, required: false, from: "user-supplied COL indices, e.g. Columbus OH=100,Austin TX=108; without it no COL adjustment is made"}
       - {name: base_location, type: string, required: false}
       - {name: tax, type: string, required: false, from: "effective tax rates per location"}
     run:
