@@ -682,3 +682,17 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .pipeline-n { font-family: var(--mono); font-size: 12px; color: var(--flame); }
 .section-tight { margin-top: 20px; }
 @media (max-width: 760px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Overview: ADLC coverage map */
+.stage-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 8px 0 0; padding: 0; list-style: none; }
+.stage-tile { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; height: 100%; }
+.stage-n { font-family: var(--mono); font-size: 12px; color: var(--flame); }
+.stage-name { font-weight: 600; font-size: 15px; color: var(--ink); }
+.stage-q { line-height: 1.35; }
+.stage-counts { margin-top: auto; padding-top: 6px; font-size: 13px; color: var(--ink-2); }
+.stage-gap { border-style: dashed; }
+.shelf-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.shelf-tile { padding: 10px 14px; font-size: 14px; }
+.select-inline { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 1000px) { .stage-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .stage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .stage-q { display: none; } }

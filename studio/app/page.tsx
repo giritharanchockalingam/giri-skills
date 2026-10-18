@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireWorkspace, type SkillRow, type VersionRow, type ReleaseStateRow } from "@/lib/factory/db";
 import { can } from "@/lib/factory/roles";
-import { skills as repoSkills } from "@/lib/data";
+import { skills as repoSkills, STAGES, SHELVES, stageOfRepoSkill } from "@/lib/data";
 import { PageHead } from "@/components/PageHead";
 import { SkillsCatalog, type CatalogItem } from "@/components/factory/SkillsCatalog";
 import { ImportDrawer } from "@/components/factory/ImportDrawer";
@@ -9,7 +9,7 @@ import { ImportDrawer } from "@/components/factory/ImportDrawer";
 export const metadata = { title: "Skills · Skills Factory" };
 export const dynamic = "force-dynamic";
 
-export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string }> }) {
+export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string; stage?: string }> }) {
   const sp = await searchParams;
   const ctx = await requireWorkspace();
   const sb = ctx.supabase;
@@ -33,6 +33,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       publishedVersion: published?.version ?? null, workingVersion: working?.version ?? null, workingStatus: (working?.status ?? null) as CatalogItem["workingStatus"],
       evalPassRate: st?.latest_eval_pass_rate == null ? null : Number(st.latest_eval_pass_rate), evalCurrent: st?.eval_current ?? null, cases: st?.eval_case_count ?? 0,
       approval: st?.approval_valid ? "valid" : st?.approval_stale ? "stale" : "none",
+      stage: vs[0]?.source.kind === "repo" ? stageOfRepoSkill(vs[0].source.repo_skill) : null,
     };
   });
   const imported = new Set(versions.filter((v) => v.source.kind === "repo").map((v) => v.source.repo_skill));
@@ -54,7 +55,8 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
           </>
         ) : <span className="caption">Your role ({ctx.role}) can run published skills. Authors create and import skills.</span>}
       </div>
-      <SkillsCatalog items={items} canCreate={can(ctx.role, "skill.create")} />
+      <SkillsCatalog items={items} canCreate={can(ctx.role, "skill.create")} initialStage={sp.stage ?? "all"}
+        stageOpts={[...STAGES.map((x) => ({ key: x.id, label: `${x.n} ${x.name}` })), ...SHELVES.map((x) => ({ key: x.id, label: x.name })), { key: "unassigned", label: "Unassigned" }]} />
     </>
   );
 }

@@ -6,7 +6,7 @@ import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { RunPill, VersionPill } from "@/components/factory/Pills";
 import { EmptyState } from "@/components/factory/EmptyState";
-import { skills as repoSkills, upstream } from "@/lib/data";
+import { skills as repoSkills, upstream, STAGES, SHELVES } from "@/lib/data";
 
 export const metadata = { title: "Overview · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -45,54 +45,45 @@ export default async function OverviewPage() {
   const spend = runs.reduce((a, r) => a + (r.cost_usd == null ? 0 : Number(r.cost_usd)), 0);
   const published = skills.filter((s) => s.status === "published").length;
 
-  const domains = Object.entries(repoSkills.reduce<Record<string, number>>((m, k) => ((m[k.domain] = (m[k.domain] ?? 0) + 1), m), {}));
   const imported = new Set(skills.map((k) => k.slug));
+  const publishedSlugs = new Set(skills.filter((k) => k.status === "published").map((k) => k.slug));
   const notImported = repoSkills.filter((k) => !imported.has(k.name)).length;
   const succeededPct = runs.length ? `${Math.round((count("succeeded") / runs.length) * 100)}%` : "—";
-
-  const pipeline: { n: string; t: string; d: string }[] = [
-    { n: "1", t: "Library", d: `${repoSkills.length + upstream.length} skills` },
-    { n: "2", t: "Prove", d: "test + evaluate on real inputs" },
-    { n: "3", t: "Approve", d: "reviewer signs the exact version" },
-    { n: "4", t: "Use", d: "frozen version, called by API" },
-  ];
+  const cover = (id: string) => {
+    const lib = repoSkills.filter((k) => k.stage === id);
+    return { lib: lib.length, ws: lib.filter((k) => imported.has(k.name)).length, pub: lib.filter((k) => publishedSlugs.has(k.name)).length };
+  };
+  const adlcCount = repoSkills.filter((k) => STAGES.some((st) => st.id === k.stage)).length;
+  const gaps = STAGES.filter((st) => cover(st.id).lib === 0).length;
 
   return (
     <>
-      <PageHead eyebrow={`Overview · ${ws.name}`} title="AI skills you can" em="trust" after="."
-        lead={`A library of ${repoSkills.length + upstream.length} AI skills — ${repoSkills.length} of ours that run, ${upstream.length} vetted from GitHub. Each is tested on real inputs and approved before people or apps can use it.`}
+      <PageHead eyebrow={`Overview · ${ws.name}`} title="The AI lifecycle," em="runnable" after="."
+        lead={`${adlcCount} skills across the ${STAGES.length} stages of building AI — each runs on real inputs, is evaluated, approved, and then callable by API. ${gaps ? `${gaps} stage${gaps === 1 ? "" : "s"} still uncovered.` : "Every stage covered."}`}
         caption={ctx.memberships.length > 1 ? <WorkspaceSwitcher ctx={ctx} /> : <>You are <b>{ctx.role}</b> in {ws.name}.</>} />
 
-      <ol className="pipeline" aria-label="How a skill gets to use">
-        {pipeline.map((p) => <li key={p.n}><span className="pipeline-n">{p.n}</span><span><b>{p.t}</b><span className="caption"> · {p.d}</span></span></li>)}
+      <ol className="stage-grid" aria-label="AI development life cycle coverage">
+        {STAGES.map((st) => { const c = cover(st.id); return (
+          <li key={st.id}>
+            <Link href={`/?stage=${st.id}`} className={`card stage-tile row-link${c.lib === 0 ? " stage-gap" : ""}`} title={st.question}>
+              <span className="stage-n">{st.n}</span>
+              <span className="stage-name">{st.name}</span>
+              <span className="caption stage-q">{st.question}</span>
+              <span className="stage-counts">{c.lib === 0 ? <span className="fail">gap</span> : <><b>{c.lib}</b> skill{c.lib === 1 ? "" : "s"} · {c.pub} published</>}</span>
+            </Link>
+          </li>); })}
       </ol>
 
-      <div className="summary-grid section-tight">
-        <Link href="/repo" className="card summary row-link" title="Skills authored in this repository, each with scripts, declared inputs, output checks and evaluation cases">
-          <div className="summary-value">{repoSkills.length}</div>
-          <div className="summary-label">our runnable skills<div className="caption">{domains.map(([d, n]) => `${d} ${n}`).join(" · ")}</div></div>
-        </Link>
-        <Link href="/upstream" className="card summary row-link" title="Top public Agent Skills vendored verbatim, pinned by commit, license tracked">
-          <div className="summary-value">{upstream.length}</div>
-          <div className="summary-label">vetted from GitHub<div className="caption">pinned · licensed · reference</div></div>
-        </Link>
-        <Link href="/" className="card summary row-link" title="Skills imported or authored in this workspace; only these go through test, review and publish">
-          <div className="summary-value">{skills.length}<span className="muted" style={{ fontSize: 20 }}>/{repoSkills.length}</span></div>
-          <div className="summary-label">in this workspace<div className="caption">{notImported ? `${notImported} not imported yet` : "all imported"}</div></div>
-        </Link>
-        <div className="card summary" title="Skills with a published, immutable version callable through the API">
-          <div className="summary-value">{published}</div>
-          <div className="summary-label">published<div className="caption">callable by API</div></div>
-        </div>
-        <div className="card summary" title="Test and API runs (evaluation cases excluded — they are scored by pass rate) in the last 7 days">
-          <div className="summary-value">{succeededPct}</div>
-          <div className="summary-label">runs succeeded<div className="caption">{runs.length} test/API runs · 7 days{runs.some((r) => r.cost_usd != null) ? ` · ≈$${spend.toFixed(4)}` : ""}</div></div>
-        </div>
+      <div className="shelf-row">
+        {SHELVES.map((sh) => { const c = cover(sh.id); return (
+          <Link key={sh.id} href={`/?stage=${sh.id}`} className="card shelf-tile row-link"><b>{sh.name}</b><span className="caption"> · {c.lib} skills · {c.pub} published</span></Link>); })}
+        <Link href="/upstream" className="card shelf-tile row-link"><b>GitHub reference</b><span className="caption"> · {upstream.length} vetted skills</span></Link>
       </div>
 
-      {notImported > 0 && can(ctx.role, "skill.create") && (
-        <p className="caption mt-3"><Link href="/?import=1" className="link-flame">Import the other {notImported} skills →</Link> to test, approve and publish them here.</p>
-      )}
+      <p className="caption mt-3">
+        In this workspace: {skills.length} skills · {published} published · {succeededPct} of {runs.length} test/API runs succeeded (7 days){runs.some((r) => r.cost_usd != null) ? ` · ≈$${spend.toFixed(4)} model spend` : ""}.
+        {notImported > 0 && can(ctx.role, "skill.create") && <> <Link href="/?import=1" className="link-flame">Import {notImported} more →</Link></>}
+      </p>
 
       <SectionHead title="Needs" em="attention" caption={inReview.length || awaiting.length || failed.length ? `${inReview.length} to review · ${awaiting.length} to publish · ${failed.length} failed` : "Nothing is waiting on you."} />
       <div className="cards-3">

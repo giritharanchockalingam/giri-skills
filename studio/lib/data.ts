@@ -6,6 +6,7 @@ import agentJson from "@/data/agent.json";
 import findingsJson from "@/data/findings.json";
 import metaJson from "@/data/meta.json";
 import upstreamJson from "@/data/upstream.json";
+import stagesJson from "@/data/stages.json";
 
 export type Verdict = "OK" | "DESC" | "BODY" | "BOTH";
 export type AgentVerdict = "Works" | "Partial" | "Broken";
@@ -20,7 +21,7 @@ export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: 
 
 export interface EvalCase { id: string; prompt: string; expected: string[] }
 export interface Skill {
-  id: string; domain: string; name: string; description: string; license: string | null;
+  id: string; domain: string; stage: string | null; name: string; description: string; license: string | null;
   metadata: Record<string, string>; agent: AgentSpec | null; bodyHtml: string;
   files: { references: string[]; assets: string[]; scripts: string[] };
   cases: EvalCase[];
@@ -201,3 +202,10 @@ export const upstreamSummary = (): UpstreamSummary => ({
   oss: upstream.filter((u) => u.licenseKind === "oss").length,
   sourceAvailable: upstream.filter((u) => u.licenseKind === "source-available").length,
 });
+
+/* ADLC stages (shared/adlc-stages.json) — the portal's primary organising axis. */
+export interface Stage { id: string; n?: number; name: string; question: string }
+export const STAGES = (stagesJson as { stages: Stage[]; shelves: Stage[] }).stages;
+export const SHELVES = (stagesJson as { stages: Stage[]; shelves: Stage[] }).shelves;
+export const stageName = (id: string | null | undefined) => [...STAGES, ...SHELVES].find((s) => s.id === id)?.name ?? "Unassigned";
+export const stageOfRepoSkill = (id: string | null | undefined) => (id ? skills.find((s) => s.id === id)?.stage ?? null : null);
