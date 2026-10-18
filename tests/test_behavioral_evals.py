@@ -135,7 +135,7 @@ AGENT_HEADER = ["skill", "case_id", "check", "pass", "evidence"]
 def test_agent_mode_dry(tmp_path):
     out = tmp_path / "agent"
     r = run_eval("agent", "--provider", "dry", "--out", str(out),
-                 "--skills", "skills/career/jd-fit-scorer", "--skills", "skills/career/outreach-and-followup")
+                 "--skills", "skills/career/jd-fit-scorer", "--skills", "skills/build/safe-fix")
     assert r.returncode == 0, r.stdout + r.stderr
     with (out / "agent.csv").open(encoding="utf-8") as f:
         rows = list(csv.reader(f))
@@ -146,7 +146,7 @@ def test_agent_mode_dry(tmp_path):
     assert "| agent pass | agent verdict |" in scorecard
     assert "| career/jd-fit-scorer |  |  |  |  |  |  | 1.00 | Works |" in scorecard
     # unwired skill: present, blank agent cells, not failing
-    assert "| career/outreach-and-followup |  |  |  |  |  |  |  |  |" in scorecard
+    assert "| build/safe-fix |  |  |  |  |  |  |  |  |" in scorecard
     assert (out / "runs").is_dir()
 
 

@@ -4,11 +4,26 @@ description: Use when the user has an interview scheduled (recruiter screen, hir
 license: MIT
 metadata:
   domain: career
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: jd, type: file, required: true, from: "job description text file"}
+      - {name: stories, type: md, required: true, from: "story bank with SB-nn ids and competency tags (layout: assets/story-bank.example.md)"}
+      - {name: round, type: string, required: false, default: "hiring-manager", from: "recruiter | hiring-manager | panel | executive | case"}
+    run:
+      - {step: prep, kind: script, cmd: "python3 -I scripts/prep.py --jd {jd} --stories {stories} --round {round} --competencies references/competency-map.md --questions references/question-bank.md --ask references/questions-to-ask.md --plan-template assets/90-day-plan.md --out-dir {out}"}
+    outputs:
+      - {path: "{out}/competency-map.csv", checks: [exists, csv:[competency,status,name,in_jd,jd_evidence,story_ids], csv_rows:status~^(mapped|GAP)$]}
+      - {path: "{out}/prep-pack.md", checks: [exists, sections:["Competency","Stories by competency","Likely questions","Gaps"]]}
+      - {path: "{out}/questions-to-ask.md", checks: [exists, sections:["Questions to ask"]]}
+      - {path: "{out}/90-day-plan.md", checks: [exists, sections:["Mandate","Days 1","Days 31","Days 61","Focus areas from the JD"], no_unowned_tbd]}
 ---
 
 # Interview Prep (truth-locked)
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/interview-prep --input <name>=<value> … --out <dir>` (see `--explain career/interview-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "I have a panel interview Thursday", "grill me for the CIO round", "map my stories to this JD", "draft my 90-day plan", "what should I ask them".
@@ -62,6 +77,7 @@ Markdown file `prep-<company>-<round>.md`:
 - [ ] No author personal data pulled from memory
 
 ## References
+- `scripts/prep.py` — JD competencies → story map (GAP when no story), prep pack by round type, questions to ask, 90-day plan skeleton (stdlib, offline)
 - `references/competency-map.md` — exec IT competencies, behavioral indicators, JD phrases
 - `references/star-r-format.md` — STAR+R structure, timing, scoring rubric
 - `references/question-bank.md` — questions by round type

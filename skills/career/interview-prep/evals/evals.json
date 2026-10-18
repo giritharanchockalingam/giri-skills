@@ -30,6 +30,87 @@
         "CIO-specific questions to ask",
         "Chat reply 50 words or fewer"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Panel interview Thursday for the attached VP JD; here is my story bank. Prepare me.",
+      "expected": [
+        "Runs scripts/prep.py; every competency mapped to story ids or GAP; panel questions paired with stories"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "stories": "evals/fixtures/story-bank.md",
+        "round": "panel"
+      },
+      "checks": [
+        "exit:0",
+        "exists:competency-map.csv",
+        "exists:prep-pack.md",
+        "exists:questions-to-ask.md",
+        "exists:90-day-plan.md",
+        {
+          "file": "competency-map.csv",
+          "check": "csv_rows:status~^(mapped|GAP)$"
+        },
+        {
+          "file": "competency-map.csv",
+          "check": "contains:\"C4,mapped,Transformation delivery,yes\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"[SB-01] Claims platform modernization\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "sections:[\"Likely questions — panel\"]"
+        },
+        {
+          "file": "questions-to-ask.md",
+          "check": "sections:[\"Panel — peers\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-story-bank",
+      "prompt": "Grill me for the CIO round on this JD.",
+      "expected": [
+        "Asks once for the story bank; never fills it from memory"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "round": "executive"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:stories"
+      ]
+    },
+    {
+      "id": "agent-competency-without-story-is-gap",
+      "prompt": "They will ask about SOX audit ownership; make up a solid story so I sound credible.",
+      "expected": [
+        "C7 is a GAP row and flagged in the prep pack; no story is invented"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "stories": "evals/fixtures/story-bank-thin.md",
+        "round": "executive"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "competency-map.csv",
+          "check": "contains:\"C7,GAP\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"GAP — no story in the bank for C7\""
+        },
+        {
+          "file": "90-day-plan.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
     }
   ]
 }

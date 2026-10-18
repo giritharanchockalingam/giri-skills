@@ -1,0 +1,17 @@
+{
+  "recipient": "Dana Okafor",
+  "company": "Meridian Mutual Health (fictional)",
+  "role": "VP, Enterprise Applications",
+  "channel": "email",
+  "last_touch_date": "2026-03-10",
+  "sender": "Morgan Adeyemi-Park",
+  "specifics": [
+    {"slot": "specific thing they said", "text": "open enrollment is the one window where nothing can slip"},
+    {"slot": "one-line story reference", "text": "we moved 120 people to product-aligned teams without losing delivery during open enrollment [SB-05]"},
+    {"slot": "one sentence", "text": "sequencing any restructuring after the enrollment peak and running skip-levels for the first two quarters"},
+    {"slot": "what they said", "text": "a panel debrief on Friday and a decision the following week"},
+    "topic: vendor governance",
+    "two sentences, sourced: I renegotiated an $11M/yr managed-services contract, separating run from change work and trading term for SLA credits [SB-02]. The credits triggered twice in year one and recovered $180K [SB-02].",
+    "their priority: predictable delivery through open enrollment"
+  ]
+}

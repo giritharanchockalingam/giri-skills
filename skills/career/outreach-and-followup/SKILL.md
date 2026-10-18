@@ -4,11 +4,25 @@ description: Use when the user needs to write or time a job-search message - ref
 license: MIT
 metadata:
   domain: career
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: type, type: string, required: true, from: "referral-ask | recruiter-reply | thank-you | status-check | decline | negotiation-open"}
+      - {name: context, type: json, required: true, from: "context.json: {recipient, company, role, last_touch_date, specifics:[...]} (layout: evals/fixtures/context-thank-you.json)"}
+    run:
+      - {step: fill, kind: script, cmd: "python3 -I scripts/fill.py --type {type} --context {context} --templates assets/message-templates.md --cadence-ref references/cadence.md --message {out}/message.md --cadence {out}/cadence.csv"}
+      - {step: polish, kind: llm, template: assets/message-final-template.md, context: ["{out}/message.md", "{out}/cadence.csv", "references/message-types.md"], out: "{out}/message-final.md"}
+    outputs:
+      - {path: "{out}/message.md", checks: [exists, sections:["Variant A","Unfilled placeholders","Cadence"]]}
+      - {path: "{out}/cadence.csv", checks: [exists, csv:[touch,date,channel,template,basis,stop_rule], csv_rows:touch!empty]}
+      - {path: "{out}/message-final.md", checks: [exists, sections:["Message","Facts used","Cadence"], no_unowned_tbd]}
 ---
 
 # Outreach and Follow-up
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/outreach-and-followup --input <name>=<value> … --out <dir>` (see `--explain career/outreach-and-followup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Write a note to X asking for a referral", "reply to this recruiter", "thank-you after my panel", "it's been 10 days, nudge them", "decline this politely", "open the comp conversation".
@@ -61,6 +75,8 @@ Unfilled placeholders: <list or "none">
 - [ ] No author personal data pulled from memory
 
 ## References
+- `scripts/fill.py` — fills the type's variants from context.json only (unfilled slots become owned markers) and dates the cadence in business days (stdlib, offline)
+- `assets/message-final-template.md` — the llm step polishes into this; every fact and id from message.md is kept
 - `references/message-types.md` — rules per type
 - `references/cadence.md` — timing, channels, stop rules, escalation ladder
 - `assets/message-templates.md` — skeletons with placeholders

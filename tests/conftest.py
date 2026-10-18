@@ -16,7 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# skill key -> script path relative to the repo root (25 scripts total).
+# skill key -> script path relative to the repo root (29 scripts total).
 SCRIPTS = {
     "score_matrix": "skills/presales/rfp-compliance-matrix/scripts/score_matrix.py",
     "tco": "skills/presales/integration-migration-assessor/scripts/tco.py",
@@ -44,6 +44,11 @@ SCRIPTS = {
     "battle_card": "skills/presales/competitive-positioning/scripts/battle_card.py",
     "account_plan": "skills/presales/account-plan/scripts/account_plan.py",
     "orals": "skills/presales/orals-prep/scripts/orals.py",
+    # phase 5: career skills turned into agents
+    "tailor": "skills/career/resume-tailor/scripts/tailor.py",
+    "check_traceability": "skills/career/resume-tailor/scripts/check_traceability.py",
+    "prep": "skills/career/interview-prep/scripts/prep.py",
+    "fill": "skills/career/outreach-and-followup/scripts/fill.py",
 }
 
 

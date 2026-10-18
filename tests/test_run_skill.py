@@ -31,6 +31,8 @@ WIRED = [
     "presales/value-case-builder", "presales/proposal-writer", "presales/sow-drafter",
     "presales/discovery-interview", "presales/solution-architecture-doc", "presales/exec-deck-redline",
     "presales/competitive-positioning", "presales/account-plan", "presales/orals-prep",
+    # phase 5
+    "career/resume-tailor", "career/interview-prep", "career/outreach-and-followup",
 ]
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 
