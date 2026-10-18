@@ -439,6 +439,21 @@ for (const f of runtimeFiles) {
   try { bundle[f.path] = new TextDecoder("utf-8", { fatal: true }).decode(buf); } catch { throw new Error(`runtime bundle: ${f.path} is not UTF-8 text`); }
 }
 writeFileSync(join(RUNTIME, "bundle.json"), JSON.stringify(bundle));
+// Content pin per repo skill: sha256 over its own files + the shared runner (scripts/*.py) and prompts (shared/*.md),
+// sorted by path. A version records the pin when it leaves draft; the server refuses to run it on different files.
+{
+  const { createHash } = await import("node:crypto");
+  const paths = Object.keys(bundle).sort();
+  const common = paths.filter((p) => p.startsWith("scripts/") || p.startsWith("shared/"));
+  const pins = {};
+  for (const s of skills) {
+    if (!s.agent) continue;
+    const h = createHash("sha256");
+    for (const p of [...common, ...paths.filter((x) => x.startsWith(`skills/${s.id}/`))]) h.update(p + "\0" + bundle[p] + "\0");
+    pins[s.id] = h.digest("hex");
+  }
+  writeFileSync(join(OUT, "content-pins.json"), JSON.stringify(pins, null, 1) + "\n");
+}
 // the Vercel Python runtime (api/py/run.py) reads the same bundle from its own folder; committed so the function has it whatever the build order
 writeFileSync(join(STUDIO, "api", "py", "bundle.json"), JSON.stringify(bundle));
 writeFileSync(join(RUNTIME, "manifest.json"), JSON.stringify({

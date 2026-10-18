@@ -1,6 +1,7 @@
 /* Server-side bridge to the Python runtime (api/py/run.py) and the one function every run goes through:
  * UI test runs, evaluation cases and consumer-API invocations all call executeRun(). Server only. */
 import type { Manifest } from "./manifest";
+import { checkPin } from "./pins";
 import { validateOutputContract, type RunInput, type OutputFile } from "./schema";
 import type { PolicyRow, VersionSource, RunStatus } from "./db";
 
@@ -61,6 +62,8 @@ export interface ExecuteOptions {
   checks?: unknown[];
   /** Re-read before execution: a run cancelled while queued never starts. */
   isCancelled?: () => Promise<boolean>;
+  /** Version status; anything past draft must run on its pinned repository files. */
+  status?: string;
 }
 
 export interface RunPatch {
@@ -86,6 +89,9 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
   const provider = o.manifest.model_config.provider;
   const allowedProviders = o.policy?.allowed_providers ?? ["none", "anthropic", "openai_compat"];
   if (!allowedProviders.includes(provider)) return base("failed", `workspace policy does not allow provider "${provider}"`);
+
+  const pin = checkPin(o.source, o.status);
+  if (!pin.ok) return base("failed", pin.reason);
 
   const cfg = runtimeConfig();
   if (!cfg.ok || !cfg.url) return base("failed", `runtime not configured — ${cfg.reason}`);
@@ -137,7 +143,7 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
   }
   const runJson = { ...(r.run_json ?? {}), factory: { contract, provider: r.provider, case_checks: r.case_checks, runtime: r.runtime, needs_input: r.needs_input, exit_code: r.exit_code } };
   return {
-    status, run_json: runJson, outputs: r.outputs, logs: r.logs,
+    status, run_json: runJson, outputs: r.outputs, logs: (pin.note ? `[factory] ${pin.note}\n` : "") + r.logs,
     provider: r.provider.used, model: r.model, usage: r.usage, cost_usd: r.cost.usd, cost_is_estimate: r.cost.is_estimate,
     started_at: started.toISOString(), finished_at: new Date().toISOString(), duration_ms: r.duration_ms || Date.now() - started.getTime(),
     error, response: r,

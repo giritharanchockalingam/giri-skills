@@ -185,3 +185,16 @@ test("consumer API strips runtime paths from checks and steps", () => {
   const out = stripRuntimePaths({ checks: [{ path: "/tmp/sf/ac84-89/out/sizing.json", evidence: "/tmp/sf/ac84-89/out/sizing.json exists" }], steps: [{ cmd: "/var/lang/bin/python -I scripts/size.py --inputs /tmp/sf/ac84-89/inputs/inputs.txt" }] });
   assert.deepEqual(out, { checks: [{ path: "sizing.json", evidence: "sizing.json exists" }], steps: [{ cmd: "python -I scripts/size.py --inputs inputs/inputs.txt" }] });
 });
+
+import { checkPin, currentPin } from "../lib/factory/pins.ts";
+test("content pin: drafts run current files; non-drafts must match their pin", () => {
+  const id = "ai-platform/infra-gpu-sizing", now = currentPin(id)!;
+  assert.ok(now && now.length === 64);
+  assert.deepEqual(checkPin({ kind: "repo", repo_skill: id, content_sha: "x".repeat(64) }, "draft").ok, true);
+  assert.equal(checkPin({ kind: "repo", repo_skill: id, content_sha: now }, "published").ok, true);
+  const bad = checkPin({ kind: "repo", repo_skill: id, content_sha: "0".repeat(64) }, "approved");
+  assert.equal(bad.ok, false);
+  const legacy = checkPin({ kind: "repo", repo_skill: id }, "published");
+  assert.ok(legacy.ok && legacy.note?.includes("before content pinning"));
+  assert.equal(checkPin({ kind: "authored" }, "published").ok, true);
+});

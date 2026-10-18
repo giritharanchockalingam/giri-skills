@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   await ctx.supabase.from("sf_runs").update({ status: "running", started_at: new Date().toISOString() }).eq("id", runId);
   const files = version.source.kind === "authored" ? (must(await ctx.supabase.from("sf_files").select("path, content").eq("version_id", versionId), "files") as { path: string; content: string }[]) : [];
   const patch = await executeRun({
-    runId, manifest: version.manifest, source: version.source, slug: version.sf_skills.slug, files, inputs: validated.inputs, assumptions, policy: await getPolicy(ctx),
+    runId, manifest: version.manifest, source: version.source, slug: version.sf_skills.slug, files, inputs: validated.inputs, assumptions, policy: await getPolicy(ctx), status: version.status,
     isCancelled: async () => (await ctx.supabase.from("sf_runs").select("status").eq("id", runId).single()).data?.status === "cancelled",
   });
   const { response, ...row } = patch;

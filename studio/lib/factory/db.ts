@@ -14,7 +14,7 @@ export interface SkillRow {
   id: string; workspace_id: string; slug: string; name: string; owner_id: string; purpose: string; intended_users: string; usage_guidance: string;
   status: SkillStatus; latest_version_id: string | null; created_at: string; updated_at: string;
 }
-export interface VersionSource { kind: "repo" | "authored"; repo_skill?: string }
+export interface VersionSource { kind: "repo" | "authored"; repo_skill?: string; /** sha256 of the repo files this version runs (set when it leaves draft) */ content_sha?: string }
 export interface VersionRow {
   id: string; skill_id: string; version: number; status: VersionStatus; manifest: Manifest; manifest_hash: string; source: VersionSource;
   change_note: string; created_by: string; created_at: string; updated_at: string; published_at: string | null;

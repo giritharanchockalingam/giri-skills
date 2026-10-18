@@ -11,6 +11,7 @@ import { can, isRole, type Action } from "@/lib/factory/roles";
 import { manifestFromRepoSkill, casesFromRepoSkill, repoSlug, type RepoSkill } from "@/lib/factory/import";
 import { skills as repoSkills } from "@/lib/data";
 import { providerKeyPresent, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
+import { currentPin } from "@/lib/factory/pins";
 
 export interface ActionResult { ok: boolean; message: string }
 const fail = (message: string): ActionResult => ({ ok: false, message });
@@ -177,7 +178,12 @@ export async function createDraft(_: ActionResult | null, fd: FormData): Promise
 export async function requestReview(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   return guarded("version.request_review", async (ctx) => {
     const id = str(fd, "version_id", 64);
-    const { error } = await ctx.supabase.from("sf_skill_versions").update({ status: "in_review" }).eq("id", id).eq("status", "draft");
+    // pin repository files at the moment review is requested: the reviewer approves exactly these files
+    const { data: cur } = await ctx.supabase.from("sf_skill_versions").select("source").eq("id", id).maybeSingle();
+    const src = (cur?.source ?? { kind: "authored" }) as { kind: string; repo_skill?: string };
+    const pin = src.kind === "repo" ? currentPin(src.repo_skill) : null;
+    if (src.kind === "repo" && !pin) return fail(`Repository skill ${src.repo_skill} is not in this deployment.`);
+    const { error } = await ctx.supabase.from("sf_skill_versions").update(pin ? { status: "in_review", source: { ...src, content_sha: pin } } : { status: "in_review" }).eq("id", id).eq("status", "draft");
     if (error) return fail(error.message);
     await audit(ctx, "version.request_review", "skill_version", id);
     revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/overview");
@@ -288,7 +294,7 @@ export async function importFromRepo(_: ActionResult | null, fd: FormData): Prom
       }).select("*").single();
       if (error) { problems.push(`${id}: ${error.message}`); continue; }
       const { data: v, error: ve } = await ctx.supabase.from("sf_skill_versions").insert({
-        skill_id: skill.id, version: 1, manifest: m.manifest, manifest_hash: manifestHash(m.manifest), source: { kind: "repo", repo_skill: s.id }, created_by: ctx.user.id,
+        skill_id: skill.id, version: 1, manifest: m.manifest, manifest_hash: manifestHash(m.manifest), source: { kind: "repo", repo_skill: s.id, content_sha: currentPin(s.id) ?? undefined }, created_by: ctx.user.id,
         change_note: `Imported from repository skill ${s.id} (SKILL.md v${s.metadata.version ?? "?"})`,
       }).select("*").single();
       if (ve || !v) { problems.push(`${id}: ${ve?.message}`); continue; }

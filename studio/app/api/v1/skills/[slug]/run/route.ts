@@ -50,7 +50,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   // files for authored skills are not exposed through the API RPC; fetch via the same definer path
   const files: { path: string; content: string }[] = Array.isArray(pub.files) ? pub.files : [];
   const policy = (pub.policy ?? null) as PolicyRow | null;
-  const patch = await executeRun({ runId, manifest, source: pub.source, slug, files, inputs: validated.inputs, assumptions, policy });
+  const patch = await executeRun({ runId, manifest, source: pub.source, slug, files, inputs: validated.inputs, assumptions, policy, status: "published" });
   const { response, ...row } = patch;
   const { error: ue } = await patchRun(row as unknown as Record<string, unknown>);
   if (ue) return apiError(500, "persist_failed", `Run executed (${row.status}) but could not be saved: ${ue.message}`);
