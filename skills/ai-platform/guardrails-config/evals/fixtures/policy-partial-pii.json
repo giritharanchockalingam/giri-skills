@@ -1,0 +1,8 @@
+{
+  "_fixture": "fictional fixture — card handling only; email/phone/ssn not yet decided",
+  "blocked_topics": [],
+  "pii_handling": {"card": "block"},
+  "max_input_chars": 500,
+  "max_output_chars": 500,
+  "allowed_tools": []
+}

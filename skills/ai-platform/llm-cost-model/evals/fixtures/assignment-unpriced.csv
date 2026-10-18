@@ -1,0 +1,3 @@
+feature,model,eligible_models,notes
+support-chat,fict-medium,fict-small,fictional fixture: fict-medium has no price row
+doc-summary,fict-large,fict-large,fictional fixture

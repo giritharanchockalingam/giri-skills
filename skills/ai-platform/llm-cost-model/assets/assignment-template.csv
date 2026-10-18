@@ -1,0 +1,2 @@
+feature,model,eligible_models,notes
+,,,eligible_models = ';'-separated models that passed your quality bar for this feature (what-if candidates)

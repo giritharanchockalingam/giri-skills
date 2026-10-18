@@ -1,0 +1,2 @@
+model,price_in_per_1m,price_out_per_1m,cached_in_per_1m,source,as_of,notes
+,,,,,,price per 1M tokens from the vendor's published price page or your contract; source and as_of are required for traceability
