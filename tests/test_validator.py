@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from conftest import REPO_ROOT, run_script
@@ -150,3 +152,16 @@ def test_validator_requires_run_step_and_check(tmp_path):
     assert r.returncode == 1
     assert "run has no steps" in r.stdout
     assert "outputs has no checks" in r.stdout
+
+
+def test_validator_enforces_adlc_stage_when_taxonomy_present(tmp_path):
+    md = "---\nname: good-skill\ndescription: Use when testing.\nmetadata:\n  domain: build\n  adlc_stage: nowhere\n---\n# x\n"
+    script = make_repo(tmp_path, {"build/good-skill": md})
+    shared = script.parent.parent / "shared"
+    shared.mkdir()
+    shutil.copy(REPO_ROOT / "shared" / "adlc-stages.json", shared / "adlc-stages.json")
+    r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+    assert r.returncode == 1 and "adlc_stage 'nowhere'" in r.stdout
+    (script.parent.parent / "skills/build/good-skill/SKILL.md").write_text(md.replace("nowhere", "build"), encoding="utf-8")
+    r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+    assert "adlc_stage" not in r.stdout
