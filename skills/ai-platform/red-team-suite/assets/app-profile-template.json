@@ -1,0 +1,10 @@
+{
+  "app_name": "<product name as users see it>",
+  "purpose": "<what the app is for, one clause, e.g. answering customers' billing questions>",
+  "tools": [
+    {"name": "<tool_name exactly as in the tool-call trace>", "description": "<what it does; mark side effects>"}
+  ],
+  "data": ["<category of data the app can see, e.g. billing history>"],
+  "canary": "<unique synthetic string planted in the system prompt for this test; never a real secret>",
+  "out_of_scope": ["<topic the app must decline>"]
+}
