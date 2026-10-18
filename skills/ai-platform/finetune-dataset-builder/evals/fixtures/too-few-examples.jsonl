@@ -1,0 +1,8 @@
+{"messages": [{"role": "user", "content": "How do I request a new laptop?"}, {"role": "assistant", "content": "Raise a hardware request in the service catalogue."}], "meta": "fictional fixture"}
+{"messages": [{"role": "user", "content": "How do I request a new laptop?"}, {"role": "assistant", "content": "Raise a hardware request in the service catalogue."}], "meta": "fictional fixture"}
+{"prompt": "Where is the VPN client?", "completion": "In the self-service software centre.", "meta": "fictional fixture"}
+{"prompt": "How do I book a room?", "completion": "", "meta": "fictional fixture"}
+{"messages": [{"role": "system", "content": "You are a helpdesk assistant."}, {"role": "user", "content": "How do I report phishing?"}, {"role": "assistant", "content": "Use the Report phish button."}], "meta": "fictional fixture"}
+{"messages": [{"role": "user", "content": "Can I install my own software?"}], "meta": "fictional fixture"}
+{"prompt": "How do I enable MFA?", "completion": "Open security settings and choose Set up MFA.", "meta": "fictional fixture"}
+{not valid json, fictional fixture}

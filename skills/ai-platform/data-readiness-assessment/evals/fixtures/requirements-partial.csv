@@ -1,0 +1,5 @@
+key,value,source,notes
+min_rows,20,fictional data-owner sign-off,fictional fixture
+required_columns,order_id;order_date;amount;region,fictional data-owner sign-off,fictional fixture
+max_null_pct,,not yet agreed,fictional fixture - owner has not set this threshold
+date_column,order_date,fictional data-owner sign-off,fictional fixture

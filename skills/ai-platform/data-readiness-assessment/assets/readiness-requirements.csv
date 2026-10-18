@@ -1,0 +1,8 @@
+key,value,source,notes
+min_rows,,,minimum usable rows (integer)
+max_null_pct,,,max null % allowed in any column (0-100)
+required_columns,,,semicolon-separated column names that must exist
+unique_key,,,semicolon-separated key column(s) that must be unique and non-null
+max_duplicate_rows,,,max fully duplicated rows allowed (integer)
+date_column,,,column holding the record date (ISO YYYY-MM-DD)
+max_age_days,,,max days between the newest date_column value and as_of
