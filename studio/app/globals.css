@@ -675,3 +675,10 @@ details.disclosure[open] > summary::before { content: "▼"; }
   .brand-name { font-size: 15px; }
   .user-chip { display: none; }
 }
+
+/* Overview pipeline strip */
+.pipeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.pipeline li { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border: 1px solid var(--rule); border-radius: 10px; font-size: 14px; min-width: 0; }
+.pipeline-n { font-family: var(--mono); font-size: 12px; color: var(--flame); }
+.section-tight { margin-top: 20px; }
+@media (max-width: 760px) { .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -7,8 +7,8 @@ import { importFromRepo } from "@/app/actions";
 export interface Importable { id: string; name: string; domain: string; description: string; imported: boolean }
 
 /** "Import from repo": the 40 wired repository skills (SKILL.md metadata.agent + evals.json) become draft v1 versions. */
-export function ImportDrawer({ importable }: { importable: Importable[] }) {
-  const [open, setOpen] = useState(false);
+export function ImportDrawer({ importable, initialOpen = false }: { importable: Importable[]; initialOpen?: boolean }) {
+  const [open, setOpen] = useState(initialOpen);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<Set<string>>(new Set());
   const list = useMemo(() => { const n = q.toLowerCase(); return importable.filter((s) => !n || s.id.includes(n) || s.description.toLowerCase().includes(n)); }, [importable, q]);

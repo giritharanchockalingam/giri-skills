@@ -6,6 +6,7 @@ import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { RunPill, VersionPill } from "@/components/factory/Pills";
 import { EmptyState } from "@/components/factory/EmptyState";
+import { skills as repoSkills, upstream } from "@/lib/data";
 
 export const metadata = { title: "Overview · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -30,8 +31,8 @@ export default async function OverviewPage() {
   const [skillsQ, statesQ, runsQ, failedQ] = await Promise.all([
     sb.from("sf_skills").select("id, slug, name, status").eq("workspace_id", ws.id),
     sb.from("sf_version_release_state").select("*").eq("workspace_id", ws.id).in("status", ["in_review", "approved", "draft"]),
-    sb.from("sf_runs").select("status, source, cost_usd").eq("workspace_id", ws.id).gte("created_at", since),
-    sb.from("sf_runs").select("id, status, error, created_at, source, version_id, sf_skill_versions(version, sf_skills!sf_skill_versions_skill_id_fkey(slug, name))").eq("workspace_id", ws.id).in("status", ["failed", "timeout"]).gte("created_at", since).order("created_at", { ascending: false }).limit(8),
+    sb.from("sf_runs").select("status, source, cost_usd").eq("workspace_id", ws.id).neq("source", "eval").gte("created_at", since),
+    sb.from("sf_runs").select("id, status, error, created_at, source, version_id, sf_skill_versions(version, sf_skills!sf_skill_versions_skill_id_fkey(slug, name))").eq("workspace_id", ws.id).neq("source", "eval").in("status", ["failed", "timeout"]).gte("created_at", since).order("created_at", { ascending: false }).limit(8),
   ]);
   const skills = (skillsQ.data ?? []) as Pick<SkillRow, "id" | "slug" | "name" | "status">[];
   const bySkill = new Map(skills.map((s) => [s.id, s]));
@@ -44,36 +45,60 @@ export default async function OverviewPage() {
   const spend = runs.reduce((a, r) => a + (r.cost_usd == null ? 0 : Number(r.cost_usd)), 0);
   const published = skills.filter((s) => s.status === "published").length;
 
-  const summary: { value: React.ReactNode; label: string; title: string }[] = [
-    { value: skills.length, label: "skills in this workspace", title: "Count of sf_skills rows in the workspace, any status" },
-    { value: published, label: "published skills", title: "Skills whose status is published (one published version each)" },
-    { value: runs.length, label: "runs in the last 7 days", title: "Runs of any source (UI, API, evaluation) created in the last 7 days" },
-    { value: runs.length ? `${Math.round((count("succeeded") / runs.length) * 100)}%` : "—", label: "succeeded (last 7 days)", title: "Runs with status succeeded ÷ all runs in the period; the output contract must have passed" },
-    { value: runs.some((r) => r.cost_usd != null) ? `≈$${spend.toFixed(4)}` : "—", label: "estimated model spend (7 days)", title: "Sum of per-run cost estimates (provider-reported tokens × price table). Not a billing figure; — when no run used a model" },
+  const domains = Object.entries(repoSkills.reduce<Record<string, number>>((m, k) => ((m[k.domain] = (m[k.domain] ?? 0) + 1), m), {}));
+  const imported = new Set(skills.map((k) => k.slug));
+  const notImported = repoSkills.filter((k) => !imported.has(k.name)).length;
+  const succeededPct = runs.length ? `${Math.round((count("succeeded") / runs.length) * 100)}%` : "—";
+
+  const pipeline: { n: string; t: string; d: string }[] = [
+    { n: "1", t: "Library", d: `${repoSkills.length + upstream.length} skills` },
+    { n: "2", t: "Prove", d: "test + evaluate on real inputs" },
+    { n: "3", t: "Approve", d: "reviewer signs the exact version" },
+    { n: "4", t: "Use", d: "frozen version, called by API" },
   ];
 
   return (
     <>
-      <PageHead eyebrow={`Overview · ${ws.name}`} title="What needs" em="attention" after="."
-        lead={inReview.length || awaiting.length || failed.length
-          ? `${inReview.length} version${inReview.length === 1 ? "" : "s"} waiting for review, ${awaiting.length} approved and ready to publish, ${failed.length} failed run${failed.length === 1 ? "" : "s"} in the last 7 days.`
-          : skills.length ? "Nothing is waiting on you. Every number below is measured from this workspace's own records." : "This workspace has no skills yet. Create one or import the repository's skills to start."}
+      <PageHead eyebrow={`Overview · ${ws.name}`} title="AI skills you can" em="trust" after="."
+        lead={`A library of ${repoSkills.length + upstream.length} AI skills — ${repoSkills.length} of ours that run, ${upstream.length} vetted from GitHub. Each is tested on real inputs and approved before people or apps can use it.`}
         caption={ctx.memberships.length > 1 ? <WorkspaceSwitcher ctx={ctx} /> : <>You are <b>{ctx.role}</b> in {ws.name}.</>} />
 
-      <div className="summary-grid">
-        {summary.map((c) => (
-          <div key={c.label} className="card summary" title={c.title}>
-            <div className="summary-value">{c.value}</div>
-            <div className="summary-label">{c.label}</div>
-          </div>
-        ))}
-      </div>
-      <p className="caption mt-3">Period: last 7 days (runs); counts are live from the database. Hover a number for its definition. Model spend is an estimate flagged per run.</p>
+      <ol className="pipeline" aria-label="How a skill gets to use">
+        {pipeline.map((p) => <li key={p.n}><span className="pipeline-n">{p.n}</span><span><b>{p.t}</b><span className="caption"> · {p.d}</span></span></li>)}
+      </ol>
 
-      <div className="cards-3 section">
+      <div className="summary-grid section-tight">
+        <Link href="/repo" className="card summary row-link" title="Skills authored in this repository, each with scripts, declared inputs, output checks and evaluation cases">
+          <div className="summary-value">{repoSkills.length}</div>
+          <div className="summary-label">our runnable skills<div className="caption">{domains.map(([d, n]) => `${d} ${n}`).join(" · ")}</div></div>
+        </Link>
+        <Link href="/upstream" className="card summary row-link" title="Top public Agent Skills vendored verbatim, pinned by commit, license tracked">
+          <div className="summary-value">{upstream.length}</div>
+          <div className="summary-label">vetted from GitHub<div className="caption">pinned · licensed · reference</div></div>
+        </Link>
+        <Link href="/" className="card summary row-link" title="Skills imported or authored in this workspace; only these go through test, review and publish">
+          <div className="summary-value">{skills.length}<span className="muted" style={{ fontSize: 20 }}>/{repoSkills.length}</span></div>
+          <div className="summary-label">in this workspace<div className="caption">{notImported ? `${notImported} not imported yet` : "all imported"}</div></div>
+        </Link>
+        <div className="card summary" title="Skills with a published, immutable version callable through the API">
+          <div className="summary-value">{published}</div>
+          <div className="summary-label">published<div className="caption">callable by API</div></div>
+        </div>
+        <div className="card summary" title="Test and API runs (evaluation cases excluded — they are scored by pass rate) in the last 7 days">
+          <div className="summary-value">{succeededPct}</div>
+          <div className="summary-label">runs succeeded<div className="caption">{runs.length} test/API runs · 7 days{runs.some((r) => r.cost_usd != null) ? ` · ≈$${spend.toFixed(4)}` : ""}</div></div>
+        </div>
+      </div>
+
+      {notImported > 0 && can(ctx.role, "skill.create") && (
+        <p className="caption mt-3"><Link href="/?import=1" className="link-flame">Import the other {notImported} skills →</Link> to test, approve and publish them here.</p>
+      )}
+
+      <SectionHead title="Needs" em="attention" caption={inReview.length || awaiting.length || failed.length ? `${inReview.length} to review · ${awaiting.length} to publish · ${failed.length} failed` : "Nothing is waiting on you."} />
+      <div className="cards-3">
         <div className="card card-pad">
           <div className="h3">Pending reviews {can(ctx.role, "version.review") ? "for you" : ""} <span className="muted font-normal">({inReview.length})</span></div>
-          <p className="caption">Versions in review. {can(ctx.role, "version.review") ? "You can approve or reject them." : "A reviewer or admin decides."}</p>
+          
           <div className="list mt-3">
             {inReview.map((s) => { const sk = bySkill.get(s.skill_id); return sk && (
               <Link key={s.version_id} href={`/skills/${sk.slug}/release?v=${s.version}`} className="list-row row-link">
@@ -85,7 +110,7 @@ export default async function OverviewPage() {
         </div>
         <div className="card card-pad">
           <div className="h3">Ready to publish <span className="muted font-normal">({awaiting.length})</span></div>
-          <p className="caption">Approved versions whose evaluation gate and approval are both valid.</p>
+          
           <div className="list mt-3">
             {awaiting.map((s) => { const sk = bySkill.get(s.skill_id); return sk && (
               <Link key={s.version_id} href={`/skills/${sk.slug}/release?v=${s.version}`} className="list-row row-link">
@@ -96,8 +121,8 @@ export default async function OverviewPage() {
           </div>
         </div>
         <div className="card card-pad">
-          <div className="h3">Failed runs <span className="muted font-normal">({failed.length})</span></div>
-          <p className="caption">Failed or timed-out runs in the last 7 days, newest first.</p>
+          <div className="h3">Failed test/API runs <span className="muted font-normal">({failed.length})</span></div>
+          
           <div className="list mt-3">
             {failed.map((r) => (
               <Link key={r.id} href={`/runs/${r.id}`} className="list-row row-link">

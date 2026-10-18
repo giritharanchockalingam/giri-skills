@@ -9,7 +9,8 @@ import { ImportDrawer } from "@/components/factory/ImportDrawer";
 export const metadata = { title: "Skills · Skills Factory" };
 export const dynamic = "force-dynamic";
 
-export default async function SkillsPage() {
+export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string }> }) {
+  const sp = await searchParams;
   const ctx = await requireWorkspace();
   const sb = ctx.supabase;
   const [skillsQ, versionsQ, statesQ] = await Promise.all([
@@ -49,7 +50,7 @@ export default async function SkillsPage() {
         {can(ctx.role, "skill.create") ? (
           <>
             <Link href="/skills/new" className="btn btn-primary">New skill</Link>
-            <ImportDrawer importable={importable} />
+            <ImportDrawer importable={importable} initialOpen={sp.import === "1"} />
           </>
         ) : <span className="caption">Your role ({ctx.role}) can run published skills. Authors create and import skills.</span>}
       </div>
