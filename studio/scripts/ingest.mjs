@@ -112,7 +112,7 @@ function parseAgent(rawFm) {
   const lines = rawFm.split(/\r?\n/);
   const start = lines.findIndex((l) => /^  agent:\s*$/.test(l));
   if (start < 0) return null;
-  const agent = { inputs: [], steps: [], outputs: [], demo: null };
+  const agent = { inputs: [], steps: [], run: [], outputs: [], demo: null };
   let section = null;
   for (let i = start + 1; i < lines.length; i++) {
     const l = lines[i];
@@ -122,8 +122,8 @@ function parseAgent(rawFm) {
     const item = l.match(/^      - (\{[\s\S]*\})\s*$/);
     if (item && section) {
       const o = parseFlow(item[1]);
-      if (section === "inputs") agent.inputs.push({ name: o.name ?? "", type: o.type ?? "", required: o.required === true, from: o.from ?? "", default: o.default ?? null, flag: o.flag ?? null });
-      else if (section === "steps") agent.steps.push({ step: o.step ?? "", kind: o.kind ?? "" });
+      if (section === "inputs") agent.inputs.push({ name: o.name ?? "", type: o.type ?? "", required: o.required === true, from: o.from ?? "", default: o.default ?? null, flag: o.flag ?? null, copy: o.copy === true });
+      else if (section === "steps") { agent.steps.push({ step: o.step ?? "", kind: o.kind ?? "" }); agent.run.push(o); } // run: the full step spec (cmd/template/context/out/…) for the factory manifest
       else agent.outputs.push({ path: o.path ?? "", checks: (Array.isArray(o.checks) ? o.checks : []).map((c) => (typeof c === "string" ? c : JSON.stringify(c))) });
     }
   }
@@ -174,6 +174,12 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
         scripts: listFiles(join(sdir, "scripts")),
       },
       cases: (evals.cases || []).map((c) => ({ id: c.id, prompt: c.prompt, expected: c.expected || [] })),
+      // agent cases (inputs + deterministic checks) become evaluation cases when the skill is imported into the factory
+      agentCases: (evals.cases || []).filter((c) => c.inputs || c.checks).map((c) => ({
+        id: c.id, prompt: c.prompt || "", inputs: Object.fromEntries(Object.entries(c.inputs || {}).map(([k, v]) => [k, String(v)])),
+        assume: Object.fromEntries(Object.entries(c.assume || {}).map(([k, v]) => [k, String(v)])), checks: c.checks || [], expected: c.expected || [],
+      })),
+      bodyMd: body,
     });
   }
 }
@@ -433,6 +439,8 @@ for (const f of runtimeFiles) {
   try { bundle[f.path] = new TextDecoder("utf-8", { fatal: true }).decode(buf); } catch { throw new Error(`runtime bundle: ${f.path} is not UTF-8 text`); }
 }
 writeFileSync(join(RUNTIME, "bundle.json"), JSON.stringify(bundle));
+// the Vercel Python runtime (api/py/run.py) reads the same bundle from its own folder; committed so the function has it whatever the build order
+writeFileSync(join(STUDIO, "api", "py", "bundle.json"), JSON.stringify(bundle));
 writeFileSync(join(RUNTIME, "manifest.json"), JSON.stringify({
   generated: new Date().toISOString(), root: "/repo", files: runtimeFiles, bytes: runtimeBytes,
   pyodide: { version: "0.27.7", url: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js" },

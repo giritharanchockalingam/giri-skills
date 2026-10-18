@@ -43,7 +43,7 @@ export default async function SkillPage({ params }: { params: Promise<{ domain: 
     <>
       <div className="page-head">
         <nav className="caption" aria-label="Breadcrumb">
-          <Link href="/" className="link">Skills</Link> <span aria-hidden="true">›</span> {domain}
+          <Link href="/" className="link">Skills</Link> <span aria-hidden="true">›</span> <Link href="/repo/" className="link">Repository</Link> <span aria-hidden="true">›</span> {domain}
         </nav>
         <div className="eyebrow mt-5">{skill.name}{skill.metadata.version && <> · v{skill.metadata.version}</>}</div>
         <h1 className="h1" style={{ marginBottom: 12 }}>{skill.name.replace(/-/g, " ")}</h1>

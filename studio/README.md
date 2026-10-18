@@ -1,23 +1,83 @@
-# giri-skills studio
+# giri-skills studio — Skills Factory
 
-Static Next.js dashboard over the `giri-skills` repo: the 40 skills, their eval cases, the behavioral eval scorecard (`evals/results/<run>/`), the ranked proposals in `docs/EVAL-FINDINGS.md`, and the 50 vendored upstream skills (`catalog/top-50.json` + `vendor/`).
+Next.js app over the `giri-skills` repo with two halves:
 
-Views:
+1. **Skills Factory** (new, server-rendered, Supabase-backed): create or import skills, version their contract (manifest), test them on a server runtime, run evaluations, approve and publish immutable versions, run them from the UI or the consumer API, and audit everything. Roles: consumer · author · reviewer · admin.
+2. **Repository views** (unchanged, build-time data): the 40 repository skills, their eval scorecard, findings and the 50 vendored upstream skills.
 
-| Route | What |
-|---|---|
-| `/` | Skills catalog — filter by domain/verdict, search name + description, click a row for detail |
-| `/skills/<domain>/<name>/` | Skill detail — stat strip, "Runs as an agent" card (how to run, declared inputs/steps/outputs, agent eval checks), **"Run it"** (runs the skill in the browser, see below), rendered SKILL.md, file inventory, eval cases with per-run trigger + quality (PASS/FAIL + judge evidence) |
-| `/evals/` | Eval dashboard — verdict distribution, per-domain breakdown, sortable/filterable scorecard with drill-down (misrouted prompts, most-failed expected items, agent run checks); the "Runs" column is the deterministic agent verdict |
-| `/findings/` | Caveats, verdict counts, 25 ranked proposals with paste-ready description blocks (Copy button) and body directions; anchor `#<n>` per proposal |
-| `/upstream/` | The 50 vendored upstream skills — search name/description/repo, filter by category and license (open source vs Anthropic source-available), ranked by installs; row → detail |
-| `/upstream/<name>/` | Upstream skill detail — stat strip (rank, category, license, pinned sha, files), Source card (GitHub link at the pinned commit, repo, path, fetched date, license note), rendered SKILL.md |
+Docs: `docs/API.md` (consumer API + manifest format), `docs/VERIFY.md` (verification checklist), `docs/BASELINE.md` (what existed before the factory).
 
-No runtime fetching: `scripts/ingest.mjs` reads the repo at build time and writes `data/*.json`, which is the UI's only data source. `data/` is committed so the site builds on Vercel without the eval CSVs. The one exception is the Run view, which fetches the generated `public/runtime/` bundle and the Pyodide runtime when opened.
+## Routes
+
+| Area | Route | What |
+|---|---|---|
+| Overview | `/overview` | Pending reviews, versions ready to publish, failed runs (7 days), measured counts with definitions; workspace creation for a first user |
+| Skills | `/` | Workspace skills catalog (search, status/source filters), **New skill**, **Import from repository** |
+| | `/skills/new` | Create a skill (name, purpose, users, guidance) → draft v1 |
+| | `/skills/<slug>` | Summary: what/when, status + version, owner, inputs/outputs/steps, evidence, needs (tools/connections), one primary next action |
+| | `/skills/<slug>/authoring` | Skill details, manifest editor (validated live, hashed on save), resource files (authored skills) |
+| | `/skills/<slug>/test` | **Test skill**: real inputs → server runtime → persisted run; link to the browser runner |
+| | `/skills/<slug>/evaluations` | Cases (CRUD), **Run evaluation**, history with per-case results, release gate |
+| | `/skills/<slug>/release` | Gates (evaluation, approval validity/staleness), request/withdraw review, approve/reject, reopen, **Publish version**, retire, new draft |
+| | `/skills/<slug>/activity` | Runs of the selected version |
+| | `/repo/`, `/repo/<domain>/<name>/` | Repository catalog and skill pages (scorecard stats, agent block, **Run it** in the browser, SKILL.md, eval cases) |
+| | `/upstream/`, `/upstream/<name>/` | Vendored upstream skills |
+| Evaluations | `/evaluations` | Readiness across workspace versions; links to `/evals/` (repo scorecard) and `/findings/` |
+| Activity | `/activity`, `/runs/<id>` | Run list (status/source filters) and run detail: steps, checks, output contract, outputs (view/download), logs, provider/model/usage/cost (estimate flag), inputs reference |
+| Administration | `/admin` | Members + roles, API keys (shown once), connections + runtime check, policies (tools, providers, budget, concurrency), audit log, account/sign-out |
+| Auth | `/login` | Supabase email + password, email link, sign-up |
+| API | `/api/v1/*` | Consumer API — see `docs/API.md` |
+| Runtime | `/api/py/run` | Vercel Python function executing `scripts/run_skill.py` (shared-secret protected; called by the server only) |
+
+## Setup
+
+Environment variables (Vercel → Project → Settings → Environment Variables, or `.env.local` for `next dev`):
+
+| Variable | Where | Required | Purpose |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | server + browser | yes | Supabase project URL, e.g. `https://ysesfztvcexufoogjgth.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | server + browser | yes | Supabase publishable (anon) key; RLS protects data |
+| `SF_RUNTIME_SECRET` | server (Next + Python function) | yes for runs | Shared secret the Next server sends to `/api/py/run`; generate with `openssl rand -hex 32`. Without it runs refuse with "runtime not configured" |
+| `ANTHROPIC_API_KEY` | server (Python function) | optional | Enables llm steps. Absent → llm steps are skipped and reported, never faked |
+| `SF_RUNTIME_URL` | server | optional | Override the runtime base URL (defaults to the Vercel deployment URL; needed under `vercel dev`: `http://localhost:3000`) |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | server | optional | Lets the server call the Python function on protected preview deployments |
+
+Database: apply `supabase/migrations/0001_sf_schema.sql` then `0002_sf_functions.sql` in the Supabase SQL editor (or `supabase db push`). Every object is prefixed `sf_`; nothing else in the project is touched; re-running is safe. Auth is the project's existing Supabase Auth; the first user to create a workspace becomes its admin and adds members by email.
+
+## Run locally
+
+```bash
+cd studio
+npm install
+cp .env.example .env.local        # fill in the values above
+npm run dev                       # ingest, then next dev on http://localhost:3000 (UI + API; no Python runtime)
+vercel dev                        # alternative: also serves api/py/run.py; set SF_RUNTIME_URL=http://localhost:3000
+```
+
+## Tests
+
+```bash
+cd studio
+npm run typecheck                 # tsc --noEmit
+npm run test:unit                 # node --test: manifest, schema, hash, release state, roles, import of all 40 repo skills
+npm run test:py                   # pytest: the Python runtime (api/py/run.py) offline — needs api/py/bundle.json (npm run ingest)
+PGHOST=/tmp PGPORT=54329 PGUSER=postgres npm run test:sql   # migrations + RLS/RPC behaviour on a local PostgreSQL (tests/sql/run.sh)
+npm test                          # typecheck + unit + py
+```
+
+## Build and deploy
+
+```bash
+cd studio
+npm run build                     # ingest (data/, public/runtime/, api/py/bundle.json), then next build (server mode)
+npm run start                     # next start
+```
+
+Vercel: **Root Directory = `studio`**, Framework Preset = Next.js. `vercel.json` configures the Python function (`api/py/*.py`: 60 s, 1024 MB, excludes `node_modules`, `.next`, `data`, …). `api/py/bundle.json` (the runtime bundle) is committed so the function has it regardless of build order. Push to the connected branch; set the env vars above; apply the migrations once.
 
 ## Run view (in-browser runner)
 
-Every wired skill page has a **Run it** card that executes the real `scripts/run_skill.py` — the same runner, the same skill scripts, the same `check_output.py` checks — inside the browser. Nothing is mocked: what the card shows is read back from the `run.json` the runner wrote.
+Every repository skill page (`/repo/<domain>/<name>/`) has a **Run it** card that executes the real `scripts/run_skill.py` — the same runner, the same skill scripts, the same `check_output.py` checks — inside the browser. Nothing is mocked: what the card shows is read back from the `run.json` the runner wrote.
 
 How it works:
 
@@ -27,15 +87,7 @@ How it works:
 - **LLM steps and the key.** With no key the runner is called with `--provider none`: llm steps are **skipped** with `skipped_reason: "no provider key (LLM step not run)"` in `run.json`, their output files are absent, and the checks on them fail — the page shows exactly that. With a key, `--provider jsbridge` routes `provider.complete()` to a JS callback (`behavioral_evals.JS_LLM_CALLBACK`) that POSTs to `https://api.anthropic.com/v1/messages` (`x-api-key`, `anthropic-version: 2023-06-01`, `anthropic-dangerous-direct-browser-access: true`) with a synchronous XHR from the worker. The key is held in a React state variable, passed to the worker for one run and dropped; it is never written to the FS, `run.json`, logs, localStorage or the URL. The input is `type=password`.
 - **Results.** Overall banner (OK / FAILED / NEEDS INPUT naming the missing inputs), per-step table (kind, exit, duration, skipped reason), per-check table (file, check, pass/failed, evidence — failed rows in red), output files with view (rendered Markdown via `lib/markdown.mjs` or raw) and download, `run.json` download, and the captured `logs/` of every step.
 - **Bundle.** `ingest` also writes `public/runtime/`: `scripts/{run_skill,check_output,skillmeta,behavioral_evals}.py`, `shared/*.md`, and for each wired skill `SKILL.md`, `scripts/`, `assets/`, `references/`, `evals/fixtures/`, `evals/evals.json` under `repo/…` (≈1.6 MB, 451 files), plus `manifest.json` (file list with sizes) and `bundle.json` (one fetch). Anything the repo `.gitignore` keeps local (the real master résumé, rate card, story bank) is never copied. `public/runtime/` is generated and git-ignored.
-- Static export is unchanged; Pyodide runs single-threaded, so no COOP/COEP headers are needed. For local testing where the CDN is unreachable, `?pyodide=/pyodide/` loads the runtime from a same-origin path (e.g. the `pyodide` npm package copied into `out/pyodide/`); other origins are ignored.
-
-## Run locally
-
-```bash
-cd studio
-npm install
-npm run dev        # runs ingest first, then next dev on http://localhost:3000
-```
+- Pyodide runs single-threaded, so no COOP/COEP headers are needed. For local testing where the CDN is unreachable, `?pyodide=/pyodide/` loads the runtime from a same-origin path (e.g. the `pyodide` npm package copied into `out/pyodide/`); other origins are ignored.
 
 ## Refresh data after a new eval run
 
@@ -57,49 +109,23 @@ git add data/                                    # commit the regenerated JSON
 
 It prints the row counts it found; `data/meta.json` carries the same counts plus the run header.
 
-## Build
-
-```bash
-cd studio
-npm run build      # runs ingest, then next build → static site in out/
-npm run start      # zero-dependency static server for out/ on http://localhost:4173
-```
-
-## Deploy to Vercel
-
-Project settings: **Root Directory = `studio`**, Framework Preset = Next.js (static export is picked up from `next.config.ts`; no server functions). Build command `npm run build`, output directory `out`.
-
-```bash
-npm i -g vercel
-cd studio
-vercel login
-vercel link                                  # create/link the project; answer the prompts
-vercel                                       # preview deploy
-vercel --prod                                # production deploy
-```
-
-If the project was linked from the repo root instead of `studio/`, set the root directory once:
-
-```bash
-vercel project ls
-# Dashboard → Project → Settings → General → Root Directory → studio
-```
-
-Git-connected deploys work the same way: push to the connected branch; Vercel runs `npm run build` inside `studio/` (ingest needs the repo present, which it is in a Git deploy; the committed `data/` also makes the build independent of the git-ignored `evals/results/*/raw/`).
 
 ## Stack
 
-Next.js 15 (App Router, `output: 'export'`, `trailingSlash`), React 19, TypeScript, Tailwind v4 via `@tailwindcss/postcss`. No other dependencies — markdown rendering, CSV parsing, and the verdict bar are hand-rolled in `scripts/ingest.mjs` and plain CSS. Dark mode follows `prefers-color-scheme`.
+Next.js 15 (App Router, server mode, `trailingSlash`), React 19, TypeScript, Tailwind v4 via `@tailwindcss/postcss`, `@supabase/supabase-js` + `@supabase/ssr` (auth + data; RLS enforced in the database, roles re-checked in every server action and route handler). The Python runtime is stdlib-only. Dark mode follows `prefers-color-scheme`.
 
 ```
 studio/
-├── app/            routes: / , /evals/ , /findings/ , /skills/[domain]/[name]/ , /upstream/ , /upstream/[name]/
-├── components/     client components (tables, filters, drill-downs, copy button, RunPanel)
-├── lib/data.ts     typed accessors over data/*.json
-├── lib/runner.ts   browser client for the Pyodide worker (runSkill, loadRuntime)
-├── lib/markdown.mjs shared Markdown → safe HTML (ingest at build time, RunPanel in the browser)
-├── public/run-worker.js  Web Worker: Pyodide + run_skill.py in-process, LLM bridge
-├── public/runtime/ generated runtime bundle (git-ignored; written by ingest)
-├── scripts/        ingest.mjs (repo → JSON + runtime bundle), serve.mjs (static server for out/)
-└── data/           generated JSON (committed)
+├── app/                 routes (see table); actions.ts = server actions; api/ = route handlers (UI runs, eval runs, v1 consumer API, runtime health)
+├── api/py/run.py        Vercel Python function: materialises the bundle into /tmp, runs run_skill.py in-process under a deadline with a scrubbed env
+├── api/py/bundle.json   generated by ingest (committed): scripts/, shared/, every wired skill's SKILL.md/scripts/assets/references/fixtures
+├── components/          factory/ (forms, editors, tables, pills) + the repository dashboard components
+├── lib/factory/         manifest (contract + validation), schema (input/output validation), hash, roles, release (gates/next action), import, db (types + context), runtime (bridge), apikey, http
+├── lib/supabase/        server/browser clients, env
+├── middleware.ts        session refresh + route protection
+├── supabase/migrations/ 0001_sf_schema.sql (tables, triggers, RLS), 0002_sf_functions.sql (release-state view, lifecycle + API RPCs)
+├── tests/               factory.test.ts (node --test), test_factory_runtime.py (pytest), sql/ (migration behaviour tests)
+├── docs/                API.md, VERIFY.md, BASELINE.md
+├── lib/data.ts, scripts/ingest.mjs, public/run-worker.js, public/runtime/   repository views + in-browser runner (unchanged)
+└── data/                generated JSON for the repository views (committed)
 ```

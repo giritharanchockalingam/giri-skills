@@ -1,0 +1,243 @@
+-- Behavioural tests for the sf_ schema: RLS per role, immutability trigger, stale approval, eval gate,
+-- publish RPC, API-key RPCs. Runs under tests/sql/run.sh against a local PostgreSQL with supabase_stub.sql.
+-- Every block raises (and aborts the script via ON_ERROR_STOP) when an expectation fails.
+\set ON_ERROR_STOP on
+\set QUIET on
+
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-000000000001', 'admin@example.test'),
+  ('00000000-0000-0000-0000-000000000002', 'author@example.test'),
+  ('00000000-0000-0000-0000-000000000003', 'reviewer@example.test'),
+  ('00000000-0000-0000-0000-000000000004', 'consumer@example.test'),
+  ('00000000-0000-0000-0000-000000000005', 'outsider@example.test');
+
+-- helper: act as a user (role authenticated + JWT sub)
+create or replace function test_as(p_user text) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', p_user, false);
+  perform set_config('role', 'authenticated', false);
+end $$;
+create or replace function test_as_anon() returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claim.sub', '', false);
+  perform set_config('role', 'anon', false);
+end $$;
+create or replace function test_expect_error(p_sql text, p_fragment text) returns void language plpgsql as $$
+begin
+  begin
+    execute p_sql;
+  exception when others then
+    if position(p_fragment in sqlerrm) = 0 then
+      raise exception 'expected error containing [%] but got [%]', p_fragment, sqlerrm;
+    end if;
+    return;
+  end;
+  raise exception 'expected an error containing [%] but the statement succeeded: %', p_fragment, p_sql;
+end $$;
+create or replace function test_assert(p_cond boolean, p_msg text) returns void language plpgsql as $$
+begin
+  if not coalesce(p_cond, false) then raise exception 'assertion failed: %', p_msg; end if;
+end $$;
+
+-- ───────── 1. workspace bootstrap: first user becomes admin ─────────
+select test_as('00000000-0000-0000-0000-000000000001');
+select sf_create_workspace('Acme Factory', 'acme') as ws \gset
+select test_assert((select role from sf_memberships where workspace_id = :'ws' and user_id = auth.uid()) = 'admin', 'creator is admin');
+select test_assert((select count(*) from sf_policies where workspace_id = :'ws') = 1, 'default policy row');
+
+-- admin adds members (RLS insert policy)
+insert into sf_memberships (workspace_id, user_id, role) values
+  (:'ws', '00000000-0000-0000-0000-000000000002', 'author'),
+  (:'ws', '00000000-0000-0000-0000-000000000003', 'reviewer'),
+  (:'ws', '00000000-0000-0000-0000-000000000004', 'consumer');
+select test_assert((select count(*) from sf_member_directory(:'ws')) = 4, 'member directory lists 4 with emails');
+select test_assert(sf_user_id_by_email('Author@example.test') = '00000000-0000-0000-0000-000000000002', 'email lookup');
+
+-- outsider sees nothing and cannot join
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_workspaces) = 0, 'outsider sees no workspace');
+select test_expect_error($$insert into sf_memberships (workspace_id, user_id, role) values ('$$ || :'ws' || $$', '00000000-0000-0000-0000-000000000005', 'admin')$$, 'row-level security');
+
+-- consumer cannot add members or create skills
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_expect_error($$insert into sf_skills (workspace_id, slug, name, owner_id) values ('$$ || :'ws' || $$', 'x', 'X', '00000000-0000-0000-0000-000000000004')$$, 'row-level security');
+
+-- ───────── 2. author creates a skill + v1 draft ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_skills (workspace_id, slug, name, owner_id, purpose) values (:'ws', 'invoice-check', 'Invoice check', auth.uid(), 'Validate an invoice against a PO')
+  returning id as skill \gset
+insert into sf_skill_versions (skill_id, version, manifest, manifest_hash, created_by)
+  values (:'skill', 1,
+          '{"inputs":[{"name":"invoice","type":"json","required":true}],"outputs":[{"path":"{out}/result.json","checks":["exists","json"]}],"release_criteria":{"min_eval_pass_rate":0.8,"require_approval":true}}',
+          repeat('a', 64), auth.uid())
+  returning id as v1 \gset
+update sf_skills set latest_version_id = :'v1' where id = :'skill';
+insert into sf_files (version_id, path, content, sha256) values (:'v1', 'scripts/check.py', 'print(1)', repeat('b', 64));
+select test_expect_error($$insert into sf_files (version_id, path, content, sha256) values ('$$ || :'v1' || $$', '../etc/passwd', 'x', repeat('b', 64))$$, 'check');
+insert into sf_eval_cases (version_id, name, inputs, checks) values (:'v1', 'happy', '{"invoice":"x"}', '["exit:0"]') returning id as case1 \gset
+
+-- release state before anything: not publishable
+select test_assert((select publishable from sf_version_release_state where version_id = :'v1') = false, 'draft without eval/approval is not publishable');
+select test_assert((select eval_gate_met from sf_version_release_state where version_id = :'v1') = false, 'eval gate unmet without a run');
+select test_expect_error($$select sf_publish_version('$$ || :'v1' || $$')$$, 'no valid approval');
+
+-- ───────── 3. consumer may not run a draft; author may ─────────
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_expect_error($$select sf_run_insert('$$ || :'v1' || $$', 'ui', '[]'::jsonb)$$, 'consumers can only run published');
+select test_as('00000000-0000-0000-0000-000000000002');
+select (sf_run_insert(:'v1', 'ui', '[{"name":"invoice","sha256":"x","bytes":1}]'::jsonb, 'idem-1')->>'run_id') as run1 \gset
+select test_assert((sf_run_insert(:'v1', 'ui', '[]'::jsonb, 'idem-1')->>'existing')::boolean, 'idempotency key returns the existing run');
+update sf_runs set status = 'succeeded', finished_at = now(), cost_usd = 0.01 where id = :'run1';
+
+-- concurrency: policy max 2, two in-flight runs block a third
+update sf_policies set max_concurrency = 1 where workspace_id = :'ws';  -- author can't (admin only)
+select test_assert((select max_concurrency from sf_policies where workspace_id = :'ws') = 2, 'author cannot change policy (RLS: 0 rows updated)');
+select test_as('00000000-0000-0000-0000-000000000001');
+update sf_policies set max_concurrency = 1 where workspace_id = :'ws';
+select test_as('00000000-0000-0000-0000-000000000002');
+select (sf_run_insert(:'v1', 'ui', '[]'::jsonb)->>'run_id') as run2 \gset
+select test_expect_error($$select sf_run_insert('$$ || :'v1' || $$', 'ui', '[]'::jsonb)$$, 'concurrency limit');
+update sf_runs set status = 'failed', error = 'test' where id = :'run2';
+
+-- budget: 0.005 USD budget already exceeded by the 0.01 estimate
+select test_as('00000000-0000-0000-0000-000000000001');
+update sf_policies set monthly_budget_usd = 0.005 where workspace_id = :'ws';
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$select sf_run_insert('$$ || :'v1' || $$', 'ui', '[]'::jsonb)$$, 'monthly budget');
+select test_as('00000000-0000-0000-0000-000000000001');
+update sf_policies set monthly_budget_usd = null where workspace_id = :'ws';
+
+-- ───────── 4. evaluation run: gate becomes met only with a current, passing run ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+select sf_eval_set_hash(:'v1') as h1 \gset
+insert into sf_eval_runs (version_id, eval_set_hash, status, pass_rate, finished_at, created_by)
+  values (:'v1', :'h1', 'finished', 0.5, now(), auth.uid());
+select test_assert((select eval_gate_met from sf_version_release_state where version_id = :'v1') = false, 'pass rate 0.5 < 0.8 fails the gate');
+insert into sf_eval_runs (version_id, eval_set_hash, status, pass_rate, finished_at, created_by)
+  values (:'v1', :'h1', 'finished', 1.0, now() + interval '1 second', auth.uid());
+select test_assert((select eval_gate_met from sf_version_release_state where version_id = :'v1') = true, 'pass rate 1.0 meets the gate');
+-- adding a case makes the evidence outdated
+insert into sf_eval_cases (version_id, name, inputs, checks) values (:'v1', 'missing input', '{}', '["exit:2"]');
+select test_assert((select eval_current from sf_version_release_state where version_id = :'v1') = false, 'new case -> eval outdated');
+select test_assert((select eval_gate_met from sf_version_release_state where version_id = :'v1') = false, 'outdated eval does not meet the gate');
+select test_expect_error($$select sf_publish_version('$$ || :'v1' || $$')$$, 'no valid approval');
+select sf_eval_set_hash(:'v1') as h2 \gset
+insert into sf_eval_runs (version_id, eval_set_hash, status, pass_rate, finished_at, created_by)
+  values (:'v1', :'h2', 'finished', 1.0, now() + interval '2 seconds', auth.uid());
+select test_assert((select eval_gate_met from sf_version_release_state where version_id = :'v1') = true, 'fresh run meets the gate again');
+
+-- ───────── 5. review: only in_review versions, only reviewers/admins, not the author ─────────
+select test_expect_error($$select sf_review_version('$$ || :'v1' || $$', 'approve')$$, 'reviewers or admins only');
+update sf_skill_versions set status = 'in_review' where id = :'v1';
+select test_expect_error($$update sf_skill_versions set status = 'published' where id = '$$ || :'v1' || $$'$$, 'only allowed through');
+select test_as('00000000-0000-0000-0000-000000000003');
+update sf_skill_versions set status = 'approved' where id = :'v1';  -- reviewer has no update right: RLS filters the row, 0 updated
+select test_assert((select status from sf_skill_versions where id = :'v1') = 'in_review', 'reviewer cannot flip status directly');
+select sf_review_version(:'v1', 'approve', 'looks right');
+select test_assert((select status from sf_skill_versions where id = :'v1') = 'approved', 'approved status');
+select test_assert((select approval_valid from sf_version_release_state where version_id = :'v1') = true, 'approval valid');
+select test_assert((select publishable from sf_version_release_state where version_id = :'v1') = true, 'publishable');
+
+-- ───────── 6. stale approval: an approved version is immutable; a draft edit after reject goes stale ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$update sf_skill_versions set manifest = '{"inputs":[]}', manifest_hash = repeat('c', 64) where id = '$$ || :'v1' || $$'$$, 'immutable');
+select test_expect_error($$insert into sf_files (version_id, path, content, sha256) values ('$$ || :'v1' || $$', 'scripts/new.py', 'x', repeat('b', 64))$$, 'immutable');
+
+-- a second version: approve, then reject route: in_review -> draft keeps the approval row but it no longer matches once edited
+insert into sf_skill_versions (skill_id, version, manifest, manifest_hash, created_by)
+  values (:'skill', 2, '{"inputs":[],"outputs":[],"release_criteria":{"min_eval_pass_rate":0,"require_approval":true}}', repeat('d', 64), auth.uid())
+  returning id as v2 \gset
+update sf_skill_versions set status = 'in_review' where id = :'v2';
+select test_as('00000000-0000-0000-0000-000000000003');
+select sf_review_version(:'v2', 'approve');
+select test_assert((select approval_valid from sf_version_release_state where version_id = :'v2') = true, 'v2 approved');
+-- author reopens the approved version for editing: allowed; the approval stays valid until the manifest changes
+select test_as('00000000-0000-0000-0000-000000000002');
+update sf_skill_versions set status = 'draft' where id = :'v2';
+select test_assert((select approval_valid from sf_version_release_state where version_id = :'v2') = true, 'reopened, unchanged: approval still valid');
+update sf_skill_versions set manifest = '{"inputs":[],"outputs":[],"limits":{"timeout_s":20},"release_criteria":{"min_eval_pass_rate":0,"require_approval":true}}', manifest_hash = repeat('9', 64) where id = :'v2';
+select test_assert((select approval_stale from sf_version_release_state where version_id = :'v2') = true, 'edited after approval: approval is STALE');
+select test_assert((select publishable from sf_version_release_state where version_id = :'v2') = false, 'stale approval blocks publish');
+select test_expect_error($$select sf_publish_version('$$ || :'v2' || $$')$$, 'approval is stale');
+select test_expect_error($$update sf_skill_versions set status = 'published' where id = '$$ || :'v2' || $$'$$, 'only allowed through');
+-- simulate the stale case directly: an in_review draft edited after an approval row exists
+insert into sf_skill_versions (skill_id, version, manifest, manifest_hash, created_by)
+  values (:'skill', 3, '{"inputs":[],"outputs":[],"release_criteria":{"min_eval_pass_rate":0,"require_approval":true}}', repeat('e', 64), auth.uid())
+  returning id as v3 \gset
+update sf_skill_versions set status = 'in_review' where id = :'v3';
+select test_as('00000000-0000-0000-0000-000000000003');
+select sf_review_version(:'v3', 'reject', 'needs a timeout');
+select test_assert((select status from sf_skill_versions where id = :'v3') = 'draft', 'reject returns to draft');
+select test_as('00000000-0000-0000-0000-000000000002');
+update sf_skill_versions set manifest = '{"inputs":[],"outputs":[],"limits":{"timeout_s":30},"release_criteria":{"min_eval_pass_rate":0,"require_approval":true}}', manifest_hash = repeat('f', 64) where id = :'v3';
+select test_assert((select approval_valid from sf_version_release_state where version_id = :'v3') = false, 'rejected+edited: no valid approval');
+-- approve-then-edit staleness through the RPC path: approve v3 after re-review, then prove the hash comparison
+update sf_skill_versions set status = 'in_review' where id = :'v3';
+select test_as('00000000-0000-0000-0000-000000000003');
+select sf_review_version(:'v3', 'approve');
+select test_assert((select latest_approval_hash from sf_version_release_state where version_id = :'v3') = repeat('f', 64), 'approval pinned to the reviewed hash');
+-- approvals are append-only
+delete from sf_approvals where version_id = :'v3';  -- no delete policy: RLS filters every row
+select test_assert((select count(*) from sf_approvals where version_id = :'v3') = 2, 'approvals are append-only (reject + approve kept)');
+select set_config('role', 'postgres', false);  -- even the owner cannot delete: the trigger rejects it
+select test_expect_error($$delete from sf_approvals where version_id = '$$ || :'v3' || $$'$$, 'append-only');
+select test_as('00000000-0000-0000-0000-000000000003');
+
+-- ───────── 7. publish: role check, gate, supersede, skill pointer, audit ─────────
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_expect_error($$select sf_publish_version('$$ || :'v1' || $$')$$, 'authors or admins only');
+select test_as('00000000-0000-0000-0000-000000000002');
+select sf_publish_version(:'v1');
+select test_assert((select status from sf_skill_versions where id = :'v1') = 'published', 'v1 published');
+select test_assert((select latest_version_id from sf_skills where id = :'skill') = :'v1', 'skill points at v1');
+select sf_publish_version(:'v3');
+select test_assert((select status from sf_skill_versions where id = :'v1') = 'superseded', 'v1 superseded by v3');
+select test_assert((select status from sf_skill_versions where id = :'v3') = 'published', 'v3 published');
+select test_expect_error($$select sf_publish_version('$$ || :'v1' || $$')$$, 'cannot be published');
+select test_assert((select count(*) from sf_audit_events where action = 'version.publish') = 2, 'publish audited');
+-- published version immutable
+select test_expect_error($$update sf_skill_versions set manifest = '{}' where id = '$$ || :'v3' || $$'$$, 'immutable');
+-- consumer can now run the published version
+select test_as('00000000-0000-0000-0000-000000000004');
+select (sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'run_id') as run3 \gset
+update sf_runs set status = 'succeeded' where id = :'run3';
+select test_assert((select count(*) from sf_runs where id = :'run3' and status = 'succeeded') = 1, 'consumer updated own run');
+select test_expect_error($$select sf_run_insert('$$ || :'v1' || $$', 'ui', '[]'::jsonb)$$, 'consumers can only run published');
+
+-- ───────── 8. API keys: anon + hash only ─────────
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_api_keys (workspace_id, name, key_hash, prefix, created_by) values (:'ws', 'ci', repeat('1', 64), 'sf_live_abcd', auth.uid()) returning id as key1 \gset
+select test_as_anon();
+select test_assert((select count(*) from sf_resolve_api_key(repeat('1', 64))) = 1, 'valid key resolves');
+select test_assert((select count(*) from sf_resolve_api_key(repeat('2', 64))) = 0, 'unknown key does not resolve');
+select test_assert(jsonb_array_length(sf_api_skills(repeat('1', 64))) = 1, 'api lists the one published skill');
+select test_assert((sf_api_skill(repeat('1', 64), 'invoice-check')->>'version')::int = 3, 'api returns the published version');
+select test_assert(sf_api_skill(repeat('1', 64), 'nope') is null, 'unknown slug -> null');
+select test_expect_error($$select sf_api_skills(repeat('2', 64))$$, 'invalid api key');
+select (sf_record_run(repeat('1', 64), 'invoice-check', '[]'::jsonb, 'api-idem-1')->>'run_id') as apirun \gset
+select test_assert((sf_record_run(repeat('1', 64), 'invoice-check', '[]'::jsonb, 'api-idem-1')->>'existing')::boolean, 'api idempotency');
+select sf_api_run_update(repeat('1', 64), :'apirun', '{"status":"succeeded","provider":"none","duration_ms":12}');
+select test_assert((sf_api_run_get(repeat('1', 64), :'apirun')->>'status') = 'succeeded', 'api run readback');
+select test_expect_error($$select count(*) from sf_skills$$, 'permission denied');  -- anon has no table grants at all
+-- revoked key
+select test_as('00000000-0000-0000-0000-000000000001');
+update sf_api_keys set revoked_at = now() where id = :'key1';
+select test_as_anon();
+select test_expect_error($$select sf_api_skills(repeat('1', 64))$$, 'invalid api key');
+
+-- ───────── 9. retire ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+select sf_retire_version(:'v3');
+select test_assert((select status from sf_skills where id = :'skill') = 'retired', 'skill retired when its only published version is retired');
+
+-- ───────── 10. cross-tenant isolation ─────────
+select test_as('00000000-0000-0000-0000-000000000005');
+select sf_create_workspace('Other', 'other') as ws2 \gset
+select test_assert((select count(*) from sf_skills) = 0, 'other workspace sees no acme skills');
+select test_assert((select count(*) from sf_runs) = 0, 'other workspace sees no acme runs');
+select test_assert((select count(*) from sf_audit_events) = 1, 'other workspace sees only its own audit');
+select test_expect_error($$select sf_run_insert('$$ || :'v1' || $$', 'ui', '[]'::jsonb)$$, 'not a member');
+
+-- the shared project's own tables were never touched
+select test_assert((select count(*) from pg_policies where tablename = 'profiles') = 0, 'profiles untouched');
+select 'ALL SQL TESTS PASSED' as result;

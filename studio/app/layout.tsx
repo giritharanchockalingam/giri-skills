@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
-import { meta } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "giri-skills studio",
-  description: "Skill catalog, eval scorecard and findings for the giri-skills repo",
+  title: "Skills Factory · giri-skills",
+  description: "Create, test, evaluate, approve, publish and run AI skills — with the giri-skills catalog, evals and upstream library.",
 };
 
 const FONTS =
@@ -20,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href={FONTS} />
       </head>
       <body>
-        <Nav meta={meta} />
+        <Nav />
         <main className="wrap">{children}</main>
       </body>
     </html>
