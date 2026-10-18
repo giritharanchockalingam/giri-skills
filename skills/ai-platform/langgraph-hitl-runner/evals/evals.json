@@ -1,0 +1,60 @@
+{
+  "skill": "langgraph-hitl-runner",
+  "cases": [
+    {
+      "id": "happy-path-approval-gates",
+      "prompt": "Our refund agent must get finance approval before issuing a refund and team-lead approval before emailing the customer. Generate the LangGraph interrupt code.",
+      "expected": [
+        "Runs scripts/build_hitl.py on an approval spec; asks for missing roles/timeouts rather than inventing them",
+        "Approval matrix table; resume flow with the same thread_id and Command(resume=...)",
+        "States hitl.py was generated and syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Generate the approval gates for the attached refund-agent spec.",
+      "expected": ["Valid spec; hitl.py with interrupt/resume, postgres checkpointer and escalation gate; hitl.md approval matrix"],
+      "inputs": {"spec": "evals/fixtures/approvals.json"},
+      "checks": [
+        "exit:0",
+        "exists:hitl.py",
+        {"file": "hitl.md", "check": "sections:[\"Approval matrix\",\"Validation\",\"Resume flow\",\"Risks\"]"},
+        {"file": "hitl.md", "check": "contains:\"| issue_refund | Refund moves money to the customer | Finance supervisor | 240 | escalate | Finance manager |\""},
+        {"file": "hitl.py", "check": "contains:\"PostgresSaver\""},
+        {"file": "hitl.py", "check": "contains:\"def escalate_issue_refund\""},
+        {"file": "validation.json", "check": "contains:\"\\\"executed\\\": false\""}
+      ]
+    },
+    {
+      "id": "agent-missing-spec",
+      "prompt": "Add human approval to my agent.",
+      "expected": ["Asks for the approval-points spec; does not invent approvers or timeouts"],
+      "inputs": {},
+      "checks": ["exit:2", "needs_input:spec"]
+    },
+    {
+      "id": "agent-unsafe-gates-rejected",
+      "prompt": "Wire payments should auto-approve after 30 minutes if nobody answers; no need for a database.",
+      "expected": ["Fails: checkpointer missing, auto-approve on an irreversible action, missing approver role, high-impact gate without timeout; no hitl.py"],
+      "inputs": {"spec": "evals/fixtures/approvals-unsafe.json"},
+      "checks": [
+        "exit:1",
+        {"file": "validation.json", "check": "contains:\"checkpointer is required\""},
+        {"file": "validation.json", "check": "contains:\"auto-approve on timeout is forbidden for an irreversible action\""},
+        {"file": "validation.json", "check": "contains:\"approver_role is missing\""},
+        {"file": "hitl.md", "check": "contains:\"No scaffold was written\""}
+      ]
+    },
+    {
+      "id": "agent-with-review",
+      "prompt": "Generate the gates and review them against the LangGraph human-in-the-loop guidance.",
+      "expected": ["Script outputs plus hitl-review.md on the review template with the upstream skill as context"],
+      "inputs": {"spec": "evals/fixtures/approvals.json", "review": "yes"},
+      "checks": [
+        "exit:0",
+        {"file": "hitl-review.md", "check": "sections:[\"Upstream conformance\",\"Gaps\",\"Decisions needed\"]"},
+        {"file": "hitl-review.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

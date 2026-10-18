@@ -1,0 +1,38 @@
+{
+  "_note": "example layout — fictional; replace every value with your own approval points",
+  "graph": "refund_agent",
+  "checkpointer": "postgres",
+  "state_fields": [
+    "amount",
+    "reason_code",
+    "customer_message"
+  ],
+  "interrupts": [
+    {
+      "before_node": "issue_refund",
+      "reason": "Refund moves money to the customer",
+      "approver_role": "Finance supervisor",
+      "timeout_minutes": 240,
+      "on_timeout": "escalate",
+      "escalate_to": "Finance manager",
+      "editable_fields": [
+        "amount",
+        "reason_code"
+      ],
+      "high_impact": true,
+      "irreversible": true
+    },
+    {
+      "before_node": "send_customer_email",
+      "reason": "Outbound message to the customer",
+      "approver_role": "Support team lead",
+      "timeout_minutes": 60,
+      "on_timeout": "reject",
+      "editable_fields": [
+        "customer_message"
+      ],
+      "high_impact": false,
+      "irreversible": true
+    }
+  ]
+}

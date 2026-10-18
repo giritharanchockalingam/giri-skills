@@ -1,0 +1,16 @@
+{
+  "_note": "example layout — fictional values; replace every value, and date the price you are quoted",
+  "chunk_size_chars": 1000,
+  "chunk_overlap_chars": 200,
+  "embedding_price_per_1m_tokens": 0.02,
+  "price_date": "2026-10-01 (fictional)",
+  "currency": "USD",
+  "top_k": 5,
+  "reranker": "yes",
+  "rerank_fetch_k": 20,
+  "vector_store": "chroma",
+  "context_budget_tokens": 6000,
+  "embedding_provider": "openai",
+  "embedding_model": "fixture-embedding-model",
+  "chars_per_token": 4
+}
