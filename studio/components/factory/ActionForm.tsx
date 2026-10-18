@@ -1,7 +1,7 @@
 "use client";
 /* A form bound to a server action with inline feedback (role=status) and a pending state on its submit button.
  * Every mutation in the factory UI goes through this so feedback after an action is consistent. */
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import type { ActionResult } from "@/app/actions";
 import { KeyReveal } from "./KeyReveal";
 
@@ -16,12 +16,22 @@ export function ActionForm({ action, children, submit, submitClass = "btn btn-pr
   revealKey?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
+  // Two-step confirm in the page (no native dialog: screen readers and automation can see it, and it never blocks the tab).
+  const [armed, setArmed] = useState(false);
   return (
-    <form action={formAction} className={className} onSubmit={(e) => { if (confirm && !window.confirm(confirm)) e.preventDefault(); }}>
+    <form action={formAction} className={className} onSubmit={(e) => { if (confirm && !armed) { e.preventDefault(); setArmed(true); } else setArmed(false); }}>
       {Object.entries(hidden).map(([k, v]) => v != null && <input key={k} type="hidden" name={k} value={String(v)} />)}
       {children}
       <div className="action-row">
-        <button type="submit" className={submitClass} disabled={pending || disabled} aria-busy={pending}>{pending ? "Working…" : submit}</button>
+        {confirm && armed ? (
+          <>
+            <span className="notice notice-hold" role="alert">{confirm}</span>
+            <button type="submit" className={submitClass} disabled={pending} aria-busy={pending}>{pending ? "Working…" : "Confirm"}</button>
+            <button type="button" className="btn" onClick={() => setArmed(false)}>Cancel</button>
+          </>
+        ) : (
+          <button type="submit" className={submitClass} disabled={pending || disabled} aria-busy={pending}>{pending ? "Working…" : submit}</button>
+        )}
         {state && <div className={`notice ${state.ok ? "notice-ok" : "notice-err"}`} role="status">{state.message}</div>}
       </div>
       {state && render?.(state as ActionResult & Record<string, unknown>)}
