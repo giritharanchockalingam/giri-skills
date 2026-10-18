@@ -1,0 +1,97 @@
+{
+  "skill": "data-readiness-assessment",
+  "cases": [
+    {
+      "id": "prompt-is-our-data-ready",
+      "prompt": "Here's a 20-row extract of our orders table and the thresholds our data owner signed off. Is it ready for the demand-forecast pilot?",
+      "expected": [
+        "Runs scripts/assess.py on the extract and requirements file",
+        "Reports the verdict with per-dimension pass/fail/TBD and the column profile",
+        "Uses only the owner's thresholds; states sample provenance caveat"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Assess the attached orders sample against the attached requirements as of 2026-10-01.",
+      "expected": [
+        "Verdict Ready; all six dimensions scored from the supplied thresholds"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/orders-sample.csv",
+        "requirements": "evals/fixtures/requirements.csv",
+        "as_of": "2026-10-01"
+      },
+      "checks": [
+        "exit:0",
+        "exists:readiness.json",
+        {"file": "readiness.md", "check": "contains:\"**Ready** — 6 pass, 0 fail, 0 TBD\""},
+        {"file": "readiness.md", "check": "sections:[\"Verdict\",\"Dimensions\",\"Column profile\",\"Gaps and owners\"]"},
+        {"file": "readiness.json", "check": "contains:\"\\\"verdict\\\": \\\"Ready\\\"\""}
+      ]
+    },
+    {
+      "id": "agent-missing-requirements",
+      "prompt": "Is this data ready? Use whatever thresholds you think are standard.",
+      "expected": [
+        "Asks once for the owner's requirements file; does not invent thresholds"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/orders-sample.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:requirements"
+      ]
+    },
+    {
+      "id": "agent-missing-data",
+      "prompt": "Here are our requirements; tell me if the data is ready.",
+      "expected": [
+        "Asks once for the dataset sample"
+      ],
+      "inputs": {
+        "requirements": "evals/fixtures/requirements.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:data"
+      ]
+    },
+    {
+      "id": "agent-not-ready-exits-1",
+      "prompt": "Assess this older extract against the same requirements.",
+      "expected": [
+        "Verdict Not ready; volume, completeness, uniqueness, duplicates and freshness fail with owners named; exit 1"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/orders-defects.csv",
+        "requirements": "evals/fixtures/requirements.csv",
+        "as_of": "2026-10-01"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "readiness.md", "check": "contains:\"**Not ready**\""},
+        {"file": "readiness.md", "check": "contains:\"| freshness | fail |\""},
+        {"file": "readiness.md", "check": "contains:\"Data steward\""}
+      ]
+    },
+    {
+      "id": "agent-absent-thresholds-not-invented",
+      "prompt": "The owner hasn't set a null limit, key or freshness window yet; just pass those.",
+      "expected": [
+        "Absent thresholds become TBD with owner Data owner; verdict Ready-with-gaps, never Ready"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/orders-sample.csv",
+        "requirements": "evals/fixtures/requirements-partial.csv",
+        "as_of": "2026-10-01"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "readiness.md", "check": "contains:\"**Ready-with-gaps**\""},
+        {"file": "readiness.md", "check": "contains:\"| completeness | [TO BE BASELINED — owner: Data owner]\""},
+        {"file": "readiness.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}
