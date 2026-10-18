@@ -1,0 +1,28 @@
+{
+  "name": "Benefits enquiry assistant",
+  "owner": "HR Ops Lead",
+  "raised_by": "HR service desk manager",
+  "problem_user": "HR service-desk agents answer repetitive benefits enquiries; 900/month at 12 min each (fictional Northwind HR)",
+  "decision": "Which policy clause applies and what the employee should do next; the agent sends the reply",
+  "current_process": {"volume": "900/mo", "time_per_unit": "12 min", "error_cost": ""},
+  "capability": {"pattern": "retrieve-and-answer", "autonomy": "draft"},
+  "data": {"sources": "HR policy library (SharePoint)", "owner": "HR Ops Lead", "access": "role-based", "sensitivity": "PII (employee records)", "freshness": "quarterly"},
+  "feasibility": {"known_pattern": "y", "integrations_exist": "y", "team_available": "y", "eval_definable": "y"},
+  "value": {"type": "cost", "mechanism": "cuts handling time per enquiry", "estimate": "assumption: 12 -> 6 min", "baseline_signed_by": "HR Ops Lead"},
+  "risks": {"tier": "medium", "top_risks": ["privacy (employee records in prompts)", "hallucination (wrong clause)", "transparency"]},
+  "scores": {
+    "value": {"score": 3, "evidence": "baseline from HR ticket export (fictional)"},
+    "feasibility": {"score": 4, "evidence": "RAG pattern proven on IT policies"},
+    "data_readiness": {"score": 3, "evidence": "owner named; quality unknown"},
+    "risk": {"score": 3, "evidence": "employee-facing with human in the loop; PII"}
+  },
+  "build_buy": {
+    "differentiation": {"favors": "buy", "note": "policy Q&A is a commodity capability"},
+    "data_sensitivity": {"favors": "build", "note": "employee records cannot leave the tenant"},
+    "product_fit": {"favors": "build", "note": "no product fits the policy corpus without heavy customization"},
+    "team_capability": {"favors": "build", "note": "platform team and eval harness in place"},
+    "time_to_value": {"favors": "buy", "note": "needed this quarter"}
+  },
+  "build_buy_exit_trigger": "vendor HR suite ships equivalent policy Q&A with tenant residency",
+  "next_step": {"step": "pull 200 historical enquiries and label 50 with HR SME", "owner": "HR Ops Lead", "by": "2026-10-31"}
+}

@@ -4,11 +4,24 @@ description: Use when the user asks for an AI compliance or risk review — "ass
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: canvas, type: md, required: true, from: "filled use-case canvas (ai-use-case-canvas assets/use-case-canvas.md layout; fixture: evals/fixtures/use-case-canvas.md)"}
+      - {name: controls, type: md, required: false, default: "references/controls-catalog.md", from: "controls catalog with the | ID | Control | Addresses | table"}
+      - {name: name, type: string, required: false, from: "system name for the model card (default: canvas title)"}
+    run:
+      - {step: register, kind: script, cmd: "python3 -I scripts/risk_register.py {canvas} --out-dir {out} --controls {controls} [--name {name}] --template assets/model-card.md"}
+    outputs:
+      - {path: "{out}/risk-register.csv", checks: [exists, csv:[risk_id,category,description,likelihood,impact,rating,control_id,control,owner], csv_rows:control!empty, csv_rows:rating!empty]}
+      - {path: "{out}/model-card.md", checks: [exists, sections:["Intended use","Out-of-scope uses","Data","Limitations","Controls in place","Monitoring"], no_unowned_tbd, contains:"legal review required"]}
 ---
 
 # AI Governance & Risk Review
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-governance-risk --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-governance-risk`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`risk-register.csv`, `model-card.md`). Scores the canvas cannot support stay `[TO BE BASELINED — owner: ___]`; a High risk with no mapped control fails the run (exit 1) on purpose.
 
 ## When to use
 - Pre-launch risk review of an AI use case; building or refreshing the AI risk register; model documentation; regulatory mapping at summary level.
@@ -53,3 +66,4 @@ If the use case, data categories, or deployment context are missing, ask once.
 - `references/risk-taxonomy.md` — risk categories, scenarios, tiering
 - `references/controls-catalog.md` — controls by risk with evidence expectations
 - `references/regulatory-mapping.md` — NIST AI RMF functions, EU AI Act tiers (summary)
+- `scripts/risk_register.py` — canvas + controls catalog → `risk-register.csv` + `model-card.md`; exit 1 if a High risk has no control

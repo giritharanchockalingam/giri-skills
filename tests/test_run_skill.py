@@ -36,6 +36,9 @@ WIRED = [
     "build/observability-setup", "build/ci-cd-vercel-github", "build/handoff-and-thread-close",
     "build/spec-to-plan", "build/test-strategy-tdd", "build/multi-tenant-saas-patterns",
     "build/product-spec-prd",
+    # phase 4
+    "ai-platform/ai-strategy-coe", "ai-platform/agent-architecture", "ai-platform/mcp-server-builder",
+    "ai-platform/ai-governance-risk", "ai-platform/ai-use-case-canvas", "ai-platform/slm-demo-builder",
 ]
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 
@@ -187,7 +190,11 @@ def test_optional_input_skips_group_and_step(tmp_path):
 
 
 def test_not_an_agent_skill_exits_3(tmp_path):
-    r = run_skill("ai-platform/ai-use-case-canvas", "--out", str(tmp_path / "o"))
+    # a minimal spec-valid skill with no metadata.agent block
+    d = tmp_path / "plain-skill"
+    d.mkdir()
+    (d / "SKILL.md").write_text("---\nname: plain-skill\ndescription: not an agent\n---\n# plain\n")
+    r = run_skill(str(d), "--out", str(tmp_path / "o"))
     assert r.returncode == 3
     assert "not an agent skill" in r.stderr
 

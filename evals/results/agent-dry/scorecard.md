@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=dry model=claude-sonnet-4-5 date=2026-10-17_
-_agent mode: 63 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
+_agent mode: 112 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict | agent pass | agent verdict |
 |---|---|---|---|---|---|---|---|---|
@@ -17,27 +17,27 @@ _agent mode: 63 cases run with scripts/run_skill.py; verdict Works >= 0.9, Parti
 | presales/solution-architecture-doc |  |  |  |  |  |  | 1.00 | Works |
 | presales/sow-drafter |  |  |  |  |  |  | 1.00 | Works |
 | presales/value-case-builder |  |  |  |  |  |  | 1.00 | Works |
-| build/ci-cd-vercel-github |  |  |  |  |  |  |  |  |
-| build/handoff-and-thread-close |  |  |  |  |  |  |  |  |
-| build/multi-tenant-saas-patterns |  |  |  |  |  |  |  |  |
-| build/nextjs-enterprise-conventions |  |  |  |  |  |  |  |  |
-| build/observability-setup |  |  |  |  |  |  |  |  |
-| build/product-spec-prd |  |  |  |  |  |  |  |  |
+| build/ci-cd-vercel-github |  |  |  |  |  |  | 1.00 | Works |
+| build/handoff-and-thread-close |  |  |  |  |  |  | 1.00 | Works |
+| build/multi-tenant-saas-patterns |  |  |  |  |  |  | 1.00 | Works |
+| build/nextjs-enterprise-conventions |  |  |  |  |  |  | 1.00 | Works |
+| build/observability-setup |  |  |  |  |  |  | 1.00 | Works |
+| build/product-spec-prd |  |  |  |  |  |  | 1.00 | Works |
 | build/project-bootstrap |  |  |  |  |  |  | 1.00 | Works |
-| build/safe-fix |  |  |  |  |  |  |  |  |
-| build/security-review |  |  |  |  |  |  |  |  |
-| build/spec-to-plan |  |  |  |  |  |  |  |  |
+| build/safe-fix |  |  |  |  |  |  | 1.00 | Works |
+| build/security-review |  |  |  |  |  |  | 1.00 | Works |
+| build/spec-to-plan |  |  |  |  |  |  | 1.00 | Works |
 | build/supabase-schema-rls |  |  |  |  |  |  | 1.00 | Works |
-| build/test-strategy-tdd |  |  |  |  |  |  |  |  |
-| ai-platform/agent-architecture |  |  |  |  |  |  |  |  |
-| ai-platform/ai-governance-risk |  |  |  |  |  |  |  |  |
-| ai-platform/ai-strategy-coe |  |  |  |  |  |  |  |  |
-| ai-platform/ai-use-case-canvas |  |  |  |  |  |  |  |  |
+| build/test-strategy-tdd |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/agent-architecture |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-governance-risk |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-strategy-coe |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-use-case-canvas |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/infra-gpu-sizing |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/llm-eval-harness |  |  |  |  |  |  | 1.00 | Works |
-| ai-platform/mcp-server-builder |  |  |  |  |  |  |  |  |
+| ai-platform/mcp-server-builder |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/rag-pipeline-design |  |  |  |  |  |  | 1.00 | Works |
-| ai-platform/slm-demo-builder |  |  |  |  |  |  |  |  |
+| ai-platform/slm-demo-builder |  |  |  |  |  |  | 1.00 | Works |
 | career/application-tracker |  |  |  |  |  |  | 1.00 | Works |
 | career/interview-prep |  |  |  |  |  |  |  |  |
 | career/jd-fit-scorer |  |  |  |  |  |  | 1.00 | Works |

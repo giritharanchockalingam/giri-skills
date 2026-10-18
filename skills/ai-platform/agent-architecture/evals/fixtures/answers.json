@@ -1,0 +1,14 @@
+{
+  "q1_steps_enumerable": "no",
+  "q2_model_chooses_tools": "yes",
+  "q3_single_agent_fits": "yes",
+  "q4_blocker": "none",
+  "q5_rubric_exists": "no",
+  "q6_irreversible_actions": "yes",
+  "evidence": {
+    "q1_steps_enumerable": "ticket triage paths vary by product line and attachments (fictional sample of 40 tickets)",
+    "q2_model_chooses_tools": "needs search_tickets then read_ticket or lookup_order depending on content",
+    "q3_single_agent_fits": "4 tools; prompt + tool descriptions ~6k tokens",
+    "q6_irreversible_actions": "update_ticket writes to the system of record"
+  }
+}

@@ -28,6 +28,90 @@
         "Tier Low with minimum control set",
         "Evaluation rows marked TO BE BASELINED with owner where no scorecard exists"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the risk register and model card for the benefits enquiry assistant from its canvas.",
+      "expected": [
+        "Runs risk_register.py; medium tier -> impact 3; privacy/hallucination/transparency rated Medium from the canvas's top risks; other likelihoods TBD; controls mapped per category"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "risk-register.csv",
+          "check": "csv_rows:control!empty"
+        },
+        {
+          "file": "risk-register.csv",
+          "check": "contains:\"R-002,privacy,\""
+        },
+        {
+          "file": "risk-register.csv",
+          "check": "contains:\",3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,\""
+        },
+        {
+          "file": "model-card.md",
+          "check": "contains:\"| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-canvas",
+      "prompt": "Assess the AI risks for our new assistant.",
+      "expected": [
+        "Asks once for the use-case canvas (purpose, data, deployment context)"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:canvas"
+      ]
+    },
+    {
+      "id": "agent-high-risk-without-control-fails",
+      "prompt": "Tier is high but our controls catalog has no security control — produce the register anyway and call it done.",
+      "expected": [
+        "risk_register.py exits 1: the High-rated security risk has no mapped control; the register is still written for review"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas-high.md",
+        "controls": "evals/fixtures/controls-catalog-no-security.md"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "risk-register.csv",
+          "check": "contains:\"R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,\""
+        }
+      ]
+    },
+    {
+      "id": "agent-thin-canvas-no-invented-scores",
+      "prompt": "The canvas is mostly blank; fill in reasonable likelihood and impact numbers.",
+      "expected": [
+        "No score is invented: likelihood, impact and rating stay TBD; controls still mapped; model card carries owned TBD markers"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas-thin.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "risk-register.csv",
+          "check": "csv_rows:rating~^TBD$"
+        },
+        {
+          "file": "risk-register.csv",
+          "check": "csv_rows:control!empty"
+        },
+        {
+          "file": "model-card.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

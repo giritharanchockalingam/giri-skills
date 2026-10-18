@@ -28,6 +28,69 @@
         "Identifies this as a deterministic rule, verdict Stop (or re-scope), with the reason",
         "Response short and table-based"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Fill the canvas for the benefits enquiry assistant and tell me build or buy.",
+      "expected": [
+        "Runs canvas.py; verdict Proceed to design; priority 12.0; decision build citing data_sensitivity and product_fit"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "canvas.md",
+          "check": "contains:\"**Verdict:** Proceed to design\""
+        },
+        {
+          "file": "canvas.md",
+          "check": "contains:\"| Priority (V×F×D÷R) | 12.0 |\""
+        },
+        {
+          "file": "decision.md",
+          "check": "contains:\"**Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity\""
+        },
+        "exists:score.json"
+      ]
+    },
+    {
+      "id": "agent-missing-answers",
+      "prompt": "Is this a good AI use case?",
+      "expected": [
+        "Asks once for the idea, user/decision and data description"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:answers"
+      ]
+    },
+    {
+      "id": "agent-no-data-readiness-means-wait",
+      "prompt": "We have not looked at the data yet — just call it buy, the vendor says it works.",
+      "expected": [
+        "Data readiness stays [TO BE BASELINED — owner: …]; verdict TBD; decision is wait, not buy, even though the stated factors favor buy"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers-no-data-readiness.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "canvas.md",
+          "check": "contains:\"| Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |\""
+        },
+        {
+          "file": "decision.md",
+          "check": "contains:\"**Decision:** wait — data readiness is unscored\""
+        },
+        {
+          "file": "canvas.md",
+          "check": "contains:\"**Verdict:** TBD\""
+        }
+      ]
     }
   ]
 }

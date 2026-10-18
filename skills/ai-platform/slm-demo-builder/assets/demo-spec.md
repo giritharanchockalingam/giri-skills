@@ -44,6 +44,13 @@ Data boundary: <where data stays>
 | Entity | Volume | Planted cases | Generator |
 |---|---|---|---|
 
+One field table per entity (parsed by `scripts/gen_synthetic.py`; types: id, name, email, date, int, float, enum, bool, text, ref — never ssn / credit_card / phone):
+
+### <entity>
+| Field | Type | Example | Constraints |
+|---|---|---|---|
+| <entity>_id | id | C00001 | prefix=C; width=5 |
+
 ## 8. UI stub
 | Screen | Inputs | Outputs | States (loading/empty/error) | Mocked vs live |
 |---|---|---|---|---|

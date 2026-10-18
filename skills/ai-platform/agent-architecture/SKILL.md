@@ -4,11 +4,26 @@ description: Use when the user asks to design an AI agent or agentic system — 
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: answers, type: json, required: true, from: "answers.json: the six decision-tree questions (q1_steps_enumerable, q2_model_chooses_tools, q3_single_agent_fits, q4_blocker, q5_rubric_exists, q6_irreversible_actions) with optional evidence (layout: evals/fixtures/answers.json)"}
+      - {name: design_doc, type: md, required: true, from: "agent design doc filled from assets/agent-design-doc.md"}
+      - {name: contracts, type: json, required: true, from: "tool-contracts.json: list of tool contracts per assets/tool-contract.schema.json + failure_modes (layout: evals/fixtures/tool-contracts.json)"}
+      - {name: name, type: string, required: false, default: "<agent>"}
+    run:
+      - {step: pattern, kind: script, cmd: "python3 -I scripts/pattern.py {answers} --out {out}/pattern.md --name {name}"}
+      - {step: design-check, kind: script, cmd: "python3 -I scripts/design_check.py {design_doc} {contracts} --out {out}/design-check.csv --schema assets/tool-contract.schema.json"}
+    outputs:
+      - {path: "{out}/pattern.md", checks: [exists, sections:["Rationale","Escalation trail","Rejected patterns","Human-in-the-loop","Budgets"], no_unowned_tbd]}
+      - {path: "{out}/design-check.csv", checks: [exists, csv:[item,kind,present,issue], csv_rows:present~^yes$]}
 ---
 
 # Agent Architecture
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/agent-architecture --input <name>=<value> … --out <dir>` (see `--explain ai-platform/agent-architecture`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`pattern.md`, `design-check.csv`). A failed design check (exit 1) is the gate working: fix the doc or contracts and re-run.
 
 ## When to use
 - Designing a new agentic system or reviewing one: pattern, state, tools, control flow, HITL, failure handling.
@@ -56,3 +71,5 @@ If the job statement or the action list is missing, ask once. Never design an ag
 - `references/mcp-tool-contracts.md` — contract rules and anti-patterns
 - `references/hitl-placement.md` — where humans go and what they see
 - `references/failure-modes.md` — failure modes with detection and mitigation
+- `scripts/pattern.py` — six decision-tree answers → `pattern.md` (pattern, rationale, rejected patterns)
+- `scripts/design_check.py` — design doc + tool contracts → `design-check.csv`; exit 1 on a missing section or invalid contract

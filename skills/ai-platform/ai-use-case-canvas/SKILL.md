@@ -4,11 +4,23 @@ description: Use when the user wants to qualify a single AI idea quickly — "is
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: answers, type: json, required: true, from: "answers.json: the canvas cells (problem_user, decision, current_process, capability, data, feasibility, value, risks), scores with evidence, build_buy factors, next_step (layout: evals/fixtures/answers.json)"}
+    run:
+      - {step: canvas, kind: script, cmd: "python3 -I scripts/canvas.py {answers} --out-dir {out} --template assets/use-case-canvas.md"}
+    outputs:
+      - {path: "{out}/canvas.md", checks: [exists, contains:"**Verdict:**", contains:"| 9 | Build / buy / partner |", no_unowned_tbd, max_lines:60]}
+      - {path: "{out}/decision.md", checks: [exists, sections:["Factors stated","Verdict"], contains:"**Decision:**"]}
+      - {path: "{out}/score.json", checks: [exists, json]}
 ---
 
 # AI Use-Case Canvas
+
+## How to run
+This skill is executable. Collect the inputs below (one `answers.json`; blanks are allowed and become owned `[TO BE BASELINED]` markers), then run `python3 scripts/run_skill.py ai-platform/ai-use-case-canvas --input answers=<file> --out <dir>` (see `--explain ai-platform/ai-use-case-canvas`). Report the `run.json` results; do not hand-write the deliverables the script produces (`canvas.md`, `decision.md`, `score.json`).
 
 ## When to use
 - First-pass qualification of one idea in under an hour; intake form for a CoE; pre-read for a sponsor conversation.
@@ -49,3 +61,4 @@ If the user/decision or the data description is missing, ask once; otherwise fil
 ## References
 - `references/canvas-definition.md` — boxes, prompts, and quality tests
 - `references/build-buy-factors.md` — decision factors and patterns
+- `scripts/canvas.py` — answers.json → `canvas.md` (filled, scored, verdict), `decision.md` (build/buy/partner citing factors), `score.json`

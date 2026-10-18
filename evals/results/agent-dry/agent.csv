@@ -1,4 +1,49 @@
 skill,case_id,check,pass,evidence
+ai-platform/agent-architecture,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/agent-architecture,agent-happy-path,"pattern.md: contains:""**Decision:** Single agent because""",1,found: **Decision:** Single agent because
+ai-platform/agent-architecture,agent-happy-path,"pattern.md: contains:""| Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |""",1,found: | Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |
+ai-platform/agent-architecture,agent-happy-path,design-check.csv: csv_rows:present~^yes$,1,0 of 15 rows not matching '^yes$' in 'present'
+ai-platform/agent-architecture,agent-missing-answers,exit:2,1,"exit code 2, expected 2"
+ai-platform/agent-architecture,agent-missing-answers,needs_input:answers,1,missing inputs named: ['answers']
+ai-platform/agent-architecture,agent-gate-fails-without-hitl,exit:1,1,"exit code 1, expected 1"
+ai-platform/agent-architecture,agent-gate-fails-without-hitl,"design-check.csv: contains:""HITL checkpoints,section,no,required section heading missing""",1,"found: HITL checkpoints,section,no,required section heading missing"
+ai-platform/agent-architecture,agent-gate-fails-without-hitl,"design-check.csv: contains:""missing failure_modes""",1,found: missing failure_modes
+ai-platform/ai-governance-risk,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-governance-risk,agent-happy-path,risk-register.csv: csv_rows:control!empty,1,0 of 9 rows empty in 'control'
+ai-platform/ai-governance-risk,agent-happy-path,"risk-register.csv: contains:""R-002,privacy,""",1,"found: R-002,privacy,"
+ai-platform/ai-governance-risk,agent-happy-path,"risk-register.csv: contains:"",3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,""",1,"found: ,3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,"
+ai-platform/ai-governance-risk,agent-happy-path,"model-card.md: contains:""| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED""",1,found: | Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED
+ai-platform/ai-governance-risk,agent-missing-canvas,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-governance-risk,agent-missing-canvas,needs_input:canvas,1,missing inputs named: ['canvas']
+ai-platform/ai-governance-risk,agent-high-risk-without-control-fails,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-governance-risk,agent-high-risk-without-control-fails,"risk-register.csv: contains:""R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,""",1,"found: R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,"
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,risk-register.csv: csv_rows:rating~^TBD$,1,0 of 9 rows not matching '^TBD$' in 'rating'
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,risk-register.csv: csv_rows:control!empty,1,0 of 9 rows empty in 'control'
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,"model-card.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+ai-platform/ai-strategy-coe,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-strategy-coe,agent-happy-path,portfolio.csv: csv_rows:score!empty,1,0 of 9 rows empty in 'score'
+ai-platform/ai-strategy-coe,agent-happy-path,"portfolio.md: contains:""| 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |""",1,found: | 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |
+ai-platform/ai-strategy-coe,agent-happy-path,"maturity.md: contains:""Level 1 (Ad hoc) overall; constraining dimension: governance""",1,found: Level 1 (Ad hoc) overall; constraining dimension: governance
+ai-platform/ai-strategy-coe,agent-happy-path,"roadmap.md: sections:[""Gap closure items""]",1,found ['Gap closure items']
+ai-platform/ai-strategy-coe,agent-missing-scorecard,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-strategy-coe,agent-missing-scorecard,needs_input:scorecard,1,missing inputs named: ['scorecard']
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,unscored.csv: csv_rows:reason!empty,1,0 of 2 rows empty in 'reason'
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"portfolio.md: contains:""| UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |""",1,"found: | UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |"
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"maturity.md: contains:""[TO BE BASELINED — owner: CDO]""",1,found: [TO BE BASELINED — owner: CDO]
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"maturity.md: contains:""score given without evidence""",1,found: score given without evidence
+ai-platform/ai-use-case-canvas,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-use-case-canvas,agent-happy-path,"canvas.md: contains:""**Verdict:** Proceed to design""",1,found: **Verdict:** Proceed to design
+ai-platform/ai-use-case-canvas,agent-happy-path,"canvas.md: contains:""| Priority (V×F×D÷R) | 12.0 |""",1,found: | Priority (V×F×D÷R) | 12.0 |
+ai-platform/ai-use-case-canvas,agent-happy-path,"decision.md: contains:""**Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity""",1,found: **Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity
+ai-platform/ai-use-case-canvas,agent-happy-path,exists:score.json,1,evals/results/agent-dry/runs/ai-platform__ai-use-case-canvas/agent-happy-path/score.json exists
+ai-platform/ai-use-case-canvas,agent-missing-answers,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-use-case-canvas,agent-missing-answers,needs_input:answers,1,missing inputs named: ['answers']
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"canvas.md: contains:""| Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |""",1,found: | Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"decision.md: contains:""**Decision:** wait — data readiness is unscored""",1,found: **Decision:** wait — data readiness is unscored
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"canvas.md: contains:""**Verdict:** TBD""",1,found: **Verdict:** TBD
 ai-platform/infra-gpu-sizing,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/infra-gpu-sizing,agent-happy-path,exists:sizing.json,1,evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json exists
 ai-platform/infra-gpu-sizing,agent-happy-path,"sizing.txt: contains:""gpus_required""",1,found: gpus_required
@@ -13,6 +58,14 @@ ai-platform/llm-eval-harness,agent-missing-cases,exit:2,1,"exit code 2, expected
 ai-platform/llm-eval-harness,agent-missing-cases,needs_input:cases,1,missing inputs named: ['cases']
 ai-platform/llm-eval-harness,agent-transcript-no-invented-criteria,exit:0,1,"exit code 0, expected 0"
 ai-platform/llm-eval-harness,agent-transcript-no-invented-criteria,"golden-set.csv: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+ai-platform/mcp-server-builder,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/mcp-server-builder,agent-happy-path,exists:scaffold-report.json,1,evals/results/agent-dry/runs/ai-platform__mcp-server-builder/agent-happy-path/scaffold-report.json exists
+ai-platform/mcp-server-builder,agent-happy-path,"server/server.py: contains:""def search_tickets(arguments: dict) -> dict:""",1,found: def search_tickets(arguments: dict) -> dict:
+ai-platform/mcp-server-builder,agent-happy-path,server/tools/read_ticket.json: json,1,valid JSON
+ai-platform/mcp-server-builder,agent-happy-path,"server/README.md: contains:""| `read_ticket` | Read one ticket by id. | read | stub |""",1,found: | `read_ticket` | Read one ticket by id. | read | stub |
+ai-platform/mcp-server-builder,agent-missing-tools,exit:2,1,"exit code 2, expected 2"
+ai-platform/mcp-server-builder,agent-missing-tools,needs_input:tools,1,missing inputs named: ['tools']
+ai-platform/mcp-server-builder,agent-bad-contracts-refused,exit:1,1,"exit code 1, expected 1"
 ai-platform/rag-pipeline-design,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/rag-pipeline-design,agent-happy-path,exists:retrieval-metrics.json,1,evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json exists
 ai-platform/rag-pipeline-design,agent-happy-path,"retrieval-metrics.txt: contains:""recall""",1,found: recall
@@ -20,6 +73,81 @@ ai-platform/rag-pipeline-design,agent-missing-eval-set,exit:2,1,"exit code 2, ex
 ai-platform/rag-pipeline-design,agent-missing-eval-set,needs_input:eval_set,1,missing inputs named: ['eval_set']
 ai-platform/rag-pipeline-design,agent-gate-fails-honestly,exit:1,1,"exit code 1, expected 1"
 ai-platform/rag-pipeline-design,agent-gate-fails-honestly,exists:retrieval-metrics.json,1,evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-gate-fails-honestly/retrieval-metrics.json exists
+ai-platform/slm-demo-builder,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/slm-demo-builder,agent-happy-path,exists:data-manifest.json,1,evals/results/agent-dry/runs/ai-platform__slm-demo-builder/agent-happy-path/data-manifest.json exists
+ai-platform/slm-demo-builder,agent-happy-path,"data/customers.csv: csv:[customer_id,name,email,segment,created,active]",1,"header has ['customer_id', 'name', 'email', 'segment', 'created', 'active']"
+ai-platform/slm-demo-builder,agent-happy-path,"data/customers.csv: contains:""@example.com""",1,found: @example.com
+ai-platform/slm-demo-builder,agent-happy-path,data/tickets.csv: csv_rows:customer_id~^C[0-9]{5}$,1,0 of 120 rows not matching '^C[0-9]{5}$' in 'customer_id'
+ai-platform/slm-demo-builder,agent-happy-path,"data-manifest.json: contains:""\""rows\"": 120""",1,"found: ""rows"": 120"
+ai-platform/slm-demo-builder,agent-missing-spec,exit:2,1,"exit code 2, expected 2"
+ai-platform/slm-demo-builder,agent-missing-spec,needs_input:spec,1,missing inputs named: ['spec']
+ai-platform/slm-demo-builder,agent-pii-field-refused,exit:1,1,"exit code 1, expected 1"
+build/ci-cd-vercel-github,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/ci-cd-vercel-github,agent-happy-path,exists:repo/.github/workflows/ci.yml,1,evals/results/agent-dry/runs/build__ci-cd-vercel-github/agent-happy-path/repo/.github/workflows/ci.yml exists
+build/ci-cd-vercel-github,agent-happy-path,exists:repo/.github/workflows/prod.yml,1,evals/results/agent-dry/runs/build__ci-cd-vercel-github/agent-happy-path/repo/.github/workflows/prod.yml exists
+build/ci-cd-vercel-github,agent-happy-path,"ci-report.json: contains:""\""ok\"": true""",1,"found: ""ok"": true"
+build/ci-cd-vercel-github,agent-happy-path,"ci-report.md: contains:""gate: PASS""",1,found: gate: PASS
+build/ci-cd-vercel-github,agent-missing-target,exit:2,1,"exit code 2, expected 2"
+build/ci-cd-vercel-github,agent-missing-target,needs_input:target,1,missing inputs named: ['target']
+build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,exit:1,1,"exit code 1, expected 1"
+build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,"ci-report.json: contains:""rls-lint""",1,found: rls-lint
+build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,"ci-report.json: contains:""\""action\"": \""kept\""""",1,"found: ""action"": ""kept"""
+build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,"ci-report.md: contains:""gate: FAIL""",1,found: gate: FAIL
+build/handoff-and-thread-close,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/handoff-and-thread-close,agent-happy-path,"HANDOFF.md: sections:[""State"",""Done this thread"",""Changed files"",""Open items"",""Next thread starts with""]",1,"found ['State', 'Done this thread', 'Changed files', 'Open items', 'Next thread starts with']"
+build/handoff-and-thread-close,agent-happy-path,"HANDOFF.md: contains:""server/services/export-service.ts""",1,found: server/services/export-service.ts
+build/handoff-and-thread-close,agent-happy-path,"HANDOFF.md: contains:""Add rate limit to export route (owner: platform)""",1,found: Add rate limit to export route (owner: platform)
+build/handoff-and-thread-close,agent-happy-path,"HANDOFF.md: contains:""uncommitted""",1,found: uncommitted
+build/handoff-and-thread-close,agent-happy-path,HANDOFF.md: max_lines:80,1,39 lines (max 80)
+build/handoff-and-thread-close,agent-missing-state,exit:2,1,"exit code 2, expected 2"
+build/handoff-and-thread-close,agent-missing-state,needs_input:state,1,missing inputs named: ['state']
+build/handoff-and-thread-close,agent-not-a-repo-fails,exit:1,1,"exit code 1, expected 1"
+build/multi-tenant-saas-patterns,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/multi-tenant-saas-patterns,agent-happy-path,"policies.sql: contains:""create policy""",1,found: create policy
+build/multi-tenant-saas-patterns,agent-happy-path,"policies.sql: contains:""auth.jwt() -> 'app_metadata' ->> 'tenant_id'""",1,found: auth.jwt() -> 'app_metadata' ->> 'tenant_id'
+build/multi-tenant-saas-patterns,agent-happy-path,"audit.csv: csv:[table,has_tenant_id,rls_enabled,tenant_index,status]",1,"header has ['table', 'has_tenant_id', 'rls_enabled', 'tenant_index', 'status']"
+build/multi-tenant-saas-patterns,agent-happy-path,"audit.md: contains:""Gate: PASS""",1,found: Gate: PASS
+build/multi-tenant-saas-patterns,agent-missing-migrations,exit:2,1,"exit code 2, expected 2"
+build/multi-tenant-saas-patterns,agent-missing-migrations,needs_input:migrations,1,missing inputs named: ['migrations']
+build/multi-tenant-saas-patterns,agent-bad-migrations-fail,exit:1,1,"exit code 1, expected 1"
+build/multi-tenant-saas-patterns,agent-bad-migrations-fail,audit.csv: csv_rows:status~^(ok|finding)$,1,0 of 2 rows not matching '^(ok|finding)$' in 'status'
+build/multi-tenant-saas-patterns,agent-bad-migrations-fail,"audit.csv: contains:""missing tenant_id""",1,found: missing tenant_id
+build/multi-tenant-saas-patterns,agent-bad-migrations-fail,"audit.csv: contains:""no index leading with tenant_id""",1,found: no index leading with tenant_id
+build/multi-tenant-saas-patterns,agent-bad-migrations-fail,"audit.md: contains:""Gate: FAIL""",1,found: Gate: FAIL
+build/nextjs-enterprise-conventions,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/nextjs-enterprise-conventions,agent-happy-path,"findings.csv: csv:[rule,file,line,snippet,severity]",1,"header has ['rule', 'file', 'line', 'snippet', 'severity']"
+build/nextjs-enterprise-conventions,agent-happy-path,"report.md: contains:""Gate: PASS""",1,found: Gate: PASS
+build/nextjs-enterprise-conventions,agent-missing-target,exit:2,1,"exit code 2, expected 2"
+build/nextjs-enterprise-conventions,agent-missing-target,needs_input:target,1,missing inputs named: ['target']
+build/nextjs-enterprise-conventions,agent-violations-fail-gate,exit:1,1,"exit code 1, expected 1"
+build/nextjs-enterprise-conventions,agent-violations-fail-gate,findings.csv: csv_rows:severity~^(high|medium|low)$,1,0 of 4 rows not matching '^(high|medium|low)$' in 'severity'
+build/nextjs-enterprise-conventions,agent-violations-fail-gate,"findings.csv: contains:""NX1""",1,found: NX1
+build/nextjs-enterprise-conventions,agent-violations-fail-gate,"findings.csv: contains:""NX3""",1,found: NX3
+build/nextjs-enterprise-conventions,agent-violations-fail-gate,"report.md: contains:""Gate: FAIL""",1,found: Gate: FAIL
+build/observability-setup,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/observability-setup,agent-happy-path,exists:repo/lib/logger.ts,1,evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/lib/logger.ts exists
+build/observability-setup,agent-happy-path,exists:repo/app/api/health/deep/route.ts,1,evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/app/api/health/deep/route.ts exists
+build/observability-setup,agent-happy-path,exists:repo/ops/alerts.yaml,1,evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/ops/alerts.yaml exists
+build/observability-setup,agent-happy-path,exists:repo/docs/observability.md,1,evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/docs/observability.md exists
+build/observability-setup,agent-happy-path,"repo/.env.example: contains:""HEALTH_CHECK_TOKEN""",1,found: HEALTH_CHECK_TOKEN
+build/observability-setup,agent-happy-path,"repo/docs/observability.md: sections:[""SLOs"",""Endpoints""]",1,"found ['SLOs', 'Endpoints']"
+build/observability-setup,agent-missing-target,exit:2,1,"exit code 2, expected 2"
+build/observability-setup,agent-missing-target,needs_input:target,1,missing inputs named: ['target']
+build/observability-setup,agent-never-overwrites,exit:0,1,"exit code 0, expected 0"
+build/observability-setup,agent-never-overwrites,"install-report.json: contains:""lib/logger.ts.proposed""",1,found: lib/logger.ts.proposed
+build/observability-setup,agent-never-overwrites,"install-report.json: contains:""\""dry_run\"": true""",1,"found: ""dry_run"": true"
+build/observability-setup,agent-never-overwrites,"install-report.md: contains:""Dry run""",1,found: Dry run
+build/product-spec-prd,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/product-spec-prd,agent-happy-path,"PRD.md: sections:[""Problem"",""Goals"",""Non-goals"",""Metrics"",""Phases""]",1,"found ['Problem', 'Goals', 'Non-goals', 'Metrics', 'Phases']"
+build/product-spec-prd,agent-happy-path,"PRD.md: contains:""| v1 | CSV export of the current filter; Admin role only; Audit entry per export |""",1,found: | v1 | CSV export of the current filter; Admin role only; Audit entry per export |
+build/product-spec-prd,agent-happy-path,"PRD.md: contains:""40% of active tenants""",1,found: 40% of active tenants
+build/product-spec-prd,agent-happy-path,exists:prd-final.md,1,evals/results/agent-dry/runs/build__product-spec-prd/agent-happy-path/prd-final.md exists
+build/product-spec-prd,agent-missing-brief,exit:2,1,"exit code 2, expected 2"
+build/product-spec-prd,agent-missing-brief,needs_input:brief,1,missing inputs named: ['brief']
+build/product-spec-prd,agent-thin-brief-not-invented,exit:0,1,"exit code 0, expected 0"
+build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: contains:""| G1 (primary) | [TO BE BASELINED — owner: ___] |""",1,found: | G1 (primary) | [TO BE BASELINED — owner: ___] |
+build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: contains:""(no evidence supplied — assumption)""",1,found: (no evidence supplied — assumption)
+build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: sections:[""Problem"",""Goals"",""Non-goals"",""Metrics"",""Phases""]",1,"found ['Problem', 'Goals', 'Non-goals', 'Metrics', 'Phases']"
 build/project-bootstrap,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 build/project-bootstrap,agent-happy-path,exists:proj/docs/SPEC.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md exists
 build/project-bootstrap,agent-happy-path,exists:proj/.github/workflows/ci.yml,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml exists
@@ -29,12 +157,57 @@ build/project-bootstrap,agent-missing-name,needs_input:name,1,missing inputs nam
 build/project-bootstrap,agent-single-tenant-default,exit:0,1,"exit code 0, expected 0"
 build/project-bootstrap,agent-single-tenant-default,exists:proj/CLAUDE.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-single-tenant-default/proj/CLAUDE.md exists
 build/project-bootstrap,agent-single-tenant-default,exists:proj/docs/HANDOFF.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-single-tenant-default/proj/docs/HANDOFF.md exists
+build/safe-fix,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/safe-fix,agent-happy-path,exists:baseline.json,1,evals/results/agent-dry/runs/build__safe-fix/agent-happy-path/baseline.json exists
+build/safe-fix,agent-happy-path,verify.json: json,1,valid JSON
+build/safe-fix,agent-happy-path,"verify.json: contains:""\""collateral\"": []""",1,"found: ""collateral"": []"
+build/safe-fix,agent-missing-cmd,exit:2,1,"exit code 2, expected 2"
+build/safe-fix,agent-missing-cmd,needs_input:cmd,1,missing inputs named: ['cmd']
+build/safe-fix,agent-collateral-fails,exit:1,1,"exit code 1, expected 1"
+build/safe-fix,agent-collateral-fails,"verify.json: contains:""collateral""",1,found: collateral
+build/safe-fix,agent-collateral-fails,"verify.json: contains:""test_calc.py::test_multiply""",1,found: test_calc.py::test_multiply
+build/security-review,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/security-review,agent-happy-path,"findings.csv: csv:[id,category,severity,file,line,evidence,recommendation]",1,"header has ['id', 'category', 'severity', 'file', 'line', 'evidence', 'recommendation']"
+build/security-review,agent-happy-path,"review.md: contains:""Scanner verdict: MERGE""",1,found: Scanner verdict: MERGE
+build/security-review,agent-happy-path,exists:security-review.md,1,evals/results/agent-dry/runs/build__security-review/agent-happy-path/security-review.md exists
+build/security-review,agent-missing-diff,exit:2,1,"exit code 2, expected 2"
+build/security-review,agent-missing-diff,needs_input:diff,1,missing inputs named: ['diff']
+build/security-review,agent-risky-diff-blocks,exit:1,1,"exit code 1, expected 1"
+build/security-review,agent-risky-diff-blocks,findings.csv: csv_rows:severity~^(critical|high|medium|low)$,1,0 of 7 rows not matching '^(critical|high|medium|low)$' in 'severity'
+build/security-review,agent-risky-diff-blocks,"findings.csv: contains:""secrets,critical""",1,"found: secrets,critical"
+build/security-review,agent-risky-diff-blocks,"findings.csv: contains:""rls-bypass""",1,found: rls-bypass
+build/security-review,agent-risky-diff-blocks,"findings.csv: contains:""[redacted]""",1,found: [redacted]
+build/security-review,agent-risky-diff-blocks,"review.md: contains:""Scanner verdict: BLOCK""",1,found: Scanner verdict: BLOCK
+build/spec-to-plan,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/spec-to-plan,agent-happy-path,"plan.md: sections:[""Tasks"",""Gates"",""Rollback""]",1,"found ['Tasks', 'Gates', 'Rollback']"
+build/spec-to-plan,agent-happy-path,"plan.md: contains:""T3 — Server action `requestExport`""",1,found: T3 — Server action `requestExport`
+build/spec-to-plan,agent-happy-path,tasks.csv: csv_rows:test!empty,1,0 of 4 rows empty in 'test'
+build/spec-to-plan,agent-happy-path,"tasks.csv: contains:""tests/integration/rls/export_jobs.test.ts""",1,found: tests/integration/rls/export_jobs.test.ts
+build/spec-to-plan,agent-missing-section,exit:2,1,"exit code 2, expected 2"
+build/spec-to-plan,agent-missing-section,needs_input:section,1,missing inputs named: ['section']
+build/spec-to-plan,agent-thin-section-not-invented,exit:0,1,"exit code 0, expected 0"
+build/spec-to-plan,agent-thin-section-not-invented,tasks.csv: csv_rows:test~^(\[TO BE BASELINED|\S),1,0 of 2 rows not matching '^(\\[TO BE BASELINED|\\S)' in 'test'
+build/spec-to-plan,agent-thin-section-not-invented,"tasks.csv: contains:""[TO BE BASELINED — owner: ___]""",1,found: [TO BE BASELINED — owner: ___]
+build/spec-to-plan,agent-thin-section-not-invented,"plan.md: contains:""Acceptance: [TO BE BASELINED""",1,found: Acceptance: [TO BE BASELINED
 build/supabase-schema-rls,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 build/supabase-schema-rls,agent-happy-path,"rls-lint.txt: contains:""0 errors""",1,found: 0 errors
 build/supabase-schema-rls,agent-missing-migrations,exit:2,1,"exit code 2, expected 2"
 build/supabase-schema-rls,agent-missing-migrations,needs_input:migrations,1,missing inputs named: ['migrations']
 build/supabase-schema-rls,agent-bad-migration-fails,exit:1,1,"exit code 1, expected 1"
 build/supabase-schema-rls,agent-bad-migration-fails,"rls-lint.txt: contains:""errors""",1,found: errors
+build/test-strategy-tdd,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/test-strategy-tdd,agent-happy-path,exists:repo/tests/unit/server-services-export-service.test.ts,1,evals/results/agent-dry/runs/build__test-strategy-tdd/agent-happy-path/repo/tests/unit/server-services-export-service.test.ts exists
+build/test-strategy-tdd,agent-happy-path,exists:repo/tests/e2e/app-app-invoices-page.spec.ts,1,evals/results/agent-dry/runs/build__test-strategy-tdd/agent-happy-path/repo/tests/e2e/app-app-invoices-page.spec.ts exists
+build/test-strategy-tdd,agent-happy-path,"repo/tests/unit/server-services-export-service.test.ts: contains:""it.todo(\""The export contains only the caller's tenant rows\"")""",1,"found: it.todo(""The export contains only the caller's tenant rows"")"
+build/test-strategy-tdd,agent-happy-path,"scaffold-report.json: contains:""tests/unit/components-features-invoices-exportbutton.test.tsx""",1,found: tests/unit/components-features-invoices-exportbutton.test.tsx
+build/test-strategy-tdd,agent-happy-path,"test-plan.md: sections:[""Pyramid"",""Criteria map""]",1,"found ['Pyramid', 'Criteria map']"
+build/test-strategy-tdd,agent-missing-feature,exit:2,1,"exit code 2, expected 2"
+build/test-strategy-tdd,agent-missing-feature,needs_input:feature,1,missing inputs named: ['feature']
+build/test-strategy-tdd,agent-never-overwrites,exit:0,1,"exit code 0, expected 0"
+build/test-strategy-tdd,agent-never-overwrites,"scaffold-report.json: contains:""tests/unit/server-services-export-service.test.ts""",1,found: tests/unit/server-services-export-service.test.ts
+build/test-strategy-tdd,agent-never-overwrites,"scaffold-report.json: contains:""\""written\"": []""",1,"found: ""written"": []"
+build/test-strategy-tdd,agent-never-overwrites,"scaffold-report.json: contains:""\""would_write\"": []""",1,"found: ""would_write"": []"
+build/test-strategy-tdd,agent-never-overwrites,"test-plan.md: contains:""exists — kept""",1,found: exists — kept
 career/application-tracker,agent-happy-path-add,exit:0,1,"exit code 0, expected 0"
 career/application-tracker,agent-happy-path-add,"tracker.csv: contains:""Acme""",1,found: Acme
 career/application-tracker,agent-happy-path-add,exists:pipeline.json,1,evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json exists

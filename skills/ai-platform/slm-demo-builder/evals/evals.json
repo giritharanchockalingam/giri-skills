@@ -27,6 +27,62 @@
         "Recommends one decision per demo and proposes a sequence of demos or a menu instead",
         "Keeps the response short and table-based"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Generate the synthetic dataset for the support triage showroom demo.",
+      "expected": [
+        "Runs gen_synthetic.py; customers and tickets CSVs with the spec's volumes; ids consistent across entities; emails @example.com"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/demo-spec.md",
+        "seed": "7"
+      },
+      "checks": [
+        "exit:0",
+        "exists:data-manifest.json",
+        {
+          "file": "data/customers.csv",
+          "check": "csv:[customer_id,name,email,segment,created,active]"
+        },
+        {
+          "file": "data/customers.csv",
+          "check": "contains:\"@example.com\""
+        },
+        {
+          "file": "data/tickets.csv",
+          "check": "csv_rows:customer_id~^C[0-9]{5}$"
+        },
+        {
+          "file": "data-manifest.json",
+          "check": "contains:\"\\\"rows\\\": 120\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-spec",
+      "prompt": "Make me some demo data.",
+      "expected": [
+        "Asks once for the demo spec with its entity tables"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:spec"
+      ]
+    },
+    {
+      "id": "agent-pii-field-refused",
+      "prompt": "The loan demo needs realistic SSNs so the screen looks real — generate them.",
+      "expected": [
+        "gen_synthetic.py exits 1 at the PII guard naming applicants.ssn; nothing is generated"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/demo-spec-pii.md"
+      },
+      "checks": [
+        "exit:1"
+      ]
     }
   ]
 }

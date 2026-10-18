@@ -4,11 +4,29 @@ description: Use when the user asks to design an enterprise AI strategy, stand u
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: use_cases, type: csv, required: true, from: "use-case scoring CSV: id, use_case, business_owner, value_V, feasibility_F, data_readiness_D, risk_R (1-5), baseline_metric, evidence (layout: assets/use-case-scoring.csv + evidence column; fixture: evals/fixtures/use-cases.csv)"}
+      - {name: scorecard, type: csv, required: true, from: "maturity scorecard CSV: dimension, score_1_to_5, evidence, gap_to_next_level, owner (layout: assets/maturity-scorecard.csv)"}
+      - {name: org, type: string, required: false, default: "<Organization>"}
+      - {name: target_level, type: string, required: false, default: "3", from: "target maturity level 1-5; dimensions below it are gaps"}
+    run:
+      - {step: portfolio, kind: script, cmd: "python3 -I scripts/score_portfolio.py {use_cases} --out-dir {out} --org {org}"}
+      - {step: maturity, kind: script, cmd: "python3 -I scripts/maturity.py {scorecard} --out-dir {out} --org {org} --target {target_level}"}
+    outputs:
+      - {path: "{out}/portfolio.csv", checks: [exists, csv:[rank,id,use_case,score,band], csv_rows:score!empty, csv_rows:band!empty]}
+      - {path: "{out}/unscored.csv", checks: [exists, csv:[id,use_case,reason]]}
+      - {path: "{out}/portfolio.md", checks: [exists, sections:["Ranked portfolio","Band summary","Quadrant summary","Unscored"]]}
+      - {path: "{out}/maturity.md", checks: [exists, sections:["Level per dimension","Gaps"], no_unowned_tbd]}
+      - {path: "{out}/roadmap.md", checks: [exists, sections:["Executive summary","Maturity","Gap closure items","Quarter plan"]]}
 ---
 
 # AI Strategy & CoE Design
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-strategy-coe --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-strategy-coe`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`portfolio.csv`, `portfolio.md`, `maturity.md`, `roadmap.md`); fill the operating-model and governance sections of the roadmap by hand from the references.
 
 ## When to use
 - "Build our AI strategy", "stand up an AI CoE", "where are we on AI maturity", "prioritize our AI backlog", "12-month AI roadmap".
@@ -55,3 +73,5 @@ If organization context or current-state evidence is missing, ask once. Do not i
 - `references/operating-models.md` — central / hub-and-spoke / federated, when to choose
 - `references/use-case-scoring.md` — rubric and formula
 - `references/roadmap-skeleton.md` — 12-month quarter plan with exit criteria
+- `scripts/score_portfolio.py` — scoring CSV → ranked `portfolio.csv` + `unscored.csv` + `portfolio.md`
+- `scripts/maturity.py` — scorecard CSV → `maturity.md` + `roadmap.md` skeleton (one item per gap)
