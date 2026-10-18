@@ -1,0 +1,8 @@
+key,value,source,notes
+min_rows,20,fictional data-owner sign-off,fictional fixture
+max_null_pct,5,fictional data-owner sign-off,fictional fixture
+required_columns,account_id;bill_date;amount;region,fictional data-owner sign-off,fictional fixture
+unique_key,account_id,fictional data-owner sign-off,fictional fixture
+max_duplicate_rows,0,fictional data-owner sign-off,fictional fixture
+date_column,bill_date,fictional data-owner sign-off,fictional fixture
+max_age_days,30,fictional data-owner sign-off,fictional fixture

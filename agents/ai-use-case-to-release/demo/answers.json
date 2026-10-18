@@ -1,0 +1,29 @@
+{
+  "_fixture": "fictional fixture — Northwind Utilities (fictional) billing assistant; every value invented for the demo",
+  "name": "Northwind Billing Assistant",
+  "owner": "Billing Ops Lead",
+  "raised_by": "Customer care manager",
+  "problem_user": "Care agents answer repetitive billing and payment questions; 6,000/month at 7 min each (fictional)",
+  "decision": "Explain the bill and the next step; refunds and payment changes stay with a human agent",
+  "current_process": {"volume": "6000/mo", "time_per_unit": "7 min", "error_cost": ""},
+  "capability": {"pattern": "retrieve-and-answer", "autonomy": "draft"},
+  "data": {"sources": "billing history, tariff library", "owner": "Billing Ops Lead", "access": "role-based", "sensitivity": "PII (customer accounts, payment data)", "freshness": "daily"},
+  "feasibility": {"known_pattern": "y", "integrations_exist": "y", "team_available": "y", "eval_definable": "y"},
+  "value": {"type": "cost", "mechanism": "cuts handling time per billing question", "estimate": "assumption: 7 -> 3 min", "baseline_signed_by": "Billing Ops Lead"},
+  "risks": {"tier": "medium", "top_risks": ["payment data in prompts", "wrong refund policy stated", "prompt injection via customer messages"]},
+  "scores": {
+    "value": {"score": 4, "evidence": "baseline from care ticket export (fictional)"},
+    "feasibility": {"score": 4, "evidence": "retrieve-and-answer pattern proven on tariff FAQs (fictional)"},
+    "data_readiness": {"score": 3, "evidence": "owner named; sample profiled in this run"},
+    "risk": {"score": 3, "evidence": "customer-facing, payment data; human approves refunds"}
+  },
+  "build_buy": {
+    "differentiation": {"favors": "buy", "note": "billing Q&A is a common capability"},
+    "data_sensitivity": {"favors": "build", "note": "payment data cannot leave the tenant"},
+    "product_fit": {"favors": "build", "note": "tariff rules are specific to Northwind"},
+    "team_capability": {"favors": "build", "note": "platform team and eval harness in place"},
+    "time_to_value": {"favors": "buy", "note": "needed before winter billing peak"}
+  },
+  "build_buy_exit_trigger": "CRM vendor ships tariff-aware billing assistant with tenant residency",
+  "next_step": {"step": "label 50 historical billing questions with a billing SME", "owner": "Billing Ops Lead", "by": "2026-11-15"}
+}

@@ -4,8 +4,10 @@
 An agent is configuration, not code: `agents/<name>/agent.json` lists the agent's inputs, its config (model provider,
 failure policy) and ordered steps. Three step kinds:
 
-  skill     {"id", "skill": "domain/name", "inputs": {name: ref}, "assume": {name: text}, "continue_on_fail": bool}
-            Runs the skill with scripts/run_skill.py (its own declared inputs, scripts and output checks).
+  skill     {"id", "skill": "domain/name", "inputs": {name: ref}, "assume": {name: text}, "continue_on_fail": bool,
+             "gate": bool}
+            Runs the skill with scripts/run_skill.py (its own declared inputs, scripts and output checks). A "gate" skill
+            that exits 1 with its outputs written is a verdict ("blocked"), e.g. a release plan that says not ready.
   compose   {"id", "compose": {"out": "facts.csv", "format": "kv-csv" | "json", "rows": {key: ref}, "include": ref}}
             Builds the next skill's input from earlier outputs (deterministic; a missing value fails the step).
   approval  {"id", "approval": {"role": "Account owner", "note": "..."}}
@@ -19,7 +21,7 @@ Usage:
   python3 scripts/run_agent.py --demo presales-pursuit --provider none --out runs/x
   python3 scripts/run_agent.py --validate agents/presales-pursuit      (static checks, no run)
 Exit codes: 0 ok · 1 a step failed (outputs and trace written) · 2 missing agent input · 3 invalid spec ·
-4 awaiting approval. Stdlib only.
+4 awaiting approval · 5 blocked by a gate step (its verdict and outputs are complete). Stdlib only.
 """
 from __future__ import annotations
 
@@ -323,7 +325,7 @@ def main() -> int:
         ok_steps = sum(s["status"] in ("ok", "approved") for s in trace["steps"])
         print(f"{spec['name']}: {status.upper()} — {ok_steps}/{len(spec['steps'])} steps; trace {out / 'agent-run.json'}")
         for s in trace["steps"]:
-            mark = {"ok": "✓", "approved": "✓", "failed": "✗", "awaiting_approval": "…", "needs_input": "?"}.get(s["status"], "·")
+            mark = {"ok": "✓", "approved": "✓", "failed": "✗", "blocked": "■", "awaiting_approval": "…", "needs_input": "?"}.get(s["status"], "·")
             extra = f" {s['checks_passed']}/{s['checks_total']} checks" if s.get("checks_total") else ""
             print(f"  {mark} {s['id']:<22} {s['kind']:<8} {s.get('skill', '')}{extra}"
                   + (f" — {s['error']}" if s.get("error") else ""))
@@ -374,12 +376,17 @@ def main() -> int:
                 if code == 2:
                     rec.update(status="needs_input", error="skill reported a missing input — see needs_input.json")
                 elif code != 0:
-                    rec.update(status="failed", error=(failed[0] if failed else log.strip().splitlines()[-1:] or [""])[0][:200])
+                    tail = log.strip().splitlines()
+                    reason = next((ln.strip() for ln in tail if "step " in ln and "failed:" in ln), None) or (failed[0] if failed else (tail[-1] if tail else ""))
+                    # a gate step saying "no" (exit 1, outputs written) is a verdict, not a malfunction
+                    rec.update(status="blocked" if step.get("gate") and (sdir / "run.json").is_file() else "failed", error=reason[:240])
         except RefError as e:
             rec.update(status="failed", error=str(e))
         rec["duration_s"] = round(time.time() - t0, 3)
         trace["steps"].append(rec)
         step_dirs[sid] = sdir
+        if rec["status"] == "blocked":
+            return finish("blocked", 5)
         if rec["status"] in ("failed", "needs_input") and not step.get("continue_on_fail"):
             return finish("failed", 1)
     return finish("ok", 0)

@@ -1,0 +1,16 @@
+{
+  "note": "One fictional system (Northwind Billing Assistant). Files in demo/ were written for this agent; generic fixtures (model candidates, eval cases, red-team responses, prices) are reused from the skills' evals. All labelled fictional.",
+  "inputs": {
+    "answers": "agents/ai-use-case-to-release/demo/answers.json", "data": "agents/ai-use-case-to-release/demo/billing-sample.csv", "data_requirements": "agents/ai-use-case-to-release/demo/data-requirements.csv",
+    "pii_policy": "skills/ai-platform/pii-data-inventory/evals/fixtures/policy.csv",
+    "candidates": "skills/ai-platform/model-selection/evals/fixtures/candidates.csv", "criteria": "skills/ai-platform/model-selection/evals/fixtures/criteria.csv",
+    "model_workload": "skills/ai-platform/model-selection/evals/fixtures/workload.csv",
+    "prompt_spec": "skills/ai-platform/prompt-spec/evals/fixtures/prompt-spec.json",
+    "eval_cases": "skills/ai-platform/llm-eval-harness/evals/fixtures/cases.csv",
+    "app_profile": "skills/ai-platform/red-team-suite/evals/fixtures/app-profile.json", "attack_responses": "skills/ai-platform/red-team-suite/evals/fixtures/responses.csv",
+    "guardrail_policy": "skills/ai-platform/guardrails-config/evals/fixtures/policy.json", "guardrail_tests": "skills/ai-platform/guardrails-config/evals/fixtures/test-inputs.csv",
+    "cost_workload": "skills/ai-platform/llm-cost-model/evals/fixtures/workload.csv", "prices": "skills/ai-platform/llm-cost-model/evals/fixtures/prices.csv",
+    "assignment": "skills/ai-platform/llm-cost-model/evals/fixtures/assignment.csv", "budget_usd_month": "1000",
+    "release_facts": "agents/ai-use-case-to-release/demo/release-facts.csv", "gates": "skills/ai-platform/ai-release-plan/evals/fixtures/gates.csv"
+  }
+}

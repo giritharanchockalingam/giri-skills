@@ -1,0 +1,10 @@
+# fictional fixture — owner-supplied release facts the earlier steps cannot measure (shadow traffic, owners)
+key,value,source,notes
+risk_tier,medium,AI risk review (fictional),fictional fixture
+latency_p95_ms,1600,staging load test (fictional),fictional fixture
+error_rate,0.003,staging load test (fictional),fictional fixture
+daily_requests,9000,care volume forecast (fictional),fictional fixture
+min_observed_requests,2000,release policy (fictional),fictional fixture
+rollback_time_min,10,runbook drill (fictional),fictional fixture
+owner_eval_lead,Eval Lead (fictional),RACI,fictional fixture
+owner_sre_oncall,SRE Rota (fictional),RACI,fictional fixture

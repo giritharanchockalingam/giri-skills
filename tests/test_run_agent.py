@@ -104,3 +104,24 @@ def test_inproc_and_subprocess_agents_agree(tmp_path: Path):
 def test_list_shows_agents():
     r = agent("--list")
     assert r.returncode == 0 and "presales-pursuit:" in r.stdout
+
+
+def test_adlc_spine_composes_real_results_and_blocks_on_the_release_gate(tmp_path: Path):
+    out = tmp_path / "adlc"
+    r = agent("--demo", "ai-use-case-to-release", "--provider", "dry", "--out", str(out))
+    assert r.returncode == 4, r.stdout + r.stderr                       # stops for the AI risk lead first
+    r = agent("--demo", "ai-use-case-to-release", "--provider", "dry", "--out", str(out),
+              "--approve", "risk-signoff", "--approver", "AI risk lead (test)")
+    assert r.returncode == 5, r.stdout + r.stderr                       # verdict, not malfunction
+    trace = json.loads((out / "agent-run.json").read_text())
+    assert trace["status"] == "blocked" and trace["steps"][-1]["status"] == "blocked"
+    assert "redteam_pass_rate" in trace["steps"][-1]["error"]
+    assert all(s["checks_passed"] == s["checks_total"] for s in trace["steps"][:-1] if s["kind"] == "skill")
+    # the facts the release plan judged were composed from the earlier steps' own outputs
+    steps = {p.name.split("-", 1)[1]: p for p in (out / "steps").iterdir()}
+    red = json.loads((steps["redteam"] / "redteam-scorecard.json").read_text())["overall"]["pass_rate"]
+    ev = json.loads((steps["evaluate"] / "scorecard.json").read_text())["overall_pass_rate"]
+    facts = dict(ln.split(",")[:2] for ln in (steps["facts"] / "facts.csv").read_text().splitlines()[1:])
+    assert facts["redteam_pass_rate"] == str(red) and facts["eval_pass_rate"] == str(ev)
+    assert facts["system_name"] == "Northwind Billing Assistant"
+    assert "NOT READY" in (steps["release"] / "release-plan.md").read_text()
