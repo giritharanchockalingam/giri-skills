@@ -28,7 +28,8 @@ export interface Skill {
 }
 export interface ScoreRow {
   skill: string; domain: string; name: string;
-  triggerAcc: number; fpRate: number; without: number; with: number; lift: number; verdict: Verdict;
+  /** Behavioural (model-graded) results; null when the skill has not been through a behavioural eval run yet. */
+  triggerAcc: number | null; fpRate: number | null; without: number | null; with: number | null; lift: number | null; verdict: Verdict | null;
   /** Share of agent checks passed (0–1), null when the skill has no agent cases. */
   agentPass: number | null; agentVerdict: AgentVerdict | null;
 }
@@ -141,10 +142,11 @@ export interface DomainSummary {
 }
 const rollup = (domain: string, rows: ScoreRow[]): DomainSummary => {
   const counts: Record<Verdict, number> = { OK: 0, DESC: 0, BODY: 0, BOTH: 0 };
-  for (const r of rows) counts[r.verdict]++;
-  const avg = (k: "triggerAcc" | "lift") => (rows.length ? rows.reduce((a, r) => a + r[k], 0) / rows.length : 0);
+  for (const r of rows) if (r.verdict) counts[r.verdict]++;
+  // averages over skills that have been through a behavioural run (new skills are excluded, not counted as 0)
+  const avg = (k: "triggerAcc" | "lift") => { const v = rows.map((r) => r[k]).filter((x): x is number => x != null); return v.length ? v.reduce((a, x) => a + x, 0) / v.length : 0; };
   return {
-    domain, n: rows.length, counts, needsWork: rows.length - counts.OK, avgTrigger: avg("triggerAcc"), avgLift: avg("lift"),
+    domain, n: rows.length, counts, needsWork: rows.filter((r) => r.verdict && r.verdict !== "OK").length, avgTrigger: avg("triggerAcc"), avgLift: avg("lift"),
     runs: rows.filter((r) => r.agentVerdict === "Works").length,
   };
 };

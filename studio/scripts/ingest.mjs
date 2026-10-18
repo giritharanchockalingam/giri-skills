@@ -224,8 +224,15 @@ if (existsSync(agentCsv)) {
   const passes = new Map();
   for (const a of agent) { const p = passes.get(a.skill) ?? { n: 0, ok: 0 }; p.n++; if (a.pass) p.ok++; passes.set(a.skill, p); }
   for (const [id, p] of passes) {
-    const row = byId.get(id);
-    if (!row) { console.warn(`agent.csv skill not in scorecard: ${id}`); continue; }
+    let row = byId.get(id);
+    if (!row) {
+      // a skill added after the last behavioural (model-graded) run: agent results are real, behavioural fields stay null
+      const sk = skills.find((x) => x.id === id);
+      if (!sk) { console.warn(`agent.csv skill not in repo: ${id}`); continue; }
+      const fresh = { skill: id, domain: sk.domain, name: sk.name, triggerAcc: null, fpRate: null, without: null, with: null, lift: null, verdict: null, agentPass: null, agentVerdict: null };
+      scorecard.push(fresh); byId.set(id, fresh);
+    }
+    row = byId.get(id);
     row.agentPass = Number((p.ok / p.n).toFixed(4));
     row.agentVerdict = row.agentPass >= 0.9 ? "Works" : row.agentPass >= 0.5 ? "Partial" : "Broken";
   }

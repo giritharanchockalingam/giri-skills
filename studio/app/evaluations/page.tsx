@@ -24,7 +24,7 @@ export default async function EvaluationsPage() {
       <PageHead eyebrow={`Evaluations · ${ctx.workspace.name}`} title="Quality" em="evidence" after="."
         lead={rows.length ? `${rows.length} active version${rows.length === 1 ? "" : "s"}: ${evaluated} evaluated, ${gated} meet their release gate.` : "No versions to evaluate yet."}
         caption="Pass rate = cases whose checks all passed ÷ cases, on the exact version and case set recorded with the run. A completed run proves execution and schema validity; the checks are what assert correctness."
-        note={<><Link href="/evals/" className="link-flame">Repo evals (behavioural scorecard of the 40 repository skills) →</Link> · <Link href="/findings/" className="link-flame">Findings →</Link></>} />
+        note={<><Link href="/evals/" className="link-flame">Repo evals (scorecard of the repository skills) →</Link> · <Link href="/findings/" className="link-flame">Findings →</Link></>} />
       <div className="card">
         {rows.length === 0 ? <div className="empty"><div className="none">Nothing to show yet.</div><p className="caption">Create or import a skill, add evaluation cases and run the evaluation.</p></div> : (
           <>

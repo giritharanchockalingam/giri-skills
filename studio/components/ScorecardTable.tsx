@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ScoreRow, Misroute, FailedItem, AgentCase } from "@/lib/data";
-import { skillHref } from "@/lib/data";
+import { skillHref, fmt } from "@/lib/data";
 import { isVerdictFilter, matchesVerdictFilter, verdictSeverity, isAgentFilter, matchesAgentFilter, agentVerdictSeverity, AGENT_COL_TIP, AGENT_FILTERS, type VerdictFilter, type AgentFilter } from "@/lib/verdict";
 import { VerdictBadge, AgentBadge, Lift, Trig } from "./Badge";
 import { DomainFilter, VerdictFilterControl, ChoiceFilter } from "./FilterBar";
@@ -65,10 +65,10 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
     const f = rows.filter((r) => (dom === "all" || r.domain === dom) && matchesVerdictFilter(ver, r.verdict) && matchesAgentFilter(runs, r.agentVerdict) && (!needle || r.name.toLowerCase().includes(needle)));
     const cmp = (a: ScoreRow, b: ScoreRow) => {
       let c = 0;
-      if (sortKey === "severity") c = verdictSeverity(a.verdict) - verdictSeverity(b.verdict) || a.lift - b.lift;
+      if (sortKey === "severity") c = verdictSeverity(a.verdict) - verdictSeverity(b.verdict) || (a.lift ?? -9) - (b.lift ?? -9);
       else if (sortKey === "agent") c = agentVerdictSeverity(a.agentVerdict) - agentVerdictSeverity(b.agentVerdict) || (a.agentPass ?? 0) - (b.agentPass ?? 0);
       else if (sortKey === "name" || sortKey === "domain") c = a[sortKey].localeCompare(b[sortKey]);
-      else c = a[sortKey] - b[sortKey];
+      else c = (a[sortKey] ?? -9) - (b[sortKey] ?? -9);  // not-yet-evaluated rows sort last
       return (c || a.skill.localeCompare(b.skill)) * (asc ? 1 : -1);
     };
     return [...f].sort(cmp);
@@ -109,9 +109,9 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
                 <td><VerdictBadge v={r.verdict} /></td>
                 <td><AgentBadge v={r.agentVerdict} /></td>
                 <td className="num"><Trig n={r.triggerAcc} /></td>
-                <td className={`num col-wide ${r.fpRate > 0 ? "num-neg" : ""}`}>{r.fpRate.toFixed(2)}</td>
-                <td className="num col-wide">{r.without.toFixed(2)}</td>
-                <td className="num col-wide">{r.with.toFixed(2)}</td>
+                <td className={`num col-wide ${(r.fpRate ?? 0) > 0 ? "num-neg" : ""}`}>{fmt(r.fpRate)}</td>
+                <td className="num col-wide">{fmt(r.without)}</td>
+                <td className="num col-wide">{fmt(r.with)}</td>
                 <td className="num"><Lift n={r.lift} /></td>
               </tr>
             ))}
@@ -177,10 +177,10 @@ function DrawerBody({ r, d }: { r: ScoreRow; d: ScorecardDrill }) {
     <>
       <div className="drawer-stats">
         {stat("Trigger", <Trig n={r.triggerAcc} />, COL_TIPS.trigger)}
-        {stat("FP rate", <span className={r.fpRate > 0 ? "num-neg" : ""}>{r.fpRate.toFixed(2)}</span>, COL_TIPS.fp)}
+        {stat("FP rate", <span className={(r.fpRate ?? 0) > 0 ? "num-neg" : ""}>{fmt(r.fpRate)}</span>, COL_TIPS.fp)}
         {stat("Lift", <Lift n={r.lift} />, COL_TIPS.lift)}
-        {stat("Without", r.without.toFixed(2), COL_TIPS.without)}
-        {stat("With", r.with.toFixed(2), COL_TIPS.with)}
+        {stat("Without", fmt(r.without), COL_TIPS.without)}
+        {stat("With", fmt(r.with), COL_TIPS.with)}
         {stat("Cases", d.cases, "Eval cases for this skill")}
         {stat("Runs", <AgentBadge v={r.agentVerdict} small />, AGENT_COL_TIP)}
       </div>

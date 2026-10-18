@@ -131,7 +131,7 @@ export default async function OverviewPage() {
       {skills.length === 0 && (
         <section className="section">
           <SectionHead title="Start" em="here" caption="Two ways to get a first skill into the factory." />
-          <div className="card"><EmptyState title="No skills yet" detail="Create a skill from scratch, or import any of the 40 repository skills (their scripts, instructions and evaluation cases come with them)." action="Go to Skills" href="/" /></div>
+          <div className="card"><EmptyState title="No skills yet" detail={`Create a skill from scratch, or import any of the ${repoSkills.length} repository skills (their scripts, instructions and evaluation cases come with them).`} action="Go to Skills" href="/" /></div>
         </section>
       )}
     </>

@@ -46,7 +46,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       <PageHead eyebrow={`Skills · ${ctx.workspace.name}`} title="Skills you can" em="trust" after="."
         lead={items.length ? `${items.length} skill${items.length === 1 ? "" : "s"}: ${published} published, ${drafts} with a draft in progress.` : "No skills in this workspace yet."}
         caption="A skill is a versioned, tested capability with a declared input/output contract. Published versions are immutable and callable through the API."
-        note={<><Link href="/repo/" className="link-flame">Repository catalog (40 skills, eval scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Upstream library →</Link></>} />
+        note={<><Link href="/repo/" className="link-flame">Repository catalog ({repoSkills.length} skills, eval scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Upstream library →</Link></>} />
       <div className="hero-actions mb-6">
         {can(ctx.role, "skill.create") ? (
           <>

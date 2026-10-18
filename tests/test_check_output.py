@@ -211,3 +211,15 @@ def test_numbers_trace_to_reads_csv_cells_separately(tmp_path):
     out = tmp_path / "out.md"; out.write_text("Value 345 and 12%.\n", encoding="utf-8")
     r = check_output.run_check(f"numbers_trace_to:{ref}", out, cwd=tmp_path, mode="real")
     assert r["pass"] is True, r
+
+
+def test_cmd_check_resolves_relative_output_paths(tmp_path, monkeypatch):
+    """cmd checks run in the skill dir; a relative --out path must still reach the output file."""
+    import check_output
+    out = tmp_path / "out"; out.mkdir()
+    f = out / "x.json"; f.write_text("{}", encoding="utf-8")
+    skill_dir = tmp_path / "skill"; skill_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    r = check_output.run_check('cmd:"python3 -c \\"import sys,os; sys.exit(0 if os.path.isfile(sys.argv[1]) else 3)\\" {path}"',
+                               Path("out/x.json"), cwd=skill_dir, mode="real")
+    assert r["pass"] is True, r

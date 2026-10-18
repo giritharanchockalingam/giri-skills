@@ -299,7 +299,8 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
     if name == "cmd":
         if not arg:
             return _result(spec, False, "cmd has no command")
-        tokens = python_argv(shlex.split(str(arg).replace("{path}", str(p))))
+        # the command runs in the skill dir (cwd), so the output path must be absolute, whatever --out was given as
+        tokens = python_argv(shlex.split(str(arg).replace("{path}", str(Path(p).resolve()))))
         if inproc_enabled() and _script_argv(tokens) is None and not subprocess_available():
             return _result(spec, False, "skipped: subprocess unavailable in-process")
         try:

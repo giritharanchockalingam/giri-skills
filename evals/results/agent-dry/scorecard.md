@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
-_provider=dry model=claude-sonnet-4-5 date=2026-10-17_
-_agent mode: 121 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
+_provider=dry model=claude-sonnet-4-5 date=2026-10-18_
+_agent mode: 173 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict | agent pass | agent verdict |
 |---|---|---|---|---|---|---|---|---|
@@ -31,12 +31,25 @@ _agent mode: 121 cases run with scripts/run_skill.py; verdict Works >= 0.9, Part
 | build/test-strategy-tdd |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/agent-architecture |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-governance-risk |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-incident-runbook |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-release-plan |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-strategy-coe |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-use-case-canvas |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/bias-fairness-check |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/data-readiness-assessment |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/feedback-improvement-loop |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/finetune-dataset-builder |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/guardrails-config |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/infra-gpu-sizing |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/llm-cost-model |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/llm-eval-harness |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/llm-observability |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/mcp-server-builder |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/model-selection |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/pii-data-inventory |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/prompt-spec |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/rag-pipeline-design |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/red-team-suite |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/slm-demo-builder |  |  |  |  |  |  | 1.00 | Works |
 | career/application-tracker |  |  |  |  |  |  | 1.00 | Works |
 | career/interview-prep |  |  |  |  |  |  | 1.00 | Works |

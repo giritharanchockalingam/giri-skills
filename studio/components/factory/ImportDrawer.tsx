@@ -6,7 +6,7 @@ import { importFromRepo } from "@/app/actions";
 
 export interface Importable { id: string; name: string; domain: string; description: string; imported: boolean }
 
-/** "Import from repo": the 40 wired repository skills (SKILL.md metadata.agent + evals.json) become draft v1 versions. */
+/** "Import from repo": every wired repository skill (SKILL.md metadata.agent + evals.json) become draft v1 versions. */
 export function ImportDrawer({ importable, initialOpen = false }: { importable: Importable[]; initialOpen?: boolean }) {
   const [open, setOpen] = useState(initialOpen);
   const [q, setQ] = useState("");

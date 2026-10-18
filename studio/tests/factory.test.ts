@@ -173,7 +173,8 @@ test("import from repo: every wired repo skill yields a valid manifest and its a
     cases += cs.length;
     for (const c of cs) for (const v of Object.values(c.inputs)) if (typeof v === "object") assert.match((v as { path: string }).path, /^evals\/fixtures\//);
   }
-  assert.equal(wired, 40);
+  assert.equal(wired, skills.filter((s) => s.agent).length);
+  assert.ok(wired >= 40, `wired=${wired}`);
   assert.ok(llm > 0 && cases > 40, `llm=${llm} cases=${cases}`);
 });
 
