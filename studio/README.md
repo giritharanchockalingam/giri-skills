@@ -1,6 +1,6 @@
 # giri-skills studio
 
-Static Next.js dashboard over the `giri-skills` repo: the 40 skills, their eval cases, the behavioral eval scorecard (`evals/results/<run>/`), and the ranked proposals in `docs/EVAL-FINDINGS.md`.
+Static Next.js dashboard over the `giri-skills` repo: the 40 skills, their eval cases, the behavioral eval scorecard (`evals/results/<run>/`), the ranked proposals in `docs/EVAL-FINDINGS.md`, and the 50 vendored upstream skills (`catalog/top-50.json` + `vendor/`).
 
 Views:
 
@@ -10,6 +10,8 @@ Views:
 | `/skills/<domain>/<name>/` | Skill detail — stat strip, "Runs as an agent" card (how to run, declared inputs/steps/outputs, agent eval checks), rendered SKILL.md, file inventory, eval cases with per-run trigger + quality (PASS/FAIL + judge evidence) |
 | `/evals/` | Eval dashboard — verdict distribution, per-domain breakdown, sortable/filterable scorecard with drill-down (misrouted prompts, most-failed expected items, agent run checks); the "Runs" column is the deterministic agent verdict |
 | `/findings/` | Caveats, verdict counts, 25 ranked proposals with paste-ready description blocks (Copy button) and body directions; anchor `#<n>` per proposal |
+| `/upstream/` | The 50 vendored upstream skills — search name/description/repo, filter by category and license (open source vs Anthropic source-available), ranked by installs; row → detail |
+| `/upstream/<name>/` | Upstream skill detail — stat strip (rank, category, license, pinned sha, files), Source card (GitHub link at the pinned commit, repo, path, fetched date, license note), rendered SKILL.md |
 
 No runtime fetching: `scripts/ingest.mjs` reads the repo at build time and writes `data/*.json`, which is the UI's only data source. `data/` is committed so the site builds on Vercel without the eval CSVs.
 
@@ -37,6 +39,7 @@ git add data/                                    # commit the regenerated JSON
 - `<RESULTS_DIR>/scorecard.md` (table + the provider/model/runs/date/spend header lines), `trigger.csv`, `quality.csv`
 - `<AGENT_RESULTS_DIR>/agent.csv` (skill, case_id, check, pass, evidence → `data/agent.json`) and the `agent pass` / `agent verdict` columns of `<AGENT_RESULTS_DIR>/scorecard.md`, merged per skill into `data/scorecard.json` as `agentPass` (0–1 or null) and `agentVerdict` (`Works` / `Partial` / `Broken` / null). The trigger/quality columns of that file are ignored. Each skill's `metadata.agent` block (inputs, run steps, outputs) lands in `data/skills.json` as `agent`, or null when the skill is not wired.
 - `docs/EVAL-FINDINGS.md` (caveats, verdict counts, ranked proposals)
+- `catalog/top-50.json` (rank, repo, path, category, license, evidence, why), `vendor/pins.json` (repo, path, sha, license, fetched per skill) and `vendor/<name>/SKILL.md` (frontmatter `description` — plain, quoted, folded or literal YAML scalars all handled — plus body → safe HTML; file count of the vendored tree, minus our `UPSTREAM.md`) → `data/upstream.json`. `licenseKind` is `source-available` when the pin's license text contains "Anthropic source-available", else `oss`; `origin` is `vendor` for anthropics/vercel-labs/supabase/stripe/cloudflare/microsoft/google/getsentry/langchain-ai/shadcn repos, else `community`. `url` is the pinned GitHub tree (`https://github.com/<repo>/tree/<sha>/<path>`).
 
 It prints the row counts it found; `data/meta.json` carries the same counts plus the run header.
 
@@ -76,7 +79,7 @@ Next.js 15 (App Router, `output: 'export'`, `trailingSlash`), React 19, TypeScri
 
 ```
 studio/
-├── app/            routes: / , /evals/ , /findings/ , /skills/[domain]/[name]/
+├── app/            routes: / , /evals/ , /findings/ , /skills/[domain]/[name]/ , /upstream/ , /upstream/[name]/
 ├── components/     client components (tables, filters, drill-downs, copy button)
 ├── lib/data.ts     typed accessors over data/*.json
 ├── scripts/        ingest.mjs (repo → JSON), serve.mjs (static server for out/)

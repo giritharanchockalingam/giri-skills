@@ -447,14 +447,72 @@ function parseFindings(md) {
 }
 const findings = parseFindings(readFileSync(join(ROOT, "docs", "EVAL-FINDINGS.md"), "utf8"));
 
+// ---------- upstream (vendored top-50: catalog/top-50.json + vendor/pins.json + vendor/<name>/SKILL.md) ----------
+// The upstream SKILL.md frontmatter is not ours: `description` may be a plain, quoted, folded (>, >-) or literal (|, |-)
+// scalar spanning several indented lines. Read the scalar by hand instead of trusting parseFrontmatter's one-line keys.
+function fmScalar(rawFm, key) {
+  const lines = rawFm.split(/\r?\n/);
+  const start = lines.findIndex((l) => new RegExp(`^${key}:`).test(l));
+  if (start < 0) return "";
+  let first = lines[start].slice(key.length + 1).trim();
+  const rest = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^\s+\S/.test(lines[i]) || (rest.length && !lines[i].trim() && /^\s/.test(lines[i + 1] ?? ""))) rest.push(lines[i].trim());
+    else break;
+  }
+  const block = first.match(/^([>|])[-+]?\s*$/);
+  if (block) return rest.join(block[1] === ">" ? " " : "\n").replace(/\s+/g, " ").trim();
+  const joined = [first, ...rest].join(" ").trim();
+  return unquote(joined).replace(/\s+/g, " ").trim();
+}
+const VENDOR_ORGS = ["anthropics", "vercel-labs", "supabase", "stripe", "cloudflare", "microsoft", "google", "getsentry", "langchain-ai", "shadcn"];
+const upstream = [];
+const top50Path = join(ROOT, "catalog", "top-50.json");
+const pinsPath = join(ROOT, "vendor", "pins.json");
+if (existsSync(top50Path) && existsSync(pinsPath)) {
+  const top50 = JSON.parse(readFileSync(top50Path, "utf8"));
+  const pins = JSON.parse(readFileSync(pinsPath, "utf8"));
+  for (const t of [...top50].sort((a, b) => a.rank - b.rank)) {
+    const pin = pins[t.name];
+    const vdir = join(ROOT, "vendor", t.name);
+    const skillMd = join(vdir, "SKILL.md");
+    if (!pin || !existsSync(skillMd)) { console.warn(`upstream: no pin or SKILL.md for ${t.name}`); continue; }
+    const { fm, body, raw } = parseFrontmatter(readFileSync(skillMd, "utf8"));
+    const license = pin.license || t.license || "";
+    const sha = pin.sha || "";
+    const path = pin.path || t.path;
+    const repo = pin.repo || t.repo;
+    upstream.push({
+      rank: t.rank,
+      name: t.name,
+      repo, path, sha, shortSha: sha.slice(0, 7),
+      category: t.category,
+      license,
+      licenseKind: /Anthropic source-available/i.test(license) ? "source-available" : "oss",
+      origin: VENDOR_ORGS.includes(repo.split("/")[0]) ? "vendor" : "community",
+      evidence: t.evidence || "",
+      why: t.why || "",
+      fetched: pin.fetched || null,
+      description: fmScalar(raw || "", "description") || fm.description || "",
+      bodyHtml: mdToHtml(body),
+      // the vendored upstream files; UPSTREAM.md is our provenance note, not theirs
+      fileCount: listFiles(vdir).filter((f) => f !== "UPSTREAM.md").length,
+      url: `https://github.com/${repo}/tree/${sha}/${path}`,
+    });
+  }
+} else {
+  console.warn(`no upstream catalog at ${top50Path} / ${pinsPath}`);
+}
+
 // ---------- write ----------
 const w = (f, d) => writeFileSync(join(OUT, f), JSON.stringify(d, null, 1) + "\n");
+w("upstream.json", upstream);
 w("skills.json", skills);
 w("scorecard.json", scorecard);
 w("trigger.json", trigger);
 w("quality.json", quality);
 w("agent.json", agent);
 w("findings.json", findings);
-w("meta.json", { ...meta, counts: { skills: skills.length, scorecard: scorecard.length, trigger: trigger.length, quality: quality.length, findings: findings.proposals.length, agent: agent.length, agentWorks }, domains: DOMAIN_ORDER, verdicts: VERDICTS, agentVerdicts: AGENT_VERDICTS });
+w("meta.json", { ...meta, counts: { skills: skills.length, scorecard: scorecard.length, trigger: trigger.length, quality: quality.length, findings: findings.proposals.length, agent: agent.length, agentWorks, upstream: upstream.length }, domains: DOMAIN_ORDER, verdicts: VERDICTS, agentVerdicts: AGENT_VERDICTS });
 
-console.log(`ingest: skills=${skills.length} scorecard=${scorecard.length} trigger=${trigger.length} quality=${quality.length} findings=${findings.proposals.length} agent=${agent.length} agentWorks=${agentWorks} wired=${skills.filter((s) => s.agent).length} (results: ${meta.resultsDir}; agent: ${meta.agentResultsDir})`);
+console.log(`ingest: skills=${skills.length} scorecard=${scorecard.length} trigger=${trigger.length} quality=${quality.length} findings=${findings.proposals.length} agent=${agent.length} agentWorks=${agentWorks} wired=${skills.filter((s) => s.agent).length} upstream=${upstream.length} (results: ${meta.resultsDir}; agent: ${meta.agentResultsDir})`);

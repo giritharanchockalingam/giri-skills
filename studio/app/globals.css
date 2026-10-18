@@ -116,7 +116,7 @@ main.wrap { max-width: var(--content); padding-top: 48px; padding-bottom: 96px; 
   letter-spacing: -.005em; color: var(--ink); margin: 0 0 6px;
 }
 .h3 { font-family: var(--sans); font-weight: 600; font-size: 16px; color: var(--ink); }
-.lead { font-size: 18px; color: var(--ink-2); max-width: 64ch; line-height: 1.5; }
+.lead { font-size: 18px; color: var(--ink-2); max-width: 64ch; line-height: 1.5; overflow-wrap: anywhere; }
 .sub { font-size: 15px; color: var(--ink-2); max-width: 70ch; }
 .caption { font-size: 13px; color: var(--ink-3); line-height: 1.5; }
 .muted { color: var(--ink-3); }
@@ -347,6 +347,7 @@ pre code { background: none; padding: 0; font-size: inherit; }
 .prose h3 { font-family: var(--sans); font-weight: 600; font-size: 17px; color: var(--ink); margin: 26px 0 8px; }
 .prose h4 { font-family: var(--sans); font-weight: 600; font-size: 15px; color: var(--ink); margin: 20px 0 6px; }
 .prose p { margin: 10px 0; }
+.prose p, .prose li, .prose td, .prose blockquote { overflow-wrap: anywhere; }
 .prose a { color: var(--flame); text-decoration: underline; text-underline-offset: 3px; }
 .prose strong { color: var(--ink); font-weight: 600; }
 .prose ul, .prose ol { margin: 10px 0 10px 22px; }
@@ -362,6 +363,8 @@ pre code { background: none; padding: 0; font-size: inherit; }
 .prose blockquote { border-left: 3px solid var(--flame); margin: 16px 0; padding: 4px 0 4px 16px; color: var(--ink-2); }
 .prose pre { margin: 14px 0; }
 .prose code { font-size: 13.5px; }
+.prose :not(pre) > code { overflow-wrap: anywhere; white-space: normal; } /* long inline tokens (URLs, XML tags) wrap instead of widening the page */
+.prose table { width: max-content; }
 .prose hr { border: 0; border-top: 1px solid var(--rule); margin: 28px 0; }
 .prose img { max-width: 100%; border-radius: var(--r-sm); }
 
@@ -394,9 +397,12 @@ pre code { background: none; padding: 0; font-size: inherit; }
 }
 @media (max-width: 767px) {
   main.wrap { padding-top: 28px; padding-bottom: 64px; }
-  .topbar .wrap { gap: 12px; }
+  /* four nav links + brand must fit 390px without shrinking: tighter gutter and gaps, 14px links, nothing abbreviated */
+  .topbar .wrap { gap: 10px; padding-left: 14px; padding-right: 14px; }
   .brand-sub, .topmeta { display: none; }
-  .topnav { margin-left: auto; gap: 18px; }
+  .brand { gap: 8px; flex: none; }
+  .topnav { margin-left: auto; gap: 10px; flex: none; }
+  .topnav a { font-size: 14px; flex: none; }
   .h1 { font-size: 36px; }
   .lead { font-size: 17px; }
   .card-pad { padding: 18px 18px; }
@@ -435,7 +441,8 @@ pre code { background: none; padding: 0; font-size: inherit; }
 .agent-case summary::-webkit-details-marker { display: none; }
 .agent-case[open] summary .caret { transform: rotate(90deg); }
 .agent-case-id { font-family: var(--mono); font-size: 13px; color: var(--ink); flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.agent-case-count { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.agent-case-count { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+@media (max-width: 767px) { .agent-case-count { white-space: normal; } .agent-case > summary { flex-wrap: wrap; } }
 .agent-checks { display: flex; flex-direction: column; gap: 10px; padding: 2px 0 14px 22px; }
 .agent-checks li { display: flex; gap: 10px; align-items: flex-start; }
 .agent-checks .pass-pill, .agent-checks .fail-pill { flex: none; margin-top: 1px; }
@@ -453,3 +460,32 @@ pre code { background: none; padding: 0; font-size: inherit; }
 .agent-kind-script { background: var(--sage-soft); color: var(--sage); }
 
 @keyframes rise { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+/* ───────────────────────────── Upstream (vendored top-50) ───────────────────────────── */
+.page-note { margin-top: 10px; font-size: 14px; }
+table.up-tbl td.rank { color: var(--ink-3); font-size: 13px; }
+table.up-tbl th.num:first-child, table.up-tbl td.num:first-child { text-align: left; width: 1%; }
+table.tbl td.desc.desc-1 > span { -webkit-line-clamp: 1; }
+/* fixed layout: the Why column takes what the sized columns leave, and nothing pushes the table past the card */
+table.up-tbl { table-layout: fixed; }
+table.up-tbl th.num:first-child { width: 48px; }
+table.up-tbl th:nth-child(2) { width: 17%; }
+table.up-tbl th:nth-child(3) { width: 20%; }
+table.up-tbl th:nth-child(4) { width: 13%; }
+table.up-tbl th:nth-child(5) { width: 12%; }
+table.up-tbl th:nth-child(6) { width: 82px; }
+table.up-tbl td .cell-name, table.up-tbl td .repo-link { white-space: normal; overflow-wrap: anywhere; }
+table.up-tbl td.desc { max-width: none; }
+.repo-link, .sha { font-family: var(--mono); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.repo-link { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.repo-link:hover { color: var(--flame); text-decoration-color: var(--flame); }
+.rank-sm { display: inline-block; min-width: 24px; margin-right: 6px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.row-card-meta .mono { font-size: 13px; overflow-wrap: anywhere; }
+.stat-value .stat-text { font-size: 22px; line-height: 1.2; display: inline-block; padding-top: 6px; }
+.stat-value .stat-text.mono { font-family: var(--mono); font-size: 20px; }
+.src-list { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; font-size: 14px; }
+.src-list dt { color: var(--ink-3); }
+.src-list dd { color: var(--ink); overflow-wrap: anywhere; }
+.src-list dd.mono { font-size: 13px; }
+.license-note { padding: 10px 12px; border-radius: var(--r-sm); background: var(--wash); color: var(--ink-2); }
+.license-note-hold { background: var(--hold-soft); color: var(--hold); }

@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "Skills" },
   { href: "/evals/", label: "Evals" },
   { href: "/findings/", label: "Findings" },
+  { href: "/upstream/", label: "Upstream" },
 ];
 
 export function Nav({ meta }: { meta: Meta }) {

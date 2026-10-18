@@ -5,6 +5,7 @@ import qualityJson from "@/data/quality.json";
 import agentJson from "@/data/agent.json";
 import findingsJson from "@/data/findings.json";
 import metaJson from "@/data/meta.json";
+import upstreamJson from "@/data/upstream.json";
 
 export type Verdict = "OK" | "DESC" | "BODY" | "BOTH";
 export type AgentVerdict = "Works" | "Partial" | "Broken";
@@ -45,7 +46,7 @@ export interface Findings {
 export interface Meta {
   provider: string | null; model: string | null; runs: number | null; seed: number | null; date: string | null;
   spend: string | null; resultsDir: string; agentResultsDir: string;
-  counts: { skills: number; scorecard: number; trigger: number; quality: number; findings: number; agent: number; agentWorks: number };
+  counts: { skills: number; scorecard: number; trigger: number; quality: number; findings: number; agent: number; agentWorks: number; upstream: number };
   domains: string[]; verdicts: Verdict[]; agentVerdicts: AgentVerdict[];
 }
 
@@ -147,4 +148,54 @@ const rollup = (domain: string, rows: ScoreRow[]): DomainSummary => {
 export const domainSummaries = (): { rows: DomainSummary[]; total: DomainSummary } => ({
   rows: DOMAINS.map((d) => rollup(d, scorecard.filter((r) => r.domain === d))),
   total: rollup("All domains", scorecard),
+});
+
+/* ───────────── Upstream: the 50 vendored public skills (catalog/top-50.json + vendor/pins.json + vendor/<name>/) ───────────── */
+
+export type LicenseKind = "oss" | "source-available";
+export type UpstreamOrigin = "vendor" | "community";
+export interface UpstreamSkill {
+  rank: number; name: string; repo: string; path: string; sha: string; shortSha: string;
+  category: string; license: string; licenseKind: LicenseKind; origin: UpstreamOrigin;
+  evidence: string; why: string; fetched: string | null; description: string; bodyHtml: string; fileCount: number;
+  /** Pinned tree on GitHub: https://github.com/<repo>/tree/<sha>/<path> */
+  url: string;
+}
+
+export const upstream = upstreamJson as UpstreamSkill[];
+
+export const upstreamFor = (name: string) => upstream.find((u) => u.name === name) ?? null;
+export const upstreamHref = (name: string) => `/upstream/${name}/`;
+
+/** Catalog categories in display order (the four buckets of catalog/top-50.json), with human labels. */
+export const UPSTREAM_CATEGORY_LABELS: Record<string, string> = {
+  "engineering-workflow": "Engineering workflow",
+  "framework-vendor": "Framework / vendor",
+  "ai-agents-mcp-rag": "AI agents · MCP · RAG",
+  "documents-productivity-business": "Documents · business",
+};
+export const UPSTREAM_CATEGORIES: string[] = [
+  ...Object.keys(UPSTREAM_CATEGORY_LABELS).filter((c) => upstream.some((u) => u.category === c)),
+  ...[...new Set(upstream.map((u) => u.category))].filter((c) => !(c in UPSTREAM_CATEGORY_LABELS)).sort(),
+];
+export const categoryLabel = (c: string) => UPSTREAM_CATEGORY_LABELS[c] ?? c;
+
+/** Short license label for pills: MIT / Apache-2.0 / Source-available. The full text stays in `license`. */
+export const licenseLabel = (u: Pick<UpstreamSkill, "license" | "licenseKind">) =>
+  u.licenseKind === "source-available" ? "Source-available" : /^Apache/i.test(u.license) ? "Apache-2.0" : /^MIT/i.test(u.license) ? "MIT" : u.license;
+
+export type LicenseFilter = "all" | "oss" | "source-available";
+export const LICENSE_FILTERS: { key: LicenseFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "oss", label: "Open source" },
+  { key: "source-available", label: "Source-available" },
+];
+
+export interface UpstreamSummary { total: number; vendor: number; community: number; oss: number; sourceAvailable: number }
+export const upstreamSummary = (): UpstreamSummary => ({
+  total: upstream.length,
+  vendor: upstream.filter((u) => u.origin === "vendor").length,
+  community: upstream.filter((u) => u.origin === "community").length,
+  oss: upstream.filter((u) => u.licenseKind === "oss").length,
+  sourceAvailable: upstream.filter((u) => u.licenseKind === "source-available").length,
 });

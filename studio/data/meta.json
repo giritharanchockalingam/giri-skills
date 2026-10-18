@@ -14,7 +14,8 @@
   "quality": 1900,
   "findings": 25,
   "agent": 421,
-  "agentWorks": 40
+  "agentWorks": 40,
+  "upstream": 50
  },
  "domains": [
   "presales",

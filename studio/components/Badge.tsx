@@ -1,4 +1,5 @@
-import type { Verdict, AgentVerdict } from "@/lib/data";
+import type { Verdict, AgentVerdict, UpstreamSkill } from "@/lib/data";
+import { licenseLabel } from "@/lib/data";
 import { verdictInfo, agentVerdictInfo } from "@/lib/verdict";
 
 /** Verdict pill with a human label; the raw code and rule live in the tooltip. */
@@ -34,4 +35,10 @@ export function Trig({ n }: { n: number | null | undefined }) {
 export function PassPill({ pass }: { pass: boolean | null | undefined }) {
   if (pass == null) return <span className="na-pill">n/a</span>;
   return <span className={pass ? "pass-pill" : "fail-pill"}>{pass ? "Pass" : "Fail"}</span>;
+}
+
+/** License pill for upstream skills: sage for MIT / Apache-2.0, amber for Anthropic source-available. Full license text in the tooltip. */
+export function LicensePill({ u, small }: { u: Pick<UpstreamSkill, "license" | "licenseKind">; small?: boolean }) {
+  const tone = u.licenseKind === "source-available" ? "hold" : "sage";
+  return <span className={`pill pill-${tone} ${small ? "pill-sm" : ""}`} title={u.license}>{licenseLabel(u)}</span>;
 }
