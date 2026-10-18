@@ -1,0 +1,30 @@
+{
+  "_note": "fictional fixture — illustrative support-ticket triage graph, not a real system",
+  "name": "ticket_triage",
+  "state": [
+    {"name": "messages", "type": "messages", "reducer": "add_messages"},
+    {"name": "intent", "type": "str"},
+    {"name": "kb_hits", "type": "list", "reducer": "add"},
+    {"name": "draft", "type": "str"},
+    {"name": "attempts", "type": "int"}
+  ],
+  "nodes": [
+    {"name": "classify", "kind": "llm", "description": "Classify the ticket intent", "reads": ["messages"], "writes": ["intent"]},
+    {"name": "route", "kind": "router", "description": "Route by intent", "reads": ["intent"]},
+    {"name": "search_kb", "kind": "tool", "description": "Search the knowledge base", "reads": ["messages"], "writes": ["kb_hits"]},
+    {"name": "draft_reply", "kind": "llm", "description": "Draft a reply from KB hits", "reads": ["messages", "kb_hits"], "writes": ["draft", "attempts"]},
+    {"name": "check_reply", "kind": "router", "description": "Accept the draft or retry the search", "reads": ["draft", "attempts"]},
+    {"name": "escalate", "kind": "function", "description": "Hand off to a human queue", "reads": ["messages"], "writes": ["messages"]}
+  ],
+  "edges": [
+    {"from": "classify", "to": "route"},
+    {"from": "search_kb", "to": "draft_reply"},
+    {"from": "draft_reply", "to": "check_reply"}
+  ],
+  "conditional_edges": [
+    {"from": "route", "routes": {"answerable": "search_kb", "complaint": "escalate"}},
+    {"from": "check_reply", "routes": {"accept": "END", "retry": "search_kb", "give_up": "escalate"}}
+  ],
+  "entry": "classify",
+  "finish": ["escalate"]
+}

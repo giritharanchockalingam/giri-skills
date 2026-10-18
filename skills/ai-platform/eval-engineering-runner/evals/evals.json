@@ -1,0 +1,72 @@
+{
+  "skill": "eval-engineering-runner",
+  "cases": [
+    {
+      "id": "happy-path-audit-golden-set",
+      "prompt": "Here is our support-bot golden set and the minimum cases we want per category. Is it fit to score with? Clean it.",
+      "expected": [
+        "Runs scripts/audit_evals.py; verdict from targets; coverage table per category",
+        "Flags duplicates, conflicting references, split leakage, empty references, missing graders; writes eval-clean.jsonl",
+        "Recommendations name exact counts; does not run the evals"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Audit the attached eval set against the attached coverage targets and give me the cleaned file.",
+      "expected": ["PASS on targets after cleaning; quality issues listed; eval-clean.jsonl written"],
+      "inputs": {"dataset": "evals/fixtures/eval-set.jsonl", "targets": "evals/fixtures/targets.csv"},
+      "checks": [
+        "exit:0",
+        "exists:eval-clean.jsonl",
+        {"file": "eval-audit.md", "check": "sections:[\"Verdict\",\"Coverage\",\"Quality issues\",\"Recommendations\"]"},
+        {"file": "eval-audit.md", "check": "contains:\"**PASS** — 20 rows in, 18 kept\""},
+        {"file": "eval-audit.md", "check": "contains:\"| billing | 7 | 6 | 33.3 | 5 | 0 | OK |\""},
+        {"file": "eval-audit.json", "check": "contains:\"split_leakage\""},
+        {"file": "eval-audit.json", "check": "contains:\"conflicting_reference\""},
+        {"file": "eval-audit.md", "check": "numbers_trace_to:eval-audit.json"}
+      ]
+    },
+    {
+      "id": "agent-missing-dataset",
+      "prompt": "Audit our eval set.",
+      "expected": ["Asks for the dataset file instead of inventing cases"],
+      "inputs": {"targets": "evals/fixtures/targets.csv"},
+      "checks": ["exit:2", "needs_input:dataset"]
+    },
+    {
+      "id": "agent-below-target-fails",
+      "prompt": "We need 6 safety cases, 5 refund cases and 2 escalation cases. Are we covered?",
+      "expected": ["FAIL with exit 1: safety, refunds and escalations below target with exact gaps; no cases invented"],
+      "inputs": {"dataset": "evals/fixtures/eval-set.jsonl", "targets": "evals/fixtures/targets-strict.csv"},
+      "checks": [
+        "exit:1",
+        {"file": "eval-audit.md", "check": "contains:\"**FAIL**\""},
+        {"file": "eval-audit.md", "check": "contains:\"| escalations | 0 | 0 | 0.0 | 2 | 2 | BELOW |\""},
+        {"file": "eval-audit.md", "check": "contains:\"add 2 distinct case(s) to reach min_cases 6\""}
+      ]
+    },
+    {
+      "id": "agent-no-targets-not-gated",
+      "prompt": "Audit the eval set; we have not agreed coverage targets yet.",
+      "expected": ["Verdict NOT GATED; min_cases marked TO BE BASELINED with an owner; nothing invented"],
+      "inputs": {"dataset": "evals/fixtures/eval-set.jsonl"},
+      "checks": [
+        "exit:0",
+        {"file": "eval-audit.md", "check": "contains:\"NOT GATED\""},
+        {"file": "eval-audit.md", "check": "contains:\"[TO BE BASELINED — owner: Eval owner]\""},
+        {"file": "eval-audit.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-with-review",
+      "prompt": "Audit the set and review it against the eval-engineering guidance.",
+      "expected": ["Script outputs plus eval-review.md on the review template with the upstream skill as context"],
+      "inputs": {"dataset": "evals/fixtures/eval-set.jsonl", "targets": "evals/fixtures/targets.csv", "review": "yes"},
+      "checks": [
+        "exit:0",
+        {"file": "eval-review.md", "check": "sections:[\"Upstream alignment\",\"Dataset gaps\",\"Next actions\"]"},
+        {"file": "eval-review.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

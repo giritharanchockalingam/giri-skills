@@ -1,0 +1,23 @@
+{
+  "_note": "fictional fixture — deliberately broken graph: static loop with no conditional exit, orphan node, dangling edge, one-route router, undeclared state field",
+  "name": "broken_loop",
+  "state": [
+    {"name": "notes", "type": "list"}
+  ],
+  "nodes": [
+    {"name": "plan", "kind": "llm", "description": "Plan the next step", "reads": ["notes"], "writes": ["notes"]},
+    {"name": "act", "kind": "tool", "description": "Act on the plan", "reads": ["plan_text"], "writes": ["notes"]},
+    {"name": "decide", "kind": "router", "description": "Router with a single route"},
+    {"name": "orphan", "kind": "function", "description": "Never wired in"}
+  ],
+  "edges": [
+    {"from": "plan", "to": "act"},
+    {"from": "act", "to": "plan"},
+    {"from": "act", "to": "summarise"}
+  ],
+  "conditional_edges": [
+    {"from": "decide", "routes": {"done": "END"}}
+  ],
+  "entry": "plan",
+  "finish": []
+}

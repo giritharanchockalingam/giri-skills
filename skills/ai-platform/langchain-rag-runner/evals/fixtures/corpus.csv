@@ -1,0 +1,4 @@
+source,doc_count,avg_chars,update_frequency,change_fraction,notes
+policies,1200,3000,monthly,,fictional fixture
+faq,400,800,weekly,,fictional fixture
+contracts,250,24000,quarterly,0.25,fictional fixture

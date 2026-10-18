@@ -1,0 +1,6 @@
+category,min_cases,notes
+billing,5,fictional fixture
+refunds,5,fictional fixture: one refund case is dropped for an empty reference
+account,4,fictional fixture
+safety,6,fictional fixture
+escalations,2,fictional fixture: category absent from the dataset
