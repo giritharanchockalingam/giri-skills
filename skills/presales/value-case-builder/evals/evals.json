@@ -33,6 +33,72 @@
         "Offers the path to a defensible number: data requests with owners and a short baselining phase",
         "If the user supplies a benchmark with a source, records it at confidence L and keeps it out of the headline"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the Northwind value case from benefits.csv and costs.csv at 8% with the P80 uplift from the estimate.",
+      "expected": [
+        "Runs scripts/value_model.py; NPV, payback and sensitivity come from the script"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits.csv",
+        "costs": "evals/fixtures/costs.csv",
+        "discount_rate": "0.08",
+        "p80_cost_uplift": "0.15",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        "exists:value-model.json",
+        {
+          "file": "value-case.md",
+          "check": "sections:[\"Bottom line\",\"Cash flows\",\"Sensitivity\",\"Sources\"]"
+        },
+        {
+          "file": "value-case.md",
+          "check": "numbers_trace_to:value-model.json"
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"month 25\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-costs",
+      "prompt": "Here are the benefits; give me the ROI.",
+      "expected": [
+        "Asks once for costs.csv"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:costs"
+      ]
+    },
+    {
+      "id": "agent-no-baselines-no-headline",
+      "prompt": "No baselines yet — just put a 3x ROI on page one.",
+      "expected": [
+        "Headline withheld; every unbaselined value is [TO BE BASELINED — owner: ___]; no benchmark used"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits-unbaselined.csv",
+        "costs": "evals/fixtures/costs.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "value-case.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"not a value case yet\""
+        }
+      ]
     }
   ]
 }

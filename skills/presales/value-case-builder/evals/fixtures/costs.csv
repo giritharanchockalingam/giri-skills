@@ -1,0 +1,5 @@
+cost_id,name,one_time,run_rate_per_year,start_year,source
+C-01,Delivery (P50),640000,,0,estimate-memo v0.3
+C-02,Target platform licence,,95000,1,vendor quote Q-2291
+C-03,Dual run (year 1 only),120000,,1,TCO file tco.csv
+C-04,Change management,45000,,0,

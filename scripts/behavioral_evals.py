@@ -345,8 +345,14 @@ def eval_case_checks(checks, exit_code: int, out_dir: Path, skill_dir: Path):
     for c in checks:
         if isinstance(c, dict):
             spec, path = str(c.get("check", "")), out_dir / str(c.get("file", ""))
+            # a reference file named by numbers_trace_to / cites_source_ids is a run output when it
+            # exists in the case's out dir (e.g. "numbers_trace_to:estimate.json"); else skill-relative
+            name, arg = check_output.parse_spec(spec)
+            refs = arg if isinstance(arg, list) else [arg]
+            cwd = out_dir if name in ("numbers_trace_to", "cites_source_ids") and arg and \
+                all((out_dir / str(x)).is_file() for x in refs) else skill_dir
             r = check_output.run_check(spec, str(path), mode="real", exit_code=exit_code,
-                                       out_dir=str(out_dir), cwd=str(skill_dir))
+                                       out_dir=str(out_dir), cwd=str(cwd))
             r["check"] = f"{c.get('file')}: {spec}"
         else:
             name, _, arg = str(c).partition(":")

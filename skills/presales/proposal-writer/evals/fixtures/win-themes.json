@@ -1,0 +1,9 @@
+{
+  "client": "Northwind Retail",
+  "initiative": "Order Hub Integration",
+  "themes": [
+    {"theme": "Peak-proof order orchestration", "proof": "Northwind peak post-mortem 2025-12 p.4: 3,100 cancelled pickup orders", "so_what": "no war room next peak"},
+    {"theme": "Inventory-accurate promising", "proof": "VP Supply Chain statement 2026-09-02: 6.2% split-shipment rate", "so_what": "fewer split shipments and markdowns"},
+    {"theme": "Fixed-price waves with explicit contingency", "proof": "", "so_what": "price certainty per wave"}
+  ]
+}

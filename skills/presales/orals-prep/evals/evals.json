@@ -31,6 +31,77 @@
         "Removes the competitor mention; offers a ghost line in consequence language instead",
         "Explains in one line that new numbers and competitor naming in orals create credibility and compliance risk"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Prep the 60-minute Northwind orals for Giri, Priya and Alex from the proposal.",
+      "expected": [
+        "Runs scripts/orals.py; timed script; every number traces to the registry; likely questions from the bank"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md",
+        "minutes": "60",
+        "speakers": "Giri,Priya,Alex"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "orals-script.md",
+          "check": "sections:[\"Timed script\",\"Airtime check\",\"Number sheet\",\"Handoffs\"]"
+        },
+        {
+          "file": "orals-script.md",
+          "check": "numbers_trace_to:number-registry.csv"
+        },
+        {
+          "file": "number-registry.csv",
+          "check": "contains:\"180,000\""
+        },
+        {
+          "file": "likely-questions.md",
+          "check": "contains:\"What is the biggest risk\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-speakers",
+      "prompt": "Prep the orals from the proposal.",
+      "expected": [
+        "Asks once for the speakers"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:speakers"
+      ]
+    },
+    {
+      "id": "agent-unbaselined-numbers-become-questions",
+      "prompt": "The proposal has TBDs — just say 'about 99.9%' in the script.",
+      "expected": [
+        "Script carries [TO BE BASELINED — owner: ___], and each marker becomes a likely question; no number outside the proposal"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal-thin.md",
+        "speakers": "Giri"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "orals-script.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "orals-script.md",
+          "check": "numbers_trace_to:number-registry.csv"
+        },
+        {
+          "file": "likely-questions.md",
+          "check": "contains:\"What is the number for\""
+        }
+      ]
     }
   ]
 }

@@ -59,6 +59,18 @@ career/offer-evaluator,agent-missing-offers,exit:2,1,"exit code 2, expected 2"
 career/offer-evaluator,agent-missing-offers,needs_input:offers,1,missing inputs named: ['offers']
 career/offer-evaluator,agent-no-col-no-adjustment,exit:0,1,"exit code 0, expected 0"
 career/offer-evaluator,agent-no-col-no-adjustment,exists:comparison.json,1,evals/results/agent-dry/runs/career__offer-evaluator/agent-no-col-no-adjustment/comparison.json exists
+presales/account-plan,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/account-plan,agent-happy-path,"account-plan.md: sections:[""Stakeholder map"",""White-space matrix"",""Pipeline"",""90-day plays""]",1,"found ['Stakeholder map', 'White-space matrix', 'Pipeline', '90-day plays']"
+presales/account-plan,agent-happy-path,"account-plan.md: contains:""1,652,000""",1,"found: 1,652,000"
+presales/account-plan,agent-happy-path,plays.csv: csv_rows:owner!empty,1,0 of 7 rows empty in 'owner'
+presales/account-plan,agent-happy-path,"plays.csv: contains:""Open white space: Data and AI""",1,found: Open white space: Data and AI
+presales/account-plan,agent-happy-path,"plays.csv: contains:""Dana Ortiz""",1,found: Dana Ortiz
+presales/account-plan,agent-missing-pipeline,exit:2,1,"exit code 2, expected 2"
+presales/account-plan,agent-missing-pipeline,needs_input:pipeline,1,missing inputs named: ['pipeline']
+presales/account-plan,agent-unvalued-pipeline-not-estimated,exit:0,1,"exit code 0, expected 0"
+presales/account-plan,agent-unvalued-pipeline-not-estimated,"account-plan.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/account-plan,agent-unvalued-pipeline-not-estimated,"account-plan.md: contains:""excludes 1 unvalued""",1,found: excludes 1 unvalued
+presales/account-plan,agent-unvalued-pipeline-not-estimated,plays.csv: csv_rows:owner~^\[TO BE BASELINED,1,0 of 5 rows not matching '^\\[TO BE BASELINED' in 'owner'
 presales/client-research-brief,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 presales/client-research-brief,agent-happy-path,"brief-skeleton.md: sections:[""Leadership"",""Sources""]",1,"found ['Leadership', 'Sources']"
 presales/client-research-brief,agent-happy-path,"brief-skeleton.md: contains:""S1""",1,found: S1
@@ -67,6 +79,28 @@ presales/client-research-brief,agent-missing-notes,exit:2,1,"exit code 2, expect
 presales/client-research-brief,agent-missing-notes,needs_input:notes,1,missing inputs named: ['notes']
 presales/client-research-brief,agent-unknowns-marked,exit:0,1,"exit code 0, expected 0"
 presales/client-research-brief,agent-unknowns-marked,"brief-skeleton.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/competitive-positioning,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/competitive-positioning,agent-happy-path,"battle-card.md: contains:""INTERNAL — do not distribute""",1,found: INTERNAL — do not distribute
+presales/competitive-positioning,agent-happy-path,"battle-card.md: sections:[""Wedge"",""Landmines"",""Objection handling""]",1,"found ['Wedge', 'Landmines', 'Objection handling']"
+presales/competitive-positioning,agent-happy-path,"battle-card.md: contains:""Peak-season cutover rehearsal and parallel run | Peak-season cutover experience (them: 2)""",1,found: Peak-season cutover rehearsal and parallel run | Peak-season cutover experience (them: 2)
+presales/competitive-positioning,agent-missing-concerns,exit:2,1,"exit code 2, expected 2"
+presales/competitive-positioning,agent-missing-concerns,needs_input:concerns,1,missing inputs named: ['concerns']
+presales/competitive-positioning,agent-unsourced-claims-are-hypotheses,exit:0,1,"exit code 0, expected 0"
+presales/competitive-positioning,agent-unsourced-claims-are-hypotheses,"battle-card.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/competitive-positioning,agent-unsourced-claims-are-hypotheses,"battle-card.md: contains:""(hypothesis)""",1,found: (hypothesis)
+presales/competitive-positioning,agent-unsourced-claims-are-hypotheses,"battle-card.md: contains:""No wedge found""",1,found: No wedge found
+presales/discovery-interview,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/discovery-interview,agent-happy-path,"discovery-pack.md: sections:[""Time budget"",""Question plan"",""Five closes""]",1,"found ['Time budget', 'Question plan', 'Five closes']"
+presales/discovery-interview,agent-happy-path,"discovery-pack.md: contains:""20% reserved""",1,found: 20% reserved
+presales/discovery-interview,agent-happy-path,"five-closes.md: sections:[""Five closes""]",1,found ['Five closes']
+presales/discovery-interview,agent-happy-path,pain-matrix.csv: csv_rows:evidence!empty,1,0 of 4 rows empty in 'evidence'
+presales/discovery-interview,agent-happy-path,"five-closes.md: contains:""Peak freeze starts""",1,found: Peak freeze starts
+presales/discovery-interview,agent-missing-vertical,exit:2,1,"exit code 2, expected 2"
+presales/discovery-interview,agent-missing-vertical,needs_input:vertical,1,missing inputs named: ['vertical']
+presales/discovery-interview,agent-thin-notes-closes-marked-tbd,exit:0,1,"exit code 0, expected 0"
+presales/discovery-interview,agent-thin-notes-closes-marked-tbd,"five-closes.md: contains:""TBD — owner: ___""",1,found: TBD — owner: ___
+presales/discovery-interview,agent-thin-notes-closes-marked-tbd,"five-closes.md: contains:""0 of 5 closes""",1,found: 0 of 5 closes
+presales/discovery-interview,agent-thin-notes-closes-marked-tbd,pain-matrix.csv: csv_rows:evidence!empty,1,0 of 1 rows empty in 'evidence'
 presales/effort-estimator,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 presales/effort-estimator,agent-happy-path,exists:estimate.json,1,evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.json exists
 presales/effort-estimator,agent-happy-path,exists:estimate.md,1,evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md exists
@@ -77,6 +111,19 @@ presales/effort-estimator,agent-missing-wbs,needs_input:wbs,1,missing inputs nam
 presales/effort-estimator,agent-no-rate-card-no-price,exit:0,1,"exit code 0, expected 0"
 presales/effort-estimator,agent-no-rate-card-no-price,"estimate.md: contains:""No rate card supplied""",1,found: No rate card supplied
 presales/effort-estimator,agent-no-rate-card-no-price,"estimate.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/exec-deck-redline,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/exec-deck-redline,agent-happy-path,"ledger.csv: csv:[slide,title,text,verdict,reason,numbers_found]",1,"header has ['slide', 'title', 'text', 'verdict', 'reason', 'numbers_found']"
+presales/exec-deck-redline,agent-happy-path,ledger.csv: csv_rows:slide~^[0-9]+$,1,0 of 5 rows not matching '^[0-9]+$' in 'slide'
+presales/exec-deck-redline,agent-happy-path,"ledger.csv: contains:""Next steps""",1,found: Next steps
+presales/exec-deck-redline,agent-happy-path,unsourced-numbers.csv: csv_rows:number!empty,1,0 of 4 rows empty in 'number'
+presales/exec-deck-redline,agent-happy-path,"unsourced-numbers.csv: contains:""40%""",1,found: 40%
+presales/exec-deck-redline,agent-happy-path,"redline.md: sections:[""Redline table"",""Rewritten slides""]",1,"found ['Redline table', 'Rewritten slides']"
+presales/exec-deck-redline,agent-missing-deck,exit:2,1,"exit code 2, expected 2"
+presales/exec-deck-redline,agent-missing-deck,needs_input:deck,1,missing inputs named: ['deck']
+presales/exec-deck-redline,agent-unsourced-numbers-flagged-not-fixed,exit:0,1,"exit code 0, expected 0"
+presales/exec-deck-redline,agent-unsourced-numbers-flagged-not-fixed,"unsourced-numbers.csv: contains:""310,000""",1,"found: 310,000"
+presales/exec-deck-redline,agent-unsourced-numbers-flagged-not-fixed,unsourced-numbers.csv: csv_rows:slide~^3$,1,0 of 4 rows not matching '^3$' in 'slide'
+presales/exec-deck-redline,agent-unsourced-numbers-flagged-not-fixed,"redline.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
 presales/integration-migration-assessor,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 presales/integration-migration-assessor,agent-happy-path,"scored.csv: csv:[band,wave]",1,"header has ['band', 'wave']"
 presales/integration-migration-assessor,agent-happy-path,exists:tco.csv,1,evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv exists
@@ -87,6 +134,30 @@ presales/integration-migration-assessor,agent-missing-rates,needs_input:rates,1,
 presales/integration-migration-assessor,agent-no-prices-no-numbers,exit:0,1,"exit code 0, expected 0"
 presales/integration-migration-assessor,agent-no-prices-no-numbers,"tco.csv: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
 presales/integration-migration-assessor,agent-no-prices-no-numbers,"tco-summary.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/orals-prep,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/orals-prep,agent-happy-path,"orals-script.md: sections:[""Timed script"",""Airtime check"",""Number sheet"",""Handoffs""]",1,"found ['Timed script', 'Airtime check', 'Number sheet', 'Handoffs']"
+presales/orals-prep,agent-happy-path,orals-script.md: numbers_trace_to:number-registry.csv,1,all 31 numbers trace
+presales/orals-prep,agent-happy-path,"number-registry.csv: contains:""180,000""",1,"found: 180,000"
+presales/orals-prep,agent-happy-path,"likely-questions.md: contains:""What is the biggest risk""",1,found: What is the biggest risk
+presales/orals-prep,agent-missing-speakers,exit:2,1,"exit code 2, expected 2"
+presales/orals-prep,agent-missing-speakers,needs_input:speakers,1,missing inputs named: ['speakers']
+presales/orals-prep,agent-unbaselined-numbers-become-questions,exit:0,1,"exit code 0, expected 0"
+presales/orals-prep,agent-unbaselined-numbers-become-questions,"orals-script.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/orals-prep,agent-unbaselined-numbers-become-questions,orals-script.md: numbers_trace_to:number-registry.csv,1,all 5 numbers trace
+presales/orals-prep,agent-unbaselined-numbers-become-questions,"likely-questions.md: contains:""What is the number for""",1,found: What is the number for
+presales/proposal-writer,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/proposal-writer,agent-happy-path,exists:proposal.md,1,evals/results/agent-dry/runs/presales__proposal-writer/agent-happy-path/proposal.md exists
+presales/proposal-writer,agent-happy-path,exists:proposal-final.md,1,evals/results/agent-dry/runs/presales__proposal-writer/agent-happy-path/proposal-final.md exists
+presales/proposal-writer,agent-happy-path,"proposal.md: sections:[""Executive summary"",""Pricing"",""Why""]",1,"found ['Executive summary', 'Pricing', 'Why']"
+presales/proposal-writer,agent-happy-path,"proposal.md: contains:""T1 Peak-proof order orchestration""",1,found: T1 Peak-proof order orchestration
+presales/proposal-writer,agent-happy-path,proposal.md: numbers_trace_to:sources.md,1,all 15 numbers trace
+presales/proposal-writer,agent-happy-path,"placeholders.csv: csv:[placeholder,section,owner]",1,"header has ['placeholder', 'section', 'owner']"
+presales/proposal-writer,agent-missing-win-themes,exit:2,1,"exit code 2, expected 2"
+presales/proposal-writer,agent-missing-win-themes,needs_input:win_themes,1,missing inputs named: ['win_themes']
+presales/proposal-writer,agent-no-proof-no-invented-figures,exit:0,1,"exit code 0, expected 0"
+presales/proposal-writer,agent-no-proof-no-invented-figures,"proposal.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/proposal-writer,agent-no-proof-no-invented-figures,placeholders.csv: csv_rows:placeholder!empty,1,0 of 28 rows empty in 'placeholder'
+presales/proposal-writer,agent-no-proof-no-invented-figures,proposal.md: numbers_trace_to:sources.md,1,all 1 numbers trace
 presales/rfp-compliance-matrix,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 presales/rfp-compliance-matrix,agent-happy-path,exists:requirements.csv,1,evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv exists
 presales/rfp-compliance-matrix,agent-happy-path,"matrix.csv: csv:[req_id,compliance,owner]",1,"header has ['req_id', 'compliance', 'owner']"
@@ -97,3 +168,36 @@ presales/rfp-compliance-matrix,agent-missing-capabilities,needs_input:capabiliti
 presales/rfp-compliance-matrix,agent-unmatched-becomes-clarify,exit:0,1,"exit code 0, expected 0"
 presales/rfp-compliance-matrix,agent-unmatched-becomes-clarify,"gaps.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
 presales/rfp-compliance-matrix,agent-unmatched-becomes-clarify,"matrix.csv: contains:""CQ-001""",1,found: CQ-001
+presales/solution-architecture-doc,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/solution-architecture-doc,agent-happy-path,architecture.md: mermaid_parses,1,2 block(s) ok
+presales/solution-architecture-doc,agent-happy-path,"architecture.md: sections:[""System context"",""Container view"",""Integration map"",""Non-functional requirements"",""Decision log""]",1,"found ['System context', 'Container view', 'Integration map', 'Non-functional requirements', 'Decision log']"
+presales/solution-architecture-doc,agent-happy-path,"architecture.md: contains:""### event""",1,found: ### event
+presales/solution-architecture-doc,agent-happy-path,nfr.csv: csv_rows:target!empty,1,0 of 4 rows empty in 'target'
+presales/solution-architecture-doc,agent-happy-path,"nfr.csv: contains:""99.9% monthly""",1,found: 99.9% monthly
+presales/solution-architecture-doc,agent-missing-components,exit:2,1,"exit code 2, expected 2"
+presales/solution-architecture-doc,agent-missing-components,needs_input:components,1,missing inputs named: ['components']
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,exit:0,1,"exit code 0, expected 0"
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,architecture.md: mermaid_parses,1,2 block(s) ok
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,nfr.csv: csv_rows:target~^\[TO BE BASELINED,1,0 of 2 rows not matching '^\\[TO BE BASELINED' in 'target'
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,"architecture.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/sow-drafter,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/sow-drafter,agent-happy-path,exists:SOW.md,1,evals/results/agent-dry/runs/presales__sow-drafter/agent-happy-path/SOW.md exists
+presales/sow-drafter,agent-happy-path,"SOW.md: sections:[""Scope"",""Deliverables and acceptance"",""Assumptions"",""RACI"",""Change control""]",1,"found ['Scope', 'Deliverables and acceptance', 'Assumptions', 'RACI', 'Change control']"
+presales/sow-drafter,agent-happy-path,"SOW.md: contains:""118 interfaces in scope per inventory export""",1,found: 118 interfaces in scope per inventory export
+presales/sow-drafter,agent-happy-path,deliverables.csv: csv_rows:acceptance!empty,1,0 of 3 rows empty in 'acceptance'
+presales/sow-drafter,agent-happy-path,assumptions-check.csv: max_lines:1,1,1 lines (max 1)
+presales/sow-drafter,agent-missing-proposal,exit:2,1,"exit code 2, expected 2"
+presales/sow-drafter,agent-missing-proposal,needs_input:proposal,1,missing inputs named: ['proposal']
+presales/sow-drafter,agent-missing-acceptance-not-invented,exit:0,1,"exit code 0, expected 0"
+presales/sow-drafter,agent-missing-acceptance-not-invented,deliverables.csv: csv_rows:acceptance~^(\[TO BE BASELINED|\S),1,0 of 2 rows not matching '^(\\[TO BE BASELINED|\\S)' in 'acceptance'
+presales/sow-drafter,agent-missing-acceptance-not-invented,"SOW.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/value-case-builder,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/value-case-builder,agent-happy-path,exists:value-model.json,1,evals/results/agent-dry/runs/presales__value-case-builder/agent-happy-path/value-model.json exists
+presales/value-case-builder,agent-happy-path,"value-case.md: sections:[""Bottom line"",""Cash flows"",""Sensitivity"",""Sources""]",1,"found ['Bottom line', 'Cash flows', 'Sensitivity', 'Sources']"
+presales/value-case-builder,agent-happy-path,value-case.md: numbers_trace_to:value-model.json,1,all 80 numbers trace
+presales/value-case-builder,agent-happy-path,"value-case.md: contains:""month 25""",1,found: month 25
+presales/value-case-builder,agent-missing-costs,exit:2,1,"exit code 2, expected 2"
+presales/value-case-builder,agent-missing-costs,needs_input:costs,1,missing inputs named: ['costs']
+presales/value-case-builder,agent-no-baselines-no-headline,exit:0,1,"exit code 0, expected 0"
+presales/value-case-builder,agent-no-baselines-no-headline,"value-case.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/value-case-builder,agent-no-baselines-no-headline,"value-case.md: contains:""not a value case yet""",1,found: not a value case yet

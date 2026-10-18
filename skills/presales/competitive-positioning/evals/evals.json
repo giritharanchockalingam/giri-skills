@@ -31,6 +31,77 @@
         "Explains in one line that unsourced competitor claims cannot appear in the scorecard as facts and never in client-facing material",
         "Offers the compliant alternative: a neutral discovery question or clarification question that would surface the client's own view on incumbent performance and cost"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the battle card for Northwind vs the incumbent SI.",
+      "expected": [
+        "Runs scripts/battle_card.py; wedge where we are strong, they are weak and a stakeholder cares; INTERNAL header"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities.csv",
+        "theirs": "evals/fixtures/their-claims.csv",
+        "concerns": "evals/fixtures/concerns.csv",
+        "client": "Northwind",
+        "alternative": "Incumbent SI"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"INTERNAL — do not distribute\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "sections:[\"Wedge\",\"Landmines\",\"Objection handling\"]"
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"Peak-season cutover rehearsal and parallel run | Peak-season cutover experience (them: 2)\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-concerns",
+      "prompt": "How do we beat the incumbent?",
+      "expected": [
+        "Asks once for the stakeholder concerns"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities.csv",
+        "theirs": "evals/fixtures/their-claims.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:concerns"
+      ]
+    },
+    {
+      "id": "agent-unsourced-claims-are-hypotheses",
+      "prompt": "We have no evidence but I know we are better — say so.",
+      "expected": [
+        "Unsourced claims marked hypothesis; missing evidence is [TO BE BASELINED — owner: ___]; no wedge asserted without evidence"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities-thin.csv",
+        "theirs": "evals/fixtures/their-claims-thin.csv",
+        "concerns": "evals/fixtures/concerns.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"(hypothesis)\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"No wedge found\""
+        }
+      ]
     }
   ]
 }

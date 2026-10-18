@@ -1,22 +1,22 @@
 # Behavioral eval scorecard
 _provider=dry model=claude-sonnet-4-5 date=2026-10-17_
-_agent mode: 36 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
+_agent mode: 63 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict | agent pass | agent verdict |
 |---|---|---|---|---|---|---|---|---|
-| presales/account-plan |  |  |  |  |  |  |  |  |
+| presales/account-plan |  |  |  |  |  |  | 1.00 | Works |
 | presales/client-research-brief |  |  |  |  |  |  | 1.00 | Works |
-| presales/competitive-positioning |  |  |  |  |  |  |  |  |
-| presales/discovery-interview |  |  |  |  |  |  |  |  |
+| presales/competitive-positioning |  |  |  |  |  |  | 1.00 | Works |
+| presales/discovery-interview |  |  |  |  |  |  | 1.00 | Works |
 | presales/effort-estimator |  |  |  |  |  |  | 1.00 | Works |
-| presales/exec-deck-redline |  |  |  |  |  |  |  |  |
+| presales/exec-deck-redline |  |  |  |  |  |  | 1.00 | Works |
 | presales/integration-migration-assessor |  |  |  |  |  |  | 1.00 | Works |
-| presales/orals-prep |  |  |  |  |  |  |  |  |
-| presales/proposal-writer |  |  |  |  |  |  |  |  |
+| presales/orals-prep |  |  |  |  |  |  | 1.00 | Works |
+| presales/proposal-writer |  |  |  |  |  |  | 1.00 | Works |
 | presales/rfp-compliance-matrix |  |  |  |  |  |  | 1.00 | Works |
-| presales/solution-architecture-doc |  |  |  |  |  |  |  |  |
-| presales/sow-drafter |  |  |  |  |  |  |  |  |
-| presales/value-case-builder |  |  |  |  |  |  |  |  |
+| presales/solution-architecture-doc |  |  |  |  |  |  | 1.00 | Works |
+| presales/sow-drafter |  |  |  |  |  |  | 1.00 | Works |
+| presales/value-case-builder |  |  |  |  |  |  | 1.00 | Works |
 | build/ci-cd-vercel-github |  |  |  |  |  |  |  |  |
 | build/handoff-and-thread-close |  |  |  |  |  |  |  |  |
 | build/multi-tenant-saas-patterns |  |  |  |  |  |  |  |  |

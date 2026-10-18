@@ -27,6 +27,10 @@ WIRED = [
     "ai-platform/llm-eval-harness", "ai-platform/rag-pipeline-design",
     "ai-platform/infra-gpu-sizing", "career/jd-fit-scorer",
     "career/application-tracker", "career/offer-evaluator",
+    # phases 1-2
+    "presales/value-case-builder", "presales/proposal-writer", "presales/sow-drafter",
+    "presales/discovery-interview", "presales/solution-architecture-doc", "presales/exec-deck-redline",
+    "presales/competitive-positioning", "presales/account-plan", "presales/orals-prep",
 ]
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 
@@ -178,7 +182,7 @@ def test_optional_input_skips_group_and_step(tmp_path):
 
 
 def test_not_an_agent_skill_exits_3(tmp_path):
-    r = run_skill("presales/proposal-writer", "--out", str(tmp_path / "o"))
+    r = run_skill("build/safe-fix", "--out", str(tmp_path / "o"))
     assert r.returncode == 3
     assert "not an agent skill" in r.stderr
 

@@ -1,0 +1,2 @@
+- Ops lead: Our order flow is manual in places and sometimes breaks.
+- They like the demo.

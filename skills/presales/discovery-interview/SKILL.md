@@ -4,11 +4,28 @@ description: Use when the user asks to prepare for, run, or synthesize a client 
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: vertical, type: string, required: true, from: "one of edtech, retail, manufacturing, travel"}
+      - {name: personas, type: string, required: true, from: "comma list of attendee personas, e.g. 'CIO,VP Digital'"}
+      - {name: minutes, type: string, required: false, default: "45"}
+      - {name: notes, type: md, required: false, from: "raw call notes / transcript (synthesize mode); without it only the prep pack is produced"}
+      - {name: client, type: string, required: false, default: "<Client>"}
+    run:
+      - {step: pack, kind: script, cmd: "python3 -I scripts/build_pack.py --vertical {vertical} --personas {personas} --minutes {minutes} --banks references/question-banks --client {client} --out {out}/discovery-pack.md --five-closes {out}/five-closes.md --pain-matrix {out}/pain-matrix.csv"}
+      - {step: synthesize, kind: script, cmd: "python3 -I scripts/synthesize.py {notes} --pain-matrix {out}/pain-matrix.csv --five-closes {out}/five-closes.md --client {client}", skip_if_missing: [notes]}
+    outputs:
+      - {path: "{out}/discovery-pack.md", checks: [exists, sections:["Time budget","Question plan","Five closes"]]}
+      - {path: "{out}/five-closes.md", checks: [exists, sections:["Five closes"]]}
+      - {path: "{out}/pain-matrix.csv", checks: [exists, csv:[pain,impact,urgency,evidence,owner]]}
 ---
 
 # discovery-interview
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/discovery-interview --input <name>=<value> … --out <dir>` (see `--explain presales/discovery-interview`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Prep me for the discovery call with <client> on <topic>."

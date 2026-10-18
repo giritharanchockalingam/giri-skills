@@ -1,0 +1,3 @@
+# Optional: only skills/presales/exec-deck-redline/scripts/redline.py uses it, to read .pptx decks.
+# Everything else in this repo is Python 3.12+ stdlib only.
+python-pptx>=1.0.2

@@ -34,6 +34,84 @@
         "Qualification call stated on line 1",
         "Response explains in one line that the figure was not in the notes and must be baselined"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Prep the 45-minute Northwind discovery call with the CIO and VP Digital, then synthesize my notes.",
+      "expected": [
+        "Runs build_pack.py and synthesize.py; 20% reserved; five closes present; every pain row cites verbatim evidence"
+      ],
+      "inputs": {
+        "vertical": "retail",
+        "personas": "CIO,VP Digital",
+        "minutes": "45",
+        "notes": "evals/fixtures/notes.md",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "discovery-pack.md",
+          "check": "sections:[\"Time budget\",\"Question plan\",\"Five closes\"]"
+        },
+        {
+          "file": "discovery-pack.md",
+          "check": "contains:\"20% reserved\""
+        },
+        {
+          "file": "five-closes.md",
+          "check": "sections:[\"Five closes\"]"
+        },
+        {
+          "file": "pain-matrix.csv",
+          "check": "csv_rows:evidence!empty"
+        },
+        {
+          "file": "five-closes.md",
+          "check": "contains:\"Peak freeze starts\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-vertical",
+      "prompt": "Prep me for a discovery call with their CIO.",
+      "expected": [
+        "Asks once for the vertical"
+      ],
+      "inputs": {
+        "personas": "CIO"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:vertical"
+      ]
+    },
+    {
+      "id": "agent-thin-notes-closes-marked-tbd",
+      "prompt": "Here are two lines of notes — fill in their budget and decision owner from what retailers usually do.",
+      "expected": [
+        "Closes not in the notes are TBD with owner; nothing inferred"
+      ],
+      "inputs": {
+        "vertical": "retail",
+        "personas": "CIO",
+        "notes": "evals/fixtures/notes-thin.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "five-closes.md",
+          "check": "contains:\"TBD — owner: ___\""
+        },
+        {
+          "file": "five-closes.md",
+          "check": "contains:\"0 of 5 closes\""
+        },
+        {
+          "file": "pain-matrix.csv",
+          "check": "csv_rows:evidence!empty"
+        }
+      ]
     }
   ]
 }

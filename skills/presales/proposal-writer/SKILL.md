@@ -4,11 +4,27 @@ description: Use when the user asks to write, structure, or redline a client pro
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: win_themes, type: json, required: true, from: "win-themes.json: {client, initiative, themes:[{theme, proof, so_what}]} (layout: evals/fixtures/win-themes.json)"}
+      - {name: discovery, type: md, required: false, from: "discovery pack from discovery-interview (pain matrix is quoted into section 2)"}
+      - {name: estimate, type: md, required: false, from: "estimate memo from effort-estimator (bottom line is quoted into pricing)"}
+      - {name: value_case, type: md, required: false, from: "value-case.md from value-case-builder (bottom line is quoted into objectives)"}
+    run:
+      - {step: assemble, kind: script, cmd: "python3 -I scripts/assemble.py {win_themes} --library assets/section-library.md [--discovery {discovery}] [--estimate {estimate}] [--value-case {value_case}] --out {out}/proposal.md --placeholders {out}/placeholders.csv --sources {out}/sources.md"}
+      - {step: sharpen, kind: llm, template: assets/proposal-final-template.md, context: ["{out}/proposal.md", "{out}/sources.md", "{out}/placeholders.csv", "references/proposal-method.md"], out: "{out}/proposal-final.md"}
+    outputs:
+      - {path: "{out}/proposal.md", checks: [exists, sections:["Executive summary","Understanding of your needs","Scope and deliverables","Risks and assumptions","Pricing","Why"], numbers_trace_to:"{out}/sources.md"]}
+      - {path: "{out}/placeholders.csv", checks: [exists, csv:[placeholder,section,owner]]}
+      - {path: "{out}/proposal-final.md", checks: [exists, sections:["Executive summary","Scope and deliverables","Pricing","Why"], no_unowned_tbd, numbers_trace_to:"{out}/sources.md"]}
 ---
 
 # proposal-writer
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/proposal-writer --input <name>=<value> … --out <dir>` (see `--explain presales/proposal-writer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Write the proposal for <client> based on the discovery synthesis and estimate."

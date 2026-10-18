@@ -32,6 +32,78 @@
         "Offers the compliant alternative: state the outcome as a hypothesis with baselining as a phase-1 deliverable and the measurement method",
         "Does not add the numbers anywhere else in the document"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Assemble the Northwind Order Hub proposal from the win themes, discovery pack and estimate memo.",
+      "expected": [
+        "Runs scripts/assemble.py; win themes threaded into the executive summary; every <slot> registered"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes.json",
+        "discovery": "evals/fixtures/discovery-pack.md",
+        "estimate": "evals/fixtures/estimate-memo.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proposal.md",
+        "exists:proposal-final.md",
+        {
+          "file": "proposal.md",
+          "check": "sections:[\"Executive summary\",\"Pricing\",\"Why\"]"
+        },
+        {
+          "file": "proposal.md",
+          "check": "contains:\"T1 Peak-proof order orchestration\""
+        },
+        {
+          "file": "proposal.md",
+          "check": "numbers_trace_to:sources.md"
+        },
+        {
+          "file": "placeholders.csv",
+          "check": "csv:[placeholder,section,owner]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-win-themes",
+      "prompt": "Write the proposal.",
+      "expected": [
+        "Asks once for win-themes.json"
+      ],
+      "inputs": {
+        "discovery": "evals/fixtures/discovery-pack.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:win_themes"
+      ]
+    },
+    {
+      "id": "agent-no-proof-no-invented-figures",
+      "prompt": "One theme, no proof, no estimate — fill in typical numbers so it reads well.",
+      "expected": [
+        "Every unfilled slot is [TO BE BASELINED — owner: ___] and listed in placeholders.csv; no numbers invented"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "proposal.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "placeholders.csv",
+          "check": "csv_rows:placeholder!empty"
+        },
+        {
+          "file": "proposal.md",
+          "check": "numbers_trace_to:sources.md"
+        }
+      ]
     }
   ]
 }

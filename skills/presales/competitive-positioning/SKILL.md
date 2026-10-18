@@ -4,11 +4,25 @@ description: Use when the user asks how to win against a named competitor, an in
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: ours, type: csv, required: true, from: "our-capabilities.csv: capability, evidence, strength 1-5 (layout: evals/fixtures/our-capabilities.csv)"}
+      - {name: theirs, type: csv, required: true, from: "their-claims.csv: claim, source, strength 1-5 (layout: evals/fixtures/their-claims.csv)"}
+      - {name: concerns, type: csv, required: true, from: "concerns.csv: stakeholder, concern — from discovery (layout: evals/fixtures/concerns.csv)"}
+      - {name: client, type: string, required: false, default: "<Client>"}
+      - {name: alternative, type: string, required: false, default: "<Alternative>"}
+    run:
+      - {step: card, kind: script, cmd: "python3 -I scripts/battle_card.py {ours} {theirs} {concerns} --out {out}/battle-card.md --client {client} --alternative {alternative}"}
+    outputs:
+      - {path: "{out}/battle-card.md", checks: [exists, contains:"INTERNAL — do not distribute", sections:["Wedge","Landmines","Objection handling","Intelligence gaps"]]}
 ---
 
 # competitive-positioning
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/competitive-positioning --input <name>=<value> … --out <dir>` (see `--explain presales/competitive-positioning`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "How do we beat the incumbent at <client>?"
