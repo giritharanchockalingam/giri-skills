@@ -1,4 +1,4 @@
-import type { Verdict } from "./data";
+import type { Verdict, AgentVerdict } from "./data";
 
 export type Tone = "sage" | "hold" | "deep" | "rust" | "none";
 
@@ -71,5 +71,51 @@ export const summarize = (verdicts: (Verdict | null | undefined)[]): VerdictSumm
 };
 
 /** The one-sentence conclusion every eval view opens with. */
-export const conclusionSentence = (s: VerdictSummary) =>
-  `${s.needsWork} of ${s.total} skills need work — ${s.needsDesc} need a better description, ${s.needsBody} need stronger instructions.`;
+export const conclusionSentence = (s: VerdictSummary, a?: AgentSummary) =>
+  `${s.needsWork} of ${s.total} skills need work — ${s.needsDesc} need a better description, ${s.needsBody} need stronger instructions.` +
+  (a ? ` ${agentClause(a)}` : "");
+
+/* ───────────── Agent run verdicts (deterministic: scripts ran, outputs passed their checks) ───────────── */
+
+export interface AgentVerdictInfo { code: AgentVerdict; label: string; tone: Tone; severity: number; explanation: string }
+
+export const AGENT_VERDICT_INFO: Record<AgentVerdict, AgentVerdictInfo> = {
+  Broken: { code: "Broken", label: "Broken", tone: "rust", severity: 0, explanation: "Fewer than half of the output checks passed — the scripts fail or the deliverables are missing." },
+  Partial: { code: "Partial", label: "Partial", tone: "hold", severity: 1, explanation: "Between 50% and 90% of the output checks passed — it runs, but some deliverables fail their checks." },
+  Works: { code: "Works", label: "Works", tone: "sage", severity: 2, explanation: "At least 90% of the output checks passed — the scripts produce every deliverable and the checks hold." },
+};
+export const NO_AGENT_VERDICT: AgentVerdictInfo = { code: "Works", label: "Not wired", tone: "none", severity: 3, explanation: "No agent cases ran for this skill." };
+
+/** Column tooltip for every "Runs" column. */
+export const AGENT_COL_TIP = "Deterministic: did the skill's scripts produce the deliverables and pass their output checks (dry provider)";
+
+export const agentVerdictInfo = (v: AgentVerdict | null | undefined): AgentVerdictInfo => (v ? AGENT_VERDICT_INFO[v] : NO_AGENT_VERDICT);
+export const agentVerdictSeverity = (v: AgentVerdict | null | undefined) => agentVerdictInfo(v).severity;
+
+export type AgentFilter = "all" | AgentVerdict | "none";
+export const AGENT_FILTERS: { key: AgentFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "Works", label: "Works" },
+  { key: "Partial", label: "Partial" },
+  { key: "Broken", label: "Broken" },
+  { key: "none", label: "Not wired" },
+];
+export const isAgentFilter = (s: string | null | undefined): s is AgentFilter => !!s && AGENT_FILTERS.some((f) => f.key === s);
+export const matchesAgentFilter = (filter: AgentFilter, v: AgentVerdict | null | undefined): boolean =>
+  filter === "all" ? true : filter === "none" ? !v : v === filter;
+
+export interface AgentSummary { total: number; ran: number; works: number; partial: number; broken: number }
+export const summarizeAgent = (verdicts: (AgentVerdict | null | undefined)[]): AgentSummary => {
+  const c = { Works: 0, Partial: 0, Broken: 0 };
+  for (const v of verdicts) if (v) c[v]++;
+  return { total: verdicts.length, ran: c.Works + c.Partial + c.Broken, works: c.Works, partial: c.Partial, broken: c.Broken };
+};
+
+/** Second clause of the conclusion: "All 40 run end-to-end as agents (40 Works)" or the real counts. */
+export const agentClause = (a: AgentSummary) => {
+  const parts = [`${a.works} Works`];
+  if (a.partial) parts.push(`${a.partial} Partial`);
+  if (a.broken) parts.push(`${a.broken} Broken`);
+  const head = a.works === a.total ? `All ${a.total} run end-to-end as agents` : `${a.works} of ${a.total} run end-to-end as agents`;
+  return `${head} (${parts.join(", ")}).`;
+};

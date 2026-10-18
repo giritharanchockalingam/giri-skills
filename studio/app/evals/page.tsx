@@ -1,5 +1,5 @@
-import { scorecard, skills, DOMAINS, domainSummaries, misroutesFor, failedWithItemsFor, proposalFor, meta } from "@/lib/data";
-import { summarize, conclusionSentence, VERDICTS_FOR_LEGEND, verdictInfo, type VerdictFilter } from "@/lib/verdict";
+import { scorecard, skills, DOMAINS, domainSummaries, misroutesFor, failedWithItemsFor, agentCasesFor, proposalFor, meta } from "@/lib/data";
+import { summarize, summarizeAgent, conclusionSentence, VERDICTS_FOR_LEGEND, verdictInfo, type VerdictFilter } from "@/lib/verdict";
 import { ScorecardTable, type ScorecardDrill } from "@/components/ScorecardTable";
 import { DomainTable } from "@/components/DomainTable";
 import { PageHead, SectionHead } from "@/components/PageHead";
@@ -8,20 +8,22 @@ export const metadata = { title: "Evals · giri-skills" };
 
 export default function EvalsPage() {
   const s = summarize(scorecard.map((r) => r.verdict));
+  const a = summarizeAgent(scorecard.map((r) => r.agentVerdict));
   const { rows: perDomain, total } = domainSummaries();
   const cases = skills.reduce((a, sk) => a + sk.cases.length, 0);
   const drill: Record<string, ScorecardDrill> = Object.fromEntries(
     scorecard.map((r) => [r.skill, {
-      misroutes: misroutesFor(r.skill), failed: failedWithItemsFor(r.skill, 5),
+      misroutes: misroutesFor(r.skill), failed: failedWithItemsFor(r.skill, 5), agentCases: agentCasesFor(r.skill),
       finding: proposalFor(r.skill)?.number ?? null, cases: skills.find((sk) => sk.id === r.skill)?.cases.length ?? 0,
     }]),
   );
 
-  const cards: { value: number; label: React.ReactNode; filter: VerdictFilter }[] = [
-    { value: s.total, label: "skills evaluated", filter: "all" },
-    { value: s.healthy, label: <><span className="tone">healthy</span> — no action needed</>, filter: "OK" },
-    { value: s.needsDesc, label: <>need a <span className="tone">better description</span></>, filter: "needs-desc" },
-    { value: s.needsBody, label: <>need <span className="tone">stronger instructions</span></>, filter: "needs-body" },
+  const cards: { value: number; label: React.ReactNode; filter: VerdictFilter; href: string }[] = [
+    { value: s.total, label: "skills evaluated", filter: "all", href: "#scorecard?verdict=all" },
+    { value: s.healthy, label: <><span className="tone">healthy</span> — no action needed</>, filter: "OK", href: "#scorecard?verdict=OK" },
+    { value: s.needsDesc, label: <>need a <span className="tone">better description</span></>, filter: "needs-desc", href: "#scorecard?verdict=needs-desc" },
+    { value: s.needsBody, label: <>need <span className="tone">stronger instructions</span></>, filter: "needs-body", href: "#scorecard?verdict=needs-body" },
+    { value: a.works, label: <><span className="tone">run as agents</span> — scripts and checks pass</>, filter: "all", href: "#scorecard?verdict=all&runs=Works" },
   ];
 
   return (
@@ -30,13 +32,13 @@ export default function EvalsPage() {
         eyebrow="giri-skills · eval results"
         title="What the evals"
         em="found"
-        lead={conclusionSentence(s)}
-        caption={<>{meta.model} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.spend} spend (est.) · {meta.date}</>}
+        lead={conclusionSentence(s, a)}
+        caption={<>{meta.model} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} agent checks · {meta.spend} spend (est.) · {meta.date}</>}
       />
 
       <div className="summary-grid">
         {cards.map((c) => (
-          <a key={c.filter} href={`#scorecard?verdict=${c.filter}`} className="card card-link summary" aria-label={`Show ${c.value} skills in the scorecard`}>
+          <a key={c.href} href={c.href} className="card card-link summary" aria-label={`Show ${c.value} skills in the scorecard`}>
             <div className="summary-value">{c.value}</div>
             <div className="summary-label">{c.label}</div>
           </a>
@@ -68,7 +70,7 @@ export default function EvalsPage() {
       </section>
 
       <section className="section" id="scorecard" style={{ scrollMarginTop: 76 }}>
-        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts and the items the judge failed." />
+        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts, the items the judge failed, and the agent run checks." />
         <ScorecardTable rows={scorecard} domains={DOMAINS} drill={drill} />
       </section>
     </>

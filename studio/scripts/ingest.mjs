@@ -1,6 +1,8 @@
 // ingest.mjs — reads the giri-skills repo (skills/, evals/results/<dir>/, docs/EVAL-FINDINGS.md)
 // and writes studio/data/*.json. Zero dependencies. Run: npm run ingest
-// Env: RESULTS_DIR (default evals/results/full-openai), relative to the repo root or absolute.
+// Env: RESULTS_DIR (default evals/results/full-openai) for trigger/quality/scorecard,
+//      AGENT_RESULTS_DIR (default evals/results/agent-dry) for agent.csv + the agent columns of its scorecard.md.
+//      Both relative to the repo root or absolute.
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdirSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
@@ -9,6 +11,7 @@ import { fileURLToPath } from "node:url";
 const STUDIO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = resolve(STUDIO, "..");
 const RESULTS_DIR = resolve(ROOT, process.env.RESULTS_DIR || "evals/results/full-openai");
+const AGENT_RESULTS_DIR = resolve(ROOT, process.env.AGENT_RESULTS_DIR || "evals/results/agent-dry");
 const OUT = join(STUDIO, "data");
 mkdirSync(OUT, { recursive: true });
 
@@ -62,17 +65,70 @@ function parseFrontmatter(md) {
   let current = null;
   for (const raw of m[1].split(/\r?\n/)) {
     if (!raw.trim()) continue;
-    const nested = raw.match(/^\s+([\w-]+):\s*(.*)$/);
+    const nested = raw.match(/^  ([\w-]+):\s*(.*)$/);
     const top = raw.match(/^([\w-]+):\s*(.*)$/);
     if (top) {
       const [, k, v] = top;
       if (v === "" ) { fm[k] = {}; current = k; }
       else { fm[k] = unquote(v); current = null; }
-    } else if (nested && current) {
+    } else if (nested && current && nested[2] !== "") {
       fm[current][nested[1]] = unquote(nested[2]);
     }
   }
-  return { fm, body: m[2] };
+  return { fm, body: m[2], raw: m[1] };
+}
+
+// ---------- metadata.agent (inputs / run / outputs as `- {flow maps}`) ----------
+function splitTop(s, sep) {
+  const parts = []; let depth = 0, quote = null, buf = "";
+  for (const ch of s) {
+    if (quote) { buf += ch; if (ch === quote) quote = null; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; buf += ch; }
+    else if (ch === "[" || ch === "{") { depth++; buf += ch; }
+    else if (ch === "]" || ch === "}") { depth--; buf += ch; }
+    else if (ch === sep && depth === 0) { parts.push(buf); buf = ""; }
+    else buf += ch;
+  }
+  if (buf.trim() || parts.length) parts.push(buf);
+  return parts.map((p) => p.trim()).filter(Boolean);
+}
+function scalar(v) {
+  v = unquote(v);
+  return v === "true" ? true : v === "false" ? false : v;
+}
+function parseFlow(s) {
+  s = s.trim();
+  if (s.startsWith("{") && s.endsWith("}")) {
+    const o = {};
+    for (const item of splitTop(s.slice(1, -1), ",")) {
+      const k = item.match(/^([\w-]+):\s*([\s\S]*)$/);
+      if (k) o[k[1]] = parseFlow(k[2]);
+    }
+    return o;
+  }
+  if (s.startsWith("[") && s.endsWith("]")) return splitTop(s.slice(1, -1), ",").map((x) => (/^[\[{]/.test(x) ? parseFlow(x) : unquote(x)));
+  return scalar(s);
+}
+function parseAgent(rawFm) {
+  const lines = rawFm.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^  agent:\s*$/.test(l));
+  if (start < 0) return null;
+  const agent = { inputs: [], steps: [], outputs: [] };
+  let section = null;
+  for (let i = start + 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (/^\S/.test(l) || /^  [\w-]+:/.test(l)) break;
+    const sec = l.match(/^    (inputs|run|outputs):\s*$/);
+    if (sec) { section = sec[1] === "run" ? "steps" : sec[1]; continue; }
+    const item = l.match(/^      - (\{[\s\S]*\})\s*$/);
+    if (item && section) {
+      const o = parseFlow(item[1]);
+      if (section === "inputs") agent.inputs.push({ name: o.name ?? "", type: o.type ?? "", required: o.required === true, from: o.from ?? "", default: o.default ?? null });
+      else if (section === "steps") agent.steps.push({ step: o.step ?? "", kind: o.kind ?? "" });
+      else agent.outputs.push({ path: o.path ?? "", checks: (Array.isArray(o.checks) ? o.checks : []).map((c) => (typeof c === "string" ? c : JSON.stringify(c))) });
+    }
+  }
+  return agent.inputs.length || agent.steps.length || agent.outputs.length ? agent : null;
 }
 const unquote = (v) => {
   v = v.trim();
@@ -205,7 +261,7 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
     const sdir = join(ddir, name);
     const skillMd = join(sdir, "SKILL.md");
     if (!existsSync(skillMd)) continue;
-    const { fm, body } = parseFrontmatter(readFileSync(skillMd, "utf8"));
+    const { fm, body, raw } = parseFrontmatter(readFileSync(skillMd, "utf8"));
     let evals = { skill: name, cases: [] };
     const evalPath = join(sdir, "evals", "evals.json");
     if (existsSync(evalPath)) {
@@ -218,6 +274,7 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
       description: fm.description || "",
       license: fm.license || null,
       metadata: typeof fm.metadata === "object" ? fm.metadata : {},
+      agent: parseAgent(raw || ""),
       bodyHtml: mdToHtml(body),
       files: {
         references: listFiles(join(sdir, "references")),
@@ -231,7 +288,7 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
 
 // ---------- scorecard ----------
 const scorecardMd = readFileSync(join(RESULTS_DIR, "scorecard.md"), "utf8");
-const meta = { provider: null, model: null, runs: null, seed: null, date: null, spend: null, resultsDir: RESULTS_DIR.replace(ROOT + "/", "") };
+const meta = { provider: null, model: null, runs: null, seed: null, date: null, spend: null, resultsDir: RESULTS_DIR.replace(ROOT + "/", ""), agentResultsDir: AGENT_RESULTS_DIR.replace(ROOT + "/", "") };
 for (const l of scorecardMd.split("\n")) {
   for (const k of ["provider", "model", "runs", "seed", "date"]) {
     const m = l.match(new RegExp(`${k}=([^\\s_]+)`));
@@ -240,19 +297,53 @@ for (const l of scorecardMd.split("\n")) {
   const sp = l.match(/spend:\s*\$?([\d.,]+)/i);
   if (sp) meta.spend = `$${sp[1]}`;
 }
+const scorecardCells = (md) => md.split("\n")
+  .filter((l) => l.startsWith("|"))
+  .map((l) => l.split("|").slice(1, -1).map((c) => c.trim()))
+  .filter((cells) => cells.length >= 7 && cells[0] !== "skill" && !/^-+$/.test(cells[0]));
 const scorecard = [];
-for (const l of scorecardMd.split("\n")) {
-  if (!l.startsWith("|")) continue;
-  const cells = l.split("|").slice(1, -1).map((c) => c.trim());
-  if (cells.length < 7 || cells[0] === "skill" || /^-+$/.test(cells[0])) continue;
+for (const cells of scorecardCells(scorecardMd)) {
   const [id, trig, fp, without, with_, lift, verdict] = cells;
   const [domain, name] = id.split("/");
   scorecard.push({
     skill: id, domain, name,
     triggerAcc: Number(trig), fpRate: Number(fp), without: Number(without), with: Number(with_), lift: Number(lift),
-    verdict: verdict.toUpperCase(),
+    verdict: verdict.toUpperCase(), agentPass: null, agentVerdict: null,
   });
 }
+
+// ---------- agent results (deterministic run_skill.py checks; separate results dir) ----------
+const AGENT_VERDICTS = ["Works", "Partial", "Broken"];
+let agent = [];
+const agentCsv = join(AGENT_RESULTS_DIR, "agent.csv");
+if (existsSync(agentCsv)) {
+  agent = parseCsv(readFileSync(agentCsv, "utf8")).map((r) => ({
+    skill: r.skill, caseId: r.case_id, check: r.check, pass: r.pass === "1" || r.pass.toUpperCase() === "PASS", evidence: r.evidence,
+  }));
+  const byId = new Map(scorecard.map((r) => [r.skill, r]));
+  // pass share from the rows; verdict from the agent scorecard columns when present, else from the pass share (>= .9 Works, >= .5 Partial)
+  const passes = new Map();
+  for (const a of agent) { const p = passes.get(a.skill) ?? { n: 0, ok: 0 }; p.n++; if (a.pass) p.ok++; passes.set(a.skill, p); }
+  for (const [id, p] of passes) {
+    const row = byId.get(id);
+    if (!row) { console.warn(`agent.csv skill not in scorecard: ${id}`); continue; }
+    row.agentPass = Number((p.ok / p.n).toFixed(4));
+    row.agentVerdict = row.agentPass >= 0.9 ? "Works" : row.agentPass >= 0.5 ? "Partial" : "Broken";
+  }
+  const agentScorecard = join(AGENT_RESULTS_DIR, "scorecard.md");
+  if (existsSync(agentScorecard)) {
+    for (const cells of scorecardCells(readFileSync(agentScorecard, "utf8"))) {
+      const row = byId.get(cells[0]);
+      if (!row || cells.length < 9) continue;
+      const v = AGENT_VERDICTS.find((x) => x.toLowerCase() === cells[8].toLowerCase());
+      if (cells[7] !== "" && !Number.isNaN(Number(cells[7]))) row.agentPass = Number(cells[7]);
+      if (v) row.agentVerdict = v;
+    }
+  }
+} else {
+  console.warn(`no agent results at ${agentCsv} (set AGENT_RESULTS_DIR)`);
+}
+const agentWorks = scorecard.filter((r) => r.agentVerdict === "Works").length;
 
 // ---------- trigger / quality ----------
 const trigger = parseCsv(readFileSync(join(RESULTS_DIR, "trigger.csv"), "utf8")).map((r) => ({
@@ -362,7 +453,8 @@ w("skills.json", skills);
 w("scorecard.json", scorecard);
 w("trigger.json", trigger);
 w("quality.json", quality);
+w("agent.json", agent);
 w("findings.json", findings);
-w("meta.json", { ...meta, counts: { skills: skills.length, scorecard: scorecard.length, trigger: trigger.length, quality: quality.length, findings: findings.proposals.length }, domains: DOMAIN_ORDER, verdicts: VERDICTS });
+w("meta.json", { ...meta, counts: { skills: skills.length, scorecard: scorecard.length, trigger: trigger.length, quality: quality.length, findings: findings.proposals.length, agent: agent.length, agentWorks }, domains: DOMAIN_ORDER, verdicts: VERDICTS, agentVerdicts: AGENT_VERDICTS });
 
-console.log(`ingest: skills=${skills.length} scorecard=${scorecard.length} trigger=${trigger.length} quality=${quality.length} findings=${findings.proposals.length} (results: ${meta.resultsDir})`);
+console.log(`ingest: skills=${skills.length} scorecard=${scorecard.length} trigger=${trigger.length} quality=${quality.length} findings=${findings.proposals.length} agent=${agent.length} agentWorks=${agentWorks} wired=${skills.filter((s) => s.agent).length} (results: ${meta.resultsDir}; agent: ${meta.agentResultsDir})`);

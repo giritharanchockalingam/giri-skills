@@ -6,12 +6,15 @@
  "date": "2026-10-17",
  "spend": "$11.84",
  "resultsDir": "evals/results/full-openai",
+ "agentResultsDir": "evals/results/agent-dry",
  "counts": {
   "skills": 40,
   "scorecard": 40,
   "trigger": 250,
   "quality": 1900,
-  "findings": 25
+  "findings": 25,
+  "agent": 421,
+  "agentWorks": 40
  },
  "domains": [
   "presales",
@@ -24,5 +27,10 @@
   "DESC",
   "BODY",
   "BOTH"
+ ],
+ "agentVerdicts": [
+  "Works",
+  "Partial",
+  "Broken"
  ]
 }

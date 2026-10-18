@@ -7,8 +7,8 @@ Views:
 | Route | What |
 |---|---|
 | `/` | Skills catalog — filter by domain/verdict, search name + description, click a row for detail |
-| `/skills/<domain>/<name>/` | Skill detail — stat strip, rendered SKILL.md, file inventory, eval cases with per-run trigger + quality (PASS/FAIL + judge evidence) |
-| `/evals/` | Eval dashboard — verdict distribution, per-domain breakdown, sortable/filterable scorecard with drill-down (misrouted prompts, most-failed expected items) |
+| `/skills/<domain>/<name>/` | Skill detail — stat strip, "Runs as an agent" card (how to run, declared inputs/steps/outputs, agent eval checks), rendered SKILL.md, file inventory, eval cases with per-run trigger + quality (PASS/FAIL + judge evidence) |
+| `/evals/` | Eval dashboard — verdict distribution, per-domain breakdown, sortable/filterable scorecard with drill-down (misrouted prompts, most-failed expected items, agent run checks); the "Runs" column is the deterministic agent verdict |
 | `/findings/` | Caveats, verdict counts, 25 ranked proposals with paste-ready description blocks (Copy button) and body directions; anchor `#<n>` per proposal |
 
 No runtime fetching: `scripts/ingest.mjs` reads the repo at build time and writes `data/*.json`, which is the UI's only data source. `data/` is committed so the site builds on Vercel without the eval CSVs.
@@ -27,6 +27,7 @@ npm run dev        # runs ingest first, then next dev on http://localhost:3000
 cd studio
 npm run ingest                                   # default: ../evals/results/full-openai
 RESULTS_DIR=evals/results/pilot-openai npm run ingest   # another results dir (relative to repo root, or absolute)
+AGENT_RESULTS_DIR=evals/results/agent-dry npm run ingest # agent run results (default shown); set both to mix runs
 git add data/                                    # commit the regenerated JSON
 ```
 
@@ -34,6 +35,7 @@ git add data/                                    # commit the regenerated JSON
 
 - `skills/<domain>/<name>/SKILL.md` (frontmatter + body → safe pre-rendered HTML), `evals/evals.json`, and the file names under `scripts/`, `references/`, `assets/`
 - `<RESULTS_DIR>/scorecard.md` (table + the provider/model/runs/date/spend header lines), `trigger.csv`, `quality.csv`
+- `<AGENT_RESULTS_DIR>/agent.csv` (skill, case_id, check, pass, evidence → `data/agent.json`) and the `agent pass` / `agent verdict` columns of `<AGENT_RESULTS_DIR>/scorecard.md`, merged per skill into `data/scorecard.json` as `agentPass` (0–1 or null) and `agentVerdict` (`Works` / `Partial` / `Broken` / null). The trigger/quality columns of that file are ignored. Each skill's `metadata.agent` block (inputs, run steps, outputs) lands in `data/skills.json` as `agent`, or null when the skill is not wired.
 - `docs/EVAL-FINDINGS.md` (caveats, verdict counts, ranked proposals)
 
 It prints the row counts it found; `data/meta.json` carries the same counts plus the run header.

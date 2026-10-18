@@ -1,5 +1,5 @@
 import type { DomainSummary } from "@/lib/data";
-import { VERDICTS_FOR_LEGEND, verdictInfo } from "@/lib/verdict";
+import { VERDICTS_FOR_LEGEND, verdictInfo, AGENT_COL_TIP } from "@/lib/verdict";
 import { Lift, Trig } from "./Badge";
 
 export const COL_TIPS = {
@@ -22,6 +22,7 @@ export function DomainTable({ rows, total, showAverages = true }: { rows: Domain
             <th className="num">Skills</th>
             <th className="num">Need work</th>
             {VERDICTS_FOR_LEGEND.map((v) => <th key={v} className="num" title={`${v} — ${verdictInfo(v).explanation}`}>{verdictInfo(v).label}</th>)}
+            <th className="num" title={AGENT_COL_TIP}>Runs</th>
             {showAverages && <th className="num" title={COL_TIPS.trigger}>Avg trigger</th>}
             {showAverages && <th className="num" title={COL_TIPS.lift}>Avg lift</th>}
           </tr>
@@ -35,6 +36,7 @@ export function DomainTable({ rows, total, showAverages = true }: { rows: Domain
                 <td className="num">{d.n}</td>
                 <td className="num">{d.needsWork}</td>
                 {VERDICTS_FOR_LEGEND.map((v) => <td key={v} className="num">{d.counts[v] || <span className="muted">0</span>}</td>)}
+                <td className="num">{d.runs || <span className="muted">0</span>}</td>
                 {showAverages && <td className="num"><Trig n={d.avgTrigger} /></td>}
                 {showAverages && <td className="num"><Lift n={d.avgLift} /></td>}
               </tr>
@@ -50,7 +52,7 @@ export function DomainTable({ rows, total, showAverages = true }: { rows: Domain
             <div key={d.domain} className="row-card" style={{ cursor: "default" }}>
               <div className="row-card-top">
                 <span className="row-card-name">{d.domain}</span>
-                <span className="caption tnum">{d.needsWork} of {d.n} need work</span>
+                <span className="caption tnum">{d.needsWork} of {d.n} need work · {d.runs} run as agents</span>
               </div>
               <div className="row-card-meta">
                 {VERDICTS_FOR_LEGEND.map((v) => (

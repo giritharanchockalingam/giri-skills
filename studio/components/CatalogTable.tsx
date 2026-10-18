@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CatalogRow } from "@/lib/data";
 import { skillHref } from "@/lib/data";
-import { matchesVerdictFilter, verdictSeverity, type VerdictFilter } from "@/lib/verdict";
-import { VerdictBadge, Lift, Trig } from "./Badge";
+import { matchesVerdictFilter, verdictSeverity, AGENT_COL_TIP, type VerdictFilter } from "@/lib/verdict";
+import { VerdictBadge, AgentBadge, Lift, Trig } from "./Badge";
 import { DomainFilter, VerdictFilterControl } from "./FilterBar";
 import { COL_TIPS } from "./DomainTable";
 
@@ -41,6 +41,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
               <th>Skill</th>
               <th>Domain</th>
               <th>Verdict</th>
+              <th title={AGENT_COL_TIP}>Runs</th>
               <th className="num" title={COL_TIPS.lift}>Lift</th>
               <th className="num" title={COL_TIPS.trigger}>Trigger</th>
               <th style={{ width: "40%" }}>Description</th>
@@ -53,12 +54,13 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
                 <td><Link href={skillHref(r.id)} className="cell-name" onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
                 <td><span className="domain-tag">{r.domain}</span></td>
                 <td><VerdictBadge v={r.verdict} /></td>
+                <td><AgentBadge v={r.agentVerdict} /></td>
                 <td className="num"><Lift n={r.lift} /></td>
                 <td className="num"><Trig n={r.triggerAcc} /></td>
                 <td className="desc" title={r.description}><span>{r.description}</span></td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={6} className="none">No skills match.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} className="none">No skills match.</td></tr>}
           </tbody>
         </table>
 
@@ -73,6 +75,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
                 <span>{r.domain}</span>
                 <span>Lift <b><Lift n={r.lift} /></b></span>
                 <span>Trigger <b><Trig n={r.triggerAcc} /></b></span>
+                <span>Runs <AgentBadge v={r.agentVerdict} small /></span>
               </div>
               <div className="row-card-desc">{r.description}</div>
             </Link>

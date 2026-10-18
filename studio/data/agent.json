@@ -1,0 +1,2949 @@
+[
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-happy-path",
+  "check": "pattern.md: contains:\"**Decision:** Single agent because\"",
+  "pass": true,
+  "evidence": "found: **Decision:** Single agent because"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-happy-path",
+  "check": "pattern.md: contains:\"| Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |\"",
+  "pass": true,
+  "evidence": "found: | Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-happy-path",
+  "check": "design-check.csv: csv_rows:present~^yes$",
+  "pass": true,
+  "evidence": "0 of 15 rows not matching '^yes$' in 'present'"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-missing-answers",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-missing-answers",
+  "check": "needs_input:answers",
+  "pass": true,
+  "evidence": "missing inputs named: ['answers']"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-gate-fails-without-hitl",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-gate-fails-without-hitl",
+  "check": "design-check.csv: contains:\"HITL checkpoints,section,no,required section heading missing\"",
+  "pass": true,
+  "evidence": "found: HITL checkpoints,section,no,required section heading missing"
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "agent-gate-fails-without-hitl",
+  "check": "design-check.csv: contains:\"missing failure_modes\"",
+  "pass": true,
+  "evidence": "found: missing failure_modes"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-happy-path",
+  "check": "risk-register.csv: csv_rows:control!empty",
+  "pass": true,
+  "evidence": "0 of 9 rows empty in 'control'"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-happy-path",
+  "check": "risk-register.csv: contains:\"R-002,privacy,\"",
+  "pass": true,
+  "evidence": "found: R-002,privacy,"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-happy-path",
+  "check": "risk-register.csv: contains:\",3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,\"",
+  "pass": true,
+  "evidence": "found: ,3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-happy-path",
+  "check": "model-card.md: contains:\"| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: | Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-missing-canvas",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-missing-canvas",
+  "check": "needs_input:canvas",
+  "pass": true,
+  "evidence": "missing inputs named: ['canvas']"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-high-risk-without-control-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-high-risk-without-control-fails",
+  "check": "risk-register.csv: contains:\"R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,\"",
+  "pass": true,
+  "evidence": "found: R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-thin-canvas-no-invented-scores",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-thin-canvas-no-invented-scores",
+  "check": "risk-register.csv: csv_rows:rating~^TBD$",
+  "pass": true,
+  "evidence": "0 of 9 rows not matching '^TBD$' in 'rating'"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-thin-canvas-no-invented-scores",
+  "check": "risk-register.csv: csv_rows:control!empty",
+  "pass": true,
+  "evidence": "0 of 9 rows empty in 'control'"
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "agent-thin-canvas-no-invented-scores",
+  "check": "model-card.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-happy-path",
+  "check": "portfolio.csv: csv_rows:score!empty",
+  "pass": true,
+  "evidence": "0 of 9 rows empty in 'score'"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-happy-path",
+  "check": "portfolio.md: contains:\"| 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |\"",
+  "pass": true,
+  "evidence": "found: | 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-happy-path",
+  "check": "maturity.md: contains:\"Level 1 (Ad hoc) overall; constraining dimension: governance\"",
+  "pass": true,
+  "evidence": "found: Level 1 (Ad hoc) overall; constraining dimension: governance"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-happy-path",
+  "check": "roadmap.md: sections:[\"Gap closure items\"]",
+  "pass": true,
+  "evidence": "found ['Gap closure items']"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-missing-scorecard",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-missing-scorecard",
+  "check": "needs_input:scorecard",
+  "pass": true,
+  "evidence": "missing inputs named: ['scorecard']"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-unscored-rows-not-ranked",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-unscored-rows-not-ranked",
+  "check": "unscored.csv: csv_rows:reason!empty",
+  "pass": true,
+  "evidence": "0 of 2 rows empty in 'reason'"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-unscored-rows-not-ranked",
+  "check": "portfolio.md: contains:\"| UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |\"",
+  "pass": true,
+  "evidence": "found: | UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-unscored-rows-not-ranked",
+  "check": "maturity.md: contains:\"[TO BE BASELINED — owner: CDO]\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED — owner: CDO]"
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "agent-unscored-rows-not-ranked",
+  "check": "maturity.md: contains:\"score given without evidence\"",
+  "pass": true,
+  "evidence": "found: score given without evidence"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "check": "canvas.md: contains:\"**Verdict:** Proceed to design\"",
+  "pass": true,
+  "evidence": "found: **Verdict:** Proceed to design"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "check": "canvas.md: contains:\"| Priority (V×F×D÷R) | 12.0 |\"",
+  "pass": true,
+  "evidence": "found: | Priority (V×F×D÷R) | 12.0 |"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "check": "decision.md: contains:\"**Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity\"",
+  "pass": true,
+  "evidence": "found: **Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "check": "exists:score.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__ai-use-case-canvas/agent-happy-path/score.json exists"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-missing-answers",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-missing-answers",
+  "check": "needs_input:answers",
+  "pass": true,
+  "evidence": "missing inputs named: ['answers']"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-no-data-readiness-means-wait",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-no-data-readiness-means-wait",
+  "check": "canvas.md: contains:\"| Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |\"",
+  "pass": true,
+  "evidence": "found: | Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-no-data-readiness-means-wait",
+  "check": "decision.md: contains:\"**Decision:** wait — data readiness is unscored\"",
+  "pass": true,
+  "evidence": "found: **Decision:** wait — data readiness is unscored"
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-no-data-readiness-means-wait",
+  "check": "canvas.md: contains:\"**Verdict:** TBD\"",
+  "pass": true,
+  "evidence": "found: **Verdict:** TBD"
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-happy-path",
+  "check": "exists:sizing.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json exists"
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-happy-path",
+  "check": "sizing.txt: contains:\"gpus_required\"",
+  "pass": true,
+  "evidence": "found: gpus_required"
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-missing-inputs",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-missing-inputs",
+  "check": "needs_input:inputs",
+  "pass": true,
+  "evidence": "missing inputs named: ['inputs']"
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-no-throughput-no-guess",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-happy-path",
+  "check": "golden-set.csv: csv:[id,input,must_contain]",
+  "pass": true,
+  "evidence": "header has ['id', 'input', 'must_contain']"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-happy-path",
+  "check": "exists:scorecard.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__llm-eval-harness/agent-happy-path/scorecard.json exists"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-happy-path",
+  "check": "scorecard.txt: contains:\"GATE\"",
+  "pass": true,
+  "evidence": "found: GATE"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-missing-cases",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-missing-cases",
+  "check": "needs_input:cases",
+  "pass": true,
+  "evidence": "missing inputs named: ['cases']"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-transcript-no-invented-criteria",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "agent-transcript-no-invented-criteria",
+  "check": "golden-set.csv: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-happy-path",
+  "check": "exists:scaffold-report.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__mcp-server-builder/agent-happy-path/scaffold-report.json exists"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-happy-path",
+  "check": "server/server.py: contains:\"def search_tickets(arguments: dict) -> dict:\"",
+  "pass": true,
+  "evidence": "found: def search_tickets(arguments: dict) -> dict:"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-happy-path",
+  "check": "server/tools/read_ticket.json: json",
+  "pass": true,
+  "evidence": "valid JSON"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-happy-path",
+  "check": "server/README.md: contains:\"| `read_ticket` | Read one ticket by id. | read | stub |\"",
+  "pass": true,
+  "evidence": "found: | `read_ticket` | Read one ticket by id. | read | stub |"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-missing-tools",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-missing-tools",
+  "check": "needs_input:tools",
+  "pass": true,
+  "evidence": "missing inputs named: ['tools']"
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "agent-bad-contracts-refused",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-happy-path",
+  "check": "exists:retrieval-metrics.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json exists"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-happy-path",
+  "check": "retrieval-metrics.txt: contains:\"recall\"",
+  "pass": true,
+  "evidence": "found: recall"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-missing-eval-set",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-missing-eval-set",
+  "check": "needs_input:eval_set",
+  "pass": true,
+  "evidence": "missing inputs named: ['eval_set']"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-gate-fails-honestly",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "agent-gate-fails-honestly",
+  "check": "exists:retrieval-metrics.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-gate-fails-honestly/retrieval-metrics.json exists"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-happy-path",
+  "check": "exists:data-manifest.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__slm-demo-builder/agent-happy-path/data-manifest.json exists"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-happy-path",
+  "check": "data/customers.csv: csv:[customer_id,name,email,segment,created,active]",
+  "pass": true,
+  "evidence": "header has ['customer_id', 'name', 'email', 'segment', 'created', 'active']"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-happy-path",
+  "check": "data/customers.csv: contains:\"@example.com\"",
+  "pass": true,
+  "evidence": "found: @example.com"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-happy-path",
+  "check": "data/tickets.csv: csv_rows:customer_id~^C[0-9]{5}$",
+  "pass": true,
+  "evidence": "0 of 120 rows not matching '^C[0-9]{5}$' in 'customer_id'"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-happy-path",
+  "check": "data-manifest.json: contains:\"\\\"rows\\\": 120\"",
+  "pass": true,
+  "evidence": "found: \"rows\": 120"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-missing-spec",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-missing-spec",
+  "check": "needs_input:spec",
+  "pass": true,
+  "evidence": "missing inputs named: ['spec']"
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "agent-pii-field-refused",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/.github/workflows/ci.yml",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__ci-cd-vercel-github/agent-happy-path/repo/.github/workflows/ci.yml exists"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/.github/workflows/prod.yml",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__ci-cd-vercel-github/agent-happy-path/repo/.github/workflows/prod.yml exists"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "check": "ci-report.json: contains:\"\\\"ok\\\": true\"",
+  "pass": true,
+  "evidence": "found: \"ok\": true"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "check": "ci-report.md: contains:\"gate: PASS\"",
+  "pass": true,
+  "evidence": "found: gate: PASS"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-missing-target",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-missing-target",
+  "check": "needs_input:target",
+  "pass": true,
+  "evidence": "missing inputs named: ['target']"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-custom-ci-missing-jobs-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-custom-ci-missing-jobs-fails",
+  "check": "ci-report.json: contains:\"rls-lint\"",
+  "pass": true,
+  "evidence": "found: rls-lint"
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-custom-ci-missing-jobs-fails",
+  "check": "ci-report.json: contains:\"\\\"action\\\": \\\"kept\\\"\"",
+  "pass": true,
+  "evidence": "found: \"action\": \"kept\""
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-custom-ci-missing-jobs-fails",
+  "check": "ci-report.md: contains:\"gate: FAIL\"",
+  "pass": true,
+  "evidence": "found: gate: FAIL"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-happy-path",
+  "check": "HANDOFF.md: sections:[\"State\",\"Done this thread\",\"Changed files\",\"Open items\",\"Next thread starts with\"]",
+  "pass": true,
+  "evidence": "found ['State', 'Done this thread', 'Changed files', 'Open items', 'Next thread starts with']"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-happy-path",
+  "check": "HANDOFF.md: contains:\"server/services/export-service.ts\"",
+  "pass": true,
+  "evidence": "found: server/services/export-service.ts"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-happy-path",
+  "check": "HANDOFF.md: contains:\"Add rate limit to export route (owner: platform)\"",
+  "pass": true,
+  "evidence": "found: Add rate limit to export route (owner: platform)"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-happy-path",
+  "check": "HANDOFF.md: contains:\"uncommitted\"",
+  "pass": true,
+  "evidence": "found: uncommitted"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-happy-path",
+  "check": "HANDOFF.md: max_lines:80",
+  "pass": true,
+  "evidence": "39 lines (max 80)"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-missing-state",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-missing-state",
+  "check": "needs_input:state",
+  "pass": true,
+  "evidence": "missing inputs named: ['state']"
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "agent-not-a-repo-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-happy-path",
+  "check": "policies.sql: contains:\"create policy\"",
+  "pass": true,
+  "evidence": "found: create policy"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-happy-path",
+  "check": "policies.sql: contains:\"auth.jwt() -> 'app_metadata' ->> 'tenant_id'\"",
+  "pass": true,
+  "evidence": "found: auth.jwt() -> 'app_metadata' ->> 'tenant_id'"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-happy-path",
+  "check": "audit.csv: csv:[table,has_tenant_id,rls_enabled,tenant_index,status]",
+  "pass": true,
+  "evidence": "header has ['table', 'has_tenant_id', 'rls_enabled', 'tenant_index', 'status']"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-happy-path",
+  "check": "audit.md: contains:\"Gate: PASS\"",
+  "pass": true,
+  "evidence": "found: Gate: PASS"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-missing-migrations",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-missing-migrations",
+  "check": "needs_input:migrations",
+  "pass": true,
+  "evidence": "missing inputs named: ['migrations']"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-bad-migrations-fail",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-bad-migrations-fail",
+  "check": "audit.csv: csv_rows:status~^(ok|finding)$",
+  "pass": true,
+  "evidence": "0 of 2 rows not matching '^(ok|finding)$' in 'status'"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-bad-migrations-fail",
+  "check": "audit.csv: contains:\"missing tenant_id\"",
+  "pass": true,
+  "evidence": "found: missing tenant_id"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-bad-migrations-fail",
+  "check": "audit.csv: contains:\"no index leading with tenant_id\"",
+  "pass": true,
+  "evidence": "found: no index leading with tenant_id"
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "agent-bad-migrations-fail",
+  "check": "audit.md: contains:\"Gate: FAIL\"",
+  "pass": true,
+  "evidence": "found: Gate: FAIL"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-happy-path",
+  "check": "findings.csv: csv:[rule,file,line,snippet,severity]",
+  "pass": true,
+  "evidence": "header has ['rule', 'file', 'line', 'snippet', 'severity']"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-happy-path",
+  "check": "report.md: contains:\"Gate: PASS\"",
+  "pass": true,
+  "evidence": "found: Gate: PASS"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-missing-target",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-missing-target",
+  "check": "needs_input:target",
+  "pass": true,
+  "evidence": "missing inputs named: ['target']"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "check": "findings.csv: csv_rows:severity~^(high|medium|low)$",
+  "pass": true,
+  "evidence": "0 of 4 rows not matching '^(high|medium|low)$' in 'severity'"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "check": "findings.csv: contains:\"NX1\"",
+  "pass": true,
+  "evidence": "found: NX1"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "check": "findings.csv: contains:\"NX3\"",
+  "pass": true,
+  "evidence": "found: NX3"
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "check": "report.md: contains:\"Gate: FAIL\"",
+  "pass": true,
+  "evidence": "found: Gate: FAIL"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/lib/logger.ts",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/lib/logger.ts exists"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/app/api/health/deep/route.ts",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/app/api/health/deep/route.ts exists"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/ops/alerts.yaml",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/ops/alerts.yaml exists"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/docs/observability.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__observability-setup/agent-happy-path/repo/docs/observability.md exists"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "repo/.env.example: contains:\"HEALTH_CHECK_TOKEN\"",
+  "pass": true,
+  "evidence": "found: HEALTH_CHECK_TOKEN"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "check": "repo/docs/observability.md: sections:[\"SLOs\",\"Endpoints\"]",
+  "pass": true,
+  "evidence": "found ['SLOs', 'Endpoints']"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-missing-target",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-missing-target",
+  "check": "needs_input:target",
+  "pass": true,
+  "evidence": "missing inputs named: ['target']"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-never-overwrites",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-never-overwrites",
+  "check": "install-report.json: contains:\"lib/logger.ts.proposed\"",
+  "pass": true,
+  "evidence": "found: lib/logger.ts.proposed"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-never-overwrites",
+  "check": "install-report.json: contains:\"\\\"dry_run\\\": true\"",
+  "pass": true,
+  "evidence": "found: \"dry_run\": true"
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-never-overwrites",
+  "check": "install-report.md: contains:\"Dry run\"",
+  "pass": true,
+  "evidence": "found: Dry run"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-happy-path",
+  "check": "PRD.md: sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]",
+  "pass": true,
+  "evidence": "found ['Problem', 'Goals', 'Non-goals', 'Metrics', 'Phases']"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-happy-path",
+  "check": "PRD.md: contains:\"| v1 | CSV export of the current filter; Admin role only; Audit entry per export |\"",
+  "pass": true,
+  "evidence": "found: | v1 | CSV export of the current filter; Admin role only; Audit entry per export |"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-happy-path",
+  "check": "PRD.md: contains:\"40% of active tenants\"",
+  "pass": true,
+  "evidence": "found: 40% of active tenants"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-happy-path",
+  "check": "exists:prd-final.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__product-spec-prd/agent-happy-path/prd-final.md exists"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-missing-brief",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-missing-brief",
+  "check": "needs_input:brief",
+  "pass": true,
+  "evidence": "missing inputs named: ['brief']"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-thin-brief-not-invented",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-thin-brief-not-invented",
+  "check": "PRD.md: contains:\"| G1 (primary) | [TO BE BASELINED — owner: ___] |\"",
+  "pass": true,
+  "evidence": "found: | G1 (primary) | [TO BE BASELINED — owner: ___] |"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-thin-brief-not-invented",
+  "check": "PRD.md: contains:\"(no evidence supplied — assumption)\"",
+  "pass": true,
+  "evidence": "found: (no evidence supplied — assumption)"
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "agent-thin-brief-not-invented",
+  "check": "PRD.md: sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]",
+  "pass": true,
+  "evidence": "found ['Problem', 'Goals', 'Non-goals', 'Metrics', 'Phases']"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-happy-path",
+  "check": "exists:proj/docs/SPEC.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md exists"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-happy-path",
+  "check": "exists:proj/.github/workflows/ci.yml",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml exists"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-happy-path",
+  "check": "proj/docs/SPEC.md: contains:\"multi-tenant\"",
+  "pass": true,
+  "evidence": "found: multi-tenant"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-missing-name",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-missing-name",
+  "check": "needs_input:name",
+  "pass": true,
+  "evidence": "missing inputs named: ['name']"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-single-tenant-default",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-single-tenant-default",
+  "check": "exists:proj/CLAUDE.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__project-bootstrap/agent-single-tenant-default/proj/CLAUDE.md exists"
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "agent-single-tenant-default",
+  "check": "exists:proj/docs/HANDOFF.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__project-bootstrap/agent-single-tenant-default/proj/docs/HANDOFF.md exists"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-happy-path",
+  "check": "exists:baseline.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__safe-fix/agent-happy-path/baseline.json exists"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-happy-path",
+  "check": "verify.json: json",
+  "pass": true,
+  "evidence": "valid JSON"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-happy-path",
+  "check": "verify.json: contains:\"\\\"collateral\\\": []\"",
+  "pass": true,
+  "evidence": "found: \"collateral\": []"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-missing-cmd",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-missing-cmd",
+  "check": "needs_input:cmd",
+  "pass": true,
+  "evidence": "missing inputs named: ['cmd']"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-collateral-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-collateral-fails",
+  "check": "verify.json: contains:\"collateral\"",
+  "pass": true,
+  "evidence": "found: collateral"
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-collateral-fails",
+  "check": "verify.json: contains:\"test_calc.py::test_multiply\"",
+  "pass": true,
+  "evidence": "found: test_calc.py::test_multiply"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-happy-path",
+  "check": "findings.csv: csv:[id,category,severity,file,line,evidence,recommendation]",
+  "pass": true,
+  "evidence": "header has ['id', 'category', 'severity', 'file', 'line', 'evidence', 'recommendation']"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-happy-path",
+  "check": "review.md: contains:\"Scanner verdict: MERGE\"",
+  "pass": true,
+  "evidence": "found: Scanner verdict: MERGE"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-happy-path",
+  "check": "exists:security-review.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__security-review/agent-happy-path/security-review.md exists"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-missing-diff",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-missing-diff",
+  "check": "needs_input:diff",
+  "pass": true,
+  "evidence": "missing inputs named: ['diff']"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "check": "findings.csv: csv_rows:severity~^(critical|high|medium|low)$",
+  "pass": true,
+  "evidence": "0 of 7 rows not matching '^(critical|high|medium|low)$' in 'severity'"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "check": "findings.csv: contains:\"secrets,critical\"",
+  "pass": true,
+  "evidence": "found: secrets,critical"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "check": "findings.csv: contains:\"rls-bypass\"",
+  "pass": true,
+  "evidence": "found: rls-bypass"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "check": "findings.csv: contains:\"[redacted]\"",
+  "pass": true,
+  "evidence": "found: [redacted]"
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "check": "review.md: contains:\"Scanner verdict: BLOCK\"",
+  "pass": true,
+  "evidence": "found: Scanner verdict: BLOCK"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "check": "plan.md: sections:[\"Tasks\",\"Gates\",\"Rollback\"]",
+  "pass": true,
+  "evidence": "found ['Tasks', 'Gates', 'Rollback']"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "check": "plan.md: contains:\"T3 — Server action `requestExport`\"",
+  "pass": true,
+  "evidence": "found: T3 — Server action `requestExport`"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "check": "tasks.csv: csv_rows:test!empty",
+  "pass": true,
+  "evidence": "0 of 4 rows empty in 'test'"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "check": "tasks.csv: contains:\"tests/integration/rls/export_jobs.test.ts\"",
+  "pass": true,
+  "evidence": "found: tests/integration/rls/export_jobs.test.ts"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-missing-section",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-missing-section",
+  "check": "needs_input:section",
+  "pass": true,
+  "evidence": "missing inputs named: ['section']"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-thin-section-not-invented",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-thin-section-not-invented",
+  "check": "tasks.csv: csv_rows:test~^(\\[TO BE BASELINED|\\S)",
+  "pass": true,
+  "evidence": "0 of 2 rows not matching '^(\\\\[TO BE BASELINED|\\\\S)' in 'test'"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-thin-section-not-invented",
+  "check": "tasks.csv: contains:\"[TO BE BASELINED — owner: ___]\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED — owner: ___]"
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-thin-section-not-invented",
+  "check": "plan.md: contains:\"Acceptance: [TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: Acceptance: [TO BE BASELINED"
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "agent-happy-path",
+  "check": "rls-lint.txt: contains:\"0 errors\"",
+  "pass": true,
+  "evidence": "found: 0 errors"
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "agent-missing-migrations",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "agent-missing-migrations",
+  "check": "needs_input:migrations",
+  "pass": true,
+  "evidence": "missing inputs named: ['migrations']"
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "agent-bad-migration-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "agent-bad-migration-fails",
+  "check": "rls-lint.txt: contains:\"errors\"",
+  "pass": true,
+  "evidence": "found: errors"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/tests/unit/server-services-export-service.test.ts",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__test-strategy-tdd/agent-happy-path/repo/tests/unit/server-services-export-service.test.ts exists"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-happy-path",
+  "check": "exists:repo/tests/e2e/app-app-invoices-page.spec.ts",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__test-strategy-tdd/agent-happy-path/repo/tests/e2e/app-app-invoices-page.spec.ts exists"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-happy-path",
+  "check": "repo/tests/unit/server-services-export-service.test.ts: contains:\"it.todo(\\\"The export contains only the caller's tenant rows\\\")\"",
+  "pass": true,
+  "evidence": "found: it.todo(\"The export contains only the caller's tenant rows\")"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-happy-path",
+  "check": "scaffold-report.json: contains:\"tests/unit/components-features-invoices-exportbutton.test.tsx\"",
+  "pass": true,
+  "evidence": "found: tests/unit/components-features-invoices-exportbutton.test.tsx"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-happy-path",
+  "check": "test-plan.md: sections:[\"Pyramid\",\"Criteria map\"]",
+  "pass": true,
+  "evidence": "found ['Pyramid', 'Criteria map']"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-missing-feature",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-missing-feature",
+  "check": "needs_input:feature",
+  "pass": true,
+  "evidence": "missing inputs named: ['feature']"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-never-overwrites",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-never-overwrites",
+  "check": "scaffold-report.json: contains:\"tests/unit/server-services-export-service.test.ts\"",
+  "pass": true,
+  "evidence": "found: tests/unit/server-services-export-service.test.ts"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-never-overwrites",
+  "check": "scaffold-report.json: contains:\"\\\"written\\\": []\"",
+  "pass": true,
+  "evidence": "found: \"written\": []"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-never-overwrites",
+  "check": "scaffold-report.json: contains:\"\\\"would_write\\\": []\"",
+  "pass": true,
+  "evidence": "found: \"would_write\": []"
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "agent-never-overwrites",
+  "check": "test-plan.md: contains:\"exists — kept\"",
+  "pass": true,
+  "evidence": "found: exists — kept"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "check": "tracker.csv: contains:\"Acme\"",
+  "pass": true,
+  "evidence": "found: Acme"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "check": "exists:pipeline.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json exists"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "check": "exists:aging.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/aging.json exists"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "check": "exists:weekly-review.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/weekly-review.md exists"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-missing-tracker",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-missing-tracker",
+  "check": "needs_input:tracker",
+  "pass": true,
+  "evidence": "missing inputs named: ['tracker']"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-report-only",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-report-only",
+  "check": "exists:aging.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__application-tracker/agent-report-only/aging.json exists"
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-report-only",
+  "check": "exists:weekly-review.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__application-tracker/agent-report-only/weekly-review.md exists"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "exists:competency-map.csv",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/competency-map.csv exists"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "exists:prep-pack.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/prep-pack.md exists"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "exists:questions-to-ask.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/questions-to-ask.md exists"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "exists:90-day-plan.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/90-day-plan.md exists"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "competency-map.csv: csv_rows:status~^(mapped|GAP)$",
+  "pass": true,
+  "evidence": "0 of 10 rows not matching '^(mapped|GAP)$' in 'status'"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "competency-map.csv: contains:\"C4,mapped,Transformation delivery,yes\"",
+  "pass": true,
+  "evidence": "found: C4,mapped,Transformation delivery,yes"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "prep-pack.md: contains:\"[SB-01] Claims platform modernization\"",
+  "pass": true,
+  "evidence": "found: [SB-01] Claims platform modernization"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "prep-pack.md: sections:[\"Likely questions — panel\"]",
+  "pass": true,
+  "evidence": "found ['Likely questions — panel']"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "check": "questions-to-ask.md: sections:[\"Panel — peers\"]",
+  "pass": true,
+  "evidence": "found ['Panel — peers']"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-missing-story-bank",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-missing-story-bank",
+  "check": "needs_input:stories",
+  "pass": true,
+  "evidence": "missing inputs named: ['stories']"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-competency-without-story-is-gap",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-competency-without-story-is-gap",
+  "check": "competency-map.csv: contains:\"C7,GAP\"",
+  "pass": true,
+  "evidence": "found: C7,GAP"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-competency-without-story-is-gap",
+  "check": "prep-pack.md: contains:\"GAP — no story in the bank for C7\"",
+  "pass": true,
+  "evidence": "found: GAP — no story in the bank for C7"
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-competency-without-story-is-gap",
+  "check": "90-day-plan.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 7 markers"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-happy-path",
+  "check": "fit.json: contains:\"verdict\"",
+  "pass": true,
+  "evidence": "found: verdict"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-happy-path",
+  "check": "fit.md: contains:\"/100\"",
+  "pass": true,
+  "evidence": "found: /100"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-missing-profile",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-missing-profile",
+  "check": "needs_input:profile",
+  "pass": true,
+  "evidence": "missing inputs named: ['profile']"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-threshold-override",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-threshold-override",
+  "check": "exists:fit.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__jd-fit-scorer/agent-threshold-override/fit.json exists"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-happy-path",
+  "check": "comparison.json: contains:\"annualized_total\"",
+  "pass": true,
+  "evidence": "found: annualized_total"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-happy-path",
+  "check": "exists:comparison.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.md exists"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-missing-offers",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-missing-offers",
+  "check": "needs_input:offers",
+  "pass": true,
+  "evidence": "missing inputs named: ['offers']"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-no-col-no-adjustment",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-no-col-no-adjustment",
+  "check": "exists:comparison.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__offer-evaluator/agent-no-col-no-adjustment/comparison.json exists"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "exists:message.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__outreach-and-followup/agent-happy-path/message.md exists"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "exists:cadence.csv",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__outreach-and-followup/agent-happy-path/cadence.csv exists"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "exists:message-final.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__outreach-and-followup/agent-happy-path/message-final.md exists"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "message.md: contains:\"Dana, thank you for the time today.\"",
+  "pass": true,
+  "evidence": "found: Dana, thank you for the time today."
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "message.md: contains:\"[SB-05]\"",
+  "pass": true,
+  "evidence": "found: [SB-05]"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "cadence.csv: csv:[touch,date,channel,template,basis,stop_rule]",
+  "pass": true,
+  "evidence": "header has ['touch', 'date', 'channel', 'template', 'basis', 'stop_rule']"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "check": "cadence.csv: contains:\"Touch 1,2026-03-11,email\"",
+  "pass": true,
+  "evidence": "found: Touch 1,2026-03-11,email"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-missing-context",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-missing-context",
+  "check": "needs_input:context",
+  "pass": true,
+  "evidence": "missing inputs named: ['context']"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "check": "message.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "check": "message.md: contains:\"- A: req ID\"",
+  "pass": true,
+  "evidence": "found: - A: req ID"
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "check": "message.md: contains:\"Priya — saw Helix Logistics (fictional) is hiring a VP, Enterprise Applications.\"",
+  "pass": true,
+  "evidence": "found: Priya — saw Helix Logistics (fictional) is hiring a VP, Enterprise Applications."
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "check": "cadence.csv: contains:\"Touch 3,2026-03-30,email\"",
+  "pass": true,
+  "evidence": "found: Touch 3,2026-03-30,email"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "exists:keyword-map.csv",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__resume-tailor/agent-happy-path/keyword-map.csv exists"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "exists:tailored-resume.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__resume-tailor/agent-happy-path/tailored-resume.md exists"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "exists:traceability.csv",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/career__resume-tailor/agent-happy-path/traceability.csv exists"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "keyword-map.csv: csv:[jd_keyword,present_in_master,master_line_ids,weight]",
+  "pass": true,
+  "evidence": "header has ['jd_keyword', 'present_in_master', 'master_line_ids', 'weight']"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "keyword-map.csv: contains:\"FinOps,yes,MR-L14,must\"",
+  "pass": true,
+  "evidence": "found: FinOps,yes,MR-L14,must"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "candidate-bullets.md: contains:\"[MR-L12] Led the claims-platform modernization\"",
+  "pass": true,
+  "evidence": "found: [MR-L12] Led the claims-platform modernization"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-happy-path",
+  "check": "tailored-resume.md: sections:[\"Summary\",\"Selected experience\",\"Skills\"]",
+  "pass": true,
+  "evidence": "found ['Summary', 'Selected experience', 'Skills']"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-missing-master",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-missing-master",
+  "check": "needs_input:master",
+  "pass": true,
+  "evidence": "missing inputs named: ['master']"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-unsupported-certification",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-unsupported-certification",
+  "check": "gap-list.md: contains:\"CISSP\"",
+  "pass": true,
+  "evidence": "found: CISSP"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-unsupported-certification",
+  "check": "gap-list.md: contains:\"SOX ITGC\"",
+  "pass": true,
+  "evidence": "found: SOX ITGC"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-unsupported-certification",
+  "check": "keyword-map.csv: contains:\"CISSP certification,no,,must\"",
+  "pass": true,
+  "evidence": "found: CISSP certification,no,,must"
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "agent-unsupported-certification",
+  "check": "candidate-bullets.md: contains:\"- CISSP certification\"",
+  "pass": true,
+  "evidence": "found: - CISSP certification"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "check": "account-plan.md: sections:[\"Stakeholder map\",\"White-space matrix\",\"Pipeline\",\"90-day plays\"]",
+  "pass": true,
+  "evidence": "found ['Stakeholder map', 'White-space matrix', 'Pipeline', '90-day plays']"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "check": "account-plan.md: contains:\"1,652,000\"",
+  "pass": true,
+  "evidence": "found: 1,652,000"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "check": "plays.csv: csv_rows:owner!empty",
+  "pass": true,
+  "evidence": "0 of 7 rows empty in 'owner'"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "check": "plays.csv: contains:\"Open white space: Data and AI\"",
+  "pass": true,
+  "evidence": "found: Open white space: Data and AI"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "check": "plays.csv: contains:\"Dana Ortiz\"",
+  "pass": true,
+  "evidence": "found: Dana Ortiz"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-missing-pipeline",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-missing-pipeline",
+  "check": "needs_input:pipeline",
+  "pass": true,
+  "evidence": "missing inputs named: ['pipeline']"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-unvalued-pipeline-not-estimated",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-unvalued-pipeline-not-estimated",
+  "check": "account-plan.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-unvalued-pipeline-not-estimated",
+  "check": "account-plan.md: contains:\"excludes 1 unvalued\"",
+  "pass": true,
+  "evidence": "found: excludes 1 unvalued"
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-unvalued-pipeline-not-estimated",
+  "check": "plays.csv: csv_rows:owner~^\\[TO BE BASELINED",
+  "pass": true,
+  "evidence": "0 of 5 rows not matching '^\\\\[TO BE BASELINED' in 'owner'"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-happy-path",
+  "check": "brief-skeleton.md: sections:[\"Leadership\",\"Sources\"]",
+  "pass": true,
+  "evidence": "found ['Leadership', 'Sources']"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-happy-path",
+  "check": "brief-skeleton.md: contains:\"S1\"",
+  "pass": true,
+  "evidence": "found: S1"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-happy-path",
+  "check": "brief.md: sections:[\"Bottom line\"]",
+  "pass": true,
+  "evidence": "found ['Bottom line']"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-missing-notes",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-missing-notes",
+  "check": "needs_input:notes",
+  "pass": true,
+  "evidence": "missing inputs named: ['notes']"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-unknowns-marked",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-unknowns-marked",
+  "check": "brief-skeleton.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-happy-path",
+  "check": "battle-card.md: contains:\"INTERNAL — do not distribute\"",
+  "pass": true,
+  "evidence": "found: INTERNAL — do not distribute"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-happy-path",
+  "check": "battle-card.md: sections:[\"Wedge\",\"Landmines\",\"Objection handling\"]",
+  "pass": true,
+  "evidence": "found ['Wedge', 'Landmines', 'Objection handling']"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-happy-path",
+  "check": "battle-card.md: contains:\"Peak-season cutover rehearsal and parallel run | Peak-season cutover experience (them: 2)\"",
+  "pass": true,
+  "evidence": "found: Peak-season cutover rehearsal and parallel run | Peak-season cutover experience (them: 2)"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-missing-concerns",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-missing-concerns",
+  "check": "needs_input:concerns",
+  "pass": true,
+  "evidence": "missing inputs named: ['concerns']"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-unsourced-claims-are-hypotheses",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-unsourced-claims-are-hypotheses",
+  "check": "battle-card.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-unsourced-claims-are-hypotheses",
+  "check": "battle-card.md: contains:\"(hypothesis)\"",
+  "pass": true,
+  "evidence": "found: (hypothesis)"
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-unsourced-claims-are-hypotheses",
+  "check": "battle-card.md: contains:\"No wedge found\"",
+  "pass": true,
+  "evidence": "found: No wedge found"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "check": "discovery-pack.md: sections:[\"Time budget\",\"Question plan\",\"Five closes\"]",
+  "pass": true,
+  "evidence": "found ['Time budget', 'Question plan', 'Five closes']"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "check": "discovery-pack.md: contains:\"20% reserved\"",
+  "pass": true,
+  "evidence": "found: 20% reserved"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "check": "five-closes.md: sections:[\"Five closes\"]",
+  "pass": true,
+  "evidence": "found ['Five closes']"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "check": "pain-matrix.csv: csv_rows:evidence!empty",
+  "pass": true,
+  "evidence": "0 of 4 rows empty in 'evidence'"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "check": "five-closes.md: contains:\"Peak freeze starts\"",
+  "pass": true,
+  "evidence": "found: Peak freeze starts"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-missing-vertical",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-missing-vertical",
+  "check": "needs_input:vertical",
+  "pass": true,
+  "evidence": "missing inputs named: ['vertical']"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-thin-notes-closes-marked-tbd",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-thin-notes-closes-marked-tbd",
+  "check": "five-closes.md: contains:\"TBD — owner: ___\"",
+  "pass": true,
+  "evidence": "found: TBD — owner: ___"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-thin-notes-closes-marked-tbd",
+  "check": "five-closes.md: contains:\"0 of 5 closes\"",
+  "pass": true,
+  "evidence": "found: 0 of 5 closes"
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-thin-notes-closes-marked-tbd",
+  "check": "pain-matrix.csv: csv_rows:evidence!empty",
+  "pass": true,
+  "evidence": "0 of 1 rows empty in 'evidence'"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "check": "exists:estimate.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.json exists"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "check": "exists:estimate.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md exists"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "check": "estimate-memo.md: sections:[\"Bottom line\",\"Assumptions\"]",
+  "pass": true,
+  "evidence": "found ['Bottom line', 'Assumptions']"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "check": "estimate.md: contains:\"Cost and price (from supplied rate card)\"",
+  "pass": true,
+  "evidence": "found: Cost and price (from supplied rate card)"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-missing-wbs",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-missing-wbs",
+  "check": "needs_input:wbs",
+  "pass": true,
+  "evidence": "missing inputs named: ['wbs']"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-no-rate-card-no-price",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-no-rate-card-no-price",
+  "check": "estimate.md: contains:\"No rate card supplied\"",
+  "pass": true,
+  "evidence": "found: No rate card supplied"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-no-rate-card-no-price",
+  "check": "estimate.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "ledger.csv: csv:[slide,title,text,verdict,reason,numbers_found]",
+  "pass": true,
+  "evidence": "header has ['slide', 'title', 'text', 'verdict', 'reason', 'numbers_found']"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "ledger.csv: csv_rows:slide~^[0-9]+$",
+  "pass": true,
+  "evidence": "0 of 5 rows not matching '^[0-9]+$' in 'slide'"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "ledger.csv: contains:\"Next steps\"",
+  "pass": true,
+  "evidence": "found: Next steps"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "unsourced-numbers.csv: csv_rows:number!empty",
+  "pass": true,
+  "evidence": "0 of 4 rows empty in 'number'"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "unsourced-numbers.csv: contains:\"40%\"",
+  "pass": true,
+  "evidence": "found: 40%"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "check": "redline.md: sections:[\"Redline table\",\"Rewritten slides\"]",
+  "pass": true,
+  "evidence": "found ['Redline table', 'Rewritten slides']"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-missing-deck",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-missing-deck",
+  "check": "needs_input:deck",
+  "pass": true,
+  "evidence": "missing inputs named: ['deck']"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-unsourced-numbers-flagged-not-fixed",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-unsourced-numbers-flagged-not-fixed",
+  "check": "unsourced-numbers.csv: contains:\"310,000\"",
+  "pass": true,
+  "evidence": "found: 310,000"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-unsourced-numbers-flagged-not-fixed",
+  "check": "unsourced-numbers.csv: csv_rows:slide~^3$",
+  "pass": true,
+  "evidence": "0 of 4 rows not matching '^3$' in 'slide'"
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-unsourced-numbers-flagged-not-fixed",
+  "check": "redline.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "check": "scored.csv: csv:[band,wave]",
+  "pass": true,
+  "evidence": "header has ['band', 'wave']"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "check": "exists:tco.csv",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv exists"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "check": "exists:tco.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.json exists"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "check": "readout.md: sections:[\"Bottom line\",\"Wave plan\"]",
+  "pass": true,
+  "evidence": "found ['Bottom line', 'Wave plan']"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-missing-rates",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-missing-rates",
+  "check": "needs_input:rates",
+  "pass": true,
+  "evidence": "missing inputs named: ['rates']"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-no-prices-no-numbers",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-no-prices-no-numbers",
+  "check": "tco.csv: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-no-prices-no-numbers",
+  "check": "tco-summary.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "check": "orals-script.md: sections:[\"Timed script\",\"Airtime check\",\"Number sheet\",\"Handoffs\"]",
+  "pass": true,
+  "evidence": "found ['Timed script', 'Airtime check', 'Number sheet', 'Handoffs']"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "check": "orals-script.md: numbers_trace_to:number-registry.csv",
+  "pass": true,
+  "evidence": "all 31 numbers trace"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "check": "number-registry.csv: contains:\"180,000\"",
+  "pass": true,
+  "evidence": "found: 180,000"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "check": "likely-questions.md: contains:\"What is the biggest risk\"",
+  "pass": true,
+  "evidence": "found: What is the biggest risk"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-missing-speakers",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-missing-speakers",
+  "check": "needs_input:speakers",
+  "pass": true,
+  "evidence": "missing inputs named: ['speakers']"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-unbaselined-numbers-become-questions",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-unbaselined-numbers-become-questions",
+  "check": "orals-script.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-unbaselined-numbers-become-questions",
+  "check": "orals-script.md: numbers_trace_to:number-registry.csv",
+  "pass": true,
+  "evidence": "all 5 numbers trace"
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-unbaselined-numbers-become-questions",
+  "check": "likely-questions.md: contains:\"What is the number for\"",
+  "pass": true,
+  "evidence": "found: What is the number for"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "exists:proposal.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__proposal-writer/agent-happy-path/proposal.md exists"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "exists:proposal-final.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__proposal-writer/agent-happy-path/proposal-final.md exists"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "proposal.md: sections:[\"Executive summary\",\"Pricing\",\"Why\"]",
+  "pass": true,
+  "evidence": "found ['Executive summary', 'Pricing', 'Why']"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "proposal.md: contains:\"T1 Peak-proof order orchestration\"",
+  "pass": true,
+  "evidence": "found: T1 Peak-proof order orchestration"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "proposal.md: numbers_trace_to:sources.md",
+  "pass": true,
+  "evidence": "all 15 numbers trace"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-happy-path",
+  "check": "placeholders.csv: csv:[placeholder,section,owner]",
+  "pass": true,
+  "evidence": "header has ['placeholder', 'section', 'owner']"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-missing-win-themes",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-missing-win-themes",
+  "check": "needs_input:win_themes",
+  "pass": true,
+  "evidence": "missing inputs named: ['win_themes']"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-no-proof-no-invented-figures",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-no-proof-no-invented-figures",
+  "check": "proposal.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-no-proof-no-invented-figures",
+  "check": "placeholders.csv: csv_rows:placeholder!empty",
+  "pass": true,
+  "evidence": "0 of 28 rows empty in 'placeholder'"
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "agent-no-proof-no-invented-figures",
+  "check": "proposal.md: numbers_trace_to:sources.md",
+  "pass": true,
+  "evidence": "all 1 numbers trace"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "check": "exists:requirements.csv",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv exists"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "check": "matrix.csv: csv:[req_id,compliance,owner]",
+  "pass": true,
+  "evidence": "header has ['req_id', 'compliance', 'owner']"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "check": "gaps.md: sections:[\"Bottom line\",\"Clarification questions\"]",
+  "pass": true,
+  "evidence": "found ['Bottom line', 'Clarification questions']"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "check": "exists:bid-score.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/bid-score.json exists"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-missing-capabilities",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-missing-capabilities",
+  "check": "needs_input:capabilities",
+  "pass": true,
+  "evidence": "missing inputs named: ['capabilities']"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-unmatched-becomes-clarify",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-unmatched-becomes-clarify",
+  "check": "gaps.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-unmatched-becomes-clarify",
+  "check": "matrix.csv: contains:\"CQ-001\"",
+  "pass": true,
+  "evidence": "found: CQ-001"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "check": "architecture.md: mermaid_parses",
+  "pass": true,
+  "evidence": "2 block(s) ok"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "check": "architecture.md: sections:[\"System context\",\"Container view\",\"Integration map\",\"Non-functional requirements\",\"Decision log\"]",
+  "pass": true,
+  "evidence": "found ['System context', 'Container view', 'Integration map', 'Non-functional requirements', 'Decision log']"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "check": "architecture.md: contains:\"### event\"",
+  "pass": true,
+  "evidence": "found: ### event"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "check": "nfr.csv: csv_rows:target!empty",
+  "pass": true,
+  "evidence": "0 of 4 rows empty in 'target'"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "check": "nfr.csv: contains:\"99.9% monthly\"",
+  "pass": true,
+  "evidence": "found: 99.9% monthly"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-missing-components",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-missing-components",
+  "check": "needs_input:components",
+  "pass": true,
+  "evidence": "missing inputs named: ['components']"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "check": "architecture.md: mermaid_parses",
+  "pass": true,
+  "evidence": "2 block(s) ok"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "check": "nfr.csv: csv_rows:target~^\\[TO BE BASELINED",
+  "pass": true,
+  "evidence": "0 of 2 rows not matching '^\\\\[TO BE BASELINED' in 'target'"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "check": "architecture.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "check": "exists:SOW.md",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__sow-drafter/agent-happy-path/SOW.md exists"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "check": "SOW.md: sections:[\"Scope\",\"Deliverables and acceptance\",\"Assumptions\",\"RACI\",\"Change control\"]",
+  "pass": true,
+  "evidence": "found ['Scope', 'Deliverables and acceptance', 'Assumptions', 'RACI', 'Change control']"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "check": "SOW.md: contains:\"118 interfaces in scope per inventory export\"",
+  "pass": true,
+  "evidence": "found: 118 interfaces in scope per inventory export"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "check": "deliverables.csv: csv_rows:acceptance!empty",
+  "pass": true,
+  "evidence": "0 of 3 rows empty in 'acceptance'"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "check": "assumptions-check.csv: max_lines:1",
+  "pass": true,
+  "evidence": "1 lines (max 1)"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-proposal",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-proposal",
+  "check": "needs_input:proposal",
+  "pass": true,
+  "evidence": "missing inputs named: ['proposal']"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-acceptance-not-invented",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-acceptance-not-invented",
+  "check": "deliverables.csv: csv_rows:acceptance~^(\\[TO BE BASELINED|\\S)",
+  "pass": true,
+  "evidence": "0 of 2 rows not matching '^(\\\\[TO BE BASELINED|\\\\S)' in 'acceptance'"
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-acceptance-not-invented",
+  "check": "SOW.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "check": "exists:value-model.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/presales__value-case-builder/agent-happy-path/value-model.json exists"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "check": "value-case.md: sections:[\"Bottom line\",\"Cash flows\",\"Sensitivity\",\"Sources\"]",
+  "pass": true,
+  "evidence": "found ['Bottom line', 'Cash flows', 'Sensitivity', 'Sources']"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "check": "value-case.md: numbers_trace_to:value-model.json",
+  "pass": true,
+  "evidence": "all 80 numbers trace"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "check": "value-case.md: contains:\"month 25\"",
+  "pass": true,
+  "evidence": "found: month 25"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-missing-costs",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-missing-costs",
+  "check": "needs_input:costs",
+  "pass": true,
+  "evidence": "missing inputs named: ['costs']"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-no-baselines-no-headline",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-no-baselines-no-headline",
+  "check": "value-case.md: contains:\"[TO BE BASELINED\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-no-baselines-no-headline",
+  "check": "value-case.md: contains:\"not a value case yet\"",
+  "pass": true,
+  "evidence": "found: not a value case yet"
+ }
+]

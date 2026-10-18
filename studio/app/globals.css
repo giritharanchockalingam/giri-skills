@@ -139,7 +139,7 @@ main.wrap { max-width: var(--content); padding-top: 48px; padding-bottom: 96px; 
 .subpanel { background: var(--wash); border-radius: var(--r-sm); padding: 16px 18px; }
 
 /* Summary cards — one number, one label, each a link that filters the scorecard */
-.summary-grid { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.summary-grid { display: grid; gap: 16px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .summary { display: block; padding: 22px 24px; }
 .summary-value { font-family: var(--serif); font-size: 36px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
 .summary-label { font-size: 14px; color: var(--ink-2); margin-top: 10px; line-height: 1.4; }
@@ -407,6 +407,8 @@ pre code { background: none; padding: 0; font-size: inherit; }
   .section { margin-top: 40px; }
   .page-head { margin-bottom: 28px; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .summary-grid > :last-child:nth-child(odd) { grid-column: span 2; }
+  .agent-cols { grid-template-columns: minmax(0, 1fr); }
   .summary { padding: 16px 16px; }
   .summary-value { font-size: 32px; }
   .only-desktop { display: none !important; }
@@ -425,4 +427,29 @@ pre code { background: none; padding: 0; font-size: inherit; }
   table.tbl th:last-child, table.tbl td:last-child { padding-right: 18px; }
   table.tbl td, table.tbl th { padding-left: 10px; padding-right: 10px; }
 }
+/* ───────────────────────────── Agent run (deterministic) ───────────────────────────── */
+.agent-cases { margin-top: 10px; }
+.agent-case { border-bottom: 1px solid var(--rule-soft); }
+.agent-case:last-child { border-bottom: 0; }
+.agent-case summary { display: flex; align-items: center; gap: 10px; padding: 11px 0; cursor: pointer; list-style: none; font-size: 14px; }
+.agent-case summary::-webkit-details-marker { display: none; }
+.agent-case[open] summary .caret { transform: rotate(90deg); }
+.agent-case-id { font-family: var(--mono); font-size: 13px; color: var(--ink); flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.agent-case-count { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.agent-checks { display: flex; flex-direction: column; gap: 10px; padding: 2px 0 14px 22px; }
+.agent-checks li { display: flex; gap: 10px; align-items: flex-start; }
+.agent-checks .pass-pill, .agent-checks .fail-pill { flex: none; margin-top: 1px; }
+.agent-check { font-family: var(--mono); font-size: 13px; color: var(--ink); line-height: 1.5; overflow-wrap: anywhere; }
+.agent-evidence { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-top: 2px; overflow-wrap: anywhere; }
+.agent-inputs code, .agent-list code, #agent .none code { font-family: var(--mono); font-size: 13px; }
+.agent-inputs td { overflow-wrap: anywhere; }
+.agent-inputs td:nth-child(-n+3) { white-space: nowrap; }
+.agent-req { color: var(--rust); font-weight: 500; }
+.agent-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 28px; }
+.agent-list { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.agent-list li { display: flex; gap: 10px; align-items: baseline; min-width: 0; overflow-wrap: anywhere; }
+.agent-kind { flex: none; font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 999px; background: var(--wash); color: var(--ink-3); }
+.agent-kind-llm { background: var(--hold-soft); color: var(--hold); }
+.agent-kind-script { background: var(--sage-soft); color: var(--sage); }
+
 @keyframes rise { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }

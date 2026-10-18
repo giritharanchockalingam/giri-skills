@@ -8,7 +8,9 @@
   "without": 0.08,
   "with": 0.15,
   "lift": 0.08,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/client-research-brief",
@@ -19,7 +21,9 @@
   "without": 0.33,
   "with": 0.43,
   "lift": 0.1,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/competitive-positioning",
@@ -30,7 +34,9 @@
   "without": 0.35,
   "with": 0.38,
   "lift": 0.04,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/discovery-interview",
@@ -41,7 +47,9 @@
   "without": 0.44,
   "with": 0.62,
   "lift": 0.19,
-  "verdict": "BOTH"
+  "verdict": "BOTH",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/effort-estimator",
@@ -52,7 +60,9 @@
   "without": 0.04,
   "with": 0.04,
   "lift": 0,
-  "verdict": "BOTH"
+  "verdict": "BOTH",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/exec-deck-redline",
@@ -63,7 +73,9 @@
   "without": 0.2,
   "with": 0.13,
   "lift": -0.07,
-  "verdict": "BOTH"
+  "verdict": "BOTH",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/integration-migration-assessor",
@@ -74,7 +86,9 @@
   "without": 0.35,
   "with": 0.23,
   "lift": -0.12,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/orals-prep",
@@ -85,7 +99,9 @@
   "without": 0.08,
   "with": 0.38,
   "lift": 0.31,
-  "verdict": "DESC"
+  "verdict": "DESC",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/proposal-writer",
@@ -96,7 +112,9 @@
   "without": 0.5,
   "with": 0.71,
   "lift": 0.21,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/rfp-compliance-matrix",
@@ -107,7 +125,9 @@
   "without": 0.11,
   "with": 0.18,
   "lift": 0.07,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -118,7 +138,9 @@
   "without": 0.25,
   "with": 0.14,
   "lift": -0.11,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/sow-drafter",
@@ -129,7 +151,9 @@
   "without": 0.11,
   "with": 0.25,
   "lift": 0.14,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "presales/value-case-builder",
@@ -140,7 +164,9 @@
   "without": 0.33,
   "with": 0.23,
   "lift": -0.1,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/ci-cd-vercel-github",
@@ -151,7 +177,9 @@
   "without": 0.3,
   "with": 0.4,
   "lift": 0.1,
-  "verdict": "BOTH"
+  "verdict": "BOTH",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/handoff-and-thread-close",
@@ -162,7 +190,9 @@
   "without": 0.22,
   "with": 0.94,
   "lift": 0.72,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/multi-tenant-saas-patterns",
@@ -173,7 +203,9 @@
   "without": 0.27,
   "with": 0.64,
   "lift": 0.36,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
@@ -184,7 +216,9 @@
   "without": 0.5,
   "with": 0.8,
   "lift": 0.3,
-  "verdict": "DESC"
+  "verdict": "DESC",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/observability-setup",
@@ -195,7 +229,9 @@
   "without": 0.14,
   "with": 0.32,
   "lift": 0.18,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/product-spec-prd",
@@ -206,7 +242,9 @@
   "without": 0.32,
   "with": 0.68,
   "lift": 0.36,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/project-bootstrap",
@@ -217,7 +255,9 @@
   "without": 0.05,
   "with": 0.27,
   "lift": 0.23,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/safe-fix",
@@ -228,7 +268,9 @@
   "without": 0.08,
   "with": 0.08,
   "lift": 0,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/security-review",
@@ -239,7 +281,9 @@
   "without": 0.19,
   "with": 0.75,
   "lift": 0.56,
-  "verdict": "DESC"
+  "verdict": "DESC",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/spec-to-plan",
@@ -250,7 +294,9 @@
   "without": 0.55,
   "with": 0.35,
   "lift": -0.2,
-  "verdict": "BOTH"
+  "verdict": "BOTH",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/supabase-schema-rls",
@@ -261,7 +307,9 @@
   "without": 0.14,
   "with": 0.5,
   "lift": 0.36,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "build/test-strategy-tdd",
@@ -272,7 +320,9 @@
   "without": 0.25,
   "with": 0.45,
   "lift": 0.2,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/agent-architecture",
@@ -283,7 +333,9 @@
   "without": 0.12,
   "with": 0.62,
   "lift": 0.5,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/ai-governance-risk",
@@ -294,7 +346,9 @@
   "without": 0.4,
   "with": 0.8,
   "lift": 0.4,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/ai-strategy-coe",
@@ -305,7 +359,9 @@
   "without": 0.35,
   "with": 0.62,
   "lift": 0.27,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/ai-use-case-canvas",
@@ -316,7 +372,9 @@
   "without": 0.4,
   "with": 0.85,
   "lift": 0.45,
-  "verdict": "DESC"
+  "verdict": "DESC",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/infra-gpu-sizing",
@@ -327,7 +385,9 @@
   "without": 0.55,
   "with": 0.65,
   "lift": 0.1,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/llm-eval-harness",
@@ -338,7 +398,9 @@
   "without": 0.2,
   "with": 0.75,
   "lift": 0.55,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/mcp-server-builder",
@@ -349,7 +411,9 @@
   "without": 0.14,
   "with": 0.36,
   "lift": 0.23,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/rag-pipeline-design",
@@ -360,7 +424,9 @@
   "without": 0.27,
   "with": 0.91,
   "lift": 0.64,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "ai-platform/slm-demo-builder",
@@ -371,7 +437,9 @@
   "without": 0.33,
   "with": 0.78,
   "lift": 0.44,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "career/application-tracker",
@@ -382,7 +450,9 @@
   "without": 0.23,
   "with": 0.23,
   "lift": 0,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "career/interview-prep",
@@ -393,7 +463,9 @@
   "without": 0.08,
   "with": 0.17,
   "lift": 0.08,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -404,7 +476,9 @@
   "without": 0.41,
   "with": 0.55,
   "lift": 0.14,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "career/offer-evaluator",
@@ -415,7 +489,9 @@
   "without": 0.29,
   "with": 0.38,
   "lift": 0.08,
-  "verdict": "BODY"
+  "verdict": "BODY",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "career/outreach-and-followup",
@@ -426,7 +502,9 @@
   "without": 0.32,
   "with": 0.68,
   "lift": 0.36,
-  "verdict": "DESC"
+  "verdict": "DESC",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  },
  {
   "skill": "career/resume-tailor",
@@ -437,6 +515,8 @@
   "without": 0.36,
   "with": 0.57,
   "lift": 0.21,
-  "verdict": "OK"
+  "verdict": "OK",
+  "agentPass": 1,
+  "agentVerdict": "Works"
  }
 ]

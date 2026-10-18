@@ -2,22 +2,33 @@ import skillsJson from "@/data/skills.json";
 import scorecardJson from "@/data/scorecard.json";
 import triggerJson from "@/data/trigger.json";
 import qualityJson from "@/data/quality.json";
+import agentJson from "@/data/agent.json";
 import findingsJson from "@/data/findings.json";
 import metaJson from "@/data/meta.json";
 
 export type Verdict = "OK" | "DESC" | "BODY" | "BOTH";
+export type AgentVerdict = "Works" | "Partial" | "Broken";
+
+export interface AgentInput { name: string; type: string; required: boolean; from: string; default: string | null }
+export interface AgentStep { step: string; kind: string }
+export interface AgentOutput { path: string; checks: string[] }
+/** The `metadata.agent` block of SKILL.md: what run_skill.py needs, runs and checks. */
+export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: AgentOutput[] }
 
 export interface EvalCase { id: string; prompt: string; expected: string[] }
 export interface Skill {
   id: string; domain: string; name: string; description: string; license: string | null;
-  metadata: Record<string, string>; bodyHtml: string;
+  metadata: Record<string, string>; agent: AgentSpec | null; bodyHtml: string;
   files: { references: string[]; assets: string[]; scripts: string[] };
   cases: EvalCase[];
 }
 export interface ScoreRow {
   skill: string; domain: string; name: string;
   triggerAcc: number; fpRate: number; without: number; with: number; lift: number; verdict: Verdict;
+  /** Share of agent checks passed (0–1), null when the skill has no agent cases. */
+  agentPass: number | null; agentVerdict: AgentVerdict | null;
 }
+export interface AgentRow { skill: string; caseId: string; check: string; pass: boolean; evidence: string }
 export interface TriggerRow { skill: string; caseId: string; run: number; selected: string; correct: number | null }
 export interface QualityRow {
   skill: string; caseId: string; run: number; mode: "without" | "with"; expectedIdx: number; pass: boolean; evidence: string;
@@ -33,15 +44,16 @@ export interface Findings {
 }
 export interface Meta {
   provider: string | null; model: string | null; runs: number | null; seed: number | null; date: string | null;
-  spend: string | null; resultsDir: string;
-  counts: { skills: number; scorecard: number; trigger: number; quality: number; findings: number };
-  domains: string[]; verdicts: Verdict[];
+  spend: string | null; resultsDir: string; agentResultsDir: string;
+  counts: { skills: number; scorecard: number; trigger: number; quality: number; findings: number; agent: number; agentWorks: number };
+  domains: string[]; verdicts: Verdict[]; agentVerdicts: AgentVerdict[];
 }
 
 export const skills = skillsJson as Skill[];
 export const scorecard = scorecardJson as ScoreRow[];
 export const trigger = triggerJson as TriggerRow[];
 export const quality = qualityJson as QualityRow[];
+export const agent = agentJson as AgentRow[];
 export const findings = findingsJson as Findings;
 export const meta = metaJson as Meta;
 
@@ -59,14 +71,14 @@ export const skillHref = (id: string) => `/skills/${id}/`;
 
 /** Catalog row: skill + score merged. */
 export interface CatalogRow {
-  id: string; name: string; domain: string; description: string; verdict: Verdict | null;
+  id: string; name: string; domain: string; description: string; verdict: Verdict | null; agentVerdict: AgentVerdict | null;
   triggerAcc: number | null; lift: number | null; cases: number; scripts: number;
 }
 export const catalogRows = (): CatalogRow[] =>
   skills.map((s) => {
     const sc = scoreFor(s.id);
     return {
-      id: s.id, name: s.name, domain: s.domain, description: s.description, verdict: sc?.verdict ?? null,
+      id: s.id, name: s.name, domain: s.domain, description: s.description, verdict: sc?.verdict ?? null, agentVerdict: sc?.agentVerdict ?? null,
       triggerAcc: sc?.triggerAcc ?? null, lift: sc?.lift ?? null, cases: s.cases.length, scripts: s.files.scripts.length,
     };
   });
@@ -101,18 +113,36 @@ export const failedWithItemsFor = (id: string, limit = 5): FailedItem[] => {
   return [...map.values()].filter((i) => i.fails > 0).sort((a, b) => b.fails - a.fails || a.caseId.localeCompare(b.caseId)).slice(0, limit);
 };
 
+/** Agent eval cases for a skill: case_id → its checks with pass/evidence, in file order. */
+export interface AgentCase { caseId: string; checks: AgentRow[]; passed: number; total: number }
+export const agentCasesFor = (id: string): AgentCase[] => {
+  const out: AgentCase[] = [];
+  for (const a of agent) {
+    if (a.skill !== id) continue;
+    let c = out.find((x) => x.caseId === a.caseId);
+    if (!c) { c = { caseId: a.caseId, checks: [], passed: 0, total: 0 }; out.push(c); }
+    c.checks.push(a); c.total++; if (a.pass) c.passed++;
+  }
+  return out;
+};
+
 export const fmt = (n: number | null | undefined, digits = 2) => (n == null || Number.isNaN(n) ? "—" : n.toFixed(digits));
 export const fmtLift = (n: number | null | undefined) => (n == null ? "—" : (n > 0 ? "+" : "") + n.toFixed(2));
 
 /** Per-domain roll-up of the scorecard (verdict counts, average trigger and lift). */
 export interface DomainSummary {
   domain: string; n: number; counts: Record<Verdict, number>; needsWork: number; avgTrigger: number; avgLift: number;
+  /** Skills whose agent run verdict is Works. */
+  runs: number;
 }
 const rollup = (domain: string, rows: ScoreRow[]): DomainSummary => {
   const counts: Record<Verdict, number> = { OK: 0, DESC: 0, BODY: 0, BOTH: 0 };
   for (const r of rows) counts[r.verdict]++;
   const avg = (k: "triggerAcc" | "lift") => (rows.length ? rows.reduce((a, r) => a + r[k], 0) / rows.length : 0);
-  return { domain, n: rows.length, counts, needsWork: rows.length - counts.OK, avgTrigger: avg("triggerAcc"), avgLift: avg("lift") };
+  return {
+    domain, n: rows.length, counts, needsWork: rows.length - counts.OK, avgTrigger: avg("triggerAcc"), avgLift: avg("lift"),
+    runs: rows.filter((r) => r.agentVerdict === "Works").length,
+  };
 };
 export const domainSummaries = (): { rows: DomainSummary[]; total: DomainSummary } => ({
   rows: DOMAINS.map((d) => rollup(d, scorecard.filter((r) => r.domain === d))),

@@ -1,5 +1,5 @@
-import type { Verdict } from "@/lib/data";
-import { verdictInfo } from "@/lib/verdict";
+import type { Verdict, AgentVerdict } from "@/lib/data";
+import { verdictInfo, agentVerdictInfo } from "@/lib/verdict";
 
 /** Verdict pill with a human label; the raw code and rule live in the tooltip. */
 export function VerdictBadge({ v, small }: { v: Verdict | null | undefined; small?: boolean }) {
@@ -9,6 +9,13 @@ export function VerdictBadge({ v, small }: { v: Verdict | null | undefined; smal
       {info.label}
     </span>
   );
+}
+
+/** Agent run pill: Works (sage) / Partial (amber) / Broken (rust); a dash when no agent cases ran. */
+export function AgentBadge({ v, small }: { v: AgentVerdict | null | undefined; small?: boolean }) {
+  const info = agentVerdictInfo(v);
+  if (!v) return <span className="muted" title={info.explanation}>—</span>;
+  return <span className={`pill pill-${info.tone} ${small ? "pill-sm" : ""}`} title={info.explanation}>{info.label}</span>;
 }
 
 /** Lift number: ≥ +0.2 sage, < 0 rust, else ink. Keeps the sign. */

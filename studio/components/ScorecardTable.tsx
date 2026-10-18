@@ -1,21 +1,24 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { ScoreRow, Misroute, FailedItem } from "@/lib/data";
+import type { ScoreRow, Misroute, FailedItem, AgentCase } from "@/lib/data";
 import { skillHref } from "@/lib/data";
-import { isVerdictFilter, matchesVerdictFilter, verdictSeverity, type VerdictFilter } from "@/lib/verdict";
-import { VerdictBadge, Lift, Trig } from "./Badge";
-import { DomainFilter, VerdictFilterControl } from "./FilterBar";
+import { isVerdictFilter, matchesVerdictFilter, verdictSeverity, isAgentFilter, matchesAgentFilter, agentVerdictSeverity, AGENT_COL_TIP, AGENT_FILTERS, type VerdictFilter, type AgentFilter } from "@/lib/verdict";
+import { VerdictBadge, AgentBadge, Lift, Trig } from "./Badge";
+import { DomainFilter, VerdictFilterControl, ChoiceFilter } from "./FilterBar";
 import { Drawer } from "./Drawer";
+import { AgentCases } from "./AgentCases";
 import { COL_TIPS } from "./DomainTable";
 
-export interface ScorecardDrill { misroutes: Misroute[]; failed: FailedItem[]; finding: number | null; cases: number }
+export interface ScorecardDrill { misroutes: Misroute[]; failed: FailedItem[]; finding: number | null; cases: number; agentCases: AgentCase[] }
+const EMPTY_DRILL: ScorecardDrill = { misroutes: [], failed: [], finding: null, cases: 0, agentCases: [] };
 
-type SortKey = "severity" | "name" | "domain" | "triggerAcc" | "fpRate" | "without" | "with" | "lift";
+type SortKey = "severity" | "name" | "domain" | "agent" | "triggerAcc" | "fpRate" | "without" | "with" | "lift";
 const COLS: { key: SortKey; label: string; num?: boolean; wide?: boolean; title?: string }[] = [
   { key: "name", label: "Skill" },
   { key: "domain", label: "Domain" },
   { key: "severity", label: "Verdict" },
+  { key: "agent", label: "Runs", title: AGENT_COL_TIP },
   { key: "triggerAcc", label: "Trigger", num: true, title: COL_TIPS.trigger },
   { key: "fpRate", label: "FP rate", num: true, wide: true, title: COL_TIPS.fp },
   { key: "without", label: "Without", num: true, wide: true, title: COL_TIPS.without },
@@ -23,14 +26,15 @@ const COLS: { key: SortKey; label: string; num?: boolean; wide?: boolean; title?
   { key: "lift", label: "Lift", num: true, title: COL_TIPS.lift },
 ];
 
-/** Reads `#scorecard?verdict=…&domain=…` so summary cards can deep-link a filter. */
-const readHash = (): { verdict?: VerdictFilter; domain?: string } => {
+/** Reads `#scorecard?verdict=…&runs=…&domain=…` so summary cards can deep-link a filter. */
+const readHash = (): { verdict?: VerdictFilter; runs?: AgentFilter; domain?: string } => {
   if (typeof window === "undefined") return {};
   const h = window.location.hash;
   if (!h.startsWith("#scorecard")) return {};
   const q = new URLSearchParams(h.split("?")[1] ?? "");
   const v = q.get("verdict");
-  return { verdict: isVerdictFilter(v) ? v : undefined, domain: q.get("domain") ?? undefined };
+  const r = q.get("runs");
+  return { verdict: isVerdictFilter(v) ? v : undefined, runs: isAgentFilter(r) ? r : undefined, domain: q.get("domain") ?? undefined };
 };
 
 export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; domains: string[]; drill: Record<string, ScorecardDrill> }) {
@@ -38,6 +42,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
   const [asc, setAsc] = useState(true);
   const [dom, setDom] = useState<string>("all");
   const [ver, setVer] = useState<VerdictFilter>("all");
+  const [runs, setRuns] = useState<AgentFilter>("all");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -46,6 +51,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
       const h = readHash();
       if (!window.location.hash.startsWith("#scorecard")) return;
       setVer(h.verdict ?? "all");
+      setRuns(h.runs ?? "all");
       if (h.domain && domains.includes(h.domain)) setDom(h.domain);
       document.getElementById("scorecard")?.scrollIntoView({ block: "start", behavior: "smooth" });
     };
@@ -56,16 +62,17 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
 
   const sorted = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const f = rows.filter((r) => (dom === "all" || r.domain === dom) && matchesVerdictFilter(ver, r.verdict) && (!needle || r.name.toLowerCase().includes(needle)));
+    const f = rows.filter((r) => (dom === "all" || r.domain === dom) && matchesVerdictFilter(ver, r.verdict) && matchesAgentFilter(runs, r.agentVerdict) && (!needle || r.name.toLowerCase().includes(needle)));
     const cmp = (a: ScoreRow, b: ScoreRow) => {
       let c = 0;
       if (sortKey === "severity") c = verdictSeverity(a.verdict) - verdictSeverity(b.verdict) || a.lift - b.lift;
+      else if (sortKey === "agent") c = agentVerdictSeverity(a.agentVerdict) - agentVerdictSeverity(b.agentVerdict) || (a.agentPass ?? 0) - (b.agentPass ?? 0);
       else if (sortKey === "name" || sortKey === "domain") c = a[sortKey].localeCompare(b[sortKey]);
       else c = a[sortKey] - b[sortKey];
       return (c || a.skill.localeCompare(b.skill)) * (asc ? 1 : -1);
     };
     return [...f].sort(cmp);
-  }, [rows, dom, ver, q, sortKey, asc]);
+  }, [rows, dom, ver, runs, q, sortKey, asc]);
 
   const onSort = (k: SortKey) => { if (k === sortKey) setAsc(!asc); else { setSortKey(k); setAsc(true); } };
   const close = useCallback(() => setOpenId(null), []);
@@ -77,6 +84,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
         <input className="input" type="search" placeholder="Search skills" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search skills" />
         <DomainFilter id="sc-domain" domains={domains} value={dom} onChange={setDom} />
         <VerdictFilterControl id="sc-verdict" value={ver} onChange={setVer} />
+        <ChoiceFilter id="sc-runs" label="Runs" value={runs} onChange={(v) => setRuns(v)} options={AGENT_FILTERS.filter((f) => f.key !== "all")} />
         <span className="toolbar-count">{sorted.length} of {rows.length} skills · worst first</span>
       </div>
 
@@ -99,6 +107,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
                 <td><span className="cell-name">{r.name}</span></td>
                 <td><span className="domain-tag">{r.domain}</span></td>
                 <td><VerdictBadge v={r.verdict} /></td>
+                <td><AgentBadge v={r.agentVerdict} /></td>
                 <td className="num"><Trig n={r.triggerAcc} /></td>
                 <td className={`num col-wide ${r.fpRate > 0 ? "num-neg" : ""}`}>{r.fpRate.toFixed(2)}</td>
                 <td className="num col-wide">{r.without.toFixed(2)}</td>
@@ -106,7 +115,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
                 <td className="num"><Lift n={r.lift} /></td>
               </tr>
             ))}
-            {sorted.length === 0 && <tr><td colSpan={8} className="none">No skills match.</td></tr>}
+            {sorted.length === 0 && <tr><td colSpan={COLS.length} className="none">No skills match.</td></tr>}
           </tbody>
         </table>
 
@@ -121,6 +130,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
                 <span>{r.domain}</span>
                 <span>Lift <b><Lift n={r.lift} /></b></span>
                 <span>Trigger <b><Trig n={r.triggerAcc} /></b></span>
+                <span>Runs <AgentBadge v={r.agentVerdict} small /></span>
               </div>
             </button>
           ))}
@@ -144,7 +154,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
             )}
           </>
         )}>
-        {openRow && <DrawerBody r={openRow} d={drill[openRow.skill] ?? { misroutes: [], failed: [], finding: null, cases: 0 }} />}
+        {openRow && <DrawerBody r={openRow} d={drill[openRow.skill] ?? EMPTY_DRILL} />}
       </Drawer>
     </div>
   );
@@ -172,6 +182,7 @@ function DrawerBody({ r, d }: { r: ScoreRow; d: ScorecardDrill }) {
         {stat("Without", r.without.toFixed(2), COL_TIPS.without)}
         {stat("With", r.with.toFixed(2), COL_TIPS.with)}
         {stat("Cases", d.cases, "Eval cases for this skill")}
+        {stat("Runs", <AgentBadge v={r.agentVerdict} small />, AGENT_COL_TIP)}
       </div>
 
       <section>
@@ -206,6 +217,12 @@ function DrawerBody({ r, d }: { r: ScoreRow; d: ScorecardDrill }) {
             ))}
           </div>
         )}
+      </section>
+
+      <section>
+        <h3 className="h3">Agent run <span className="muted font-normal">({d.agentCases.length} {d.agentCases.length === 1 ? "case" : "cases"})</span></h3>
+        <p className="caption mt-1">{AGENT_COL_TIP}. Open a case for each check and its evidence.</p>
+        <AgentCases cases={d.agentCases} emptyText="Not wired yet — no agent cases ran for this skill." />
       </section>
     </>
   );
