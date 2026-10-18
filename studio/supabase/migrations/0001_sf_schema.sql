@@ -328,105 +328,97 @@ alter table public.sf_runs           enable row level security;
 alter table public.sf_connections    enable row level security;
 alter table public.sf_audit_events   enable row level security;
 
--- drop + create keeps this file re-runnable
-do $$
-declare p record;
-begin
-  for p in select policyname, tablename from pg_policies where schemaname = 'public' and tablename like 'sf\_%' loop
-    execute format('drop policy if exists %I on public.%I', p.policyname, p.tablename);
-  end loop;
-end $$;
 
 -- workspaces: members read; creation happens in sf_create_workspace; admins rename
-create policy sf_workspaces_select on public.sf_workspaces for select to authenticated using (public.sf_is_member(id));
-create policy sf_workspaces_update on public.sf_workspaces for update to authenticated
-  using (public.sf_has_role(id, array['admin'])) with check (public.sf_has_role(id, array['admin']));
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_workspaces' and policyname='sf_workspaces_select') then execute $p$ create policy sf_workspaces_select on public.sf_workspaces for select to authenticated using (public.sf_is_member(id)) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_workspaces' and policyname='sf_workspaces_update') then execute $p$ create policy sf_workspaces_update on public.sf_workspaces for update to authenticated
+  using (public.sf_has_role(id, array['admin'])) with check (public.sf_has_role(id, array['admin'])) $p$; end if; end $$;
 
 -- memberships: members see their workspace's roster; admins manage it
-create policy sf_memberships_select on public.sf_memberships for select to authenticated using (public.sf_is_member(workspace_id));
-create policy sf_memberships_insert on public.sf_memberships for insert to authenticated with check (public.sf_has_role(workspace_id, array['admin']));
-create policy sf_memberships_update on public.sf_memberships for update to authenticated
-  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin']));
-create policy sf_memberships_delete on public.sf_memberships for delete to authenticated
-  using (public.sf_has_role(workspace_id, array['admin']) and user_id <> auth.uid());
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_memberships' and policyname='sf_memberships_select') then execute $p$ create policy sf_memberships_select on public.sf_memberships for select to authenticated using (public.sf_is_member(workspace_id)) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_memberships' and policyname='sf_memberships_insert') then execute $p$ create policy sf_memberships_insert on public.sf_memberships for insert to authenticated with check (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_memberships' and policyname='sf_memberships_update') then execute $p$ create policy sf_memberships_update on public.sf_memberships for update to authenticated
+  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_memberships' and policyname='sf_memberships_delete') then execute $p$ create policy sf_memberships_delete on public.sf_memberships for delete to authenticated
+  using (public.sf_has_role(workspace_id, array['admin']) and user_id <> auth.uid()) $p$; end if; end $$;
 
 -- policies: members read; admins write
-create policy sf_policies_select on public.sf_policies for select to authenticated using (public.sf_is_member(workspace_id));
-create policy sf_policies_insert on public.sf_policies for insert to authenticated with check (public.sf_has_role(workspace_id, array['admin']));
-create policy sf_policies_update on public.sf_policies for update to authenticated
-  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin']));
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_policies' and policyname='sf_policies_select') then execute $p$ create policy sf_policies_select on public.sf_policies for select to authenticated using (public.sf_is_member(workspace_id)) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_policies' and policyname='sf_policies_insert') then execute $p$ create policy sf_policies_insert on public.sf_policies for insert to authenticated with check (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_policies' and policyname='sf_policies_update') then execute $p$ create policy sf_policies_update on public.sf_policies for update to authenticated
+  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
 
 -- skills: members read; authors/admins create and edit; admins delete
-create policy sf_skills_select on public.sf_skills for select to authenticated using (public.sf_is_member(workspace_id));
-create policy sf_skills_insert on public.sf_skills for insert to authenticated
-  with check (public.sf_has_role(workspace_id, array['author','admin']) and owner_id = auth.uid());
-create policy sf_skills_update on public.sf_skills for update to authenticated
-  using (public.sf_has_role(workspace_id, array['author','admin'])) with check (public.sf_has_role(workspace_id, array['author','admin']));
-create policy sf_skills_delete on public.sf_skills for delete to authenticated using (public.sf_has_role(workspace_id, array['admin']));
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skills' and policyname='sf_skills_select') then execute $p$ create policy sf_skills_select on public.sf_skills for select to authenticated using (public.sf_is_member(workspace_id)) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skills' and policyname='sf_skills_insert') then execute $p$ create policy sf_skills_insert on public.sf_skills for insert to authenticated
+  with check (public.sf_has_role(workspace_id, array['author','admin']) and owner_id = auth.uid()) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skills' and policyname='sf_skills_update') then execute $p$ create policy sf_skills_update on public.sf_skills for update to authenticated
+  using (public.sf_has_role(workspace_id, array['author','admin'])) with check (public.sf_has_role(workspace_id, array['author','admin'])) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skills' and policyname='sf_skills_delete') then execute $p$ create policy sf_skills_delete on public.sf_skills for delete to authenticated using (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
 
 -- versions: members read; authors/admins create drafts and edit (trigger enforces immutability)
-create policy sf_versions_select on public.sf_skill_versions for select to authenticated
-  using (exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_is_member(s.workspace_id)));
-create policy sf_versions_insert on public.sf_skill_versions for insert to authenticated
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skill_versions' and policyname='sf_versions_select') then execute $p$ create policy sf_versions_select on public.sf_skill_versions for select to authenticated
+  using (exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_is_member(s.workspace_id))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skill_versions' and policyname='sf_versions_insert') then execute $p$ create policy sf_versions_insert on public.sf_skill_versions for insert to authenticated
   with check (status = 'draft' and created_by = auth.uid()
-              and exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin'])));
-create policy sf_versions_update on public.sf_skill_versions for update to authenticated
+              and exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin']))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skill_versions' and policyname='sf_versions_update') then execute $p$ create policy sf_versions_update on public.sf_skill_versions for update to authenticated
   using (exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin'])))
-  with check (exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin'])));
-create policy sf_versions_delete on public.sf_skill_versions for delete to authenticated
-  using (status = 'draft' and exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin'])));
+  with check (exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin']))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_skill_versions' and policyname='sf_versions_delete') then execute $p$ create policy sf_versions_delete on public.sf_skill_versions for delete to authenticated
+  using (status = 'draft' and exists (select 1 from public.sf_skills s where s.id = skill_id and public.sf_has_role(s.workspace_id, array['author','admin']))) $p$; end if; end $$;
 
 -- files / eval cases: members read; authors/admins write
-create policy sf_files_select on public.sf_files for select to authenticated
-  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id)));
-create policy sf_files_write on public.sf_files for all to authenticated
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_files' and policyname='sf_files_select') then execute $p$ create policy sf_files_select on public.sf_files for select to authenticated
+  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_files' and policyname='sf_files_write') then execute $p$ create policy sf_files_write on public.sf_files for all to authenticated
   using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','admin'])))
-  with check (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','admin'])));
+  with check (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','admin']))) $p$; end if; end $$;
 
-create policy sf_eval_cases_select on public.sf_eval_cases for select to authenticated
-  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id)));
-create policy sf_eval_cases_write on public.sf_eval_cases for all to authenticated
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_eval_cases' and policyname='sf_eval_cases_select') then execute $p$ create policy sf_eval_cases_select on public.sf_eval_cases for select to authenticated
+  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_eval_cases' and policyname='sf_eval_cases_write') then execute $p$ create policy sf_eval_cases_write on public.sf_eval_cases for all to authenticated
   using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','admin'])))
-  with check (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','admin'])));
+  with check (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','admin']))) $p$; end if; end $$;
 
 -- eval runs: members read; authors/reviewers/admins start; the starter records progress
-create policy sf_eval_runs_select on public.sf_eval_runs for select to authenticated
-  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id)));
-create policy sf_eval_runs_insert on public.sf_eval_runs for insert to authenticated
-  with check (created_by = auth.uid() and exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','reviewer','admin'])));
-create policy sf_eval_runs_update on public.sf_eval_runs for update to authenticated
-  using (created_by = auth.uid()) with check (created_by = auth.uid());
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_eval_runs' and policyname='sf_eval_runs_select') then execute $p$ create policy sf_eval_runs_select on public.sf_eval_runs for select to authenticated
+  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_eval_runs' and policyname='sf_eval_runs_insert') then execute $p$ create policy sf_eval_runs_insert on public.sf_eval_runs for insert to authenticated
+  with check (created_by = auth.uid() and exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_has_role(s.workspace_id, array['author','reviewer','admin']))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_eval_runs' and policyname='sf_eval_runs_update') then execute $p$ create policy sf_eval_runs_update on public.sf_eval_runs for update to authenticated
+  using (created_by = auth.uid()) with check (created_by = auth.uid()) $p$; end if; end $$;
 
 -- approvals: members read; reviewers/admins decide on versions that are in review; append-only
-create policy sf_approvals_select on public.sf_approvals for select to authenticated
-  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id)));
-create policy sf_approvals_insert on public.sf_approvals for insert to authenticated
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_approvals' and policyname='sf_approvals_select') then execute $p$ create policy sf_approvals_select on public.sf_approvals for select to authenticated
+  using (exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id where v.id = version_id and public.sf_is_member(s.workspace_id))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_approvals' and policyname='sf_approvals_insert') then execute $p$ create policy sf_approvals_insert on public.sf_approvals for insert to authenticated
   with check (reviewer_id = auth.uid()
               and exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id
                           where v.id = sf_approvals.version_id and v.status = 'in_review' and v.manifest_hash = sf_approvals.manifest_hash
-                            and public.sf_has_role(s.workspace_id, array['reviewer','admin'])));
+                            and public.sf_has_role(s.workspace_id, array['reviewer','admin']))) $p$; end if; end $$;
 
 -- api keys: admins only (the hash is stored; the key itself is shown once at creation)
-create policy sf_api_keys_all on public.sf_api_keys for all to authenticated
-  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin']));
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_api_keys' and policyname='sf_api_keys_all') then execute $p$ create policy sf_api_keys_all on public.sf_api_keys for all to authenticated
+  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
 
 -- runs: members read their workspace's runs; any member may run a published version, authors/reviewers/admins any version
-create policy sf_runs_select on public.sf_runs for select to authenticated using (public.sf_is_member(workspace_id));
-create policy sf_runs_insert on public.sf_runs for insert to authenticated
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_runs' and policyname='sf_runs_select') then execute $p$ create policy sf_runs_select on public.sf_runs for select to authenticated using (public.sf_is_member(workspace_id)) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_runs' and policyname='sf_runs_insert') then execute $p$ create policy sf_runs_insert on public.sf_runs for insert to authenticated
   with check (invoked_by = auth.uid() and public.sf_is_member(workspace_id)
               and exists (select 1 from public.sf_skill_versions v join public.sf_skills s on s.id = v.skill_id
                           where v.id = version_id and s.workspace_id = sf_runs.workspace_id
-                            and (v.status = 'published' or public.sf_has_role(s.workspace_id, array['author','reviewer','admin']))));
-create policy sf_runs_update on public.sf_runs for update to authenticated
-  using (invoked_by = auth.uid()) with check (invoked_by = auth.uid());
+                            and (v.status = 'published' or public.sf_has_role(s.workspace_id, array['author','reviewer','admin'])))) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_runs' and policyname='sf_runs_update') then execute $p$ create policy sf_runs_update on public.sf_runs for update to authenticated
+  using (invoked_by = auth.uid()) with check (invoked_by = auth.uid()) $p$; end if; end $$;
 
 -- connections: members read; admins manage
-create policy sf_connections_select on public.sf_connections for select to authenticated using (public.sf_is_member(workspace_id));
-create policy sf_connections_write on public.sf_connections for all to authenticated
-  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin']));
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_connections' and policyname='sf_connections_select') then execute $p$ create policy sf_connections_select on public.sf_connections for select to authenticated using (public.sf_is_member(workspace_id)) $p$; end if; end $$;
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_connections' and policyname='sf_connections_write') then execute $p$ create policy sf_connections_write on public.sf_connections for all to authenticated
+  using (public.sf_has_role(workspace_id, array['admin'])) with check (public.sf_has_role(workspace_id, array['admin'])) $p$; end if; end $$;
 
 -- audit: members read; writes go through sf_audit()
-create policy sf_audit_select on public.sf_audit_events for select to authenticated using (public.sf_is_member(workspace_id));
+do $$ begin if not exists (select 1 from pg_policies where schemaname='public' and tablename='sf_audit_events' and policyname='sf_audit_select') then execute $p$ create policy sf_audit_select on public.sf_audit_events for select to authenticated using (public.sf_is_member(workspace_id)) $p$; end if; end $$;
 
 -- ───────────────────────────── grants ─────────────────────────────
 -- only the sf_ objects: nothing else in the shared project is touched

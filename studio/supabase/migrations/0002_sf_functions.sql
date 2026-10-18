@@ -70,8 +70,7 @@ $$;
 grant execute on function public.sf_eval_set_hash(uuid) to authenticated;
 
 -- ───────────────────────────── release state ─────────────────────────────
-drop view if exists public.sf_version_release_state;
-create view public.sf_version_release_state with (security_invoker = true) as
+create or replace view public.sf_version_release_state with (security_invoker = true) as
 with latest_eval as (
   select distinct on (version_id) version_id, pass_rate, eval_set_hash, finished_at, status, provider, model, id as eval_run_id
   from public.sf_eval_runs where status = 'finished' order by version_id, finished_at desc nulls last
