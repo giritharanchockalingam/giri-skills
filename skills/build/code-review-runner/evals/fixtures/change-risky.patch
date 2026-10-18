@@ -1,0 +1,37 @@
+# fictional fixture — invented diff for the code-review-runner evals; every key below is fake
+diff --git a/app/reports/export.py b/app/reports/export.py
+new file mode 100644
+--- /dev/null
++++ b/app/reports/export.py
+@@ -0,0 +1,22 @@
++import requests
++
++AWS_KEY = "AKIAFAKEFAKEFAKE1234"
++api_token = "q8Zt3VxP0mLr7KsW2yHnB5cJ"
++
++
++def fetch_report(db, customer_id, region):
++    sql = "SELECT * FROM invoices WHERE customer_id = '" + customer_id + "'"
++    rows = db.execute(sql)
++    try:
++        resp = requests.get("https://reports.example.test/" + region, verify=False)
++    except Exception:
++        pass
++    print("rows", len(rows))
++    return rows
++
++
++def compute(expr):
++    # FIXME this is temporary
++    return eval(expr)
++
++
+diff --git a/app/settings.py b/app/settings.py
+index 5555555..6666666 100644
+--- a/app/settings.py
++++ b/app/settings.py
+@@ -3,3 +3,4 @@ DEBUG = False
+ ALLOWED_HOSTS = ["reports.example.test"]
+ # TODO(priya): move to env
+ TIMEOUT_S = 30
++password = "${DB_PASSWORD}"

@@ -1,0 +1,6 @@
+rule_id,pattern,severity,message,file_glob
+# Rows starting with # are ignored. severity: blocking | warning | info | off,,,,
+# Custom rule: a Python regex matched against each added line; file_glob limits it (fnmatch),,,,
+TEAM-EXAMPLE,\bnoqa\b,info,Explain every noqa in the PR description,*.py
+# Override a built-in rule: its id with an empty pattern and the new severity,,,,
+CR-NO-TESTS,,warning,,

@@ -1,0 +1,31 @@
+# fictional fixture — invented diff for the code-review-runner evals; not from a real repository
+diff --git a/src/cart/coupon.ts b/src/cart/coupon.ts
+index 1111111..2222222 100644
+--- a/src/cart/coupon.ts
++++ b/src/cart/coupon.ts
+@@ -10,6 +10,12 @@ import { findCoupon } from "./store";
+ export function applyCoupon(cart: Cart, code: string): Cart {
+   const coupon = findCoupon(code);
+-  const off = cart.subtotal * coupon.percent / 100;
++  if (!coupon) {
++    return cart;
++  }
++  console.log("coupon applied", code);
++  // TODO: support stacking coupons
++  const off = (cart.subtotal * coupon.percent) / 100;
+   return { ...cart, discount: off };
+ }
+diff --git a/src/cart/__tests__/coupon.test.ts b/src/cart/__tests__/coupon.test.ts
+index 3333333..4444444 100644
+--- a/src/cart/__tests__/coupon.test.ts
++++ b/src/cart/__tests__/coupon.test.ts
+@@ -20,3 +20,8 @@ describe("applyCoupon", () => {
+   it("applies a percent coupon", () => {
+     expect(applyCoupon(cart, "TEN").discount).toBe(10);
+   });
++
++  it("ignores an unknown coupon", () => {
++    console.log("debug in a test file is not flagged");
++    expect(applyCoupon(cart, "NOPE")).toEqual(cart);
++  });
+ });

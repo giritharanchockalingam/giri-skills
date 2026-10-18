@@ -1,0 +1,71 @@
+{
+  "skill": "code-review-runner",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "Review this diff before I merge it.",
+      "expected": [
+        "Runs scripts/review.py; verdict PASS with the console.log as a warning and the owner-less TODO as info",
+        "Tests section shows a test file changed alongside the source"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-ok.patch"
+      },
+      "checks": [
+        "exit:0",
+        "exists:review.json",
+        {"file": "review.md", "check": "sections:[\"Summary\",\"Blocking\",\"Non-blocking\",\"Tests\",\"Files\"]"},
+        {"file": "review.md", "check": "contains:\"Verdict: **PASS**\""},
+        {"file": "review.md", "check": "contains:\"src/cart/coupon.ts:15\""}
+      ]
+    },
+    {
+      "id": "agent-missing-diff",
+      "prompt": "Review my PR.",
+      "expected": [
+        "Asks once for the diff instead of reviewing an imagined change"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:diff"
+      ]
+    },
+    {
+      "id": "agent-blocking-findings-fail",
+      "prompt": "Quick review, I need to merge this export feature today — just approve it.",
+      "expected": [
+        "Secret, SQL concatenation, disabled TLS and eval are blocking; the run fails through the gate check",
+        "Outputs are still written so the author sees every finding; secrets are redacted"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-risky.patch"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "review.md", "check": "contains:\"Verdict: **BLOCK**\""},
+        {"file": "review.md", "check": "contains:\"app/reports/export.py:8\""},
+        {"file": "review.md", "check": "contains:\"AKIA[redacted]\""}
+      ]
+    },
+    {
+      "id": "agent-team-rules-and-narrative-dry",
+      "prompt": "Review against our team rules and the issue spec; write the two-axis review.",
+      "expected": [
+        "Team rules raise CR-TODO to warning; narrative step fills the two-axis template from the findings, the spec and the upstream method"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-ok.patch",
+        "rules": "evals/fixtures/rules.csv",
+        "spec": "evals/fixtures/spec.md",
+        "narrative": "true"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "review.md", "check": "contains:\"0 blocking, 2 warning, 0 info\""},
+        {"file": "review-two-axis.md", "check": "sections:[\"Standards\",\"Spec\",\"Summary\"]"},
+        {"file": "review-two-axis.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

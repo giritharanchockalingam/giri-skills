@@ -1,0 +1,15 @@
+{
+  "_note": "Template: replace the example flow with your own. Actions: goto(value), click(selector), fill(selector, value), expect_text(value[, selector]), expect_url(value). Selectors: role=button[name=\"…\"], text=…, label=…, placeholder=…, testid=…; plain CSS is allowed but warned.",
+  "base_url": "${BASE_URL}",
+  "flows": [
+    {
+      "name": "<flow name>",
+      "steps": [
+        {"action": "goto", "value": "/<path>"},
+        {"action": "fill", "selector": "label=<field label>", "value": "<value>"},
+        {"action": "click", "selector": "role=button[name=\"<button text>\"]"},
+        {"action": "expect_text", "value": "<text that proves success>"}
+      ]
+    }
+  ]
+}

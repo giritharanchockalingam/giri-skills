@@ -1,0 +1,74 @@
+{
+  "skill": "domain-modeling-runner",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "Model our course-enrollment domain from these entity, relationship and glossary files; give me the ER diagram and glossary.",
+      "expected": [
+        "Runs scripts/model.py; Mermaid erDiagram with 5 entities and 3 relationships; Enrollment is the N:M join",
+        "Glossary keeps the supplied definitions; Offering and Term are marked for the domain expert, not invented"
+      ],
+      "inputs": {
+        "entities": "evals/fixtures/entities.csv",
+        "relationships": "evals/fixtures/relationships.csv",
+        "glossary": "evals/fixtures/glossary.csv",
+        "title": "Course enrollment"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "model.md", "check": "mermaid_parses"},
+        {"file": "model.md", "check": "sections:[\"Diagram\",\"Entities\",\"Relationships\",\"Glossary\",\"Open questions\"]"},
+        {"file": "model.md", "check": "contains:\"Student 0+ to 0+ Course\""},
+        {"file": "model.md", "check": "contains:\"[TO BE BASELINED — owner: Domain expert]\""}
+      ]
+    },
+    {
+      "id": "agent-missing-relationships",
+      "prompt": "Draw the ER diagram for these entities.",
+      "expected": [
+        "Asks once for the relationships file instead of guessing how the entities relate"
+      ],
+      "inputs": {
+        "entities": "evals/fixtures/entities.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:relationships"
+      ]
+    },
+    {
+      "id": "agent-invalid-model-fails",
+      "prompt": "Validate this model: students enrol in courses, instructors teach courses, terms have many offerings.",
+      "expected": [
+        "N:M without join, undefined Instructor and cardinality 'many' are errors; the run fails; outputs list them under Open questions",
+        "Instructor is not added to the model"
+      ],
+      "inputs": {
+        "entities": "evals/fixtures/entities.csv",
+        "relationships": "evals/fixtures/relationships-invalid.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "model.md", "check": "contains:\"entity 'Instructor' is not defined\""},
+        {"file": "model.md", "check": "contains:\"N:M needs a join note\""}
+      ]
+    },
+    {
+      "id": "agent-narrative-dry",
+      "prompt": "Model the domain and challenge our terms; any ADRs we should write?",
+      "expected": [
+        "Review step fills the modeling-review template from the model and the upstream method and formats"
+      ],
+      "inputs": {
+        "entities": "evals/fixtures/entities.csv",
+        "relationships": "evals/fixtures/relationships.csv",
+        "narrative": "true"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "modeling-review.md", "check": "sections:[\"Challenged terms\",\"Edge-case scenarios\",\"ADR candidates\"]"},
+        {"file": "modeling-review.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

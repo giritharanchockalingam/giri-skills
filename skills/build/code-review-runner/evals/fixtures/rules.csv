@@ -1,0 +1,5 @@
+rule_id,pattern,severity,message,file_glob
+# fictional fixture — example team rules for the code-review-runner evals,,,,
+TEAM-NO-ANY,:\s*any\b,warning,Avoid the any type in TypeScript,*.ts
+CR-TODO,,warning,,
+CR-NO-TESTS,,blocking,,

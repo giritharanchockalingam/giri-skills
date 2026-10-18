@@ -1,0 +1,19 @@
+{
+  "_note": "fictional fixture — deliberately invalid flows for the webapp-testing-runner evals",
+  "base_url": "${BASE_URL}",
+  "flows": [
+    {
+      "name": "Checkout",
+      "steps": [
+        {"action": "goto", "value": "/cart"},
+        {"action": "hover", "selector": "text=Pay"},
+        {"action": "fill", "selector": "label=Card number"},
+        {"action": "click"}
+      ]
+    },
+    {
+      "name": "Checkout",
+      "steps": []
+    }
+  ]
+}

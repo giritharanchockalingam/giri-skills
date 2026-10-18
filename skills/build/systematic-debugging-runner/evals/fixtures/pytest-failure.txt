@@ -1,0 +1,21 @@
+# fictional fixture — invented test output for the systematic-debugging-runner evals; not from a real system
+============================= test session starts ==============================
+collected 3 items
+
+tests/test_invoice.py ..F                                                [100%]
+
+=================================== FAILURES ===================================
+_____________________________ test_total_with_tax ______________________________
+Traceback (most recent call last):
+  File "/home/dev/acme-billing/tests/test_invoice.py", line 22, in test_total_with_tax
+    assert invoice_total(lines, region="EU") == 121.0
+  File "/home/dev/acme-billing/billing/invoice.py", line 41, in invoice_total
+    rate = tax_rate_for(region)
+  File "/home/dev/acme-billing/billing/tax.py", line 17, in tax_rate_for
+    return RATES[region.upper()]["standard"]
+  File "/home/dev/acme-billing/.venv/lib/python3.12/site-packages/frozendict/core.py", line 88, in __getitem__
+    return dict.__getitem__(self, key)
+KeyError: 'EU'
+=========================== short test summary info ============================
+FAILED tests/test_invoice.py::test_total_with_tax - KeyError: 'EU'
+========================= 1 failed, 2 passed in 0.12s ==========================
