@@ -4,11 +4,25 @@ description: Use when the user asks to rework, redline, sharpen, or review an ex
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: deck, type: file, required: true, from: "deck.pptx (needs python-pptx, see requirements-optional.txt) or a deck.md/.txt export with '--- slide N ---' separators (layout: evals/fixtures/deck.md)"}
+    run:
+      - {step: ledger, kind: script, cmd: "python3 -I scripts/redline.py {deck} --ledger {out}/ledger.csv --unsourced {out}/unsourced-numbers.csv"}
+      - {step: redline, kind: llm, template: assets/redline-template.md, context: ["{out}/ledger.csv", "{out}/unsourced-numbers.csv", "assets/redline-rubric.md", "assets/storyline-checklist.md"], out: "{out}/redline.md"}
+      - {step: apply, kind: script, cmd: "python3 -I scripts/redline.py --apply {out}/redline.md --ledger {out}/ledger.csv"}
+    outputs:
+      - {path: "{out}/ledger.csv", checks: [exists, csv:[slide,title,text,verdict,reason,numbers_found], csv_rows:slide~^[0-9]+$, csv_rows:verdict!empty]}
+      - {path: "{out}/unsourced-numbers.csv", checks: [exists, csv:[slide,number,context]]}
+      - {path: "{out}/redline.md", checks: [exists, sections:["Redline table","Rewritten slides","Unsourced numbers"], no_unowned_tbd, numbers_trace_to:"{out}/ledger.csv"]}
 ---
 
 # exec-deck-redline
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/exec-deck-redline --input <name>=<value> … --out <dir>` (see `--explain presales/exec-deck-redline`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Redline this steering-committee deck."

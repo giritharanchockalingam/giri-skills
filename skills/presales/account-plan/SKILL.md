@@ -4,11 +4,26 @@ description: Use when the user asks to build or refresh a quarterly or annual ac
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: stakeholders, type: csv, required: true, from: "stakeholders.csv: name, role, stance -2..2, influence 1-5, last_contact, departure_risk (layout: evals/fixtures/stakeholders.csv)"}
+      - {name: pipeline, type: csv, required: true, from: "pipeline.csv: opportunity, stage, value, close_date, owner, next_step (CRM export; layout: evals/fixtures/pipeline.csv)"}
+      - {name: services, type: csv, required: true, from: "services.csv: service, status_at_account in active|proposed|none (layout: evals/fixtures/services.csv)"}
+      - {name: client, type: string, required: false, default: "<Client>"}
+      - {name: as_of, type: string, required: false, from: "yyyy-mm-dd; enables stale-contact (90 days) detection"}
+    run:
+      - {step: plan, kind: script, cmd: "python3 -I scripts/account_plan.py {stakeholders} {pipeline} {services} --out {out}/account-plan.md --plays {out}/plays.csv --client {client} [--as-of {as_of}]"}
+    outputs:
+      - {path: "{out}/account-plan.md", checks: [exists, sections:["Stakeholder map","White-space matrix","Pipeline","90-day plays"]]}
+      - {path: "{out}/plays.csv", checks: [exists, csv:[play_id,play,addresses,owner,date,success_measure], csv_rows:owner!empty]}
 ---
 
 # account-plan
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/account-plan --input <name>=<value> … --out <dir>` (see `--explain presales/account-plan`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Build the Q<n> account plan for <client>."

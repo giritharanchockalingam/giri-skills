@@ -26,7 +26,7 @@ def ok(spec, path=None, **kw):
 
 
 def test_vocabulary_is_complete():
-    expected = {"exists", "json", "csv", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
+    expected = {"exists", "json", "csv", "csv_rows", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
                 "cites_source_ids", "mermaid_parses", "max_lines", "contains", "cmd", "exit", "needs_input"}
     assert co.VOCAB == expected
 
@@ -55,6 +55,40 @@ def test_csv(tmp_path):
     assert ok("csv:[id,stage]", p)
     r = co.run_check("csv:[id,missing]", str(p))
     assert not r["pass"] and "missing" in r["evidence"]
+
+
+def test_csv_rows_not_empty(tmp_path):
+    p = w(tmp_path, "d.csv", "id,acceptance\nD-01,Signed off\nD-02,[TO BE BASELINED — owner: ___]\n")
+    assert ok("csv_rows:acceptance!empty", p, mode="real")
+    gap = w(tmp_path, "g.csv", "id,acceptance\nD-01,Signed off\nD-02,\n")
+    r = co.run_check("csv_rows:acceptance!empty", str(gap), mode="real")
+    assert not r["pass"] and "1 of 2 rows empty" in r["evidence"] and "lines [3]" in r["evidence"]
+    assert not ok("csv_rows:acceptance!empty", gap, mode="dry")   # partially filled: still evaluated
+    r = co.run_check("csv_rows:nope!empty", str(p), mode="real")
+    assert not r["pass"] and "not in header" in r["evidence"]
+    assert not ok("csv_rows:acceptance!empty", w(tmp_path, "h.csv", "id,acceptance\n"), mode="real")
+
+
+def test_csv_rows_regex(tmp_path):
+    p = w(tmp_path, "s.csv", "slide,verdict\n1,[KEEP]\n2,[SHARPEN] + [TBD]\n")
+    assert ok(r"csv_rows:verdict~\[(KEEP|SHARPEN|CUT|ADD|TBD)\]", p, mode="real")
+    assert ok(r"csv_rows:slide~^\d+$", p, mode="real")
+    r = co.run_check(r"csv_rows:verdict~^\[KEEP\]$", str(p), mode="real")
+    assert not r["pass"] and "not matching" in r["evidence"]
+    assert not ok("csv_rows:verdict~[", p, mode="real")          # bad regex fails, never raises
+    assert not ok("csv_rows:verdict", p, mode="real")            # no predicate
+
+
+def test_csv_rows_dry_mode_skips_unfilled_column(tmp_path):
+    p = w(tmp_path, "l.csv", "slide,verdict\n1,\n2,\n")
+    r = co.run_check("csv_rows:verdict!empty", str(p), mode="dry")
+    assert r["pass"] and "skipped in dry mode" in r["evidence"]
+    assert not ok("csv_rows:verdict!empty", p, mode="real")
+
+
+def test_csv_rows_parse_spec_keeps_regex():
+    assert co.parse_spec("csv_rows:owner!empty") == ("csv_rows", "owner!empty")
+    assert co.parse_spec(r"csv_rows:when~^\d{4}-\d{2}") == ("csv_rows", r"when~^\d{4}-\d{2}")
 
 
 def test_yaml(tmp_path):

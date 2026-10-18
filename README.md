@@ -62,19 +62,19 @@ docs/          CATALOG.md (design rationale and sources)
 | career | `offer-evaluator` | compare.py |
 | career | `outreach-and-followup` | — |
 | career | `resume-tailor` | — |
-| presales | `account-plan` | — |
+| presales | `account-plan` | account_plan.py |
 | presales | `client-research-brief` | brief_skeleton.py |
-| presales | `competitive-positioning` | — |
-| presales | `discovery-interview` | — |
+| presales | `competitive-positioning` | battle_card.py |
+| presales | `discovery-interview` | build_pack.py, synthesize.py |
 | presales | `effort-estimator` | estimate.py |
-| presales | `exec-deck-redline` | — |
+| presales | `exec-deck-redline` | redline.py (optional python-pptx) |
 | presales | `integration-migration-assessor` | score_inventory.py |
-| presales | `orals-prep` | — |
-| presales | `proposal-writer` | — |
+| presales | `orals-prep` | orals.py |
+| presales | `proposal-writer` | assemble.py |
 | presales | `rfp-compliance-matrix` | extract_requirements.py |
-| presales | `solution-architecture-doc` | — |
-| presales | `sow-drafter` | — |
-| presales | `value-case-builder` | — |
+| presales | `solution-architecture-doc` | arch_doc.py |
+| presales | `sow-drafter` | sow_from_proposal.py |
+| presales | `value-case-builder` | value_model.py |
 
 ## Inputs you must supply (placeholders shipped as `*.example.*`)
 | File | Used by |
@@ -87,7 +87,7 @@ docs/          CATALOG.md (design rationale and sources)
 Real versions are git-ignored by default (see `.gitignore`); keep them local.
 
 ## Run a skill as an agent
-Skills at `metadata.version >= 0.2.0` declare inputs, run steps and checked outputs in `metadata.agent` (12 wired in phase 0; see `docs/PHASE0-REPORT.md`).
+Skills at `metadata.version >= 0.2.0` declare inputs, run steps and checked outputs in `metadata.agent` (12 wired in phase 0, all 13 presales skills after phases 1–2; see `docs/PHASE0-REPORT.md`).
 ```bash
 python3 scripts/run_skill.py --list                      # agent skills and their inputs
 python3 scripts/run_skill.py --explain presales/effort-estimator
@@ -96,6 +96,8 @@ cat ./runs/acme/run.json                                 # steps, checks, ok
 python3 scripts/behavioral_evals.py agent --provider dry  # run every agent eval case; scorecard gets Works/Partial/Broken
 ```
 A missing required input exits 2 with `needs_input.json`; `--assume name=value` proceeds with a labeled assumption. `--provider dry` fills `llm` steps with the unfilled template (CI); `anthropic`/`openai` read the key from the environment only.
+
+Every script is stdlib-only. One optional dependency exists: `exec-deck-redline` reads `.pptx` decks through python-pptx (`pip install -r requirements-optional.txt`); without it, export the deck to `deck.md` with `--- slide N ---` separators (the eval fixtures use that form, so tests and CI never need the package).
 
 ## Conventions
 - A skill is a routing layer: `SKILL.md` ≤ 300 lines; depth lives in `references/`.

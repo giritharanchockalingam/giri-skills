@@ -4,11 +4,23 @@ description: Use when the user asks to convert an approved proposal into a State
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: proposal, type: md, required: true, from: "approved proposal.md from proposal-writer (needs the Scope and deliverables table; assumptions register is carried over)"}
+    run:
+      - {step: sow, kind: script, cmd: "python3 -I scripts/sow_from_proposal.py {proposal} --template assets/sow-template.md --out {out}/SOW.md --deliverables {out}/deliverables.csv --assumptions-check {out}/assumptions-check.csv"}
+    outputs:
+      - {path: "{out}/SOW.md", checks: [exists, sections:["Scope","Deliverables and acceptance","Assumptions","RACI","Change control"]]}
+      - {path: "{out}/deliverables.csv", checks: [exists, csv:[id,deliverable,acceptance,phase,format], csv_rows:acceptance!empty]}
+      - {path: "{out}/assumptions-check.csv", checks: [exists, max_lines:1]}
 ---
 
 # sow-drafter
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/sow-drafter --input <name>=<value> … --out <dir>` (see `--explain presales/sow-drafter`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Turn the approved proposal into an SOW."

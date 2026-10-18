@@ -5,7 +5,11 @@ Check spec syntax (a string):
   exists                       file exists and is non-empty
   json                         file parses as JSON
   csv:[a,b]                    CSV header contains every listed column
-  yaml                         file is non-empty and parses with the repo's YAML subset
+  csv_rows:<col>!empty         every row has a non-empty <col>
+  csv_rows:<col>~<regex>       every row's <col> matches <regex> (re.search); the column must exist
+                               and the CSV must have >= 1 data row. Dry mode: a column that is
+                               blank in every row is an unfilled llm slot and is skipped
+  yaml                       file is non-empty and parses with the repo's YAML subset
   sections:[A,B]               a Markdown heading contains each listed text (case-insensitive)
   no_unowned_tbd               every `[TO BE BASELINED` marker names an owner (real mode);
                                dry mode only verifies the marker format `— owner:`
@@ -45,7 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import skillmeta  # noqa: E402
 
 VOCAB = {
-    "exists", "json", "csv", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
+    "exists", "json", "csv", "csv_rows", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
     "cites_source_ids", "mermaid_parses", "max_lines", "contains", "cmd", "exit", "needs_input",
 }
 RUN_LEVEL = {"exit", "needs_input"}
@@ -125,6 +129,41 @@ def _resolve(ref, cwd):
     return p
 
 
+def _csv_rows(spec, arg: str, text: str, mode: str) -> dict:
+    """csv_rows:<col>!empty | csv_rows:<col>~<regex> — a per-row predicate on one column."""
+    arg = arg.strip()
+    if arg.endswith("!empty"):
+        col, pred, pattern = arg[: -len("!empty")].strip(), "!empty", None
+    elif "~" in arg:
+        col, _, pattern = arg.partition("~")
+        col, pred = col.strip(), "~"
+        try:
+            rx = re.compile(pattern)
+        except re.error as e:
+            return _result(spec, False, f"bad regex {pattern!r}: {e}")
+    else:
+        return _result(spec, False, f"csv_rows needs '<col>!empty' or '<col>~<regex>', got {arg!r}")
+    if not col:
+        return _result(spec, False, "csv_rows: empty column name")
+    rows = list(csv.DictReader(io.StringIO(text)))
+    header = rows[0].keys() if rows else next(csv.reader(io.StringIO(text)), [])
+    if col not in header:
+        return _result(spec, False, f"column '{col}' not in header {list(header)}")
+    if not rows:
+        return _result(spec, False, "no data rows")
+    values = [(r.get(col) or "").strip() for r in rows]
+    if mode == "dry" and all(v == "" for v in values):
+        return _result(spec, True, f"skipped in dry mode: '{col}' unfilled in all {len(rows)} rows")
+    if pred == "!empty":
+        bad = [i + 2 for i, v in enumerate(values) if v == ""]
+        label = "empty"
+    else:
+        bad = [i + 2 for i, v in enumerate(values) if not rx.search(v)]
+        label = f"not matching {pattern!r}"
+    return _result(spec, not bad, f"{len(bad)} of {len(rows)} rows {label} in '{col}'"
+                   + (f" (lines {bad[:6]})" if bad else ""))
+
+
 # ------------------------------------------------------------------ checks
 
 def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=None, cwd=None) -> dict:
@@ -185,6 +224,8 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
         want = arg if isinstance(arg, list) else ([arg] if arg else [])
         missing = [c for c in want if c not in header]
         return _result(spec, not missing, f"missing columns {missing}" if missing else f"header has {want}")
+    if name == "csv_rows":
+        return _csv_rows(spec, str(arg or ""), text, mode)
     if name == "yaml":
         if not text.strip():
             return _result(spec, False, "empty file")

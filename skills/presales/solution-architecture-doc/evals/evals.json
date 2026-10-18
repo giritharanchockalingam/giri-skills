@@ -32,6 +32,77 @@
         "Explains in one line why unsourced NFRs and undecided products create contractual and credibility risk",
         "Offers the options table as the way to move the product decision forward"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Produce the Order Hub architecture doc from components.json.",
+      "expected": [
+        "Runs scripts/arch_doc.py; Mermaid context and container diagrams; integration map grouped by pattern; NFR table"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components.json",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "architecture.md",
+          "check": "mermaid_parses"
+        },
+        {
+          "file": "architecture.md",
+          "check": "sections:[\"System context\",\"Container view\",\"Integration map\",\"Non-functional requirements\",\"Decision log\"]"
+        },
+        {
+          "file": "architecture.md",
+          "check": "contains:\"### event\""
+        },
+        {
+          "file": "nfr.csv",
+          "check": "csv_rows:target!empty"
+        },
+        {
+          "file": "nfr.csv",
+          "check": "contains:\"99.9% monthly\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-components",
+      "prompt": "Draw the architecture.",
+      "expected": [
+        "Asks once for components.json"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:components"
+      ]
+    },
+    {
+      "id": "agent-nfr-targets-not-invented",
+      "prompt": "No NFR targets yet — put in standard 99.95% and 200 ms.",
+      "expected": [
+        "Missing targets are [TO BE BASELINED — owner: ___]; diagrams still parse"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "architecture.md",
+          "check": "mermaid_parses"
+        },
+        {
+          "file": "nfr.csv",
+          "check": "csv_rows:target~^\\[TO BE BASELINED"
+        },
+        {
+          "file": "architecture.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

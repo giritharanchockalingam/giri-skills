@@ -4,11 +4,25 @@ description: Use when the user asks to prepare for a pitch presentation, orals, 
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: proposal, type: md, required: true, from: "the submitted proposal.md (every number in the script must trace to it)"}
+      - {name: speakers, type: string, required: true, from: "comma list of presenters in speaking order"}
+      - {name: minutes, type: string, required: false, default: "60"}
+    run:
+      - {step: script, kind: script, cmd: "python3 -I scripts/orals.py {proposal} --minutes {minutes} --speakers {speakers} --question-bank references/question-bank-and-red-team.md --script {out}/orals-script.md --registry {out}/number-registry.csv --questions {out}/likely-questions.md"}
+    outputs:
+      - {path: "{out}/orals-script.md", checks: [exists, sections:["Timed script","Airtime check","Number sheet","Handoffs"], numbers_trace_to:"{out}/number-registry.csv"]}
+      - {path: "{out}/number-registry.csv", checks: [exists, csv:[number,section,context]]}
+      - {path: "{out}/likely-questions.md", checks: [exists]}
 ---
 
 # orals-prep
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/orals-prep --input <name>=<value> … --out <dir>` (see `--explain presales/orals-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "We are shortlisted; orals are Thursday — prepare us."

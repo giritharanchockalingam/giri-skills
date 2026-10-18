@@ -1,0 +1,5 @@
+benefit_id,name,driver,unit_value,units_per_year,ramp_pct_y1,ramp_pct_y2,ramp_pct_y3,source
+B-01,Fewer split shipments,Margin leakage on online orders,18,24000,25,75,100,VP Digital dashboard export 2026-08 p.3
+B-02,Integration run-cost reduction,Platform licence and run team,310000,1,50,100,100,CIO licence schedule 2026-07
+B-03,Faster channel onboarding,Time to market for marketplaces,42000,3,0,50,100,VP Apps statement 2026-09-02
+B-04,Reduced peak overtime,Store operations cost,,,,,,

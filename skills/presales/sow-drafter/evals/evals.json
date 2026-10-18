@@ -32,6 +32,69 @@
         "Total amount shown as [TO BE BASELINED — owner: ___] with a note that the figure must come from the estimate/proposal pricing",
         "Offers a deemed-acceptance clause as the flexibility mechanism instead"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Turn the approved Northwind proposal into an SOW.",
+      "expected": [
+        "Runs scripts/sow_from_proposal.py; deliverables carry acceptance criteria; every proposal assumption appears in the SOW"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:SOW.md",
+        {
+          "file": "SOW.md",
+          "check": "sections:[\"Scope\",\"Deliverables and acceptance\",\"Assumptions\",\"RACI\",\"Change control\"]"
+        },
+        {
+          "file": "SOW.md",
+          "check": "contains:\"118 interfaces in scope per inventory export\""
+        },
+        {
+          "file": "deliverables.csv",
+          "check": "csv_rows:acceptance!empty"
+        },
+        {
+          "file": "assumptions-check.csv",
+          "check": "max_lines:1"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-proposal",
+      "prompt": "Draft the SOW.",
+      "expected": [
+        "Asks once for the proposal"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:proposal"
+      ]
+    },
+    {
+      "id": "agent-missing-acceptance-not-invented",
+      "prompt": "The proposal has no acceptance criteria — write reasonable ones.",
+      "expected": [
+        "Acceptance criteria are [TO BE BASELINED — owner: ___], never invented"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal-thin.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "deliverables.csv",
+          "check": "csv_rows:acceptance~^(\\[TO BE BASELINED|\\S)"
+        },
+        {
+          "file": "SOW.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

@@ -16,7 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# skill key -> script path relative to the repo root (15 scripts total).
+# skill key -> script path relative to the repo root (25 scripts total).
 SCRIPTS = {
     "score_matrix": "skills/presales/rfp-compliance-matrix/scripts/score_matrix.py",
     "tco": "skills/presales/integration-migration-assessor/scripts/tco.py",
@@ -33,6 +33,17 @@ SCRIPTS = {
     "score": "skills/career/jd-fit-scorer/scripts/score.py",
     "tracker": "skills/career/application-tracker/scripts/tracker.py",
     "compare": "skills/career/offer-evaluator/scripts/compare.py",
+    # phases 1-2: presales skills turned into agents
+    "value_model": "skills/presales/value-case-builder/scripts/value_model.py",
+    "assemble": "skills/presales/proposal-writer/scripts/assemble.py",
+    "sow_from_proposal": "skills/presales/sow-drafter/scripts/sow_from_proposal.py",
+    "build_pack": "skills/presales/discovery-interview/scripts/build_pack.py",
+    "synthesize": "skills/presales/discovery-interview/scripts/synthesize.py",
+    "arch_doc": "skills/presales/solution-architecture-doc/scripts/arch_doc.py",
+    "redline": "skills/presales/exec-deck-redline/scripts/redline.py",
+    "battle_card": "skills/presales/competitive-positioning/scripts/battle_card.py",
+    "account_plan": "skills/presales/account-plan/scripts/account_plan.py",
+    "orals": "skills/presales/orals-prep/scripts/orals.py",
 }
 
 

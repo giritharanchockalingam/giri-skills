@@ -4,11 +4,27 @@ description: Use when the user asks to build, structure, or review a business ca
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: benefits, type: csv, required: true, from: "benefits.csv: benefit_id, name, driver, unit_value, units_per_year, ramp_pct_y1..y3, source (layout: evals/fixtures/benefits.csv)"}
+      - {name: costs, type: csv, required: true, from: "costs.csv: cost_id, name, one_time, run_rate_per_year, start_year, source (layout: evals/fixtures/costs.csv)"}
+      - {name: discount_rate, type: string, required: false, from: "client finance's rate as a fraction, e.g. 0.08; without it NPV is [TO BE BASELINED]"}
+      - {name: p80_cost_uplift, type: string, required: false, from: "P80/P50 uplift on cost as a fraction, from the estimate memo; without it P80 cost is [TO BE BASELINED]"}
+      - {name: years, type: string, required: false, default: "5"}
+      - {name: client, type: string, required: false, default: "<Client>"}
+    run:
+      - {step: model, kind: script, cmd: "python3 -I scripts/value_model.py {benefits} {costs} --years {years} [--discount-rate {discount_rate}] [--p80-cost-uplift {p80_cost_uplift}] --client {client} --json {out}/value-model.json --out {out}/value-case.md"}
+    outputs:
+      - {path: "{out}/value-model.json", checks: [exists, json]}
+      - {path: "{out}/value-case.md", checks: [exists, sections:["Bottom line","Cash flows","Sensitivity","Sources"], numbers_trace_to:"{out}/value-model.json"]}
 ---
 
 # value-case-builder
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/value-case-builder --input <name>=<value> … --out <dir>` (see `--explain presales/value-case-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Build the business case for <initiative>."
