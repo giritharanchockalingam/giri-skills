@@ -42,7 +42,12 @@ What happens if we do nothing: …
 |---|---|---|
 | | | |
 
-## Scope by phase
+## Metrics
+| Metric | Baseline | Target | Source / instrumentation | Review date |
+|---|---|---|---|---|
+| | [TO BE BASELINED — owner: ___] | | | |
+
+## Phases (scope by phase)
 | Phase | Includes | Excludes | Exit criterion |
 |---|---|---|---|
 | v1 | | | |

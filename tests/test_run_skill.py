@@ -31,6 +31,11 @@ WIRED = [
     "presales/value-case-builder", "presales/proposal-writer", "presales/sow-drafter",
     "presales/discovery-interview", "presales/solution-architecture-doc", "presales/exec-deck-redline",
     "presales/competitive-positioning", "presales/account-plan", "presales/orals-prep",
+    # phase 3
+    "build/safe-fix", "build/nextjs-enterprise-conventions", "build/security-review",
+    "build/observability-setup", "build/ci-cd-vercel-github", "build/handoff-and-thread-close",
+    "build/spec-to-plan", "build/test-strategy-tdd", "build/multi-tenant-saas-patterns",
+    "build/product-spec-prd",
 ]
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 
@@ -182,7 +187,7 @@ def test_optional_input_skips_group_and_step(tmp_path):
 
 
 def test_not_an_agent_skill_exits_3(tmp_path):
-    r = run_skill("build/safe-fix", "--out", str(tmp_path / "o"))
+    r = run_skill("ai-platform/ai-use-case-canvas", "--out", str(tmp_path / "o"))
     assert r.returncode == 3
     assert "not an agent skill" in r.stderr
 

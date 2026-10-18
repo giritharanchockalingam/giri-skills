@@ -1,0 +1,27 @@
+diff --git a/server/actions/create-invoice.ts b/server/actions/create-invoice.ts
+new file mode 100644
+--- /dev/null
++++ b/server/actions/create-invoice.ts
+@@ -0,0 +1,12 @@
++"use server";
++import { z } from "zod";
++import { requireUser } from "@/lib/auth";
++import { createInvoice } from "@/server/services/invoice-service";
++
++const Input = z.object({ number: z.string().min(1), amount: z.number().int().positive() });
++
++export async function createInvoiceAction(raw: unknown) {
++  const input = Input.parse(raw);
++  const user = await requireUser();
++  return createInvoice(user.tenantId, input);
++}
+diff --git a/lib/db/invoices.ts b/lib/db/invoices.ts
+--- a/lib/db/invoices.ts
++++ b/lib/db/invoices.ts
+@@ -3,3 +3,6 @@ import { sql } from "@/lib/db/client";
+ export async function listInvoices(tenantId: string) {
+   return sql`select id, number from invoices where tenant_id = ${sql.param(tenantId)}`;
+ }
++export async function countInvoices(tenantId: string) {
++  return sql`select count(*) from invoices where tenant_id = ${sql.param(tenantId)}`;
++}

@@ -4,11 +4,26 @@ description: Use at the end of a working thread, before switching topics, or whe
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: target, type: path, required: true, from: "git repository root of the project"}
+      - {name: state, type: string, required: true, from: "one honest line: green|red|partial — what is true now"}
+      - {name: since, type: string, required: false, from: "ref or YYYY-MM-DD; default: last commit touching docs/HANDOFF.md"}
+      - {name: project, type: string, required: false, from: "project name for the header (default: repo dir name)"}
+      - {name: seed, type: dir, required: false, from: "evals/demos only: commit-folder layout to build a throwaway repo at target (evals/fixtures/repo-files)"}
+    run:
+      - {step: seed, kind: script, cmd: "python3 -I scripts/make_fixture_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
+      - {step: handoff, kind: script, cmd: "python3 -I scripts/handoff.py --target {target} --state {state} [--since {since}] [--project {project}] --template assets/HANDOFF.md --out {out}/HANDOFF.md"}
+    outputs:
+      - {path: "{out}/HANDOFF.md", checks: [exists, sections:["State","Done this thread","Changed files","Open items","Next thread starts with"], max_lines:80]}
 ---
 
 # handoff-and-thread-close
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/handoff-and-thread-close --input <name>=<value> … --out <dir>` (see `--explain build/handoff-and-thread-close`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Every changed file comes from `git diff --name-status`; copy the result to `docs/HANDOFF.md` (or pass `--write-to-repo` to the script) and commit it so the next run knows where this thread ended.
 
 ## When to use
 - End of a thread; topic change (rule: one topic per thread); context window filling; before a long pause.
@@ -56,3 +71,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/handoff-method.md` — what goes in, what stays out, prompt-writing rules
 - `assets/HANDOFF.md` — the contract template
 - `assets/next-thread-prompt.md` — prompt patterns per situation
+- `scripts/handoff.py` — fills HANDOFF.md from git (commits, changed files, carried open items); `scripts/make_fixture_repo.py` builds the eval repo

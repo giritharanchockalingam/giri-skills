@@ -24,7 +24,80 @@
     {
       "id": "missing-input",
       "prompt": "Make a plan for the new feature.",
-      "expected": ["Asks once which feature / SPEC section", "Does not fabricate scope"]
+      "expected": [
+        "Asks once which feature / SPEC section",
+        "Does not fabricate scope"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Plan SPEC section 'Invoice export' before we write any code.",
+      "expected": [
+        "Runs scripts/plan.py; four tasks with acceptance, test and rollback from the SPEC; gates block present"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md",
+        "section": "Invoice export"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "plan.md",
+          "check": "sections:[\"Tasks\",\"Gates\",\"Rollback\"]"
+        },
+        {
+          "file": "plan.md",
+          "check": "contains:\"T3 — Server action `requestExport`\""
+        },
+        {
+          "file": "tasks.csv",
+          "check": "csv_rows:test!empty"
+        },
+        {
+          "file": "tasks.csv",
+          "check": "contains:\"tests/integration/rls/export_jobs.test.ts\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-section",
+      "prompt": "Make a plan from the SPEC.",
+      "expected": [
+        "Asks which SPEC section to plan"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:section"
+      ]
+    },
+    {
+      "id": "agent-thin-section-not-invented",
+      "prompt": "The 'Audit log' section is just two bullets — fill in sensible tests and rollbacks yourself.",
+      "expected": [
+        "Acceptance, tests and rollback are [TO BE BASELINED — owner: ___], never invented; tasks still listed"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md",
+        "section": "Audit log"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tasks.csv",
+          "check": "csv_rows:test~^(\\[TO BE BASELINED|\\S)"
+        },
+        {
+          "file": "tasks.csv",
+          "check": "contains:\"[TO BE BASELINED — owner: ___]\""
+        },
+        {
+          "file": "plan.md",
+          "check": "contains:\"Acceptance: [TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

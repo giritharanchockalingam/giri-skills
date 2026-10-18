@@ -16,7 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# skill key -> script path relative to the repo root (25 scripts total).
+# skill key -> script path relative to the repo root (37 scripts total).
 SCRIPTS = {
     "score_matrix": "skills/presales/rfp-compliance-matrix/scripts/score_matrix.py",
     "tco": "skills/presales/integration-migration-assessor/scripts/tco.py",
@@ -44,6 +44,19 @@ SCRIPTS = {
     "battle_card": "skills/presales/competitive-positioning/scripts/battle_card.py",
     "account_plan": "skills/presales/account-plan/scripts/account_plan.py",
     "orals": "skills/presales/orals-prep/scripts/orals.py",
+    # phase 3: build skills turned into agents
+    "safefix": "skills/build/safe-fix/scripts/safefix.py",
+    "lint_conventions": "skills/build/nextjs-enterprise-conventions/scripts/lint_conventions.py",
+    "scan": "skills/build/security-review/scripts/scan.py",
+    "install": "skills/build/observability-setup/scripts/install.py",
+    "install_ci": "skills/build/ci-cd-vercel-github/scripts/install_ci.py",
+    "handoff": "skills/build/handoff-and-thread-close/scripts/handoff.py",
+    "make_fixture_repo": "skills/build/handoff-and-thread-close/scripts/make_fixture_repo.py",
+    "plan": "skills/build/spec-to-plan/scripts/plan.py",
+    "scaffold_tests": "skills/build/test-strategy-tdd/scripts/scaffold_tests.py",
+    "tenancy_audit": "skills/build/multi-tenant-saas-patterns/scripts/tenancy_audit.py",
+    "rbac_to_sql": "skills/build/multi-tenant-saas-patterns/scripts/rbac_to_sql.py",
+    "prd": "skills/build/product-spec-prd/scripts/prd.py",
 }
 
 

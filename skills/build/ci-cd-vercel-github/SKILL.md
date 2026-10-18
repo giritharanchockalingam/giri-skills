@@ -4,11 +4,25 @@ description: Use for any pipeline work on a Next.js + Supabase app deployed to V
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: target, type: path, required: true, from: "repo root (created if absent); existing workflows are kept, never overwritten"}
+    run:
+      - {step: install, kind: script, cmd: "python3 -I scripts/install_ci.py --target {target} --report-json {out}/ci-report.json --report-md {out}/ci-report.md"}
+    outputs:
+      - {path: "{out}/ci-report.json", checks: [exists, json, contains:"jobs_found"]}
+      - {path: "{out}/ci-report.md", checks: [exists, sections:["Workflows","Branch protection","Next steps"]]}
+      - {path: "{target}/.github/workflows/ci.yml", checks: [exists, yaml]}
+      - {path: "{target}/.github/workflows/preview.yml", checks: [exists, yaml]}
+      - {path: "{target}/.github/workflows/prod.yml", checks: [exists, yaml]}
 ---
 
 # ci-cd-vercel-github
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The install step exits 1 when a kept (customised) workflow lacks a required job, because branch protection depends on those check names; merge the missing stage from `assets/workflows/` and re-run.
 
 ## When to use
 - New pipeline, pipeline change, flaky/failing workflow, adding a stage (e2e, RLS lint, coverage gate), release/rollback procedure.
@@ -58,3 +72,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/rollback.md` — code and migration rollback procedures, decision table
 - `references/troubleshooting.md` — common failures and fixes
 - `assets/workflows/ci.yml`, `assets/workflows/preview.yml`, `assets/workflows/prod.yml`
+- `scripts/install_ci.py` — writes absent workflows, keeps existing ones, validates `on:`/`jobs:` and required job names

@@ -4,11 +4,25 @@ description: Use pre-merge or pre-release to review a diff, PR or feature for se
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: diff, type: file, required: true, from: "unified diff of the change (`git diff main...HEAD > change.patch`)"}
+      - {name: target, type: dir, required: false, from: "repo root to scan in full as well (callers, policies)"}
+    run:
+      - {step: scan, kind: script, cmd: "python3 -I scripts/scan.py --diff {diff} [--target {target}] --findings {out}/findings.csv --report {out}/review.md"}
+      - {step: review, kind: llm, template: assets/review-report.md, context: ["{out}/findings.csv", "{out}/review.md", "references/review-method.md", "references/severity-rubric.md"], out: "{out}/security-review.md"}
+    outputs:
+      - {path: "{out}/findings.csv", checks: [exists, csv:[id,category,severity,file,line,evidence,recommendation], cmd:"python3 -I scripts/scan.py --gate {path}"]}
+      - {path: "{out}/review.md", checks: [exists, sections:["Findings","Surfaces scanned","Method"]]}
+      - {path: "{out}/security-review.md", checks: [exists, sections:["Findings","Threat model","Verification"]]}
 ---
 
 # security-review
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/security-review --input <name>=<value> … --out <dir>` (see `--explain build/security-review`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The scan always writes its findings and the review step reasons on them; the gate check then fails the run (exit 1) when any critical/high finding remains, so a risky diff is reported, never waved through.
 
 ## When to use
 - "Review this before merge", "is this safe", PR touching auth, tenancy, server actions, route handlers, migrations, env, file upload, external calls.
@@ -56,3 +70,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/stack-specifics.md` — Next.js server actions, Supabase RLS/service-role, Vercel env pitfalls
 - `references/severity-rubric.md` — rating rules and SLA
 - `assets/review-report.md` — report template
+- `scripts/scan.py` — diff/repo scanner for SEC1–SEC6 (auth, injection, secrets, SSRF, XSS, RLS bypass) → findings.csv; `--gate` fails on critical/high

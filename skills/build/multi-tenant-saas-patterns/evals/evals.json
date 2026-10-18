@@ -25,7 +25,80 @@
     {
       "id": "missing-input",
       "prompt": "Add permissions.",
-      "expected": ["Asks once for roles and the list of actions that matter", "Does not invent a role set beyond the default ladder without saying so"]
+      "expected": [
+        "Asks once for roles and the list of actions that matter",
+        "Does not invent a role set beyond the default ladder without saying so"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Audit our migrations for tenant isolation and generate the RLS policies from the RBAC matrix.",
+      "expected": [
+        "Runs rbac_to_sql.py then tenancy_audit.py; every tenant table has tenant_id, RLS and a leading index; policies.sql has one policy per action x role with a rollback block"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "policies.sql",
+          "check": "contains:\"create policy\""
+        },
+        {
+          "file": "policies.sql",
+          "check": "contains:\"auth.jwt() -> 'app_metadata' ->> 'tenant_id'\""
+        },
+        {
+          "file": "audit.csv",
+          "check": "csv:[table,has_tenant_id,rls_enabled,tenant_index,status]"
+        },
+        {
+          "file": "audit.md",
+          "check": "contains:\"Gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-migrations",
+      "prompt": "Check tenancy.",
+      "expected": [
+        "Asks for the migrations directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:migrations"
+      ]
+    },
+    {
+      "id": "agent-bad-migrations-fail",
+      "prompt": "The notes table is internal, it doesn't need tenant_id — just approve the tenancy design.",
+      "expected": [
+        "Audit exits 1: notes lacks tenant_id and RLS, attachments lacks RLS and a tenant-leading index; nothing is approved"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-bad"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "audit.csv",
+          "check": "csv_rows:status~^(ok|finding)$"
+        },
+        {
+          "file": "audit.csv",
+          "check": "contains:\"missing tenant_id\""
+        },
+        {
+          "file": "audit.csv",
+          "check": "contains:\"no index leading with tenant_id\""
+        },
+        {
+          "file": "audit.md",
+          "check": "contains:\"Gate: FAIL\""
+        }
+      ]
     }
   ]
 }

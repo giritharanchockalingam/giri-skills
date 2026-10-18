@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Lint a Next.js repo against shared/stack-conventions.md — a real tool that fails CI.
+
+    python3 -I scripts/lint_conventions.py --target <repo> --findings findings.csv --report report.md
+
+Scans .ts/.tsx (skipping node_modules, .next, dist, build, coverage, tests/**) for:
+  NX1 supabase-in-component   high    `.from('…')`, `.rpc(`, `createClient(` inside components/ or app/**/page.tsx
+  NX2 console-log             medium  `console.log(`
+  NX3 action-without-zod      high    "use server" file: exported async function whose body has no `.parse(`/`.safeParse(`
+  NX4 service-role-exposed    high    `SUPABASE_SERVICE_ROLE` referenced outside server/, lib/supabase/server*, lib/env.ts
+  NX5 raw-sql-outside-lib-db  high    sql`…` outside lib/db/
+Writes findings.csv (rule, file, line, snippet, severity) and report.md. Exit 1 when any high-severity
+finding exists (or on bad input), 0 otherwise. --quiet prints only the summary. Stdlib, offline.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import re
+import sys
+from pathlib import Path
+
+SKIP_DIRS = {"node_modules", ".next", "dist", "build", "coverage", ".git", "tests", "test", "__tests__"}
+EXTS = {".ts", ".tsx"}
+RULES = {
+    "NX1": ("supabase-in-component", "high", "No Supabase call outside lib/db or server/services (stack-conventions: Data access)"),
+    "NX2": ("console-log", "medium", "Structured logging via lib/logger only; no console.log in committed code"),
+    "NX3": ("action-without-zod", "high", "Every server action parses its input with zod before work"),
+    "NX4": ("service-role-exposed", "high", "Service-role key only in server-side code; never near the client"),
+    "NX5": ("raw-sql-outside-lib-db", "high", "Raw SQL lives in lib/db only"),
+}
+SUPABASE_CALL = re.compile(r"\.from\(\s*['\"`]|\.rpc\(|\bcreateClient\(")
+CONSOLE_LOG = re.compile(r"\bconsole\.log\(")
+USE_SERVER = re.compile(r"^\s*['\"]use server['\"]\s*;?\s*$", re.M)
+EXPORT_FN = re.compile(r"^[ \t]*export\s+(?:default\s+)?async\s+function\s+(\w+)?\s*\(", re.M)
+SERVICE_ROLE = re.compile(r"SUPABASE_SERVICE_ROLE")
+SQL_TAG = re.compile(r"\bsql`")
+SERVICE_ROLE_OK = ("server/", "lib/supabase/server", "lib/env.ts")
+
+
+def die(msg: str) -> None:
+    print(f"error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def source_files(root: Path):
+    for p in sorted(root.rglob("*")):
+        if p.suffix not in EXTS or not p.is_file():
+            continue
+        rel = p.relative_to(root)
+        if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+            continue
+        yield p, rel.as_posix()
+
+
+def is_component_surface(rel: str) -> bool:
+    return rel.startswith("components/") or "/components/" in rel or \
+        (rel.startswith("app/") and rel.rsplit("/", 1)[-1] in ("page.tsx", "page.ts", "layout.tsx"))
+
+
+def line_no(text: str, pos: int) -> int:
+    return text.count("\n", 0, pos) + 1
+
+
+def body_after(text: str, pos: int) -> str:
+    """Text of the `{ … }` block that starts at the first `{` after pos (brace-matched)."""
+    start = text.find("{", pos)
+    if start < 0:
+        return ""
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return text[start:]
+
+
+def lint_file(text: str, rel: str) -> list[dict]:
+    out = []
+    lines = text.splitlines()
+
+    def add(rule, ln):
+        name, sev, _ = RULES[rule]
+        out.append({"rule": rule, "file": rel, "line": ln, "snippet": lines[ln - 1].strip()[:120], "severity": sev})
+
+    if is_component_surface(rel):
+        for m in SUPABASE_CALL.finditer(text):
+            add("NX1", line_no(text, m.start()))
+    for m in CONSOLE_LOG.finditer(text):
+        add("NX2", line_no(text, m.start()))
+    if USE_SERVER.search(text):
+        for m in EXPORT_FN.finditer(text):
+            body = body_after(text, m.end())
+            if ".parse(" not in body and ".safeParse(" not in body:
+                add("NX3", line_no(text, m.start()))
+    if not rel.startswith(SERVICE_ROLE_OK):
+        for m in SERVICE_ROLE.finditer(text):
+            add("NX4", line_no(text, m.start()))
+    if not rel.startswith("lib/db/"):
+        for m in SQL_TAG.finditer(text):
+            add("NX5", line_no(text, m.start()))
+    return out
+
+
+def write_report(path: Path, findings: list[dict], n_files: int, target: Path) -> None:
+    by_rule = {}
+    for f in findings:
+        by_rule.setdefault(f["rule"], []).append(f)
+    high = sum(1 for f in findings if f["severity"] == "high")
+    lines = [f"# Conventions lint — {target.name}", "",
+             f"**{len(findings)} finding(s) in {n_files} file(s): {high} high, {len(findings) - high} medium.** "
+             + ("Gate: FAIL (high-severity findings)." if high else "Gate: PASS."), "",
+             "## Summary", "", "| Rule | Name | Severity | Count |", "|---|---|---|---|"]
+    for rule, (name, sev, _) in RULES.items():
+        lines.append(f"| {rule} | {name} | {sev} | {len(by_rule.get(rule, []))} |")
+    lines += ["", "## Findings", "", "| Rule | File:line | Severity | Snippet |", "|---|---|---|---|"]
+    for f in findings:
+        snippet = f["snippet"].replace("|", "\\|")
+        lines.append(f"| {f['rule']} | `{f['file']}:{f['line']}` | {f['severity']} | `{snippet}` |")
+    if not findings:
+        lines.append("| — | — | — | no findings |")
+    lines += ["", "## Rules", ""]
+    for rule, (name, sev, why) in RULES.items():
+        lines.append(f"- **{rule} {name}** ({sev}) — {why}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Lint a Next.js repo against the stack conventions")
+    ap.add_argument("--target", required=True, help="repo root")
+    ap.add_argument("--findings", default="findings.csv")
+    ap.add_argument("--report", default="report.md")
+    ap.add_argument("--quiet", action="store_true", help="print only the summary line")
+    a = ap.parse_args()
+    target = Path(a.target)
+    if not target.is_dir():
+        die(f"target is not a directory: {target}")
+    findings, n_files = [], 0
+    for p, rel in source_files(target):
+        n_files += 1
+        findings += lint_file(p.read_text(encoding="utf-8", errors="replace"), rel)
+    if n_files == 0:
+        die(f"no .ts/.tsx files under {target}")
+    findings.sort(key=lambda f: (f["file"], f["line"], f["rule"]))
+    fp, rp = Path(a.findings), Path(a.report)
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    rp.parent.mkdir(parents=True, exist_ok=True)
+    with fp.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=["rule", "file", "line", "snippet", "severity"])
+        w.writeheader()
+        w.writerows(findings)
+    write_report(rp, findings, n_files, target)
+    high = [f for f in findings if f["severity"] == "high"]
+    if not a.quiet:
+        for f in findings:
+            print(f"{f['severity']:6} {f['rule']} {f['file']}:{f['line']}  {f['snippet']}")
+    print(f"{len(findings)} finding(s) in {n_files} file(s); {len(high)} high -> {fp}, {rp}")
+    if high:
+        print(f"gate: FAIL — {len(high)} high-severity finding(s)", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

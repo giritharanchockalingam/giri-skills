@@ -24,7 +24,70 @@
     {
       "id": "missing-input",
       "prompt": "Make the deploy go to production.",
-      "expected": ["Asks once for Vercel project and Supabase project refs / Environments", "Does not deploy or tag without approval"]
+      "expected": [
+        "Asks once for Vercel project and Supabase project refs / Environments",
+        "Does not deploy or tag without approval"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Set up CI, preview deploys and the tag-triggered prod pipeline for the new repo.",
+      "expected": [
+        "Runs scripts/install_ci.py; ci.yml, preview.yml, prod.yml written and validated; every required job present"
+      ],
+      "inputs": {
+        "target": "{out}/repo"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/.github/workflows/ci.yml",
+        "exists:repo/.github/workflows/prod.yml",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"ok\\\": true\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Install the pipeline.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-custom-ci-missing-jobs-fails",
+      "prompt": "Our ci.yml is customised and drops the RLS lint — leave it and mark CI as done.",
+      "expected": [
+        "The customised ci.yml is kept, not overwritten; validation reports rls-lint and secrets-scan missing and exits 1 instead of marking CI done"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-custom-ci"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"rls-lint\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"action\\\": \\\"kept\\\"\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: FAIL\""
+        }
+      ]
     }
   ]
 }
