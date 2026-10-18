@@ -3,14 +3,17 @@
  * Every mutation in the factory UI goes through this so feedback after an action is consistent. */
 import { useActionState, type ReactNode } from "react";
 import type { ActionResult } from "@/app/actions";
+import { KeyReveal } from "./KeyReveal";
 
 type Act = (prev: ActionResult | null, fd: FormData) => Promise<ActionResult>;
 
-export function ActionForm({ action, children, submit, submitClass = "btn btn-primary", confirm, className, hidden = {}, render, disabled }: {
+export function ActionForm({ action, children, submit, submitClass = "btn btn-primary", confirm, className, hidden = {}, render, revealKey, disabled }: {
   action: Act; children?: ReactNode; submit: string; submitClass?: string; confirm?: string; className?: string; disabled?: boolean;
   hidden?: Record<string, string | number | undefined | null>;
   /** Extra content rendered from the result (e.g. a one-time API key). */
   render?: (r: ActionResult & Record<string, unknown>) => ReactNode;
+  /** Server components cannot pass functions to this client component: set this to show a one-time `key` from the result. */
+  revealKey?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
   return (
@@ -22,6 +25,7 @@ export function ActionForm({ action, children, submit, submitClass = "btn btn-pr
         {state && <div className={`notice ${state.ok ? "notice-ok" : "notice-err"}`} role="status">{state.message}</div>}
       </div>
       {state && render?.(state as ActionResult & Record<string, unknown>)}
+      {state && revealKey && typeof (state as ActionResult & Record<string, unknown>).key === "string" && <KeyReveal value={(state as ActionResult & Record<string, unknown>).key as string} />}
     </form>
   );
 }

@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfigured } from "@/lib/supabase/env";
 
 export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname.replace(/\/+$/, "") || "/";  // trailingSlash: "/login/" → "/login"
+  const pathname = request.nextUrl.pathname.replace(/\/+$/, "") || "/";  // tolerate "/login/" links
   if (!supabaseConfigured()) {
     // honest setup state: the login page explains what is missing
     return pathname === "/login" ? NextResponse.next() : NextResponse.redirect(new URL("/login?setup=1", request.url));

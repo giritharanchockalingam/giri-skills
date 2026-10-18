@@ -5,7 +5,6 @@ import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { RolePill } from "@/components/factory/Pills";
 import { RuntimeStatus } from "@/components/factory/RuntimeStatus";
-import { KeyReveal } from "@/components/factory/KeyReveal";
 
 export const metadata = { title: "Administration · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -104,7 +103,7 @@ export default async function AdminPage() {
                     <tbody>{keyRows.map((k) => <tr key={k.id}><td>{k.name}</td><td className="mono-sm">{k.prefix}…</td><td className="muted">{fmtDate(k.created_at)}</td><td className="muted">{k.last_used_at ? fmtDate(k.last_used_at) : "never"}</td><td>{k.revoked_at ? <span className="fail">revoked</span> : <span className="pass">active</span>}</td><td>{!k.revoked_at && <ActionForm action={revokeApiKey} submit="Revoke" submitClass="btn btn-danger btn-sm" confirm={`Revoke key “${k.name}”? Applications using it will get 401.`} hidden={{ key_id: k.id }} />}</td></tr>)}
                       {keyRows.length === 0 && <tr><td colSpan={6} className="none">No API keys yet.</td></tr>}</tbody></table></div>
                   <div className="mt-5"><div className="h3" style={{ fontSize: 14 }}>Create a key</div>
-                    <ActionForm action={createApiKey} submit="Create key" render={(r) => typeof r.key === "string" ? <KeyReveal value={r.key} /> : null}>
+                    <ActionForm action={createApiKey} submit="Create key" revealKey>
                       <div className="field" style={{ maxWidth: 420 }}><label htmlFor="k-name">Name</label><input id="k-name" name="name" className="input" required maxLength={80} placeholder="order-service (production)" /></div>
                     </ActionForm></div>
                 </>
