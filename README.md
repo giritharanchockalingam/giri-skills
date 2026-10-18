@@ -1,6 +1,6 @@
 # giri-skills
 
-40 Agent Skills (agentskills.io format) for presales & solution architecture, enterprise app building, AI platform/agentic work, and career management — built to a Big 4 / Fortune 50 quality bar. Works with Claude Code, Claude (Cowork), Cursor, Codex, Gemini CLI, Copilot and any `SKILL.md`-compatible agent.
+40 executable Agent Skills (agentskills.io format, each one a configurable agent: declared inputs → deterministic scripts → checked deliverables) for presales & solution architecture, enterprise app building, AI platform/agentic work, and career management — built to a Big 4 / Fortune 50 quality bar. Works with Claude Code, Claude (Cowork), Cursor, Codex, Gemini CLI, Copilot and any `SKILL.md`-compatible agent.
 
 ## Install
 
@@ -91,6 +91,7 @@ Skills at `metadata.version >= 0.2.0` declare inputs, run steps and checked outp
 ```bash
 python3 scripts/run_skill.py --list                      # agent skills and their inputs
 python3 scripts/run_skill.py --explain presales/effort-estimator
+python3 scripts/run_skill.py --demo presales/effort-estimator   # run it on its own fixtures, see run.json
 python3 scripts/run_skill.py presales/effort-estimator --input wbs=./wbs.csv --input rates=./rates.csv --input client=Acme --out ./runs/acme --provider dry
 cat ./runs/acme/run.json                                 # steps, checks, ok
 python3 scripts/behavioral_evals.py agent --provider dry  # run every agent eval case; scorecard gets Works/Partial/Broken
