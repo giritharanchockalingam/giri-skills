@@ -4,6 +4,7 @@ description: Use when the user wants to qualify a single AI idea quickly — "is
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: use-case
   version: 0.2.0
   author: giri-skills
   agent:

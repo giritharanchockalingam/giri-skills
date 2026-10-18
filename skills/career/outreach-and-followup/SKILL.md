@@ -4,6 +4,7 @@ description: Use when the user needs to write or time a job-search message - ref
 license: MIT
 metadata:
   domain: career
+  adlc_stage: career
   version: 0.2.0
   author: giri-skills
   agent:

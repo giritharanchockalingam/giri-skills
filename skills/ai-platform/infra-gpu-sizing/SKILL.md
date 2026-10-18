@@ -4,6 +4,7 @@ description: Use when the user asks to size GPU or inference infrastructure, com
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: deploy
   version: 0.2.0
   author: giri-skills
   agent:

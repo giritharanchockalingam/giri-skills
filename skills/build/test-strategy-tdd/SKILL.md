@@ -4,6 +4,7 @@ description: Use before implementing any feature, fix or refactor to decide what
 license: MIT
 metadata:
   domain: build
+  adlc_stage: evaluate
   version: 0.2.0
   author: giri-skills
   agent:

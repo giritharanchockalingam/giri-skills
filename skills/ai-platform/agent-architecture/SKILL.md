@@ -4,6 +4,7 @@ description: Use when the user asks to design an AI agent or agentic system — 
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: architecture
   version: 0.2.0
   author: giri-skills
   agent:

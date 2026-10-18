@@ -4,6 +4,7 @@ description: Use when the user reports any application event (applied, recruiter
 license: MIT
 metadata:
   domain: career
+  adlc_stage: career
   version: 0.2.0
   author: giri-skills
   agent:

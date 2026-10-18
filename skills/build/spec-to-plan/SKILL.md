@@ -4,6 +4,7 @@ description: Use when a feature request, ticket or SPEC section must become an e
 license: MIT
 metadata:
   domain: build
+  adlc_stage: requirements
   version: 0.2.0
   author: giri-skills
   agent:

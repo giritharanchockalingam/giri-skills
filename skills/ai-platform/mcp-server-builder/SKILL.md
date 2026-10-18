@@ -4,6 +4,7 @@ description: Use when the user asks to build, wrap, or review an MCP (Model Cont
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: build
   version: 0.2.0
   author: giri-skills
   agent:

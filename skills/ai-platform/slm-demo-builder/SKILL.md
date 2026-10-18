@@ -4,6 +4,7 @@ description: Use when the user asks to build a new SLM or agent showroom demo â€
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: build
   version: 0.2.0
   author: giri-skills
   agent:

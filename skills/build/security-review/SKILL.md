@@ -4,6 +4,7 @@ description: Use pre-merge or pre-release to review a diff, PR or feature for se
 license: MIT
 metadata:
   domain: build
+  adlc_stage: govern
   version: 0.2.0
   author: giri-skills
   agent:

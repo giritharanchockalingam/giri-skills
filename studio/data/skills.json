@@ -2,11 +2,13 @@
  {
   "id": "ai-platform/agent-architecture",
   "domain": "ai-platform",
+  "stage": "architecture",
   "name": "agent-architecture",
   "description": "Use when the user asks to design an AI agent or agentic system — \"should this be an agent\", \"single vs multi-agent\", \"design the LangGraph graph\", \"define the tools / MCP contracts\", \"where do humans approve\". Produces a pattern decision (workflow vs single agent vs multi-agent) with rationale, a state and graph design, tool contracts, human-in-the-loop checkpoints, a failure-modes table with mitigations, and an agent design doc. Not for building MCP servers (use mcp-server-builder), RAG retrieval design (use rag-pipeline-design), or evaluation (use llm-eval-harness).",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "architecture",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -247,11 +249,13 @@
  {
   "id": "ai-platform/ai-governance-risk",
   "domain": "ai-platform",
+  "stage": "govern",
   "name": "ai-governance-risk",
   "description": "Use when the user asks for an AI compliance or risk review — \"assess the risks of this AI use case\", \"build our AI risk register\", \"write a model card\", \"map us to NIST AI RMF / EU AI Act\", \"what controls do we need before launch\". Produces a risk register (bias, privacy, hallucination, IP, security, misuse) with likelihood, impact, controls, and owners; a controls checklist; a model card; and a summary-level mapping to NIST AI RMF functions and EU AI Act risk tiers. Not legal advice; not for strategy (ai-strategy-coe) or agent design (agent-architecture).",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "govern",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -494,11 +498,13 @@
  {
   "id": "ai-platform/ai-strategy-coe",
   "domain": "ai-platform",
+  "stage": "strategy",
   "name": "ai-strategy-coe",
   "description": "Use when the user asks to design an enterprise AI strategy, stand up or assess an AI Center of Excellence (CoE), score an AI use-case portfolio, or build a 12-month AI roadmap. Produces a 5-level maturity assessment (data, platform, talent, governance, value), an operating-model recommendation (central / hub-and-spoke / federated), a scored use-case portfolio, a governance outline, and a quarter-by-quarter roadmap. Not for a single use case (use ai-use-case-canvas) or compliance-only reviews (use ai-governance-risk).",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "strategy",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -770,11 +776,13 @@
  {
   "id": "ai-platform/ai-use-case-canvas",
   "domain": "ai-platform",
+  "stage": "use-case",
   "name": "ai-use-case-canvas",
   "description": "Use when the user wants to qualify a single AI idea quickly — \"is this a good AI use case\", \"fill the canvas for X\", \"should we build or buy this\", \"what would it take\". Produces a one-page canvas: problem and user, current process and baseline, proposed AI capability, data readiness, feasibility, value hypothesis, risks and tier, build/buy/partner decision, next 30-day step. Not for portfolio-level strategy (ai-strategy-coe), detailed design (agent-architecture, rag-pipeline-design), or a full risk review (ai-governance-risk).",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "use-case",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -975,11 +983,13 @@
  {
   "id": "ai-platform/infra-gpu-sizing",
   "domain": "ai-platform",
+  "stage": "deploy",
   "name": "infra-gpu-sizing",
   "description": "Use when the user asks to size GPU or inference infrastructure, compare self-hosting an LLM against renting GPUs or using an API, or estimate monthly cost for a given user load — \"how many GPUs do we need\", \"self-host vs rent\", \"cost of serving model X to N users\". Produces a workload model (users, requests/day, tokens in/out, latency SLO), throughput math from user-supplied tokens/s per GPU, GPU count, monthly cost for self-host vs rental vs API from user-supplied unit prices, a TCO factor table, and a recommendation; ships a calculator script. Not for training-cluster sizing or vendor selection.",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "deploy",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -1170,11 +1180,13 @@
  {
   "id": "ai-platform/llm-eval-harness",
   "domain": "ai-platform",
+  "stage": "evaluate",
   "name": "llm-eval-harness",
   "description": "Use when the user asks \"is this agent/LLM app good enough\", \"build an eval set\", \"add a regression gate for prompts\", \"set up LLM-as-judge\", or needs to prove quality before release. Produces a golden set, a scoring rubric, an automated pytest-compatible runner (deterministic scorer by default, pluggable LLM judge), a scorecard, and a CI regression gate with thresholds. Not for retrieval-only metrics (rag-pipeline-design has recall@k) or for designing the agent itself (agent-architecture).",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "evaluate",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -1416,11 +1428,13 @@
  {
   "id": "ai-platform/mcp-server-builder",
   "domain": "ai-platform",
+  "stage": "build",
   "name": "mcp-server-builder",
   "description": "Use when the user asks to build, wrap, or review an MCP (Model Context Protocol) server — \"expose our API as MCP tools\", \"build an MCP server for X\", \"review this MCP server\". Produces a spec-compliant server (tools, resources, prompts) with JSON-schema tool contracts, auth and scoping, structured errors, tests, and a README. Delegates to the Anthropic mcp-builder skill when installed; otherwise follows the bundled spec essentials. Not for agent design (use agent-architecture) or for generic REST APIs.",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "build",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -1628,11 +1642,13 @@
  {
   "id": "ai-platform/rag-pipeline-design",
   "domain": "ai-platform",
+  "stage": "architecture",
   "name": "rag-pipeline-design",
   "description": "Use when the user has a knowledge, search, or question-answering use case over documents — \"design our RAG pipeline\", \"which chunking/embedding should we use\", \"our RAG answers are wrong\", \"size the cost of a knowledge assistant\". Produces the retrieval design (ingestion, chunking, embedding, hybrid retrieval, reranking), an evaluation set and metrics (recall@k, MRR, faithfulness, answer relevance), guardrails, and a cost model with labeled inputs; ships a retrieval-eval script. Not for agent orchestration (use agent-architecture) or model-quality evaluation beyond retrieval (use llm-eval-harness).",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "architecture",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -1839,11 +1855,13 @@
  {
   "id": "ai-platform/slm-demo-builder",
   "domain": "ai-platform",
+  "stage": "build",
   "name": "slm-demo-builder",
   "description": "Use when the user asks to build a new SLM or agent showroom demo — \"add a demo for X to the studio\", \"build a demo an exec can click through\", \"I need a demo spec and talk track\". Produces a demo spec (persona, scenario, happy path, wow moments, failure handling), a synthetic data plan and generator approach, a UI stub definition, and a timed talk track with objection handling. Not for production builds (use the build-domain skills) or for sizing/evaluation.",
   "license": "MIT",
   "metadata": {
    "domain": "ai-platform",
+   "adlc_stage": "build",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -2040,11 +2058,13 @@
  {
   "id": "build/ci-cd-vercel-github",
   "domain": "build",
+  "stage": "deploy",
   "name": "ci-cd-vercel-github",
   "description": "Use for any pipeline work on a Next.js + Supabase app deployed to Vercel via GitHub Actions — \"set up CI\", \"add preview deploys\", \"deploy to prod\", \"pipeline is failing\", \"rollback\". Produces ci.yml (lint→typecheck→unit→build), preview.yml (Vercel preview + Playwright), prod.yml (tag-triggered: migrate staging→prod, deploy, smoke, release), environment/secret matrix, promotion flow and a rollback runbook. Not for test authoring (use test-strategy-tdd) or alerting (use observability-setup).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "deploy",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -2257,11 +2277,13 @@
  {
   "id": "build/handoff-and-thread-close",
   "domain": "build",
+  "stage": "improve",
   "name": "handoff-and-thread-close",
   "description": "Use at the end of a working thread, before switching topics, or when context is getting long — \"wrap up\", \"hand off\", \"close this thread\", \"update HANDOFF\". Produces an updated docs/HANDOFF.md (state, done, changed files from git, open items with owners, the exact next-thread prompt), a verification record, and a changed-files list so the next thread starts cold with zero re-explanation. Not for release notes (use ci-cd-vercel-github) or PR descriptions alone.",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "improve",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -2498,11 +2520,13 @@
  {
   "id": "build/multi-tenant-saas-patterns",
   "domain": "build",
+  "stage": "architecture",
   "name": "multi-tenant-saas-patterns",
   "description": "Use when designing or changing tenant isolation, roles/permissions, plans and feature flags, billing entitlements, or audit logging in a multi-tenant SaaS on Supabase + Next.js. Produces the tenant model (tables, claims, invitation flow), an RBAC matrix (CSV + enforcement points), plan/feature-flag model with entitlement checks, and an audit-log design, each with migration and code touchpoints. Design-level; hand off to supabase-schema-rls for SQL and security-review for verification. Not for single-tenant apps.",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "architecture",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -2740,11 +2764,13 @@
  {
   "id": "build/nextjs-enterprise-conventions",
   "domain": "build",
+  "stage": "build",
   "name": "nextjs-enterprise-conventions",
   "description": "Use whenever writing or reviewing Next.js (App Router) / React / TypeScript code in this stack. Enforces server/client component rules, data-access layering (lib/db, server/services, server/actions), zod at boundaries, the typed Result<T,E> error pattern, structured logging, folder and naming conventions from shared/stack-conventions.md, and Vercel's react/next best-practice skills when installed. Produces compliant code plus a conventions checklist result. Not for schema (use supabase-schema-rls) or security audits (use security-review).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "build",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -2938,11 +2964,13 @@
  {
   "id": "build/observability-setup",
   "domain": "build",
+  "stage": "operate",
   "name": "observability-setup",
   "description": "Use when an app is going to production or lacks visibility — \"add logging\", \"set up Sentry\", \"health checks\", \"alerts\", \"we can't see what's failing\". Produces structured JSON logging (lib/logger.ts), error tracking wiring, /api/health and /api/health/deep endpoints, alert rules, an SLO starter and a minimal dashboard spec for the Next.js + Supabase + Vercel stack. Not for debugging a specific failure (use safe-fix) or CI (use ci-cd-vercel-github).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "operate",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -3161,11 +3189,13 @@
  {
   "id": "build/product-spec-prd",
   "domain": "build",
+  "stage": "requirements",
   "name": "product-spec-prd",
   "description": "Use when a product feature or capability needs defining before engineering planning — \"write a PRD\", \"spec this feature\", \"what should v1 include\", a vague idea that must become goals, non-goals, user stories, success metrics and phased scope. Produces docs/prd/<slug>.md from the PRD template, with acceptance criteria ready for spec-to-plan. Wraps the product-management:write-spec skill when installed. Not for technical plans (use spec-to-plan) or architecture decisions (ADR).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "requirements",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -3372,11 +3402,13 @@
  {
   "id": "build/project-bootstrap",
   "domain": "build",
+  "stage": "build",
   "name": "project-bootstrap",
   "description": "Use when the user starts a new app or repo (Next.js + Supabase + Vercel by default) and needs the enterprise skeleton before any feature code — SPEC.md, CLAUDE.md, HANDOFF.md, ADR folder, GitHub Actions CI skeleton, .env.example contract, branch rules. Produces the docs/CI/ADR scaffold (via scripts/scaffold.py, idempotent) plus a filled SPEC.md and a stack starter checklist. Not for adding features to an existing repo (use spec-to-plan) or pipeline tuning (use ci-cd-vercel-github).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "build",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -3609,11 +3641,13 @@
  {
   "id": "build/safe-fix",
   "domain": "build",
+  "stage": "improve",
   "name": "safe-fix",
   "description": "Use when the user reports a bug or says \"fix this\" — an error, stack trace, failing test, wrong behaviour, \"works in staging not prod\". Produces a reproduction, an isolated root cause with evidence, a minimal diff that touches only the failing path, a regression test that fails before and passes after, and full-suite verification — never collateral breakage, never data patches. Wraps superpowers systematic-debugging plus Karpathy-style guardrails when installed. Not for features (use spec-to-plan) or security findings without a repro (use security-review).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "improve",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -3829,11 +3863,13 @@
  {
   "id": "build/security-review",
   "domain": "build",
+  "stage": "govern",
   "name": "security-review",
   "description": "Use pre-merge or pre-release to review a diff, PR or feature for security defects in the Next.js + Supabase + Vercel stack. Produces a reasoning-based review (threat model per change: authz, injection, secrets, RLS bypass, SSRF, IDOR, mass assignment, server-action pitfalls) with severity-rated findings and fixes applied in code, not a generic checklist. Wraps the sentry security-review skill when installed. Not for schema authoring (use supabase-schema-rls) or bug fixing without a security angle (use safe-fix).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "govern",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -4059,11 +4095,13 @@
  {
   "id": "build/spec-to-plan",
   "domain": "build",
+  "stage": "requirements",
   "name": "spec-to-plan",
   "description": "Use when a feature request, ticket or SPEC section must become an executable plan before any code is written. Produces a task-gated plan (docs/plans/<slug>.md) with files to touch, acceptance criteria, test list, rollback, and explicit plan→approve→build→test→verify gates. Wraps the superpowers brainstorm/write-plan skills when installed. Not for bug fixes (use safe-fix) or product definition (use product-spec-prd).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "requirements",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -4281,11 +4319,13 @@
  {
   "id": "build/supabase-schema-rls",
   "domain": "build",
+  "stage": "build",
   "name": "supabase-schema-rls",
   "description": "Use for any Supabase data-model or auth change — new table, column, relationship, role, or policy. Produces a forward-only migration SQL with a rollback block, RLS policies (tenant / owner / role-based / public-read patterns), regenerated typed client, seed data, and an RLS lint pass (scripts/rls_lint.py). Enforces RLS on every table and service-role use server-side only. Not for app-level authz logic (use nextjs-enterprise-conventions) or a full security audit (use security-review).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "build",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -4478,11 +4518,13 @@
  {
   "id": "build/test-strategy-tdd",
   "domain": "build",
+  "stage": "evaluate",
   "name": "test-strategy-tdd",
   "description": "Use before implementing any feature, fix or refactor to decide what tests exist and write them first. Produces a test pyramid for the feature type (unit / integration / e2e / contract), Vitest and Playwright scaffolds, fixtures, and a coverage gate, following red→green→refactor. Wraps superpowers test-driven-development and anthropics webapp-testing when installed. Not for test-only debugging (use safe-fix) or CI wiring (use ci-cd-vercel-github).",
   "license": "MIT",
   "metadata": {
    "domain": "build",
+   "adlc_stage": "evaluate",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -4721,11 +4763,13 @@
  {
   "id": "career/application-tracker",
   "domain": "career",
+  "stage": "career",
   "name": "application-tracker",
   "description": "Use when the user reports any application event (applied, recruiter screen booked, interview done, offer, rejection, ghosted) or asks for their pipeline, what is stale, or a weekly job-search review. Maintains tracker.csv (one row per opportunity) with stage, next action and dates; produces a pipeline table, an aging/stale list, and a weekly review summary. Includes a stdlib CLI (tracker.py) for add/update/list/aging.",
   "license": "MIT",
   "metadata": {
    "domain": "career",
+   "adlc_stage": "career",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -4984,11 +5028,13 @@
  {
   "id": "career/interview-prep",
   "domain": "career",
+  "stage": "career",
   "name": "interview-prep",
   "description": "Use when the user has an interview scheduled (recruiter screen, hiring manager, panel, CIO/CEO, board-style case) for a senior director / VP / executive IT role and asks to prepare, practice, build STAR stories, draft a 90-day plan, or list questions to ask. Produces a competency-mapped story set in STAR+R format, a likely-question bank for the round type, a 90-day plan draft, and questions to ask. TRUTH LOCK - every story traces to the user's story bank or master résumé; no invented examples.",
   "license": "MIT",
   "metadata": {
    "domain": "career",
+   "adlc_stage": "career",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -5237,11 +5283,13 @@
  {
   "id": "career/jd-fit-scorer",
   "domain": "career",
+  "stage": "career",
   "name": "jd-fit-scorer",
   "description": "Use when the user pastes a job description (JD) or job link and asks whether to apply, how well they fit, or to score/rank roles. Produces a weighted fit score (must-haves 60%, nice-to-haves 25%, culture/logistics 15%, red flags subtract), a gap table, and a go/no-go call for senior director / VP / executive IT roles. Requires the user's profile keywords or master résumé; never invents experience.",
   "license": "MIT",
   "metadata": {
    "domain": "career",
+   "adlc_stage": "career",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -5453,11 +5501,13 @@
  {
   "id": "career/offer-evaluator",
   "domain": "career",
+  "stage": "career",
   "name": "offer-evaluator",
   "description": "Use when the user receives a job offer (or expects one) and asks to evaluate it, compare offers or an offer against their current package, adjust for relocation / cost of living, plan a negotiation, or decide. Produces a total-compensation table, a COL-adjusted comparison, a negotiation-lever plan, and a weighted decision matrix for senior director / VP / executive IT roles. Uses only figures the user supplies (offer letter, current comp, COL indices); no hardcoded market or COL data.",
   "license": "MIT",
   "metadata": {
    "domain": "career",
+   "adlc_stage": "career",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -5684,11 +5734,13 @@
  {
   "id": "career/outreach-and-followup",
   "domain": "career",
+  "stage": "career",
   "name": "outreach-and-followup",
   "description": "Use when the user needs to write or time a job-search message - referral ask, recruiter reply, post-interview thank-you, status check, decline, or negotiation opener - by LinkedIn or email, for senior director / VP / executive IT roles. Produces 2-3 goal-labelled variants per message, a subject line, and the follow-up cadence (what to send, when, and when to stop). Facts come only from the user's inputs; no invented names, dates or claims.",
   "license": "MIT",
   "metadata": {
    "domain": "career",
+   "adlc_stage": "career",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -5928,11 +5980,13 @@
  {
   "id": "career/resume-tailor",
   "domain": "career",
+  "stage": "career",
   "name": "resume-tailor",
   "description": "Use when the user asks to tailor, rewrite, or ATS-optimize their résumé for a specific job description (JD), or to produce a targeted executive summary or bullet set for a senior director / VP / executive IT role. Produces an ATS keyword map, rewritten bullets (action + scope + metric + outcome), a before/after diff, and a traceability table. TRUTH LOCK - every bullet must trace to a line in the user's master résumé; the skill refuses to add claims that are not in it.",
   "license": "MIT",
   "metadata": {
    "domain": "career",
+   "adlc_stage": "career",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -6205,11 +6259,13 @@
  {
   "id": "presales/account-plan",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "account-plan",
   "description": "Use when the user asks to build or refresh a quarterly or annual account plan, account strategy, or account review for an existing or target client. Produces a one-page-first account plan — account snapshot, relationship and stakeholder map with coverage gaps, white-space map (our services × their business units/platforms), pipeline table, risks to the account, and 90-day plays with owners and dates — with every revenue, pipeline, or stakeholder fact sourced to the user's inputs or marked [TO BE BASELINED — owner: ___]. Do not use for pre-pitch research on a new logo (client-research-brief) or for a single-pursuit battle card (competitive-positioning).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -6458,11 +6514,13 @@
  {
   "id": "presales/client-research-brief",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "client-research-brief",
   "description": "Use when the user asks to research a company, account, or prospect before a pitch, discovery call, or proposal (\"research <company> before the meeting\", \"build me a brief on <account>\"). Produces a sourced one-page brief — business snapshot, filings and financial signals, technology-stack signals, leadership, recent news, likely initiatives, and hypotheses for the call — with every claim carrying a source and every unknown marked. Includes a no-network script that turns a notes/links file into the brief skeleton. Do not use for competitor battle cards (competitive-positioning) or for synthesizing a call (discovery-interview).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -6690,11 +6748,13 @@
  {
   "id": "presales/competitive-positioning",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "competitive-positioning",
   "description": "Use when the user asks how to win against a named competitor, an incumbent vendor or services provider, a platform vendor's services arm, or the status quo in a pursuit (\"how do we win vs <X>\", \"build a battle card for <incumbent>\"). Produces a battle card — their likely strengths and weaknesses as evidenced, our wedge, landmines to avoid, objection handling, ghost lines for the proposal, and the evaluation criteria we want the client to adopt — with every claim about a competitor sourced or marked as hypothesis. Do not use for general market research (client-research-brief) or for proposal prose (proposal-writer).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -6929,11 +6989,13 @@
  {
   "id": "presales/discovery-interview",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "discovery-interview",
   "description": "Use when the user asks to prepare for, run, or synthesize a client discovery call, scoping workshop, or stakeholder interview in a presales context. Produces a vertical-specific question bank (EdTech, Retail, Manufacturing, Travel), a pain/impact/urgency matrix, a hypothesis register, and a gaps list that feeds proposal-writer and effort-estimator. Do not use for client background research (client-research-brief) or for internal product research synthesis.",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -7208,11 +7270,13 @@
  {
   "id": "presales/effort-estimator",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "effort-estimator",
   "description": "Use when the user asks to size, estimate, or price a services engagement, build a WBS, produce P50/P80/P90 effort and duration, design a staffing pyramid or onshore/offshore mix, or sanity-check margin. Produces a WBS with 3-point estimates, a Monte Carlo (PERT) distribution with confidence levels, a staffing table by role and phase, and a cost roll-up against a rate card the user supplies (never invented rates). Includes a script that runs PERT + Monte Carlo over a WBS CSV. Do not use for business-case benefits (value-case-builder) or for the proposal narrative (proposal-writer).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -7471,11 +7535,13 @@
  {
   "id": "presales/exec-deck-redline",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "exec-deck-redline",
   "description": "Use when the user asks to rework, redline, sharpen, or review an executive deck, steering-committee pack, board slide set, or pitch deck. Produces a slide-by-slide redline ([KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD]) that keeps the original storyline and sharpens it, rewritten slide titles as assertions, speaker notes, and [TO BE BASELINED — owner: ___] markers for every unsourced number, role, or date. Never replaces the narrative with a new one and never invents figures. Do not use for building a deck from scratch (use proposal-writer or the relevant domain skill first) or for document redlines (proposal-writer / sow-drafter redline modes).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -7718,11 +7784,13 @@
  {
   "id": "presales/integration-migration-assessor",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "integration-migration-assessor",
   "description": "Use when the user asks to assess, score, plan, or build the case for migrating an integration or middleware estate between platforms (iPaaS to API gateway, ESB to event backbone, ETL tool to cloud data integration, any platform-to-platform move). Produces an interface inventory scored on complexity factors, a wave plan with entry/exit criteria, a TCO/ROI model layout with every figure sourced or marked [TO BE BASELINED — owner: ___], and a migration-factory approach. Includes a script that scores an API/interface inventory CSV and assigns waves. Do not use for the architecture document itself (solution-architecture-doc), effort math (effort-estimator), or benefits narrative (value-case-builder); this skill feeds all three.",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -7993,11 +8061,13 @@
  {
   "id": "presales/orals-prep",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "orals-prep",
   "description": "Use when the user asks to prepare for a pitch presentation, orals, bid defense, shortlist interview, steering-committee presentation, or executive readout where the team presents and takes questions. Produces a timed script with speaker assignments, the opening and close, a likely-questions bank with sourced answers, red-team objections with responses, a rehearsal plan, and a scoring rubric for dry runs — with every number in the script traceable to the proposal or sources and every unknown marked [TO BE BASELINED — owner: ___]. Do not use for deck content rework (exec-deck-redline) or for competitive analysis (competitive-positioning); both feed this skill.",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -8226,11 +8296,13 @@
  {
   "id": "presales/proposal-writer",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "proposal-writer",
   "description": "Use when the user asks to write, structure, or redline a client proposal, RFP response narrative, or statement of qualifications. Produces an on-template proposal — executive summary, understanding of needs, approach and methodology, solution, team, timeline, governance, risks, assumptions, pricing placeholders, and why-us — built on win themes and ghosting the competition, with every figure sourced or marked [TO BE BASELINED — owner: ___]. In redline mode it keeps the existing storyline and sharpens it slide/section by section. Do not use for compliance matrices (rfp-compliance-matrix), SOWs (sow-drafter), or pricing math (effort-estimator).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -8490,11 +8562,13 @@
  {
   "id": "presales/rfp-compliance-matrix",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "rfp-compliance-matrix",
   "description": "Use when an RFP, RFI, RFQ, or tender document is received and the user asks to inventory requirements, build a compliance matrix, assess bid/no-bid, or draft clarification questions. Produces a numbered requirement inventory (CSV), a compliance matrix (Comply / Partial / Non-comply / Clarify, with owner, evidence, and response pointer), a gaps-and-risks list, a clarification-question list, and a bid/no-bid recommendation. Includes a script that extracts numbered and shall/must requirements from .txt/.md/.docx/.pdf into CSV. Do not use for writing the proposal narrative (proposal-writer) or pricing (effort-estimator).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -8729,11 +8803,13 @@
  {
   "id": "presales/solution-architecture-doc",
   "domain": "presales",
+  "stage": "architecture",
   "name": "solution-architecture-doc",
   "description": "Use when the user asks to produce, review, or redline a target or solution architecture for a client — context and container views, integration map, non-functional requirements, decision log, or migration waves — for a proposal, assessment, or design phase. Produces a C4-style architecture document with Mermaid diagrams, an integration inventory map, an NFR table with measurable targets, ADRs for each significant decision, and a wave plan, with every quantity sourced or marked [TO BE BASELINED — owner: ___]. Do not use for effort sizing (effort-estimator), for interface complexity scoring (integration-migration-assessor), or for internal engineering ADRs unrelated to a client deliverable.",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "architecture",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -8949,11 +9025,13 @@
  {
   "id": "presales/sow-drafter",
   "domain": "presales",
+  "stage": "opportunity",
   "name": "sow-drafter",
   "description": "Use when the user asks to convert an approved proposal into a Statement of Work, draft or redline an SOW, or tighten scope, deliverables, acceptance criteria, assumptions, change control, or RACI for a services engagement. Produces an SOW on template with numbered scope and out-of-scope, deliverables with acceptance criteria, milestones, assumptions and dependencies (each a change-control trigger), governance and RACI, commercial schedule placeholders, and a scope-ambiguity register. Every figure comes from the proposal or estimate or is marked [TO BE BASELINED — owner: ___]. Do not use for proposal narrative (proposal-writer) or effort math (effort-estimator); legal terms are flagged for counsel, not drafted.",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "opportunity",
    "version": "0.2.0",
    "author": "giri-skills"
   },
@@ -9156,11 +9234,13 @@
  {
   "id": "presales/value-case-builder",
   "domain": "presales",
+  "stage": "use-case",
   "name": "value-case-builder",
   "description": "Use when the user asks to build, structure, or review a business case, value case, ROI model, benefits case, or cost-benefit analysis for a client initiative or internal investment. Produces a benefits tree (driver → lever → metric → value), a cost and savings model layout (CSV spec plus markdown), payback and multi-year net, sensitivity on the top drivers, and a benefits-realization plan with owners; every number is sourced to a client document or statement or marked [TO BE BASELINED — owner: ___]. Do not use for platform-only TCO (integration-migration-assessor feeds this) or for effort (effort-estimator).",
   "license": "MIT",
   "metadata": {
    "domain": "presales",
+   "adlc_stage": "use-case",
    "version": "0.2.0",
    "author": "giri-skills"
   },

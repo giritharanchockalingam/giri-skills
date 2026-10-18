@@ -4,6 +4,7 @@ description: Use when the user asks how to win against a named competitor, an in
 license: MIT
 metadata:
   domain: presales
+  adlc_stage: opportunity
   version: 0.2.0
   author: giri-skills
   agent:

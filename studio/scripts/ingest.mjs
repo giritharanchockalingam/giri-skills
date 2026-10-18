@@ -162,6 +162,7 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
     skills.push({
       id: `${domain}/${name}`,
       domain,
+      stage: (typeof fm.metadata === "object" && fm.metadata.adlc_stage) || null,
       name: fm.name || name,
       description: fm.description || "",
       license: fm.license || null,
@@ -465,6 +466,7 @@ writeFileSync(join(RUNTIME, "manifest.json"), JSON.stringify({
 const w = (f, d) => writeFileSync(join(OUT, f), JSON.stringify(d, null, 1) + "\n");
 w("upstream.json", upstream);
 w("skills.json", skills);
+w("stages.json", JSON.parse(readFileSync(join(ROOT, "shared", "adlc-stages.json"), "utf8")));
 w("scorecard.json", scorecard);
 w("trigger.json", trigger);
 w("quality.json", quality);

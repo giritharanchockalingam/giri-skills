@@ -4,6 +4,7 @@ description: Use when the user has a knowledge, search, or question-answering us
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: architecture
   version: 0.2.0
   author: giri-skills
   agent:

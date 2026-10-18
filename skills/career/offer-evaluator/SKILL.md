@@ -4,6 +4,7 @@ description: Use when the user receives a job offer (or expects one) and asks to
 license: MIT
 metadata:
   domain: career
+  adlc_stage: career
   version: 0.2.0
   author: giri-skills
   agent:

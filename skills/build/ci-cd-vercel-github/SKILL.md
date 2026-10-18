@@ -4,6 +4,7 @@ description: Use for any pipeline work on a Next.js + Supabase app deployed to V
 license: MIT
 metadata:
   domain: build
+  adlc_stage: deploy
   version: 0.2.0
   author: giri-skills
   agent:

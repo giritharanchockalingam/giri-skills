@@ -4,6 +4,7 @@ description: Use when the user asks "is this agent/LLM app good enough", "build 
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: evaluate
   version: 0.2.0
   author: giri-skills
   agent:

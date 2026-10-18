@@ -4,6 +4,7 @@ description: Use when the user reports a bug or says "fix this" — an error, st
 license: MIT
 metadata:
   domain: build
+  adlc_stage: improve
   version: 0.2.0
   author: giri-skills
   agent:

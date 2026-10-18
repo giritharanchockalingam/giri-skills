@@ -4,6 +4,7 @@ description: Use for any Supabase data-model or auth change — new table, colum
 license: MIT
 metadata:
   domain: build
+  adlc_stage: build
   version: 0.2.0
   author: giri-skills
   agent:

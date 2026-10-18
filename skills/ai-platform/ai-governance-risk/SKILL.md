@@ -4,6 +4,7 @@ description: Use when the user asks for an AI compliance or risk review — "ass
 license: MIT
 metadata:
   domain: ai-platform
+  adlc_stage: govern
   version: 0.2.0
   author: giri-skills
   agent:

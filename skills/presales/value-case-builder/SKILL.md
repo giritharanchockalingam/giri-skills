@@ -4,6 +4,7 @@ description: Use when the user asks to build, structure, or review a business ca
 license: MIT
 metadata:
   domain: presales
+  adlc_stage: use-case
   version: 0.2.0
   author: giri-skills
   agent:

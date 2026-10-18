@@ -4,6 +4,7 @@ description: Use when the user starts a new app or repo (Next.js + Supabase + Ve
 license: MIT
 metadata:
   domain: build
+  adlc_stage: build
   version: 0.2.0
   author: giri-skills
   agent:

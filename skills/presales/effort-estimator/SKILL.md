@@ -4,6 +4,7 @@ description: Use when the user asks to size, estimate, or price a services engag
 license: MIT
 metadata:
   domain: presales
+  adlc_stage: opportunity
   version: 0.2.0
   author: giri-skills
   agent:

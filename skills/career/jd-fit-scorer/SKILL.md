@@ -4,6 +4,7 @@ description: Use when the user pastes a job description (JD) or job link and ask
 license: MIT
 metadata:
   domain: career
+  adlc_stage: career
   version: 0.2.0
   author: giri-skills
   agent:

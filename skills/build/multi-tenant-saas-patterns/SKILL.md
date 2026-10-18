@@ -4,6 +4,7 @@ description: Use when designing or changing tenant isolation, roles/permissions,
 license: MIT
 metadata:
   domain: build
+  adlc_stage: architecture
   version: 0.2.0
   author: giri-skills
   agent:

@@ -4,6 +4,7 @@ description: Use whenever writing or reviewing Next.js (App Router) / React / Ty
 license: MIT
 metadata:
   domain: build
+  adlc_stage: build
   version: 0.2.0
   author: giri-skills
   agent:

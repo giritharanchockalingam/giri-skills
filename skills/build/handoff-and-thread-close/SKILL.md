@@ -4,6 +4,7 @@ description: Use at the end of a working thread, before switching topics, or whe
 license: MIT
 metadata:
   domain: build
+  adlc_stage: improve
   version: 0.2.0
   author: giri-skills
   agent:

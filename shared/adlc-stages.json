@@ -1,0 +1,19 @@
+{
+  "stages": [
+    {"id": "strategy",     "n": 1,  "name": "Strategy & portfolio", "question": "Where should we use AI, and how do we organise for it?"},
+    {"id": "use-case",     "n": 2,  "name": "Use case & value",     "question": "Is this idea worth building, and what is it worth?"},
+    {"id": "data",         "n": 3,  "name": "Data readiness",       "question": "Do we have the data, and may we use it?"},
+    {"id": "requirements", "n": 4,  "name": "Requirements",         "question": "What exactly are we building?"},
+    {"id": "architecture", "n": 5,  "name": "Architecture",         "question": "Which pattern, model and components?"},
+    {"id": "build",        "n": 6,  "name": "Build",                "question": "Prompts, tools, code and data to make it work."},
+    {"id": "evaluate",     "n": 7,  "name": "Evaluate",             "question": "Is it good, safe and fair enough?"},
+    {"id": "govern",       "n": 8,  "name": "Govern",               "question": "Risks, controls and security sign-off."},
+    {"id": "deploy",       "n": 9,  "name": "Deploy",               "question": "Cost, capacity, guardrails and rollout."},
+    {"id": "operate",      "n": 10, "name": "Operate",              "question": "Is it healthy in production?"},
+    {"id": "improve",      "n": 11, "name": "Improve",              "question": "What do we change next, and how safely?"}
+  ],
+  "shelves": [
+    {"id": "opportunity", "name": "Business · Opportunity", "question": "Win and shape the engagement (presales)."},
+    {"id": "career",      "name": "Business · Career",      "question": "Personal career workflows."}
+  ]
+}

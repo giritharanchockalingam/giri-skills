@@ -4,6 +4,7 @@ description: Use when an app is going to production or lacks visibility — "add
 license: MIT
 metadata:
   domain: build
+  adlc_stage: operate
   version: 0.2.0
   author: giri-skills
   agent:

@@ -4,6 +4,7 @@ description: Use when a product feature or capability needs defining before engi
 license: MIT
 metadata:
   domain: build
+  adlc_stage: requirements
   version: 0.2.0
   author: giri-skills
   agent:

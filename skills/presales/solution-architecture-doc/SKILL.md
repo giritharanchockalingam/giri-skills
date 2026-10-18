@@ -4,6 +4,7 @@ description: Use when the user asks to produce, review, or redline a target or s
 license: MIT
 metadata:
   domain: presales
+  adlc_stage: architecture
   version: 0.2.0
   author: giri-skills
   agent:
