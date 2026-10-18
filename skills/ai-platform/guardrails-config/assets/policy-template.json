@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy and fill. Every value is a policy decision by the accountable owner (AI security lead / Data protection officer); nothing here is a recommended default.",
+  "blocked_topics": [],
+  "pii_handling": {
+    "email": "mask | block | allow",
+    "phone": "mask | block | allow",
+    "card": "mask | block | allow",
+    "ssn": "mask | block | allow"
+  },
+  "max_input_chars": 0,
+  "max_output_chars": 0,
+  "allowed_tools": [],
+  "injection_markers": []
+}

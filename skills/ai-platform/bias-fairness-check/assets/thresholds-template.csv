@@ -1,0 +1,5 @@
+metric,threshold,notes
+demographic_parity_difference,,set by the Responsible AI lead; blank = to be baselined (never a pass)
+disparate_impact_ratio,,0.8 only if the four-fifths rule is the chosen policy
+equal_opportunity_difference,,
+equalized_odds_difference,,

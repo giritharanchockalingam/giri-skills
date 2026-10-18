@@ -1,0 +1,91 @@
+{
+  "skill": "bias-fairness-check",
+  "cases": [
+    {
+      "id": "fairness-gate-before-launch",
+      "prompt": "Here are labelled predictions from our loan pre-screen model by applicant group. Is there disparate impact? Our policy thresholds are attached.",
+      "expected": [
+        "Computes per-group selection rate, TPR, FPR, precision and the four fairness metrics with the script",
+        "Compares only against the supplied thresholds; names the reference group and its basis",
+        "Flags small groups instead of hiding them; keeps the Limits section"
+      ]
+    },
+    {
+      "id": "no-threshold-no-invention",
+      "prompt": "Run a bias check on this file and tell me if it passes the usual thresholds.",
+      "expected": [
+        "Does not invent thresholds; marks each as [TO BE BASELINED — owner: Responsible AI lead]",
+        "Verdict INCOMPLETE, not PASS; asks the owner for the policy thresholds"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Check fairness of the attached predictions against our thresholds; reference group A, flag groups under 5.",
+      "expected": [
+        "Runs scripts/fairness.py; verdict PASS with DPD 0.2, DIR 0.6, EOD 0.5, EqOdds 0.5; group C flagged"
+      ],
+      "inputs": {
+        "predictions": "evals/fixtures/predictions.csv",
+        "thresholds": "evals/fixtures/thresholds.csv",
+        "reference_group": "A",
+        "min_sample": "5"
+      },
+      "checks": [
+        "exit:0",
+        "exists:fairness.json",
+        {"file": "fairness-report.md", "check": "sections:[\"Verdict\",\"Metrics\",\"Per-group\",\"Small groups\",\"Limits\"]"},
+        {"file": "fairness-report.md", "check": "contains:\"**PASS**\""},
+        {"file": "fairness-report.md", "check": "contains:\"| `disparate_impact_ratio` | 0.6000 | >= | 0.5000 | pass |\""},
+        {"file": "fairness-report.md", "check": "numbers_trace_to:fairness.json"}
+      ]
+    },
+    {
+      "id": "agent-missing-predictions",
+      "prompt": "Is our model fair?",
+      "expected": [
+        "Asks for the predictions CSV instead of guessing"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:predictions"
+      ]
+    },
+    {
+      "id": "agent-four-fifths-breach-fails",
+      "prompt": "Apply the four-fifths rule to these predictions (reference group A).",
+      "expected": [
+        "DIR 0.6 < 0.8 is a breach: verdict FAIL and the run exits 1; outputs still written"
+      ],
+      "inputs": {
+        "predictions": "evals/fixtures/predictions.csv",
+        "thresholds": "evals/fixtures/thresholds-four-fifths.csv",
+        "reference_group": "A"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "fairness-report.md", "check": "contains:\"**FAIL**\""},
+        {"file": "fairness-report.md", "check": "contains:\"four-fifths rule\""},
+        {"file": "fairness.json", "check": "contains:\"\\\"breach\\\"\""}
+      ]
+    },
+    {
+      "id": "agent-no-thresholds-not-a-pass",
+      "prompt": "Run the bias check on these predictions by region; we have not set thresholds yet.",
+      "expected": [
+        "Every metric to be baselined with an owner; verdict INCOMPLETE; reference group defaults to the highest selection rate and says so"
+      ],
+      "inputs": {
+        "predictions": "evals/fixtures/predictions-region.csv",
+        "sensitive_attr": "region"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "fairness-report.md", "check": "contains:\"**INCOMPLETE**\""},
+        {"file": "fairness-report.md", "check": "contains:\"[TO BE BASELINED — owner: Responsible AI lead]\""},
+        {"file": "fairness-report.md", "check": "contains:\"highest selection rate\""},
+        {"file": "fairness-report.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}
