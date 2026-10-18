@@ -60,6 +60,7 @@ MUST_EXIST = FILE_TYPES - {"path"}
 TOKEN_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 OPT_GROUP_RE = re.compile(r"\[([^\[\]]*\{[^\[\]]*)\]")
 CONTEXT_LIMIT = 12 * 1024
+VENDOR_CONTEXT_LIMIT = 32 * 1024  # wrapped upstream instructions are read whole (largest today ~16 KB)
 
 LLM_INSTRUCTION = ("Fill this template using ONLY the context files. Copy every number exactly as it appears in "
                    "them; never calculate, re-round or derive new numbers (percentages, totals, splits, rates) — if a "
@@ -313,8 +314,9 @@ def run_llm_step(step, values, assumptions, skill_dir: Path, provider, logs: Pat
             parts += ["", f"## Context: {cp.name}", "", "(file missing)"]
             continue
         body = cp.read_text(encoding="utf-8", errors="replace")
-        if len(body) > CONTEXT_LIMIT:
-            body = body[:CONTEXT_LIMIT] + "\n[... truncated at 12 KB ...]"
+        limit = VENDOR_CONTEXT_LIMIT if "/vendor/" in cp.as_posix() else CONTEXT_LIMIT
+        if len(body) > limit:
+            body = body[:limit] + f"\n[... truncated at {limit // 1024} KB ...]"
         parts += ["", f"## Context: {cp.name}", "", body]
     user = "\n".join(parts)
     (logs / f"{name}.prompt.txt").write_text(user, encoding="utf-8")

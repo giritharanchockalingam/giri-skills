@@ -1949,6 +1949,323 @@
   "bodyMd": "\n# Data Readiness Assessment\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-readiness-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-readiness-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`readiness.json`, `readiness.md`). A \"Not ready\" verdict exits 1 on purpose: the run is telling you the data fails an owner threshold.\n\n## When to use\n- Gate check at the ADLC data stage: before committing to a use case, a RAG corpus, a fine-tune or a model build.\n- \"Profile this extract and tell me if it meets the requirements the data owner signed off.\"\n- Re-check after a data fix: re-run with the same requirements file and compare verdicts.\n- NOT for: PII discovery or handling policy (`pii-data-inventory`), building train/val/test splits (`finetune-dataset-builder`), designing pipelines or data contracts, full-population data quality monitoring.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `data` — sample dataset CSV with header | yes | data owner / engineer extract | run stops (exit 2), asks once |\n| `requirements` — `key,value` thresholds | yes | data owner sign-off (copy `assets/readiness-requirements.csv`) | run stops (exit 2), asks once |\n| `as_of` — ISO date for freshness | no | the assessment date the owner agrees | freshness reported TBD |\n\nRequirement keys: `min_rows`, `max_null_pct`, `required_columns` (`a;b;c`), `unique_key` (`a[;b]`), `max_duplicate_rows`, `date_column` + `max_age_days`. A blank or absent key leaves its dimension `[TO BE BASELINED — owner: Data owner]`. Unknown keys are listed in Notes and ignored.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the sample is representative (source system, extract date, filter) and that the requirements came from the accountable data owner, not from this skill.\n3. Run the agent. `scripts/assess.py` profiles every column (null %, inferred type, distinct), counts fully duplicated rows, and scores six dimensions — volume, completeness, schema, uniqueness, duplicates, freshness — using `references/readiness-dimensions.md`.\n4. Read the verdict: any fail → **Not ready** (exit 1); else any TBD → **Ready-with-gaps**; else **Ready**.\n5. For each gap, hand the owner named in \"Gaps and owners\" the action: set the missing threshold, remediate at source, or record a waiver. Re-run after changes.\n6. Run the self-check.\n\n## Output\n- `readiness.json` — source files, requirements as parsed, verdict, per-dimension status/threshold/observed/detail/owner, column profile, notes.\n- `readiness.md` — sections **Verdict**, **Dimensions**, **Column profile**, **Gaps and owners** (+ Notes when keys were ignored). Every number traces to `readiness.json`.\n\n## Self-check\n- [ ] Every threshold came from the requirements file; none were assumed\n- [ ] Every TBD names an accountable owner (`Data owner`)\n- [ ] The sample's provenance (system, date, filter) is stated next to the verdict when reported\n- [ ] Not ready is reported as Not ready, with the failing dimensions and owners, not softened\n- [ ] Freshness is TBD, not passed, when `as_of` was not supplied\n\n## References\n- `references/readiness-dimensions.md` — dimension definitions, formulas, null and type rules\n- `references/method-notes.md` — sampling caveats and how this maps to public data-quality frameworks\n- `assets/readiness-requirements.csv` — requirements template for the data owner\n- `scripts/assess.py` — profiler and scorer (argparse; stdlib)\n"
  },
  {
+  "id": "ai-platform/eval-engineering-runner",
+  "domain": "ai-platform",
+  "stage": "evaluate",
+  "name": "eval-engineering-runner",
+  "description": "Use when the user has an eval dataset and wants to know whether it is fit to score with — \"audit our eval set\", \"do we have enough cases per category\", \"find duplicates and leakage in the golden set\", \"clean this eval file\". Produces eval-audit.json and eval-audit.md (verdict, per-category coverage vs targets, duplicates and near-duplicates, empty references, conflicting references, split leakage, grader coverage, balance, recommendations per category) and a cleaned eval-clean.jsonl; optional LLM review against the upstream eval-engineering guidance. Not for running evals or LLM-as-judge scoring (llm-eval-harness) or retrieval metrics (rag-pipeline-design).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "evaluate",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "dataset",
+     "type": "file",
+     "required": true,
+     "from": "eval set JSONL or CSV: id, input, expected/reference, category or tags, optional grader, split, label (layout: assets/eval-dataset.example.jsonl)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "targets",
+     "type": "csv",
+     "required": false,
+     "from": "coverage targets CSV: category, min_cases (layout: assets/coverage-targets.example.csv); without it coverage is reported, not gated",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "near_dup_threshold",
+     "type": "string",
+     "required": false,
+     "from": "token Jaccard at or above which two inputs count as near-duplicates (method parameter)",
+     "default": "0.9",
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "review",
+     "type": "flag",
+     "required": false,
+     "from": "yes to add an LLM review of the audit against the upstream eval-engineering guidance",
+     "default": null,
+     "flag": "--review",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "audit",
+     "kind": "script"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "audit",
+     "kind": "script",
+     "cmd": "python3 -I scripts/audit_evals.py --dataset {dataset} [--targets {targets}] --near-dup-threshold {near_dup_threshold} --out-dir {out}",
+     "stdout": "{out}/audit.log"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm",
+     "template": "assets/eval-review-template.md",
+     "context": [
+      "../../../vendor/eval-engineering/SKILL.md",
+      "../../../vendor/eval-engineering/references/verifier-design.md",
+      "../../../vendor/eval-engineering/references/calibration.md",
+      "{out}/eval-audit.md",
+      "{out}/eval-audit.json"
+     ],
+     "out": "{out}/eval-review.md",
+     "skip_if_missing": [
+      "review"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/eval-audit.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"coverage\\\"\""
+     ]
+    },
+    {
+     "path": "{out}/eval-audit.md",
+     "checks": [
+      "exists",
+      "sections:[\"Verdict\",\"Coverage\",\"Quality issues\",\"Recommendations\"]",
+      "no_unowned_tbd"
+     ]
+    },
+    {
+     "path": "{out}/eval-clean.jsonl",
+     "checks": [
+      "exists",
+      "cmd:\"python3 scripts/check_jsonl.py {path} --require id --require input --require category\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "dataset": "evals/fixtures/eval-set.jsonl",
+     "targets": "evals/fixtures/targets.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"eval-engineering-runner\">Eval Engineering Runner</h1>\n<p>Wraps eval-engineering from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill designs Harbor tasks and verifiers by interview; this skill applies its dataset-level concerns (leakage, coverage, independent verifier evidence, fairness of the case mix) as a deterministic audit of a flat eval set. Upstream text is not copied: the optional review step reads <code>vendor/eval-engineering/SKILL.md</code> and two of its references directly.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/eval-engineering-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/eval-engineering-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce (<code>eval-audit.json</code>, <code>eval-audit.md</code>, <code>eval-clean.jsonl</code>). A FAIL (exit 1) means a category is below its target: add cases and re-run.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Before trusting a score: is the eval set big enough per category, free of duplicates and leakage, and gradable?</li><li>After merging cases from several sources (logs, SMEs, synthetic) into one golden set.</li><li>NOT for: running the evals or judging outputs (<code>llm-eval-harness</code> runs them; this skill engineers the dataset), retrieval metrics (<code>rag-pipeline-design</code>), designing Harbor tasks (the upstream skill itself).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>dataset</code> — JSONL or CSV with id, input, expected/reference, category or tags; optional grader type, split, label</td><td>yes</td><td>eval owner; layout <code>assets/eval-dataset.example.jsonl</code></td></tr><tr><td><code>targets</code> — CSV category, min_cases</td><td>no (without it the verdict is NOT GATED)</td><td>eval owner + product owner; layout <code>assets/coverage-targets.example.csv</code></td></tr><tr><td><code>near_dup_threshold</code> — token Jaccard (default 0.9, a method parameter printed in the report)</td><td>no</td><td>eval owner</td></tr><tr><td><code>review</code> — flag for the optional LLM review</td><td>no</td><td>user</td></tr></tbody></table>\n<p>Targets are never invented: without a targets file each category's <code>min_cases</code> is <code>[TO BE BASELINED — owner: Eval owner]</code>.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Export the eval set to JSONL or CSV; set per-category <code>min_cases</code> with the product owner.</li><li>Run the skill. <code>scripts/audit_evals.py</code> applies <code>references/audit-method.md</code>: normalise inputs; drop empty inputs, empty references (unless the grader is reference-free), and exact duplicates; flag conflicting references, cross-split leakage, near-duplicates, missing or unknown graders, repeated ids; count cleaned cases per category against targets.</li><li>On exit 1 (FAIL) add the cases named in Recommendations, then re-run. Fix high-severity issues before scoring with <code>llm-eval-harness</code>.</li><li>Use <code>eval-clean.jsonl</code> as the scored set; keep the original for provenance.</li><li>Optional: pass <code>review=yes</code> for <code>eval-review.md</code> on <code>assets/eval-review-template.md</code>.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<table><thead><tr><th>File</th><th>Content</th><th>Checks</th></tr></thead><tbody><tr><td><code>eval-audit.json</code></td><td>verdict, coverage per category, balance, label distribution, issues, issue counts, recommendations, columns used</td><td>json; has coverage</td></tr><tr><td><code>eval-audit.md</code></td><td>Verdict, Coverage, Quality issues, Recommendations</td><td>sections; no unowned TBD</td></tr><tr><td><code>eval-clean.jsonl</code></td><td>cleaned cases: id, input, expected, category, tags, grader, split (+ label)</td><td>every line JSON; id, input, category non-empty; ids unique (<code>scripts/check_jsonl.py</code>)</td></tr><tr><td><code>eval-review.md</code> (optional)</td><td>Upstream alignment, Dataset gaps, Next actions</td><td>eval case <code>agent-with-review</code></td></tr></tbody></table>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every category in scope has a target; none is below it</li><li>[ ] No input appears in more than one split; conflicting references resolved</li><li>[ ] Every case has a grader type; reference-based graders have references</li><li>[ ] Near-duplicates reviewed: kept only where they test something different</li><li>[ ] Recommendations name counts, not adjectives</li><li>[ ] The scored set is <code>eval-clean.jsonl</code>, regenerated after every change</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/audit-method.md</code> — rules, severities, normalisation, and limits</li><li><code>scripts/audit_evals.py</code> — auditor and cleaner (argparse; stdlib)</li><li><code>scripts/check_jsonl.py</code> — JSONL validator used by the output check</li><li><code>assets/eval-dataset.example.jsonl</code>, <code>assets/coverage-targets.example.csv</code> — input layouts</li><li><code>assets/eval-review-template.md</code> — template for the optional review</li><li>Upstream: <code>vendor/eval-engineering/SKILL.md</code> (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)</li></ul>",
+  "files": {
+   "references": [
+    "audit-method.md"
+   ],
+   "assets": [
+    "coverage-targets.example.csv",
+    "eval-dataset.example.jsonl",
+    "eval-review-template.md"
+   ],
+   "scripts": [
+    "audit_evals.py",
+    "check_jsonl.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "happy-path-audit-golden-set",
+    "prompt": "Here is our support-bot golden set and the minimum cases we want per category. Is it fit to score with? Clean it.",
+    "expected": [
+     "Runs scripts/audit_evals.py; verdict from targets; coverage table per category",
+     "Flags duplicates, conflicting references, split leakage, empty references, missing graders; writes eval-clean.jsonl",
+     "Recommendations name exact counts; does not run the evals"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Audit the attached eval set against the attached coverage targets and give me the cleaned file.",
+    "expected": [
+     "PASS on targets after cleaning; quality issues listed; eval-clean.jsonl written"
+    ]
+   },
+   {
+    "id": "agent-missing-dataset",
+    "prompt": "Audit our eval set.",
+    "expected": [
+     "Asks for the dataset file instead of inventing cases"
+    ]
+   },
+   {
+    "id": "agent-below-target-fails",
+    "prompt": "We need 6 safety cases, 5 refund cases and 2 escalation cases. Are we covered?",
+    "expected": [
+     "FAIL with exit 1: safety, refunds and escalations below target with exact gaps; no cases invented"
+    ]
+   },
+   {
+    "id": "agent-no-targets-not-gated",
+    "prompt": "Audit the eval set; we have not agreed coverage targets yet.",
+    "expected": [
+     "Verdict NOT GATED; min_cases marked TO BE BASELINED with an owner; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Audit the set and review it against the eval-engineering guidance.",
+    "expected": [
+     "Script outputs plus eval-review.md on the review template with the upstream skill as context"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Audit the attached eval set against the attached coverage targets and give me the cleaned file.",
+    "inputs": {
+     "dataset": "evals/fixtures/eval-set.jsonl",
+     "targets": "evals/fixtures/targets.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:eval-clean.jsonl",
+     {
+      "file": "eval-audit.md",
+      "check": "sections:[\"Verdict\",\"Coverage\",\"Quality issues\",\"Recommendations\"]"
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"**PASS** — 20 rows in, 18 kept\""
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"| billing | 7 | 6 | 33.3 | 5 | 0 | OK |\""
+     },
+     {
+      "file": "eval-audit.json",
+      "check": "contains:\"split_leakage\""
+     },
+     {
+      "file": "eval-audit.json",
+      "check": "contains:\"conflicting_reference\""
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "numbers_trace_to:eval-audit.json"
+     }
+    ],
+    "expected": [
+     "PASS on targets after cleaning; quality issues listed; eval-clean.jsonl written"
+    ]
+   },
+   {
+    "id": "agent-missing-dataset",
+    "prompt": "Audit our eval set.",
+    "inputs": {
+     "targets": "evals/fixtures/targets.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:dataset"
+    ],
+    "expected": [
+     "Asks for the dataset file instead of inventing cases"
+    ]
+   },
+   {
+    "id": "agent-below-target-fails",
+    "prompt": "We need 6 safety cases, 5 refund cases and 2 escalation cases. Are we covered?",
+    "inputs": {
+     "dataset": "evals/fixtures/eval-set.jsonl",
+     "targets": "evals/fixtures/targets-strict.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"**FAIL**\""
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"| escalations | 0 | 0 | 0.0 | 2 | 2 | BELOW |\""
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"add 2 distinct case(s) to reach min_cases 6\""
+     }
+    ],
+    "expected": [
+     "FAIL with exit 1: safety, refunds and escalations below target with exact gaps; no cases invented"
+    ]
+   },
+   {
+    "id": "agent-no-targets-not-gated",
+    "prompt": "Audit the eval set; we have not agreed coverage targets yet.",
+    "inputs": {
+     "dataset": "evals/fixtures/eval-set.jsonl"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"NOT GATED\""
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "contains:\"[TO BE BASELINED — owner: Eval owner]\""
+     },
+     {
+      "file": "eval-audit.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Verdict NOT GATED; min_cases marked TO BE BASELINED with an owner; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Audit the set and review it against the eval-engineering guidance.",
+    "inputs": {
+     "dataset": "evals/fixtures/eval-set.jsonl",
+     "targets": "evals/fixtures/targets.csv",
+     "review": "yes"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "eval-review.md",
+      "check": "sections:[\"Upstream alignment\",\"Dataset gaps\",\"Next actions\"]"
+     },
+     {
+      "file": "eval-review.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Script outputs plus eval-review.md on the review template with the upstream skill as context"
+    ]
+   }
+  ],
+  "bodyMd": "\n# Eval Engineering Runner\n\nWraps eval-engineering from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill designs Harbor tasks and verifiers by interview; this skill applies its dataset-level concerns (leakage, coverage, independent verifier evidence, fairness of the case mix) as a deterministic audit of a flat eval set. Upstream text is not copied: the optional review step reads `vendor/eval-engineering/SKILL.md` and two of its references directly.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/eval-engineering-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/eval-engineering-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`eval-audit.json`, `eval-audit.md`, `eval-clean.jsonl`). A FAIL (exit 1) means a category is below its target: add cases and re-run.\n\n## When to use\n- Before trusting a score: is the eval set big enough per category, free of duplicates and leakage, and gradable?\n- After merging cases from several sources (logs, SMEs, synthetic) into one golden set.\n- NOT for: running the evals or judging outputs (`llm-eval-harness` runs them; this skill engineers the dataset), retrieval metrics (`rag-pipeline-design`), designing Harbor tasks (the upstream skill itself).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `dataset` — JSONL or CSV with id, input, expected/reference, category or tags; optional grader type, split, label | yes | eval owner; layout `assets/eval-dataset.example.jsonl` |\n| `targets` — CSV category, min_cases | no (without it the verdict is NOT GATED) | eval owner + product owner; layout `assets/coverage-targets.example.csv` |\n| `near_dup_threshold` — token Jaccard (default 0.9, a method parameter printed in the report) | no | eval owner |\n| `review` — flag for the optional LLM review | no | user |\n\nTargets are never invented: without a targets file each category's `min_cases` is `[TO BE BASELINED — owner: Eval owner]`.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Export the eval set to JSONL or CSV; set per-category `min_cases` with the product owner.\n3. Run the skill. `scripts/audit_evals.py` applies `references/audit-method.md`: normalise inputs; drop empty inputs, empty references (unless the grader is reference-free), and exact duplicates; flag conflicting references, cross-split leakage, near-duplicates, missing or unknown graders, repeated ids; count cleaned cases per category against targets.\n4. On exit 1 (FAIL) add the cases named in Recommendations, then re-run. Fix high-severity issues before scoring with `llm-eval-harness`.\n5. Use `eval-clean.jsonl` as the scored set; keep the original for provenance.\n6. Optional: pass `review=yes` for `eval-review.md` on `assets/eval-review-template.md`.\n7. Run the self-check.\n\n## Output\n| File | Content | Checks |\n|---|---|---|\n| `eval-audit.json` | verdict, coverage per category, balance, label distribution, issues, issue counts, recommendations, columns used | json; has coverage |\n| `eval-audit.md` | Verdict, Coverage, Quality issues, Recommendations | sections; no unowned TBD |\n| `eval-clean.jsonl` | cleaned cases: id, input, expected, category, tags, grader, split (+ label) | every line JSON; id, input, category non-empty; ids unique (`scripts/check_jsonl.py`) |\n| `eval-review.md` (optional) | Upstream alignment, Dataset gaps, Next actions | eval case `agent-with-review` |\n\n## Self-check\n- [ ] Every category in scope has a target; none is below it\n- [ ] No input appears in more than one split; conflicting references resolved\n- [ ] Every case has a grader type; reference-based graders have references\n- [ ] Near-duplicates reviewed: kept only where they test something different\n- [ ] Recommendations name counts, not adjectives\n- [ ] The scored set is `eval-clean.jsonl`, regenerated after every change\n\n## References\n- `references/audit-method.md` — rules, severities, normalisation, and limits\n- `scripts/audit_evals.py` — auditor and cleaner (argparse; stdlib)\n- `scripts/check_jsonl.py` — JSONL validator used by the output check\n- `assets/eval-dataset.example.jsonl`, `assets/coverage-targets.example.csv` — input layouts\n- `assets/eval-review-template.md` — template for the optional review\n- Upstream: `vendor/eval-engineering/SKILL.md` (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)\n"
+ },
+ {
   "id": "ai-platform/feedback-improvement-loop",
   "domain": "ai-platform",
   "stage": "improve",
@@ -2874,6 +3191,829 @@
    }
   ],
   "bodyMd": "\n# Infra & GPU Sizing (inference)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/infra-gpu-sizing --input <name>=<value> … --out <dir>` (see `--explain ai-platform/infra-gpu-sizing`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.\n\n## When to use\n- Sizing inference capacity for a self-hosted or rented LLM/SLM; deciding self-host vs rental vs API; budgeting a pilot or rollout.\n- NOT for: training/fine-tuning cluster sizing, picking a model (use evals), network/storage design.\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Concurrent or daily active users and peak factor | yes | user |\n| Requests per user per day; tokens in/out per request (averages) | yes | user / logs; if absent ask, then state assumptions |\n| Latency SLO: time-to-first-token and tokens/s per stream, or end-to-end p95 | yes | user |\n| Model(s) and precision (e.g., 8B at fp16/int8), context length | yes | user |\n| Measured or vendor-stated throughput: tokens/s per GPU for that model + serving stack | yes | user benchmark or vendor doc; **not** invented by the skill |\n| Unit prices: $/GPU-hr rental, self-host capex and power/hosting, API $/1M tokens | yes | user; dated |\n| Availability target, residency, data constraints | no | user |\n\nIf throughput per GPU or unit prices are missing, ask once; otherwise run with explicitly labeled placeholder inputs and mark results illustrative.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. **Build the workload model** with `references/workload-model.md`: requests/day → peak requests/s → tokens/s required (prefill and decode separated).\n3. **Compute capacity** with `references/throughput-math.md`: GPUs = ceil(peak tokens/s ÷ effective tokens/s per GPU ÷ utilization target) with headroom for redundancy. Latency check: decode tokens/s per stream vs SLO at the resulting concurrency.\n4. **Run the calculator**: fill `assets/gpu-sizing-inputs.csv`, then `python3 -I scripts/size.py --inputs assets/gpu-sizing-inputs.csv`. Compare scenarios (low/expected/peak) and options (self-host / rental / API).\n5. **Apply TCO factors** with `references/tco-factors.md`: utilization, ops staffing, upgrade cycle, egress, support, idle time, scaling elasticity.\n6. **Recommend**: option, GPU count, monthly cost range, breakeven utilization between rental and self-host, and the triggers to revisit.\n7. Run the self-check.\n\n## Output\n- `gpu-sizing-<name>.md`: inputs table (with sources/dates), capacity math, cost comparison table, sensitivity, recommendation, assumptions, risks.\n- Calculator output (table or JSON) embedded.\n\n## Self-check\n- [ ] Every throughput figure cites a benchmark or vendor doc, or is labeled illustrative\n- [ ] Every price is a dated user input; nothing hardcoded\n- [ ] Prefill and decode handled separately; latency SLO checked, not only throughput\n- [ ] Peak factor, utilization target, and redundancy stated as assumptions\n- [ ] Breakeven between options shown as a function of utilization\n- [ ] TCO includes people and idle cost, not only hardware\n- [ ] Recommendation names revisit triggers (volume, model change, price change)\n\n## References\n- `references/workload-model.md` — from users to tokens/s\n- `references/throughput-math.md` — capacity and latency formulas (figures illustrative)\n- `references/tco-factors.md` — self-host vs rental vs API factors\n- `scripts/size.py` — calculator (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/langchain-rag-runner",
+  "domain": "ai-platform",
+  "stage": "build",
+  "name": "langchain-rag-runner",
+  "description": "Use when the user is building a LangChain RAG pipeline and needs the numbers and starter code — \"how many chunks will our corpus make\", \"what will embedding cost, one-time and monthly\", \"does top_k fit the context window\", \"generate the ingestion and retrieval code\". Produces rag-plan.json and rag-plan.md (sizing per source, one-time and monthly re-embedding cost from a user-supplied price, retrieval budget vs context, warnings, scaffold summary) and a syntax-checked LangChain ingestion + retrieval scaffold rag_pipeline.py; optional LLM review against the upstream langchain-rag guidance. Not for retrieval-quality evaluation or chunking-strategy trade-offs (rag-pipeline-design) or GPU sizing (infra-gpu-sizing).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "build",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "corpus",
+     "type": "csv",
+     "required": true,
+     "from": "corpus profile CSV: source, doc_count, avg_chars, update_frequency (static|yearly|quarterly|monthly|weekly|daily or updates per month), optional change_fraction (layout: assets/corpus-profile.example.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "config",
+     "type": "json",
+     "required": true,
+     "from": "RAG config JSON: chunk_size_chars, chunk_overlap_chars, embedding_price_per_1m_tokens (user-supplied, no default), top_k, reranker yes/no, vector_store, context_budget_tokens; optional embedding_model, embedding_provider, rerank_fetch_k, chars_per_token, currency, price_date (layout: assets/rag-config.example.json)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "review",
+     "type": "flag",
+     "required": false,
+     "from": "yes to add an LLM review of the plan against the upstream langchain-rag guidance",
+     "default": null,
+     "flag": "--review",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "plan",
+     "kind": "script"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "plan",
+     "kind": "script",
+     "cmd": "python3 -I scripts/plan_rag.py --corpus {corpus} --config {config} --out-dir {out}",
+     "stdout": "{out}/plan.log"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm",
+     "template": "assets/rag-review-template.md",
+     "context": [
+      "../../../vendor/langchain-rag/SKILL.md",
+      "{out}/rag-plan.md",
+      "{out}/rag-plan.json",
+      "{out}/rag_pipeline.py"
+     ],
+     "out": "{out}/rag-review.md",
+     "skip_if_missing": [
+      "review"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/rag-plan.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"ok\\\": true\""
+     ]
+    },
+    {
+     "path": "{out}/rag-plan.md",
+     "checks": [
+      "exists",
+      "sections:[\"Sizing\",\"Cost\",\"Retrieval budget\",\"Warnings\",\"Scaffold\"]",
+      "no_unowned_tbd",
+      "numbers_trace_to:\"{out}/rag-plan.json\""
+     ]
+    },
+    {
+     "path": "{out}/rag_pipeline.py",
+     "checks": [
+      "exists",
+      "contains:\"RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)\"",
+      "cmd:\"python3 scripts/check_syntax.py {path} --require ingest --require retrieve --require make_embeddings --require make_vector_store\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "corpus": "evals/fixtures/corpus.csv",
+     "config": "evals/fixtures/rag-config.json"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"langchain-rag-runner\">LangChain RAG Runner</h1>\n<p>Wraps langchain-rag from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its splitter, embedding and vector-store guidance into sizing and cost arithmetic, blocking config checks and a generated scaffold. Upstream text is not copied: the optional review step reads <code>vendor/langchain-rag/SKILL.md</code> directly.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/langchain-rag-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/langchain-rag-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce (<code>rag-plan.json</code>, <code>rag-plan.md</code>, <code>rag_pipeline.py</code>). A blocked plan (exit 1) is the gate working: fix the config or corpus profile and re-run.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Before building a LangChain RAG pipeline: how many chunks, how many embedding tokens, what it costs to embed and keep fresh, whether <code>top_k</code> chunks fit the context.</li><li>When a chunking, <code>top_k</code> or store choice changes and the cost or budget must be re-checked.</li><li>NOT for: measuring retrieval quality or choosing between chunking strategies (<code>rag-pipeline-design</code>), serving capacity (<code>infra-gpu-sizing</code>), running evals (<code>llm-eval-harness</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>corpus</code> — one row per source: doc count, average characters, update frequency, optional change fraction</td><td>yes</td><td>data owner; layout <code>assets/corpus-profile.example.csv</code></td></tr><tr><td><code>config</code> — chunk size and overlap (chars), embedding price per 1M tokens, <code>top_k</code>, reranker yes/no, vector store, context budget (tokens available for retrieved text)</td><td>yes</td><td>ML platform lead; layout <code>assets/rag-config.example.json</code></td></tr><tr><td>optional config: embedding model and provider, <code>rerank_fetch_k</code>, chars per token (default 4), currency, price date</td><td>no</td><td>ML platform lead</td></tr><tr><td><code>review</code> — flag for the optional LLM review</td><td>no</td><td>user</td></tr></tbody></table>\n<p>The embedding price has no default: a missing price blocks the run. A missing model, price date or rerank candidate count becomes <code>[TO BE BASELINED — owner: &lt;role&gt;]</code>.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Fill the corpus profile and config from <code>assets/</code>. Use measured averages (from a sample) rather than guesses; record the price date.</li><li>Run the skill. <code>scripts/plan_rag.py</code> applies <code>references/sizing-method.md</code>: chunks per document from the sliding window, embedded characters including overlap, tokens as characters ÷ chars-per-token (an estimate), one-time and monthly re-embedding cost, per-query context vs budget.</li><li>Blocking (exit 1): a missing required key, overlap ≥ chunk size, <code>rerank_fetch_k</code> &lt; <code>top_k</code>, <code>top_k</code> × chunk tokens over the context budget, an invalid corpus row. Fix and re-run.</li><li>Read the Warnings: zero overlap, in-memory store, FAISS deserialization, missing model or price date, documents shorter than one chunk.</li><li><code>rag_pipeline.py</code> holds the config constants, one <code>SOURCES</code> entry per corpus source (locations from environment variables), <code>make_embeddings()</code> (one embeddings object for index and query), <code>make_vector_store()</code> for chroma, faiss, inmemory, pinecone or pgvector, <code>ingest()</code> and <code>retrieve()</code> with optional rerank. It was generated and syntax-checked, not executed.</li><li>Optional: pass <code>review=yes</code> for <code>rag-review.md</code> on <code>assets/rag-review-template.md</code>.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<table><thead><tr><th>File</th><th>Content</th><th>Checks</th></tr></thead><tbody><tr><td><code>rag-plan.json</code></td><td>ok flag, config, method, per-source sizing and cost, totals, retrieval budget, warnings, scaffold status</td><td>json; <code>&quot;ok&quot;: true</code></td></tr><tr><td><code>rag-plan.md</code></td><td>Sizing, Cost, Retrieval budget, Warnings, Scaffold</td><td>sections; no unowned TBD; every number traces to <code>rag-plan.json</code></td></tr><tr><td><code>rag_pipeline.py</code></td><td>LangChain ingestion + retrieval scaffold</td><td>syntax check with required functions; splitter wired to config</td></tr><tr><td><code>rag-review.md</code> (optional)</td><td>Upstream conformance, Cost and budget risks, Next changes</td><td>eval case <code>agent-with-review</code></td></tr></tbody></table>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every price is a dated user input; nothing assumed</li><li>[ ] Token counts are labelled estimates (characters ÷ chars-per-token), not tokenizer counts</li><li>[ ] Monthly cost states whether it assumes a full re-embed or a change fraction</li><li>[ ] <code>top_k</code> × chunk fits the context budget with headroom for the prompt and answer</li><li>[ ] Index and query use the same embeddings object; the store persists beyond tests</li><li>[ ] <code>rag_pipeline.py</code> is described as syntax-checked, not run</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/sizing-method.md</code> — formulas, a hand-checked example, and limits</li><li><code>scripts/plan_rag.py</code> — calculator and generator (argparse; stdlib)</li><li><code>scripts/check_syntax.py</code> — compile/ast check used by the output check</li><li><code>assets/corpus-profile.example.csv</code>, <code>assets/rag-config.example.json</code> — input layouts</li><li><code>assets/rag-review-template.md</code> — template for the optional review</li><li>Upstream: <code>vendor/langchain-rag/SKILL.md</code> (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)</li></ul>",
+  "files": {
+   "references": [
+    "sizing-method.md"
+   ],
+   "assets": [
+    "corpus-profile.example.csv",
+    "rag-config.example.json",
+    "rag-review-template.md"
+   ],
+   "scripts": [
+    "check_syntax.py",
+    "plan_rag.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "happy-path-size-and-scaffold",
+    "prompt": "We have 1,200 policy docs (~3k chars), 400 FAQs and 250 long contracts. Chunk 1000/200, top 5 with a reranker, Chroma. Our embedding quote is $0.02 per 1M tokens. What will it cost and give me the LangChain code.",
+    "expected": [
+     "Runs scripts/plan_rag.py; chunk counts per source with the ceil formula; tokens labelled as chars/4 estimates",
+     "One-time and monthly re-embedding cost from the quoted price only",
+     "Retrieval budget vs context; rag_pipeline.py described as syntax-checked, not executed"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Size and cost the corpus in the attached profile with the attached RAG config, and generate the pipeline scaffold.",
+    "expected": [
+     "Sizing, cost and budget computed from the inputs; scaffold generated and syntax-checked"
+    ]
+   },
+   {
+    "id": "agent-missing-config",
+    "prompt": "How much will embedding our corpus cost?",
+    "expected": [
+     "Asks for the RAG config (incl. the embedding price) instead of assuming one"
+    ]
+   },
+   {
+    "id": "agent-no-price-no-guess",
+    "prompt": "We don't have a price quote; just use the usual embedding price.",
+    "expected": [
+     "Blocks with the missing price named; no price assumed, no scaffold"
+    ]
+   },
+   {
+    "id": "agent-context-overflow-blocked",
+    "prompt": "Retrieve the top 20 chunks of 2000 characters into a 4000-token context.",
+    "expected": [
+     "Blocks: 10000 est. tokens exceed the 4000 budget; warns about zero overlap and the in-memory store"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Plan the pipeline and review it against the LangChain RAG guidance.",
+    "expected": [
+     "Script outputs plus rag-review.md on the review template with the upstream skill as context"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Size and cost the corpus in the attached profile with the attached RAG config, and generate the pipeline scaffold.",
+    "inputs": {
+     "corpus": "evals/fixtures/corpus.csv",
+     "config": "evals/fixtures/rag-config.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:rag_pipeline.py",
+     {
+      "file": "rag-plan.md",
+      "check": "sections:[\"Sizing\",\"Cost\",\"Retrieval budget\",\"Warnings\",\"Scaffold\"]"
+     },
+     {
+      "file": "rag-plan.md",
+      "check": "contains:\"| policies | 1,200 | 3,000 | 4 | 4,800 | 1,080,000 | monthly |\""
+     },
+     {
+      "file": "rag-plan.md",
+      "check": "contains:\"| contracts | 250 | 24,000 | 30 | 7,500 | 1,862,500 | quarterly |\""
+     },
+     {
+      "file": "rag-plan.md",
+      "check": "numbers_trace_to:rag-plan.json"
+     },
+     {
+      "file": "rag-plan.json",
+      "check": "contains:\"\\\"per_query_context_tokens\\\": 1250\""
+     }
+    ],
+    "expected": [
+     "Sizing, cost and budget computed from the inputs; scaffold generated and syntax-checked"
+    ]
+   },
+   {
+    "id": "agent-missing-config",
+    "prompt": "How much will embedding our corpus cost?",
+    "inputs": {
+     "corpus": "evals/fixtures/corpus.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:config"
+    ],
+    "expected": [
+     "Asks for the RAG config (incl. the embedding price) instead of assuming one"
+    ]
+   },
+   {
+    "id": "agent-no-price-no-guess",
+    "prompt": "We don't have a price quote; just use the usual embedding price.",
+    "inputs": {
+     "corpus": "evals/fixtures/corpus.csv",
+     "config": "evals/fixtures/rag-config-no-price.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "rag-plan.json",
+      "check": "contains:\"embedding_price_per_1m_tokens is missing (no default is assumed)\""
+     },
+     {
+      "file": "rag-plan.md",
+      "check": "contains:\"BLOCKED\""
+     }
+    ],
+    "expected": [
+     "Blocks with the missing price named; no price assumed, no scaffold"
+    ]
+   },
+   {
+    "id": "agent-context-overflow-blocked",
+    "prompt": "Retrieve the top 20 chunks of 2000 characters into a 4000-token context.",
+    "inputs": {
+     "corpus": "evals/fixtures/corpus.csv",
+     "config": "evals/fixtures/rag-config-overflow.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "rag-plan.json",
+      "check": "contains:\"exceeds the context budget\""
+     },
+     {
+      "file": "rag-plan.md",
+      "check": "contains:\"NO — blocking\""
+     },
+     {
+      "file": "rag-plan.md",
+      "check": "contains:\"in-memory\""
+     }
+    ],
+    "expected": [
+     "Blocks: 10000 est. tokens exceed the 4000 budget; warns about zero overlap and the in-memory store"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Plan the pipeline and review it against the LangChain RAG guidance.",
+    "inputs": {
+     "corpus": "evals/fixtures/corpus.csv",
+     "config": "evals/fixtures/rag-config.json",
+     "review": "yes"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "rag-review.md",
+      "check": "sections:[\"Upstream conformance\",\"Cost and budget risks\",\"Next changes\"]"
+     },
+     {
+      "file": "rag-review.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Script outputs plus rag-review.md on the review template with the upstream skill as context"
+    ]
+   }
+  ],
+  "bodyMd": "\n# LangChain RAG Runner\n\nWraps langchain-rag from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its splitter, embedding and vector-store guidance into sizing and cost arithmetic, blocking config checks and a generated scaffold. Upstream text is not copied: the optional review step reads `vendor/langchain-rag/SKILL.md` directly.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langchain-rag-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langchain-rag-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`rag-plan.json`, `rag-plan.md`, `rag_pipeline.py`). A blocked plan (exit 1) is the gate working: fix the config or corpus profile and re-run.\n\n## When to use\n- Before building a LangChain RAG pipeline: how many chunks, how many embedding tokens, what it costs to embed and keep fresh, whether `top_k` chunks fit the context.\n- When a chunking, `top_k` or store choice changes and the cost or budget must be re-checked.\n- NOT for: measuring retrieval quality or choosing between chunking strategies (`rag-pipeline-design`), serving capacity (`infra-gpu-sizing`), running evals (`llm-eval-harness`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `corpus` — one row per source: doc count, average characters, update frequency, optional change fraction | yes | data owner; layout `assets/corpus-profile.example.csv` |\n| `config` — chunk size and overlap (chars), embedding price per 1M tokens, `top_k`, reranker yes/no, vector store, context budget (tokens available for retrieved text) | yes | ML platform lead; layout `assets/rag-config.example.json` |\n| optional config: embedding model and provider, `rerank_fetch_k`, chars per token (default 4), currency, price date | no | ML platform lead |\n| `review` — flag for the optional LLM review | no | user |\n\nThe embedding price has no default: a missing price blocks the run. A missing model, price date or rerank candidate count becomes `[TO BE BASELINED — owner: <role>]`.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Fill the corpus profile and config from `assets/`. Use measured averages (from a sample) rather than guesses; record the price date.\n3. Run the skill. `scripts/plan_rag.py` applies `references/sizing-method.md`: chunks per document from the sliding window, embedded characters including overlap, tokens as characters ÷ chars-per-token (an estimate), one-time and monthly re-embedding cost, per-query context vs budget.\n4. Blocking (exit 1): a missing required key, overlap ≥ chunk size, `rerank_fetch_k` < `top_k`, `top_k` × chunk tokens over the context budget, an invalid corpus row. Fix and re-run.\n5. Read the Warnings: zero overlap, in-memory store, FAISS deserialization, missing model or price date, documents shorter than one chunk.\n6. `rag_pipeline.py` holds the config constants, one `SOURCES` entry per corpus source (locations from environment variables), `make_embeddings()` (one embeddings object for index and query), `make_vector_store()` for chroma, faiss, inmemory, pinecone or pgvector, `ingest()` and `retrieve()` with optional rerank. It was generated and syntax-checked, not executed.\n7. Optional: pass `review=yes` for `rag-review.md` on `assets/rag-review-template.md`.\n8. Run the self-check.\n\n## Output\n| File | Content | Checks |\n|---|---|---|\n| `rag-plan.json` | ok flag, config, method, per-source sizing and cost, totals, retrieval budget, warnings, scaffold status | json; `\"ok\": true` |\n| `rag-plan.md` | Sizing, Cost, Retrieval budget, Warnings, Scaffold | sections; no unowned TBD; every number traces to `rag-plan.json` |\n| `rag_pipeline.py` | LangChain ingestion + retrieval scaffold | syntax check with required functions; splitter wired to config |\n| `rag-review.md` (optional) | Upstream conformance, Cost and budget risks, Next changes | eval case `agent-with-review` |\n\n## Self-check\n- [ ] Every price is a dated user input; nothing assumed\n- [ ] Token counts are labelled estimates (characters ÷ chars-per-token), not tokenizer counts\n- [ ] Monthly cost states whether it assumes a full re-embed or a change fraction\n- [ ] `top_k` × chunk fits the context budget with headroom for the prompt and answer\n- [ ] Index and query use the same embeddings object; the store persists beyond tests\n- [ ] `rag_pipeline.py` is described as syntax-checked, not run\n\n## References\n- `references/sizing-method.md` — formulas, a hand-checked example, and limits\n- `scripts/plan_rag.py` — calculator and generator (argparse; stdlib)\n- `scripts/check_syntax.py` — compile/ast check used by the output check\n- `assets/corpus-profile.example.csv`, `assets/rag-config.example.json` — input layouts\n- `assets/rag-review-template.md` — template for the optional review\n- Upstream: `vendor/langchain-rag/SKILL.md` (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)\n"
+ },
+ {
+  "id": "ai-platform/langgraph-hitl-runner",
+  "domain": "ai-platform",
+  "stage": "build",
+  "name": "langgraph-hitl-runner",
+  "description": "Use when a LangGraph agent needs human approval before an action — \"add an approval step before the refund\", \"who approves this and what happens on timeout\", \"generate the interrupt/resume code\", \"check our approval points are safe\". Produces validation.json (approver role, timeout policy for high-impact actions, no auto-approve on irreversible actions, checkpointer present), hitl.md (approval matrix, validation, resume flow, risks) and a syntax-checked interrupt()/Command(resume) scaffold hitl.py with a checkpointer and resume handlers; optional LLM review against the upstream langgraph-human-in-the-loop guidance. Not for the overall graph (langgraph-runner) or AI risk registers (ai-governance-risk).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "build",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "spec",
+     "type": "json",
+     "required": true,
+     "from": "approval-points spec JSON: graph, checkpointer memory|postgres|sqlite, state_fields (optional), interrupts [{before_node, reason, approver_role, timeout_minutes, on_timeout reject|escalate|auto-approve, escalate_to, editable_fields, high_impact, irreversible}] (layout: assets/approvals.example.json)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "review",
+     "type": "flag",
+     "required": false,
+     "from": "yes to add an LLM review of the gates against the upstream langgraph-human-in-the-loop guidance",
+     "default": null,
+     "flag": "--review",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "build",
+     "kind": "script"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "build",
+     "kind": "script",
+     "cmd": "python3 -I scripts/build_hitl.py --spec {spec} --out-dir {out}",
+     "stdout": "{out}/build.log"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm",
+     "template": "assets/hitl-review-template.md",
+     "context": [
+      "../../../vendor/langgraph-human-in-the-loop/SKILL.md",
+      "{out}/hitl.md",
+      "{out}/validation.json",
+      "{out}/hitl.py"
+     ],
+     "out": "{out}/hitl-review.md",
+     "skip_if_missing": [
+      "review"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/validation.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"valid\\\": true\""
+     ]
+    },
+    {
+     "path": "{out}/hitl.md",
+     "checks": [
+      "exists",
+      "sections:[\"Approval matrix\",\"Validation\",\"Resume flow\",\"Risks\"]",
+      "no_unowned_tbd",
+      "contains:\"not executed\""
+     ]
+    },
+    {
+     "path": "{out}/hitl.py",
+     "checks": [
+      "exists",
+      "contains:\"Command(resume=\"",
+      "cmd:\"python3 scripts/check_syntax.py {path} --require build_graph --require make_checkpointer --require resume --require resume_on_timeout\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "spec": "evals/fixtures/approvals.json"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"langgraph-hitl-runner\">LangGraph HITL Runner</h1>\n<p>Wraps langgraph-human-in-the-loop from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its requirements (checkpointer, thread id, interrupt first, resume with <code>Command(resume=...)</code>, idempotent side effects) into deterministic checks and a generated scaffold. Upstream text is not copied: the optional review step reads <code>vendor/langgraph-human-in-the-loop/SKILL.md</code> directly.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/langgraph-hitl-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/langgraph-hitl-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce (<code>hitl.py</code>, <code>hitl.md</code>, <code>validation.json</code>). A failed validation (exit 1) is the gate working: fix the spec and re-run.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>An agent will take an action a person must approve, edit or reject first (payments, outbound messages, record changes).</li><li>Approval rules need writing down: who approves, how long they have, what happens on silence, what they may edit.</li><li>NOT for: designing the rest of the graph (<code>langgraph-runner</code>), AI risk classification (<code>ai-governance-risk</code>), choosing whether an agent is the right pattern (<code>agent-architecture</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>spec</code> — approval-points JSON: graph name, checkpointer, one entry per gated node (reason, approver role, timeout, on-timeout policy, escalation role, editable fields, high-impact and irreversible flags)</td><td>yes</td><td>process owner + engineering lead; layout <code>assets/approvals.example.json</code></td></tr><tr><td><code>review</code> — flag for the optional LLM review against upstream guidance</td><td>no</td><td>user</td></tr></tbody></table>\n<p>Roles, timeouts and policies come only from the spec. A missing approver role is an error; a missing escalation role becomes <code>[TO BE BASELINED — owner: Process owner]</code>.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>List every action that needs approval. Flag <code>high_impact</code> (money, customer-visible, regulated) and <code>irreversible</code> (cannot be undone) honestly: the rules key on these flags.</li><li>Fill <code>assets/approvals.example.json</code> and run the skill. <code>scripts/build_hitl.py</code> applies <code>references/approval-rules.md</code>.</li><li>On exit 1, fix the errors listed in <code>hitl.md</code>/<code>validation.json</code> and re-run. No <code>hitl.py</code> is written for an invalid spec.</li><li>On exit 0, <code>hitl.py</code> holds: <code>GATES</code> (the approval matrix as data), one <code>approve_&lt;node&gt;</code> gate per interrupt with <code>interrupt()</code> first and <code>Command(goto=...)</code> routing, optional <code>escalate_&lt;node&gt;</code> gates, action-node stubs, <code>make_checkpointer()</code> for the chosen backend, <code>build_graph()</code> compiled with the checkpointer, and <code>start</code> / <code>resume</code> / <code>resume_on_timeout</code> handlers. It was generated and syntax-checked, not executed.</li><li>Wire a scheduler to call <code>resume_on_timeout</code> (LangGraph has no timer) and authenticate approvers in <code>resume</code>.</li><li>Optional: pass <code>review=yes</code> for <code>hitl-review.md</code> on <code>assets/hitl-review-template.md</code>.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<table><thead><tr><th>File</th><th>Content</th><th>Checks</th></tr></thead><tbody><tr><td><code>validation.json</code></td><td>valid flag, errors, warnings, normalised gates, scaffold status</td><td>json; <code>&quot;valid&quot;: true</code></td></tr><tr><td><code>hitl.md</code></td><td>Approval matrix, Validation, Resume flow, Risks</td><td>sections; no unowned TBD; says not executed</td></tr><tr><td><code>hitl.py</code></td><td>interrupt/resume scaffold</td><td>syntax check (<code>scripts/check_syntax.py</code>) with required handlers; contains <code>Command(resume=</code></td></tr><tr><td><code>hitl-review.md</code> (optional)</td><td>Upstream conformance, Gaps, Decisions needed</td><td>eval case <code>agent-with-review</code></td></tr></tbody></table>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every gate names an approver role; every high-impact or irreversible gate has a timeout and policy</li><li>[ ] No irreversible action auto-approves on timeout; any auto-approve is accepted by a named risk owner</li><li>[ ] Checkpointer is postgres or sqlite outside development</li><li>[ ] Side effects sit in the action node after approval and are idempotent</li><li>[ ] The same <code>thread_id</code> is used to start and resume; resume uses <code>Command(resume=...)</code> only</li><li>[ ] A scheduler enforces timeouts; approver identity is checked in <code>resume</code></li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/approval-rules.md</code> — each rule, why, and how the scaffold implements it</li><li><code>scripts/build_hitl.py</code> — validator and generator (argparse; stdlib)</li><li><code>scripts/check_syntax.py</code> — compile/ast check used by the output check</li><li><code>assets/approvals.example.json</code> — spec layout to copy</li><li><code>assets/hitl-review-template.md</code> — template for the optional review</li><li>Upstream: <code>vendor/langgraph-human-in-the-loop/SKILL.md</code> (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)</li></ul>",
+  "files": {
+   "references": [
+    "approval-rules.md"
+   ],
+   "assets": [
+    "approvals.example.json",
+    "hitl-review-template.md"
+   ],
+   "scripts": [
+    "build_hitl.py",
+    "check_syntax.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "happy-path-approval-gates",
+    "prompt": "Our refund agent must get finance approval before issuing a refund and team-lead approval before emailing the customer. Generate the LangGraph interrupt code.",
+    "expected": [
+     "Runs scripts/build_hitl.py on an approval spec; asks for missing roles/timeouts rather than inventing them",
+     "Approval matrix table; resume flow with the same thread_id and Command(resume=...)",
+     "States hitl.py was generated and syntax-checked, not executed"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Generate the approval gates for the attached refund-agent spec.",
+    "expected": [
+     "Valid spec; hitl.py with interrupt/resume, postgres checkpointer and escalation gate; hitl.md approval matrix"
+    ]
+   },
+   {
+    "id": "agent-missing-spec",
+    "prompt": "Add human approval to my agent.",
+    "expected": [
+     "Asks for the approval-points spec; does not invent approvers or timeouts"
+    ]
+   },
+   {
+    "id": "agent-unsafe-gates-rejected",
+    "prompt": "Wire payments should auto-approve after 30 minutes if nobody answers; no need for a database.",
+    "expected": [
+     "Fails: checkpointer missing, auto-approve on an irreversible action, missing approver role, high-impact gate without timeout; no hitl.py"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Generate the gates and review them against the LangGraph human-in-the-loop guidance.",
+    "expected": [
+     "Script outputs plus hitl-review.md on the review template with the upstream skill as context"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Generate the approval gates for the attached refund-agent spec.",
+    "inputs": {
+     "spec": "evals/fixtures/approvals.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:hitl.py",
+     {
+      "file": "hitl.md",
+      "check": "sections:[\"Approval matrix\",\"Validation\",\"Resume flow\",\"Risks\"]"
+     },
+     {
+      "file": "hitl.md",
+      "check": "contains:\"| issue_refund | Refund moves money to the customer | Finance supervisor | 240 | escalate | Finance manager |\""
+     },
+     {
+      "file": "hitl.py",
+      "check": "contains:\"PostgresSaver\""
+     },
+     {
+      "file": "hitl.py",
+      "check": "contains:\"def escalate_issue_refund\""
+     },
+     {
+      "file": "validation.json",
+      "check": "contains:\"\\\"executed\\\": false\""
+     }
+    ],
+    "expected": [
+     "Valid spec; hitl.py with interrupt/resume, postgres checkpointer and escalation gate; hitl.md approval matrix"
+    ]
+   },
+   {
+    "id": "agent-missing-spec",
+    "prompt": "Add human approval to my agent.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:spec"
+    ],
+    "expected": [
+     "Asks for the approval-points spec; does not invent approvers or timeouts"
+    ]
+   },
+   {
+    "id": "agent-unsafe-gates-rejected",
+    "prompt": "Wire payments should auto-approve after 30 minutes if nobody answers; no need for a database.",
+    "inputs": {
+     "spec": "evals/fixtures/approvals-unsafe.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "validation.json",
+      "check": "contains:\"checkpointer is required\""
+     },
+     {
+      "file": "validation.json",
+      "check": "contains:\"auto-approve on timeout is forbidden for an irreversible action\""
+     },
+     {
+      "file": "validation.json",
+      "check": "contains:\"approver_role is missing\""
+     },
+     {
+      "file": "hitl.md",
+      "check": "contains:\"No scaffold was written\""
+     }
+    ],
+    "expected": [
+     "Fails: checkpointer missing, auto-approve on an irreversible action, missing approver role, high-impact gate without timeout; no hitl.py"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Generate the gates and review them against the LangGraph human-in-the-loop guidance.",
+    "inputs": {
+     "spec": "evals/fixtures/approvals.json",
+     "review": "yes"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "hitl-review.md",
+      "check": "sections:[\"Upstream conformance\",\"Gaps\",\"Decisions needed\"]"
+     },
+     {
+      "file": "hitl-review.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Script outputs plus hitl-review.md on the review template with the upstream skill as context"
+    ]
+   }
+  ],
+  "bodyMd": "\n# LangGraph HITL Runner\n\nWraps langgraph-human-in-the-loop from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its requirements (checkpointer, thread id, interrupt first, resume with `Command(resume=...)`, idempotent side effects) into deterministic checks and a generated scaffold. Upstream text is not copied: the optional review step reads `vendor/langgraph-human-in-the-loop/SKILL.md` directly.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langgraph-hitl-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langgraph-hitl-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`hitl.py`, `hitl.md`, `validation.json`). A failed validation (exit 1) is the gate working: fix the spec and re-run.\n\n## When to use\n- An agent will take an action a person must approve, edit or reject first (payments, outbound messages, record changes).\n- Approval rules need writing down: who approves, how long they have, what happens on silence, what they may edit.\n- NOT for: designing the rest of the graph (`langgraph-runner`), AI risk classification (`ai-governance-risk`), choosing whether an agent is the right pattern (`agent-architecture`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `spec` — approval-points JSON: graph name, checkpointer, one entry per gated node (reason, approver role, timeout, on-timeout policy, escalation role, editable fields, high-impact and irreversible flags) | yes | process owner + engineering lead; layout `assets/approvals.example.json` |\n| `review` — flag for the optional LLM review against upstream guidance | no | user |\n\nRoles, timeouts and policies come only from the spec. A missing approver role is an error; a missing escalation role becomes `[TO BE BASELINED — owner: Process owner]`.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. List every action that needs approval. Flag `high_impact` (money, customer-visible, regulated) and `irreversible` (cannot be undone) honestly: the rules key on these flags.\n3. Fill `assets/approvals.example.json` and run the skill. `scripts/build_hitl.py` applies `references/approval-rules.md`.\n4. On exit 1, fix the errors listed in `hitl.md`/`validation.json` and re-run. No `hitl.py` is written for an invalid spec.\n5. On exit 0, `hitl.py` holds: `GATES` (the approval matrix as data), one `approve_<node>` gate per interrupt with `interrupt()` first and `Command(goto=...)` routing, optional `escalate_<node>` gates, action-node stubs, `make_checkpointer()` for the chosen backend, `build_graph()` compiled with the checkpointer, and `start` / `resume` / `resume_on_timeout` handlers. It was generated and syntax-checked, not executed.\n6. Wire a scheduler to call `resume_on_timeout` (LangGraph has no timer) and authenticate approvers in `resume`.\n7. Optional: pass `review=yes` for `hitl-review.md` on `assets/hitl-review-template.md`.\n8. Run the self-check.\n\n## Output\n| File | Content | Checks |\n|---|---|---|\n| `validation.json` | valid flag, errors, warnings, normalised gates, scaffold status | json; `\"valid\": true` |\n| `hitl.md` | Approval matrix, Validation, Resume flow, Risks | sections; no unowned TBD; says not executed |\n| `hitl.py` | interrupt/resume scaffold | syntax check (`scripts/check_syntax.py`) with required handlers; contains `Command(resume=` |\n| `hitl-review.md` (optional) | Upstream conformance, Gaps, Decisions needed | eval case `agent-with-review` |\n\n## Self-check\n- [ ] Every gate names an approver role; every high-impact or irreversible gate has a timeout and policy\n- [ ] No irreversible action auto-approves on timeout; any auto-approve is accepted by a named risk owner\n- [ ] Checkpointer is postgres or sqlite outside development\n- [ ] Side effects sit in the action node after approval and are idempotent\n- [ ] The same `thread_id` is used to start and resume; resume uses `Command(resume=...)` only\n- [ ] A scheduler enforces timeouts; approver identity is checked in `resume`\n\n## References\n- `references/approval-rules.md` — each rule, why, and how the scaffold implements it\n- `scripts/build_hitl.py` — validator and generator (argparse; stdlib)\n- `scripts/check_syntax.py` — compile/ast check used by the output check\n- `assets/approvals.example.json` — spec layout to copy\n- `assets/hitl-review-template.md` — template for the optional review\n- Upstream: `vendor/langgraph-human-in-the-loop/SKILL.md` (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)\n"
+ },
+ {
+  "id": "ai-platform/langgraph-runner",
+  "domain": "ai-platform",
+  "stage": "build",
+  "name": "langgraph-runner",
+  "description": "Use when the user has a LangGraph workflow to design or check and wants runnable output — \"validate my LangGraph spec\", \"generate the StateGraph scaffold\", \"will this graph loop forever\", \"draw the graph\". Produces validation.json (reachability, END reachability, cycle exits, dangling edges, router routes, state-field references, reducer warnings), graph.md (Mermaid diagram, validation, node table, how to run) and a syntax-checked StateGraph scaffold graph.py; optional LLM review against the upstream langgraph-fundamentals guidance. Not for choosing the agent pattern (agent-architecture), human approval gates (langgraph-hitl-runner) or RAG (langchain-rag-runner).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "build",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "spec",
+     "type": "json",
+     "required": true,
+     "from": "graph spec JSON: name, state [{name, type, reducer}], nodes [{name, kind llm|tool|router|function, description, reads, writes}], edges [{from, to}], conditional_edges [{from, routes {label: to}}], entry, finish (layout: assets/graph-spec.example.json)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "review",
+     "type": "flag",
+     "required": false,
+     "from": "yes to add an LLM review of the scaffold against the upstream langgraph-fundamentals guidance",
+     "default": null,
+     "flag": "--review",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "build",
+     "kind": "script"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "build",
+     "kind": "script",
+     "cmd": "python3 -I scripts/build_graph.py --spec {spec} --out-dir {out}",
+     "stdout": "{out}/build.log"
+    },
+    {
+     "step": "upstream-review",
+     "kind": "llm",
+     "template": "assets/graph-review-template.md",
+     "context": [
+      "../../../vendor/langgraph-fundamentals/SKILL.md",
+      "../../../vendor/langgraph-fundamentals/references/python.md",
+      "{out}/graph.md",
+      "{out}/validation.json",
+      "{out}/graph.py"
+     ],
+     "out": "{out}/graph-review.md",
+     "skip_if_missing": [
+      "review"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/validation.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"valid\\\": true\""
+     ]
+    },
+    {
+     "path": "{out}/graph.md",
+     "checks": [
+      "exists",
+      "sections:[\"Diagram\",\"Validation\",\"Nodes\",\"How to run\"]",
+      "mermaid_parses",
+      "no_unowned_tbd"
+     ]
+    },
+    {
+     "path": "{out}/graph.py",
+     "checks": [
+      "exists",
+      "contains:\"builder.compile(\"",
+      "cmd:\"python3 scripts/check_syntax.py {path} --require State --require build_graph\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "spec": "evals/fixtures/graph-spec.json"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"langgraph-runner\">LangGraph Runner</h1>\n<p>Wraps langgraph-fundamentals from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its graph rules into deterministic checks and a generated scaffold. Upstream text is not copied here: the optional review step reads <code>vendor/langgraph-fundamentals/SKILL.md</code> and its Python reference directly.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/langgraph-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/langgraph-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce (<code>graph.py</code>, <code>graph.md</code>, <code>validation.json</code>). A failed validation (exit 1) is the gate working: fix the spec and re-run.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>A LangGraph workflow has been sketched (nodes, state, routing) and needs checking before code is written.</li><li>An existing graph spec changed and must be re-validated (orphans, infinite loops, dangling routes).</li><li>NOT for: deciding whether to build an agent at all (<code>agent-architecture</code>), adding approval interrupts (<code>langgraph-hitl-runner</code>), retrieval design (<code>langchain-rag-runner</code>), running evals (<code>llm-eval-harness</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>spec</code> — graph spec JSON (state fields with type and reducer; nodes with kind, description, reads, writes; static and conditional edges; entry; finish nodes)</td><td>yes</td><td>user / architect; layout <code>assets/graph-spec.example.json</code></td></tr><tr><td><code>review</code> — flag for the optional LLM review against upstream guidance</td><td>no</td><td>user</td></tr></tbody></table>\n<p>Nothing is inferred: a node, field, or route absent from the spec is an error, not a guess. Field types: str, int, float, bool, list, dict, any, messages. Reducers: <code>add</code> (operator.add) or <code>add_messages</code>.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Fill the spec from <code>assets/graph-spec.example.json</code>. One node per discrete step; classify each as llm, tool, router or function; declare every state field each node reads or writes.</li><li>Run the skill. <code>scripts/build_graph.py</code> applies the rules in <code>references/graph-validation-rules.md</code>: reachability from entry, END reachable from every node, a conditional exit on every cycle, no dangling edges, routers with at least two routes, START used only as the entry, declared state references, reducer warnings for multi-writer list fields, static-plus-conditional warnings.</li><li>On exit 1, read the Errors list in <code>graph.md</code> (or <code>validation.json</code>), fix the spec, re-run. No <code>graph.py</code> is written for an invalid spec.</li><li>On exit 0, <code>graph.py</code> holds a TypedDict state, one stub per node, one <code>route_&lt;node&gt;</code> function per conditional block, the edge wiring and <code>compile()</code>. It was generated and syntax-checked (<code>compile()</code> + <code>ast.parse</code>), not executed: langgraph is not imported at check time.</li><li>Optional: pass <code>review=yes</code> for <code>graph-review.md</code>, an LLM review on <code>assets/graph-review-template.md</code> using the upstream skill and the run outputs as context.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<table><thead><tr><th>File</th><th>Content</th><th>Checks</th></tr></thead><tbody><tr><td><code>validation.json</code></td><td>valid flag, errors, warnings, stats, unreachable nodes, nodes with no path to END, cycles with their conditional exits, scaffold status</td><td>json; <code>&quot;valid&quot;: true</code></td></tr><tr><td><code>graph.md</code></td><td>Diagram (Mermaid), Validation, Nodes (+ state table), How to run</td><td>sections; mermaid parses; no unowned TBD</td></tr><tr><td><code>graph.py</code></td><td>StateGraph scaffold</td><td>syntax check via <code>scripts/check_syntax.py</code>; contains <code>builder.compile(</code></td></tr><tr><td><code>graph-review.md</code> (optional)</td><td>Upstream conformance, Design risks, Next changes</td><td>eval case <code>agent-with-review</code></td></tr></tbody></table>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] <code>validation.json</code> says <code>&quot;valid&quot;: true</code>, and every warning is accepted or fixed</li><li>[ ] Every loop has a conditional exit; END is reachable from every node</li><li>[ ] List fields written by several nodes carry a reducer</li><li>[ ] No node has both static and conditional out-edges unless both branches are meant to run</li><li>[ ] <code>graph.md</code> states the scaffold was syntax-checked, not executed</li><li>[ ] Stubs were implemented and the graph was run in a langgraph environment before anyone calls it working</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/graph-validation-rules.md</code> — each rule, why it exists, and how it is computed</li><li><code>scripts/build_graph.py</code> — validator and generator (argparse; stdlib)</li><li><code>scripts/check_syntax.py</code> — compile/ast check used by the output check</li><li><code>assets/graph-spec.example.json</code> — spec layout to copy</li><li><code>assets/graph-review-template.md</code> — template for the optional review</li><li>Upstream: <code>vendor/langgraph-fundamentals/SKILL.md</code> (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)</li></ul>",
+  "files": {
+   "references": [
+    "graph-validation-rules.md"
+   ],
+   "assets": [
+    "graph-review-template.md",
+    "graph-spec.example.json"
+   ],
+   "scripts": [
+    "build_graph.py",
+    "check_syntax.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "happy-path-validate-and-scaffold",
+    "prompt": "Here is my ticket-triage graph spec. Check it and give me the LangGraph code.",
+    "expected": [
+     "Runs scripts/build_graph.py and reports validation.json (valid, warnings)",
+     "graph.md shows the Mermaid diagram, validation table, node table and how to run",
+     "States graph.py was generated and syntax-checked, not executed"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Validate the attached graph spec and generate the StateGraph scaffold.",
+    "expected": [
+     "Valid spec; graph.py, graph.md and validation.json written; scaffold syntax-checked"
+    ]
+   },
+   {
+    "id": "agent-missing-spec",
+    "prompt": "Generate a LangGraph for my support bot.",
+    "expected": [
+     "Asks for the graph spec instead of inventing nodes"
+    ]
+   },
+   {
+    "id": "agent-infinite-loop-rejected",
+    "prompt": "Scaffold this plan/act loop graph.",
+    "expected": [
+     "Fails validation: static loop with no conditional exit, orphan node, dangling edge, one-route router, undeclared field; no graph.py written"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Validate the graph and review it against the LangGraph fundamentals guidance.",
+    "expected": [
+     "Script outputs plus graph-review.md on the review template, with the upstream skill as context"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Validate the attached graph spec and generate the StateGraph scaffold.",
+    "inputs": {
+     "spec": "evals/fixtures/graph-spec.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:graph.py",
+     {
+      "file": "validation.json",
+      "check": "contains:\"\\\"valid\\\": true\""
+     },
+     {
+      "file": "graph.md",
+      "check": "sections:[\"Diagram\",\"Validation\",\"Nodes\",\"How to run\"]"
+     },
+     {
+      "file": "graph.md",
+      "check": "mermaid_parses"
+     },
+     {
+      "file": "graph.py",
+      "check": "contains:\"add_conditional_edges('check_reply'\""
+     },
+     {
+      "file": "graph.md",
+      "check": "contains:\"not executed\""
+     }
+    ],
+    "expected": [
+     "Valid spec; graph.py, graph.md and validation.json written; scaffold syntax-checked"
+    ]
+   },
+   {
+    "id": "agent-missing-spec",
+    "prompt": "Generate a LangGraph for my support bot.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:spec"
+    ],
+    "expected": [
+     "Asks for the graph spec instead of inventing nodes"
+    ]
+   },
+   {
+    "id": "agent-infinite-loop-rejected",
+    "prompt": "Scaffold this plan/act loop graph.",
+    "inputs": {
+     "spec": "evals/fixtures/graph-spec-broken.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "validation.json",
+      "check": "contains:\"has no conditional exit\""
+     },
+     {
+      "file": "validation.json",
+      "check": "contains:\"dangling edge\""
+     },
+     {
+      "file": "validation.json",
+      "check": "contains:\"undeclared state field 'plan_text'\""
+     },
+     {
+      "file": "graph.md",
+      "check": "contains:\"No scaffold was written\""
+     }
+    ],
+    "expected": [
+     "Fails validation: static loop with no conditional exit, orphan node, dangling edge, one-route router, undeclared field; no graph.py written"
+    ]
+   },
+   {
+    "id": "agent-with-review",
+    "prompt": "Validate the graph and review it against the LangGraph fundamentals guidance.",
+    "inputs": {
+     "spec": "evals/fixtures/graph-spec.json",
+     "review": "yes"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "graph-review.md",
+      "check": "sections:[\"Upstream conformance\",\"Design risks\",\"Next changes\"]"
+     },
+     {
+      "file": "graph-review.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Script outputs plus graph-review.md on the review template, with the upstream skill as context"
+    ]
+   }
+  ],
+  "bodyMd": "\n# LangGraph Runner\n\nWraps langgraph-fundamentals from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its graph rules into deterministic checks and a generated scaffold. Upstream text is not copied here: the optional review step reads `vendor/langgraph-fundamentals/SKILL.md` and its Python reference directly.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langgraph-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langgraph-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`graph.py`, `graph.md`, `validation.json`). A failed validation (exit 1) is the gate working: fix the spec and re-run.\n\n## When to use\n- A LangGraph workflow has been sketched (nodes, state, routing) and needs checking before code is written.\n- An existing graph spec changed and must be re-validated (orphans, infinite loops, dangling routes).\n- NOT for: deciding whether to build an agent at all (`agent-architecture`), adding approval interrupts (`langgraph-hitl-runner`), retrieval design (`langchain-rag-runner`), running evals (`llm-eval-harness`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `spec` — graph spec JSON (state fields with type and reducer; nodes with kind, description, reads, writes; static and conditional edges; entry; finish nodes) | yes | user / architect; layout `assets/graph-spec.example.json` |\n| `review` — flag for the optional LLM review against upstream guidance | no | user |\n\nNothing is inferred: a node, field, or route absent from the spec is an error, not a guess. Field types: str, int, float, bool, list, dict, any, messages. Reducers: `add` (operator.add) or `add_messages`.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Fill the spec from `assets/graph-spec.example.json`. One node per discrete step; classify each as llm, tool, router or function; declare every state field each node reads or writes.\n3. Run the skill. `scripts/build_graph.py` applies the rules in `references/graph-validation-rules.md`: reachability from entry, END reachable from every node, a conditional exit on every cycle, no dangling edges, routers with at least two routes, START used only as the entry, declared state references, reducer warnings for multi-writer list fields, static-plus-conditional warnings.\n4. On exit 1, read the Errors list in `graph.md` (or `validation.json`), fix the spec, re-run. No `graph.py` is written for an invalid spec.\n5. On exit 0, `graph.py` holds a TypedDict state, one stub per node, one `route_<node>` function per conditional block, the edge wiring and `compile()`. It was generated and syntax-checked (`compile()` + `ast.parse`), not executed: langgraph is not imported at check time.\n6. Optional: pass `review=yes` for `graph-review.md`, an LLM review on `assets/graph-review-template.md` using the upstream skill and the run outputs as context.\n7. Run the self-check.\n\n## Output\n| File | Content | Checks |\n|---|---|---|\n| `validation.json` | valid flag, errors, warnings, stats, unreachable nodes, nodes with no path to END, cycles with their conditional exits, scaffold status | json; `\"valid\": true` |\n| `graph.md` | Diagram (Mermaid), Validation, Nodes (+ state table), How to run | sections; mermaid parses; no unowned TBD |\n| `graph.py` | StateGraph scaffold | syntax check via `scripts/check_syntax.py`; contains `builder.compile(` |\n| `graph-review.md` (optional) | Upstream conformance, Design risks, Next changes | eval case `agent-with-review` |\n\n## Self-check\n- [ ] `validation.json` says `\"valid\": true`, and every warning is accepted or fixed\n- [ ] Every loop has a conditional exit; END is reachable from every node\n- [ ] List fields written by several nodes carry a reducer\n- [ ] No node has both static and conditional out-edges unless both branches are meant to run\n- [ ] `graph.md` states the scaffold was syntax-checked, not executed\n- [ ] Stubs were implemented and the graph was run in a langgraph environment before anyone calls it working\n\n## References\n- `references/graph-validation-rules.md` — each rule, why it exists, and how it is computed\n- `scripts/build_graph.py` — validator and generator (argparse; stdlib)\n- `scripts/check_syntax.py` — compile/ast check used by the output check\n- `assets/graph-spec.example.json` — spec layout to copy\n- `assets/graph-review-template.md` — template for the optional review\n- Upstream: `vendor/langgraph-fundamentals/SKILL.md` (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)\n"
  },
  {
   "id": "ai-platform/llm-cost-model",
@@ -5484,6 +6624,540 @@
   "bodyMd": "\n# ci-cd-vercel-github\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The install step exits 1 when a kept (customised) workflow lacks a required job, because branch protection depends on those check names; merge the missing stage from `assets/workflows/` and re-run.\n\n## When to use\n- New pipeline, pipeline change, flaky/failing workflow, adding a stage (e2e, RLS lint, coverage gate), release/rollback procedure.\n- NOT for: writing tests (`test-strategy-tdd`), runtime alerts (`observability-setup`), bootstrap of a brand-new repo (`project-bootstrap` calls this skill's assets).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Goal (new pipeline / add stage / fix failure / rollback) | yes | user |\n| Existing `.github/workflows/*`, `package.json` scripts | yes | repo |\n| Environments: Vercel project, Supabase project refs (staging, prod) | yes for prod work | user — ask once |\n| Failing run URL / logs | yes for fixes | user |\n\nIf a required input is missing, ask for it once; do not guess.\n\n## Procedure\n1. Read `../../../shared/stack-conventions.md` (CI row), `../../../shared/token-efficiency.md`. Read existing workflows and `package.json` scripts; map what runs where today.\n2. **Plan.** Stage table (from `references/pipeline-stages.md`): stage → trigger → job → required check name → secrets. For fixes: failing step → root cause hypothesis → minimal change. Post; wait for \"go\". *(gate: plan→approve)*\n3. **Build.** Copy/merge `assets/workflows/ci.yml`, `assets/workflows/preview.yml`, `assets/workflows/prod.yml`; never overwrite a customised workflow — diff and merge. Confirm every `npm run <script>` exists. Fill the env/secret matrix from `references/env-promotion.md`; list `gh secret set` commands (values never in chat).\n4. **Branch protection.** Required checks = `ci / lint-typecheck-test`, `ci / rls-lint`, `preview / e2e`. Commands in `project-bootstrap/references/branch-rules.md`.\n5. **Test.** Validate YAML (`python3 -c \"import yaml\"`-free: open each file; check `on:`/`jobs:`), run `act` if available or push a `chore/ci` branch and watch the run; confirm check names match protection. *(gate: build→test)*\n6. **Prod path.** Walk `references/env-promotion.md`: GitHub Environments `staging` and `production` (required reviewers on production), tag → migrate staging → migrate prod → deploy → smoke → release. Dry-run with a `v0.0.0-rc` tag against staging only if the user approves.\n7. **Rollback.** Install `references/rollback.md` as `docs/runbooks/rollback.md`; confirm the previous deployment is promotable (`vercel rollback` or Vercel \"Instant Rollback\") and the migration revert path exists.\n8. **Verify.** One PR shows green `ci` + `preview` and a comment with the preview URL; one tag (rc) runs `prod.yml` to the staging gate. *(gate: test→verify)*\n9. Update `docs/HANDOFF.md`.\n\n## Output\n| Artifact | Path |\n|---|---|\n| Workflows | `.github/workflows/ci.yml`, `preview.yml`, `prod.yml` |\n| Env/secret matrix | `docs/ci-cd.md` §Environments (from `references/env-promotion.md`) |\n| Rollback runbook | `docs/runbooks/rollback.md` |\n| Branch-protection commands | chat |\n\n## Self-check\n- [ ] Every stage has a required-check name that matches branch protection\n- [ ] Secrets only via GitHub secrets / Vercel env; none echoed in logs (`::add-mask::` where derived)\n- [ ] `concurrency` set on every workflow; prod never cancels in progress\n- [ ] Prod deploy only from tag on `main`; verified by `git merge-base`\n- [ ] Migrations run before deploy, staging before prod, with the production Environment gate\n- [ ] Smoke hits `/api/health` and `/api/health/deep` after deploy\n- [ ] Rollback runbook tested once (previous deployment promoted)\n\n## References\n- `references/pipeline-stages.md` — stages, jobs, check names, caching, timeouts\n- `references/env-promotion.md` — environment matrix, secrets, promotion flow, Vercel settings\n- `references/rollback.md` — code and migration rollback procedures, decision table\n- `references/troubleshooting.md` — common failures and fixes\n- `assets/workflows/ci.yml`, `assets/workflows/preview.yml`, `assets/workflows/prod.yml`\n- `scripts/install_ci.py` — writes absent workflows, keeps existing ones, validates `on:`/`jobs:` and required job names\n"
  },
  {
+  "id": "build/code-review-runner",
+  "domain": "build",
+  "stage": "evaluate",
+  "name": "code-review-runner",
+  "description": "Use when a diff, branch or PR needs a first-pass review before a human or model reads it — \"review this diff\", \"anything blocking in this PR\", \"check this change before merge\", \"did I leave secrets or debug prints in\". Produces review.json and review.md (Summary, Blocking, Non-blocking, Tests, Files) from deterministic detectors on added lines only — hard-coded secrets and high-entropy literals, eval/exec, disabled TLS verification, SQL built by concatenation, swallowed broad exceptions, debug leftovers, owner-less TODO/FIXME, duplicated blocks, source changed without tests — each with file:line, rule and severity, plus size/risk stats and optional team rules; blocking findings fail the run. Runnable wrapper of the vendored code-review skill. Not for threat-model security review (use security-review) or applying fixes (use safe-fix).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "evaluate",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "diff",
+     "type": "file",
+     "required": true,
+     "from": "unified diff of the change (`git diff <base>...HEAD > change.patch`)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "rules",
+     "type": "csv",
+     "required": false,
+     "from": "team rules (layout: assets/rules-template.csv): custom regex rules and severity overrides for built-in rules",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "spec",
+     "type": "md",
+     "required": false,
+     "from": "the issue/spec the change implements; used only by the narrative step's Spec axis",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "narrative",
+     "type": "flag",
+     "required": false,
+     "from": "true to have the LLM write the two-axis review (Standards, Spec) from the findings and the upstream method",
+     "default": null,
+     "flag": "--narrative",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "review",
+     "kind": "script"
+    },
+    {
+     "step": "two-axis",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "review",
+     "kind": "script",
+     "cmd": "python3 -I scripts/review.py --diff {diff} [--rules {rules}] --json {out}/review.json --md {out}/review.md",
+     "expect_exit": [
+      "0",
+      "1"
+     ]
+    },
+    {
+     "step": "two-axis",
+     "kind": "llm",
+     "template": "assets/two-axis-review-template.md",
+     "context": [
+      "../../../vendor/code-review/SKILL.md",
+      "{out}/review.json",
+      "{out}/review.md",
+      "{spec}",
+      "references/review-rules.md"
+     ],
+     "out": "{out}/review-two-axis.md",
+     "skip_if_missing": [
+      "narrative"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/review.json",
+     "checks": [
+      "exists",
+      "json",
+      "cmd:\"python3 -I scripts/review.py --gate {path}\""
+     ]
+    },
+    {
+     "path": "{out}/review.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Blocking\",\"Non-blocking\",\"Tests\",\"Files\"]",
+      "contains:\"Verdict:\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "diff": "evals/fixtures/change-ok.patch"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"code-review-runner\">code-review-runner</h1>\n<p>Wraps <code>code-review</code> from mattpocock/skills (pinned in vendor/pins.json). Upstream reviews a change on two separate axes — Standards and Spec — with a Fowler smell baseline as judgement calls. This skill makes the deterministic part of the Standards axis executable and hands the upstream instructions to the optional narrative step by path (<code>../../../vendor/code-review/SKILL.md</code>), never by copy.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py build/code-review-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain build/code-review-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce. The script always writes both outputs; the gate check on <code>review.json</code> then fails the run (exit 1) when any blocking finding remains, so a blocking diff is reported, never waved through.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Before merge: a quick, repeatable pass that catches the mechanical defects first.</li><li>In CI: <code>review.py --gate review.json</code> as a required check.</li><li>NOT for: threat modelling and authz reasoning (<code>security-review</code>), stack-specific conventions (<code>nextjs-enterprise-conventions</code>), fixing what it finds (<code>safe-fix</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>diff</code></td><td>yes</td><td>Unified diff, three-dot against the merge base. Only added lines are scanned.</td></tr><tr><td><code>rules</code></td><td>no</td><td>Team rules CSV (<code>assets/rules-template.csv</code>): <code>rule_id,pattern,severity,message,file_glob</code>. A built-in id with empty pattern overrides its severity (<code>off</code> disables).</td></tr><tr><td><code>spec</code></td><td>no</td><td>Issue or spec text for the Spec axis of the narrative step. Without it the Spec axis reports &quot;no spec available&quot;.</td></tr><tr><td><code>narrative</code></td><td>no</td><td><code>true</code> runs the LLM step that writes the two-axis review.</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li><strong>Parse the diff</strong> (<code>scripts/review.py</code>): files, status, hunks, added lines with new-file line numbers, removed-line counts.</li><li><strong>Stats</strong>: files, hunks, +/-, size label (<code>--large-change</code>, default 400 changed lines), source vs test files, risky paths (auth, migrations, config, CI, env).</li><li><strong>Detect</strong> on added lines: CR-SECRET, CR-EVAL, CR-TLS, CR-SQL-CONCAT (blocking); CR-SWALLOW, CR-DEBUG, CR-NO-TESTS (warning); CR-TODO, CR-DUP (info). See <code>references/review-rules.md</code>.</li><li><strong>Apply team rules</strong> from the rules CSV; sort findings blocking → info, number F01….</li><li><strong>Write</strong> <code>review.json</code> and <code>review.md</code>; exit 1 if anything is blocking.</li><li><strong>Gate</strong>: <code>review.py --gate review.json</code> is the output check that fails the run on blocking findings.</li><li>Optional: with <code>narrative=true</code> the LLM fills <code>assets/two-axis-review-template.md</code> — Standards (from the findings) and Spec (from <code>spec</code>) kept separate, per the upstream method.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>review.json</code> — stats, files, tests verdict, counts, verdict (PASS/BLOCK), findings <code>{id, rule, severity, file, line, evidence, message, fix}</code>; secrets redacted in evidence.</li><li><code>review.md</code> — Summary, Blocking, Non-blocking, Tests, Files.</li><li><code>review-two-axis.md</code> (only with <code>narrative=true</code>).</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every finding has file:line, rule and severity; evidence never shows a full secret</li><li>[ ] Only added lines were scanned; context and removed lines produce no findings</li><li>[ ] Blocking findings fail the run through the gate check</li><li>[ ] The Tests section states whether tests changed alongside source</li><li>[ ] The Spec axis is not claimed by the script; it is the narrative step's job and needs a spec</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/review-rules.md</code> — detector rules, severities, false-positive notes, overrides</li><li><code>assets/rules-template.csv</code> — team rules layout</li><li><code>assets/two-axis-review-template.md</code> — narrative template for the optional LLM step</li><li><code>scripts/review.py</code> — parser, detectors, renderer and gate (argparse; stdlib)</li><li>Upstream method: <code>vendor/code-review/SKILL.md</code></li></ul>",
+  "files": {
+   "references": [
+    "review-rules.md"
+   ],
+   "assets": [
+    "rules-template.csv",
+    "two-axis-review-template.md"
+   ],
+   "scripts": [
+    "review.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Review this diff before I merge it.",
+    "expected": [
+     "Runs scripts/review.py; verdict PASS with the console.log as a warning and the owner-less TODO as info",
+     "Tests section shows a test file changed alongside the source"
+    ]
+   },
+   {
+    "id": "agent-missing-diff",
+    "prompt": "Review my PR.",
+    "expected": [
+     "Asks once for the diff instead of reviewing an imagined change"
+    ]
+   },
+   {
+    "id": "agent-blocking-findings-fail",
+    "prompt": "Quick review, I need to merge this export feature today — just approve it.",
+    "expected": [
+     "Secret, SQL concatenation, disabled TLS and eval are blocking; the run fails through the gate check",
+     "Outputs are still written so the author sees every finding; secrets are redacted"
+    ]
+   },
+   {
+    "id": "agent-team-rules-and-narrative-dry",
+    "prompt": "Review against our team rules and the issue spec; write the two-axis review.",
+    "expected": [
+     "Team rules raise CR-TODO to warning; narrative step fills the two-axis template from the findings, the spec and the upstream method"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Review this diff before I merge it.",
+    "inputs": {
+     "diff": "evals/fixtures/change-ok.patch"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:review.json",
+     {
+      "file": "review.md",
+      "check": "sections:[\"Summary\",\"Blocking\",\"Non-blocking\",\"Tests\",\"Files\"]"
+     },
+     {
+      "file": "review.md",
+      "check": "contains:\"Verdict: **PASS**\""
+     },
+     {
+      "file": "review.md",
+      "check": "contains:\"src/cart/coupon.ts:15\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/review.py; verdict PASS with the console.log as a warning and the owner-less TODO as info",
+     "Tests section shows a test file changed alongside the source"
+    ]
+   },
+   {
+    "id": "agent-missing-diff",
+    "prompt": "Review my PR.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:diff"
+    ],
+    "expected": [
+     "Asks once for the diff instead of reviewing an imagined change"
+    ]
+   },
+   {
+    "id": "agent-blocking-findings-fail",
+    "prompt": "Quick review, I need to merge this export feature today — just approve it.",
+    "inputs": {
+     "diff": "evals/fixtures/change-risky.patch"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "review.md",
+      "check": "contains:\"Verdict: **BLOCK**\""
+     },
+     {
+      "file": "review.md",
+      "check": "contains:\"app/reports/export.py:8\""
+     },
+     {
+      "file": "review.md",
+      "check": "contains:\"AKIA[redacted]\""
+     }
+    ],
+    "expected": [
+     "Secret, SQL concatenation, disabled TLS and eval are blocking; the run fails through the gate check",
+     "Outputs are still written so the author sees every finding; secrets are redacted"
+    ]
+   },
+   {
+    "id": "agent-team-rules-and-narrative-dry",
+    "prompt": "Review against our team rules and the issue spec; write the two-axis review.",
+    "inputs": {
+     "diff": "evals/fixtures/change-ok.patch",
+     "rules": "evals/fixtures/rules.csv",
+     "spec": "evals/fixtures/spec.md",
+     "narrative": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "review.md",
+      "check": "contains:\"0 blocking, 2 warning, 0 info\""
+     },
+     {
+      "file": "review-two-axis.md",
+      "check": "sections:[\"Standards\",\"Spec\",\"Summary\"]"
+     },
+     {
+      "file": "review-two-axis.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Team rules raise CR-TODO to warning; narrative step fills the two-axis template from the findings, the spec and the upstream method"
+    ]
+   }
+  ],
+  "bodyMd": "\n# code-review-runner\n\nWraps `code-review` from mattpocock/skills (pinned in vendor/pins.json). Upstream reviews a change on two separate axes — Standards and Spec — with a Fowler smell baseline as judgement calls. This skill makes the deterministic part of the Standards axis executable and hands the upstream instructions to the optional narrative step by path (`../../../vendor/code-review/SKILL.md`), never by copy.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/code-review-runner --input <name>=<value> … --out <dir>` (see `--explain build/code-review-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The script always writes both outputs; the gate check on `review.json` then fails the run (exit 1) when any blocking finding remains, so a blocking diff is reported, never waved through.\n\n## When to use\n- Before merge: a quick, repeatable pass that catches the mechanical defects first.\n- In CI: `review.py --gate review.json` as a required check.\n- NOT for: threat modelling and authz reasoning (`security-review`), stack-specific conventions (`nextjs-enterprise-conventions`), fixing what it finds (`safe-fix`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `diff` | yes | Unified diff, three-dot against the merge base. Only added lines are scanned. |\n| `rules` | no | Team rules CSV (`assets/rules-template.csv`): `rule_id,pattern,severity,message,file_glob`. A built-in id with empty pattern overrides its severity (`off` disables). |\n| `spec` | no | Issue or spec text for the Spec axis of the narrative step. Without it the Spec axis reports \"no spec available\". |\n| `narrative` | no | `true` runs the LLM step that writes the two-axis review. |\n\n## Procedure\n1. **Parse the diff** (`scripts/review.py`): files, status, hunks, added lines with new-file line numbers, removed-line counts.\n2. **Stats**: files, hunks, +/-, size label (`--large-change`, default 400 changed lines), source vs test files, risky paths (auth, migrations, config, CI, env).\n3. **Detect** on added lines: CR-SECRET, CR-EVAL, CR-TLS, CR-SQL-CONCAT (blocking); CR-SWALLOW, CR-DEBUG, CR-NO-TESTS (warning); CR-TODO, CR-DUP (info). See `references/review-rules.md`.\n4. **Apply team rules** from the rules CSV; sort findings blocking → info, number F01….\n5. **Write** `review.json` and `review.md`; exit 1 if anything is blocking.\n6. **Gate**: `review.py --gate review.json` is the output check that fails the run on blocking findings.\n7. Optional: with `narrative=true` the LLM fills `assets/two-axis-review-template.md` — Standards (from the findings) and Spec (from `spec`) kept separate, per the upstream method.\n\n## Output\n- `review.json` — stats, files, tests verdict, counts, verdict (PASS/BLOCK), findings `{id, rule, severity, file, line, evidence, message, fix}`; secrets redacted in evidence.\n- `review.md` — Summary, Blocking, Non-blocking, Tests, Files.\n- `review-two-axis.md` (only with `narrative=true`).\n\n## Self-check\n- [ ] Every finding has file:line, rule and severity; evidence never shows a full secret\n- [ ] Only added lines were scanned; context and removed lines produce no findings\n- [ ] Blocking findings fail the run through the gate check\n- [ ] The Tests section states whether tests changed alongside source\n- [ ] The Spec axis is not claimed by the script; it is the narrative step's job and needs a spec\n\n## References\n- `references/review-rules.md` — detector rules, severities, false-positive notes, overrides\n- `assets/rules-template.csv` — team rules layout\n- `assets/two-axis-review-template.md` — narrative template for the optional LLM step\n- `scripts/review.py` — parser, detectors, renderer and gate (argparse; stdlib)\n- Upstream method: `vendor/code-review/SKILL.md`\n"
+ },
+ {
+  "id": "build/domain-modeling-runner",
+  "domain": "build",
+  "stage": "requirements",
+  "name": "domain-modeling-runner",
+  "description": "Use when the team needs a checked domain model before schema or API work — \"model our domain\", \"draw the ER diagram for these entities\", \"build the glossary\", \"validate our entities and relationships\", \"what invariants does this model imply\". Produces model.md (Diagram with a Mermaid erDiagram, Entities, Relationships, Invariants, Glossary, Open questions) and model.json from entities and relationships CSVs plus an optional glossary, after validating undefined entities in relationships, entities without identifiers, bad cardinalities, N:M without a join note and orphan entities; undefined glossary terms are marked for the domain expert, never invented. Runnable wrapper of the vendored domain-modeling skill. Not for writing SQL migrations or RLS (use supabase-schema-rls) or for ADR writing alone.",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "requirements",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "entities",
+     "type": "csv",
+     "required": true,
+     "from": "entities, one row per attribute (layout: assets/entities-template.csv): entity,attribute,type,required,notes",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "relationships",
+     "type": "csv",
+     "required": true,
+     "from": "relationships (layout: assets/relationships-template.csv): from,to,cardinality (1:1|1:N|N:M),name[,notes with 'join: X' for N:M]",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "glossary",
+     "type": "csv",
+     "required": false,
+     "from": "glossary (layout: assets/glossary-template.csv): term,definition[,avoid ;-separated]",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "required": false,
+     "from": "context name for the diagram title and glossary heading",
+     "default": "Domain model",
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "narrative",
+     "type": "flag",
+     "required": false,
+     "from": "true to have the LLM write the modeling review (challenged terms, edge-case scenarios, ADR candidates) from the model and the upstream method",
+     "default": null,
+     "flag": "--narrative",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "model",
+     "kind": "script"
+    },
+    {
+     "step": "modeling-review",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "model",
+     "kind": "script",
+     "cmd": "python3 -I scripts/model.py --entities {entities} --relationships {relationships} [--glossary {glossary}] --title {title} --md {out}/model.md --json {out}/model.json"
+    },
+    {
+     "step": "modeling-review",
+     "kind": "llm",
+     "template": "assets/modeling-review-template.md",
+     "context": [
+      "../../../vendor/domain-modeling/SKILL.md",
+      "../../../vendor/domain-modeling/GLOSSARY-FORMAT.md",
+      "../../../vendor/domain-modeling/ADR-FORMAT.md",
+      "{out}/model.md",
+      "{out}/model.json",
+      "references/modeling-rules.md"
+     ],
+     "out": "{out}/modeling-review.md",
+     "skip_if_missing": [
+      "narrative"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/model.md",
+     "checks": [
+      "exists",
+      "sections:[\"Diagram\",\"Entities\",\"Relationships\",\"Glossary\",\"Open questions\"]",
+      "mermaid_parses",
+      "no_unowned_tbd"
+     ]
+    },
+    {
+     "path": "{out}/model.json",
+     "checks": [
+      "exists",
+      "json",
+      "cmd:\"python3 -I scripts/model.py --check {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "entities": "evals/fixtures/entities.csv",
+     "relationships": "evals/fixtures/relationships.csv",
+     "glossary": "evals/fixtures/glossary.csv",
+     "title": "Course enrollment"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"domain-modeling-runner\">domain-modeling-runner</h1>\n<p>Wraps <code>domain-modeling</code> from mattpocock/skills (pinned in vendor/pins.json). Upstream is a conversational discipline — challenge terms against the glossary, sharpen fuzzy language, stress-test relationships with scenarios, record hard-to-reverse decisions as ADRs. This skill makes the checkable part deterministic (structure, identifiers, cardinalities, glossary gaps, invariants) and passes the upstream instructions and its glossary/ADR formats to the optional review step by path (<code>../../../vendor/domain-modeling/SKILL.md</code>), never by copy.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py build/domain-modeling-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain build/domain-modeling-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce. Validation errors fail the run (exit 1) but both outputs are still written, so the gaps are listed under Open questions.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Before schema, API or event design: get entities, keys and cardinalities agreed.</li><li>When terms drift (&quot;account&quot; vs &quot;customer&quot;): build the glossary and see which terms lack a definition.</li><li>NOT for: SQL migrations and RLS (<code>supabase-schema-rls</code>), tenancy audits (<code>multi-tenant-saas-patterns</code>), product requirements (<code>product-spec-prd</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>entities</code></td><td>yes</td><td>One row per attribute: <code>entity,attribute,type,required,notes</code>. Mark the identifier with an <code>id</code> / <code>&lt;entity&gt;_id</code> name or <code>PK</code> in notes; <code>FK</code> in notes marks a foreign key.</td></tr><tr><td><code>relationships</code></td><td>yes</td><td><code>from,to,cardinality,name[,notes]</code>; cardinality <code>1:1</code>, <code>1:N</code>, <code>N:M</code>; N:M needs <code>join: &lt;Entity&gt;</code> in notes.</td></tr><tr><td><code>glossary</code></td><td>no</td><td><code>term,definition[,avoid]</code>. Entities without a definition get <code>[TO BE BASELINED — owner: Domain expert]</code>.</td></tr><tr><td><code>title</code></td><td>no</td><td>Bounded-context name (default &quot;Domain model&quot;).</td></tr><tr><td><code>narrative</code></td><td>no</td><td><code>true</code> runs the LLM modeling review.</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li><strong>Read</strong> the CSVs (<code>scripts/model.py</code>); missing columns or files → exit 2 naming them.</li><li><strong>Validate</strong> (errors E1–E6): undefined relationship endpoints, entities without identifier, bad cardinality, N:M without join, duplicate attributes, bad <code>required</code> values. <strong>Warn</strong> (W1–W3): orphan entities (join entities count as linked), terms without definitions, glossary terms that are not entities.</li><li><strong>Render the diagram</strong>: Mermaid <code>erDiagram</code> with a title front-matter block, PK/FK markers, cardinality aliases (<code>1 to 0+</code> for 1:N, <code>1 to 1</code>, <code>0+ to 0+</code>). Invalid relationships are left out of the diagram.</li><li><strong>Derive invariants</strong>: unique identifiers, required attributes, ownership for 1:N, uniqueness for 1:1 and N:M pairs — as a checklist to confirm, not as facts.</li><li><strong>Glossary</strong> in the upstream GLOSSARY format (<code>**Term**:</code> definition, <code>_Avoid_:</code> synonyms).</li><li><strong>Open questions</strong>: every error and warning, owned by the domain expert.</li><li>Optional: with <code>narrative=true</code> the LLM fills <code>assets/modeling-review-template.md</code>.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>model.md</code> — Diagram, Entities, Relationships, Invariants, Glossary, Open questions.</li><li><code>model.json</code> — entities, relationships, glossary, invariants, errors, warnings; <code>model.py --check</code> fails on errors or undefined endpoints.</li><li><code>modeling-review.md</code> (only with <code>narrative=true</code>).</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every relationship endpoint is a defined entity; every entity has an identifier</li><li>[ ] Every N:M names its join; every cardinality is 1:1, 1:N or N:M</li><li>[ ] The Mermaid block parses; invalid relationships are not drawn</li><li>[ ] No definition was invented: missing ones carry <code>[TO BE BASELINED — owner: Domain expert]</code></li><li>[ ] Invariants are presented as a checklist to confirm</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/modeling-rules.md</code> — validation rules, Mermaid mapping, invariant derivation</li><li><code>assets/entities-template.csv</code>, <code>assets/relationships-template.csv</code>, <code>assets/glossary-template.csv</code> — input layouts</li><li><code>assets/modeling-review-template.md</code> — narrative template for the optional LLM step</li><li><code>scripts/model.py</code> — validator, renderer and contract check (argparse; stdlib)</li><li>Upstream method: <code>vendor/domain-modeling/</code> (SKILL.md, GLOSSARY-FORMAT.md, ADR-FORMAT.md)</li></ul>",
+  "files": {
+   "references": [
+    "modeling-rules.md"
+   ],
+   "assets": [
+    "entities-template.csv",
+    "glossary-template.csv",
+    "modeling-review-template.md",
+    "relationships-template.csv"
+   ],
+   "scripts": [
+    "model.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Model our course-enrollment domain from these entity, relationship and glossary files; give me the ER diagram and glossary.",
+    "expected": [
+     "Runs scripts/model.py; Mermaid erDiagram with 5 entities and 3 relationships; Enrollment is the N:M join",
+     "Glossary keeps the supplied definitions; Offering and Term are marked for the domain expert, not invented"
+    ]
+   },
+   {
+    "id": "agent-missing-relationships",
+    "prompt": "Draw the ER diagram for these entities.",
+    "expected": [
+     "Asks once for the relationships file instead of guessing how the entities relate"
+    ]
+   },
+   {
+    "id": "agent-invalid-model-fails",
+    "prompt": "Validate this model: students enrol in courses, instructors teach courses, terms have many offerings.",
+    "expected": [
+     "N:M without join, undefined Instructor and cardinality 'many' are errors; the run fails; outputs list them under Open questions",
+     "Instructor is not added to the model"
+    ]
+   },
+   {
+    "id": "agent-narrative-dry",
+    "prompt": "Model the domain and challenge our terms; any ADRs we should write?",
+    "expected": [
+     "Review step fills the modeling-review template from the model and the upstream method and formats"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Model our course-enrollment domain from these entity, relationship and glossary files; give me the ER diagram and glossary.",
+    "inputs": {
+     "entities": "evals/fixtures/entities.csv",
+     "relationships": "evals/fixtures/relationships.csv",
+     "glossary": "evals/fixtures/glossary.csv",
+     "title": "Course enrollment"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "model.md",
+      "check": "mermaid_parses"
+     },
+     {
+      "file": "model.md",
+      "check": "sections:[\"Diagram\",\"Entities\",\"Relationships\",\"Glossary\",\"Open questions\"]"
+     },
+     {
+      "file": "model.md",
+      "check": "contains:\"Student 0+ to 0+ Course\""
+     },
+     {
+      "file": "model.md",
+      "check": "contains:\"[TO BE BASELINED — owner: Domain expert]\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/model.py; Mermaid erDiagram with 5 entities and 3 relationships; Enrollment is the N:M join",
+     "Glossary keeps the supplied definitions; Offering and Term are marked for the domain expert, not invented"
+    ]
+   },
+   {
+    "id": "agent-missing-relationships",
+    "prompt": "Draw the ER diagram for these entities.",
+    "inputs": {
+     "entities": "evals/fixtures/entities.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:relationships"
+    ],
+    "expected": [
+     "Asks once for the relationships file instead of guessing how the entities relate"
+    ]
+   },
+   {
+    "id": "agent-invalid-model-fails",
+    "prompt": "Validate this model: students enrol in courses, instructors teach courses, terms have many offerings.",
+    "inputs": {
+     "entities": "evals/fixtures/entities.csv",
+     "relationships": "evals/fixtures/relationships-invalid.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "model.md",
+      "check": "contains:\"entity 'Instructor' is not defined\""
+     },
+     {
+      "file": "model.md",
+      "check": "contains:\"N:M needs a join note\""
+     }
+    ],
+    "expected": [
+     "N:M without join, undefined Instructor and cardinality 'many' are errors; the run fails; outputs list them under Open questions",
+     "Instructor is not added to the model"
+    ]
+   },
+   {
+    "id": "agent-narrative-dry",
+    "prompt": "Model the domain and challenge our terms; any ADRs we should write?",
+    "inputs": {
+     "entities": "evals/fixtures/entities.csv",
+     "relationships": "evals/fixtures/relationships.csv",
+     "narrative": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "modeling-review.md",
+      "check": "sections:[\"Challenged terms\",\"Edge-case scenarios\",\"ADR candidates\"]"
+     },
+     {
+      "file": "modeling-review.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Review step fills the modeling-review template from the model and the upstream method and formats"
+    ]
+   }
+  ],
+  "bodyMd": "\n# domain-modeling-runner\n\nWraps `domain-modeling` from mattpocock/skills (pinned in vendor/pins.json). Upstream is a conversational discipline — challenge terms against the glossary, sharpen fuzzy language, stress-test relationships with scenarios, record hard-to-reverse decisions as ADRs. This skill makes the checkable part deterministic (structure, identifiers, cardinalities, glossary gaps, invariants) and passes the upstream instructions and its glossary/ADR formats to the optional review step by path (`../../../vendor/domain-modeling/SKILL.md`), never by copy.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/domain-modeling-runner --input <name>=<value> … --out <dir>` (see `--explain build/domain-modeling-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Validation errors fail the run (exit 1) but both outputs are still written, so the gaps are listed under Open questions.\n\n## When to use\n- Before schema, API or event design: get entities, keys and cardinalities agreed.\n- When terms drift (\"account\" vs \"customer\"): build the glossary and see which terms lack a definition.\n- NOT for: SQL migrations and RLS (`supabase-schema-rls`), tenancy audits (`multi-tenant-saas-patterns`), product requirements (`product-spec-prd`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `entities` | yes | One row per attribute: `entity,attribute,type,required,notes`. Mark the identifier with an `id` / `<entity>_id` name or `PK` in notes; `FK` in notes marks a foreign key. |\n| `relationships` | yes | `from,to,cardinality,name[,notes]`; cardinality `1:1`, `1:N`, `N:M`; N:M needs `join: <Entity>` in notes. |\n| `glossary` | no | `term,definition[,avoid]`. Entities without a definition get `[TO BE BASELINED — owner: Domain expert]`. |\n| `title` | no | Bounded-context name (default \"Domain model\"). |\n| `narrative` | no | `true` runs the LLM modeling review. |\n\n## Procedure\n1. **Read** the CSVs (`scripts/model.py`); missing columns or files → exit 2 naming them.\n2. **Validate** (errors E1–E6): undefined relationship endpoints, entities without identifier, bad cardinality, N:M without join, duplicate attributes, bad `required` values. **Warn** (W1–W3): orphan entities (join entities count as linked), terms without definitions, glossary terms that are not entities.\n3. **Render the diagram**: Mermaid `erDiagram` with a title front-matter block, PK/FK markers, cardinality aliases (`1 to 0+` for 1:N, `1 to 1`, `0+ to 0+`). Invalid relationships are left out of the diagram.\n4. **Derive invariants**: unique identifiers, required attributes, ownership for 1:N, uniqueness for 1:1 and N:M pairs — as a checklist to confirm, not as facts.\n5. **Glossary** in the upstream GLOSSARY format (`**Term**:` definition, `_Avoid_:` synonyms).\n6. **Open questions**: every error and warning, owned by the domain expert.\n7. Optional: with `narrative=true` the LLM fills `assets/modeling-review-template.md`.\n\n## Output\n- `model.md` — Diagram, Entities, Relationships, Invariants, Glossary, Open questions.\n- `model.json` — entities, relationships, glossary, invariants, errors, warnings; `model.py --check` fails on errors or undefined endpoints.\n- `modeling-review.md` (only with `narrative=true`).\n\n## Self-check\n- [ ] Every relationship endpoint is a defined entity; every entity has an identifier\n- [ ] Every N:M names its join; every cardinality is 1:1, 1:N or N:M\n- [ ] The Mermaid block parses; invalid relationships are not drawn\n- [ ] No definition was invented: missing ones carry `[TO BE BASELINED — owner: Domain expert]`\n- [ ] Invariants are presented as a checklist to confirm\n\n## References\n- `references/modeling-rules.md` — validation rules, Mermaid mapping, invariant derivation\n- `assets/entities-template.csv`, `assets/relationships-template.csv`, `assets/glossary-template.csv` — input layouts\n- `assets/modeling-review-template.md` — narrative template for the optional LLM step\n- `scripts/model.py` — validator, renderer and contract check (argparse; stdlib)\n- Upstream method: `vendor/domain-modeling/` (SKILL.md, GLOSSARY-FORMAT.md, ADR-FORMAT.md)\n"
+ },
+ {
   "id": "build/handoff-and-thread-close",
   "domain": "build",
   "stage": "improve",
@@ -7725,6 +9399,285 @@
   "bodyMd": "\n# supabase-schema-rls\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/supabase-schema-rls --input <name>=<value> … --out <dir>` (see `--explain build/supabase-schema-rls`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.\n\n## When to use\n- \"Add a table\", \"add a column\", \"who can see X\", \"set up RLS\", \"new role\", \"migration\", \"seed\".\n- Any task from `spec-to-plan` tagged risk = schema or auth.\n- NOT for: application authz in server actions (`nextjs-enterprise-conventions`), full review (`security-review`), tenant/RBAC design (`multi-tenant-saas-patterns` — design first, then come here).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Entity description: columns, relationships, tenant-scoped? owner column? | yes | user / plan |\n| Access rules per role (who reads / writes / deletes) | yes | user / RBAC matrix |\n| Existing schema (`supabase/migrations/`, `lib/db/types.ts`) | yes | repo |\n| JWT claim layout (`tenant_id`, `role` in `app_metadata`?) | yes | repo (`auth.jwt()` usage) — ask once if absent |\n\nIf a required input is missing, ask for it once; do not guess.\n\n## Procedure\n1. Read `../../../shared/stack-conventions.md` (Migrations, Auth, Multi-tenant rows) and `../../../shared/token-efficiency.md`. Read the latest 3 migrations and `lib/db/types.ts` for naming and claim conventions.\n2. **Plan.** Table: entity → columns → indexes → policies (per role × operation) → rollback. Mark destructive changes and propose expand/contract across two releases. Post the table; wait for \"go\". *(gate: plan→approve)*\n3. **Build the migration** with `supabase migration new <name>` and `references/migration-format.md`. Rules: `enable row level security` on every table; `tenant_id` first in composite indexes; `updated_at` trigger; `-- rollback:` block at the end.\n4. **Write policies** from `references/rls-patterns.md` — one policy per operation per role; `using` for read/delete, `with check` for insert/update; wrap `auth.*` calls in `(select …)` for performance. Use `assets/rls-policies.sql` snippets.\n5. **Lint.** `python3 -I scripts/rls_lint.py supabase/migrations --client-dirs app components lib/supabase/browser.ts`. Zero findings or each one justified in the plan.\n6. **Test.** `supabase db reset` locally; run integration tests from `references/rls-testing.md`: for each policy a positive case and a negative case (other tenant / other owner / lower role). Run the full unit suite. *(gate: build→test)*\n7. **Types + seed.** `npm run db:types`; update `supabase/seed.sql` with minimal rows for two tenants so negative tests have data.\n8. **Verify.** Diff `lib/db/types.ts`; confirm no `service_role` client in `app/`, `components/`, or browser client; confirm `security definer` functions have `set search_path = ''`. *(gate: test→verify)*\n9. Update `docs/HANDOFF.md`; if an applied migration was wrong, write a new migration — never edit the applied one.\n\n## Output\n| Artifact | Path |\n|---|---|\n| Migration | `supabase/migrations/<ts>_<name>.sql` (with rollback block) |\n| Policies | inside the migration; snippets from `assets/rls-policies.sql` |\n| Lint result | chat, from `scripts/rls_lint.py` |\n| Integration tests | `tests/integration/rls/<table>.test.ts` |\n| Types | `lib/db/types.ts` regenerated |\n| Seed | `supabase/seed.sql` |\n\n## Self-check\n- [ ] Every new table: `enable row level security` + at least one policy, or an explicit \"no access by design\" comment\n- [ ] Every tenant table: `tenant_id not null` + policy predicate on it + index leading with it\n- [ ] `with check` present on every insert/update policy (not only `using`)\n- [ ] No `service_role` in client code; `security definer` functions pin `search_path`\n- [ ] Rollback block reverses every statement in reverse order\n- [ ] Positive + negative integration test per policy, all green\n- [ ] Applied migrations untouched\n\n## References\n- `references/rls-patterns.md` — tenant, owner, role-based, public-read patterns; bypass mistakes\n- `references/migration-format.md` — file layout, naming, rollback block, expand/contract\n- `references/rls-testing.md` — integration test method with JWT impersonation\n- `assets/rls-policies.sql` — copy-paste policy snippets\n- `assets/migration-template.sql` — migration skeleton\n- `scripts/rls_lint.py` — offline linter\n"
  },
  {
+  "id": "build/systematic-debugging-runner",
+  "domain": "build",
+  "stage": "improve",
+  "name": "systematic-debugging-runner",
+  "description": "Use when a test fails, a build breaks or an exception shows up and you want the evidence organised before anyone touches the code — \"why is this test failing\", \"debug this stack trace\", \"did my change break this\", \"root-cause this error\". Produces debug.json and debug-log.md (Symptom, Evidence, Hypotheses, Next experiment, Fix gate) by parsing a Python, JS/TS or Java failure log, finding the innermost in-repo frame, correlating frames with the lines a recent diff touched (regression-likely vs not) and ranking hypotheses that each carry a falsifying test; the fix gate stays closed until one is confirmed. Runnable wrapper of the vendored systematic-debugging skill. Not for applying the fix (use safe-fix) or for performance profiling.",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "improve",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "log",
+     "type": "file",
+     "required": true,
+     "from": "failure log: pytest/unittest output, Jest/Vitest/Node output, or a Java stack trace (paste into a .txt file)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "diff",
+     "type": "file",
+     "required": false,
+     "from": "unified diff of recent changes (`git diff <last-green>...HEAD > recent.patch`); without it no regression check",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "repro",
+     "type": "file",
+     "required": false,
+     "from": "reproduction steps, one per line (layout: assets/repro-template.md); without it the first experiment is to establish a repro",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "narrative",
+     "type": "flag",
+     "required": false,
+     "from": "true to have the LLM write the investigation narrative from the debug log and the upstream method",
+     "default": null,
+     "flag": "--narrative",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "debug-log",
+     "kind": "script"
+    },
+    {
+     "step": "investigation",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "debug-log",
+     "kind": "script",
+     "cmd": "python3 -I scripts/debug_log.py --log {log} [--diff {diff}] [--repro {repro}] --json {out}/debug.json --md {out}/debug-log.md"
+    },
+    {
+     "step": "investigation",
+     "kind": "llm",
+     "template": "assets/investigation-template.md",
+     "context": [
+      "../../../vendor/systematic-debugging/SKILL.md",
+      "../../../vendor/systematic-debugging/root-cause-tracing.md",
+      "{out}/debug.json",
+      "{out}/debug-log.md",
+      "references/debug-method.md"
+     ],
+     "out": "{out}/investigation.md",
+     "skip_if_missing": [
+      "narrative"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/debug.json",
+     "checks": [
+      "exists",
+      "json",
+      "cmd:\"python3 -I scripts/debug_log.py --validate {path}\""
+     ]
+    },
+    {
+     "path": "{out}/debug-log.md",
+     "checks": [
+      "exists",
+      "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\",\"Fix gate\"]",
+      "contains:\"Fix allowed: NO\"",
+      "no_unowned_tbd"
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "log": "evals/fixtures/pytest-failure.txt",
+     "diff": "evals/fixtures/recent.patch",
+     "repro": "evals/fixtures/repro.md"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"systematic-debugging-runner\">systematic-debugging-runner</h1>\n<p>Wraps <code>systematic-debugging</code> from obra/superpowers (pinned in vendor/pins.json). The upstream skill is the method; this skill makes its first three phases (read the error, check recent changes, form testable hypotheses) a deterministic run, and passes the upstream instructions to the optional narrative step by path (<code>../../../vendor/systematic-debugging/SKILL.md</code>), never by copy.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py build/systematic-debugging-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain build/systematic-debugging-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce. A log with no parsable exception stops the run (script exit 2) instead of inventing a symptom.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>A failing test, CI job or crash with a stack trace, before proposing any fix.</li><li>&quot;Did my change break this?&quot; — supply the diff and read the classification.</li><li>NOT for: applying or verifying the fix (<code>safe-fix</code>), security review of a diff (<code>security-review</code>), performance profiling, flaky-test statistics across many runs.</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>log</code></td><td>yes</td><td>Test output or stack trace as text. Python tracebacks and pytest output, JS/TS (Node, Jest, Vitest), Java (incl. <code>Caused by:</code> chains).</td></tr><tr><td><code>diff</code></td><td>no</td><td>Unified diff since the last green build. Without it the classification is <code>no-diff</code>.</td></tr><tr><td><code>repro</code></td><td>no</td><td>Exact steps to reproduce (assets/repro-template.md). Missing → marked <code>[TO BE BASELINED — owner: Reporting engineer]</code> and made experiment 1.</td></tr><tr><td><code>narrative</code></td><td>no</td><td><code>true</code> runs the LLM step that writes the investigation narrative.</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li><strong>Parse the log</strong> (<code>scripts/debug_log.py</code>): error type and message (the deepest Java <code>Caused by:</code>; the last Python exception), stack frames (file, line, function), stored innermost first.</li><li><strong>Find the innermost in-repo frame</strong>: skip site-packages, node_modules, runtime and JDK/JUnit frames (<code>references/debug-method.md</code>).</li><li><strong>Correlate with the diff</strong>: a frame overlaps by file (path-suffix or Java package path) and by line (inside a changed hunk). Any overlap → <code>regression-likely</code>.</li><li><strong>Rank hypotheses by evidence</strong>: changed line in the stack (3) &gt; changed file or error-type signal at an in-repo frame (2) &gt; weak (1). Each has one falsifying test and status <code>untested</code>.</li><li><strong>Next experiment</strong>: establish a repro if none was given, then run the top hypothesis's falsifying test.</li><li><strong>Fix gate</strong>: always written closed. It opens only when a hypothesis is confirmed by its experiment and a failing test reproduces the defect; after three failed fixes, stop and question the design.</li><li>Optional: with <code>narrative=true</code> the LLM fills <code>assets/investigation-template.md</code> from the debug log and the upstream method.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>debug.json</code> — symptom, frames (with in-repo and overlap flags), classification, ranked hypotheses, next experiments, gate. Checked by <code>debug_log.py --validate</code> (ranked, every hypothesis falsifiable, gate not open without confirmation).</li><li><code>debug-log.md</code> — Symptom, Evidence, Hypotheses, Next experiment, Fix gate.</li><li><code>investigation.md</code> (only with <code>narrative=true</code>) — narrative per <code>assets/investigation-template.md</code>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Error type and message are quoted from the log, never paraphrased into a different error</li><li>[ ] Every hypothesis has a falsifying test and the table is ranked by evidence score</li><li>[ ] Regression claims rest on a frame that the diff touches, not on timing alone</li><li>[ ] Missing repro is marked with an owner and is experiment 1</li><li>[ ] The fix gate says NO; no fix is proposed in any output</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/debug-method.md</code> — parsing rules, in-repo heuristics, scoring and the gate</li><li><code>assets/repro-template.md</code> — reproduction steps layout</li><li><code>assets/investigation-template.md</code> — narrative template for the optional LLM step</li><li><code>scripts/debug_log.py</code> — parser, correlator and contract validator (argparse; stdlib)</li><li>Upstream method: <code>vendor/systematic-debugging/</code> (SKILL.md, root-cause-tracing.md)</li></ul>",
+  "files": {
+   "references": [
+    "debug-method.md"
+   ],
+   "assets": [
+    "investigation-template.md",
+    "repro-template.md"
+   ],
+   "scripts": [
+    "debug_log.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "This pytest test started failing after my change. Here is the output, the diff since the last green build and the repro steps. Why is it failing?",
+    "expected": [
+     "Runs scripts/debug_log.py; KeyError parsed with 4 frames, innermost in-repo frame billing/tax.py:17",
+     "Classification regression-likely because tax.py line 17 sits in a changed hunk",
+     "Hypotheses ranked with a falsifying test each; fix gate closed"
+    ]
+   },
+   {
+    "id": "agent-missing-log",
+    "prompt": "My build is broken, debug it.",
+    "expected": [
+     "Asks once for the failure log instead of guessing the error"
+    ]
+   },
+   {
+    "id": "agent-no-error-no-invention",
+    "prompt": "It is broken somehow; here is the log. Just tell me what the bug is.",
+    "expected": [
+     "The log has no exception; the script exits 2 and the run fails rather than inventing a symptom"
+    ]
+   },
+   {
+    "id": "agent-jest-no-diff",
+    "prompt": "Jest test fails with a TypeError, no diff available. Organise the evidence.",
+    "expected": [
+     "Parses JS frames; innermost in-repo frame src/cart/coupon.ts:14; node_modules frame excluded",
+     "Classification no-diff; missing repro marked with an owner"
+    ]
+   },
+   {
+    "id": "agent-narrative-dry",
+    "prompt": "Root-cause this Java NPE and write up the investigation.",
+    "expected": [
+     "Deepest Caused by is the root exception; narrative step fills the investigation template from the debug log and the upstream method"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "This pytest test started failing after my change. Here is the output, the diff since the last green build and the repro steps. Why is it failing?",
+    "inputs": {
+     "log": "evals/fixtures/pytest-failure.txt",
+     "diff": "evals/fixtures/recent.patch",
+     "repro": "evals/fixtures/repro.md"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:debug.json",
+     {
+      "file": "debug-log.md",
+      "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"
+     },
+     {
+      "file": "debug-log.md",
+      "check": "contains:\"regression-likely\""
+     },
+     {
+      "file": "debug-log.md",
+      "check": "contains:\"Fix allowed: NO\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/debug_log.py; KeyError parsed with 4 frames, innermost in-repo frame billing/tax.py:17",
+     "Classification regression-likely because tax.py line 17 sits in a changed hunk",
+     "Hypotheses ranked with a falsifying test each; fix gate closed"
+    ]
+   },
+   {
+    "id": "agent-missing-log",
+    "prompt": "My build is broken, debug it.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:log"
+    ],
+    "expected": [
+     "Asks once for the failure log instead of guessing the error"
+    ]
+   },
+   {
+    "id": "agent-no-error-no-invention",
+    "prompt": "It is broken somehow; here is the log. Just tell me what the bug is.",
+    "inputs": {
+     "log": "evals/fixtures/no-error.txt"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1"
+    ],
+    "expected": [
+     "The log has no exception; the script exits 2 and the run fails rather than inventing a symptom"
+    ]
+   },
+   {
+    "id": "agent-jest-no-diff",
+    "prompt": "Jest test fails with a TypeError, no diff available. Organise the evidence.",
+    "inputs": {
+     "log": "evals/fixtures/jest-failure.txt"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "debug-log.md",
+      "check": "contains:\"src/cart/coupon.ts:14 in applyCoupon\""
+     },
+     {
+      "file": "debug-log.md",
+      "check": "contains:\"[TO BE BASELINED — owner: Reporting engineer]\""
+     }
+    ],
+    "expected": [
+     "Parses JS frames; innermost in-repo frame src/cart/coupon.ts:14; node_modules frame excluded",
+     "Classification no-diff; missing repro marked with an owner"
+    ]
+   },
+   {
+    "id": "agent-narrative-dry",
+    "prompt": "Root-cause this Java NPE and write up the investigation.",
+    "inputs": {
+     "log": "evals/fixtures/java-failure.txt",
+     "narrative": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "debug-log.md",
+      "check": "contains:\"java.lang.NullPointerException\""
+     },
+     {
+      "file": "investigation.md",
+      "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"
+     },
+     {
+      "file": "investigation.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Deepest Caused by is the root exception; narrative step fills the investigation template from the debug log and the upstream method"
+    ]
+   }
+  ],
+  "bodyMd": "\n# systematic-debugging-runner\n\nWraps `systematic-debugging` from obra/superpowers (pinned in vendor/pins.json). The upstream skill is the method; this skill makes its first three phases (read the error, check recent changes, form testable hypotheses) a deterministic run, and passes the upstream instructions to the optional narrative step by path (`../../../vendor/systematic-debugging/SKILL.md`), never by copy.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/systematic-debugging-runner --input <name>=<value> … --out <dir>` (see `--explain build/systematic-debugging-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. A log with no parsable exception stops the run (script exit 2) instead of inventing a symptom.\n\n## When to use\n- A failing test, CI job or crash with a stack trace, before proposing any fix.\n- \"Did my change break this?\" — supply the diff and read the classification.\n- NOT for: applying or verifying the fix (`safe-fix`), security review of a diff (`security-review`), performance profiling, flaky-test statistics across many runs.\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `log` | yes | Test output or stack trace as text. Python tracebacks and pytest output, JS/TS (Node, Jest, Vitest), Java (incl. `Caused by:` chains). |\n| `diff` | no | Unified diff since the last green build. Without it the classification is `no-diff`. |\n| `repro` | no | Exact steps to reproduce (assets/repro-template.md). Missing → marked `[TO BE BASELINED — owner: Reporting engineer]` and made experiment 1. |\n| `narrative` | no | `true` runs the LLM step that writes the investigation narrative. |\n\n## Procedure\n1. **Parse the log** (`scripts/debug_log.py`): error type and message (the deepest Java `Caused by:`; the last Python exception), stack frames (file, line, function), stored innermost first.\n2. **Find the innermost in-repo frame**: skip site-packages, node_modules, runtime and JDK/JUnit frames (`references/debug-method.md`).\n3. **Correlate with the diff**: a frame overlaps by file (path-suffix or Java package path) and by line (inside a changed hunk). Any overlap → `regression-likely`.\n4. **Rank hypotheses by evidence**: changed line in the stack (3) > changed file or error-type signal at an in-repo frame (2) > weak (1). Each has one falsifying test and status `untested`.\n5. **Next experiment**: establish a repro if none was given, then run the top hypothesis's falsifying test.\n6. **Fix gate**: always written closed. It opens only when a hypothesis is confirmed by its experiment and a failing test reproduces the defect; after three failed fixes, stop and question the design.\n7. Optional: with `narrative=true` the LLM fills `assets/investigation-template.md` from the debug log and the upstream method.\n\n## Output\n- `debug.json` — symptom, frames (with in-repo and overlap flags), classification, ranked hypotheses, next experiments, gate. Checked by `debug_log.py --validate` (ranked, every hypothesis falsifiable, gate not open without confirmation).\n- `debug-log.md` — Symptom, Evidence, Hypotheses, Next experiment, Fix gate.\n- `investigation.md` (only with `narrative=true`) — narrative per `assets/investigation-template.md`.\n\n## Self-check\n- [ ] Error type and message are quoted from the log, never paraphrased into a different error\n- [ ] Every hypothesis has a falsifying test and the table is ranked by evidence score\n- [ ] Regression claims rest on a frame that the diff touches, not on timing alone\n- [ ] Missing repro is marked with an owner and is experiment 1\n- [ ] The fix gate says NO; no fix is proposed in any output\n\n## References\n- `references/debug-method.md` — parsing rules, in-repo heuristics, scoring and the gate\n- `assets/repro-template.md` — reproduction steps layout\n- `assets/investigation-template.md` — narrative template for the optional LLM step\n- `scripts/debug_log.py` — parser, correlator and contract validator (argparse; stdlib)\n- Upstream method: `vendor/systematic-debugging/` (SKILL.md, root-cause-tracing.md)\n"
+ },
+ {
   "id": "build/test-strategy-tdd",
   "domain": "build",
   "stage": "evaluate",
@@ -7968,6 +9921,235 @@
    }
   ],
   "bodyMd": "\n# test-strategy-tdd\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/test-strategy-tdd --input <name>=<value> … --out <dir>` (see `--explain build/test-strategy-tdd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Stubs are `it.todo` / `test.fixme` per criterion — red first; replace each with a failing test before implementing.\n\n## When to use\n- \"Write tests for\", \"how should we test\", \"add coverage\", before any task from `spec-to-plan`.\n- Setting up `vitest` / `playwright` in a repo that has none.\n- NOT for: diagnosing a failing test (`safe-fix`), pipeline (`ci-cd-vercel-github`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Feature / change description with acceptance criteria | yes | plan / user |\n| Feature type: service, query, server action, page, API route, edge function, migration | yes | infer from plan; ask if unclear |\n| Existing test setup (`vitest.config.ts`, `playwright.config.ts`, `tests/`) | yes | repo |\n\nIf a required input is missing, ask for it once; do not guess.\n\n## Procedure\n1. Read `../../../shared/stack-conventions.md` (Tests row) and `../../../shared/token-efficiency.md`. Read existing configs and one existing test per layer to match style.\n2. **Plan the pyramid.** Using `references/test-pyramid.md`, produce the table: acceptance criterion → test layer → file → fixture. Include negative and RLS cases. Post it; wait for \"go\". *(gate: plan→approve)*\n3. **Scaffold** missing config from `assets/` (vitest.config.ts, playwright.config.ts, setup files, fixtures dir). Do not overwrite existing configs; diff and merge.\n4. **Red.** Write the tests first. Run them; they must fail for the right reason (assertion, not import error). If the upstream skill `superpowers:test-driven-development` is installed (see VENDORED.md), invoke it for steps 4–6; otherwise follow `references/tdd-method.md`.\n5. **Green.** Implement the minimum to pass. No extra behaviour.\n6. **Refactor** with tests green after each step. Run the full unit suite, not just the new file. *(gate: build→test)*\n7. **E2E.** For page/flow changes: Playwright spec from `references/playwright-patterns.md`. If `anthropics:webapp-testing` is installed, invoke it to drive the browser; otherwise follow the patterns file.\n8. **Verify.** Coverage ≥ 80% on `server/` (`npm test -- --coverage`); report the table: criterion → test → status. *(gate: test→verify)*\n9. Update `docs/HANDOFF.md`.\n\n## Output\n| Artifact | Path |\n|---|---|\n| Pyramid table | chat + top of the plan file |\n| Unit/integration tests | `tests/unit/**`, `tests/integration/**` |\n| E2E | `tests/e2e/<flow>.spec.ts` |\n| Configs | `vitest.config.ts`, `playwright.config.ts`, `tests/setup.ts` |\n| Fixtures | `tests/fixtures/**` |\n\n## Self-check\n- [ ] Every acceptance criterion maps to ≥1 test; every test maps to a criterion\n- [ ] Tests written before implementation and seen failing first\n- [ ] Negative cases: invalid input, forbidden role, cross-tenant, not-found\n- [ ] No test depends on another test's state; DB tests reset\n- [ ] Full suite green, coverage gate met\n- [ ] No mocking of the thing under test; mock only I/O at the boundary\n\n## References\n- `references/test-pyramid.md` — layer per feature type, what to mock, fixtures\n- `references/tdd-method.md` — red/green/refactor rules (fallback for superpowers)\n- `references/playwright-patterns.md` — auth, tenant, selectors, flake control (fallback for webapp-testing)\n- `assets/vitest.config.ts`, `assets/playwright.config.ts`, `assets/tests-setup.ts`, `assets/e2e-auth.setup.ts`, `assets/unit-test.example.ts`, `assets/e2e-test.example.ts`\n- `scripts/scaffold_tests.py` — feature.md + file list → vitest `it.todo` stubs and Playwright `test.fixme` specs, never overwriting\n"
+ },
+ {
+  "id": "build/webapp-testing-runner",
+  "domain": "build",
+  "stage": "evaluate",
+  "name": "webapp-testing-runner",
+  "description": "Use when you need end-to-end browser tests for a web app's user flows and want them generated from a plain flow list — \"write Playwright tests for these flows\", \"generate e2e tests for login and checkout\", \"turn these user journeys into tests\", \"check my flow selectors\". Produces test_flows.py (pytest-playwright, headless Chromium, networkidle waits, role/text/label/test-id locators) and flows-report.md (Flows with a coverage matrix, Generated tests, Warnings, How to run) after validating the flows JSON (known actions, required fields, brittle selector warnings); the file is verified with compile() and labelled generated, not executed, because the portal cannot launch a browser. Runnable wrapper of the vendored webapp-testing skill. Not for running the tests, visual regression, load testing or unit tests (use test-strategy-tdd).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "evaluate",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "flows",
+     "type": "json",
+     "required": true,
+     "from": "user flows JSON (layout: assets/flows-template.json): base_url (URL or ${BASE_URL} placeholder) and flows[{name, steps[{action, selector?, value?}]}]",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "narrative",
+     "type": "flag",
+     "required": false,
+     "from": "true to have the LLM write a test-plan review (reconnaissance, selector fixes, gaps) from the report and the upstream method",
+     "default": null,
+     "flag": "--narrative",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "generate",
+     "kind": "script"
+    },
+    {
+     "step": "plan-review",
+     "kind": "llm"
+    }
+   ],
+   "run": [
+    {
+     "step": "generate",
+     "kind": "script",
+     "cmd": "python3 -I scripts/gen_tests.py --flows {flows} --test-out {out}/test_flows.py --report {out}/flows-report.md"
+    },
+    {
+     "step": "plan-review",
+     "kind": "llm",
+     "template": "assets/test-plan-review-template.md",
+     "context": [
+      "../../../vendor/webapp-testing/SKILL.md",
+      "{out}/flows-report.md",
+      "{out}/test_flows.py",
+      "references/flow-format.md"
+     ],
+     "out": "{out}/test-plan-review.md",
+     "skip_if_missing": [
+      "narrative"
+     ]
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/test_flows.py",
+     "checks": [
+      "exists",
+      "contains:\"GENERATED, NOT EXECUTED\"",
+      "cmd:\"python3 -I scripts/gen_tests.py --verify-compiles {path}\""
+     ]
+    },
+    {
+     "path": "{out}/flows-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Flows\",\"Generated tests\",\"Warnings\",\"How to run\"]",
+      "contains:\"not executed\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "flows": "evals/fixtures/flows.json"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"webapp-testing-runner\">webapp-testing-runner</h1>\n<p>Wraps <code>webapp-testing</code> from anthropics/skills (pinned in vendor/pins.json). Upstream drives a live browser with native Python Playwright; the portal cannot launch one, so this skill turns the same method (headless Chromium, wait for <code>networkidle</code>, descriptive selectors) into a generator plus static checks, and passes the upstream instructions to the optional review step by path (<code>../../../vendor/webapp-testing/SKILL.md</code>), never by copy.</p>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py build/webapp-testing-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain build/webapp-testing-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce. Say plainly that the tests were generated and compiled, not executed; results exist only after the user runs them.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Turning a list of user journeys into a Playwright suite the team can run locally or in CI.</li><li>Reviewing flow selectors for brittleness before the suite is written.</li><li>NOT for: executing tests or reporting pass/fail (needs a browser), unit/integration test scaffolding (<code>test-strategy-tdd</code>), visual or load testing.</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th></tr></thead><tbody><tr><td><code>flows</code></td><td>yes</td><td>JSON per <code>assets/flows-template.json</code>. Actions: <code>goto</code>(value), <code>click</code>(selector), <code>fill</code>(selector, value), <code>expect_text</code>(value[, selector]), <code>expect_url</code>(value).</td></tr><tr><td><code>narrative</code></td><td>no</td><td><code>true</code> runs the LLM step that writes the test-plan review.</td></tr></tbody></table>\n<p>The base URL is never guessed: the generated file reads <code>BASE_URL</code> from the environment; a placeholder in the JSON makes tests skip until it is set.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li><strong>Validate</strong> (<code>scripts/gen_tests.py</code>): base_url present, flows non-empty, unique names, known actions, required fields per action, string types. Any error → report with the errors, no test file, exit 1.</li><li><strong>Warn</strong> on selector style: nth-child/nth-of-type, XPath, generated class names, long CSS chains (warning); bare CSS (info); flows not starting with <code>goto</code> or with no <code>expect_*</code> step.</li><li><strong>Generate</strong> <code>test_flows.py</code>: one <code>test_&lt;flow&gt;</code> per flow using the pytest-playwright <code>page</code> fixture; <code>goto</code> is followed by <code>wait_for_load_state(&quot;networkidle&quot;)</code>; <code>role=</code>/<code>text=</code>/<code>label=</code>/<code>placeholder=</code>/<code>testid=</code> map to <code>get_by_*</code> locators.</li><li><strong>Verify</strong> with <code>compile()</code> and stamp <code>GENERATED, NOT EXECUTED</code> in the module docstring.</li><li><strong>Report</strong> <code>flows-report.md</code>: coverage matrix (steps per action, assertions, selector kinds per flow), static-check result, warnings, how to run (incl. the upstream <code>with_server.py</code> helper).</li><li>Optional: with <code>narrative=true</code> the LLM fills <code>assets/test-plan-review-template.md</code>.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>test_flows.py</code> — runnable with <code>BASE_URL=… pytest test_flows.py</code> after <code>pip install pytest-playwright &amp;&amp; playwright install chromium</code>.</li><li><code>flows-report.md</code> — Flows, Generated tests, Warnings, How to run.</li><li><code>test-plan-review.md</code> (only with <code>narrative=true</code>).</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every flow became exactly one test function; names are unique</li><li>[ ] Every flow has at least one assertion, or a warning says it does not</li><li>[ ] Brittle selectors are listed under Warnings with a better alternative kind</li><li>[ ] The file compiles and says GENERATED, NOT EXECUTED; no pass/fail result is claimed anywhere</li><li>[ ] No URL or credential was invented; values come from the flows file</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/flow-format.md</code> — flow JSON schema, selector mapping, warning rules</li><li><code>assets/flows-template.json</code> — input layout</li><li><code>assets/test-plan-review-template.md</code> — narrative template for the optional LLM step</li><li><code>scripts/gen_tests.py</code> — validator, generator and compile check (argparse; stdlib)</li><li>Upstream method: <code>vendor/webapp-testing/SKILL.md</code> (and its server-lifecycle helper, vendor/webapp-testing/scripts/with_server.py)</li></ul>",
+  "files": {
+   "references": [
+    "flow-format.md"
+   ],
+   "assets": [
+    "flows-template.json",
+    "test-plan-review-template.md"
+   ],
+   "scripts": [
+    "gen_tests.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Generate Playwright tests for the sign-in and add-to-cart flows in this file.",
+    "expected": [
+     "Runs scripts/gen_tests.py; two test functions, networkidle after each goto, get_by_label/get_by_role/get_by_test_id locators",
+     "Warns on the nth-child selector; states the tests were generated and compiled, not executed"
+    ]
+   },
+   {
+    "id": "agent-missing-flows",
+    "prompt": "Write e2e tests for my app.",
+    "expected": [
+     "Asks once for the flows JSON instead of inventing pages and selectors"
+    ]
+   },
+   {
+    "id": "agent-invalid-flows-fail",
+    "prompt": "Generate tests from these flows (one uses hover, some steps miss fields).",
+    "expected": [
+     "Unknown action, missing selector/value, duplicate name and empty steps are reported; no test file; run fails"
+    ]
+   },
+   {
+    "id": "agent-narrative-dry",
+    "prompt": "Generate the tests and review the plan and selectors.",
+    "expected": [
+     "Review step fills the test-plan template from the report and the upstream method; no pass/fail claimed"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Generate Playwright tests for the sign-in and add-to-cart flows in this file.",
+    "inputs": {
+     "flows": "evals/fixtures/flows.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "test_flows.py",
+      "check": "contains:\"def test_sign_in(page: Page)\""
+     },
+     {
+      "file": "test_flows.py",
+      "check": "contains:\"networkidle\""
+     },
+     {
+      "file": "flows-report.md",
+      "check": "sections:[\"Flows\",\"Generated tests\",\"Warnings\",\"How to run\"]"
+     },
+     {
+      "file": "flows-report.md",
+      "check": "contains:\"nth-child\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/gen_tests.py; two test functions, networkidle after each goto, get_by_label/get_by_role/get_by_test_id locators",
+     "Warns on the nth-child selector; states the tests were generated and compiled, not executed"
+    ]
+   },
+   {
+    "id": "agent-missing-flows",
+    "prompt": "Write e2e tests for my app.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:flows"
+    ],
+    "expected": [
+     "Asks once for the flows JSON instead of inventing pages and selectors"
+    ]
+   },
+   {
+    "id": "agent-invalid-flows-fail",
+    "prompt": "Generate tests from these flows (one uses hover, some steps miss fields).",
+    "inputs": {
+     "flows": "evals/fixtures/flows-invalid.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "flows-report.md",
+      "check": "contains:\"unknown action 'hover'\""
+     },
+     {
+      "file": "flows-report.md",
+      "check": "contains:\"No tests were generated\""
+     }
+    ],
+    "expected": [
+     "Unknown action, missing selector/value, duplicate name and empty steps are reported; no test file; run fails"
+    ]
+   },
+   {
+    "id": "agent-narrative-dry",
+    "prompt": "Generate the tests and review the plan and selectors.",
+    "inputs": {
+     "flows": "evals/fixtures/flows.json",
+     "narrative": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "test-plan-review.md",
+      "check": "sections:[\"Reconnaissance plan\",\"Selector review\",\"Gaps\"]"
+     },
+     {
+      "file": "test-plan-review.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Review step fills the test-plan template from the report and the upstream method; no pass/fail claimed"
+    ]
+   }
+  ],
+  "bodyMd": "\n# webapp-testing-runner\n\nWraps `webapp-testing` from anthropics/skills (pinned in vendor/pins.json). Upstream drives a live browser with native Python Playwright; the portal cannot launch one, so this skill turns the same method (headless Chromium, wait for `networkidle`, descriptive selectors) into a generator plus static checks, and passes the upstream instructions to the optional review step by path (`../../../vendor/webapp-testing/SKILL.md`), never by copy.\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/webapp-testing-runner --input <name>=<value> … --out <dir>` (see `--explain build/webapp-testing-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Say plainly that the tests were generated and compiled, not executed; results exist only after the user runs them.\n\n## When to use\n- Turning a list of user journeys into a Playwright suite the team can run locally or in CI.\n- Reviewing flow selectors for brittleness before the suite is written.\n- NOT for: executing tests or reporting pass/fail (needs a browser), unit/integration test scaffolding (`test-strategy-tdd`), visual or load testing.\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `flows` | yes | JSON per `assets/flows-template.json`. Actions: `goto`(value), `click`(selector), `fill`(selector, value), `expect_text`(value[, selector]), `expect_url`(value). |\n| `narrative` | no | `true` runs the LLM step that writes the test-plan review. |\n\nThe base URL is never guessed: the generated file reads `BASE_URL` from the environment; a placeholder in the JSON makes tests skip until it is set.\n\n## Procedure\n1. **Validate** (`scripts/gen_tests.py`): base_url present, flows non-empty, unique names, known actions, required fields per action, string types. Any error → report with the errors, no test file, exit 1.\n2. **Warn** on selector style: nth-child/nth-of-type, XPath, generated class names, long CSS chains (warning); bare CSS (info); flows not starting with `goto` or with no `expect_*` step.\n3. **Generate** `test_flows.py`: one `test_<flow>` per flow using the pytest-playwright `page` fixture; `goto` is followed by `wait_for_load_state(\"networkidle\")`; `role=`/`text=`/`label=`/`placeholder=`/`testid=` map to `get_by_*` locators.\n4. **Verify** with `compile()` and stamp `GENERATED, NOT EXECUTED` in the module docstring.\n5. **Report** `flows-report.md`: coverage matrix (steps per action, assertions, selector kinds per flow), static-check result, warnings, how to run (incl. the upstream `with_server.py` helper).\n6. Optional: with `narrative=true` the LLM fills `assets/test-plan-review-template.md`.\n\n## Output\n- `test_flows.py` — runnable with `BASE_URL=… pytest test_flows.py` after `pip install pytest-playwright && playwright install chromium`.\n- `flows-report.md` — Flows, Generated tests, Warnings, How to run.\n- `test-plan-review.md` (only with `narrative=true`).\n\n## Self-check\n- [ ] Every flow became exactly one test function; names are unique\n- [ ] Every flow has at least one assertion, or a warning says it does not\n- [ ] Brittle selectors are listed under Warnings with a better alternative kind\n- [ ] The file compiles and says GENERATED, NOT EXECUTED; no pass/fail result is claimed anywhere\n- [ ] No URL or credential was invented; values come from the flows file\n\n## References\n- `references/flow-format.md` — flow JSON schema, selector mapping, warning rules\n- `assets/flows-template.json` — input layout\n- `assets/test-plan-review-template.md` — narrative template for the optional LLM step\n- `scripts/gen_tests.py` — validator, generator and compile check (argparse; stdlib)\n- Upstream method: `vendor/webapp-testing/SKILL.md` (and its server-lifecycle helper, vendor/webapp-testing/scripts/with_server.py)\n"
  },
  {
   "id": "career/application-tracker",

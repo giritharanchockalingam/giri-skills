@@ -721,6 +721,153 @@
   "evidence": "0 unowned of 8 markers"
  },
  {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "exists:eval-clean.jsonl",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__eval-engineering-runner/agent-happy-path/eval-clean.jsonl exists"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "eval-audit.md: sections:[\"Verdict\",\"Coverage\",\"Quality issues\",\"Recommendations\"]",
+  "pass": true,
+  "evidence": "found ['Verdict', 'Coverage', 'Quality issues', 'Recommendations']"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "eval-audit.md: contains:\"**PASS** — 20 rows in, 18 kept\"",
+  "pass": true,
+  "evidence": "found: **PASS** — 20 rows in, 18 kept"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "eval-audit.md: contains:\"| billing | 7 | 6 | 33.3 | 5 | 0 | OK |\"",
+  "pass": true,
+  "evidence": "found: | billing | 7 | 6 | 33.3 | 5 | 0 | OK |"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "eval-audit.json: contains:\"split_leakage\"",
+  "pass": true,
+  "evidence": "found: split_leakage"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "eval-audit.json: contains:\"conflicting_reference\"",
+  "pass": true,
+  "evidence": "found: conflicting_reference"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "check": "eval-audit.md: numbers_trace_to:eval-audit.json",
+  "pass": true,
+  "evidence": "all 5 numbers trace"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-missing-dataset",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-missing-dataset",
+  "check": "needs_input:dataset",
+  "pass": true,
+  "evidence": "missing inputs named: ['dataset']"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-below-target-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-below-target-fails",
+  "check": "eval-audit.md: contains:\"**FAIL**\"",
+  "pass": true,
+  "evidence": "found: **FAIL**"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-below-target-fails",
+  "check": "eval-audit.md: contains:\"| escalations | 0 | 0 | 0.0 | 2 | 2 | BELOW |\"",
+  "pass": true,
+  "evidence": "found: | escalations | 0 | 0 | 0.0 | 2 | 2 | BELOW |"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-below-target-fails",
+  "check": "eval-audit.md: contains:\"add 2 distinct case(s) to reach min_cases 6\"",
+  "pass": true,
+  "evidence": "found: add 2 distinct case(s) to reach min_cases 6"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-no-targets-not-gated",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-no-targets-not-gated",
+  "check": "eval-audit.md: contains:\"NOT GATED\"",
+  "pass": true,
+  "evidence": "found: NOT GATED"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-no-targets-not-gated",
+  "check": "eval-audit.md: contains:\"[TO BE BASELINED — owner: Eval owner]\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED — owner: Eval owner]"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-no-targets-not-gated",
+  "check": "eval-audit.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 9 markers"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-with-review",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-with-review",
+  "check": "eval-review.md: sections:[\"Upstream alignment\",\"Dataset gaps\",\"Next actions\"]",
+  "pass": true,
+  "evidence": "found ['Upstream alignment', 'Dataset gaps', 'Next actions']"
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-with-review",
+  "check": "eval-review.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 0 markers"
+ },
+ {
   "skill": "ai-platform/feedback-improvement-loop",
   "caseId": "agent-happy-path",
   "check": "exit:0",
@@ -1041,6 +1188,377 @@
   "check": "exit:1",
   "pass": true,
   "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "exists:rag_pipeline.py",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__langchain-rag-runner/agent-happy-path/rag_pipeline.py exists"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "rag-plan.md: sections:[\"Sizing\",\"Cost\",\"Retrieval budget\",\"Warnings\",\"Scaffold\"]",
+  "pass": true,
+  "evidence": "found ['Sizing', 'Cost', 'Retrieval budget', 'Warnings', 'Scaffold']"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "rag-plan.md: contains:\"| policies | 1,200 | 3,000 | 4 | 4,800 | 1,080,000 | monthly |\"",
+  "pass": true,
+  "evidence": "found: | policies | 1,200 | 3,000 | 4 | 4,800 | 1,080,000 | monthly |"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "rag-plan.md: contains:\"| contracts | 250 | 24,000 | 30 | 7,500 | 1,862,500 | quarterly |\"",
+  "pass": true,
+  "evidence": "found: | contracts | 250 | 24,000 | 30 | 7,500 | 1,862,500 | quarterly |"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "rag-plan.md: numbers_trace_to:rag-plan.json",
+  "pass": true,
+  "evidence": "all 35 numbers trace"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "check": "rag-plan.json: contains:\"\\\"per_query_context_tokens\\\": 1250\"",
+  "pass": true,
+  "evidence": "found: \"per_query_context_tokens\": 1250"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-missing-config",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-missing-config",
+  "check": "needs_input:config",
+  "pass": true,
+  "evidence": "missing inputs named: ['config']"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-no-price-no-guess",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-no-price-no-guess",
+  "check": "rag-plan.json: contains:\"embedding_price_per_1m_tokens is missing (no default is assumed)\"",
+  "pass": true,
+  "evidence": "found: embedding_price_per_1m_tokens is missing (no default is assumed)"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-no-price-no-guess",
+  "check": "rag-plan.md: contains:\"BLOCKED\"",
+  "pass": true,
+  "evidence": "found: BLOCKED"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "check": "rag-plan.json: contains:\"exceeds the context budget\"",
+  "pass": true,
+  "evidence": "found: exceeds the context budget"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "check": "rag-plan.md: contains:\"NO — blocking\"",
+  "pass": true,
+  "evidence": "found: NO — blocking"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "check": "rag-plan.md: contains:\"in-memory\"",
+  "pass": true,
+  "evidence": "found: in-memory"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-with-review",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-with-review",
+  "check": "rag-review.md: sections:[\"Upstream conformance\",\"Cost and budget risks\",\"Next changes\"]",
+  "pass": true,
+  "evidence": "found ['Upstream conformance', 'Cost and budget risks', 'Next changes']"
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-with-review",
+  "check": "rag-review.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 0 markers"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "exists:hitl.py",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__langgraph-hitl-runner/agent-happy-path/hitl.py exists"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "hitl.md: sections:[\"Approval matrix\",\"Validation\",\"Resume flow\",\"Risks\"]",
+  "pass": true,
+  "evidence": "found ['Approval matrix', 'Validation', 'Resume flow', 'Risks']"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "hitl.md: contains:\"| issue_refund | Refund moves money to the customer | Finance supervisor | 240 | escalate | Finance manager |\"",
+  "pass": true,
+  "evidence": "found: | issue_refund | Refund moves money to the customer | Finance supervisor | 240 | escalate | Finance manager |"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "hitl.py: contains:\"PostgresSaver\"",
+  "pass": true,
+  "evidence": "found: PostgresSaver"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "hitl.py: contains:\"def escalate_issue_refund\"",
+  "pass": true,
+  "evidence": "found: def escalate_issue_refund"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "check": "validation.json: contains:\"\\\"executed\\\": false\"",
+  "pass": true,
+  "evidence": "found: \"executed\": false"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-missing-spec",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-missing-spec",
+  "check": "needs_input:spec",
+  "pass": true,
+  "evidence": "missing inputs named: ['spec']"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "check": "validation.json: contains:\"checkpointer is required\"",
+  "pass": true,
+  "evidence": "found: checkpointer is required"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "check": "validation.json: contains:\"auto-approve on timeout is forbidden for an irreversible action\"",
+  "pass": true,
+  "evidence": "found: auto-approve on timeout is forbidden for an irreversible action"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "check": "validation.json: contains:\"approver_role is missing\"",
+  "pass": true,
+  "evidence": "found: approver_role is missing"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "check": "hitl.md: contains:\"No scaffold was written\"",
+  "pass": true,
+  "evidence": "found: No scaffold was written"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-with-review",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-with-review",
+  "check": "hitl-review.md: sections:[\"Upstream conformance\",\"Gaps\",\"Decisions needed\"]",
+  "pass": true,
+  "evidence": "found ['Upstream conformance', 'Gaps', 'Decisions needed']"
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-with-review",
+  "check": "hitl-review.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 0 markers"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "exists:graph.py",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/ai-platform__langgraph-runner/agent-happy-path/graph.py exists"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "validation.json: contains:\"\\\"valid\\\": true\"",
+  "pass": true,
+  "evidence": "found: \"valid\": true"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "graph.md: sections:[\"Diagram\",\"Validation\",\"Nodes\",\"How to run\"]",
+  "pass": true,
+  "evidence": "found ['Diagram', 'Validation', 'Nodes', 'How to run']"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "graph.md: mermaid_parses",
+  "pass": true,
+  "evidence": "1 block(s) ok"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "graph.py: contains:\"add_conditional_edges('check_reply'\"",
+  "pass": true,
+  "evidence": "found: add_conditional_edges('check_reply'"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "check": "graph.md: contains:\"not executed\"",
+  "pass": true,
+  "evidence": "found: not executed"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-missing-spec",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-missing-spec",
+  "check": "needs_input:spec",
+  "pass": true,
+  "evidence": "missing inputs named: ['spec']"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "check": "validation.json: contains:\"has no conditional exit\"",
+  "pass": true,
+  "evidence": "found: has no conditional exit"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "check": "validation.json: contains:\"dangling edge\"",
+  "pass": true,
+  "evidence": "found: dangling edge"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "check": "validation.json: contains:\"undeclared state field 'plan_text'\"",
+  "pass": true,
+  "evidence": "found: undeclared state field 'plan_text'"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "check": "graph.md: contains:\"No scaffold was written\"",
+  "pass": true,
+  "evidence": "found: No scaffold was written"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "check": "graph-review.md: sections:[\"Upstream conformance\",\"Design risks\",\"Next changes\"]",
+  "pass": true,
+  "evidence": "found ['Upstream conformance', 'Design risks', 'Next changes']"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "check": "graph-review.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 0 markers"
  },
  {
   "skill": "ai-platform/llm-cost-model",
@@ -2009,6 +2527,202 @@
   "evidence": "found: gate: FAIL"
  },
  {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "check": "exists:review.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__code-review-runner/agent-happy-path/review.json exists"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "check": "review.md: sections:[\"Summary\",\"Blocking\",\"Non-blocking\",\"Tests\",\"Files\"]",
+  "pass": true,
+  "evidence": "found ['Summary', 'Blocking', 'Non-blocking', 'Tests', 'Files']"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "check": "review.md: contains:\"Verdict: **PASS**\"",
+  "pass": true,
+  "evidence": "found: Verdict: **PASS**"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "check": "review.md: contains:\"src/cart/coupon.ts:15\"",
+  "pass": true,
+  "evidence": "found: src/cart/coupon.ts:15"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-missing-diff",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-missing-diff",
+  "check": "needs_input:diff",
+  "pass": true,
+  "evidence": "missing inputs named: ['diff']"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-blocking-findings-fail",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-blocking-findings-fail",
+  "check": "review.md: contains:\"Verdict: **BLOCK**\"",
+  "pass": true,
+  "evidence": "found: Verdict: **BLOCK**"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-blocking-findings-fail",
+  "check": "review.md: contains:\"app/reports/export.py:8\"",
+  "pass": true,
+  "evidence": "found: app/reports/export.py:8"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-blocking-findings-fail",
+  "check": "review.md: contains:\"AKIA[redacted]\"",
+  "pass": true,
+  "evidence": "found: AKIA[redacted]"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-team-rules-and-narrative-dry",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-team-rules-and-narrative-dry",
+  "check": "review.md: contains:\"0 blocking, 2 warning, 0 info\"",
+  "pass": true,
+  "evidence": "found: 0 blocking, 2 warning, 0 info"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-team-rules-and-narrative-dry",
+  "check": "review-two-axis.md: sections:[\"Standards\",\"Spec\",\"Summary\"]",
+  "pass": true,
+  "evidence": "found ['Standards', 'Spec', 'Summary']"
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-team-rules-and-narrative-dry",
+  "check": "review-two-axis.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 1 markers"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "check": "model.md: mermaid_parses",
+  "pass": true,
+  "evidence": "1 block(s) ok"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "check": "model.md: sections:[\"Diagram\",\"Entities\",\"Relationships\",\"Glossary\",\"Open questions\"]",
+  "pass": true,
+  "evidence": "found ['Diagram', 'Entities', 'Relationships', 'Glossary', 'Open questions']"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "check": "model.md: contains:\"Student 0+ to 0+ Course\"",
+  "pass": true,
+  "evidence": "found: Student 0+ to 0+ Course"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "check": "model.md: contains:\"[TO BE BASELINED — owner: Domain expert]\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED — owner: Domain expert]"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-missing-relationships",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-missing-relationships",
+  "check": "needs_input:relationships",
+  "pass": true,
+  "evidence": "missing inputs named: ['relationships']"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-invalid-model-fails",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-invalid-model-fails",
+  "check": "model.md: contains:\"entity 'Instructor' is not defined\"",
+  "pass": true,
+  "evidence": "found: entity 'Instructor' is not defined"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-invalid-model-fails",
+  "check": "model.md: contains:\"N:M needs a join note\"",
+  "pass": true,
+  "evidence": "found: N:M needs a join note"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "modeling-review.md: sections:[\"Challenged terms\",\"Edge-case scenarios\",\"ADR candidates\"]",
+  "pass": true,
+  "evidence": "found ['Challenged terms', 'Edge-case scenarios', 'ADR candidates']"
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "modeling-review.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 1 markers"
+ },
+ {
   "skill": "build/handoff-and-thread-close",
   "caseId": "agent-happy-path",
   "check": "exit:0",
@@ -2723,6 +3437,111 @@
   "evidence": "found: errors"
  },
  {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "check": "exists:debug.json",
+  "pass": true,
+  "evidence": "evals/results/agent-dry/runs/build__systematic-debugging-runner/agent-happy-path/debug.json exists"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "check": "debug-log.md: sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]",
+  "pass": true,
+  "evidence": "found ['Symptom', 'Evidence', 'Hypotheses', 'Next experiment']"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "check": "debug-log.md: contains:\"regression-likely\"",
+  "pass": true,
+  "evidence": "found: regression-likely"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "check": "debug-log.md: contains:\"Fix allowed: NO\"",
+  "pass": true,
+  "evidence": "found: Fix allowed: NO"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-missing-log",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-missing-log",
+  "check": "needs_input:log",
+  "pass": true,
+  "evidence": "missing inputs named: ['log']"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-no-error-no-invention",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-jest-no-diff",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-jest-no-diff",
+  "check": "debug-log.md: contains:\"src/cart/coupon.ts:14 in applyCoupon\"",
+  "pass": true,
+  "evidence": "found: src/cart/coupon.ts:14 in applyCoupon"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-jest-no-diff",
+  "check": "debug-log.md: contains:\"[TO BE BASELINED — owner: Reporting engineer]\"",
+  "pass": true,
+  "evidence": "found: [TO BE BASELINED — owner: Reporting engineer]"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "debug-log.md: contains:\"java.lang.NullPointerException\"",
+  "pass": true,
+  "evidence": "found: java.lang.NullPointerException"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "investigation.md: sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]",
+  "pass": true,
+  "evidence": "found ['Symptom', 'Evidence', 'Hypotheses', 'Next experiment']"
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "investigation.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 1 markers"
+ },
+ {
   "skill": "build/test-strategy-tdd",
   "caseId": "agent-happy-path",
   "check": "exit:0",
@@ -2812,6 +3631,97 @@
   "check": "test-plan.md: contains:\"exists — kept\"",
   "pass": true,
   "evidence": "found: exists — kept"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "check": "test_flows.py: contains:\"def test_sign_in(page: Page)\"",
+  "pass": true,
+  "evidence": "found: def test_sign_in(page: Page)"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "check": "test_flows.py: contains:\"networkidle\"",
+  "pass": true,
+  "evidence": "found: networkidle"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "check": "flows-report.md: sections:[\"Flows\",\"Generated tests\",\"Warnings\",\"How to run\"]",
+  "pass": true,
+  "evidence": "found ['Flows', 'Generated tests', 'Warnings', 'How to run']"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "check": "flows-report.md: contains:\"nth-child\"",
+  "pass": true,
+  "evidence": "found: nth-child"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-missing-flows",
+  "check": "exit:2",
+  "pass": true,
+  "evidence": "exit code 2, expected 2"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-missing-flows",
+  "check": "needs_input:flows",
+  "pass": true,
+  "evidence": "missing inputs named: ['flows']"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-invalid-flows-fail",
+  "check": "exit:1",
+  "pass": true,
+  "evidence": "exit code 1, expected 1"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-invalid-flows-fail",
+  "check": "flows-report.md: contains:\"unknown action 'hover'\"",
+  "pass": true,
+  "evidence": "found: unknown action 'hover'"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-invalid-flows-fail",
+  "check": "flows-report.md: contains:\"No tests were generated\"",
+  "pass": true,
+  "evidence": "found: No tests were generated"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "exit:0",
+  "pass": true,
+  "evidence": "exit code 0, expected 0"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "test-plan-review.md: sections:[\"Reconnaissance plan\",\"Selector review\",\"Gaps\"]",
+  "pass": true,
+  "evidence": "found ['Reconnaissance plan', 'Selector review', 'Gaps']"
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-narrative-dry",
+  "check": "test-plan-review.md: no_unowned_tbd",
+  "pass": true,
+  "evidence": "0 unowned of 1 markers"
  },
  {
   "skill": "career/application-tracker",

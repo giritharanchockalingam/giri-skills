@@ -102,6 +102,27 @@ ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,exit:
 ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,"readiness.md: contains:""**Ready-with-gaps**""",1,found: **Ready-with-gaps**
 ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,"readiness.md: contains:""| completeness | [TO BE BASELINED — owner: Data owner]""",1,found: | completeness | [TO BE BASELINED — owner: Data owner]
 ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,readiness.md: no_unowned_tbd,1,0 unowned of 8 markers
+ai-platform/eval-engineering-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/eval-engineering-runner,agent-happy-path,exists:eval-clean.jsonl,1,evals/results/agent-dry/runs/ai-platform__eval-engineering-runner/agent-happy-path/eval-clean.jsonl exists
+ai-platform/eval-engineering-runner,agent-happy-path,"eval-audit.md: sections:[""Verdict"",""Coverage"",""Quality issues"",""Recommendations""]",1,"found ['Verdict', 'Coverage', 'Quality issues', 'Recommendations']"
+ai-platform/eval-engineering-runner,agent-happy-path,"eval-audit.md: contains:""**PASS** — 20 rows in, 18 kept""",1,"found: **PASS** — 20 rows in, 18 kept"
+ai-platform/eval-engineering-runner,agent-happy-path,"eval-audit.md: contains:""| billing | 7 | 6 | 33.3 | 5 | 0 | OK |""",1,found: | billing | 7 | 6 | 33.3 | 5 | 0 | OK |
+ai-platform/eval-engineering-runner,agent-happy-path,"eval-audit.json: contains:""split_leakage""",1,found: split_leakage
+ai-platform/eval-engineering-runner,agent-happy-path,"eval-audit.json: contains:""conflicting_reference""",1,found: conflicting_reference
+ai-platform/eval-engineering-runner,agent-happy-path,eval-audit.md: numbers_trace_to:eval-audit.json,1,all 5 numbers trace
+ai-platform/eval-engineering-runner,agent-missing-dataset,exit:2,1,"exit code 2, expected 2"
+ai-platform/eval-engineering-runner,agent-missing-dataset,needs_input:dataset,1,missing inputs named: ['dataset']
+ai-platform/eval-engineering-runner,agent-below-target-fails,exit:1,1,"exit code 1, expected 1"
+ai-platform/eval-engineering-runner,agent-below-target-fails,"eval-audit.md: contains:""**FAIL**""",1,found: **FAIL**
+ai-platform/eval-engineering-runner,agent-below-target-fails,"eval-audit.md: contains:""| escalations | 0 | 0 | 0.0 | 2 | 2 | BELOW |""",1,found: | escalations | 0 | 0 | 0.0 | 2 | 2 | BELOW |
+ai-platform/eval-engineering-runner,agent-below-target-fails,"eval-audit.md: contains:""add 2 distinct case(s) to reach min_cases 6""",1,found: add 2 distinct case(s) to reach min_cases 6
+ai-platform/eval-engineering-runner,agent-no-targets-not-gated,exit:0,1,"exit code 0, expected 0"
+ai-platform/eval-engineering-runner,agent-no-targets-not-gated,"eval-audit.md: contains:""NOT GATED""",1,found: NOT GATED
+ai-platform/eval-engineering-runner,agent-no-targets-not-gated,"eval-audit.md: contains:""[TO BE BASELINED — owner: Eval owner]""",1,found: [TO BE BASELINED — owner: Eval owner]
+ai-platform/eval-engineering-runner,agent-no-targets-not-gated,eval-audit.md: no_unowned_tbd,1,0 unowned of 9 markers
+ai-platform/eval-engineering-runner,agent-with-review,exit:0,1,"exit code 0, expected 0"
+ai-platform/eval-engineering-runner,agent-with-review,"eval-review.md: sections:[""Upstream alignment"",""Dataset gaps"",""Next actions""]",1,"found ['Upstream alignment', 'Dataset gaps', 'Next actions']"
+ai-platform/eval-engineering-runner,agent-with-review,eval-review.md: no_unowned_tbd,1,0 unowned of 0 markers
 ai-platform/feedback-improvement-loop,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/feedback-improvement-loop,agent-happy-path,"backlog.csv: csv:[rank,bucket,feature,score,fix_type,owner]",1,"header has ['rank', 'bucket', 'feature', 'score', 'fix_type', 'owner']"
 ai-platform/feedback-improvement-loop,agent-happy-path,"improvement-report.md: contains:""| 1 | hallucination | policy-qa | 3 | 2.67 | 8 | 2 | retrieval |""",1,found: | 1 | hallucination | policy-qa | 3 | 2.67 | 8 | 2 | retrieval |
@@ -148,6 +169,59 @@ ai-platform/infra-gpu-sizing,agent-happy-path,"sizing.txt: contains:""gpus_requi
 ai-platform/infra-gpu-sizing,agent-missing-inputs,exit:2,1,"exit code 2, expected 2"
 ai-platform/infra-gpu-sizing,agent-missing-inputs,needs_input:inputs,1,missing inputs named: ['inputs']
 ai-platform/infra-gpu-sizing,agent-no-throughput-no-guess,exit:1,1,"exit code 1, expected 1"
+ai-platform/langchain-rag-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/langchain-rag-runner,agent-happy-path,exists:rag_pipeline.py,1,evals/results/agent-dry/runs/ai-platform__langchain-rag-runner/agent-happy-path/rag_pipeline.py exists
+ai-platform/langchain-rag-runner,agent-happy-path,"rag-plan.md: sections:[""Sizing"",""Cost"",""Retrieval budget"",""Warnings"",""Scaffold""]",1,"found ['Sizing', 'Cost', 'Retrieval budget', 'Warnings', 'Scaffold']"
+ai-platform/langchain-rag-runner,agent-happy-path,"rag-plan.md: contains:""| policies | 1,200 | 3,000 | 4 | 4,800 | 1,080,000 | monthly |""",1,"found: | policies | 1,200 | 3,000 | 4 | 4,800 | 1,080,000 | monthly |"
+ai-platform/langchain-rag-runner,agent-happy-path,"rag-plan.md: contains:""| contracts | 250 | 24,000 | 30 | 7,500 | 1,862,500 | quarterly |""",1,"found: | contracts | 250 | 24,000 | 30 | 7,500 | 1,862,500 | quarterly |"
+ai-platform/langchain-rag-runner,agent-happy-path,rag-plan.md: numbers_trace_to:rag-plan.json,1,all 35 numbers trace
+ai-platform/langchain-rag-runner,agent-happy-path,"rag-plan.json: contains:""\""per_query_context_tokens\"": 1250""",1,"found: ""per_query_context_tokens"": 1250"
+ai-platform/langchain-rag-runner,agent-missing-config,exit:2,1,"exit code 2, expected 2"
+ai-platform/langchain-rag-runner,agent-missing-config,needs_input:config,1,missing inputs named: ['config']
+ai-platform/langchain-rag-runner,agent-no-price-no-guess,exit:1,1,"exit code 1, expected 1"
+ai-platform/langchain-rag-runner,agent-no-price-no-guess,"rag-plan.json: contains:""embedding_price_per_1m_tokens is missing (no default is assumed)""",1,found: embedding_price_per_1m_tokens is missing (no default is assumed)
+ai-platform/langchain-rag-runner,agent-no-price-no-guess,"rag-plan.md: contains:""BLOCKED""",1,found: BLOCKED
+ai-platform/langchain-rag-runner,agent-context-overflow-blocked,exit:1,1,"exit code 1, expected 1"
+ai-platform/langchain-rag-runner,agent-context-overflow-blocked,"rag-plan.json: contains:""exceeds the context budget""",1,found: exceeds the context budget
+ai-platform/langchain-rag-runner,agent-context-overflow-blocked,"rag-plan.md: contains:""NO — blocking""",1,found: NO — blocking
+ai-platform/langchain-rag-runner,agent-context-overflow-blocked,"rag-plan.md: contains:""in-memory""",1,found: in-memory
+ai-platform/langchain-rag-runner,agent-with-review,exit:0,1,"exit code 0, expected 0"
+ai-platform/langchain-rag-runner,agent-with-review,"rag-review.md: sections:[""Upstream conformance"",""Cost and budget risks"",""Next changes""]",1,"found ['Upstream conformance', 'Cost and budget risks', 'Next changes']"
+ai-platform/langchain-rag-runner,agent-with-review,rag-review.md: no_unowned_tbd,1,0 unowned of 0 markers
+ai-platform/langgraph-hitl-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/langgraph-hitl-runner,agent-happy-path,exists:hitl.py,1,evals/results/agent-dry/runs/ai-platform__langgraph-hitl-runner/agent-happy-path/hitl.py exists
+ai-platform/langgraph-hitl-runner,agent-happy-path,"hitl.md: sections:[""Approval matrix"",""Validation"",""Resume flow"",""Risks""]",1,"found ['Approval matrix', 'Validation', 'Resume flow', 'Risks']"
+ai-platform/langgraph-hitl-runner,agent-happy-path,"hitl.md: contains:""| issue_refund | Refund moves money to the customer | Finance supervisor | 240 | escalate | Finance manager |""",1,found: | issue_refund | Refund moves money to the customer | Finance supervisor | 240 | escalate | Finance manager |
+ai-platform/langgraph-hitl-runner,agent-happy-path,"hitl.py: contains:""PostgresSaver""",1,found: PostgresSaver
+ai-platform/langgraph-hitl-runner,agent-happy-path,"hitl.py: contains:""def escalate_issue_refund""",1,found: def escalate_issue_refund
+ai-platform/langgraph-hitl-runner,agent-happy-path,"validation.json: contains:""\""executed\"": false""",1,"found: ""executed"": false"
+ai-platform/langgraph-hitl-runner,agent-missing-spec,exit:2,1,"exit code 2, expected 2"
+ai-platform/langgraph-hitl-runner,agent-missing-spec,needs_input:spec,1,missing inputs named: ['spec']
+ai-platform/langgraph-hitl-runner,agent-unsafe-gates-rejected,exit:1,1,"exit code 1, expected 1"
+ai-platform/langgraph-hitl-runner,agent-unsafe-gates-rejected,"validation.json: contains:""checkpointer is required""",1,found: checkpointer is required
+ai-platform/langgraph-hitl-runner,agent-unsafe-gates-rejected,"validation.json: contains:""auto-approve on timeout is forbidden for an irreversible action""",1,found: auto-approve on timeout is forbidden for an irreversible action
+ai-platform/langgraph-hitl-runner,agent-unsafe-gates-rejected,"validation.json: contains:""approver_role is missing""",1,found: approver_role is missing
+ai-platform/langgraph-hitl-runner,agent-unsafe-gates-rejected,"hitl.md: contains:""No scaffold was written""",1,found: No scaffold was written
+ai-platform/langgraph-hitl-runner,agent-with-review,exit:0,1,"exit code 0, expected 0"
+ai-platform/langgraph-hitl-runner,agent-with-review,"hitl-review.md: sections:[""Upstream conformance"",""Gaps"",""Decisions needed""]",1,"found ['Upstream conformance', 'Gaps', 'Decisions needed']"
+ai-platform/langgraph-hitl-runner,agent-with-review,hitl-review.md: no_unowned_tbd,1,0 unowned of 0 markers
+ai-platform/langgraph-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/langgraph-runner,agent-happy-path,exists:graph.py,1,evals/results/agent-dry/runs/ai-platform__langgraph-runner/agent-happy-path/graph.py exists
+ai-platform/langgraph-runner,agent-happy-path,"validation.json: contains:""\""valid\"": true""",1,"found: ""valid"": true"
+ai-platform/langgraph-runner,agent-happy-path,"graph.md: sections:[""Diagram"",""Validation"",""Nodes"",""How to run""]",1,"found ['Diagram', 'Validation', 'Nodes', 'How to run']"
+ai-platform/langgraph-runner,agent-happy-path,graph.md: mermaid_parses,1,1 block(s) ok
+ai-platform/langgraph-runner,agent-happy-path,"graph.py: contains:""add_conditional_edges('check_reply'""",1,found: add_conditional_edges('check_reply'
+ai-platform/langgraph-runner,agent-happy-path,"graph.md: contains:""not executed""",1,found: not executed
+ai-platform/langgraph-runner,agent-missing-spec,exit:2,1,"exit code 2, expected 2"
+ai-platform/langgraph-runner,agent-missing-spec,needs_input:spec,1,missing inputs named: ['spec']
+ai-platform/langgraph-runner,agent-infinite-loop-rejected,exit:1,1,"exit code 1, expected 1"
+ai-platform/langgraph-runner,agent-infinite-loop-rejected,"validation.json: contains:""has no conditional exit""",1,found: has no conditional exit
+ai-platform/langgraph-runner,agent-infinite-loop-rejected,"validation.json: contains:""dangling edge""",1,found: dangling edge
+ai-platform/langgraph-runner,agent-infinite-loop-rejected,"validation.json: contains:""undeclared state field 'plan_text'""",1,found: undeclared state field 'plan_text'
+ai-platform/langgraph-runner,agent-infinite-loop-rejected,"graph.md: contains:""No scaffold was written""",1,found: No scaffold was written
+ai-platform/langgraph-runner,agent-with-review,exit:0,1,"exit code 0, expected 0"
+ai-platform/langgraph-runner,agent-with-review,"graph-review.md: sections:[""Upstream conformance"",""Design risks"",""Next changes""]",1,"found ['Upstream conformance', 'Design risks', 'Next changes']"
+ai-platform/langgraph-runner,agent-with-review,graph-review.md: no_unowned_tbd,1,0 unowned of 0 markers
 ai-platform/llm-cost-model,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/llm-cost-model,agent-happy-path,exists:cost-model.json,1,evals/results/agent-dry/runs/ai-platform__llm-cost-model/agent-happy-path/cost-model.json exists
 ai-platform/llm-cost-model,agent-happy-path,"cost-model.md: sections:[""Monthly total"",""By feature"",""What-if"",""Budget"",""Sources""]",1,"found ['Monthly total', 'By feature', 'What-if', 'Budget', 'Sources']"
@@ -286,6 +360,34 @@ build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,exit:1,1,"exit code
 build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,"ci-report.json: contains:""rls-lint""",1,found: rls-lint
 build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,"ci-report.json: contains:""\""action\"": \""kept\""""",1,"found: ""action"": ""kept"""
 build/ci-cd-vercel-github,agent-custom-ci-missing-jobs-fails,"ci-report.md: contains:""gate: FAIL""",1,found: gate: FAIL
+build/code-review-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/code-review-runner,agent-happy-path,exists:review.json,1,evals/results/agent-dry/runs/build__code-review-runner/agent-happy-path/review.json exists
+build/code-review-runner,agent-happy-path,"review.md: sections:[""Summary"",""Blocking"",""Non-blocking"",""Tests"",""Files""]",1,"found ['Summary', 'Blocking', 'Non-blocking', 'Tests', 'Files']"
+build/code-review-runner,agent-happy-path,"review.md: contains:""Verdict: **PASS**""",1,found: Verdict: **PASS**
+build/code-review-runner,agent-happy-path,"review.md: contains:""src/cart/coupon.ts:15""",1,found: src/cart/coupon.ts:15
+build/code-review-runner,agent-missing-diff,exit:2,1,"exit code 2, expected 2"
+build/code-review-runner,agent-missing-diff,needs_input:diff,1,missing inputs named: ['diff']
+build/code-review-runner,agent-blocking-findings-fail,exit:1,1,"exit code 1, expected 1"
+build/code-review-runner,agent-blocking-findings-fail,"review.md: contains:""Verdict: **BLOCK**""",1,found: Verdict: **BLOCK**
+build/code-review-runner,agent-blocking-findings-fail,"review.md: contains:""app/reports/export.py:8""",1,found: app/reports/export.py:8
+build/code-review-runner,agent-blocking-findings-fail,"review.md: contains:""AKIA[redacted]""",1,found: AKIA[redacted]
+build/code-review-runner,agent-team-rules-and-narrative-dry,exit:0,1,"exit code 0, expected 0"
+build/code-review-runner,agent-team-rules-and-narrative-dry,"review.md: contains:""0 blocking, 2 warning, 0 info""",1,"found: 0 blocking, 2 warning, 0 info"
+build/code-review-runner,agent-team-rules-and-narrative-dry,"review-two-axis.md: sections:[""Standards"",""Spec"",""Summary""]",1,"found ['Standards', 'Spec', 'Summary']"
+build/code-review-runner,agent-team-rules-and-narrative-dry,review-two-axis.md: no_unowned_tbd,1,0 unowned of 1 markers
+build/domain-modeling-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/domain-modeling-runner,agent-happy-path,model.md: mermaid_parses,1,1 block(s) ok
+build/domain-modeling-runner,agent-happy-path,"model.md: sections:[""Diagram"",""Entities"",""Relationships"",""Glossary"",""Open questions""]",1,"found ['Diagram', 'Entities', 'Relationships', 'Glossary', 'Open questions']"
+build/domain-modeling-runner,agent-happy-path,"model.md: contains:""Student 0+ to 0+ Course""",1,found: Student 0+ to 0+ Course
+build/domain-modeling-runner,agent-happy-path,"model.md: contains:""[TO BE BASELINED — owner: Domain expert]""",1,found: [TO BE BASELINED — owner: Domain expert]
+build/domain-modeling-runner,agent-missing-relationships,exit:2,1,"exit code 2, expected 2"
+build/domain-modeling-runner,agent-missing-relationships,needs_input:relationships,1,missing inputs named: ['relationships']
+build/domain-modeling-runner,agent-invalid-model-fails,exit:1,1,"exit code 1, expected 1"
+build/domain-modeling-runner,agent-invalid-model-fails,"model.md: contains:""entity 'Instructor' is not defined""",1,found: entity 'Instructor' is not defined
+build/domain-modeling-runner,agent-invalid-model-fails,"model.md: contains:""N:M needs a join note""",1,found: N:M needs a join note
+build/domain-modeling-runner,agent-narrative-dry,exit:0,1,"exit code 0, expected 0"
+build/domain-modeling-runner,agent-narrative-dry,"modeling-review.md: sections:[""Challenged terms"",""Edge-case scenarios"",""ADR candidates""]",1,"found ['Challenged terms', 'Edge-case scenarios', 'ADR candidates']"
+build/domain-modeling-runner,agent-narrative-dry,modeling-review.md: no_unowned_tbd,1,0 unowned of 1 markers
 build/handoff-and-thread-close,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 build/handoff-and-thread-close,agent-happy-path,"HANDOFF.md: sections:[""State"",""Done this thread"",""Changed files"",""Open items"",""Next thread starts with""]",1,"found ['State', 'Done this thread', 'Changed files', 'Open items', 'Next thread starts with']"
 build/handoff-and-thread-close,agent-happy-path,"HANDOFF.md: contains:""server/services/export-service.ts""",1,found: server/services/export-service.ts
@@ -388,6 +490,21 @@ build/supabase-schema-rls,agent-missing-migrations,exit:2,1,"exit code 2, expect
 build/supabase-schema-rls,agent-missing-migrations,needs_input:migrations,1,missing inputs named: ['migrations']
 build/supabase-schema-rls,agent-bad-migration-fails,exit:1,1,"exit code 1, expected 1"
 build/supabase-schema-rls,agent-bad-migration-fails,"rls-lint.txt: contains:""errors""",1,found: errors
+build/systematic-debugging-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/systematic-debugging-runner,agent-happy-path,exists:debug.json,1,evals/results/agent-dry/runs/build__systematic-debugging-runner/agent-happy-path/debug.json exists
+build/systematic-debugging-runner,agent-happy-path,"debug-log.md: sections:[""Symptom"",""Evidence"",""Hypotheses"",""Next experiment""]",1,"found ['Symptom', 'Evidence', 'Hypotheses', 'Next experiment']"
+build/systematic-debugging-runner,agent-happy-path,"debug-log.md: contains:""regression-likely""",1,found: regression-likely
+build/systematic-debugging-runner,agent-happy-path,"debug-log.md: contains:""Fix allowed: NO""",1,found: Fix allowed: NO
+build/systematic-debugging-runner,agent-missing-log,exit:2,1,"exit code 2, expected 2"
+build/systematic-debugging-runner,agent-missing-log,needs_input:log,1,missing inputs named: ['log']
+build/systematic-debugging-runner,agent-no-error-no-invention,exit:1,1,"exit code 1, expected 1"
+build/systematic-debugging-runner,agent-jest-no-diff,exit:0,1,"exit code 0, expected 0"
+build/systematic-debugging-runner,agent-jest-no-diff,"debug-log.md: contains:""src/cart/coupon.ts:14 in applyCoupon""",1,found: src/cart/coupon.ts:14 in applyCoupon
+build/systematic-debugging-runner,agent-jest-no-diff,"debug-log.md: contains:""[TO BE BASELINED — owner: Reporting engineer]""",1,found: [TO BE BASELINED — owner: Reporting engineer]
+build/systematic-debugging-runner,agent-narrative-dry,exit:0,1,"exit code 0, expected 0"
+build/systematic-debugging-runner,agent-narrative-dry,"debug-log.md: contains:""java.lang.NullPointerException""",1,found: java.lang.NullPointerException
+build/systematic-debugging-runner,agent-narrative-dry,"investigation.md: sections:[""Symptom"",""Evidence"",""Hypotheses"",""Next experiment""]",1,"found ['Symptom', 'Evidence', 'Hypotheses', 'Next experiment']"
+build/systematic-debugging-runner,agent-narrative-dry,investigation.md: no_unowned_tbd,1,0 unowned of 1 markers
 build/test-strategy-tdd,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 build/test-strategy-tdd,agent-happy-path,exists:repo/tests/unit/server-services-export-service.test.ts,1,evals/results/agent-dry/runs/build__test-strategy-tdd/agent-happy-path/repo/tests/unit/server-services-export-service.test.ts exists
 build/test-strategy-tdd,agent-happy-path,exists:repo/tests/e2e/app-app-invoices-page.spec.ts,1,evals/results/agent-dry/runs/build__test-strategy-tdd/agent-happy-path/repo/tests/e2e/app-app-invoices-page.spec.ts exists
@@ -401,6 +518,19 @@ build/test-strategy-tdd,agent-never-overwrites,"scaffold-report.json: contains:"
 build/test-strategy-tdd,agent-never-overwrites,"scaffold-report.json: contains:""\""written\"": []""",1,"found: ""written"": []"
 build/test-strategy-tdd,agent-never-overwrites,"scaffold-report.json: contains:""\""would_write\"": []""",1,"found: ""would_write"": []"
 build/test-strategy-tdd,agent-never-overwrites,"test-plan.md: contains:""exists — kept""",1,found: exists — kept
+build/webapp-testing-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/webapp-testing-runner,agent-happy-path,"test_flows.py: contains:""def test_sign_in(page: Page)""",1,found: def test_sign_in(page: Page)
+build/webapp-testing-runner,agent-happy-path,"test_flows.py: contains:""networkidle""",1,found: networkidle
+build/webapp-testing-runner,agent-happy-path,"flows-report.md: sections:[""Flows"",""Generated tests"",""Warnings"",""How to run""]",1,"found ['Flows', 'Generated tests', 'Warnings', 'How to run']"
+build/webapp-testing-runner,agent-happy-path,"flows-report.md: contains:""nth-child""",1,found: nth-child
+build/webapp-testing-runner,agent-missing-flows,exit:2,1,"exit code 2, expected 2"
+build/webapp-testing-runner,agent-missing-flows,needs_input:flows,1,missing inputs named: ['flows']
+build/webapp-testing-runner,agent-invalid-flows-fail,exit:1,1,"exit code 1, expected 1"
+build/webapp-testing-runner,agent-invalid-flows-fail,"flows-report.md: contains:""unknown action 'hover'""",1,found: unknown action 'hover'
+build/webapp-testing-runner,agent-invalid-flows-fail,"flows-report.md: contains:""No tests were generated""",1,found: No tests were generated
+build/webapp-testing-runner,agent-narrative-dry,exit:0,1,"exit code 0, expected 0"
+build/webapp-testing-runner,agent-narrative-dry,"test-plan-review.md: sections:[""Reconnaissance plan"",""Selector review"",""Gaps""]",1,"found ['Reconnaissance plan', 'Selector review', 'Gaps']"
+build/webapp-testing-runner,agent-narrative-dry,test-plan-review.md: no_unowned_tbd,1,0 unowned of 1 markers
 career/application-tracker,agent-happy-path-add,exit:0,1,"exit code 0, expected 0"
 career/application-tracker,agent-happy-path-add,"tracker.csv: contains:""Acme""",1,found: Acme
 career/application-tracker,agent-happy-path-add,exists:pipeline.json,1,evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json exists
