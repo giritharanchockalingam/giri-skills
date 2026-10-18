@@ -426,16 +426,17 @@ export async function useCompatForDrafts(_: ActionResult | null, _fd: FormData):
     const { data: rows, error } = await ctx.supabase.from("sf_skill_versions").select("id, version, manifest, sf_skills!sf_skill_versions_skill_id_fkey(slug, workspace_id)").eq("status", "draft");
     if (error) return fail(error.message);
     const drafts = (rows ?? []).filter((r) => (r as unknown as { sf_skills: { workspace_id: string } }).sf_skills?.workspace_id === ctx.workspace.id) as unknown as { id: string; version: number; manifest: Manifest; sf_skills: { slug: string } }[];
-    const changed: string[] = [];
+    const changed: string[] = [], problems: string[] = [];
     for (const d of drafts) {
       if (!d.manifest.run.some((st) => st.kind === "llm")) continue;
       if (d.manifest.model_config.provider === "openai_compat" && d.manifest.model_config.model === model && d.manifest.model_config.max_tokens >= (Number(process.env.SF_LLM_MAX_TOKENS) || 12000)) continue;
       const maxTokens = Math.min(32000, Math.max(d.manifest.model_config.max_tokens, Number(process.env.SF_LLM_MAX_TOKENS) || 12000));
-      const v = validateManifest({ ...d.manifest, model_config: { ...d.manifest.model_config, provider: "openai_compat", model, max_tokens: maxTokens } });
-      if (!v.ok) return fail(`${d.sf_skills.slug}: ${v.problems.map((x) => x.message).join("; ")}`);
+      const v = validateManifest({ ...d.manifest, model_config: { ...d.manifest.model_config, provider: "openai_compat", model, max_tokens: maxTokens },
+        limits: { ...d.manifest.limits, max_tokens: Math.max(d.manifest.limits.max_tokens, maxTokens) } });
+      if (!v.ok) { problems.push(`${d.sf_skills.slug}: ${v.problems.map((x) => x.message).join("; ")}`); continue; }
       const hash = manifestHash(v.manifest);
       const { error: ue } = await ctx.supabase.from("sf_skill_versions").update({ manifest: v.manifest, manifest_hash: hash, change_note: `model provider → openai_compat · ${model}` }).eq("id", d.id);
-      if (ue) return fail(`${d.sf_skills.slug}: ${ue.message}`);
+      if (ue) { problems.push(`${d.sf_skills.slug}: ${ue.message}`); continue; }
       await audit(ctx, "version.update", "skill_version", d.id, { manifest_hash: hash, version: d.version, provider: "openai_compat", model });
       changed.push(d.sf_skills.slug);
     }
@@ -448,6 +449,7 @@ export async function useCompatForDrafts(_: ActionResult | null, _fd: FormData):
       await audit(ctx, "policy.update", "workspace", ctx.workspace.id, row);
     }
     revalidatePath("/", "layout");
-    return okay(changed.length ? `${changed.length} draft(s) now use ${model}: ${changed.join(", ")}.` : `No drafts needed a change (all llm drafts already use ${model}).`);
+    const msg = changed.length ? `${changed.length} draft(s) now use ${model}: ${changed.join(", ")}.` : `No drafts needed a change (all llm drafts already use ${model}).`;
+    return problems.length ? fail(`${msg} Not changed: ${problems.join(" · ")}`) : okay(msg);
   });
 }
