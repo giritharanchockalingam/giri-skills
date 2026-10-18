@@ -1,0 +1,352 @@
+{
+  "agent-browser": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0",
+    "path": "skills/agent-browser",
+    "repo": "vercel-labs/agent-browser",
+    "sha": "dac13bb87468fe9d74a040d862720f6cc17a9565"
+  },
+  "brainstorming": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/brainstorming",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "claude-api": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (per-skill LICENSE.txt)",
+    "path": "skills/claude-api",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "code-review": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/engineering/code-review",
+    "repo": "mattpocock/skills",
+    "sha": "49dd158d1076134a641b33efb035946536778336"
+  },
+  "competitor-profiling": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/competitor-profiling",
+    "repo": "coreyhaines31/marketingskills",
+    "sha": "365b412152b9542499ca1439426f7fc3cc92bb65"
+  },
+  "copywriting": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/copywriting",
+    "repo": "coreyhaines31/marketingskills",
+    "sha": "365b412152b9542499ca1439426f7fc3cc92bb65"
+  },
+  "customer-research": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/customer-research",
+    "repo": "coreyhaines31/marketingskills",
+    "sha": "365b412152b9542499ca1439426f7fc3cc92bb65"
+  },
+  "deep-agents-core": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "config/skills/deep-agents-core",
+    "repo": "langchain-ai/langchain-skills",
+    "sha": "16a992f09ab3ccfb642dd4f08d350d833d1990bf"
+  },
+  "deploy-to-vercel": {
+    "fetched": "2026-10-17",
+    "license": "MIT (repo README)",
+    "path": "skills/deploy-to-vercel",
+    "repo": "vercel-labs/agent-skills",
+    "sha": "063bee94c3f4df8453406c830b0a7df0f2860278"
+  },
+  "doc-coauthoring": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (repo README; no per-skill LICENSE.txt found)",
+    "path": "skills/doc-coauthoring",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "docx": {
+    "fetched": "2026-10-17",
+    "license": "Anthropic source-available (NOT OSS; governed by Anthropic ToS) \u2014 flagged",
+    "path": "skills/docx",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "domain-modeling": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/engineering/domain-modeling",
+    "repo": "mattpocock/skills",
+    "sha": "49dd158d1076134a641b33efb035946536778336"
+  },
+  "eval-engineering": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "config/skills/eval-engineering",
+    "repo": "langchain-ai/langchain-skills",
+    "sha": "16a992f09ab3ccfb642dd4f08d350d833d1990bf"
+  },
+  "executing-plans": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/executing-plans",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "find-skills": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/find-skills",
+    "repo": "vercel-labs/skills",
+    "sha": "13e4063a1cf913f5606d57d42ab83a86f5001e04"
+  },
+  "frontend-design": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (per-skill LICENSE.txt)",
+    "path": "skills/frontend-design",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "google-agents-cli-adk-code": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0",
+    "path": "skills/google-agents-cli-adk-code",
+    "repo": "google/agents-cli",
+    "sha": "d445570c61fd446487ea6623c5635b23aded237f"
+  },
+  "grill-me": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/productivity/grill-me",
+    "repo": "mattpocock/skills",
+    "sha": "49dd158d1076134a641b33efb035946536778336"
+  },
+  "handoff": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/productivity/handoff",
+    "repo": "mattpocock/skills",
+    "sha": "49dd158d1076134a641b33efb035946536778336"
+  },
+  "improve-codebase-architecture": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/engineering/improve-codebase-architecture",
+    "repo": "mattpocock/skills",
+    "sha": "49dd158d1076134a641b33efb035946536778336"
+  },
+  "internal-comms": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (per-skill LICENSE.txt)",
+    "path": "skills/internal-comms",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "karpathy-guidelines": {
+    "fetched": "2026-10-17",
+    "license": "MIT (repo README)",
+    "path": "skills/karpathy-guidelines",
+    "repo": "multica-ai/andrej-karpathy-skills",
+    "sha": "2c606141936f1eeef17fa3043a72095b4765b9c2"
+  },
+  "langchain-rag": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "config/skills/langchain-rag",
+    "repo": "langchain-ai/langchain-skills",
+    "sha": "16a992f09ab3ccfb642dd4f08d350d833d1990bf"
+  },
+  "langgraph-fundamentals": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "config/skills/langgraph-fundamentals",
+    "repo": "langchain-ai/langchain-skills",
+    "sha": "16a992f09ab3ccfb642dd4f08d350d833d1990bf"
+  },
+  "langgraph-human-in-the-loop": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "config/skills/langgraph-human-in-the-loop",
+    "repo": "langchain-ai/langchain-skills",
+    "sha": "16a992f09ab3ccfb642dd4f08d350d833d1990bf"
+  },
+  "mcp-builder": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (per-skill LICENSE.txt)",
+    "path": "skills/mcp-builder",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "microsoft-foundry": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/microsoft-foundry",
+    "repo": "microsoft/azure-skills",
+    "sha": "cf79ce8778ad063eeac19dbe8bf982d71b466ce0"
+  },
+  "pdf": {
+    "fetched": "2026-10-17",
+    "license": "Anthropic source-available (NOT OSS; governed by Anthropic ToS) \u2014 flagged",
+    "path": "skills/pdf",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "pptx": {
+    "fetched": "2026-10-17",
+    "license": "Anthropic source-available (NOT OSS; governed by Anthropic ToS) \u2014 flagged",
+    "path": "skills/pptx",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "sales-enablement": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/sales-enablement",
+    "repo": "coreyhaines31/marketingskills",
+    "sha": "365b412152b9542499ca1439426f7fc3cc92bb65"
+  },
+  "security-review": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0",
+    "path": "skills/security-review",
+    "repo": "getsentry/skills",
+    "sha": "f57ada2d0b640406ea7e25b11d636c530e77c58b"
+  },
+  "shadcn": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/shadcn",
+    "repo": "shadcn/ui",
+    "sha": "d2fba50ee5b9113008b5bb908563527b7efd2f27"
+  },
+  "skill-creator": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (per-skill LICENSE.txt)",
+    "path": "skills/skill-creator",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "stripe-best-practices": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/stripe-best-practices",
+    "repo": "stripe/ai",
+    "sha": "24947f1632ee3440ba9f27f92404beea164517b9"
+  },
+  "subagent-driven-development": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/subagent-driven-development",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "supabase": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/supabase",
+    "repo": "supabase/agent-skills",
+    "sha": "c9be0e931b7930f7d02126d04774d904c381e7d7"
+  },
+  "supabase-postgres-best-practices": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/supabase-postgres-best-practices",
+    "repo": "supabase/agent-skills",
+    "sha": "c9be0e931b7930f7d02126d04774d904c381e7d7"
+  },
+  "systematic-debugging": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/systematic-debugging",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "test-driven-development": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/test-driven-development",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "vercel-composition-patterns": {
+    "fetched": "2026-10-17",
+    "license": "MIT (repo README)",
+    "path": "skills/composition-patterns",
+    "repo": "vercel-labs/agent-skills",
+    "sha": "063bee94c3f4df8453406c830b0a7df0f2860278"
+  },
+  "vercel-optimize": {
+    "fetched": "2026-10-17",
+    "license": "MIT (repo README)",
+    "path": "skills/vercel-optimize",
+    "repo": "vercel-labs/agent-skills",
+    "sha": "063bee94c3f4df8453406c830b0a7df0f2860278"
+  },
+  "vercel-react-best-practices": {
+    "fetched": "2026-10-17",
+    "license": "MIT (repo README)",
+    "path": "skills/react-best-practices",
+    "repo": "vercel-labs/agent-skills",
+    "sha": "063bee94c3f4df8453406c830b0a7df0f2860278"
+  },
+  "verification-before-completion": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/verification-before-completion",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "web-design-guidelines": {
+    "fetched": "2026-10-17",
+    "license": "MIT (repo README)",
+    "path": "skills/web-design-guidelines",
+    "repo": "vercel-labs/agent-skills",
+    "sha": "063bee94c3f4df8453406c830b0a7df0f2860278"
+  },
+  "web-perf": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0",
+    "path": "skills/web-perf",
+    "repo": "cloudflare/skills",
+    "sha": "86505e44f87d801aa1864a3c4109e9a8ae5c409f"
+  },
+  "webapp-testing": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0 (per-skill LICENSE.txt)",
+    "path": "skills/webapp-testing",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  },
+  "workers-best-practices": {
+    "fetched": "2026-10-17",
+    "license": "Apache-2.0",
+    "path": "skills/workers-best-practices",
+    "repo": "cloudflare/skills",
+    "sha": "86505e44f87d801aa1864a3c4109e9a8ae5c409f"
+  },
+  "writing-for-agents": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/productivity/writing-for-agents",
+    "repo": "mattpocock/skills",
+    "sha": "49dd158d1076134a641b33efb035946536778336"
+  },
+  "writing-plans": {
+    "fetched": "2026-10-17",
+    "license": "MIT",
+    "path": "skills/writing-plans",
+    "repo": "obra/superpowers",
+    "sha": "bb92a77741419a4ab5f06e711a283343f1ada0c3"
+  },
+  "xlsx": {
+    "fetched": "2026-10-17",
+    "license": "Anthropic source-available (NOT OSS; governed by Anthropic ToS) \u2014 flagged",
+    "path": "skills/xlsx",
+    "repo": "anthropics/skills",
+    "sha": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+  }
+}

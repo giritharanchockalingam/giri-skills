@@ -76,6 +76,10 @@ docs/          CATALOG.md (design rationale and sources)
 | presales | `sow-drafter` | sow_from_proposal.py |
 | presales | `value-case-builder` | value_model.py |
 
+## Upstream skills (50, vendored)
+
+The 50 most-installed public skills (skills.sh ranking) are vendored under `vendor/` and pinned by commit — superpowers workflow, Vercel/React/Next, Supabase, Stripe, Cloudflare, LangChain/LangGraph, Sentry security, Anthropic document skills, marketing, and more. Ranking + evidence: [catalog/TOP-50.md](catalog/TOP-50.md). Terms and update commands: [VENDORED.md](VENDORED.md).
+
 ## Inputs you must supply (placeholders shipped as `*.example.*`)
 | File | Used by |
 |---|---|

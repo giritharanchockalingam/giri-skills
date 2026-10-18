@@ -1,27 +1,27 @@
 # Vendored / Upstream Skills
 
-Skills in this repo **wrap** upstream skills where a vendor or a top maintainer already owns the knowledge. Install the upstream set once; our skills detect it by name and fall back to their own `references/` when absent.
+50 top public Agent Skills are vendored verbatim under `vendor/<name>/`, each pinned to a commit in `vendor/pins.json` with `UPSTREAM.md` + `LICENSE.upstream` beside it. Catalog with ranking evidence: `catalog/TOP-50.md`. Our own 40 skills wrap some of these by name (security-review, vercel-*, supabase, karpathy-guidelines, superpowers sub-skills, anthropics docx/pdf/pptx/xlsx/skill-creator/mcp-builder/webapp-testing).
 
-| Name used in our SKILL.md | Upstream repo | Install | Used by |
-|---|---|---|---|
-| `superpowers:brainstorming`, `superpowers:writing-plans`, `superpowers:executing-plans`, `superpowers:test-driven-development`, `superpowers:systematic-debugging` | obra/superpowers | `/plugin marketplace add obra/superpowers-marketplace` → `/plugin install superpowers@superpowers-marketplace` | spec-to-plan, test-strategy-tdd, safe-fix |
-| `security-review` | getsentry/skills | `npx skills add getsentry/skills --skill security-review` | security-review |
-| `vercel-react-best-practices`, `vercel-composition-patterns`, `web-design-guidelines` | vercel-labs/agent-skills | `npx skills add vercel-labs/agent-skills` | nextjs-enterprise-conventions |
-| `supabase`, `supabase-postgres-best-practices` | supabase/agent-skills | `npx skills add supabase/agent-skills` | supabase-schema-rls |
-| `anthropics:webapp-testing`, `anthropics:mcp-builder`, `anthropics:skill-creator`, docx/pdf/pptx/xlsx | anthropics/skills | `/plugin marketplace add anthropics/skills` | test-strategy-tdd, mcp-server-builder, all document outputs |
-| `karpathy-guidelines` | multica-ai/andrej-karpathy-skills | `npx skills add multica-ai/andrej-karpathy-skills` | safe-fix (behavioral baseline) |
-| `product-management:write-spec` | Anthropic product-management plugin | bundled in Claude (Cowork/Code) | product-spec-prd |
+## Commands
+```bash
+python3 scripts/vendor_sync.py            # sync at pinned commits
+python3 scripts/vendor_sync.py --update   # move pins to upstream HEAD
+python3 scripts/vendor_sync.py --check    # CI: every catalog entry vendored
+scripts/install.sh claude                 # installs skills/ AND vendor/
+```
 
-## Pinning
-To make installs reproducible, pin a commit in `vendor/pins.txt` (`owner/repo@sha`) and run `scripts/vendor-sync.sh` (TODO) — not yet automated. Until then, record the installed version here when you upgrade:
+## Rules
+- Never edit files under `vendor/`; change the pin and re-sync.
+- Never copy upstream bodies into `skills/`; wrap by name.
+- superpowers sub-skills are also installable as a plugin: `/plugin marketplace add obra/superpowers-marketplace` → `/plugin install superpowers@superpowers-marketplace`.
 
-| Upstream | Pinned sha | Date |
+## Licensing
+| Group | Count | Terms |
 |---|---|---|
-| obra/superpowers | installed via plugin marketplace | 2026-10-16 |
-| getsentry/skills | main | 2026-10-16 |
-| vercel-labs/agent-skills | main (all 9) | 2026-10-16 |
-| supabase/agent-skills | main | 2026-10-16 |
-| anthropics/skills | TBD | — |
+| MIT / Apache-2.0 (LICENSE file or repo README) | 46 | Redistributable with attribution (kept in `LICENSE.upstream`) |
+| Anthropic source-available: `docx`, `pdf`, `pptx`, `xlsx` | 4 | Governed by your Anthropic agreement, not OSS. Fine in this private repo for your own use; **do not redistribute publicly** |
 
-## Rule
-Never copy upstream SKILL.md bodies into this repo. Wrap by name; keep our fallbacks complete enough to work alone.
+Excluded on purpose: trailofbits/skills (CC-BY-SA share-alike), better-auth/skills (no license, repo unreachable), bulk AI-generated collections.
+
+## Pins
+See `vendor/pins.json` (repo, path, sha, license, fetched date per skill).

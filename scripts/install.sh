@@ -20,7 +20,7 @@ while IFS= read -r skill; do
   rm -rf "$DEST/$name"
   if [[ "$MODE" == "--copy" ]]; then cp -r "$skill" "$DEST/$name"; else ln -s "$skill" "$DEST/$name"; fi
   n=$((n+1))
-done < <(find "$ROOT/skills" -name SKILL.md -exec dirname {} \;)
+done < <(find "$ROOT/skills" "$ROOT/vendor" -name SKILL.md -exec dirname {} \; 2>/dev/null)
 # shared/ is referenced by relative path from skills; expose it alongside
 rm -rf "$DEST/_giri-shared"; ln -sfn "$ROOT/shared" "$DEST/_giri-shared"
 echo "Installed $n skills to $DEST ($([[ "$MODE" == "--copy" ]] && echo copy || echo symlink))"

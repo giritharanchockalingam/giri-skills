@@ -46,3 +46,58 @@ Skills in this repo follow the agentskills.io format (`SKILL.md` + `references/`
 | presales | `solution-architecture-doc` (skills/presales/solution-architecture-doc) | Use when the user asks to produce, review, or redline a target or solution architecture for a client — context and container views, integrat |
 | presales | `sow-drafter` (skills/presales/sow-drafter) | Use when the user asks to convert an approved proposal into a Statement of Work, draft or redline an SOW, or tighten scope, deliverables, ac |
 | presales | `value-case-builder` (skills/presales/value-case-builder) | Use when the user asks to build, structure, or review a business case, value case, ROI model, benefits case, or cost-benefit analysis for a  |
+
+## Upstream skills (vendored, pinned — see vendor/pins.json)
+
+| # | Skill | Source | Category | License |
+|---|---|---|---|---|
+| 1 | `find-skills` (vendor/find-skills) | vercel-labs/skills | engineering-workflow | MIT |
+| 2 | `grill-me` (vendor/grill-me) | mattpocock/skills | engineering-workflow | MIT |
+| 3 | `agent-browser` (vendor/agent-browser) | vercel-labs/agent-browser | framework-vendor | Apache-2.0 |
+| 4 | `improve-codebase-architecture` (vendor/improve-codebase-architecture) | mattpocock/skills | engineering-workflow | MIT |
+| 5 | `handoff` (vendor/handoff) | mattpocock/skills | engineering-workflow | MIT |
+| 6 | `frontend-design` (vendor/frontend-design) | anthropics/skills | framework-vendor | Apache-2.0 |
+| 7 | `domain-modeling` (vendor/domain-modeling) | mattpocock/skills | engineering-workflow | MIT |
+| 8 | `vercel-react-best-practices` (vendor/vercel-react-best-practices) | vercel-labs/agent-skills | framework-vendor | MIT |
+| 9 | `code-review` (vendor/code-review) | mattpocock/skills | engineering-workflow | MIT |
+| 10 | `web-design-guidelines` (vendor/web-design-guidelines) | vercel-labs/agent-skills | framework-vendor | MIT |
+| 11 | `microsoft-foundry` (vendor/microsoft-foundry) | microsoft/azure-skills | ai-agents-mcp-rag | MIT |
+| 12 | `google-agents-cli-adk-code` (vendor/google-agents-cli-adk-code) | google/agents-cli | ai-agents-mcp-rag | Apache-2.0 |
+| 13 | `supabase-postgres-best-practices` (vendor/supabase-postgres-best-practices) | supabase/agent-skills | framework-vendor | MIT |
+| 14 | `writing-for-agents` (vendor/writing-for-agents) | mattpocock/skills | ai-agents-mcp-rag | MIT |
+| 15 | `skill-creator` (vendor/skill-creator) | anthropics/skills | engineering-workflow | Apache-2.0 |
+| 16 | `vercel-composition-patterns` (vendor/vercel-composition-patterns) | vercel-labs/agent-skills | framework-vendor | MIT |
+| 17 | `brainstorming` (vendor/brainstorming) | obra/superpowers | engineering-workflow | MIT |
+| 18 | `supabase` (vendor/supabase) | supabase/agent-skills | framework-vendor | MIT |
+| 19 | `systematic-debugging` (vendor/systematic-debugging) | obra/superpowers | engineering-workflow | MIT |
+| 20 | `writing-plans` (vendor/writing-plans) | obra/superpowers | engineering-workflow | MIT |
+| 21 | `shadcn` (vendor/shadcn) | shadcn/ui | framework-vendor | MIT |
+| 22 | `test-driven-development` (vendor/test-driven-development) | obra/superpowers | engineering-workflow | MIT |
+| 23 | `verification-before-completion` (vendor/verification-before-completion) | obra/superpowers | engineering-workflow | MIT |
+| 24 | `pptx` (vendor/pptx) | anthropics/skills | documents-productivity-business | Anthropic source-available |
+| 25 | `executing-plans` (vendor/executing-plans) | obra/superpowers | engineering-workflow | MIT |
+| 26 | `subagent-driven-development` (vendor/subagent-driven-development) | obra/superpowers | engineering-workflow | MIT |
+| 27 | `copywriting` (vendor/copywriting) | coreyhaines31/marketingskills | documents-productivity-business | MIT |
+| 28 | `pdf` (vendor/pdf) | anthropics/skills | documents-productivity-business | Anthropic source-available |
+| 29 | `docx` (vendor/docx) | anthropics/skills | documents-productivity-business | Anthropic source-available |
+| 30 | `xlsx` (vendor/xlsx) | anthropics/skills | documents-productivity-business | Anthropic source-available |
+| 31 | `webapp-testing` (vendor/webapp-testing) | anthropics/skills | framework-vendor | Apache-2.0 |
+| 32 | `deploy-to-vercel` (vendor/deploy-to-vercel) | vercel-labs/agent-skills | framework-vendor | MIT |
+| 33 | `mcp-builder` (vendor/mcp-builder) | anthropics/skills | ai-agents-mcp-rag | Apache-2.0 |
+| 34 | `workers-best-practices` (vendor/workers-best-practices) | cloudflare/skills | framework-vendor | Apache-2.0 |
+| 35 | `sales-enablement` (vendor/sales-enablement) | coreyhaines31/marketingskills | documents-productivity-business | MIT |
+| 36 | `customer-research` (vendor/customer-research) | coreyhaines31/marketingskills | documents-productivity-business | MIT |
+| 37 | `web-perf` (vendor/web-perf) | cloudflare/skills | framework-vendor | Apache-2.0 |
+| 38 | `vercel-optimize` (vendor/vercel-optimize) | vercel-labs/agent-skills | framework-vendor | MIT |
+| 39 | `stripe-best-practices` (vendor/stripe-best-practices) | stripe/ai | framework-vendor | MIT |
+| 40 | `doc-coauthoring` (vendor/doc-coauthoring) | anthropics/skills | documents-productivity-business | Apache-2.0 |
+| 41 | `competitor-profiling` (vendor/competitor-profiling) | coreyhaines31/marketingskills | documents-productivity-business | MIT |
+| 42 | `internal-comms` (vendor/internal-comms) | anthropics/skills | documents-productivity-business | Apache-2.0 |
+| 43 | `claude-api` (vendor/claude-api) | anthropics/skills | ai-agents-mcp-rag | Apache-2.0 |
+| 44 | `karpathy-guidelines` (vendor/karpathy-guidelines) | multica-ai/andrej-karpathy-skills | engineering-workflow | MIT |
+| 45 | `security-review` (vendor/security-review) | getsentry/skills | framework-vendor | Apache-2.0 |
+| 46 | `langgraph-fundamentals` (vendor/langgraph-fundamentals) | langchain-ai/langchain-skills | ai-agents-mcp-rag | MIT |
+| 47 | `langchain-rag` (vendor/langchain-rag) | langchain-ai/langchain-skills | ai-agents-mcp-rag | MIT |
+| 48 | `langgraph-human-in-the-loop` (vendor/langgraph-human-in-the-loop) | langchain-ai/langchain-skills | ai-agents-mcp-rag | MIT |
+| 49 | `deep-agents-core` (vendor/deep-agents-core) | langchain-ai/langchain-skills | ai-agents-mcp-rag | MIT |
+| 50 | `eval-engineering` (vendor/eval-engineering) | langchain-ai/langchain-skills | ai-agents-mcp-rag | MIT |

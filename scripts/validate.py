@@ -30,10 +30,15 @@ def frontmatter(text: str) -> dict | None:
     if end == -1:
         return None
     fm = {}
+    key = None
     for line in text[4:end].splitlines():
-        if ":" in line and not line.startswith(" "):
-            k, _, v = line.partition(":")
-            fm[k.strip()] = v.strip()
+        if line and not line.startswith(" ") and ":" in line:
+            key, _, v = line.partition(":")
+            key = key.strip()
+            fm[key] = v.strip()
+        elif key and line.startswith(" ") and line.strip():
+            # multi-line scalar continuation (e.g. a folded description)
+            fm[key] = (fm[key] + " " + line.strip()).strip()
     return fm
 
 def _rel_paths_in(text: str):
@@ -155,7 +160,16 @@ def main() -> int:
             try: json.loads(ev.read_text())
             except Exception as e: errors.append(f"{rel}: evals.json invalid: {e}")
         check_agent(d, rel, errors)
-    print(f"Checked {count} skills, {len(errors)} errors")
+    vendor = ROOT / "vendor"
+    vcount = 0
+    for md in sorted(vendor.glob("*/SKILL.md")):
+        vcount += 1
+        fm = frontmatter(md.read_text(encoding="utf-8", errors="replace"))
+        if not fm or not fm.get("name") or not fm.get("description"):
+            errors.append(f"vendor/{md.parent.name}: SKILL.md missing name/description frontmatter")
+        if not (md.parent / "UPSTREAM.md").exists():
+            errors.append(f"vendor/{md.parent.name}: UPSTREAM.md missing (run scripts/vendor_sync.py)")
+    print(f"Checked {count} skills + {vcount} vendored, {len(errors)} errors")
     for e in errors: print("  -", e)
     return 1 if errors else 0
 
