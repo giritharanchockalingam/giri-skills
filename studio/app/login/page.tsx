@@ -4,7 +4,7 @@ import { supabaseConfigured } from "@/lib/supabase/env";
 export const metadata = { title: "Sign in · Skills Factory" };
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; setup?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; setup?: string; auth_error?: string }> }) {
   const sp = await searchParams;
   const configured = supabaseConfigured();
   return (
@@ -14,6 +14,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <h1 className="h1">Sign <em>in</em>.</h1>
         <p className="lead">Skills, versions, evaluations and runs live in your workspace. Sign in with the account your administrator added, or create one.</p>
       </div>
+      {sp.auth_error && <div className="notice notice-err" role="alert" style={{ marginBottom: 16 }}>Sign-in link failed: {sp.auth_error}. Request a new link and open it once, in this browser.</div>}
       {configured ? (
         <LoginForm next={sp.next && sp.next.startsWith("/") ? sp.next : "/overview"} />
       ) : (

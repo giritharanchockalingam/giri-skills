@@ -19,11 +19,11 @@ export function LoginForm({ next }: { next: string }) {
     const sb = createBrowserSupabase();
     try {
       if (mode === "magic") {
-        const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}${next}` } });
+        const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
         if (error) throw error;
         setMsg({ ok: true, text: "Check your inbox for the sign-in link." });
       } else if (mode === "signup") {
-        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}${next}` } });
+        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
         if (error) throw error;
         if (data.session) { router.push(next); router.refresh(); }
         else setMsg({ ok: true, text: "Account created. Confirm the email we sent, then sign in." });

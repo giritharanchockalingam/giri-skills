@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
     },
   });
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user && pathname !== "/login") {
+  if (!user && pathname !== "/login" && pathname !== "/auth/callback") {
     if (pathname.startsWith("/api/")) return NextResponse.json({ error: { code: "unauthenticated", message: "Sign in first." } }, { status: 401 });
     const url = new URL("/login", request.url);
     if (pathname !== "/") url.searchParams.set("next", pathname);
