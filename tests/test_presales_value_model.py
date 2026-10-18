@@ -37,7 +37,7 @@ def test_fixture_model_reconciles_and_traces(tmp_path):
     text = md.read_text(encoding="utf-8")
     for h in ("## Bottom line", "## Cash flows", "## Sensitivity", "## Sources"):
         assert h in text
-    assert "[TO BE BASELINED — owner: ___]" in text  # B-04 and C-04 source
+    assert "[TO BE BASELINED — owner: Finance lead]" in text  # B-04 and C-04 source
     # every number in the markdown appears in the json (the skill's numbers_trace_to check)
     import sys
     sys.path.insert(0, str(REPO_ROOT / "scripts"))

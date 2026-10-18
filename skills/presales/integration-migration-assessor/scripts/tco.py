@@ -19,7 +19,7 @@ Inputs
                                      current-platform costs in `target` stop after it
     horizon_years                    default 3 (max 5)
   A key that is absent or blank makes every line that needs it
-  `[TO BE BASELINED — owner: ___]`; a derived total that touches such a line is reported the
+  `[TO BE BASELINED — owner: Integration architect]`; a derived total that touches such a line is reported the
   same way, never as a number (assets/tco-model-spec.md).
 
 Outputs
@@ -41,7 +41,7 @@ import json
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Integration architect]"
 BANDS = [("Simple", "unit_cost_simple"), ("Medium", "unit_cost_medium"),
          ("Complex", "unit_cost_complex"), ("Very complex", "unit_cost_very_complex")]
 RUN_CATS = [("licence", "licence"), ("infrastructure", "infrastructure"),
@@ -235,7 +235,7 @@ def render_md(lines, s, counts):
     L += ["", "## Inventory counts used (non-retirement)", "| Band | Count |", "|---|---|"]
     L += [f"| {b} | {counts.get(b, 0)} |" for b, _ in BANDS]
     if s["tbd_lines"]:
-        L += ["", "## Lines awaiting input (owner: ___)"]
+        L += ["", "## Lines awaiting input (owner: Integration architect)"]
         L += [f"- {t}" for t in s["tbd_lines"]]
     return "\n".join(L) + "\n"
 

@@ -55,7 +55,7 @@ def test_thin_proposal_markers_become_questions(tmp_path):
     assert r.returncode == 0, r.stderr
     assert "What is the number for:" in q.read_text(encoding="utf-8")
     text = s.read_text(encoding="utf-8")
-    assert "[TO BE BASELINED — owner: ___]" in text
+    assert "[TO BE BASELINED — owner: Bid manager]" in text
     assert check_output.run_check(f"numbers_trace_to:{reg}", str(s), mode="real")["pass"]
 
 

@@ -13,7 +13,7 @@ Sub-bullets fill its fields when they start with a recognised key (case-insensit
   files | file               -> files to touch
   size                       -> S | M | L
 Inline `(accept: …; test: …; rollback: …)` after the task text works too. A field the spec does not
-give is `[TO BE BASELINED — owner: ___]` — never invented. Writes plan.md on the template (Tasks,
+give is `[TO BE BASELINED — owner: Tech lead]` — never invented. Writes plan.md on the template (Tasks,
 Gates, Rollback filled) and tasks.csv (id, task, acceptance, test, rollback, files, size). More than
 8 tasks is reported as a split warning. Exit 1 when the file, the section or any task is missing. Stdlib.
 """
@@ -28,7 +28,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_TEMPLATE = HERE.parent / "assets" / "plan-template.md"
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Tech lead]"
 KEYS = {"accept": "acceptance", "acceptance": "acceptance", "ac": "acceptance", "test": "test", "tests": "test",
         "rollback": "rollback", "revert": "rollback", "files": "files", "file": "files", "size": "size"}
 ITEM_RE = re.compile(r"^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$")

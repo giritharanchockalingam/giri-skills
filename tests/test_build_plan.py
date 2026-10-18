@@ -9,7 +9,7 @@ SCRIPT = "skills/build/spec-to-plan/scripts/plan.py"
 SK = REPO_ROOT / "skills/build/spec-to-plan"
 SPEC = SK / "evals/fixtures/SPEC.md"
 TMPL = SK / "assets/plan-template.md"
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Tech lead]"
 
 
 def run(tmp_path, spec, section, *extra):

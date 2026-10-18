@@ -39,7 +39,7 @@ def test_thin_context_leaves_owned_markers_not_facts(tmp_path):
     r, msg, rows = run(tmp_path, "referral-ask", FX / "context-referral-thin.json")
     assert r.returncode == 0, r.stderr
     text = msg.read_text(encoding="utf-8")
-    assert "Priya, I'm applying for VP, Enterprise Applications ([TO BE BASELINED — owner: ___]) at Helix Logistics" in text
+    assert "Priya, I'm applying for VP, Enterprise Applications ([TO BE BASELINED — owner: Sender]) at Helix Logistics" in text
     assert "- A: req ID" in text and "- B: Name" in text
     assert "$" not in text.split("## Facts")[0].replace("$XXM", "")     # no invented outcome figure
     # business-day cadence from a Thursday: Day 0, Day 5, Day 12; third touch switches channel

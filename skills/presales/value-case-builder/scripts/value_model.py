@@ -9,7 +9,7 @@ benefits.csv columns: benefit_id, name, driver, unit_value, units_per_year, ramp
 costs.csv columns:    cost_id, name, one_time, run_rate_per_year, start_year, source
 
 Rules: no number is invented. A blank unit_value / units_per_year excludes the benefit from the
-headline and lists it as [TO BE BASELINED — owner: ___]; a blank source is reported the same way.
+headline and lists it as [TO BE BASELINED — owner: Finance lead]; a blank source is reported the same way.
 Without --discount-rate the NPV is a marker; without --p80-cost-uplift the P80 cost is a marker.
 Totals in the JSON equal the sum of the yearly rows (reconciliation is asserted before writing).
 Exit 1 on missing columns, non-numeric cells or an unreadable file. Stdlib only, offline.
@@ -22,7 +22,7 @@ import json
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Finance lead]"
 BENEFIT_COLS = ["benefit_id", "name", "driver", "unit_value", "units_per_year",
                 "ramp_pct_y1", "ramp_pct_y2", "ramp_pct_y3", "source"]
 COST_COLS = ["cost_id", "name", "one_time", "run_rate_per_year", "start_year", "source"]

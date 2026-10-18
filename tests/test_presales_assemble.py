@@ -34,7 +34,7 @@ def test_assembles_in_library_order_with_themes(tmp_path):
     assert heads[0].startswith("## 0.") and heads[-1].startswith("## 12.")
     assert not any(h.startswith("## 13.") for h in heads)           # internal checklist not shipped
     assert "- **T1 Peak-proof order orchestration** — no war room next peak (proof: Northwind peak post-mortem" in text
-    assert "(proof: [TO BE BASELINED — owner: ___])" in text          # T3 has no proof
+    assert "(proof: [TO BE BASELINED — owner: Bid manager])" in text          # T3 has no proof
     assert "Evidence from discovery" in text and "war room for nine days" in text
     assert "Basis: estimate memo bottom line" in text and "USD 1,472,000" in text
     assert "<" not in text.replace("<!--", "")                        # no raw placeholders survive
@@ -48,7 +48,7 @@ def test_thin_themes_produce_markers_not_numbers(tmp_path):
     r, out, ph, src = run(tmp_path, FX / "win-themes-thin.json")
     assert r.returncode == 0, r.stderr
     text = out.read_text(encoding="utf-8")
-    assert "[TO BE BASELINED — owner: ___]" in text
+    assert "[TO BE BASELINED — owner: Bid manager]" in text
     assert "USD" not in text and "1,472,000" not in text
     assert len(list(csv.DictReader(ph.open(encoding="utf-8")))) > 10
 

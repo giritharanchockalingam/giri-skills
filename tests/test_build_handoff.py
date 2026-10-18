@@ -64,7 +64,7 @@ def test_handoff_since_previous_handoff_commit(tmp_path):
     assert "chore: bootstrap repo with HANDOFF" not in text                    # before the last HANDOFF commit
     assert "- `server/services/export-service.ts` — added: feat: invoice CSV export service and route" in text
     assert "- `tests/unit/export-service.test.ts` — added: test: unit test for export service" in text
-    assert "- `docs/notes.md` — uncommitted: [TO BE BASELINED — owner: ___]" in text
+    assert "- `docs/notes.md` — uncommitted: [TO BE BASELINED — owner: Project owner]" in text
     assert "- Decide export file format CSV vs XLSX (owner: Giri)" in text      # carried forward
     assert "uncommitted changes present (1 file(s))" in text
     assert "Read docs/HANDOFF.md, CLAUDE.md." in text

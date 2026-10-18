@@ -28,7 +28,7 @@ def test_ranking_formula_and_bands(tmp_path):
     assert by["UC-009"]["band"] == "Stop"                                           # V<=2
     assert by["UC-008"]["band"] == "Stop"                                           # R=5
     assert by["UC-004"]["score"] == "8.0" and by["UC-004"]["band"] == "Later"
-    assert by["UC-005"]["business_owner"] == "[TO BE BASELINED — owner: ___]"
+    assert by["UC-005"]["business_owner"] == "[TO BE BASELINED — owner: AI CoE lead]"
     assert all(x["score"] for x in ranked)
     assert rows(tmp_path / "unscored.csv") == []
     md = (tmp_path / "portfolio.md").read_text(encoding="utf-8")

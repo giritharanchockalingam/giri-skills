@@ -36,7 +36,7 @@ def test_fixture_doc(tmp_path):
     assert "| ADR-005 | API gateway on Apigee X |" in text
     rows = list(csv.DictReader(nfr.open(encoding="utf-8")))
     assert [r_["category"] for r_ in rows] == ["Availability", "Performance", "Recoverability", "Security"]
-    assert rows[0]["target"] == "99.9% monthly" and rows[1]["target"] == "[TO BE BASELINED — owner: ___]"
+    assert rows[0]["target"] == "99.9% monthly" and rows[1]["target"] == "[TO BE BASELINED — owner: Solution architect]"
     assert "| Wave for INT-006 |" in text                               # missing wave surfaced
 
 

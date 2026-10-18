@@ -7,7 +7,7 @@ from conftest import REPO_ROOT, run_script
 
 SCRIPT = "skills/ai-platform/ai-governance-risk/scripts/risk_register.py"
 FX = REPO_ROOT / "skills/ai-platform/ai-governance-risk/evals/fixtures"
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: AI risk lead]"
 
 
 def rows(path):
@@ -31,12 +31,12 @@ def test_register_from_medium_canvas(tmp_path):
     assert all(x["control"] for x in rs.values())
     card = (tmp_path / "model-card.md").read_text(encoding="utf-8")
     assert "# Model Card — Benefits enquiry assistant — v0.1" in card
-    assert "| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED — owner: ___] |" in card
+    assert "| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED — owner: AI risk lead] |" in card
     assert "| Retrieval sources | HR policy library (SharePoint) |" in card
     assert "| C02 — Data classification and minimization" in card           # tier minimum control set
     assert "| C08 —" not in card                                             # high-tier-only control not required
     assert "legal review required" in card
-    assert "[TO BE BASELINED — owner: ___]" in card and "[TO BE BASELINED]" not in card.replace(TBD, "")
+    assert "[TO BE BASELINED — owner: AI risk lead]" in card and "[TO BE BASELINED]" not in card.replace(TBD, "")
 
 
 def test_high_risk_without_control_exits_1(tmp_path):

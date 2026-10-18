@@ -12,7 +12,7 @@ What it does, deterministically:
   * threads the win themes into the executive summary (T1..Tn) and the why-us table;
   * quotes the "Bottom line" of the estimate memo (pricing basis) and the value case (objectives),
     and the pain matrix rows of the discovery pack (understanding of needs) when supplied;
-  * replaces every unfilled <placeholder> with `[TO BE BASELINED — owner: ___]` and records it in
+  * replaces every unfilled <placeholder> with `[TO BE BASELINED — owner: Bid manager]` and records it in
     placeholders.csv (placeholder, section, owner) so nothing silent remains;
   * writes sources.md = the concatenation of every supplied input, the trace target for numbers.
 Nothing is invented: no number, date, role or reference appears that is not in an input file.
@@ -27,7 +27,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Bid manager]"
 PLACEHOLDER_RE = re.compile(r"<([^<>\n`]{1,120})>")
 SECTION_RE = re.compile(r"^## (\d+)\. (.+)$")
 SKIP_SECTIONS = {"13"}

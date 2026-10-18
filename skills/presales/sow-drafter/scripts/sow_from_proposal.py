@@ -15,7 +15,7 @@ Writes SOW.md on the template (scope in/out, deliverables with acceptance criter
 RACI stub, the template's change-control clause verbatim), deliverables.csv (id, deliverable,
 acceptance, phase, format) and assumptions-check.csv listing proposal assumptions NOT carried
 over (header only when the SOW is complete). Any missing acceptance criterion, date or amount is
-`[TO BE BASELINED — owner: ___]`; nothing is invented. Exit 1 when proposal.md is missing or has
+`[TO BE BASELINED — owner: Delivery lead]`; nothing is invented. Exit 1 when proposal.md is missing or has
 no scope/deliverables table. Stdlib only, offline.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Delivery lead]"
 
 
 def die(msg: str) -> None:

@@ -29,7 +29,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_TEMPLATE = HERE.parent / "assets" / "HANDOFF.md"
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Project owner]"
 MAX_LINES = 80
 STATUS_WORD = {"A": "added", "M": "modified", "D": "deleted", "R": "renamed", "C": "copied", "T": "type changed"}
 

@@ -16,7 +16,7 @@ components.json:
 Diagrams are Mermaid `flowchart` blocks in C4 layout (context: actors, system, external systems;
 container: containers inside the system boundary, with every integration as an edge), so they
 render anywhere Mermaid does. The integration map groups by pattern and lists waves; an NFR with
-no target or measure is `[TO BE BASELINED — owner: ___]`; the decision-log stub carries one ADR
+no target or measure is `[TO BE BASELINED — owner: Solution architect]`; the decision-log stub carries one ADR
 row per pattern and per container technology. No number is invented.
 Exit 1 on invalid JSON, missing keys, duplicate ids, or an integration endpoint that is not a
 container, actor or external system. Stdlib only, offline.
@@ -30,7 +30,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Solution architect]"
 
 
 def die(msg: str) -> None:

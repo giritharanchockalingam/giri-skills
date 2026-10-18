@@ -1,0 +1,12 @@
+{
+  "note": "Fictional fixtures reused from each skill's evals (labelled fictional in the files).",
+  "inputs": {
+    "client": "Northwind", "vertical": "retail", "personas": "CIO,VP Digital",
+    "notes": "skills/presales/discovery-interview/evals/fixtures/notes.md",
+    "wbs": "skills/presales/effort-estimator/evals/fixtures/wbs.csv",
+    "rates": "skills/presales/effort-estimator/evals/fixtures/rates.csv",
+    "benefits": "skills/presales/value-case-builder/evals/fixtures/benefits.csv",
+    "costs": "skills/presales/value-case-builder/evals/fixtures/costs.csv",
+    "win_themes": "skills/presales/proposal-writer/evals/fixtures/win-themes.json"
+  }
+}

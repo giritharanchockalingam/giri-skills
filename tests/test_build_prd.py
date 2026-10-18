@@ -9,7 +9,7 @@ SCRIPT = "skills/build/product-spec-prd/scripts/prd.py"
 SK = REPO_ROOT / "skills/build/product-spec-prd"
 FX = SK / "evals/fixtures"
 TMPL = SK / "assets/prd-template.md"
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Product owner]"
 SECTIONS = ["## Problem", "## Users", "## Goals", "## Non-goals", "## Metrics", "## Phases", "## Engineering handoff"]
 
 

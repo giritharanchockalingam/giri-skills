@@ -320,14 +320,14 @@ def render_md(tasks, unresolved, sim, staff, cost, mix) -> str:
         L.append("")
     else:
         L.append("## Cost and price")
-        L.append("No rate card supplied — effort only. Price: [TO BE BASELINED — owner: ___]")
+        L.append("No rate card supplied — effort only. Price: [TO BE BASELINED — owner: Estimation lead]")
         L.append("")
     if unresolved:
         L.append("## Unresolved tasks (excluded from totals)")
         L.append("| Task | Reason |")
         L.append("|---|---|")
         for t in unresolved:
-            L.append(f"| {t.task_id} {t.name} | {t.unresolved_reason} — [TO BE BASELINED — owner: ___] |")
+            L.append(f"| {t.task_id} {t.name} | {t.unresolved_reason} — [TO BE BASELINED — owner: Estimation lead] |")
         L.append("")
     L.append(f"Modeled tasks: {len(tasks)}; unresolved: {len(unresolved)}.")
     return "\n".join(L)

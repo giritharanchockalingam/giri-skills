@@ -26,7 +26,7 @@ import math
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: AI CoE lead]"
 AXES = {"V": ("value_V", "value"), "F": ("feasibility_F", "feasibility"),
         "D": ("data_readiness_D", "data_readiness"), "R": ("risk_R", "risk")}
 OUT_COLS = ["rank", "id", "use_case", "business_owner", "value_V", "feasibility_F", "data_readiness_D",

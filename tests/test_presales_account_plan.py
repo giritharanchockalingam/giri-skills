@@ -29,14 +29,14 @@ def test_plan_from_fixtures(tmp_path):
     assert "| Lee Wong ⚠ |" in text
     assert "| Data and AI | none | P1 |" in text and "| Integration modernization | active | — |" in text
     assert "| **Total** | | 1,652,000 (excludes 1 unvalued) |" in text
-    assert "| Apigee platform readiness | qualify | [TO BE BASELINED — owner: ___] |" in text
+    assert "| Apigee platform readiness | qualify | [TO BE BASELINED — owner: Account owner] |" in text
     rows = list(csv.DictReader(plays.open(encoding="utf-8")))
     kinds = {r_["type"] for r_ in rows}
     assert kinds == {"white-space", "stakeholder", "risk", "coverage"}
     assert sum(r_["type"] == "white-space" for r_ in rows) == 2
     assert any("Dana Ortiz" in r_["play"] and r_["type"] == "stakeholder" for r_ in rows)   # stance -1, influence 5
     assert not any("Sam Kim" in r_["play"] and r_["type"] == "stakeholder" for r_ in rows)  # influence 2
-    assert all(r_["owner"] == "[TO BE BASELINED — owner: ___]" for r_ in rows)
+    assert all(r_["owner"] == "[TO BE BASELINED — owner: Account owner]" for r_ in rows)
     assert any("Sam Kim" in r_["play"] and r_["type"] == "coverage" for r_ in rows)      # never contacted
 
 

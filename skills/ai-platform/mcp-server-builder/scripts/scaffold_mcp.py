@@ -291,7 +291,7 @@ def main() -> int:
     write_new(target / "tests" / "test_tools.py", TEST_TEMPLATE, report)
     readme = [f"# {name}", "", "Minimal MCP-style server (JSON-RPC 2.0 over stdio, Python stdlib). Scaffolded; every tool is a stub.",
               "", "## Tools", "| Tool | Purpose | Side effect | Status |", "|---|---|---|---|"]
-    readme += [f"| `{t['name']}` | {t['description']} | {(t.get('x-contract') or {}).get('side_effect', '[TO BE BASELINED — owner: ___]')} | stub |"
+    readme += [f"| `{t['name']}` | {t['description']} | {(t.get('x-contract') or {}).get('side_effect', '[TO BE BASELINED — owner: MCP server owner]')} | stub |"
                for t in tools]
     readme += ["", "## Run", "```", "python3 server.py", "```",
                "One JSON-RPC message per line on stdin; responses on stdout; nothing else is written to stdout.",

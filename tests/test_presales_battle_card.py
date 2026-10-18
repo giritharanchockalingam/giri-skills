@@ -36,7 +36,7 @@ def test_wedge_landmines_objections(tmp_path):
     assert len(cells) == 5 and cells[2] == "Position on: Fixed-price waves with explicit P80 contingency"
     assert cells[4].startswith("What would you need to see")
     vp = next(ln for ln in obj.splitlines() if ln.startswith("| Knowledge of the current MuleSoft estate"))
-    assert vp.count("[TO BE BASELINED — owner: ___]") == 2             # reframe + proof unknown
+    assert vp.count("[TO BE BASELINED — owner: Bid manager]") == 2             # reframe + proof unknown
 
 
 def test_thin_inputs_no_wedge_and_hypotheses(tmp_path):

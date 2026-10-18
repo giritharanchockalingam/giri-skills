@@ -102,7 +102,7 @@ SECTION_ORDER = [
     "Sources",
 ]
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Account owner]"
 
 
 def classify(line: str) -> str:

@@ -9,7 +9,7 @@ brief.json:
    "phases": [{"name": "v1", "scope": ["…"], "excludes": ["…"], "exit": "…"}],
    "evidence": [{"claim": "…", "source": "…", "date": "…"}], "constraints": ["…"], "flag": "feature.exports"}
 Only `feature` and `problem` are required. Every missing or empty array becomes a
-`[TO BE BASELINED — owner: ___]` row; metric baselines default to the same marker. Sections filled:
+`[TO BE BASELINED — owner: Product owner]` row; metric baselines default to the same marker. Sections filled:
 header line, exec summary, Problem, Users, Goals, Non-goals, Metrics, Phases, Engineering handoff,
 Flag. The LLM step then sharpens the result on the same template. Exit 1 on missing/invalid brief. Stdlib.
 """
@@ -24,7 +24,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_TEMPLATE = HERE.parent / "assets" / "prd-template.md"
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Product owner]"
 
 
 def die(msg: str) -> None:

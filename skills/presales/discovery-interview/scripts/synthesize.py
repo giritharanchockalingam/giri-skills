@@ -10,7 +10,7 @@ notes.md: one statement per bullet or line. Supported, all optional:
                        nothing go to the "parked" list in five-closes.md, never into the matrix
 Pain rows carry impact / urgency = H when the line holds a figure ($, %, hours, days, cost) or a
 date / freeze / renewal word, else "TBD" — never guessed. Evidence is the verbatim line, so it is
-never empty. Each close is quoted verbatim or `TBD — owner: ___`.
+never empty. Each close is quoted verbatim or `TBD — owner: Engagement lead`.
 Exit 1 when notes.md is missing or holds no usable line. Stdlib only, offline.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "TBD — owner: ___"
+TBD = "TBD — owner: Engagement lead"
 PAIN_WORDS = ("manual", "slow", "broke", "brittle", "fail", "outage", "incident", "cost", "cannot", "can't",
               "late", "error", "re-key", "rekey", "complain", "war room", "cancel", "wrong", "risk",
               "expensive", "stuck", "delay", "backlog", "pain", "problem", "issue", "overtime", "miss",

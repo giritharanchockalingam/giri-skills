@@ -27,7 +27,7 @@ def test_retail_pack_budget_and_filter(tmp_path):
     assert all(("CIO" in ln or "VP Digital" in ln) for ln in plan)   # persona filter
     assert "| Decision owner |" in text and "## Five closes" in text
     assert "## Branches" in text and "## Pre-reads to request" in text
-    assert "| Decision owner | TBD — owner: ___ |" in fc.read_text(encoding="utf-8")
+    assert "| Decision owner | TBD — owner: Engagement lead |" in fc.read_text(encoding="utf-8")
     assert pm.read_text(encoding="utf-8") == "pain,impact,urgency,evidence,owner\n"
 
 

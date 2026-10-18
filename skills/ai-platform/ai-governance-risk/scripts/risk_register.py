@@ -12,7 +12,7 @@ read when present.
 Register rules (references/risk-taxonomy.md): one row per taxonomy category. Impact comes from
 the canvas tier (low=2, medium=3, high=5 per the taxonomy's impact scale; basis cited) and likelihood is 3 only when the canvas
 names that category among its top risks — anything the canvas does not support stays
-`[TO BE BASELINED — owner: ___]`, and the rating is TBD until both scores exist.
+`[TO BE BASELINED — owner: AI risk lead]`, and the rating is TBD until both scores exist.
 Rating = L x I: >= 15 High, 8-14 Medium, < 8 Low. Controls are mapped per category from the
 catalog's `| ID | Control | Addresses | ... |` table ("All" matches every category).
 
@@ -31,7 +31,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: AI risk lead]"
 CATEGORIES = [("bias", "Bias / fairness"), ("privacy", "Privacy"), ("hallucination", "Hallucination / accuracy"),
               ("ip", "IP / copyright"), ("security", "Security"), ("misuse", "Misuse"),
               ("operational", "Operational"), ("transparency", "Transparency / accountability"),

@@ -24,7 +24,7 @@ import json
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: AI architect]"
 YN = ("yes", "no")
 QUESTIONS = {
     "q1_steps_enumerable": (YN, "Can the steps be enumerated in advance for every input?"),

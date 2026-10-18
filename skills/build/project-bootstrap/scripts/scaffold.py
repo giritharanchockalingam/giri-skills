@@ -35,7 +35,7 @@ STACK_ADR = """# ADR-0001: Default stack — Next.js App Router, Supabase, Verce
 |---|---|
 | Status | Accepted |
 | Date | {date} |
-| Deciders | [TO BE BASELINED — owner: ___] |
+| Deciders | [TO BE BASELINED — owner: Tech lead] |
 
 ## Context
 {name} needs a web application with authenticated users, relational data{tenancy_ctx}, preview environments per change, and a release gate before production. The team standard (shared/stack-conventions.md) is Next.js + Supabase + Vercel + GitHub Actions.
@@ -72,7 +72,7 @@ def render(text: str, name: str, tenancy: str) -> str:
         text.replace("{{PROJECT_NAME}}", name)
         .replace("{{DATE}}", today)
         .replace("{{TENANCY}}", tenancy)
-        .replace("{{PURPOSE}}", "[TO BE BASELINED — owner: ___]")
+        .replace("{{PURPOSE}}", "[TO BE BASELINED — owner: Tech lead]")
         .replace("{{NUMBER}}", "NNNN")
         .replace("{{TITLE}}", "Title")
     )

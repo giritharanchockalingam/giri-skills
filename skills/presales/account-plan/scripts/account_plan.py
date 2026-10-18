@@ -11,7 +11,7 @@ services.csv:     service, status_at_account (active | proposed | none)
 Produces account-plan.md: stakeholder map (influence × stance grid), white-space matrix, pipeline
 table with total, risks (departure risk, stale contacts when --as-of is given), and 90-day plays:
 one per service with status none, one per stakeholder with stance <= 0 and influence >= 4, one per
-stakeholder flagged departure_risk. Play owner and date are `[TO BE BASELINED — owner: ___]` (the
+stakeholder flagged departure_risk. Play owner and date are `[TO BE BASELINED — owner: Account owner]` (the
 plan never assigns people it was not told about); plays.csv carries the same rows. Blank pipeline
 values become the marker and are excluded from the total, which then says so.
 Exit 1 on missing columns, stance/influence out of range, non-numeric values or an unknown
@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Account owner]"
 STATUSES = ("active", "proposed", "none")
 STALE_DAYS = 90
 

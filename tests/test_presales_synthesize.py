@@ -30,7 +30,7 @@ def test_notes_to_matrix_and_closes(tmp_path):
     text = fc.read_text(encoding="utf-8")
     assert "## Five closes" in text
     assert "| Decision owner | \"Maria Chen (CTO) signs off" in text
-    assert "| Incumbents / alternatives | TBD — owner: ___ |" in text
+    assert "| Incumbents / alternatives | TBD — owner: Engagement lead |" in text
     assert "Captured 3 of 5 closes" in text
     assert "office move" in text.split("## Parked")[1]
 
@@ -39,7 +39,7 @@ def test_thin_notes_do_not_infer(tmp_path):
     r, pm, fc = run(tmp_path, FX / "notes-thin.md")
     assert r.returncode == 0, r.stderr
     text = fc.read_text(encoding="utf-8")
-    assert text.count("TBD — owner: ___") == 5 and "Captured 0 of 5" in text
+    assert text.count("TBD — owner: Engagement lead") == 5 and "Captured 0 of 5" in text
     rows = list(csv.DictReader(pm.open(encoding="utf-8")))
     assert len(rows) == 1 and rows[0]["impact"] == "TBD"
 

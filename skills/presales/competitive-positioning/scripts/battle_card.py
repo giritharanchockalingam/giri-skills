@@ -12,7 +12,7 @@ Wedge = our capability with strength >= 4 that overlaps (shared keyword) a claim
 <= 2 AND overlaps a stakeholder concern. Landmines = their claims rated >= 4 (do not attack) plus the
 template's standing rules. Objection grid = one row per concern with acknowledge / reframe / proof /
 ask-back: reframe and proof are pre-filled only from a matching capability's evidence, otherwise
-`[TO BE BASELINED — owner: ___]`. A blank evidence or source cell becomes the marker; nothing is
+`[TO BE BASELINED — owner: Bid manager]`. A blank evidence or source cell becomes the marker; nothing is
 invented. Exit 1 on missing columns, strength outside 1-5 or non-numeric. Stdlib only, offline.
 """
 from __future__ import annotations
@@ -23,7 +23,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Bid manager]"
 STOP = set("the a an and or of to in on for with our their we they your you is are be by at as from "
            "that this it its into over under than more less very can will not no any all has have had "
            "do does did but if then so such per via up out new old own same".split())

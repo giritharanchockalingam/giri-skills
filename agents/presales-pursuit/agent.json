@@ -1,0 +1,31 @@
+{
+  "name": "presales-pursuit",
+  "version": "0.1.0",
+  "description": "From discovery notes to a priced, value-backed proposal: discovery pack → effort estimate → value case → (account owner approves) → proposal.",
+  "adlc_stage": "opportunity",
+  "inputs": [
+    {"name": "client", "type": "string", "required": true, "from": "client name"},
+    {"name": "vertical", "type": "string", "required": true, "from": "industry, e.g. retail"},
+    {"name": "personas", "type": "string", "required": true, "from": "comma-separated stakeholder roles"},
+    {"name": "notes", "type": "md", "required": true, "from": "discovery call notes"},
+    {"name": "wbs", "type": "csv", "required": true, "from": "work breakdown with 3-point estimates (layout: skills/presales/effort-estimator/assets/wbs-template.csv)"},
+    {"name": "rates", "type": "csv", "required": false, "from": "rate card; without it the estimate is effort-only"},
+    {"name": "benefits", "type": "csv", "required": true, "from": "benefit lines for the value case"},
+    {"name": "costs", "type": "csv", "required": true, "from": "cost lines for the value case"},
+    {"name": "win_themes", "type": "json", "required": true, "from": "{client, initiative, themes:[{theme, proof, so_what}]}"}
+  ],
+  "config": {"provider": "none", "model": "claude-sonnet-4-5", "on_fail": "stop"},
+  "steps": [
+    {"id": "discovery", "skill": "presales/discovery-interview",
+     "inputs": {"vertical": "$in.vertical", "personas": "$in.personas", "notes": "$in.notes", "client": "$in.client"}},
+    {"id": "estimate", "skill": "presales/effort-estimator",
+     "inputs": {"wbs": "$in.wbs", "rates": "$in.rates", "client": "$in.client"}},
+    {"id": "value", "skill": "presales/value-case-builder",
+     "inputs": {"benefits": "$in.benefits", "costs": "$in.costs", "client": "$in.client"}},
+    {"id": "commercial-review", "approval": {"role": "Account owner", "note": "Approve the estimate and value case before they are quoted in the proposal."}},
+    {"id": "proposal", "skill": "presales/proposal-writer",
+     "inputs": {"win_themes": "$in.win_themes", "discovery": "$steps.discovery:five-closes.md",
+                "estimate": "$steps.estimate:estimate.md", "value_case": "$steps.value:value-case.md"}}
+  ],
+  "outputs": ["$steps.proposal:proposal.md", "$steps.proposal:proposal-final.md", "$steps.estimate:estimate.md", "$steps.value:value-case.md"]
+}

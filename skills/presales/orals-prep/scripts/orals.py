@@ -13,7 +13,7 @@ first speaker and the close to the last. number-registry.csv lists every number 
 and airtime numbers (section "orals timing"), so every number in orals-script.md traces to it.
 likely-questions.md = the standard evaluator questions from the question bank, one question per
 `[TO BE BASELINED` marker in the proposal ("what is the number?"), and one per assumption row.
-No proof line is written for a section that holds no number; it reads `[TO BE BASELINED — owner: ___]`.
+No proof line is written for a section that holds no number; it reads `[TO BE BASELINED — owner: Bid manager]`.
 Exit 1 when proposal.md is missing / has no sections, --minutes < 10, or --speakers is empty.
 Stdlib only, offline.
 """
@@ -25,7 +25,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Bid manager]"
 NUMBER_RE = re.compile(r"(?<![\w.])([$€£]?)(-?\d[\d,]*(?:\.\d+)?)(%?)(?![\w])")
 DATE_RE = re.compile(r"\b\d{4}-\d{2}(-\d{2})?\b")
 OPEN_MIN, CLOSE_MIN, QA_SHARE = 1.5, 1.0, 0.30

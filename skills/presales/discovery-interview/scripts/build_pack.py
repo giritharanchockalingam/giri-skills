@@ -56,7 +56,7 @@ def parse_bank(text: str):
             continue
         if not ln.startswith("|"):
             if in_pre and ln.strip():
-                prereads += [[d.strip(" ."), "[TO BE BASELINED — owner: ___]", "pre-read"]
+                prereads += [[d.strip(" ."), "[TO BE BASELINED — owner: Engagement lead]", "pre-read"]
                              for d in ln.split(",") if d.strip(" .")]
             continue
         c = cells(ln)
@@ -137,9 +137,9 @@ def main() -> int:
     L = [f"# Discovery Pack — {a.client} — {a.initiative} — prep", "",
          f"Vertical: {a.vertical} · Personas: {', '.join(wanted)} · Call length: {a.minutes} min · "
          f"Bank: `{bank.as_posix()}` ({len(questions)} questions, {n_match} match the personas, {len(picked)} selected)", "",
-         "## Bottom line", "[TO BE BASELINED — owner: ___] — what we must learn on this call to decide whether to propose, and what shape.", "",
+         "## Bottom line", "[TO BE BASELINED — owner: Engagement lead] — what we must learn on this call to decide whether to propose, and what shape.", "",
          "## Hypotheses", "| ID | Hypothesis | If true, we propose | Confirms | Kills | Tested by |", "|---|---|---|---|---|---|",
-         "| H1 | [TO BE BASELINED — owner: ___] | | | | |", "",
+         "| H1 | [TO BE BASELINED — owner: Engagement lead] | | | | |", "",
          f"## Time budget ({a.minutes} min; {int(CLIENT_SHARE * 100)}% reserved for their questions)",
          "| Block | Minutes | Note |", "|---|---|---|",
          f"| Opening and agenda | {OPENING_MIN} | why we are here, what we will ask |",
@@ -153,11 +153,11 @@ def main() -> int:
     for i, q in enumerate(picked, 1):
         L.append(f"| {i} | {q['id']} | {q['question']} | {q['persona']} | {q['stage']} | {q['listen']} | H? | {MIN_PER_QUESTION} |")
     L += ["", "## Branches", "| If they say | Go to |", "|---|---|"]
-    L += [f"| {a_} | {b} |" for a_, b in branches] or ["| [TO BE BASELINED — owner: ___] | |"]
+    L += [f"| {a_} | {b} |" for a_, b in branches] or ["| [TO BE BASELINED — owner: Engagement lead] | |"]
     L += ["", "## Five closes (last 10 minutes)", "| Close | Ask | Asked by | Answer captured |", "|---|---|---|---|"]
     L += [f"| {name} | {ask} | | |" for name, ask in CLOSES]
     L += ["", "## Pre-reads to request", "| Document | From (client role) | Why |", "|---|---|---|"]
-    L += [f"| {' | '.join(p[:3])} |" for p in prereads] or ["| [TO BE BASELINED — owner: ___] | | |"]
+    L += [f"| {' | '.join(p[:3])} |" for p in prereads] or ["| [TO BE BASELINED — owner: Engagement lead] | | |"]
     L += ["", "## Questions not selected (same personas, if time allows)", "| Bank id | Question | Persona | Stage |", "|---|---|---|---|"]
     rest = [q for q in questions if matches(q["persona"], wanted) and q not in picked]
     L += [f"| {q['id']} | {q['question']} | {q['persona']} | {q['stage']} |" for q in rest] or ["| — | none | | |"]
@@ -166,7 +166,7 @@ def main() -> int:
     if a.five_closes:
         F = [f"# Five closes — {a.client}", "", "Prep mode: no notes synthesized yet; every close is open and must be asked on the call.", "",
              "## Five closes", "| Close | Answer captured (verbatim) | Status |", "|---|---|---|"]
-        F += [f"| {name} | TBD — owner: ___ | open — ask: {ask} |" for name, ask in CLOSES]
+        F += [f"| {name} | TBD — owner: Engagement lead | open — ask: {ask} |" for name, ask in CLOSES]
         Path(a.five_closes).write_text("\n".join(F) + "\n", encoding="utf-8")
     if a.pain_matrix:
         Path(a.pain_matrix).write_text("pain,impact,urgency,evidence,owner\n", encoding="utf-8")

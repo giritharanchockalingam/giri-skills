@@ -14,7 +14,7 @@ What it does, deterministically:
     per type, `**A — label**` + code block per variant);
   * fills `<placeholders>` only from context.json: recipient / company / role / dates / req id directly,
     anything else from `specifics` whose slot name matches the placeholder. Every other placeholder
-    becomes `[TO BE BASELINED — owner: ___]` and is listed, so nothing is silently made up;
+    becomes `[TO BE BASELINED — owner: Sender]` and is listed, so nothing is silently made up;
   * cadence.csv — touch, date, channel, template, basis, stop_rule: the touches of the matching row of
     references/cadence.md, dated in business days from last_touch_date (or timeline_date where the row
     says so). A touch without a computable date is left for the user with its basis.
@@ -31,7 +31,7 @@ import re
 import sys
 from pathlib import Path
 
-TBD = "[TO BE BASELINED — owner: ___]"
+TBD = "[TO BE BASELINED — owner: Sender]"
 TYPES = {
     "referral-ask": {"section": "1", "cadence": "Referral ask (warm contact)", "cold": "Referral ask (cold contact)"},
     "recruiter-reply": {"section": "2", "cadence": "Recruiter inbound"},
@@ -276,7 +276,7 @@ def write_message(path: Path, msg_type: str, title: str, variants, ctx: dict, ca
     L = [f"# {title} — {ctx['role']}, {ctx['company']}", "",
          f"Type: {msg_type} | Recipient: {ctx['recipient']} | Channel: {ctx.get('channel') or 'email'} | "
          f"Last touch: {ctx['last_touch_date']}", "",
-         "Facts come only from context.json. Every unfilled slot is `[TO BE BASELINED — owner: ___]` and listed "
+         "Facts come only from context.json. Every unfilled slot is `[TO BE BASELINED — owner: Sender]` and listed "
          "below; the polish step fills a slot only when a listed fact supports it.", ""]
     all_unfilled = []
     for v in variants:

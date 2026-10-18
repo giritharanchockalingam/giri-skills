@@ -30,7 +30,7 @@ def test_sow_from_fixture(tmp_path):
     assert text.startswith("# Statement of Work — Northwind Retail — Order Hub Integration")
     assert "| S-01 | Deliver Interface inventory and complexity scores (Wave 0) |" in text
     assert "| O-02 | store POS replacement | S-02 |" in text
-    assert "| D-03 | Cutover runbook | Step list with rollback | Markdown | [TO BE BASELINED — owner: ___] |" in text
+    assert "| D-03 | Cutover runbook | Step list with rollback | Markdown | [TO BE BASELINED — owner: Delivery lead] |" in text
     assert "| A-02 | No cutover inside the peak freeze" in text
     assert "| D-02 | A | R | R | I | C | C |" in text                 # RACI stub
     assert "## 10. Change control" in text and "CR-nn" in text          # clause from template
@@ -47,7 +47,7 @@ def test_thin_proposal_marks_acceptance_tbd(tmp_path):
     r, sow, dl, ac = run(tmp_path, FX / "proposal-thin.md")
     assert r.returncode == 0, r.stderr
     rows = list(csv.DictReader(dl.open(encoding="utf-8")))
-    assert all(r_["acceptance"] == "[TO BE BASELINED — owner: ___]" for r_ in rows)
+    assert all(r_["acceptance"] == "[TO BE BASELINED — owner: Delivery lead]" for r_ in rows)
     assert "proposal carries no assumption register" in sow.read_text(encoding="utf-8")
 
 

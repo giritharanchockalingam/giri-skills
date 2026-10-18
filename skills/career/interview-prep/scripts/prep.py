@@ -268,7 +268,7 @@ def write_plan(template: str, rows, jd_title: str, jd: str, path: Path) -> None:
             ln = "| " + " | ".join(cells) + " |"
         ln = re.sub(r":\s*___\s*$", f": {TBD.format(owner='Hiring manager')}", ln)
         out.append(ln)
-    text = "\n".join(out).replace("owner: ___]", "owner: Me]")
+    text = "\n".join(out).replace("owner: Candidate]", "owner: Me]")
     # JD-derived focus headings: top competencies by JD emphasis
     focus = ["", "## Focus areas from the JD", ""]
     top = [r for r in rows if r["in_jd"] == "yes"][:4]
