@@ -1,0 +1,15 @@
+key,value,source,notes
+system_name,,,name of the AI system or feature being released
+risk_tier,,,low | medium | high (from ai-governance-risk or your risk process)
+eval_pass_rate,,,fraction 0-1 from the offline eval run (llm-eval-harness)
+redteam_pass_rate,,,fraction 0-1 from the red-team suite
+latency_p95_ms,,,measured in staging or shadow
+error_rate,,,fraction 0-1 measured in staging or shadow
+daily_requests,,,expected production requests per day
+min_observed_requests,,,requests each shadow/canary stage must observe before promotion
+rollback_time_min,,,measured time to roll back to the previous version
+canary_steps,,,optional override of the tier policy e.g. 1;5;25
+owner_eval_lead,,,name
+owner_sre_oncall,,,name
+owner_release_manager,,,name
+owner_product_owner,,,name

@@ -1,0 +1,17 @@
+# fictional fixture — invented feedback rows for tests only; no real users
+id,ts,rating,comment,tags,trace_id,feature,notes
+F01,2026-09-08T09:10:00Z,1,It made up a policy number that does not exist,,t-101,policy-qa,fictional fixture
+F02,2026-09-08T10:00:00Z,down,Cited a deductible that is not true for my plan,,t-102,policy-qa,fictional fixture
+F03,2026-09-08T11:30:00Z,2,Answer was inaccurate about the waiting period,,,policy-qa,fictional fixture
+F04,2026-09-08T12:00:00Z,5,Great answer thanks,,t-104,policy-qa,fictional fixture
+F05,2026-09-08T13:15:00Z,2,Gave me a wall of text instead of the summary table,,t-105,claims-summary,fictional fixture
+F06,2026-09-08T14:00:00Z,3,The format is hard to scan,,t-106,claims-summary,fictional fixture
+F07,2026-09-09T08:00:00Z,1,It took forever and then timed out,,t-107,claims-summary,fictional fixture
+F08,2026-09-09T09:00:00Z,down,Refused to answer a normal question about my own claim,,t-108,claims-summary,fictional fixture
+F09,2026-09-09T10:00:00Z,2,Missing the information on appeal deadlines,,t-109,policy-qa,fictional fixture
+F10,2026-09-09T11:00:00Z,up,,,t-110,claims-summary,fictional fixture
+F11,2026-09-09T12:00:00Z,1,Something felt off,latency,t-111,claims-summary,fictional fixture
+F12,2026-09-09T13:00:00Z,3,Bit condescending,,t-112,policy-qa,fictional fixture
+F13,2026-09-09T14:00:00Z,4,Fine,,,policy-qa,fictional fixture
+F14,2026-09-09T15:00:00Z,meh,unrated row,,,policy-qa,fictional fixture
+F15,2026-09-10T09:00:00Z,1,Answer was about a different product entirely,,t-115,policy-qa,fictional fixture

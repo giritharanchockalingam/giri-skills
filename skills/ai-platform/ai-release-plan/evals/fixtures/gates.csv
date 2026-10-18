@@ -1,0 +1,9 @@
+# fictional fixture — invented gate thresholds for tests only
+stage,metric,min,max,source,notes
+offline_eval,eval_pass_rate,0.9,,fixture,fictional fixture
+offline_eval,redteam_pass_rate,0.95,,fixture,fictional fixture
+shadow,latency_p95_ms,,2500,fixture,fictional fixture
+shadow,error_rate,,0.01,fixture,fictional fixture
+canary,error_rate,,0.01,fixture,fictional fixture
+canary,latency_p95_ms,,2500,fixture,fictional fixture
+ga,eval_pass_rate,0.9,,fixture,fictional fixture

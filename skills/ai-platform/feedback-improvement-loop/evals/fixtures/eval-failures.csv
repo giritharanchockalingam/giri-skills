@@ -1,0 +1,5 @@
+# fictional fixture — invented eval failures for tests only
+case_id,feature,failure_reason,notes
+E-07,policy-qa,Answer contained an invented clause number,fictional fixture
+E-12,claims-summary,Output not in the required table format,fictional fixture
+E-19,policy-qa,Judge marked answer incorrect vs reference,fictional fixture
