@@ -1,0 +1,3 @@
+term,definition,avoid
+"# One or two sentences: what the term IS. avoid = synonyms to stop using, separated by ;",,
+<Term>,<definition>,<synonym>; <synonym>

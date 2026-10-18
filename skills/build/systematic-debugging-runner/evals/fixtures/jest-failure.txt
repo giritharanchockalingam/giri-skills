@@ -1,0 +1,16 @@
+# fictional fixture — invented Jest output for the systematic-debugging-runner evals; not from a real system
+ FAIL  src/cart/__tests__/cart.test.ts
+  ● Cart › applies coupon
+
+    TypeError: Cannot read properties of undefined (reading 'percent')
+
+      12 | export function applyCoupon(cart: Cart, code: string): Cart {
+      13 |   const coupon = findCoupon(code);
+    > 14 |   const off = cart.subtotal * coupon.percent / 100;
+         |                                      ^
+
+      at applyCoupon (src/cart/coupon.ts:14:38)
+      at Object.<anonymous> (src/cart/__tests__/cart.test.ts:21:20)
+      at Promise.then.completed (node_modules/jest-circus/build/utils.js:298:28)
+
+Tests:       1 failed, 4 passed, 5 total

@@ -1,0 +1,5 @@
+from,to,cardinality,name,notes
+"# fictional fixture — invented relationships for the domain-modeling-runner evals",,,,
+Student,Course,N:M,enrolls in,join: Enrollment
+Course,Offering,1:N,is offered as,
+Term,Offering,1:N,schedules,

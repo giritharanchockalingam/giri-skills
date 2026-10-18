@@ -1,0 +1,84 @@
+{
+  "skill": "systematic-debugging-runner",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "This pytest test started failing after my change. Here is the output, the diff since the last green build and the repro steps. Why is it failing?",
+      "expected": [
+        "Runs scripts/debug_log.py; KeyError parsed with 4 frames, innermost in-repo frame billing/tax.py:17",
+        "Classification regression-likely because tax.py line 17 sits in a changed hunk",
+        "Hypotheses ranked with a falsifying test each; fix gate closed"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/pytest-failure.txt",
+        "diff": "evals/fixtures/recent.patch",
+        "repro": "evals/fixtures/repro.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:debug.json",
+        {"file": "debug-log.md", "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"},
+        {"file": "debug-log.md", "check": "contains:\"regression-likely\""},
+        {"file": "debug-log.md", "check": "contains:\"Fix allowed: NO\""}
+      ]
+    },
+    {
+      "id": "agent-missing-log",
+      "prompt": "My build is broken, debug it.",
+      "expected": [
+        "Asks once for the failure log instead of guessing the error"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:log"
+      ]
+    },
+    {
+      "id": "agent-no-error-no-invention",
+      "prompt": "It is broken somehow; here is the log. Just tell me what the bug is.",
+      "expected": [
+        "The log has no exception; the script exits 2 and the run fails rather than inventing a symptom"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/no-error.txt"
+      },
+      "checks": [
+        "exit:1"
+      ]
+    },
+    {
+      "id": "agent-jest-no-diff",
+      "prompt": "Jest test fails with a TypeError, no diff available. Organise the evidence.",
+      "expected": [
+        "Parses JS frames; innermost in-repo frame src/cart/coupon.ts:14; node_modules frame excluded",
+        "Classification no-diff; missing repro marked with an owner"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/jest-failure.txt"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "debug-log.md", "check": "contains:\"src/cart/coupon.ts:14 in applyCoupon\""},
+        {"file": "debug-log.md", "check": "contains:\"[TO BE BASELINED — owner: Reporting engineer]\""}
+      ]
+    },
+    {
+      "id": "agent-narrative-dry",
+      "prompt": "Root-cause this Java NPE and write up the investigation.",
+      "expected": [
+        "Deepest Caused by is the root exception; narrative step fills the investigation template from the debug log and the upstream method"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/java-failure.txt",
+        "narrative": "true"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "debug-log.md", "check": "contains:\"java.lang.NullPointerException\""},
+        {"file": "investigation.md", "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"},
+        {"file": "investigation.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

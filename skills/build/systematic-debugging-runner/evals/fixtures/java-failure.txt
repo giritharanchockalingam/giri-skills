@@ -1,0 +1,9 @@
+# fictional fixture — invented Java stack trace for the systematic-debugging-runner evals; not from a real system
+Exception in thread "main" java.lang.IllegalStateException: order processing failed
+	at com.acme.orders.OrderService.process(OrderService.java:57)
+	at com.acme.orders.Main.main(Main.java:12)
+Caused by: java.lang.NullPointerException: Cannot invoke "com.acme.orders.Address.zip()" because "addr" is null
+	at com.acme.orders.ShippingCalculator.quote(ShippingCalculator.java:33)
+	at com.acme.orders.OrderService.process(OrderService.java:54)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	... 1 more

@@ -1,0 +1,3 @@
+from,to,cardinality,name,notes
+"# cardinality: 1:1 | 1:N | N:M. An N:M row must name its join in notes, e.g. join: <JoinEntity>",,,,
+<Entity>,<OtherEntity>,1:N,<verb phrase>,
