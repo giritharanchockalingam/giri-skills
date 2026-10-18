@@ -192,3 +192,14 @@ def test_cli(tmp_path):
     r = run_script(SCRIPT, str(p), "json")
     assert r.returncode == 1
     assert "FAIL" in r.stdout
+
+
+def test_numbers_trace_to_ignores_iso_dates_but_not_derived_percentages(tmp_path):
+    import check_output
+    ref = tmp_path / "ref.json"; ref.write_text('{"p50": 223, "p80": 246}', encoding="utf-8")
+    ok = tmp_path / "ok.md"; ok.write_text("Memo v0.1 (2026-10-18)\nP80 246 person-days, P50 223.\n", encoding="utf-8")
+    bad = tmp_path / "bad.md"; bad.write_text("Memo (2026-10-18)\nArchitect 64% in phase 2.\n", encoding="utf-8")
+    r_ok = check_output.run_check(f"numbers_trace_to:{ref}", ok, cwd=tmp_path, mode="real")
+    r_bad = check_output.run_check(f"numbers_trace_to:{ref}", bad, cwd=tmp_path, mode="real")
+    assert r_ok["pass"] is True, r_ok
+    assert r_bad["pass"] is False and "64" in r_bad["evidence"] and "2026" not in r_bad["evidence"]

@@ -61,7 +61,9 @@ TOKEN_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 OPT_GROUP_RE = re.compile(r"\[([^\[\]]*\{[^\[\]]*)\]")
 CONTEXT_LIMIT = 12 * 1024
 
-LLM_INSTRUCTION = ("Fill this template using ONLY the context files. Where the files do not say, write "
+LLM_INSTRUCTION = ("Fill this template using ONLY the context files. Copy every number exactly as it appears in "
+                   "them; never calculate, re-round or derive new numbers (percentages, totals, splits, rates) — if a "
+                   "value would need calculating, write the marker instead. Where the files do not say, write "
                    "`[TO BE BASELINED — owner: <role>]` naming the accountable role (e.g. Client PMO, Delivery lead, "
                    "Account owner) — never leave the owner blank. Use one marker per unknown fact; drop empty example "
                    "rows instead of filling them with markers. Return the completed file only.")
@@ -299,7 +301,7 @@ def run_llm_step(step, values, assumptions, skill_dir: Path, provider, logs: Pat
                 "duration_s": round(time.time() - t0, 3), "out": str(out_path), "error": ""}
     system = ((SHARED / "quality-bar.md").read_text(encoding="utf-8") + "\n\n"
               + (SHARED / "writing-style.md").read_text(encoding="utf-8"))
-    parts = [LLM_INSTRUCTION, "", "## Template", "", tmpl]
+    parts = [LLM_INSTRUCTION, f"Today's date (use it for dates in the header): {time.strftime('%Y-%m-%d')}.", "", "## Template", "", tmpl]
     if assumptions:
         parts += ["", "## Assumptions supplied by the user (label each use as [ASSUMED: …])", ""]
         parts += [f"- {v}" for v in assumptions.values()]

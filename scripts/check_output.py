@@ -13,7 +13,7 @@ Check spec syntax (a string):
   sections:[A,B]               a Markdown heading contains each listed text (case-insensitive)
   no_unowned_tbd               every `[TO BE BASELINED` marker names an owner (real mode);
                                dry mode only verifies the marker format `— owner:`
-  numbers_trace_to:<file>      every number in the output with >= 3 significant digits, or
+  numbers_trace_to:<file>      every number (ISO dates excluded) in the output with >= 3 significant digits, or
                                with a $ or % sign, appears in <file> (list of files allowed);
                                skipped in dry mode
   cites_source_ids:<file>      every `[Sn]` citation in the output exists as an id `Sn` in <file>;
@@ -188,10 +188,13 @@ def _sig_digits(num: str) -> int:
     return len(digits)
 
 
+ISO_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+
+
 def _numbers(text: str):
-    """Numbers worth tracing: >=3 significant digits or carrying $ / %."""
+    """Numbers worth tracing: >=3 significant digits or carrying $ / %. ISO dates (yyyy-mm-dd) are dates, not figures."""
     out = []
-    for m in NUMBER_RE.finditer(text):
+    for m in NUMBER_RE.finditer(ISO_DATE_RE.sub(" ", text)):
         sym, num, pct = m.groups()
         if sym or pct or _sig_digits(num) >= 3:
             out.append(num.replace(",", ""))
