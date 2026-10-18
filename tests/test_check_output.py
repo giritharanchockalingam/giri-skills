@@ -223,3 +223,13 @@ def test_cmd_check_resolves_relative_output_paths(tmp_path, monkeypatch):
     r = check_output.run_check('cmd:"python3 -c \\"import sys,os; sys.exit(0 if os.path.isfile(sys.argv[1]) else 3)\\" {path}"',
                                Path("out/x.json"), cwd=skill_dir, mode="real")
     assert r["pass"] is True, r
+
+
+def test_mermaid_parses_accepts_er_diagram_cardinality(tmp_path):
+    import check_output
+    f = tmp_path / "m.md"
+    f.write_text("```mermaid\nerDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER {\n    string id\n  }\n```\n", encoding="utf-8")
+    assert check_output.run_check("mermaid_parses", f, cwd=tmp_path, mode="real")["pass"] is True
+    g = tmp_path / "n.md"
+    g.write_text("```mermaid\nerDiagram\n  CUSTOMER\n  ORDER\n```\n", encoding="utf-8")
+    assert check_output.run_check("mermaid_parses", g, cwd=tmp_path, mode="real")["pass"] is False

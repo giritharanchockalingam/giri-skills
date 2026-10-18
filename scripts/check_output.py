@@ -391,11 +391,14 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
         blocks = re.findall(r"```mermaid\s*\n(.*?)```", text, re.S)
         if not blocks:
             return _result(spec, False, "no mermaid block")
+        er_edge = re.compile(r"[|}o][|o]?(--|\.\.)[|o]?[|{o]")  # erDiagram cardinality, e.g. ||--o{  }|..|{
         for b in blocks:
-            for o, c in ("[]", "{}", "()"):
+            is_er = b.lstrip().startswith("erDiagram")
+            # erDiagram uses { } for cardinality markers and attribute blocks, so only () [] must balance there
+            for o, c in (("[]", "()") if is_er else ("[]", "{}", "()")):
                 if b.count(o) != b.count(c):
                     return _result(spec, False, f"unbalanced {o}{c}")
-            if "-->" not in b and "---" not in b and "->>" not in b:
+            if "-->" not in b and "---" not in b and "->>" not in b and not (is_er and er_edge.search(b)):
                 return _result(spec, False, "no edges")
         return _result(spec, True, f"{len(blocks)} block(s) ok")
     if name == "max_lines":
