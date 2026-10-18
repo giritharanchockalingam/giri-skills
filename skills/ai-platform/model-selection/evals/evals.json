@@ -1,0 +1,79 @@
+{
+  "skill": "model-selection",
+  "cases": [
+    {
+      "id": "which-model-no-facts",
+      "prompt": "Which LLM should we use for our claims-summary assistant?",
+      "expected": [
+        "Asks once for the candidate shortlist with the team's own eval scores, prices and latency (dated, sourced) and for the criteria and hard constraints",
+        "Offers assets/candidates-template.csv and assets/criteria-template.csv; does not quote any model price, benchmark score or capability from memory"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Rank these five candidates on our criteria and workload and tell me which model to pick.",
+      "expected": [
+        "Runs scripts/select_model.py; eliminates Cedar-8 and Delta-Pro with reasons; Atlas-L wins at 0.6 with Birch-70 runner-up; sensitivity stable"
+      ],
+      "inputs": {
+        "candidates": "evals/fixtures/candidates.csv",
+        "criteria": "evals/fixtures/criteria.csv",
+        "workload": "evals/fixtures/workload.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:ranking.json",
+        {"file": "decision.md", "check": "sections:[\"Recommendation\",\"Eliminated\",\"Scores\",\"Sensitivity\",\"Sources\"]"},
+        {"file": "decision.md", "check": "numbers_trace_to:ranking.json"},
+        {"file": "decision.md", "check": "contains:\"Atlas-L (fictional)** (Provider One (fictional), api) ranks first\""},
+        {"file": "decision.md", "check": "contains:\"p95_latency_ms = 3000 above hard_max 2500\""},
+        {"file": "decision.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-missing-candidates",
+      "prompt": "Pick a model for us using these criteria.",
+      "expected": [
+        "Asks for the candidates file instead of inventing a shortlist or model facts"
+      ],
+      "inputs": {
+        "criteria": "evals/fixtures/criteria.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:candidates"
+      ]
+    },
+    {
+      "id": "agent-no-survivor-self-host",
+      "prompt": "We must self-host and need at least 0.85 task accuracy. Which model?",
+      "expected": [
+        "Every candidate is eliminated with reasons; the run exits 1 and decision.md says no candidate meets the hard constraints instead of recommending one anyway"
+      ],
+      "inputs": {
+        "candidates": "evals/fixtures/candidates.csv",
+        "criteria": "evals/fixtures/criteria-self-host-strict.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "ranking.json", "check": "contains:\"ranking\": []"},
+        {"file": "decision.md", "check": "contains:\"None of the 5 candidates survives the hard constraints\""},
+        {"file": "decision.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-cost-criterion-without-workload",
+      "prompt": "Rank on cost too, but I don't have volumes yet.",
+      "expected": [
+        "Refuses to compute monthly cost without a workload; exits with an input error rather than assuming volumes"
+      ],
+      "inputs": {
+        "candidates": "evals/fixtures/candidates.csv",
+        "criteria": "evals/fixtures/criteria.csv"
+      },
+      "checks": [
+        "exit:1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "_fixture": "fictional fixture - deliberately broken spec: undeclared {{language}}, unused 'channel', example missing a required variable, example output violating the schema",
+  "id": "ticket-triage",
+  "version": "1.3",
+  "role": "You are the support-ticket triage assistant for Northwind Utilities (a fictional company).",
+  "task": "Classify the ticket below and answer in {{language}}.\n\nCustomer tier: {{customer_tier}}\n\nTicket:\n{{ticket_text}}",
+  "variables": [
+    {"name": "ticket_text", "description": "Raw ticket body", "required": true},
+    {"name": "customer_tier", "description": "standard | priority", "required": true},
+    {"name": "channel", "description": "email | web", "required": false}
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": ["category", "urgency", "needs_human"],
+    "properties": {
+      "category": {"type": "string", "enum": ["billing", "outage", "meter", "account", "other"]},
+      "urgency": {"type": "string", "enum": ["low", "medium", "high"]},
+      "needs_human": {"type": "boolean"}
+    }
+  },
+  "constraints": ["Use only the ticket text."],
+  "examples": [
+    {
+      "inputs": {"ticket_text": "My bill doubled.", "language": "en"},
+      "output": {"category": "invoice", "urgency": "medium", "needs_human": "no"}
+    }
+  ],
+  "max_input_tokens": 1200
+}

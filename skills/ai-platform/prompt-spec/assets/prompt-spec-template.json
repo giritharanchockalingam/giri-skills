@@ -1,0 +1,23 @@
+{
+  "id": "<lowercase-slug>",
+  "version": "0.1.0",
+  "role": "<stable instructions: who the assistant is, what it must and must not do>",
+  "task": "<per-request instruction with {{variable_name}} placeholders>",
+  "variables": [
+    {"name": "variable_name", "description": "<what it holds and where it comes from>", "required": true}
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": ["<field>"],
+    "properties": {
+      "<field>": {"type": "string", "enum": ["<allowed>", "<values>"]}
+    }
+  },
+  "constraints": [
+    "<one rule per line, testable>"
+  ],
+  "examples": [
+    {"inputs": {"variable_name": "<owner-approved example input>"}, "output": {"<field>": "<allowed>"}}
+  ],
+  "max_input_tokens": 0
+}

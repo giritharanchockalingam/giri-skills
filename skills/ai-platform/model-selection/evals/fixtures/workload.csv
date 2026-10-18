@@ -1,0 +1,4 @@
+key,value,unit,source,as_of_date,notes
+tokens_in_per_request,1800,tokens,fictional log sample,2026-09-01,fictional fixture
+tokens_out_per_request,350,tokens,fictional log sample,2026-09-01,fictional fixture
+requests_per_month,400000,count,fictional product plan,2026-09-01,fictional fixture
