@@ -4,11 +4,24 @@ description: Use when an app is going to production or lacks visibility — "add
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: target, type: path, required: true, from: "Next.js repo root (created if absent)"}
+      - {name: project, type: string, required: false, from: "project name for docs/observability.md (default: target dir name)"}
+      - {name: dry_run, type: flag, required: false, flag: "--dry-run", from: "true to report only and write nothing"}
+    run:
+      - {step: install, kind: script, cmd: "python3 -I scripts/install.py --target {target} [--project {project}] {dry_run} --report-json {out}/install-report.json --report-md {out}/install-report.md"}
+    outputs:
+      - {path: "{out}/install-report.json", checks: [exists, json, contains:"written"]}
+      - {path: "{out}/install-report.md", checks: [exists, sections:["Written","Proposed","Env vars","Next steps"]]}
 ---
 
 # observability-setup
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten: a differing file gets a `.proposed` twin listed in the report for a manual merge.
 
 ## When to use
 - First production release; after an incident with "we had no idea"; before an SLA commitment.
@@ -61,3 +74,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/health-endpoints.md` — liveness vs readiness vs deep; response contract
 - `references/alerts-and-slos.md` — alert catalogue, SLO starter, error-budget policy, dashboard panels
 - `assets/logger.ts`, `assets/logger-context.ts`, `assets/health-route.ts`, `assets/health-deep-route.ts`, `assets/alert-rules.yaml`
+- `scripts/install.py` — installs the assets into a repo without overwriting (`.proposed` twins), appends env vars to `.env.example`

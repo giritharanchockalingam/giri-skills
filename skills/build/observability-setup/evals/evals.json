@@ -25,7 +25,74 @@
     {
       "id": "missing-input",
       "prompt": "Add observability.",
-      "expected": ["Asks once for critical journeys and alert channel", "Does not invent SLO numbers; marks them to be baselined with owner"]
+      "expected": [
+        "Asks once for critical journeys and alert channel",
+        "Does not invent SLO numbers; marks them to be baselined with owner"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Add structured logging, health endpoints and alert rules to the new app before the first production release.",
+      "expected": [
+        "Runs scripts/install.py; logger, health routes, alerts YAML and SLO starter are written; env vars appended to .env.example"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "project": "demo-app"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/lib/logger.ts",
+        "exists:repo/app/api/health/deep/route.ts",
+        "exists:repo/ops/alerts.yaml",
+        "exists:repo/docs/observability.md",
+        {
+          "file": "repo/.env.example",
+          "check": "contains:\"HEALTH_CHECK_TOKEN\""
+        },
+        {
+          "file": "repo/docs/observability.md",
+          "check": "sections:[\"SLOs\",\"Endpoints\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Set up observability.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-never-overwrites",
+      "prompt": "We already have a lib/logger.ts; just replace it with the standard one.",
+      "expected": [
+        "The existing logger is not overwritten; the report lists lib/logger.ts under proposed with a .proposed twin; dry run writes nothing"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-existing",
+        "dry_run": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "install-report.json",
+          "check": "contains:\"lib/logger.ts.proposed\""
+        },
+        {
+          "file": "install-report.json",
+          "check": "contains:\"\\\"dry_run\\\": true\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"Dry run\""
+        }
+      ]
     }
   ]
 }

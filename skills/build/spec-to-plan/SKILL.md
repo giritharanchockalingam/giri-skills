@@ -4,11 +4,24 @@ description: Use when a feature request, ticket or SPEC section must become an e
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: spec, type: md, required: true, from: "docs/SPEC.md (or a ticket exported to Markdown)"}
+      - {name: section, type: string, required: true, from: "heading text of the SPEC section to plan"}
+      - {name: slug, type: string, required: false, from: "plan slug (default: from the heading)"}
+    run:
+      - {step: plan, kind: script, cmd: "python3 -I scripts/plan.py {spec} --section {section} [--slug {slug}] --template assets/plan-template.md --out {out}/plan.md --tasks {out}/tasks.csv"}
+    outputs:
+      - {path: "{out}/plan.md", checks: [exists, sections:["Tasks","Gates","Rollback"]]}
+      - {path: "{out}/tasks.csv", checks: [exists, csv:[id,task,acceptance,test,rollback,files,size], csv_rows:test!empty, csv_rows:rollback!empty]}
 ---
 
 # spec-to-plan
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/spec-to-plan --input <name>=<value> … --out <dir>` (see `--explain build/spec-to-plan`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Fields the SPEC does not state come out as `[TO BE BASELINED — owner: ___]`; fill them (or the SPEC) before asking for the approve gate.
 
 ## When to use
 - "Plan this feature", "how should we build X", a ticket or SPEC section is handed over for implementation.
@@ -56,3 +69,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/plan-method.md` — task decomposition rules, sizing, gate definitions
 - `references/brainstorm-fallback.md` — question method when superpowers is absent
 - `assets/plan-template.md` — plan file template
+- `scripts/plan.py` — SPEC section → plan.md (tasks, gates, rollback) + tasks.csv; unknown fields marked `[TO BE BASELINED — owner: ___]`

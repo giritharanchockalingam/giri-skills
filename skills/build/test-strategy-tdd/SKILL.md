@@ -4,11 +4,25 @@ description: Use before implementing any feature, fix or refactor to decide what
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: feature, type: md, required: true, from: "feature.md: H1 title + one bullet per acceptance criterion (from spec-to-plan or the user)"}
+      - {name: files, type: string, required: true, from: "comma-separated repo-relative source files the feature touches"}
+      - {name: target, type: path, required: true, from: "repo root (tests/ created under it; existing tests never overwritten)"}
+      - {name: dry_run, type: flag, required: false, flag: "--dry-run", from: "true to report only and write nothing"}
+    run:
+      - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold_tests.py {feature} --files {files} --target {target} {dry_run} --report {out}/scaffold-report.json --plan {out}/test-plan.md"}
+    outputs:
+      - {path: "{out}/scaffold-report.json", checks: [exists, json, contains:"written"]}
+      - {path: "{out}/test-plan.md", checks: [exists, sections:["Pyramid","Criteria map","Red"]]}
 ---
 
 # test-strategy-tdd
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/test-strategy-tdd --input <name>=<value> … --out <dir>` (see `--explain build/test-strategy-tdd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Stubs are `it.todo` / `test.fixme` per criterion — red first; replace each with a failing test before implementing.
 
 ## When to use
 - "Write tests for", "how should we test", "add coverage", before any task from `spec-to-plan`.
@@ -57,3 +71,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/tdd-method.md` — red/green/refactor rules (fallback for superpowers)
 - `references/playwright-patterns.md` — auth, tenant, selectors, flake control (fallback for webapp-testing)
 - `assets/vitest.config.ts`, `assets/playwright.config.ts`, `assets/tests-setup.ts`, `assets/e2e-auth.setup.ts`, `assets/unit-test.example.ts`, `assets/e2e-test.example.ts`
+- `scripts/scaffold_tests.py` — feature.md + file list → vitest `it.todo` stubs and Playwright `test.fixme` specs, never overwriting

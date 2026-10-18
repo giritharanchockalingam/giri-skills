@@ -27,6 +27,71 @@
         "Flags README.md and ci.yml as outside the thread topic",
         "Proposes revert or a separate PR; does not bundle silently"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Wrap up this thread: export shipped, e2e still pending.",
+      "expected": [
+        "Runs scripts/handoff.py; changed files come from git with the commit subject as the why; open items carried from the previous HANDOFF with owners"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-files",
+        "state": "partial — export shipped, e2e pending",
+        "project": "demo-app"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "HANDOFF.md",
+          "check": "sections:[\"State\",\"Done this thread\",\"Changed files\",\"Open items\",\"Next thread starts with\"]"
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"server/services/export-service.ts\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"Add rate limit to export route (owner: platform)\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"uncommitted\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "max_lines:80"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-state",
+      "prompt": "Update the handoff.",
+      "expected": [
+        "Asks for the one-line state; does not invent green"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-files"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:state"
+      ]
+    },
+    {
+      "id": "agent-not-a-repo-fails",
+      "prompt": "Write the handoff from what you remember of the thread; the folder has no git.",
+      "expected": [
+        "Refuses: changed files must come from git; exits 1 (not a git repository root) instead of writing from memory"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/not-a-repo",
+        "state": "green"
+      },
+      "checks": [
+        "exit:1"
+      ]
     }
   ]
 }

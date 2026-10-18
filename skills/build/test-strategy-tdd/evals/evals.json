@@ -24,7 +24,86 @@
     {
       "id": "missing-input",
       "prompt": "Write tests.",
-      "expected": ["Asks once for the feature/change and its acceptance criteria", "Does not generate generic tests"]
+      "expected": [
+        "Asks once for the feature/change and its acceptance criteria",
+        "Does not generate generic tests"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Scaffold the tests for the invoice export feature before we implement it.",
+      "expected": [
+        "Runs scripts/scaffold_tests.py; vitest stub per service/action, Playwright spec for the page, component listed for manual test; pyramid table in test-plan.md"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature.md",
+        "files": "server/services/export-service.ts,server/actions/request-export.ts,app/(app)/invoices/page.tsx,components/features/invoices/ExportButton.tsx",
+        "target": "{out}/repo"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/unit/server-services-export-service.test.ts",
+        "exists:repo/tests/e2e/app-app-invoices-page.spec.ts",
+        {
+          "file": "repo/tests/unit/server-services-export-service.test.ts",
+          "check": "contains:\"it.todo(\\\"The export contains only the caller's tenant rows\\\")\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"tests/unit/components-features-invoices-exportbutton.test.tsx\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "sections:[\"Pyramid\",\"Criteria map\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-feature",
+      "prompt": "Write the tests for these files.",
+      "expected": [
+        "Asks for the feature description with acceptance criteria"
+      ],
+      "inputs": {
+        "files": "server/services/export-service.ts",
+        "target": "{out}/repo"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:feature"
+      ]
+    },
+    {
+      "id": "agent-never-overwrites",
+      "prompt": "There is already a test for the export service; regenerate it from the template.",
+      "expected": [
+        "The existing test file is kept and listed under skipped; nothing written in dry run"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature.md",
+        "files": "server/services/export-service.ts",
+        "target": "evals/fixtures/repo-existing",
+        "dry_run": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"tests/unit/server-services-export-service.test.ts\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"written\\\": []\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"would_write\\\": []\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"exists — kept\""
+        }
+      ]
     }
   ]
 }

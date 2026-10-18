@@ -4,11 +4,23 @@ description: Use when a product feature or capability needs defining before engi
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: brief, type: json, required: true, from: "brief.json: {feature, problem, users[], goals[], non_goals[], metrics[{name,target,baseline}], phases[{name,scope[]}]} (layout: evals/fixtures/brief.json)"}
+    run:
+      - {step: prd, kind: script, cmd: "python3 -I scripts/prd.py {brief} --template assets/prd-template.md --out {out}/PRD.md"}
+      - {step: sharpen, kind: llm, template: assets/prd-template.md, context: ["{out}/PRD.md", "references/prd-method.md", "references/prd-review-checklist.md"], out: "{out}/prd-final.md"}
+    outputs:
+      - {path: "{out}/PRD.md", checks: [exists, sections:["Problem","Users","Goals","Non-goals","Metrics","Phases","Engineering handoff"]]}
+      - {path: "{out}/prd-final.md", checks: [exists, sections:["Problem","Goals","Non-goals","Metrics","Phases"], no_unowned_tbd]}
 ---
 
 # product-spec-prd
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/product-spec-prd --input <name>=<value> … --out <dir>` (see `--explain build/product-spec-prd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Every brief field the script cannot find becomes `[TO BE BASELINED — owner: ___]`; the sharpen step may tighten wording but must not invent numbers, users or dates.
 
 ## When to use
 - A feature idea, customer ask, or roadmap item needs a definition engineers can plan from.
@@ -56,3 +68,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/prd-method.md` — framing questions, scoping rules, metric design (fallback for write-spec)
 - `references/prd-review-checklist.md` — challenge list used before presenting
 - `assets/prd-template.md` — PRD template
+- `scripts/prd.py` — brief.json → PRD.md on the template; missing arrays become `[TO BE BASELINED — owner: ___]` rows

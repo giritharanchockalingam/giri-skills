@@ -4,11 +4,24 @@ description: Use when the user reports a bug or says "fix this" — an error, st
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: target, type: dir, required: true, from: "repo directory the test command runs in"}
+      - {name: cmd, type: string, required: true, from: "the full test command, e.g. \"python3 -m pytest -q\" or \"npx vitest run\""}
+      - {name: baseline, type: json, required: false, from: "baseline.json recorded by `safefix.py baseline` before the fix; without it the baseline is taken now (pre-fix state)"}
+    run:
+      - {step: baseline, kind: script, cmd: "python3 -I scripts/safefix.py baseline --target {target} --cmd {cmd} --out {out}/baseline.json", skip_if_present: [baseline]}
+      - {step: verify, kind: script, cmd: "python3 -I scripts/safefix.py verify --target {target} --cmd {cmd} [--baseline {baseline}] --out {out}/verify.json"}
+    outputs:
+      - {path: "{out}/verify.json", checks: [exists, json, contains:"collateral"]}
 ---
 
 # safe-fix
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/safe-fix --input <name>=<value> … --out <dir>` (see `--explain build/safe-fix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Typical flow: run once before the fix (writes `baseline.json`), apply the fix, run again with `--input baseline=<dir>/baseline.json`; any newly failing test is collateral and the run exits 1.
 
 ## When to use
 - "Fix this bug", an error message, stack trace, failing CI job, "it used to work", production incident follow-up.
@@ -58,3 +71,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/never-collateral.md` — the guardrails (what a fix may never do)
 - `references/common-bugs-stack.md` — recurring causes in Next.js/Supabase/Vercel apps
 - `assets/fix-report.md` — report template
+- `scripts/safefix.py` — `baseline` / `verify`: snapshots the test suite before a fix and fails (exit 1) on any newly failing test

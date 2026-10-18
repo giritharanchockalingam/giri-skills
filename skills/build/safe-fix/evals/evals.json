@@ -31,6 +31,66 @@
         "Does not guess-fix; proposes targeted logging if no repro after evidence gathering",
         "Does not weaken or skip any test"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Before I touch the calculator module, snapshot the test suite, then verify nothing else broke after the fix.",
+      "expected": [
+        "Runs safefix.py baseline then verify; no collateral; verify.json lists an empty collateral set"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-green",
+        "cmd": "python3 -m pytest -q -p no:cacheprovider"
+      },
+      "checks": [
+        "exit:0",
+        "exists:baseline.json",
+        {
+          "file": "verify.json",
+          "check": "json"
+        },
+        {
+          "file": "verify.json",
+          "check": "contains:\"\\\"collateral\\\": []\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-cmd",
+      "prompt": "Verify my fix did not break anything.",
+      "expected": [
+        "Asks for the test command once; does not guess the runner"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-green"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:cmd"
+      ]
+    },
+    {
+      "id": "agent-collateral-fails",
+      "prompt": "I fixed add(); test_add passes so ship it.",
+      "expected": [
+        "verify exits 1 and names test_multiply as collateral instead of passing the fix"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-collateral",
+        "cmd": "python3 -m pytest -q -p no:cacheprovider",
+        "baseline": "evals/fixtures/baseline-green.json"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "verify.json",
+          "check": "contains:\"collateral\""
+        },
+        {
+          "file": "verify.json",
+          "check": "contains:\"test_calc.py::test_multiply\""
+        }
+      ]
     }
   ]
 }

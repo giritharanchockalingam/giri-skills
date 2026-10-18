@@ -4,11 +4,26 @@ description: Use when designing or changing tenant isolation, roles/permissions,
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: migrations, type: dir, required: true, from: "supabase/migrations directory (or one .sql file) to audit for tenant_id / RLS / tenant-leading index"}
+      - {name: rbac, type: csv, required: false, default: assets/rbac-matrix.csv, from: "RBAC matrix in the assets/rbac-matrix.csv layout (default: the starter matrix)"}
+      - {name: exempt, type: string, required: false, from: "comma-separated global tables exempt from tenant_id (default: tenants,plans,feature_flags,profiles)"}
+    run:
+      - {step: policies, kind: script, cmd: "python3 -I scripts/rbac_to_sql.py {rbac} --out {out}/policies.sql"}
+      - {step: audit, kind: script, cmd: "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] --out {out}/audit.csv --report {out}/audit.md"}
+    outputs:
+      - {path: "{out}/policies.sql", checks: [exists, contains:"create policy", contains:"-- rollback:"]}
+      - {path: "{out}/audit.csv", checks: [exists, csv:[table,file,has_tenant_id,rls_enabled,tenant_index,policies,exempt,status,findings], csv_rows:status~^(ok|finding)$]}
+      - {path: "{out}/audit.md", checks: [exists, sections:["Tables","Rules"]]}
 ---
 
 # multi-tenant-saas-patterns
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/multi-tenant-saas-patterns --input <name>=<value> … --out <dir>` (see `--explain build/multi-tenant-saas-patterns`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The audit step exits 1 when a non-exempt table lacks tenant_id, RLS or a tenant-leading index; hand the findings and `policies.sql` to supabase-schema-rls for the migration.
 
 ## When to use
 - "Add organisations/workspaces", "who can do what", "plans and limits", "feature flags per customer", "audit trail", "invite users", "switch tenant".
@@ -63,3 +78,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/audit-log.md` — schema, trigger, app events, retention, access
 - `assets/rbac-matrix.csv` — starter matrix
 - `assets/tenancy-schema.sql` — reference DDL for the core tables (hand to supabase-schema-rls)
+- `scripts/tenancy_audit.py` — migrations → tenant_id / RLS / leading-index audit (exit 1 on findings); `scripts/rbac_to_sql.py` — matrix → policies.sql

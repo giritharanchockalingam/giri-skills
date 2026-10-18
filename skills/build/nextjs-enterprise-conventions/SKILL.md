@@ -4,11 +4,22 @@ description: Use whenever writing or reviewing Next.js (App Router) / React / Ty
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: target, type: dir, required: true, from: "Next.js repo root (app/, components/, lib/, server/)"}
+    run:
+      - {step: lint, kind: script, cmd: "python3 -I scripts/lint_conventions.py --target {target} --findings {out}/findings.csv --report {out}/report.md"}
+    outputs:
+      - {path: "{out}/findings.csv", checks: [exists, csv:[rule,file,line,snippet,severity]]}
+      - {path: "{out}/report.md", checks: [exists, sections:["Summary","Findings","Rules"]]}
 ---
 
 # nextjs-enterprise-conventions
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/nextjs-enterprise-conventions --input <name>=<value> … --out <dir>` (see `--explain build/nextjs-enterprise-conventions`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The lint step exits 1 on any high-severity finding, so a non-compliant repo fails the run by design; fix the findings in code, then re-run.
 
 ## When to use
 - Any new or modified file under `app/`, `components/`, `lib/`, `server/`.
@@ -59,3 +70,4 @@ If a required input is missing, ask for it once; do not guess.
 - `references/logging.md` — log schema, correlation id, redaction
 - `references/conventions-checklist.md` — rule table used in verify
 - `assets/result.ts`, `assets/server-action.example.ts`, `assets/service.example.ts` — starters
+- `scripts/lint_conventions.py` — offline linter for NX1–NX5 (Supabase in components, console.log, zod at actions, service-role exposure, raw SQL); exit 1 on high findings

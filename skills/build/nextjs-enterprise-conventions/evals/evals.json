@@ -24,7 +24,72 @@
     {
       "id": "missing-input",
       "prompt": "Make this component follow our conventions.",
-      "expected": ["Asks once which file/diff", "Does not guess the component"]
+      "expected": [
+        "Asks once which file/diff",
+        "Does not guess the component"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Check this repo against our Next.js conventions before I open the PR.",
+      "expected": [
+        "Runs scripts/lint_conventions.py; a compliant repo passes with an empty findings table"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Lint the conventions.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-violations-fail-gate",
+      "prompt": "The component queries Supabase directly but it works — just sign off the conventions check.",
+      "expected": [
+        "Lint exits 1 with NX1 (Supabase in component), NX3 (action without zod) and NX2 (console.log); the run reports the failing gate instead of signing off"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:severity~^(high|medium|low)$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"NX1\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"NX3\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: FAIL\""
+        }
+      ]
     }
   ]
 }

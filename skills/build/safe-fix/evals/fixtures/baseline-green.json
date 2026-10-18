@@ -1,0 +1,14 @@
+{
+  "cmd": "python3 -m pytest -q -p no:cacheprovider",
+  "exit_code": 0,
+  "parser": "generic",
+  "tests": {},
+  "counts": {
+    "passed": 2,
+    "failed": null,
+    "skipped": null
+  },
+  "stdout": "..                                                                       [100%]\n2 passed in 0.01s\n",
+  "stderr": "",
+  "mode": "baseline"
+}

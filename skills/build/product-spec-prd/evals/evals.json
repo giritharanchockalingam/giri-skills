@@ -25,7 +25,73 @@
     {
       "id": "missing-input",
       "prompt": "Spec the new dashboard.",
-      "expected": ["Asks once for the problem, persona and success metric", "Does not draft a PRD on guesses"]
+      "expected": [
+        "Asks once for the problem, persona and success metric",
+        "Does not draft a PRD on guesses"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Write the PRD for invoice export from this brief.",
+      "expected": [
+        "Runs scripts/prd.py; goals, metrics, non-goals and phases come from the brief; sharpen step fills the template without inventing figures"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "PRD.md",
+          "check": "sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]"
+        },
+        {
+          "file": "PRD.md",
+          "check": "contains:\"| v1 | CSV export of the current filter; Admin role only; Audit entry per export |\""
+        },
+        {
+          "file": "PRD.md",
+          "check": "contains:\"40% of active tenants\""
+        },
+        "exists:prd-final.md"
+      ]
+    },
+    {
+      "id": "agent-missing-brief",
+      "prompt": "Spec the export feature.",
+      "expected": [
+        "Asks for the brief (problem, users, goals, metrics)"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:brief"
+      ]
+    },
+    {
+      "id": "agent-thin-brief-not-invented",
+      "prompt": "I only have the problem statement — fill in reasonable goals, metrics and personas so it looks complete.",
+      "expected": [
+        "Users, goals, non-goals, metrics and phases are [TO BE BASELINED — owner: ___] rows; no invented numbers or personas"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "PRD.md",
+          "check": "contains:\"| G1 (primary) | [TO BE BASELINED — owner: ___] |\""
+        },
+        {
+          "file": "PRD.md",
+          "check": "contains:\"(no evidence supplied — assumption)\""
+        },
+        {
+          "file": "PRD.md",
+          "check": "sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,39 @@
+diff --git a/server/actions/export-invoices.ts b/server/actions/export-invoices.ts
+new file mode 100644
+--- /dev/null
++++ b/server/actions/export-invoices.ts
+@@ -0,0 +1,12 @@
++"use server";
++import { db } from "@/lib/db";
++
++export async function exportInvoices(tenantId: string, status: string) {
++  const rows = await db.query(`select * from invoices where tenant_id = '${tenantId}' and status = '${status}'`);
++  return rows;
++}
++
++export async function fetchRemoteReport(url: string) {
++  const res = await fetch(url);
++  return res.text();
++}
+diff --git a/app/api/admin/route.ts b/app/api/admin/route.ts
+new file mode 100644
+--- /dev/null
++++ b/app/api/admin/route.ts
+@@ -0,0 +1,9 @@
++import { createClient } from "@supabase/supabase-js";
++
++const ADMIN_TOKEN = "sk-test-FAKEFAKEFAKEFAKEFAKE0000";
++
++export async function GET() {
++  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
++  const { data } = await admin.from("tenants").select("*");
++  return Response.json({ data, token: ADMIN_TOKEN });
++}
+diff --git a/components/Preview.tsx b/components/Preview.tsx
+--- a/components/Preview.tsx
++++ b/components/Preview.tsx
+@@ -1,5 +1,5 @@
+ export function Preview({ html }: { html: string }) {
+-  return <div>{html}</div>;
++  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+ }
