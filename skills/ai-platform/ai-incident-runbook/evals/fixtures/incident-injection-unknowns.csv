@@ -1,0 +1,6 @@
+# fictional fixture — invented incident for tests only; regulated status and blast radius deliberately unknown
+key,value,notes
+category,prompt-injection,fictional fixture
+data_exposed,unknown,fictional fixture
+regulated_data,unknown,fictional fixture
+started_at,2026-10-03T08:00:00Z,fictional fixture

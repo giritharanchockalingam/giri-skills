@@ -1,0 +1,6 @@
+stage,metric,min,max,source,notes
+offline_eval,eval_pass_rate,,,,owner-supplied threshold; stage in offline_eval|shadow|canary|ga
+offline_eval,redteam_pass_rate,,,,
+shadow,latency_p95_ms,,,,
+canary,error_rate,,,,
+ga,error_rate,,,,

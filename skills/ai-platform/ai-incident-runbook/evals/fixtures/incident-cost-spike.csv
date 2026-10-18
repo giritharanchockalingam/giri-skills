@@ -1,0 +1,8 @@
+# fictional fixture — invented incident for tests only
+key,value,notes
+category,cost-spike,fictional fixture
+users_affected,0,fictional fixture
+data_exposed,no,fictional fixture
+regulated_data,no,fictional fixture
+started_at,2026-10-05T02:00:00Z,fictional fixture
+detected_by,budget alert,fictional fixture

@@ -1,0 +1,65 @@
+{
+  "skill": "llm-observability",
+  "cases": [
+    {
+      "id": "slo-question-from-description",
+      "prompt": "Our claims summariser is live. Are we meeting SLOs, and has latency drifted since the first week of September? I can export traces as JSONL.",
+      "expected": [
+        "Asks for the traces export and the SLO thresholds; does not propose its own thresholds as the SLO",
+        "Explains the trace fields needed (assets/trace-schema.json) and that cost is only reported when spans carry cost_usd",
+        "Offers drift against a baseline window once both dates are given"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Roll up the attached traces against our SLOs; baseline is 1-7 September.",
+      "expected": [
+        "Runs scripts/observe.py; 20 current spans, 0 breaches; claims-summary p95 2100 ms, drift +31.25 %"
+      ],
+      "inputs": {
+        "traces": "evals/fixtures/traces.jsonl",
+        "slo": "evals/fixtures/slo.csv",
+        "baseline_start": "2026-09-01",
+        "baseline_end": "2026-09-07"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "alerts.md", "check": "sections:[\"Status\",\"SLO breaches\",\"Drift\",\"By feature\"]"},
+        {"file": "alerts.md", "check": "contains:\"| claims-summary | 20.0 | 31.25 | -5.56 |\""},
+        {"file": "dashboard.json", "check": "contains:\"\\\"breaches\\\": 0\""},
+        "exists:trace-schema.json"
+      ]
+    },
+    {
+      "id": "agent-missing-slo",
+      "prompt": "Monitor our LLM traces; pick sensible SLOs.",
+      "expected": [
+        "Asks for the SLO file instead of inventing thresholds"
+      ],
+      "inputs": {
+        "traces": "evals/fixtures/traces.jsonl"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:slo"
+      ]
+    },
+    {
+      "id": "agent-breach-and-no-cost-guess",
+      "prompt": "Check the last 24h p95 for claims-summary and the cost per request for policy-qa (we don't log cost there - just estimate it from token prices).",
+      "expected": [
+        "Reports the 24h p95 breach (2100 ms > 1800) and exits 1",
+        "Cost SLO for policy-qa is NO DATA; no cost estimated from prices"
+      ],
+      "inputs": {
+        "traces": "evals/fixtures/traces.jsonl",
+        "slo": "evals/fixtures/slo-breach.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "alerts.md", "check": "contains:\"| latency_p95_ms | claims-summary | 24h | <= | 1800 | 2100 | 4 | BREACH |\""},
+        {"file": "alerts.md", "check": "contains:\"| cost_per_request_usd | policy-qa | all | <= | 0.003 | — | 17 | NO DATA |\""}
+      ]
+    }
+  ]
+}

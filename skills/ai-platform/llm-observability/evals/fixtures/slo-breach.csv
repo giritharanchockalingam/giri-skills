@@ -1,0 +1,5 @@
+# fictional fixture — invented SLO thresholds for tests only
+metric,threshold,window,feature,comparator
+latency_p95_ms,1800,24h,claims-summary,
+error_rate,0.1,all,*,
+cost_per_request_usd,0.003,all,policy-qa,

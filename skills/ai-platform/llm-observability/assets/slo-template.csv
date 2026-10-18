@@ -1,0 +1,6 @@
+metric,threshold,window,feature,comparator
+error_rate,,24h,*,
+latency_p95_ms,,24h,*,
+eval_score_mean,,7d,*,
+cost_per_request_usd,,7d,*,
+drift_tokens_per_request_pct,,all,*,

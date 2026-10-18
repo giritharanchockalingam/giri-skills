@@ -1,0 +1,4 @@
+# fictional fixture — a custom matrix with no baseline row (nothing fires for a cost spike)
+rule_id,conditions,severity,reason
+C01,category=data-leak,SEV1,Any data leak is SEV1 in this fictional policy
+C02,users_affected>=500,SEV2,Broad blast radius

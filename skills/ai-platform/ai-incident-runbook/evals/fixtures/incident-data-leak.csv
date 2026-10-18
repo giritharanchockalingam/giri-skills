@@ -1,0 +1,13 @@
+# fictional fixture — invented incident for tests only; no real system, people or data
+key,value,notes
+system_name,Benefits assistant (fictional),fictional fixture
+summary,Assistant quoted another member's claim details in an answer,fictional fixture
+category,data-leak,fictional fixture
+users_affected,12,fictional fixture
+data_exposed,yes,fictional fixture
+regulated_data,yes,fictional fixture
+started_at,2026-10-01T14:05:00Z,fictional fixture
+detected_at,2026-10-01T15:20:00Z,fictional fixture
+detected_by,user report,fictional fixture
+owner_incident_commander,IC Rota (fictional),fictional fixture
+owner_engineering_lead,Eng Lead (fictional),fictional fixture
