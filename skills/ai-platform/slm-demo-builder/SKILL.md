@@ -4,11 +4,23 @@ description: Use when the user asks to build a new SLM or agent showroom demo �
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: spec, type: md, required: true, from: "demo spec (assets/demo-spec.md layout) with §7 entity field tables: | Field | Type | Example | Constraints | (fixture: evals/fixtures/demo-spec.md)"}
+      - {name: rows, type: string, required: false, default: "200", from: "rows per entity unless the spec's volume table says otherwise"}
+      - {name: seed, type: string, required: false, default: "42"}
+    run:
+      - {step: synthetic, kind: script, cmd: "python3 -I scripts/gen_synthetic.py {spec} --out-dir {out} --rows {rows} --seed {seed}"}
+    outputs:
+      - {path: "{out}/data-manifest.json", checks: [exists, json, contains:"\"pii_guard\": \"passed\"", contains:"\"email_domain\": \"example.com\""]}
 ---
 
 # SLM / Agent Demo Builder
+
+## How to run
+This skill is executable. Write the demo spec (with the §7 entity field tables), then run `python3 scripts/run_skill.py ai-platform/slm-demo-builder --input spec=<demo-spec.md> [--input rows=N --input seed=S] --out <dir>` (see `--explain ai-platform/slm-demo-builder`). Report the `run.json` results; do not hand-write the synthetic dataset the script produces (`data/<entity>.csv`, `data-manifest.json`). A spec that declares an SSN / credit-card / phone field is refused (exit 1) by the PII guard; fix the spec.
 
 ## When to use
 - Adding a demo to a showroom or experience studio; preparing a client-specific walkthrough; turning a prototype into a repeatable 10-minute story.
@@ -52,3 +64,4 @@ If audience or scenario is missing, ask once.
 - `references/demo-spec-guide.md` — what a good demo spec contains
 - `references/synthetic-data.md` — generation approach and realism rules
 - `references/talk-track.md` — structure, timing, objection handling
+- `scripts/gen_synthetic.py` — demo-spec.md §7 entity tables → seeded `data/<entity>.csv` + `data-manifest.json`; PII guard; emails only @example.com

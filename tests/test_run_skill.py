@@ -31,6 +31,9 @@ WIRED = [
     "presales/value-case-builder", "presales/proposal-writer", "presales/sow-drafter",
     "presales/discovery-interview", "presales/solution-architecture-doc", "presales/exec-deck-redline",
     "presales/competitive-positioning", "presales/account-plan", "presales/orals-prep",
+    # phase 4
+    "ai-platform/ai-strategy-coe", "ai-platform/agent-architecture", "ai-platform/mcp-server-builder",
+    "ai-platform/ai-governance-risk", "ai-platform/ai-use-case-canvas", "ai-platform/slm-demo-builder",
 ]
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 

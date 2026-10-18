@@ -1,0 +1,10 @@
+id,use_case,business_owner,sponsor,value_V,feasibility_F,data_readiness_D,risk_R,baseline_metric,baseline_value,target_value,evidence
+UC-001,Invoice extraction and three-way match,AP Manager,CFO,4,5,4,2,manual touch rate,62%,20%,AP cycle-time report FY26 (fictional)
+UC-002,Support ticket triage and routing,Support Lead,COO,3,4,4,2,mean time to assign,4.1h,1h,ticket system export (fictional)
+UC-003,Internal policy assistant (RAG),HR Ops,CHRO,3,3,3,2,HR inbox volume,900/mo,500/mo,HR mailbox stats (fictional)
+UC-004,Customer churn prediction,Retention Lead,CRO,4,3,2,3,churn rate,,,CRM lacks usage events; data owner unnamed
+UC-005,Autonomous refund agent,,CFO,4,2,3,4,refund handling cost,,,no owner named; writes to ERP
+UC-006,Sales email generator,Sales Ops,CRO,2,4,3,3,emails/day,,,qualitative benefit only
+UC-007,Contract clause review,Legal Ops,GC,4,3,3,3,review hours per contract,6h,2h,legal timesheets (fictional)
+UC-008,Credit limit auto-decision,Credit Manager,CFO,5,2,3,5,decision time,,,regulated decision; no human review planned
+UC-009,Meeting summarizer,IT,CIO,2,5,4,1,,,,commodity capability

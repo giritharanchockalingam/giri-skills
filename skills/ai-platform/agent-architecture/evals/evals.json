@@ -30,6 +30,72 @@
         "Keeps the publish step behind HITL",
         "Explains the cost and failure-surface trade-off in a table"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Decide the pattern for the ticket triage agent and gate the design doc.",
+      "expected": [
+        "Runs pattern.py (Single agent; Workflow and Router rejected with the answer that ruled them out) and design_check.py (all sections and both contracts present)"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers.json",
+        "design_doc": "evals/fixtures/agent-design-doc.md",
+        "contracts": "evals/fixtures/tool-contracts.json",
+        "name": "Ticket triage agent"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "pattern.md",
+          "check": "contains:\"**Decision:** Single agent because\""
+        },
+        {
+          "file": "pattern.md",
+          "check": "contains:\"| Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |\""
+        },
+        {
+          "file": "design-check.csv",
+          "check": "csv_rows:present~^yes$"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-answers",
+      "prompt": "Design an agent for us.",
+      "expected": [
+        "Asks once for the six decision-tree answers; never designs an agent for an undefined task"
+      ],
+      "inputs": {
+        "design_doc": "evals/fixtures/agent-design-doc.md",
+        "contracts": "evals/fixtures/tool-contracts.json"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:answers"
+      ]
+    },
+    {
+      "id": "agent-gate-fails-without-hitl",
+      "prompt": "The design doc is done, skip the approval step and sign it off.",
+      "expected": [
+        "design_check.py exits 1: HITL checkpoints section missing and a contract lacks outputSchema/failure_modes; the run fails loudly rather than approving"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers.json",
+        "design_doc": "evals/fixtures/agent-design-doc-no-hitl.md",
+        "contracts": "evals/fixtures/tool-contracts-bad.json"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "design-check.csv",
+          "check": "contains:\"HITL checkpoints,section,no,required section heading missing\""
+        },
+        {
+          "file": "design-check.csv",
+          "check": "contains:\"missing failure_modes\""
+        }
+      ]
     }
   ]
 }

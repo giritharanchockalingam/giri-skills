@@ -16,7 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# skill key -> script path relative to the repo root (25 scripts total).
+# skill key -> script path relative to the repo root (33 scripts total).
 SCRIPTS = {
     "score_matrix": "skills/presales/rfp-compliance-matrix/scripts/score_matrix.py",
     "tco": "skills/presales/integration-migration-assessor/scripts/tco.py",
@@ -44,6 +44,15 @@ SCRIPTS = {
     "battle_card": "skills/presales/competitive-positioning/scripts/battle_card.py",
     "account_plan": "skills/presales/account-plan/scripts/account_plan.py",
     "orals": "skills/presales/orals-prep/scripts/orals.py",
+    # phase 4: ai-platform skills turned into agents
+    "score_portfolio": "skills/ai-platform/ai-strategy-coe/scripts/score_portfolio.py",
+    "maturity": "skills/ai-platform/ai-strategy-coe/scripts/maturity.py",
+    "pattern": "skills/ai-platform/agent-architecture/scripts/pattern.py",
+    "design_check": "skills/ai-platform/agent-architecture/scripts/design_check.py",
+    "scaffold_mcp": "skills/ai-platform/mcp-server-builder/scripts/scaffold_mcp.py",
+    "risk_register": "skills/ai-platform/ai-governance-risk/scripts/risk_register.py",
+    "canvas": "skills/ai-platform/ai-use-case-canvas/scripts/canvas.py",
+    "gen_synthetic": "skills/ai-platform/slm-demo-builder/scripts/gen_synthetic.py",
 }
 
 

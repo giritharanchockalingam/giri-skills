@@ -29,6 +29,58 @@
         "Proposes narrow query tools or a read-only, allow-listed, HITL-gated alternative",
         "Keeps the response short and table-based"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Scaffold an MCP server for our two ticket tools.",
+      "expected": [
+        "Runs scaffold_mcp.py; server.py handles initialize/tools/list/tools/call with stubs; the generated pytest suite passes"
+      ],
+      "inputs": {
+        "tools": "evals/fixtures/tools.json",
+        "name": "ticket-mcp"
+      },
+      "checks": [
+        "exit:0",
+        "exists:scaffold-report.json",
+        {
+          "file": "server/server.py",
+          "check": "contains:\"def search_tickets(arguments: dict) -> dict:\""
+        },
+        {
+          "file": "server/tools/read_ticket.json",
+          "check": "json"
+        },
+        {
+          "file": "server/README.md",
+          "check": "contains:\"| `read_ticket` | Read one ticket by id. | read | stub |\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-tools",
+      "prompt": "Build me an MCP server.",
+      "expected": [
+        "Asks once for the tool list with schemas; does not invent tools"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:tools"
+      ]
+    },
+    {
+      "id": "agent-bad-contracts-refused",
+      "prompt": "The tool names have spaces and one schema is a string — just generate something.",
+      "expected": [
+        "scaffold_mcp.py exits 1 naming the invalid tool; nothing is scaffolded from a bad contract"
+      ],
+      "inputs": {
+        "tools": "evals/fixtures/tools-bad.json"
+      },
+      "checks": [
+        "exit:1"
+      ]
     }
   ]
 }

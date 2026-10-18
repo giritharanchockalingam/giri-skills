@@ -1,0 +1,7 @@
+dimension,score_1_to_5,evidence,gap_to_next_level,owner,baseline_status
+data,3,,,CDO,TO BE BASELINED
+platform,3,Approved gateway with logging; dev/test/prod (fictional platform review),,Platform Lead,baselined
+talent,,,,CHRO,TO BE BASELINED
+governance,2,Acceptable-use policy published; no inventory (fictional),,CISO,baselined
+value,,,,,TO BE BASELINED
+overall_min,,= minimum of the five dimension scores,,,

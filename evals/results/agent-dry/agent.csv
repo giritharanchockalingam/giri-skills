@@ -1,4 +1,49 @@
 skill,case_id,check,pass,evidence
+ai-platform/agent-architecture,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/agent-architecture,agent-happy-path,"pattern.md: contains:""**Decision:** Single agent because""",1,found: **Decision:** Single agent because
+ai-platform/agent-architecture,agent-happy-path,"pattern.md: contains:""| Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |""",1,found: | Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |
+ai-platform/agent-architecture,agent-happy-path,design-check.csv: csv_rows:present~^yes$,1,0 of 15 rows not matching '^yes$' in 'present'
+ai-platform/agent-architecture,agent-missing-answers,exit:2,1,"exit code 2, expected 2"
+ai-platform/agent-architecture,agent-missing-answers,needs_input:answers,1,missing inputs named: ['answers']
+ai-platform/agent-architecture,agent-gate-fails-without-hitl,exit:1,1,"exit code 1, expected 1"
+ai-platform/agent-architecture,agent-gate-fails-without-hitl,"design-check.csv: contains:""HITL checkpoints,section,no,required section heading missing""",1,"found: HITL checkpoints,section,no,required section heading missing"
+ai-platform/agent-architecture,agent-gate-fails-without-hitl,"design-check.csv: contains:""missing failure_modes""",1,found: missing failure_modes
+ai-platform/ai-governance-risk,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-governance-risk,agent-happy-path,risk-register.csv: csv_rows:control!empty,1,0 of 9 rows empty in 'control'
+ai-platform/ai-governance-risk,agent-happy-path,"risk-register.csv: contains:""R-002,privacy,""",1,"found: R-002,privacy,"
+ai-platform/ai-governance-risk,agent-happy-path,"risk-register.csv: contains:"",3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,""",1,"found: ,3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,"
+ai-platform/ai-governance-risk,agent-happy-path,"model-card.md: contains:""| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED""",1,found: | Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED
+ai-platform/ai-governance-risk,agent-missing-canvas,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-governance-risk,agent-missing-canvas,needs_input:canvas,1,missing inputs named: ['canvas']
+ai-platform/ai-governance-risk,agent-high-risk-without-control-fails,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-governance-risk,agent-high-risk-without-control-fails,"risk-register.csv: contains:""R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,""",1,"found: R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,"
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,risk-register.csv: csv_rows:rating~^TBD$,1,0 of 9 rows not matching '^TBD$' in 'rating'
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,risk-register.csv: csv_rows:control!empty,1,0 of 9 rows empty in 'control'
+ai-platform/ai-governance-risk,agent-thin-canvas-no-invented-scores,"model-card.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+ai-platform/ai-strategy-coe,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-strategy-coe,agent-happy-path,portfolio.csv: csv_rows:score!empty,1,0 of 9 rows empty in 'score'
+ai-platform/ai-strategy-coe,agent-happy-path,"portfolio.md: contains:""| 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |""",1,found: | 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |
+ai-platform/ai-strategy-coe,agent-happy-path,"maturity.md: contains:""Level 1 (Ad hoc) overall; constraining dimension: governance""",1,found: Level 1 (Ad hoc) overall; constraining dimension: governance
+ai-platform/ai-strategy-coe,agent-happy-path,"roadmap.md: sections:[""Gap closure items""]",1,found ['Gap closure items']
+ai-platform/ai-strategy-coe,agent-missing-scorecard,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-strategy-coe,agent-missing-scorecard,needs_input:scorecard,1,missing inputs named: ['scorecard']
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,unscored.csv: csv_rows:reason!empty,1,0 of 2 rows empty in 'reason'
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"portfolio.md: contains:""| UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |""",1,"found: | UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |"
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"maturity.md: contains:""[TO BE BASELINED — owner: CDO]""",1,found: [TO BE BASELINED — owner: CDO]
+ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"maturity.md: contains:""score given without evidence""",1,found: score given without evidence
+ai-platform/ai-use-case-canvas,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-use-case-canvas,agent-happy-path,"canvas.md: contains:""**Verdict:** Proceed to design""",1,found: **Verdict:** Proceed to design
+ai-platform/ai-use-case-canvas,agent-happy-path,"canvas.md: contains:""| Priority (V×F×D÷R) | 12.0 |""",1,found: | Priority (V×F×D÷R) | 12.0 |
+ai-platform/ai-use-case-canvas,agent-happy-path,"decision.md: contains:""**Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity""",1,found: **Decision:** build — 3 of 5 factors favor build; strongest: data_sensitivity
+ai-platform/ai-use-case-canvas,agent-happy-path,exists:score.json,1,evals/results/agent-dry/runs/ai-platform__ai-use-case-canvas/agent-happy-path/score.json exists
+ai-platform/ai-use-case-canvas,agent-missing-answers,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-use-case-canvas,agent-missing-answers,needs_input:answers,1,missing inputs named: ['answers']
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"canvas.md: contains:""| Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |""",1,found: | Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"decision.md: contains:""**Decision:** wait — data readiness is unscored""",1,found: **Decision:** wait — data readiness is unscored
+ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"canvas.md: contains:""**Verdict:** TBD""",1,found: **Verdict:** TBD
 ai-platform/infra-gpu-sizing,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/infra-gpu-sizing,agent-happy-path,exists:sizing.json,1,evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json exists
 ai-platform/infra-gpu-sizing,agent-happy-path,"sizing.txt: contains:""gpus_required""",1,found: gpus_required
@@ -13,6 +58,14 @@ ai-platform/llm-eval-harness,agent-missing-cases,exit:2,1,"exit code 2, expected
 ai-platform/llm-eval-harness,agent-missing-cases,needs_input:cases,1,missing inputs named: ['cases']
 ai-platform/llm-eval-harness,agent-transcript-no-invented-criteria,exit:0,1,"exit code 0, expected 0"
 ai-platform/llm-eval-harness,agent-transcript-no-invented-criteria,"golden-set.csv: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+ai-platform/mcp-server-builder,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/mcp-server-builder,agent-happy-path,exists:scaffold-report.json,1,evals/results/agent-dry/runs/ai-platform__mcp-server-builder/agent-happy-path/scaffold-report.json exists
+ai-platform/mcp-server-builder,agent-happy-path,"server/server.py: contains:""def search_tickets(arguments: dict) -> dict:""",1,found: def search_tickets(arguments: dict) -> dict:
+ai-platform/mcp-server-builder,agent-happy-path,server/tools/read_ticket.json: json,1,valid JSON
+ai-platform/mcp-server-builder,agent-happy-path,"server/README.md: contains:""| `read_ticket` | Read one ticket by id. | read | stub |""",1,found: | `read_ticket` | Read one ticket by id. | read | stub |
+ai-platform/mcp-server-builder,agent-missing-tools,exit:2,1,"exit code 2, expected 2"
+ai-platform/mcp-server-builder,agent-missing-tools,needs_input:tools,1,missing inputs named: ['tools']
+ai-platform/mcp-server-builder,agent-bad-contracts-refused,exit:1,1,"exit code 1, expected 1"
 ai-platform/rag-pipeline-design,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/rag-pipeline-design,agent-happy-path,exists:retrieval-metrics.json,1,evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json exists
 ai-platform/rag-pipeline-design,agent-happy-path,"retrieval-metrics.txt: contains:""recall""",1,found: recall
@@ -20,6 +73,15 @@ ai-platform/rag-pipeline-design,agent-missing-eval-set,exit:2,1,"exit code 2, ex
 ai-platform/rag-pipeline-design,agent-missing-eval-set,needs_input:eval_set,1,missing inputs named: ['eval_set']
 ai-platform/rag-pipeline-design,agent-gate-fails-honestly,exit:1,1,"exit code 1, expected 1"
 ai-platform/rag-pipeline-design,agent-gate-fails-honestly,exists:retrieval-metrics.json,1,evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-gate-fails-honestly/retrieval-metrics.json exists
+ai-platform/slm-demo-builder,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/slm-demo-builder,agent-happy-path,exists:data-manifest.json,1,evals/results/agent-dry/runs/ai-platform__slm-demo-builder/agent-happy-path/data-manifest.json exists
+ai-platform/slm-demo-builder,agent-happy-path,"data/customers.csv: csv:[customer_id,name,email,segment,created,active]",1,"header has ['customer_id', 'name', 'email', 'segment', 'created', 'active']"
+ai-platform/slm-demo-builder,agent-happy-path,"data/customers.csv: contains:""@example.com""",1,found: @example.com
+ai-platform/slm-demo-builder,agent-happy-path,data/tickets.csv: csv_rows:customer_id~^C[0-9]{5}$,1,0 of 120 rows not matching '^C[0-9]{5}$' in 'customer_id'
+ai-platform/slm-demo-builder,agent-happy-path,"data-manifest.json: contains:""\""rows\"": 120""",1,"found: ""rows"": 120"
+ai-platform/slm-demo-builder,agent-missing-spec,exit:2,1,"exit code 2, expected 2"
+ai-platform/slm-demo-builder,agent-missing-spec,needs_input:spec,1,missing inputs named: ['spec']
+ai-platform/slm-demo-builder,agent-pii-field-refused,exit:1,1,"exit code 1, expected 1"
 build/project-bootstrap,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 build/project-bootstrap,agent-happy-path,exists:proj/docs/SPEC.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md exists
 build/project-bootstrap,agent-happy-path,exists:proj/.github/workflows/ci.yml,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml exists

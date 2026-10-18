@@ -1,0 +1,22 @@
+[
+  {
+    "name": "search_tickets",
+    "description": "Search support tickets by status and date. Use before reading or updating a ticket.",
+    "input_schema": {"type": "object", "additionalProperties": false, "required": ["status"],
+      "properties": {"status": {"type": "string", "enum": ["open", "pending", "closed"]},
+                     "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20}}},
+    "output_schema": {"type": "object", "required": ["status"],
+      "properties": {"status": {"type": "string", "enum": ["ok", "error"]},
+                     "data": {"type": "object", "properties": {"items": {"type": "array"}, "total": {"type": "integer"}}}}},
+    "x-contract": {"side_effect": "read", "idempotent": true, "scopes": ["tickets:read"], "timeout_ms": 5000}
+  },
+  {
+    "name": "read_ticket",
+    "description": "Read one ticket by id.",
+    "input_schema": {"type": "object", "additionalProperties": false, "required": ["ticket_id"],
+      "properties": {"ticket_id": {"type": "string", "pattern": "^T[0-9]{6}$"}}},
+    "output_schema": {"type": "object", "required": ["status"],
+      "properties": {"status": {"type": "string", "enum": ["ok", "error"]}, "data": {"type": "object"}}},
+    "x-contract": {"side_effect": "read", "idempotent": true, "scopes": ["tickets:read"], "timeout_ms": 3000}
+  }
+]

@@ -31,6 +31,81 @@
         "Flags talent per spoke as the precondition",
         "Response is concise and table-based"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Rank our nine candidate use cases and assess maturity for Northwind.",
+      "expected": [
+        "Runs score_portfolio.py and maturity.py; ranked portfolio with bands; overall level = minimum dimension; one roadmap item per gap"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases.csv",
+        "scorecard": "evals/fixtures/maturity-scorecard.csv",
+        "org": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "portfolio.csv",
+          "check": "csv_rows:score!empty"
+        },
+        {
+          "file": "portfolio.md",
+          "check": "contains:\"| 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |\""
+        },
+        {
+          "file": "maturity.md",
+          "check": "contains:\"Level 1 (Ad hoc) overall; constraining dimension: governance\""
+        },
+        {
+          "file": "roadmap.md",
+          "check": "sections:[\"Gap closure items\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-scorecard",
+      "prompt": "Build our AI roadmap from the use-case list.",
+      "expected": [
+        "Asks once for the maturity scorecard; does not infer maturity from industry averages"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:scorecard"
+      ]
+    },
+    {
+      "id": "agent-unscored-rows-not-ranked",
+      "prompt": "Some use cases are not fully scored and two maturity scores have no evidence — rank them anyway.",
+      "expected": [
+        "Rows missing an axis go to the unscored bucket, not the ranking; unevidenced maturity scores become [TO BE BASELINED — owner: …]"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases-partial.csv",
+        "scorecard": "evals/fixtures/maturity-scorecard-thin.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "unscored.csv",
+          "check": "csv_rows:reason!empty"
+        },
+        {
+          "file": "portfolio.md",
+          "check": "contains:\"| UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |\""
+        },
+        {
+          "file": "maturity.md",
+          "check": "contains:\"[TO BE BASELINED — owner: CDO]\""
+        },
+        {
+          "file": "maturity.md",
+          "check": "contains:\"score given without evidence\""
+        }
+      ]
     }
   ]
 }
