@@ -218,6 +218,22 @@ career/application-tracker,agent-missing-tracker,needs_input:tracker,1,missing i
 career/application-tracker,agent-report-only,exit:0,1,"exit code 0, expected 0"
 career/application-tracker,agent-report-only,exists:aging.json,1,evals/results/agent-dry/runs/career__application-tracker/agent-report-only/aging.json exists
 career/application-tracker,agent-report-only,exists:weekly-review.md,1,evals/results/agent-dry/runs/career__application-tracker/agent-report-only/weekly-review.md exists
+career/interview-prep,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+career/interview-prep,agent-happy-path,exists:competency-map.csv,1,evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/competency-map.csv exists
+career/interview-prep,agent-happy-path,exists:prep-pack.md,1,evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/prep-pack.md exists
+career/interview-prep,agent-happy-path,exists:questions-to-ask.md,1,evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/questions-to-ask.md exists
+career/interview-prep,agent-happy-path,exists:90-day-plan.md,1,evals/results/agent-dry/runs/career__interview-prep/agent-happy-path/90-day-plan.md exists
+career/interview-prep,agent-happy-path,competency-map.csv: csv_rows:status~^(mapped|GAP)$,1,0 of 10 rows not matching '^(mapped|GAP)$' in 'status'
+career/interview-prep,agent-happy-path,"competency-map.csv: contains:""C4,mapped,Transformation delivery,yes""",1,"found: C4,mapped,Transformation delivery,yes"
+career/interview-prep,agent-happy-path,"prep-pack.md: contains:""[SB-01] Claims platform modernization""",1,found: [SB-01] Claims platform modernization
+career/interview-prep,agent-happy-path,"prep-pack.md: sections:[""Likely questions — panel""]",1,found ['Likely questions — panel']
+career/interview-prep,agent-happy-path,"questions-to-ask.md: sections:[""Panel — peers""]",1,found ['Panel — peers']
+career/interview-prep,agent-missing-story-bank,exit:2,1,"exit code 2, expected 2"
+career/interview-prep,agent-missing-story-bank,needs_input:stories,1,missing inputs named: ['stories']
+career/interview-prep,agent-competency-without-story-is-gap,exit:0,1,"exit code 0, expected 0"
+career/interview-prep,agent-competency-without-story-is-gap,"competency-map.csv: contains:""C7,GAP""",1,"found: C7,GAP"
+career/interview-prep,agent-competency-without-story-is-gap,"prep-pack.md: contains:""GAP — no story in the bank for C7""",1,found: GAP — no story in the bank for C7
+career/interview-prep,agent-competency-without-story-is-gap,90-day-plan.md: no_unowned_tbd,1,0 unowned of 7 markers
 career/jd-fit-scorer,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 career/jd-fit-scorer,agent-happy-path,"fit.json: contains:""verdict""",1,found: verdict
 career/jd-fit-scorer,agent-happy-path,"fit.md: contains:""/100""",1,found: /100
@@ -232,6 +248,36 @@ career/offer-evaluator,agent-missing-offers,exit:2,1,"exit code 2, expected 2"
 career/offer-evaluator,agent-missing-offers,needs_input:offers,1,missing inputs named: ['offers']
 career/offer-evaluator,agent-no-col-no-adjustment,exit:0,1,"exit code 0, expected 0"
 career/offer-evaluator,agent-no-col-no-adjustment,exists:comparison.json,1,evals/results/agent-dry/runs/career__offer-evaluator/agent-no-col-no-adjustment/comparison.json exists
+career/outreach-and-followup,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+career/outreach-and-followup,agent-happy-path,exists:message.md,1,evals/results/agent-dry/runs/career__outreach-and-followup/agent-happy-path/message.md exists
+career/outreach-and-followup,agent-happy-path,exists:cadence.csv,1,evals/results/agent-dry/runs/career__outreach-and-followup/agent-happy-path/cadence.csv exists
+career/outreach-and-followup,agent-happy-path,exists:message-final.md,1,evals/results/agent-dry/runs/career__outreach-and-followup/agent-happy-path/message-final.md exists
+career/outreach-and-followup,agent-happy-path,"message.md: contains:""Dana, thank you for the time today.""",1,"found: Dana, thank you for the time today."
+career/outreach-and-followup,agent-happy-path,"message.md: contains:""[SB-05]""",1,found: [SB-05]
+career/outreach-and-followup,agent-happy-path,"cadence.csv: csv:[touch,date,channel,template,basis,stop_rule]",1,"header has ['touch', 'date', 'channel', 'template', 'basis', 'stop_rule']"
+career/outreach-and-followup,agent-happy-path,"cadence.csv: contains:""Touch 1,2026-03-11,email""",1,"found: Touch 1,2026-03-11,email"
+career/outreach-and-followup,agent-missing-context,exit:2,1,"exit code 2, expected 2"
+career/outreach-and-followup,agent-missing-context,needs_input:context,1,missing inputs named: ['context']
+career/outreach-and-followup,agent-thin-context-placeholders,exit:0,1,"exit code 0, expected 0"
+career/outreach-and-followup,agent-thin-context-placeholders,"message.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+career/outreach-and-followup,agent-thin-context-placeholders,"message.md: contains:""- A: req ID""",1,found: - A: req ID
+career/outreach-and-followup,agent-thin-context-placeholders,"message.md: contains:""Priya — saw Helix Logistics (fictional) is hiring a VP, Enterprise Applications.""",1,"found: Priya — saw Helix Logistics (fictional) is hiring a VP, Enterprise Applications."
+career/outreach-and-followup,agent-thin-context-placeholders,"cadence.csv: contains:""Touch 3,2026-03-30,email""",1,"found: Touch 3,2026-03-30,email"
+career/resume-tailor,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+career/resume-tailor,agent-happy-path,exists:keyword-map.csv,1,evals/results/agent-dry/runs/career__resume-tailor/agent-happy-path/keyword-map.csv exists
+career/resume-tailor,agent-happy-path,exists:tailored-resume.md,1,evals/results/agent-dry/runs/career__resume-tailor/agent-happy-path/tailored-resume.md exists
+career/resume-tailor,agent-happy-path,exists:traceability.csv,1,evals/results/agent-dry/runs/career__resume-tailor/agent-happy-path/traceability.csv exists
+career/resume-tailor,agent-happy-path,"keyword-map.csv: csv:[jd_keyword,present_in_master,master_line_ids,weight]",1,"header has ['jd_keyword', 'present_in_master', 'master_line_ids', 'weight']"
+career/resume-tailor,agent-happy-path,"keyword-map.csv: contains:""FinOps,yes,MR-L14,must""",1,"found: FinOps,yes,MR-L14,must"
+career/resume-tailor,agent-happy-path,"candidate-bullets.md: contains:""[MR-L12] Led the claims-platform modernization""",1,found: [MR-L12] Led the claims-platform modernization
+career/resume-tailor,agent-happy-path,"tailored-resume.md: sections:[""Summary"",""Selected experience"",""Skills""]",1,"found ['Summary', 'Selected experience', 'Skills']"
+career/resume-tailor,agent-missing-master,exit:2,1,"exit code 2, expected 2"
+career/resume-tailor,agent-missing-master,needs_input:master,1,missing inputs named: ['master']
+career/resume-tailor,agent-unsupported-certification,exit:0,1,"exit code 0, expected 0"
+career/resume-tailor,agent-unsupported-certification,"gap-list.md: contains:""CISSP""",1,found: CISSP
+career/resume-tailor,agent-unsupported-certification,"gap-list.md: contains:""SOX ITGC""",1,found: SOX ITGC
+career/resume-tailor,agent-unsupported-certification,"keyword-map.csv: contains:""CISSP certification,no,,must""",1,"found: CISSP certification,no,,must"
+career/resume-tailor,agent-unsupported-certification,"candidate-bullets.md: contains:""- CISSP certification""",1,found: - CISSP certification
 presales/account-plan,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 presales/account-plan,agent-happy-path,"account-plan.md: sections:[""Stakeholder map"",""White-space matrix"",""Pipeline"",""90-day plays""]",1,"found ['Stakeholder map', 'White-space matrix', 'Pipeline', '90-day plays']"
 presales/account-plan,agent-happy-path,"account-plan.md: contains:""1,652,000""",1,"found: 1,652,000"

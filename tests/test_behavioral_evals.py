@@ -135,18 +135,18 @@ AGENT_HEADER = ["skill", "case_id", "check", "pass", "evidence"]
 def test_agent_mode_dry(tmp_path):
     out = tmp_path / "agent"
     r = run_eval("agent", "--provider", "dry", "--out", str(out),
-                 "--skills", "skills/career/jd-fit-scorer", "--skills", "skills/career/outreach-and-followup")
+                 "--skills", "skills/career/jd-fit-scorer", "--skills", "skills/build/safe-fix")
     assert r.returncode == 0, r.stdout + r.stderr
     with (out / "agent.csv").open(encoding="utf-8") as f:
         rows = list(csv.reader(f))
     assert rows[0] == AGENT_HEADER
-    assert {row[0] for row in rows[1:]} == {"career/jd-fit-scorer"}
+    assert {row[0] for row in rows[1:]} == {"career/jd-fit-scorer", "build/safe-fix"}
     assert all(row[3] == "1" for row in rows[1:]), rows
     scorecard = (out / "scorecard.md").read_text(encoding="utf-8")
     assert "| agent pass | agent verdict |" in scorecard
     assert "| career/jd-fit-scorer |  |  |  |  |  |  | 1.00 | Works |" in scorecard
-    # unwired skill: present, blank agent cells, not failing
-    assert "| career/outreach-and-followup |  |  |  |  |  |  |  |  |" in scorecard
+    # all 40 skills are agents now; a second wired skill must also score
+    assert "| build/safe-fix |  |  |  |  |  |  | 1.00 | Works |" in scorecard
     assert (out / "runs").is_dir()
 
 

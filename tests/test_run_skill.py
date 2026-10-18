@@ -39,6 +39,8 @@ WIRED = [
     # phase 4
     "ai-platform/ai-strategy-coe", "ai-platform/agent-architecture", "ai-platform/mcp-server-builder",
     "ai-platform/ai-governance-risk", "ai-platform/ai-use-case-canvas", "ai-platform/slm-demo-builder",
+    # phase 5
+    "career/resume-tailor", "career/interview-prep", "career/outreach-and-followup",
 ]
 FAKE_KEY = "sk-ant-TESTKEY-not-a-real-key-0000000000"
 

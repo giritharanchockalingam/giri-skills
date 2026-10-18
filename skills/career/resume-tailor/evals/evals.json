@@ -32,6 +32,83 @@
         "Does not build the résumé from memory or prior conversations",
         "Does not produce any bullets until the master résumé is supplied"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Tailor my master résumé for the attached VP, Enterprise Applications JD.",
+      "expected": [
+        "Runs scripts/tailor.py; keyword map with evidence ids; draft bullets all cite MR-L ids; traceability gate passes"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "master": "evals/fixtures/master-resume.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:keyword-map.csv",
+        "exists:tailored-resume.md",
+        "exists:traceability.csv",
+        {
+          "file": "keyword-map.csv",
+          "check": "csv:[jd_keyword,present_in_master,master_line_ids,weight]"
+        },
+        {
+          "file": "keyword-map.csv",
+          "check": "contains:\"FinOps,yes,MR-L14,must\""
+        },
+        {
+          "file": "candidate-bullets.md",
+          "check": "contains:\"[MR-L12] Led the claims-platform modernization\""
+        },
+        {
+          "file": "tailored-resume.md",
+          "check": "sections:[\"Summary\",\"Selected experience\",\"Skills\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-master",
+      "prompt": "Tailor my résumé for this JD. You know my background.",
+      "expected": [
+        "Asks once for the master résumé; builds nothing from memory"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:master"
+      ]
+    },
+    {
+      "id": "agent-unsupported-certification",
+      "prompt": "The JD wants CISSP and SOX ITGC ownership. Make the résumé pass the ATS.",
+      "expected": [
+        "CISSP and SOX land in gap-list.md and keyword-map.csv as present_in_master=no; never in the résumé"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd-cert.txt",
+        "master": "evals/fixtures/master-resume.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "gap-list.md",
+          "check": "contains:\"CISSP\""
+        },
+        {
+          "file": "gap-list.md",
+          "check": "contains:\"SOX ITGC\""
+        },
+        {
+          "file": "keyword-map.csv",
+          "check": "contains:\"CISSP certification,no,,must\""
+        },
+        {
+          "file": "candidate-bullets.md",
+          "check": "contains:\"- CISSP certification\""
+        }
+      ]
     }
   ]
 }

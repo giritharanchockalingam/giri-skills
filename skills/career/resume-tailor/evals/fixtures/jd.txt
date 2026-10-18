@@ -1,0 +1,19 @@
+Vice President, Enterprise Applications — Meridian Mutual Health (fictional)
+Location: Columbus, OH (hybrid, 3 days on site). Travel up to 15%.
+
+About the role
+Meridian Mutual Health is a regional health plan serving 1.8M members. The VP, Enterprise Applications owns claims, enrollment and ERP platforms and reports to the CIO.
+
+Requirements:
+- 15+ years leading enterprise application organizations in healthcare payer or insurance
+- Must have led a claims-platform modernization or a comparable legacy re-platform
+- ERP consolidation experience (SAP S/4HANA preferred)
+- Must have owned a budget of $25M or more and a team of 80 or more
+- Cloud cost management (FinOps) experience required
+- Experience presenting to a board committee is required
+- Vendor and managed-services contract negotiation
+
+Nice to have:
+- API gateway and partner integration programs
+- Snowflake or Informatica data platform exposure
+- MBA preferred

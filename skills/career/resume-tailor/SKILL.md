@@ -4,11 +4,28 @@ description: Use when the user asks to tailor, rewrite, or ATS-optimize their r�
 license: MIT
 metadata:
   domain: career
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: jd, type: file, required: true, from: "job description text file"}
+      - {name: master, type: md, required: true, from: "master résumé with MR-Lnn | line ids (layout: assets/master-resume.example.md)"}
+    run:
+      - {step: map, kind: script, cmd: "python3 -I scripts/tailor.py --jd {jd} --master {master} --keyword-map {out}/keyword-map.csv --gap-list {out}/gap-list.md --bullets {out}/candidate-bullets.md"}
+      - {step: draft, kind: llm, template: assets/tailored-resume-template.md, context: ["{out}/candidate-bullets.md", "{out}/keyword-map.csv", "{out}/gap-list.md", "{master}", "references/bullet-formula.md"], out: "{out}/tailored-resume.md"}
+      - {step: trace, kind: script, cmd: "python3 -I scripts/check_traceability.py --resume {out}/tailored-resume.md --master {master} --out {out}/traceability.csv"}
+    outputs:
+      - {path: "{out}/keyword-map.csv", checks: [exists, csv:[jd_keyword,present_in_master,master_line_ids,weight], csv_rows:present_in_master~^(yes|no)$]}
+      - {path: "{out}/gap-list.md", checks: [exists, sections:["Gap list"]]}
+      - {path: "{out}/candidate-bullets.md", checks: [exists, sections:["Candidate bullets"]]}
+      - {path: "{out}/tailored-resume.md", checks: [exists, sections:["Summary","Selected experience","Skills"], no_unowned_tbd, cmd:"python3 -I scripts/check_traceability.py --resume {path} --master {master} --out {out}/traceability.csv"]}
+      - {path: "{out}/traceability.csv", checks: [exists, csv:[bullet,cited_ids,all_ids_exist,numbers_in_bullet_found_in_cited_lines]]}
 ---
 
 # Résumé Tailor (truth-locked)
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/resume-tailor --input <name>=<value> … --out <dir>` (see `--explain career/resume-tailor`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Tailor my résumé for this JD", "make this ATS-friendly", "rewrite my summary for a VP role", "which keywords am I missing".
@@ -63,6 +80,9 @@ Markdown file `resume-<company>-<role>.md` containing, in order:
 - [ ] No author personal data pulled from memory; everything comes from the supplied master résumé
 
 ## References
+- `scripts/tailor.py` — JD keyword → master-line evidence map, gap list, verbatim candidate bullets (stdlib, offline)
+- `scripts/check_traceability.py` — the TRUTH LOCK gate: exit 1 on an uncited bullet, an unknown id, or a number absent from its cited lines
+- `assets/tailored-resume-template.md` — the llm step fills this; every bullet ends with `[MR-Lnn]`
 - `references/ats-keyword-mapping.md` — mapping method, synonym rules, density limits
 - `references/bullet-formula.md` — action + scope + metric + outcome, exec verbs, anti-patterns
 - `references/executive-resume-structure.md` — section order, length, what to cut at exec level

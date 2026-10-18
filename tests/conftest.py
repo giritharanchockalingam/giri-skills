@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # skill key -> script path relative to the repo root (37 scripts total).
 # skill key -> script path relative to the repo root (33 scripts total).
+# skill key -> script path relative to the repo root (29 scripts total).
 SCRIPTS = {
     "score_matrix": "skills/presales/rfp-compliance-matrix/scripts/score_matrix.py",
     "tco": "skills/presales/integration-migration-assessor/scripts/tco.py",
@@ -67,6 +68,11 @@ SCRIPTS = {
     "risk_register": "skills/ai-platform/ai-governance-risk/scripts/risk_register.py",
     "canvas": "skills/ai-platform/ai-use-case-canvas/scripts/canvas.py",
     "gen_synthetic": "skills/ai-platform/slm-demo-builder/scripts/gen_synthetic.py",
+    # phase 5: career skills turned into agents
+    "tailor": "skills/career/resume-tailor/scripts/tailor.py",
+    "check_traceability": "skills/career/resume-tailor/scripts/check_traceability.py",
+    "prep": "skills/career/interview-prep/scripts/prep.py",
+    "fill": "skills/career/outreach-and-followup/scripts/fill.py",
 }
 
 

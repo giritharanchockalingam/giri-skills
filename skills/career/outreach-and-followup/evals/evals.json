@@ -29,6 +29,83 @@
         "Dana's note references something specific she said or asks the user for it",
         "Sent within 24 hours guidance in cadence row"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Thank-you note to Dana Okafor after today's panel; context attached.",
+      "expected": [
+        "Runs scripts/fill.py; Reinforce and Repair variants filled only from context.json; cadence dated within 24 h"
+      ],
+      "inputs": {
+        "type": "thank-you",
+        "context": "evals/fixtures/context-thank-you.json"
+      },
+      "checks": [
+        "exit:0",
+        "exists:message.md",
+        "exists:cadence.csv",
+        "exists:message-final.md",
+        {
+          "file": "message.md",
+          "check": "contains:\"Dana, thank you for the time today.\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"[SB-05]\""
+        },
+        {
+          "file": "cadence.csv",
+          "check": "csv:[touch,date,channel,template,basis,stop_rule]"
+        },
+        {
+          "file": "cadence.csv",
+          "check": "contains:\"Touch 1,2026-03-11,email\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-context",
+      "prompt": "Nudge the recruiter at that company about my application.",
+      "expected": [
+        "Asks once for context.json (recipient, role, last contact date); invents nothing"
+      ],
+      "inputs": {
+        "type": "status-check"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:context"
+      ]
+    },
+    {
+      "id": "agent-thin-context-placeholders",
+      "prompt": "Referral note to Priya Nair — just make it sound good, I'll fix details later.",
+      "expected": [
+        "Every unsupplied slot (req ID, outcome, sender) is an owned marker listed under Unfilled placeholders; no fact invented"
+      ],
+      "inputs": {
+        "type": "referral-ask",
+        "context": "evals/fixtures/context-referral-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "message.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"- A: req ID\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"Priya — saw Helix Logistics (fictional) is hiring a VP, Enterprise Applications.\""
+        },
+        {
+          "file": "cadence.csv",
+          "check": "contains:\"Touch 3,2026-03-30,email\""
+        }
+      ]
     }
   ]
 }

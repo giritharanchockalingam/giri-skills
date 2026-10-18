@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=dry model=claude-sonnet-4-5 date=2026-10-17_
-_agent mode: 112 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
+_agent mode: 121 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict | agent pass | agent verdict |
 |---|---|---|---|---|---|---|---|---|
@@ -39,8 +39,8 @@ _agent mode: 112 cases run with scripts/run_skill.py; verdict Works >= 0.9, Part
 | ai-platform/rag-pipeline-design |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/slm-demo-builder |  |  |  |  |  |  | 1.00 | Works |
 | career/application-tracker |  |  |  |  |  |  | 1.00 | Works |
-| career/interview-prep |  |  |  |  |  |  |  |  |
+| career/interview-prep |  |  |  |  |  |  | 1.00 | Works |
 | career/jd-fit-scorer |  |  |  |  |  |  | 1.00 | Works |
 | career/offer-evaluator |  |  |  |  |  |  | 1.00 | Works |
-| career/outreach-and-followup |  |  |  |  |  |  |  |  |
-| career/resume-tailor |  |  |  |  |  |  |  |  |
+| career/outreach-and-followup |  |  |  |  |  |  | 1.00 | Works |
+| career/resume-tailor |  |  |  |  |  |  | 1.00 | Works |
