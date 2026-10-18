@@ -429,8 +429,9 @@ export async function useCompatForDrafts(_: ActionResult | null, _fd: FormData):
     const changed: string[] = [];
     for (const d of drafts) {
       if (!d.manifest.run.some((st) => st.kind === "llm")) continue;
-      if (d.manifest.model_config.provider === "openai_compat" && d.manifest.model_config.model === model) continue;
-      const v = validateManifest({ ...d.manifest, model_config: { ...d.manifest.model_config, provider: "openai_compat", model } });
+      if (d.manifest.model_config.provider === "openai_compat" && d.manifest.model_config.model === model && d.manifest.model_config.max_tokens >= (Number(process.env.SF_LLM_MAX_TOKENS) || 12000)) continue;
+      const maxTokens = Math.min(32000, Math.max(d.manifest.model_config.max_tokens, Number(process.env.SF_LLM_MAX_TOKENS) || 12000));
+      const v = validateManifest({ ...d.manifest, model_config: { ...d.manifest.model_config, provider: "openai_compat", model, max_tokens: maxTokens } });
       if (!v.ok) return fail(`${d.sf_skills.slug}: ${v.problems.map((x) => x.message).join("; ")}`);
       const hash = manifestHash(v.manifest);
       const { error: ue } = await ctx.supabase.from("sf_skill_versions").update({ manifest: v.manifest, manifest_hash: hash, change_note: `model provider → openai_compat · ${model}` }).eq("id", d.id);

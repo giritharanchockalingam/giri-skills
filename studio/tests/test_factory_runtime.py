@@ -294,3 +294,25 @@ def test_openai_compat_drops_rejected_params_and_prices_from_env(rt, monkeypatch
     assert len(bodies) == 2 and "temperature" not in bodies[1] and bodies[1]["max_completion_tokens"] > 0
     assert res["usage"]["retries"] == 0
     assert abs(res["cost"]["usd"] - (1000 * 0.10 + 400 * 0.50) / 1e6) < 1e-12 and "SF_LLM_PRICE" in res["cost"]["basis"]
+
+
+def test_empty_completion_is_an_error_not_a_blank_file(rt, monkeypatch):
+    """A reasoning model that spends the whole budget thinking returns no text: the step must fail loudly."""
+    monkeypatch.setenv("SF_LLM_API_KEY", "sk-test")
+    monkeypatch.setenv("SF_LLM_BASE_URL", "https://api.openai.com/v1")
+    seen = []
+    class FakeResp(io.BytesIO):
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    def fake_urlopen(req, timeout=0):  # noqa: ARG001
+        body = json.loads(req.data); seen.append(body)
+        return FakeResp(json.dumps({"model": body["model"], "usage": {"prompt_tokens": 10, "completion_tokens": body["max_completion_tokens"]},
+                                    "choices": [{"finish_reason": "length", "message": {"content": ""}}]}).encode())
+    monkeypatch.setattr(rt.urllib.request, "urlopen", fake_urlopen)
+    m = {**AUTHORED, "run": [{"step": "memo", "kind": "llm", "template": "assets/t.md", "context": [], "out": "{out}/summary.json"}],
+         "outputs": [{"path": "{out}/summary.json", "checks": ["exists"]}]}
+    res = rt.execute({"run_id": "t-empty", "skill": {"kind": "authored", "slug": "llm", "manifest": m, "files": [{"path": "assets/t.md", "content": "# Memo\n"}]},
+                      "inputs": {"data": {"kind": "text", "content": "a,b\n", "ext": "csv"}}, "provider": "openai_compat", "model": "m", "max_tokens": 12000})
+    assert res["status"] == "failed"
+    assert seen[0]["max_completion_tokens"] == 12000 and seen[0]["reasoning_effort"] == "low"
+    assert "no text" in res["logs"] or "no text" in json.dumps(res.get("run_json") or {})

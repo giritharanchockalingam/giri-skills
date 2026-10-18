@@ -173,8 +173,10 @@ class Usage:
                 "source": "provider-reported" if self.calls else None}
 
 
-def make_anthropic_callback(key: str, usage: Usage, max_retries: int):
+def make_anthropic_callback(key: str, usage: Usage, max_retries: int, max_tokens_cfg: int | None = None, temperature_cfg: float | None = None):
     def call(system, user, model, max_tokens, temperature):
+        max_tokens = max_tokens_cfg or max_tokens
+        temperature = temperature_cfg if temperature_cfg is not None else temperature
         body = json.dumps({"model": model, "max_tokens": int(max_tokens), "temperature": float(temperature), "system": system,
                            "messages": [{"role": "user", "content": user}]}).encode("utf-8")
         attempt = 0
@@ -209,16 +211,27 @@ def make_anthropic_callback(key: str, usage: Usage, max_retries: int):
         usage.input_tokens += int(u.get("input_tokens") or 0)
         usage.output_tokens += int(u.get("output_tokens") or 0)
         usage.model = data.get("model") or model
-        return "".join(c.get("text", "") for c in data.get("content", []) if c.get("type") == "text")
+        text = "".join(c.get("text", "") for c in data.get("content", []) if c.get("type") == "text")
+        if not text.strip():
+            raise RuntimeError(f"anthropic returned no text (stop_reason={data.get('stop_reason')}); raise model_config.max_tokens if it is max_tokens")
+        return text
     return call
 
 
-def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retries: int):
+def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retries: int, max_tokens_cfg: int | None = None, temperature_cfg: float | None = None):
     """Any OpenAI-compatible /chat/completions endpoint (Groq, OpenRouter, vLLM, Ollama gateway…)."""
     url = base_url.rstrip("/") + "/chat/completions"
     def call(system, user, model, max_tokens, temperature):
+        max_tokens = max_tokens_cfg or max_tokens
+        temperature = temperature_cfg if temperature_cfg is not None else temperature
         payload = {"model": model, "max_completion_tokens": int(max_tokens), "temperature": float(temperature),
                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+        # Reasoning models spend completion tokens thinking before answering. Default to "low" on OpenAI (the call is
+        # retried without it if the model rejects the parameter); SF_LLM_REASONING_EFFORT overrides ("none" disables).
+        effort = os.environ.get("SF_LLM_REASONING_EFFORT", "").strip() or ("low" if "api.openai.com" in url else "")
+        effort = "" if effort == "none" else effort
+        if effort:
+            payload["reasoning_effort"] = effort
         attempt = 0
         while True:
             body = json.dumps(payload).encode("utf-8")
@@ -240,6 +253,9 @@ def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retri
                 low = (detail or "").lower()
                 if e.code == 400 and "temperature" in low and "temperature" in payload:
                     payload.pop("temperature")
+                    continue
+                if e.code == 400 and "reasoning_effort" in low and "reasoning_effort" in payload:
+                    payload.pop("reasoning_effort")
                     continue
                 if e.code == 400 and "max_completion_tokens" in low and "max_completion_tokens" in payload:
                     payload["max_tokens"] = payload.pop("max_completion_tokens")
@@ -263,7 +279,13 @@ def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retri
         usage.output_tokens += int(u.get("completion_tokens") or 0)
         usage.model = data.get("model") or model
         choices = data.get("choices") or []
-        return (choices[0].get("message", {}).get("content") or "") if choices else ""
+        text = (choices[0].get("message", {}).get("content") or "") if choices else ""
+        if not text.strip():
+            reason = choices[0].get("finish_reason") if choices else "no choices"
+            raise RuntimeError(f"openai_compat returned no text (finish_reason={reason}); "
+                               + ("the token budget was used up before any answer — raise model_config.max_tokens or set SF_LLM_REASONING_EFFORT=low"
+                                  if reason == "length" else "empty completion"))
+        return text
     return call
 
 
@@ -427,10 +449,12 @@ def execute(req: dict) -> dict:
                 argv += ["--assume", f"{name}={val}"]
 
         callback = None
+        budget = max(256, min(int(req.get("max_tokens") or 4000), 64000))  # manifest model_config.max_tokens, clamped
+        temp = float(req["temperature"]) if req.get("temperature") is not None else None
         if provider_req == "anthropic":
             key = os.environ.get("ANTHROPIC_API_KEY", "")
             if key:
-                provider_arg, callback = "jsbridge", make_anthropic_callback(key, usage, max_retries)
+                provider_arg, callback = "jsbridge", make_anthropic_callback(key, usage, max_retries, budget, temp)
                 result["provider"].update({"used": "anthropic", "available": True, "note": "ANTHROPIC_API_KEY present on the server"})
             else:
                 provider_arg = "none"
@@ -439,7 +463,7 @@ def execute(req: dict) -> dict:
             key = os.environ.get("SF_LLM_API_KEY", "")
             base = os.environ.get("SF_LLM_BASE_URL") or DEFAULT_COMPAT_BASE_URL
             if key:
-                provider_arg, callback = "jsbridge", make_openai_compat_callback(base, key, usage, max_retries)
+                provider_arg, callback = "jsbridge", make_openai_compat_callback(base, key, usage, max_retries, budget, temp)
                 result["provider"].update({"used": "openai_compat", "available": True, "note": f"OpenAI-compatible endpoint {base}"})
             else:
                 provider_arg = "none"
