@@ -1,0 +1,12 @@
+Senior Director, Enterprise Applications — Harbor Freight Logistics (fictional)
+Location: Columbus OH (hybrid). Travel up to 20%.
+
+Requirements:
+- 10+ years leading enterprise application teams; must have ERP consolidation experience (SAP S/4HANA preferred)
+- Must have owned a budget of $25M or more
+- Experience with API gateway and partner integration programs is required
+- Cloud cost management (FinOps) experience required
+- Nice to have: healthcare payer or insurance domain
+- Nice to have: Snowflake or Informatica data platform exposure
+- MBA preferred
+We value ownership, candor and a bias for action.

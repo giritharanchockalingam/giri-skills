@@ -1,0 +1,115 @@
+{
+  "skill": "presales/integration-migration-assessor",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path",
+  "inputs": {
+    "inventory": "/home/claude/giri-skills/skills/presales/integration-migration-assessor/evals/fixtures/inventory.csv",
+    "rates": "/home/claude/giri-skills/skills/presales/integration-migration-assessor/evals/fixtures/rates.csv",
+    "client": "Acme",
+    "waves": "3"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "score",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/score_inventory.py /home/claude/giri-skills/skills/presales/integration-migration-assessor/evals/fixtures/inventory.csv --out /home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/scored.csv --waves 3 --summary",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.035,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/logs/score.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "tco",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/tco.py /home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/scored.csv --rates /home/claude/giri-skills/skills/presales/integration-migration-assessor/evals/fixtures/rates.csv --out /home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv --summary /home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco-summary.md --json /home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.038,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/logs/tco.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "readout",
+      "kind": "llm",
+      "ok": true,
+      "exit": 0,
+      "provider": "dry",
+      "duration_s": 0.0,
+      "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/readout.md",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/scored.csv exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/scored.csv"
+    },
+    {
+      "check": "csv:[interface_id,weighted_score,band,wave,retire_candidate]",
+      "pass": true,
+      "evidence": "header has ['interface_id', 'weighted_score', 'band', 'wave', 'retire_candidate']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/scored.csv"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv"
+    },
+    {
+      "check": "csv:[scenario,category,line,year,amount,source]",
+      "pass": true,
+      "evidence": "header has ['scenario', 'category', 'line', 'year', 'amount', 'source']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/readout.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/readout.md"
+    },
+    {
+      "check": "sections:[\"Bottom line\",\"Scoring results\",\"Wave plan\",\"TCO\",\"Risks\",\"Next steps\"]",
+      "pass": true,
+      "evidence": "found ['Bottom line', 'Scoring results', 'Wave plan', 'TCO', 'Risks', 'Next steps']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/readout.md"
+    },
+    {
+      "check": "no_unowned_tbd",
+      "pass": true,
+      "evidence": "0 unowned of 2 markers",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/readout.md"
+    },
+    {
+      "check": "numbers_trace_to:[\"/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/scoring-summary.md\",\"/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco-summary.md\"]",
+      "pass": true,
+      "evidence": "skipped in dry mode",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/readout.md"
+    }
+  ],
+  "ok": true
+}

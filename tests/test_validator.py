@@ -25,7 +25,8 @@ def make_repo(tmp_path: Path, skills: dict[str, str], with_evals: bool = True) -
     """
     root = tmp_path / "repo"
     (root / "scripts").mkdir(parents=True)
-    shutil.copy(REPO_ROOT / "scripts/validate.py", root / "scripts" / "validate.py")
+    for name in ("validate.py", "skillmeta.py", "check_output.py"):
+        shutil.copy(REPO_ROOT / "scripts" / name, root / "scripts" / name)
     for dirname, md in skills.items():
         skill = root / "skills" / dirname
         (skill / "evals").mkdir(parents=True)
@@ -72,3 +73,80 @@ def test_validator_rejects_missing_evals(tmp_path):
     r = run_script(validator)
     assert r.returncode == 1
     assert "evals/evals.json missing" in r.stdout
+
+
+AGENT_SKILL = """---
+name: my-skill
+description: An agent skill.
+metadata:
+  version: 0.2.0
+  agent:
+    inputs:
+      - {name: data, type: csv, required: true}
+    run:
+      - {step: go, kind: script, cmd: "python3 -I scripts/go.py {data} --out {out}/x.json"}
+    outputs:
+      - {path: "{out}/x.json", checks: [exists, json]}
+---
+
+# My Skill
+"""
+
+AGENT_EVALS = """{"skill": "my-skill", "cases": [
+  {"id": "c1", "prompt": "p", "expected": ["e"], "inputs": {"data": "evals/fixtures/d.csv"}, "checks": ["exit:0"]}
+]}"""
+
+
+def make_agent_repo(tmp_path: Path, md: str = AGENT_SKILL, evals: str = AGENT_EVALS,
+                    with_script: bool = True, with_fixture: bool = True) -> Path:
+    validator = make_repo(tmp_path, {"my-skill": md})
+    skill = validator.parents[1] / "skills" / "my-skill"
+    (skill / "evals" / "evals.json").write_text(evals, encoding="utf-8")
+    if with_script:
+        (skill / "scripts").mkdir()
+        (skill / "scripts" / "go.py").write_text("print(1)\n", encoding="utf-8")
+    if with_fixture:
+        (skill / "evals" / "fixtures").mkdir()
+        (skill / "evals" / "fixtures" / "d.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+    return validator
+
+
+def test_validator_accepts_wired_agent_skill(tmp_path):
+    r = run_script(make_agent_repo(tmp_path))
+    assert r.returncode == 0, r.stdout
+
+
+def test_validator_requires_agent_block_at_0_2_0(tmp_path):
+    md = GOOD_SKILL.replace("description: A perfectly fine test skill.",
+                            "description: Fine.\nmetadata:\n  version: 0.2.0")
+    r = run_script(make_agent_repo(tmp_path, md=md))
+    assert r.returncode == 1
+    assert "metadata.agent missing" in r.stdout
+
+
+def test_validator_rejects_unknown_check(tmp_path):
+    md = AGENT_SKILL.replace("checks: [exists, json]", "checks: [exists, bogus]")
+    r = run_script(make_agent_repo(tmp_path, md=md))
+    assert r.returncode == 1
+    assert "unknown check 'bogus'" in r.stdout
+
+
+def test_validator_rejects_missing_fixture(tmp_path):
+    r = run_script(make_agent_repo(tmp_path, with_fixture=False))
+    assert r.returncode == 1
+    assert "fixture missing" in r.stdout
+
+
+def test_validator_rejects_missing_script(tmp_path):
+    r = run_script(make_agent_repo(tmp_path, with_script=False))
+    assert r.returncode == 1
+    assert "references missing file: scripts/go.py" in r.stdout
+
+
+def test_validator_requires_run_step_and_check(tmp_path):
+    md = AGENT_SKILL.replace("      - {step: go, kind: script, cmd: \"python3 -I scripts/go.py {data} --out {out}/x.json\"}\n", "")
+    md = md.replace("checks: [exists, json]", "checks: []")
+    r = run_script(make_agent_repo(tmp_path, md=md))
+    assert r.returncode == 1
+    assert "run has no steps" in r.stdout
+    assert "outputs has no checks" in r.stdout

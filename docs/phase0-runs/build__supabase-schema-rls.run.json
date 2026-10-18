@@ -1,0 +1,50 @@
+{
+  "skill": "build/supabase-schema-rls",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__supabase-schema-rls/agent-happy-path",
+  "inputs": {
+    "migrations": "/home/claude/giri-skills/skills/build/supabase-schema-rls/evals/fixtures/migrations-clean",
+    "client_dirs": "",
+    "root": ""
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "lint",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/rls_lint.py /home/claude/giri-skills/skills/build/supabase-schema-rls/evals/fixtures/migrations-clean",
+      "exit": 0,
+      "expected_exit": [
+        0,
+        1
+      ],
+      "ok": true,
+      "duration_s": 0.059,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__supabase-schema-rls/agent-happy-path/logs/lint.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__supabase-schema-rls/agent-happy-path/rls-lint.txt exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__supabase-schema-rls/agent-happy-path/rls-lint.txt"
+    },
+    {
+      "check": "contains:\"errors\"",
+      "pass": true,
+      "evidence": "found: errors",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__supabase-schema-rls/agent-happy-path/rls-lint.txt"
+    },
+    {
+      "check": "cmd:\"python3 -I scripts/rls_lint.py /home/claude/giri-skills/skills/build/supabase-schema-rls/evals/fixtures/migrations-clean --quiet\"",
+      "pass": true,
+      "evidence": "exit 0: rls_lint: 0 findings, 0 errors",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__supabase-schema-rls/agent-happy-path/rls-lint.txt"
+    }
+  ],
+  "ok": true
+}

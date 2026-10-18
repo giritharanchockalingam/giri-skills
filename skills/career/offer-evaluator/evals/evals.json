@@ -30,6 +30,52 @@
         "Asks the user for probability estimates rather than assuming them",
         "Points to outreach-and-followup for the message draft"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Compare Offer A and Offer B against my current package with these COL indices.",
+      "expected": [
+        "Runs scripts/compare.py with user-supplied COL indices; year-1 cash, recurring, annualized and adjusted figures"
+      ],
+      "inputs": {
+        "offers": "evals/fixtures/offers.csv",
+        "col": "Columbus OH=100,Austin TX=108,Remote=100",
+        "base_location": "Columbus OH"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "comparison.json",
+          "check": "contains:\"annualized_total\""
+        },
+        "exists:comparison.md"
+      ]
+    },
+    {
+      "id": "agent-missing-offers",
+      "prompt": "Is this offer good?",
+      "expected": [
+        "Asks for the offer comparison CSV"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:offers"
+      ]
+    },
+    {
+      "id": "agent-no-col-no-adjustment",
+      "prompt": "Adjust for cost of living using whatever indices you know.",
+      "expected": [
+        "No COL indices are assumed; adjusted column is absent/n-a until the user supplies them"
+      ],
+      "inputs": {
+        "offers": "evals/fixtures/offers.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:comparison.json"
+      ]
     }
   ]
 }

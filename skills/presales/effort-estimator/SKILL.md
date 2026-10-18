@@ -4,11 +4,28 @@ description: Use when the user asks to size, estimate, or price a services engag
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: wbs, type: csv, required: true, from: "user WBS file (layout: assets/wbs-template.csv)"}
+      - {name: rates, type: csv, required: false, from: "user rate card (layout: assets/rate-card.example.csv); without it: effort only, no price"}
+      - {name: client, type: string, required: true, from: "client name for the memo"}
+      - {name: iterations, type: string, required: false, default: "20000"}
+    run:
+      - {step: model-json, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} --seed 7 --json", stdout: "{out}/estimate.json"}
+      - {step: model-report, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} --seed 7 --out {out}/estimate.md"}
+      - {step: memo, kind: llm, template: assets/estimate-summary-template.md, context: ["{out}/estimate.md", "{out}/estimate.json", "references/estimation-method.md"], out: "{out}/estimate-memo.md"}
+    outputs:
+      - {path: "{out}/estimate.json", checks: [exists, json]}
+      - {path: "{out}/estimate.md", checks: [exists, sections:["Bottom line","Basis mix","By phase","Staffing"]]}
+      - {path: "{out}/estimate-memo.md", checks: [exists, sections:["Bottom line","Basis of estimate","Assumptions","Risks"], no_unowned_tbd, numbers_trace_to:"{out}/estimate.md"]}
 ---
 
 # effort-estimator
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/effort-estimator --input <name>=<value> … --out <dir>` (see `--explain presales/effort-estimator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Size the <initiative> engagement."

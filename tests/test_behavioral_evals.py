@@ -127,3 +127,36 @@ def test_negative_set_and_judge_prompt():
     template = (REPO / "evals" / "judge-prompt.md").read_text(encoding="utf-8")
     assert "{output}" in template
     assert "{expected_items}" in template
+
+
+AGENT_HEADER = ["skill", "case_id", "check", "pass", "evidence"]
+
+
+def test_agent_mode_dry(tmp_path):
+    out = tmp_path / "agent"
+    r = run_eval("agent", "--provider", "dry", "--out", str(out),
+                 "--skills", "skills/career/jd-fit-scorer", "--skills", "skills/career/outreach-and-followup")
+    assert r.returncode == 0, r.stdout + r.stderr
+    with (out / "agent.csv").open(encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    assert rows[0] == AGENT_HEADER
+    assert {row[0] for row in rows[1:]} == {"career/jd-fit-scorer"}
+    assert all(row[3] == "1" for row in rows[1:]), rows
+    scorecard = (out / "scorecard.md").read_text(encoding="utf-8")
+    assert "| agent pass | agent verdict |" in scorecard
+    assert "| career/jd-fit-scorer |  |  |  |  |  |  | 1.00 | Works |" in scorecard
+    # unwired skill: present, blank agent cells, not failing
+    assert "| career/outreach-and-followup |  |  |  |  |  |  |  |  |" in scorecard
+    assert (out / "runs").is_dir()
+
+
+def test_agent_mode_merges_into_existing_scorecard(tmp_path):
+    r, out = dry_run(tmp_path)  # trigger + quality first
+    assert r.returncode == 0, r.stdout + r.stderr
+    r2 = run_eval("agent", "--provider", "dry", "--out", str(out), "--skills", "skills/career/jd-fit-scorer")
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    scorecard = (out / "scorecard.md").read_text(encoding="utf-8")
+    line = next(l for l in scorecard.splitlines() if l.startswith("| career/jd-fit-scorer |"))
+    cells = [c.strip() for c in line.strip("|").split("|")]
+    assert cells[6] == "BOTH" and cells[7] == "1.00" and cells[8] == "Works"  # old verdict kept
+    assert (out / "trigger.csv").exists() and (out / "quality.csv").exists()

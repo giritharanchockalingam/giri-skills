@@ -1,0 +1,4 @@
+key,value,unit,source,notes
+currency,USD,,,fictional fixture with no prices
+decommission_month,14,months,fictional wave plan,
+horizon_years,3,years,,

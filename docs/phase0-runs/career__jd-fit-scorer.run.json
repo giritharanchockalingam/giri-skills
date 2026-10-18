@@ -1,0 +1,74 @@
+{
+  "skill": "career/jd-fit-scorer",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path",
+  "inputs": {
+    "jd": "/home/claude/giri-skills/skills/career/jd-fit-scorer/evals/fixtures/jd.txt",
+    "profile": "/home/claude/giri-skills/skills/career/jd-fit-scorer/evals/fixtures/profile.txt",
+    "threshold": "0.5"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "score-json",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/score.py --jd /home/claude/giri-skills/skills/career/jd-fit-scorer/evals/fixtures/jd.txt --profile /home/claude/giri-skills/skills/career/jd-fit-scorer/evals/fixtures/profile.txt --threshold 0.5 --json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.036,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/logs/score-json.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "score-table",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/score.py --jd /home/claude/giri-skills/skills/career/jd-fit-scorer/evals/fixtures/jd.txt --profile /home/claude/giri-skills/skills/career/jd-fit-scorer/evals/fixtures/profile.txt --threshold 0.5",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.035,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/logs/score-table.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.json"
+    },
+    {
+      "check": "contains:\"verdict\"",
+      "pass": true,
+      "evidence": "found: verdict",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.md"
+    },
+    {
+      "check": "contains:\"/100\"",
+      "pass": true,
+      "evidence": "found: /100",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__jd-fit-scorer/agent-happy-path/fit.md"
+    }
+  ],
+  "ok": true
+}

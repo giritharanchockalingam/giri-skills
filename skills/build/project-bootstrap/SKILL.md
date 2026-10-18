@@ -4,11 +4,28 @@ description: Use when the user starts a new app or repo (Next.js + Supabase + Ve
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: target, type: path, required: true, from: "project directory to scaffold (created if absent)"}
+      - {name: name, type: string, required: true, from: "project name"}
+      - {name: multi_tenant, type: flag, required: false, flag: "--multi-tenant", from: "true to mark tenancy as multi-tenant"}
+    run:
+      - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold.py --target {target} --name {name} {multi_tenant}", stdout: "{out}/scaffold.log"}
+    outputs:
+      - {path: "{target}/docs/SPEC.md", checks: [exists, sections:["Purpose"]]}
+      - {path: "{target}/CLAUDE.md", checks: [exists]}
+      - {path: "{target}/docs/HANDOFF.md", checks: [exists]}
+      - {path: "{target}/docs/adr/0001-stack.md", checks: [exists]}
+      - {path: "{target}/.github/workflows/ci.yml", checks: [exists, yaml]}
+      - {path: "{target}/.env.example", checks: [exists]}
 ---
 
 # project-bootstrap
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/project-bootstrap --input <name>=<value> … --out <dir>` (see `--explain build/project-bootstrap`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "New app", "new repo", "set up the project", "bootstrap", "start from scratch".

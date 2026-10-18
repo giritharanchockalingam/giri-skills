@@ -1,0 +1,67 @@
+{
+  "skill": "ai-platform/infra-gpu-sizing",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path",
+  "inputs": {
+    "inputs": "/home/claude/giri-skills/skills/ai-platform/infra-gpu-sizing/evals/fixtures/inputs.csv",
+    "overrides": ""
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "size-json",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/size.py --inputs /home/claude/giri-skills/skills/ai-platform/infra-gpu-sizing/evals/fixtures/inputs.csv --json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.036,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/logs/size-json.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "size-table",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/size.py --inputs /home/claude/giri-skills/skills/ai-platform/infra-gpu-sizing/evals/fixtures/inputs.csv",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.035,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/logs/size-table.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.txt exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.txt"
+    },
+    {
+      "check": "contains:\"gpus_required\"",
+      "pass": true,
+      "evidence": "found: gpus_required",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.txt"
+    }
+  ],
+  "ok": true
+}

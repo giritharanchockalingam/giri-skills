@@ -1,0 +1,9 @@
+capability_id,keywords,status,evidence,owner,gap_condition,mitigation,category
+CAP-01,migrate||integrations||gateway,C,Migration factory accelerator ref MF-2025-03,Priya Raman,,,TEC
+CAP-02,developer portal||self-service,C,Product feature: portal module v4,Daniel Okafor,,,TEC
+CAP-03,oauth||mutual tls,C,Security pattern library SP-07,Daniel Okafor,,,SEC
+CAP-04,automated regression||regression testing,P,,Lena Fischer,Regression suite covers REST only; SOAP interfaces manual,custom-build — estimated in pricing,TEC
+CAP-05,audit logs||seven years,P,Platform retains 13 months natively,Lena Fischer,Retention beyond 13 months needs cold storage export,partner — archive service,SEC
+CAP-06,delivery manager||status reporting,C,Delivery playbook DP-2 (fictional),Priya Raman,,,DEL
+CAP-07,iso 27001,C,Cert ISO-27001-FIX-2027 (fictional; expires 2027-09),Marco Bellini,,,ADM
+CAP-08,fixed||not-to-exceed||per wave,C,Commercial model CM-3,Marco Bellini,,,COM

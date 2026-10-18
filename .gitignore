@@ -13,3 +13,6 @@ evals/results/*/raw/
 studio/node_modules/
 studio/.next/
 studio/out/
+# agent-mode per-case run dirs and ad-hoc run_skill.py outputs stay local
+evals/results/*/runs/
+runs/

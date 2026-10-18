@@ -29,6 +29,58 @@
         "Both hard-constraint hits named explicitly",
         "Suggests logging in tracker as Passed with reason"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Score my fit for the attached JD against my profile keywords.",
+      "expected": [
+        "Runs scripts/score.py; weighted score, bucket table, go/no-go verdict"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "profile": "evals/fixtures/profile.txt"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "fit.json",
+          "check": "contains:\"verdict\""
+        },
+        {
+          "file": "fit.md",
+          "check": "contains:\"/100\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-profile",
+      "prompt": "Should I apply to this JD?",
+      "expected": [
+        "Asks for the profile keyword file"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:profile"
+      ]
+    },
+    {
+      "id": "agent-threshold-override",
+      "prompt": "Be strict: only count exact matches.",
+      "expected": [
+        "Uses the supplied threshold; verdict still from the script"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "profile": "evals/fixtures/profile.txt",
+        "threshold": "0.9"
+      },
+      "checks": [
+        "exit:0",
+        "exists:fit.json"
+      ]
     }
   ]
 }

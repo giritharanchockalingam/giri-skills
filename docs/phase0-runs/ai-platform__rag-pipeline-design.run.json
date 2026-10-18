@@ -1,0 +1,56 @@
+{
+  "skill": "ai-platform/rag-pipeline-design",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path",
+  "inputs": {
+    "eval_set": "/home/claude/giri-skills/skills/ai-platform/rag-pipeline-design/evals/fixtures/eval-set.csv",
+    "k": "1,5,10",
+    "min_recall": "",
+    "at": "5"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "retrieval-metrics",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/eval_retrieval.py --csv /home/claude/giri-skills/skills/ai-platform/rag-pipeline-design/evals/fixtures/eval-set.csv --k 1,5,10 --json /home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.037,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/logs/retrieval-metrics.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.txt exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.txt"
+    },
+    {
+      "check": "contains:\"recall\"",
+      "pass": true,
+      "evidence": "found: recall",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.txt"
+    }
+  ],
+  "ok": true
+}

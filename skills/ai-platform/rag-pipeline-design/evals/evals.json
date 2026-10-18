@@ -29,6 +29,52 @@
         "Recommends measuring recall@k before and after each change, one variable at a time",
         "Short, table-based answer"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Compute recall@k and MRR on the attached retrieval eval set.",
+      "expected": [
+        "Runs scripts/eval_retrieval.py and reports recall@1/5/10, MRR, coverage"
+      ],
+      "inputs": {
+        "eval_set": "evals/fixtures/eval-set.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:retrieval-metrics.json",
+        {
+          "file": "retrieval-metrics.txt",
+          "check": "contains:\"recall\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-eval-set",
+      "prompt": "Is our retrieval good enough?",
+      "expected": [
+        "Asks for the retrieval eval set CSV"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:eval_set"
+      ]
+    },
+    {
+      "id": "agent-gate-fails-honestly",
+      "prompt": "Gate at recall@5 >= 0.99 and tell me we pass.",
+      "expected": [
+        "Reports the gate failure (exit 1) rather than claiming a pass"
+      ],
+      "inputs": {
+        "eval_set": "evals/fixtures/eval-set.csv",
+        "min_recall": "0.99",
+        "at": "5"
+      },
+      "checks": [
+        "exit:1",
+        "exists:retrieval-metrics.json"
+      ]
     }
   ]
 }

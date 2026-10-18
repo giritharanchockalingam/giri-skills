@@ -1,0 +1,99 @@
+skill,case_id,check,pass,evidence
+ai-platform/infra-gpu-sizing,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/infra-gpu-sizing,agent-happy-path,exists:sizing.json,1,evals/results/agent-dry/runs/ai-platform__infra-gpu-sizing/agent-happy-path/sizing.json exists
+ai-platform/infra-gpu-sizing,agent-happy-path,"sizing.txt: contains:""gpus_required""",1,found: gpus_required
+ai-platform/infra-gpu-sizing,agent-missing-inputs,exit:2,1,"exit code 2, expected 2"
+ai-platform/infra-gpu-sizing,agent-missing-inputs,needs_input:inputs,1,missing inputs named: ['inputs']
+ai-platform/infra-gpu-sizing,agent-no-throughput-no-guess,exit:1,1,"exit code 1, expected 1"
+ai-platform/llm-eval-harness,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/llm-eval-harness,agent-happy-path,"golden-set.csv: csv:[id,input,must_contain]",1,"header has ['id', 'input', 'must_contain']"
+ai-platform/llm-eval-harness,agent-happy-path,exists:scorecard.json,1,evals/results/agent-dry/runs/ai-platform__llm-eval-harness/agent-happy-path/scorecard.json exists
+ai-platform/llm-eval-harness,agent-happy-path,"scorecard.txt: contains:""GATE""",1,found: GATE
+ai-platform/llm-eval-harness,agent-missing-cases,exit:2,1,"exit code 2, expected 2"
+ai-platform/llm-eval-harness,agent-missing-cases,needs_input:cases,1,missing inputs named: ['cases']
+ai-platform/llm-eval-harness,agent-transcript-no-invented-criteria,exit:0,1,"exit code 0, expected 0"
+ai-platform/llm-eval-harness,agent-transcript-no-invented-criteria,"golden-set.csv: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+ai-platform/rag-pipeline-design,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/rag-pipeline-design,agent-happy-path,exists:retrieval-metrics.json,1,evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-happy-path/retrieval-metrics.json exists
+ai-platform/rag-pipeline-design,agent-happy-path,"retrieval-metrics.txt: contains:""recall""",1,found: recall
+ai-platform/rag-pipeline-design,agent-missing-eval-set,exit:2,1,"exit code 2, expected 2"
+ai-platform/rag-pipeline-design,agent-missing-eval-set,needs_input:eval_set,1,missing inputs named: ['eval_set']
+ai-platform/rag-pipeline-design,agent-gate-fails-honestly,exit:1,1,"exit code 1, expected 1"
+ai-platform/rag-pipeline-design,agent-gate-fails-honestly,exists:retrieval-metrics.json,1,evals/results/agent-dry/runs/ai-platform__rag-pipeline-design/agent-gate-fails-honestly/retrieval-metrics.json exists
+build/project-bootstrap,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/project-bootstrap,agent-happy-path,exists:proj/docs/SPEC.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md exists
+build/project-bootstrap,agent-happy-path,exists:proj/.github/workflows/ci.yml,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml exists
+build/project-bootstrap,agent-happy-path,"proj/docs/SPEC.md: contains:""multi-tenant""",1,found: multi-tenant
+build/project-bootstrap,agent-missing-name,exit:2,1,"exit code 2, expected 2"
+build/project-bootstrap,agent-missing-name,needs_input:name,1,missing inputs named: ['name']
+build/project-bootstrap,agent-single-tenant-default,exit:0,1,"exit code 0, expected 0"
+build/project-bootstrap,agent-single-tenant-default,exists:proj/CLAUDE.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-single-tenant-default/proj/CLAUDE.md exists
+build/project-bootstrap,agent-single-tenant-default,exists:proj/docs/HANDOFF.md,1,evals/results/agent-dry/runs/build__project-bootstrap/agent-single-tenant-default/proj/docs/HANDOFF.md exists
+build/supabase-schema-rls,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+build/supabase-schema-rls,agent-happy-path,"rls-lint.txt: contains:""0 errors""",1,found: 0 errors
+build/supabase-schema-rls,agent-missing-migrations,exit:2,1,"exit code 2, expected 2"
+build/supabase-schema-rls,agent-missing-migrations,needs_input:migrations,1,missing inputs named: ['migrations']
+build/supabase-schema-rls,agent-bad-migration-fails,exit:1,1,"exit code 1, expected 1"
+build/supabase-schema-rls,agent-bad-migration-fails,"rls-lint.txt: contains:""errors""",1,found: errors
+career/application-tracker,agent-happy-path-add,exit:0,1,"exit code 0, expected 0"
+career/application-tracker,agent-happy-path-add,"tracker.csv: contains:""Acme""",1,found: Acme
+career/application-tracker,agent-happy-path-add,exists:pipeline.json,1,evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json exists
+career/application-tracker,agent-happy-path-add,exists:aging.json,1,evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/aging.json exists
+career/application-tracker,agent-happy-path-add,exists:weekly-review.md,1,evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/weekly-review.md exists
+career/application-tracker,agent-missing-tracker,exit:2,1,"exit code 2, expected 2"
+career/application-tracker,agent-missing-tracker,needs_input:tracker,1,missing inputs named: ['tracker']
+career/application-tracker,agent-report-only,exit:0,1,"exit code 0, expected 0"
+career/application-tracker,agent-report-only,exists:aging.json,1,evals/results/agent-dry/runs/career__application-tracker/agent-report-only/aging.json exists
+career/application-tracker,agent-report-only,exists:weekly-review.md,1,evals/results/agent-dry/runs/career__application-tracker/agent-report-only/weekly-review.md exists
+career/jd-fit-scorer,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+career/jd-fit-scorer,agent-happy-path,"fit.json: contains:""verdict""",1,found: verdict
+career/jd-fit-scorer,agent-happy-path,"fit.md: contains:""/100""",1,found: /100
+career/jd-fit-scorer,agent-missing-profile,exit:2,1,"exit code 2, expected 2"
+career/jd-fit-scorer,agent-missing-profile,needs_input:profile,1,missing inputs named: ['profile']
+career/jd-fit-scorer,agent-threshold-override,exit:0,1,"exit code 0, expected 0"
+career/jd-fit-scorer,agent-threshold-override,exists:fit.json,1,evals/results/agent-dry/runs/career__jd-fit-scorer/agent-threshold-override/fit.json exists
+career/offer-evaluator,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+career/offer-evaluator,agent-happy-path,"comparison.json: contains:""annualized_total""",1,found: annualized_total
+career/offer-evaluator,agent-happy-path,exists:comparison.md,1,evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.md exists
+career/offer-evaluator,agent-missing-offers,exit:2,1,"exit code 2, expected 2"
+career/offer-evaluator,agent-missing-offers,needs_input:offers,1,missing inputs named: ['offers']
+career/offer-evaluator,agent-no-col-no-adjustment,exit:0,1,"exit code 0, expected 0"
+career/offer-evaluator,agent-no-col-no-adjustment,exists:comparison.json,1,evals/results/agent-dry/runs/career__offer-evaluator/agent-no-col-no-adjustment/comparison.json exists
+presales/client-research-brief,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/client-research-brief,agent-happy-path,"brief-skeleton.md: sections:[""Leadership"",""Sources""]",1,"found ['Leadership', 'Sources']"
+presales/client-research-brief,agent-happy-path,"brief-skeleton.md: contains:""S1""",1,found: S1
+presales/client-research-brief,agent-happy-path,"brief.md: sections:[""Bottom line""]",1,found ['Bottom line']
+presales/client-research-brief,agent-missing-notes,exit:2,1,"exit code 2, expected 2"
+presales/client-research-brief,agent-missing-notes,needs_input:notes,1,missing inputs named: ['notes']
+presales/client-research-brief,agent-unknowns-marked,exit:0,1,"exit code 0, expected 0"
+presales/client-research-brief,agent-unknowns-marked,"brief-skeleton.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/effort-estimator,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/effort-estimator,agent-happy-path,exists:estimate.json,1,evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.json exists
+presales/effort-estimator,agent-happy-path,exists:estimate.md,1,evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md exists
+presales/effort-estimator,agent-happy-path,"estimate-memo.md: sections:[""Bottom line"",""Assumptions""]",1,"found ['Bottom line', 'Assumptions']"
+presales/effort-estimator,agent-happy-path,"estimate.md: contains:""Cost and price (from supplied rate card)""",1,found: Cost and price (from supplied rate card)
+presales/effort-estimator,agent-missing-wbs,exit:2,1,"exit code 2, expected 2"
+presales/effort-estimator,agent-missing-wbs,needs_input:wbs,1,missing inputs named: ['wbs']
+presales/effort-estimator,agent-no-rate-card-no-price,exit:0,1,"exit code 0, expected 0"
+presales/effort-estimator,agent-no-rate-card-no-price,"estimate.md: contains:""No rate card supplied""",1,found: No rate card supplied
+presales/effort-estimator,agent-no-rate-card-no-price,"estimate.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/integration-migration-assessor,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/integration-migration-assessor,agent-happy-path,"scored.csv: csv:[band,wave]",1,"header has ['band', 'wave']"
+presales/integration-migration-assessor,agent-happy-path,exists:tco.csv,1,evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.csv exists
+presales/integration-migration-assessor,agent-happy-path,exists:tco.json,1,evals/results/agent-dry/runs/presales__integration-migration-assessor/agent-happy-path/tco.json exists
+presales/integration-migration-assessor,agent-happy-path,"readout.md: sections:[""Bottom line"",""Wave plan""]",1,"found ['Bottom line', 'Wave plan']"
+presales/integration-migration-assessor,agent-missing-rates,exit:2,1,"exit code 2, expected 2"
+presales/integration-migration-assessor,agent-missing-rates,needs_input:rates,1,missing inputs named: ['rates']
+presales/integration-migration-assessor,agent-no-prices-no-numbers,exit:0,1,"exit code 0, expected 0"
+presales/integration-migration-assessor,agent-no-prices-no-numbers,"tco.csv: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/integration-migration-assessor,agent-no-prices-no-numbers,"tco-summary.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/rfp-compliance-matrix,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+presales/rfp-compliance-matrix,agent-happy-path,exists:requirements.csv,1,evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv exists
+presales/rfp-compliance-matrix,agent-happy-path,"matrix.csv: csv:[req_id,compliance,owner]",1,"header has ['req_id', 'compliance', 'owner']"
+presales/rfp-compliance-matrix,agent-happy-path,"gaps.md: sections:[""Bottom line"",""Clarification questions""]",1,"found ['Bottom line', 'Clarification questions']"
+presales/rfp-compliance-matrix,agent-happy-path,exists:bid-score.json,1,evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/bid-score.json exists
+presales/rfp-compliance-matrix,agent-missing-capabilities,exit:2,1,"exit code 2, expected 2"
+presales/rfp-compliance-matrix,agent-missing-capabilities,needs_input:capabilities,1,missing inputs named: ['capabilities']
+presales/rfp-compliance-matrix,agent-unmatched-becomes-clarify,exit:0,1,"exit code 0, expected 0"
+presales/rfp-compliance-matrix,agent-unmatched-becomes-clarify,"gaps.md: contains:""[TO BE BASELINED""",1,found: [TO BE BASELINED
+presales/rfp-compliance-matrix,agent-unmatched-becomes-clarify,"matrix.csv: contains:""CQ-001""",1,found: CQ-001

@@ -1,0 +1,98 @@
+{
+  "skill": "presales/rfp-compliance-matrix",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path",
+  "inputs": {
+    "rfp": "/home/claude/giri-skills/skills/presales/rfp-compliance-matrix/evals/fixtures/rfp.md",
+    "capabilities": "/home/claude/giri-skills/skills/presales/rfp-compliance-matrix/evals/fixtures/capabilities.csv",
+    "min_words": "4"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "extract",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/extract_requirements.py /home/claude/giri-skills/skills/presales/rfp-compliance-matrix/evals/fixtures/rfp.md --out /home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv --min-words 4",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.054,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/logs/extract.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "score",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/score_matrix.py /home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv --capabilities /home/claude/giri-skills/skills/presales/rfp-compliance-matrix/evals/fixtures/capabilities.csv --out /home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/matrix.csv --gaps /home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/gaps.md --summary /home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/bid-score.json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.037,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/logs/score.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv"
+    },
+    {
+      "check": "csv:[req_id,client_id,text,mdo_hint]",
+      "pass": true,
+      "evidence": "header has ['req_id', 'client_id', 'text', 'mdo_hint']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/requirements.csv"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/matrix.csv exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/matrix.csv"
+    },
+    {
+      "check": "csv:[req_id,mdo,compliance,evidence,gap_condition,mitigation,owner,clarification_id]",
+      "pass": true,
+      "evidence": "header has ['req_id', 'mdo', 'compliance', 'evidence', 'gap_condition', 'mitigation', 'owner', 'clarification_id']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/matrix.csv"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/gaps.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/gaps.md"
+    },
+    {
+      "check": "sections:[\"Bottom line\",\"Mandatory gaps\",\"Clarification questions\"]",
+      "pass": true,
+      "evidence": "found ['Bottom line', 'Mandatory gaps', 'Clarification questions']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/gaps.md"
+    },
+    {
+      "check": "no_unowned_tbd",
+      "pass": true,
+      "evidence": "0 unowned of 7 markers",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/gaps.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/bid-score.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/bid-score.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__rfp-compliance-matrix/agent-happy-path/bid-score.json"
+    }
+  ],
+  "ok": true
+}

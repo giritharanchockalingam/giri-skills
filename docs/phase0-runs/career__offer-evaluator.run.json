@@ -1,0 +1,76 @@
+{
+  "skill": "career/offer-evaluator",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path",
+  "inputs": {
+    "offers": "/home/claude/giri-skills/skills/career/offer-evaluator/evals/fixtures/offers.csv",
+    "horizon": "4",
+    "col": "Columbus OH=100,Austin TX=108,Remote=100",
+    "base_location": "Columbus OH",
+    "tax": ""
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "compare-json",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/compare.py --file /home/claude/giri-skills/skills/career/offer-evaluator/evals/fixtures/offers.csv --horizon 4 --col 'Columbus OH=100,Austin TX=108,Remote=100' --base-location 'Columbus OH' --json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.035,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/logs/compare-json.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "compare-table",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/compare.py --file /home/claude/giri-skills/skills/career/offer-evaluator/evals/fixtures/offers.csv --horizon 4 --col 'Columbus OH=100,Austin TX=108,Remote=100' --base-location 'Columbus OH'",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.041,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/logs/compare-table.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.json"
+    },
+    {
+      "check": "contains:\"annualized_total\"",
+      "pass": true,
+      "evidence": "found: annualized_total",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.md"
+    },
+    {
+      "check": "contains:\"annualized\"",
+      "pass": true,
+      "evidence": "found: annualized",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__offer-evaluator/agent-happy-path/comparison.md"
+    }
+  ],
+  "ok": true
+}

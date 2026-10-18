@@ -4,11 +4,25 @@ description: Use when the user pastes a job description (JD) or job link and ask
 license: MIT
 metadata:
   domain: career
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: jd, type: file, required: true, from: "job description text file"}
+      - {name: profile, type: file, required: true, from: "profile keyword file (layout: assets/profile-keywords.example.txt)"}
+      - {name: threshold, type: string, required: false, default: "0.5"}
+    run:
+      - {step: score-json, kind: script, cmd: "python3 -I scripts/score.py --jd {jd} --profile {profile} --threshold {threshold} --json", stdout: "{out}/fit.json"}
+      - {step: score-table, kind: script, cmd: "python3 -I scripts/score.py --jd {jd} --profile {profile} --threshold {threshold}", stdout: "{out}/fit.md"}
+    outputs:
+      - {path: "{out}/fit.json", checks: [exists, json, contains:"verdict"]}
+      - {path: "{out}/fit.md", checks: [exists, contains:"/100"]}
 ---
 
 # JD Fit Scorer
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/jd-fit-scorer --input <name>=<value> … --out <dir>` (see `--explain career/jd-fit-scorer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - User pastes a JD, posting URL text, or recruiter summary and asks "should I apply?", "how well do I fit?", "score this", or "rank these roles".

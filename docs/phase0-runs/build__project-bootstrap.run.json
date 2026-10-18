@@ -1,0 +1,79 @@
+{
+  "skill": "build/project-bootstrap",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path",
+  "inputs": {
+    "target": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj",
+    "name": "demo-app",
+    "multi_tenant": "--multi-tenant"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "scaffold",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/scaffold.py --target /home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj --name demo-app --multi-tenant",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.035,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/logs/scaffold.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md"
+    },
+    {
+      "check": "sections:[\"Purpose\"]",
+      "pass": true,
+      "evidence": "found ['Purpose']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/SPEC.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/CLAUDE.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/CLAUDE.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/HANDOFF.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/HANDOFF.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/adr/0001-stack.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/docs/adr/0001-stack.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml"
+    },
+    {
+      "check": "yaml",
+      "pass": true,
+      "evidence": "parsed 6 top-level keys",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.github/workflows/ci.yml"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.env.example exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/build__project-bootstrap/agent-happy-path/proj/.env.example"
+    }
+  ],
+  "ok": true
+}

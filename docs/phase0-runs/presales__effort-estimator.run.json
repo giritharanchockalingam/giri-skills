@@ -1,0 +1,103 @@
+{
+  "skill": "presales/effort-estimator",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path",
+  "inputs": {
+    "wbs": "/home/claude/giri-skills/skills/presales/effort-estimator/evals/fixtures/wbs.csv",
+    "rates": "/home/claude/giri-skills/skills/presales/effort-estimator/evals/fixtures/rates.csv",
+    "client": "Acme",
+    "iterations": "20000"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "model-json",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/estimate.py /home/claude/giri-skills/skills/presales/effort-estimator/evals/fixtures/wbs.csv --rates /home/claude/giri-skills/skills/presales/effort-estimator/evals/fixtures/rates.csv --iterations 20000 --seed 7 --json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.62,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/logs/model-json.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "model-report",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/estimate.py /home/claude/giri-skills/skills/presales/effort-estimator/evals/fixtures/wbs.csv --rates /home/claude/giri-skills/skills/presales/effort-estimator/evals/fixtures/rates.csv --iterations 20000 --seed 7 --out /home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.637,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/logs/model-report.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "memo",
+      "kind": "llm",
+      "ok": true,
+      "exit": 0,
+      "provider": "dry",
+      "duration_s": 0.0,
+      "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate-memo.md",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md"
+    },
+    {
+      "check": "sections:[\"Bottom line\",\"Basis mix\",\"By phase\",\"Staffing\"]",
+      "pass": true,
+      "evidence": "found ['Bottom line', 'Basis mix', 'By phase', 'Staffing']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate-memo.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate-memo.md"
+    },
+    {
+      "check": "sections:[\"Bottom line\",\"Basis of estimate\",\"Assumptions\",\"Risks\"]",
+      "pass": true,
+      "evidence": "found ['Bottom line', 'Basis of estimate', 'Assumptions', 'Risks']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate-memo.md"
+    },
+    {
+      "check": "no_unowned_tbd",
+      "pass": true,
+      "evidence": "0 unowned of 1 markers",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate-memo.md"
+    },
+    {
+      "check": "numbers_trace_to:\"/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate.md\"",
+      "pass": true,
+      "evidence": "skipped in dry mode",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__effort-estimator/agent-happy-path/estimate-memo.md"
+    }
+  ],
+  "ok": true
+}
