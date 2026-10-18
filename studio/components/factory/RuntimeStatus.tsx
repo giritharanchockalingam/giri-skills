@@ -11,7 +11,7 @@ export function RuntimeStatus() {
       const r = await fetch("/api/runtime/health", { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) setState({ ok: false, text: j.error?.message ?? `HTTP ${r.status}` });
-      else if (j.ok) setState({ ok: true, text: `Reachable at ${j.url} — Python ${j.detail?.python}, ${j.detail?.bundle_files} bundle files, ANTHROPIC_API_KEY ${j.detail?.anthropic_key_present ? "present" : "absent"} in the function, max deadline ${j.detail?.max_timeout_s}s.` });
+      else if (j.ok) setState({ ok: true, text: `Reachable at ${j.url} — Python ${j.detail?.python}, ${j.detail?.bundle_files} bundle files, model keys: anthropic ${j.detail?.anthropic_key_present ? "present" : "absent"}, openai_compat ${j.detail?.compat_key_present ? "present" : "absent"}, max deadline ${j.detail?.max_timeout_s}s.` });
       else setState({ ok: false, text: j.error ?? "unavailable" });
     } catch (e) { setState({ ok: false, text: (e as Error).message }); }
     finally { setBusy(false); }

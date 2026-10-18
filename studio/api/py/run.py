@@ -49,6 +49,7 @@ MAX_CONTENT_TEXT = 200 * 1024
 MAX_OUTPUT_FILES = 200
 WORK_ROOT = Path(os.environ.get("SF_WORK_ROOT", "/tmp/sf"))
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+DEFAULT_COMPAT_BASE_URL = "https://api.groq.com/openai/v1"  # provider "openai_compat": SF_LLM_BASE_URL overrides
 # USD per million tokens, used ONLY for the cost estimate (cost_is_estimate = true). Update when prices change.
 PRICE_TABLE_DATE = "2026-10"
 PRICES = {"claude-sonnet-4-5": (3.0, 15.0), "claude-haiku-4-5": (1.0, 5.0), "claude-opus-4-1": (15.0, 75.0), "claude-opus-4-6": (15.0, 75.0)}
@@ -200,6 +201,50 @@ def make_anthropic_callback(key: str, usage: Usage, max_retries: int):
         usage.output_tokens += int(u.get("output_tokens") or 0)
         usage.model = data.get("model") or model
         return "".join(c.get("text", "") for c in data.get("content", []) if c.get("type") == "text")
+    return call
+
+
+def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retries: int):
+    """Any OpenAI-compatible /chat/completions endpoint (Groq, OpenRouter, vLLM, Ollama gateway…)."""
+    url = base_url.rstrip("/") + "/chat/completions"
+    def call(system, user, model, max_tokens, temperature):
+        body = json.dumps({"model": model, "max_tokens": int(max_tokens), "temperature": float(temperature),
+                           "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}).encode("utf-8")
+        attempt = 0
+        while True:
+            req = urllib.request.Request(url, data=body, method="POST", headers={
+                "content-type": "application/json", "authorization": f"Bearer {key}", "user-agent": "skills-factory/1"})
+            try:
+                with urllib.request.urlopen(req, timeout=50) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                detail = ""
+                try:
+                    err = json.loads(e.read().decode("utf-8")).get("error", {})
+                    detail = err.get("message", "") if isinstance(err, dict) else str(err)
+                except Exception:  # noqa: BLE001
+                    pass
+                if e.code in (429, 500, 502, 503) and attempt < max_retries:
+                    attempt += 1
+                    usage.retries += 1
+                    time.sleep(min(2 ** attempt, 8))
+                    continue
+                raise RuntimeError(f"openai_compat HTTP {e.code}: {detail or e.reason}") from None
+            except (urllib.error.URLError, TimeoutError) as e:
+                if attempt < max_retries:
+                    attempt += 1
+                    usage.retries += 1
+                    time.sleep(min(2 ** attempt, 8))
+                    continue
+                raise RuntimeError(f"openai_compat request failed: {e}") from None
+        u = data.get("usage") or {}
+        usage.calls += 1
+        usage.input_tokens += int(u.get("prompt_tokens") or 0)
+        usage.output_tokens += int(u.get("completion_tokens") or 0)
+        usage.model = data.get("model") or model
+        choices = data.get("choices") or []
+        return (choices[0].get("message", {}).get("content") or "") if choices else ""
     return call
 
 
@@ -362,14 +407,24 @@ def execute(req: dict) -> dict:
             if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", name) and str(val) != "":
                 argv += ["--assume", f"{name}={val}"]
 
-        key = os.environ.get("ANTHROPIC_API_KEY", "")
+        callback = None
         if provider_req == "anthropic":
+            key = os.environ.get("ANTHROPIC_API_KEY", "")
             if key:
-                provider_arg = "jsbridge"
+                provider_arg, callback = "jsbridge", make_anthropic_callback(key, usage, max_retries)
                 result["provider"].update({"used": "anthropic", "available": True, "note": "ANTHROPIC_API_KEY present on the server"})
             else:
                 provider_arg = "none"
                 result["provider"].update({"used": "none", "available": False, "note": "provider unavailable — set ANTHROPIC_API_KEY on the server; llm steps were skipped"})
+        elif provider_req == "openai_compat":
+            key = os.environ.get("SF_LLM_API_KEY", "")
+            base = os.environ.get("SF_LLM_BASE_URL") or DEFAULT_COMPAT_BASE_URL
+            if key:
+                provider_arg, callback = "jsbridge", make_openai_compat_callback(base, key, usage, max_retries)
+                result["provider"].update({"used": "openai_compat", "available": True, "note": f"OpenAI-compatible endpoint {base}"})
+            else:
+                provider_arg = "none"
+                result["provider"].update({"used": "none", "available": False, "note": "provider unavailable — set SF_LLM_API_KEY on the server; llm steps were skipped"})
         else:
             provider_arg = "none"
             result["provider"].update({"used": "none", "available": True, "note": "no model requested (provider: none)"})
@@ -379,7 +434,7 @@ def execute(req: dict) -> dict:
         captured = io.StringIO()
         with scrubbed_env(work):
             run_skill, behavioral_evals = fresh_runner(repo)
-            behavioral_evals.JS_LLM_CALLBACK = make_anthropic_callback(key, usage, max_retries) if provider_arg == "jsbridge" else None
+            behavioral_evals.JS_LLM_CALLBACK = callback
             saved_argv, saved_cwd = sys.argv, os.getcwd()
             def go():
                 sys.argv = ["run_skill.py"] + argv
@@ -488,7 +543,7 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 (Vercel requires this name)
         except Exception as e:  # noqa: BLE001
             return self._json(500, {"error": str(e)})
         return self._json(200, {"ok": True, "python": sys.version.split()[0], "bundle_files": n,
-                                "anthropic_key_present": bool(os.environ.get("ANTHROPIC_API_KEY")),
+                                "anthropic_key_present": bool(os.environ.get("ANTHROPIC_API_KEY")), "compat_key_present": bool(os.environ.get("SF_LLM_API_KEY")),
                                 "runtime_version": RUNTIME_VERSION, "runner_version": RUNNER_VERSION, "max_timeout_s": MAX_TIMEOUT_S})
 
     def do_POST(self):  # noqa: N802

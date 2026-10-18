@@ -1,5 +1,6 @@
 /* Import from repo: a wired skill (data/skills.json, i.e. its SKILL.md metadata.agent block + evals.json) → a factory
  * manifest and evaluation cases. This is real repository data, not seed data. Pure module. */
+import { defaultLlmProvider } from "./providers.ts";
 import { emptyManifest, validateManifest, type Manifest, type InputType, type StepSpec, type Problem } from "./manifest.ts";
 
 export interface RepoAgentInput { name: string; type: string; required: boolean; from: string; default: string | null; flag: string | null; copy?: boolean }
@@ -38,6 +39,7 @@ export function manifestFromRepoSkill(s: RepoSkill): { ok: true; manifest: Manif
     return st;
   });
   const hasLlm = run.some((r) => r.kind === "llm");
+  const llm = defaultLlmProvider();
   const draft: Manifest = {
     ...base,
     purpose: s.description,
@@ -55,8 +57,8 @@ export function manifestFromRepoSkill(s: RepoSkill): { ok: true; manifest: Manif
       ...s.files.scripts.map((f) => `scripts/${f}`), ...s.files.assets.map((f) => `assets/${f}`), ...s.files.references.map((f) => `references/${f}`),
     ],
     allowed_tools: hasLlm ? ["script", "llm"] : ["script"],
-    connections: hasLlm ? ["anthropic"] : [],
-    model_config: { ...base.model_config, provider: hasLlm ? "anthropic" : "none" },
+    connections: hasLlm ? [llm.provider] : [],
+    model_config: { ...base.model_config, provider: hasLlm ? llm.provider : "none", ...(hasLlm && llm.model ? { model: llm.model } : {}) },
   };
   const v = validateManifest(draft);
   if (!v.ok) return { ok: false, problems: v.problems };

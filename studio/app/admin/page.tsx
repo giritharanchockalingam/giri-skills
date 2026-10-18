@@ -1,3 +1,4 @@
+import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL } from "@/lib/factory/providers";
 import { getContext, fmtDate, type ApiKeyRow, type ConnectionRow, type PolicyRow, type AuditRow } from "@/lib/factory/db";
 import { can, ROLES, ROLE_HELP } from "@/lib/factory/roles";
 import { addMember, removeMember, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace } from "@/app/actions";
@@ -26,7 +27,8 @@ export default async function AdminPage() {
   const connRows = (conns.data ?? []) as ConnectionRow[];
   const pol = (policy.data ?? null) as PolicyRow | null;
   const auditRows = (audit.data ?? []) as AuditRow[];
-  const anthropicPresent = Boolean(process.env.ANTHROPIC_API_KEY);
+  const anthropicPresent = providerKeyPresent("anthropic");
+  const compatPresent = providerKeyPresent("openai_compat");
 
   return (
     <>
@@ -67,9 +69,11 @@ export default async function AdminPage() {
             <SectionHead title="Connections and" em="runtime" caption="Secrets stay in server environment variables; a connection records which variable a skill needs and whether it is present. Status is checked on the server." />
             <div className="stack">
               <div className="card card-pad">
-                <div className="h3 mb-2">Model provider — Anthropic</div>
+                <div className="h3 mb-2">Model providers</div>
                 <dl className="kv">
-                  <dt>Server key</dt><dd>{anthropicPresent ? <span className="pass">Configured — ANTHROPIC_API_KEY is present on this server</span> : <span className="fail">Not configured — set ANTHROPIC_API_KEY in the deployment environment. Until then llm steps are skipped and reported, never faked.</span>}</dd>
+                  <dt>OpenAI-compatible</dt><dd>{compatPresent ? <span className="pass">configured · {process.env.SF_LLM_BASE_URL || DEFAULT_COMPAT_BASE_URL}</span> : <span className="fail">not configured — set SF_LLM_API_KEY (Groq free tier by default)</span>}</dd>
+                  <dt>Anthropic</dt><dd>{anthropicPresent ? <span className="pass">configured</span> : <span className="muted">not configured (paid; optional)</span>}</dd>
+                  <dt>Without a key</dt><dd className="caption">llm steps are skipped and reported, never faked.</dd>
                   <dt>Python runtime</dt><dd>{admin ? <RuntimeStatus /> : <span className="muted">admins can check the runtime here</span>}</dd>
                 </dl>
               </div>
@@ -77,7 +81,7 @@ export default async function AdminPage() {
                 <div className="h3 mb-2">Declared connections <span className="muted font-normal">({connRows.length})</span></div>
                 <div className="list">{connRows.map((c) => (
                   <div key={c.id} className="list-row"><span className="min-w-0"><span className="name"><code>{c.name}</code></span> <span className="caption">{c.kind}{c.secret_ref ? ` · ${c.secret_ref}` : ""}{typeof c.config.base_url === "string" && c.config.base_url ? ` · ${c.config.base_url}` : ""}</span></span>
-                    <span className={c.status === "configured" || (c.name === "anthropic" && anthropicPresent) ? "pass" : c.status === "not_configured" ? "fail" : "muted"}>{c.name === "anthropic" ? (anthropicPresent ? "configured" : "not configured") : c.status.replace("_", " ")}</span></div>
+                    <span className={c.status === "configured" || (providerEnvKey(c.name) && providerKeyPresent(c.name)) ? "pass" : c.status === "not_configured" ? "fail" : "muted"}>{providerEnvKey(c.name) ? (providerKeyPresent(c.name) ? "configured" : "not configured") : c.status.replace("_", " ")}</span></div>
                 ))}{connRows.length === 0 && <p className="none">No connections declared. Manifests may still name “anthropic”, which is checked against the server key above.</p>}</div>
                 {admin && (
                   <div className="mt-5"><div className="h3" style={{ fontSize: 14 }}>Add or update a connection</div>
@@ -117,7 +121,7 @@ export default async function AdminPage() {
               <ActionForm action={savePolicy} submit="Save policy" disabled={!admin}>
                 <div className="form-grid form-grid-2">
                   <fieldset className="field"><legend className="field-label">Allowed tools</legend>{["script", "llm"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_tools" value={t} defaultChecked={(pol?.allowed_tools ?? ["script", "llm"]).includes(t)} disabled={!admin} /> {t}</label>)}</fieldset>
-                  <fieldset className="field"><legend className="field-label">Allowed providers</legend>{["none", "anthropic"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_providers" value={t} defaultChecked={(pol?.allowed_providers ?? ["none", "anthropic"]).includes(t)} disabled={!admin} /> {t}</label>)}</fieldset>
+                  <fieldset className="field"><legend className="field-label">Allowed providers</legend>{["none", "anthropic", "openai_compat"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_providers" value={t} defaultChecked={(pol?.allowed_providers ?? ["none", "anthropic", "openai_compat"]).includes(t)} disabled={!admin} /> {t}</label>)}</fieldset>
                   <div className="field"><label htmlFor="p-budget">Monthly budget (USD, estimated spend; empty = no limit)</label><input id="p-budget" name="monthly_budget_usd" className="input" type="number" min={0} step={0.01} defaultValue={pol?.monthly_budget_usd ?? ""} disabled={!admin} /></div>
                   <div className="field"><label htmlFor="p-conc">Max concurrent runs</label><input id="p-conc" name="max_concurrency" className="input" type="number" min={1} max={50} defaultValue={pol?.max_concurrency ?? 2} disabled={!admin} /></div>
                 </div>

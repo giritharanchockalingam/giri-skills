@@ -1,3 +1,4 @@
+import { providerKeyPresent, providerEnvKey } from "@/lib/factory/providers";
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
@@ -15,7 +16,7 @@ export default async function TestPage({ params, searchParams }: { params: Promi
   const d = await loadSkillPage(slug, v ?? null);
   const allowed = can(d.ctx.role, d.version.status === "published" ? "run.published" : "run.any_version") && !["retired", "superseded"].includes(d.version.status);
   const cfg = runtimeConfig();
-  const serverKey = Boolean(process.env.ANTHROPIC_API_KEY);
+  const serverKey = providerKeyPresent(d.version.manifest.model_config.provider);
   const req = requirements(d.version.manifest);
   const { data: conns } = req.connections.length > 0
     ? await d.ctx.supabase.from("sf_connections").select("*").eq("workspace_id", d.ctx.workspace.id)
@@ -43,8 +44,9 @@ export default async function TestPage({ params, searchParams }: { params: Promi
               <dt>Connections</dt>
               <dd>{req.connections.length === 0 ? "none" : req.connections.map((c) => {
                 const row = connections.find((x) => x.name === c);
-                const ok = c === "anthropic" ? serverKey : row?.status === "configured";
-                return <div key={c}><code>{c}</code> — {ok ? <span className="pass">configured</span> : <span className="fail">not configured</span>}{c === "anthropic" && !serverKey && <span className="caption"> (ANTHROPIC_API_KEY missing on the server; llm steps will be skipped)</span>}</div>;
+                const env = providerEnvKey(c);
+                const ok = env ? providerKeyPresent(c) : row?.status === "configured";
+                return <div key={c}><code>{c}</code> — {ok ? <span className="pass">configured</span> : <span className="fail">not configured</span>}{env && !ok && <span className="caption"> ({env} missing on the server; llm steps will be skipped)</span>}</div>;
               })}</dd>
               <dt>Runs</dt><dd>{d.runCount} of v{d.version.version} · <Link href={`/skills/${slug}/activity/${vq}`} className="link">Activity</Link></dd>
             </dl>

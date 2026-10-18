@@ -362,7 +362,7 @@ export async function revokeApiKey(_: ActionResult | null, fd: FormData): Promis
 export async function savePolicy(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
   return guarded("admin.policies", async (ctx) => {
     const tools = fd.getAll("allowed_tools").map(String).filter((t) => t === "script" || t === "llm");
-    const providers = fd.getAll("allowed_providers").map(String).filter((t) => t === "none" || t === "anthropic");
+    const providers = fd.getAll("allowed_providers").map(String).filter((t) => t === "none" || t === "anthropic" || t === "openai_compat");
     const budgetRaw = str(fd, "monthly_budget_usd", 20);
     const budget = budgetRaw === "" ? null : Number(budgetRaw);
     if (budget != null && (!Number.isFinite(budget) || budget < 0)) return fail("Monthly budget must be a non-negative number or empty.");

@@ -45,7 +45,7 @@ export function TestForm({ versionId, manifest, runtimeOk, runtimeReason, keyPre
   return (
     <form onSubmit={submit} className="stack">
       {!runtimeOk && <div className="notice notice-err">Runtime unavailable: {runtimeReason}</div>}
-      {needsLlm && !keyPresent && <div className="notice notice-hold">No ANTHROPIC_API_KEY on the server: scripts run, llm steps are skipped and recorded — checks on their outputs will fail.</div>}
+      {needsLlm && !keyPresent && <div className="notice notice-hold">No key on the server for provider “{manifest.model_config.provider}”: scripts run, llm steps are skipped and recorded — checks on their outputs will fail.</div>}
       {manifest.run.length === 0 && <div className="notice notice-hold">No steps yet — add one under Instructions.</div>}
       <div className="run-inputs">
         {inputs.map((i) => <Field key={i.name} i={i} d={drafts[i.name]} set={(p) => set(i.name, p)} />)}

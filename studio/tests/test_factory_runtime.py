@@ -230,3 +230,40 @@ def test_handler_requires_the_shared_secret(rt, monkeypatch):
     body = json.dumps({"run_id": "t-http", "skill": {"kind": "repo", "repo_skill": "presales/effort-estimator"}, "inputs": {}, "provider": "none"}).encode()
     h = H({"x-sf-runtime-secret": "s3cret", "content-length": str(len(body))}, body); h.do_POST()
     assert h.sent == [200] and json.loads(h.wfile.getvalue())["status"] == "needs_input"
+
+
+def test_openai_compat_callback_uses_base_url_and_records_usage(rt, monkeypatch):
+    """provider openai_compat (e.g. Groq free tier): Bearer key, /chat/completions on SF_LLM_BASE_URL, usage from prompt/completion tokens."""
+    monkeypatch.setenv("SF_LLM_API_KEY", "gsk-test")
+    monkeypatch.setenv("SF_LLM_BASE_URL", "https://example.test/openai/v1/")
+    seen = {}
+    class FakeResp(io.BytesIO):
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    def fake_urlopen(req, timeout=0):  # noqa: ARG001
+        seen["url"], seen["auth"] = req.full_url, req.get_header("Authorization")
+        body = json.loads(req.data)
+        assert body["messages"][0]["role"] == "system" and body["messages"][1]["role"] == "user"
+        return FakeResp(json.dumps({"model": body["model"], "usage": {"prompt_tokens": 900, "completion_tokens": 200},
+                                    "choices": [{"message": {"role": "assistant", "content": "# Memo\n\n## Bottom line\n\nok\n"}}]}).encode())
+    monkeypatch.setattr(rt.urllib.request, "urlopen", fake_urlopen)
+    m = {**AUTHORED, "run": [{"step": "memo", "kind": "llm", "template": "assets/t.md", "context": [], "out": "{out}/summary.json"}],
+         "outputs": [{"path": "{out}/summary.json", "checks": ["exists"]}]}
+    res = rt.execute({"run_id": "t-compat", "skill": {"kind": "authored", "slug": "llm", "manifest": m,
+                                                       "files": [{"path": "assets/t.md", "content": "# Memo\n\n## Bottom line\n"}]},
+                      "inputs": {"data": {"kind": "text", "content": "a,b\n", "ext": "csv"}}, "provider": "openai_compat", "model": "llama-3.3-70b-versatile"})
+    assert res["status"] == "succeeded", (res["error"], res["logs"])
+    assert seen == {"url": "https://example.test/openai/v1/chat/completions", "auth": "Bearer gsk-test"}
+    assert res["provider"]["used"] == "openai_compat"
+    assert res["usage"]["input_tokens"] == 900 and res["usage"]["output_tokens"] == 200 and res["usage"]["calls"] == 1
+    assert res["cost"]["usd"] is None  # no price-table entry: free tier is not assumed to be free forever
+
+
+def test_openai_compat_without_key_skips_llm_honestly(rt, monkeypatch):
+    monkeypatch.delenv("SF_LLM_API_KEY", raising=False)
+    m = {**AUTHORED, "run": [{"step": "memo", "kind": "llm", "template": "assets/t.md", "context": [], "out": "{out}/summary.json"}],
+         "outputs": [{"path": "{out}/summary.json", "checks": ["exists"]}]}
+    res = rt.execute({"run_id": "t-compat-nokey", "skill": {"kind": "authored", "slug": "llm", "manifest": m,
+                                                             "files": [{"path": "assets/t.md", "content": "# Memo\n"}]},
+                      "inputs": {"data": {"kind": "text", "content": "a,b\n", "ext": "csv"}}, "provider": "openai_compat", "model": "llama-3.3-70b-versatile"})
+    assert res["status"] == "failed" and res["provider"]["used"] == "none" and "SF_LLM_API_KEY" in res["provider"]["note"]

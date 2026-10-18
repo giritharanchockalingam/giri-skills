@@ -84,7 +84,7 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
   const blocked = [...tools].filter((t) => !allowedTools.includes(t));
   if (blocked.length) return base("failed", `workspace policy does not allow tool(s): ${blocked.join(", ")}`);
   const provider = o.manifest.model_config.provider;
-  const allowedProviders = o.policy?.allowed_providers ?? ["none", "anthropic"];
+  const allowedProviders = o.policy?.allowed_providers ?? ["none", "anthropic", "openai_compat"];
   if (!allowedProviders.includes(provider)) return base("failed", `workspace policy does not allow provider "${provider}"`);
 
   const cfg = runtimeConfig();

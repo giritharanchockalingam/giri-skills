@@ -58,7 +58,7 @@ export interface StepSpec {
   skip_if_missing?: string[]; skip_if_present?: string[];
 }
 
-export type Provider = "none" | "anthropic";
+export type Provider = "none" | "anthropic" | "openai_compat";
 
 export interface Manifest {
   manifest_version: 1;
@@ -220,8 +220,8 @@ export function validateManifest(raw: unknown): { ok: true; manifest: Manifest; 
 
   // model config
   const mc = isObj(m.model_config) ? m.model_config : {};
-  const provider = mc.provider === "anthropic" ? "anthropic" : mc.provider == null || mc.provider === "none" ? "none" : null;
-  if (!provider) bad("model_config.provider", 'must be "none" or "anthropic"');
+  const provider = mc.provider === "anthropic" || mc.provider === "openai_compat" ? mc.provider : mc.provider == null || mc.provider === "none" ? "none" : null;
+  if (!provider) bad("model_config.provider", 'must be "none", "anthropic" or "openai_compat"');
   const temperature = mc.temperature == null ? base.model_config.temperature : mc.temperature;
   if (!isNum(temperature) || temperature < 0 || temperature > 1) bad("model_config.temperature", "must be a number between 0 and 1");
   const maxTok = mc.max_tokens == null ? base.model_config.max_tokens : mc.max_tokens;
@@ -231,8 +231,9 @@ export function validateManifest(raw: unknown): { ok: true; manifest: Manifest; 
     temperature: isNum(temperature) ? temperature : 0.2, max_tokens: Number.isInteger(maxTok) ? (maxTok as number) : 4000,
   };
   const hasLlm = out.run.some((s) => s.kind === "llm");
-  if (hasLlm && out.model_config.provider === "none") bad("model_config.provider", 'this skill has llm steps; with provider "none" they are skipped and their checks fail (set "anthropic" to run them)');
-  if (out.model_config.provider === "anthropic" && !out.connections.includes("anthropic")) out.connections.push("anthropic");
+  if (hasLlm && out.model_config.provider === "none") bad("model_config.provider", 'this skill has llm steps; with provider "none" they are skipped and their checks fail (set "anthropic" or "openai_compat" to run them)');
+  if (out.model_config.provider !== "none" && !out.connections.includes(out.model_config.provider)) out.connections.push(out.model_config.provider);
+  out.connections = out.connections.filter((c) => !(["anthropic", "openai_compat"].includes(c) && c !== out.model_config.provider));
 
   // limits
   const lim = isObj(m.limits) ? m.limits : {};
