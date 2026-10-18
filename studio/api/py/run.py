@@ -74,6 +74,15 @@ def sha256_text(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+def compat_price():
+    """SF_LLM_PRICE_IN / SF_LLM_PRICE_OUT: USD per 1M tokens for the openai_compat model (enables cost estimates and budgets)."""
+    try:
+        i, o = os.environ.get("SF_LLM_PRICE_IN"), os.environ.get("SF_LLM_PRICE_OUT")
+        return (float(i), float(o)) if i is not None and o is not None else None
+    except ValueError:
+        return None
+
+
 def price_for(model: str):
     for key, p in PRICES.items():
         if key in model or model in key:
@@ -208,10 +217,11 @@ def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retri
     """Any OpenAI-compatible /chat/completions endpoint (Groq, OpenRouter, vLLM, Ollama gateway…)."""
     url = base_url.rstrip("/") + "/chat/completions"
     def call(system, user, model, max_tokens, temperature):
-        body = json.dumps({"model": model, "max_tokens": int(max_tokens), "temperature": float(temperature),
-                           "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}).encode("utf-8")
+        payload = {"model": model, "max_completion_tokens": int(max_tokens), "temperature": float(temperature),
+                   "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
         attempt = 0
         while True:
+            body = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=body, method="POST", headers={
                 "content-type": "application/json", "authorization": f"Bearer {key}", "user-agent": "skills-factory/1"})
             try:
@@ -225,6 +235,15 @@ def make_openai_compat_callback(base_url: str, key: str, usage: Usage, max_retri
                     detail = err.get("message", "") if isinstance(err, dict) else str(err)
                 except Exception:  # noqa: BLE001
                     pass
+                # Parameter dialects differ: newer OpenAI models reject a custom temperature; some gateways only know
+                # max_tokens. Adjust once per parameter and retry (not counted as a provider retry).
+                low = (detail or "").lower()
+                if e.code == 400 and "temperature" in low and "temperature" in payload:
+                    payload.pop("temperature")
+                    continue
+                if e.code == 400 and "max_completion_tokens" in low and "max_completion_tokens" in payload:
+                    payload["max_tokens"] = payload.pop("max_completion_tokens")
+                    continue
                 if e.code in (429, 500, 502, 503) and attempt < max_retries:
                     attempt += 1
                     usage.retries += 1
@@ -502,10 +521,12 @@ def execute(req: dict) -> dict:
         result["usage"] = usage.as_dict() if usage.calls else None
         if usage.calls:
             result["model"] = usage.model or model
-            p = price_for(usage.model or model)
+            env_price = compat_price() if result["provider"]["used"] == "openai_compat" else None
+            p = env_price or price_for(usage.model or model)
             if p:
+                basis = "provider-reported tokens × SF_LLM_PRICE_IN/OUT" if env_price else f"provider-reported tokens × price table {PRICE_TABLE_DATE} (api/py/run.py)"
                 result["cost"] = {"usd": round((usage.input_tokens * p[0] + usage.output_tokens * p[1]) / 1_000_000, 6), "is_estimate": True,
-                                  "basis": f"provider-reported tokens × price table {PRICE_TABLE_DATE} (api/py/run.py); not a billing figure"}
+                                  "basis": f"{basis}; not a billing figure"}
             else:
                 result["cost"] = {"usd": None, "is_estimate": True, "basis": f"no price for model {usage.model or model} in the table"}
         result["duration_ms"] = int((time.time() - t_start) * 1000)

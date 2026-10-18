@@ -10,6 +10,7 @@ import { manifestHash, sha256, generateApiKey } from "@/lib/factory/hash";
 import { can, isRole, type Action } from "@/lib/factory/roles";
 import { manifestFromRepoSkill, casesFromRepoSkill, repoSlug, type RepoSkill } from "@/lib/factory/import";
 import { skills as repoSkills } from "@/lib/data";
+import { providerKeyPresent, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
 
 export interface ActionResult { ok: boolean; message: string }
 const fail = (message: string): ActionResult => ({ ok: false, message });
@@ -409,3 +410,37 @@ export async function cancelRun(_: ActionResult | null, fd: FormData): Promise<A
 
 /** Server-side check of a skill row for role gating in pages (not an action; exported for reuse). */
 export type { SkillRow };
+
+/** Admin: point every DRAFT that has llm steps at the configured OpenAI-compatible provider (SF_LLM_*), and allow that
+ *  provider in the workspace policy. Published/approved versions are untouched (immutable / approval-pinned). */
+export async function useCompatForDrafts(_: ActionResult | null, _fd: FormData): Promise<ActionResult> {
+  return guarded("admin.policies", async (ctx) => {
+    if (!providerKeyPresent("openai_compat")) return fail("SF_LLM_API_KEY is not set on the server. Add it in Vercel and redeploy first.");
+    const model = process.env.SF_LLM_MODEL || DEFAULT_COMPAT_MODEL;
+    const { data: rows, error } = await ctx.supabase.from("sf_skill_versions").select("id, version, manifest, sf_skills!sf_skill_versions_skill_id_fkey(slug, workspace_id)").eq("status", "draft");
+    if (error) return fail(error.message);
+    const drafts = (rows ?? []).filter((r) => (r as unknown as { sf_skills: { workspace_id: string } }).sf_skills?.workspace_id === ctx.workspace.id) as unknown as { id: string; version: number; manifest: Manifest; sf_skills: { slug: string } }[];
+    const changed: string[] = [];
+    for (const d of drafts) {
+      if (!d.manifest.run.some((st) => st.kind === "llm")) continue;
+      if (d.manifest.model_config.provider === "openai_compat" && d.manifest.model_config.model === model) continue;
+      const v = validateManifest({ ...d.manifest, model_config: { ...d.manifest.model_config, provider: "openai_compat", model } });
+      if (!v.ok) return fail(`${d.sf_skills.slug}: ${v.problems.map((x) => x.message).join("; ")}`);
+      const hash = manifestHash(v.manifest);
+      const { error: ue } = await ctx.supabase.from("sf_skill_versions").update({ manifest: v.manifest, manifest_hash: hash, change_note: `model provider → openai_compat · ${model}` }).eq("id", d.id);
+      if (ue) return fail(`${d.sf_skills.slug}: ${ue.message}`);
+      await audit(ctx, "version.update", "skill_version", d.id, { manifest_hash: hash, version: d.version, provider: "openai_compat", model });
+      changed.push(d.sf_skills.slug);
+    }
+    const { data: pol } = await ctx.supabase.from("sf_policies").select("*").eq("workspace_id", ctx.workspace.id).maybeSingle();
+    const allowed: string[] = (pol?.allowed_providers as string[] | undefined) ?? ["none", "anthropic"];
+    if (!allowed.includes("openai_compat")) {
+      const row = { workspace_id: ctx.workspace.id, allowed_tools: pol?.allowed_tools ?? ["script", "llm"], allowed_providers: [...allowed, "openai_compat"], monthly_budget_usd: pol?.monthly_budget_usd ?? null, max_concurrency: pol?.max_concurrency ?? 2 };
+      const { error: pe } = await ctx.supabase.from("sf_policies").upsert(row, { onConflict: "workspace_id" });
+      if (pe) return fail(pe.message);
+      await audit(ctx, "policy.update", "workspace", ctx.workspace.id, row);
+    }
+    revalidatePath("/", "layout");
+    return okay(changed.length ? `${changed.length} draft(s) now use ${model}: ${changed.join(", ")}.` : `No drafts needed a change (all llm drafts already use ${model}).`);
+  });
+}

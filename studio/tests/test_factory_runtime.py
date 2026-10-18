@@ -267,3 +267,30 @@ def test_openai_compat_without_key_skips_llm_honestly(rt, monkeypatch):
                                                              "files": [{"path": "assets/t.md", "content": "# Memo\n"}]},
                       "inputs": {"data": {"kind": "text", "content": "a,b\n", "ext": "csv"}}, "provider": "openai_compat", "model": "llama-3.3-70b-versatile"})
     assert res["status"] == "failed" and res["provider"]["used"] == "none" and "SF_LLM_API_KEY" in res["provider"]["note"]
+
+
+def test_openai_compat_drops_rejected_params_and_prices_from_env(rt, monkeypatch):
+    """OpenAI reasoning models reject a custom temperature: the call is retried once without it. Price comes from env."""
+    monkeypatch.setenv("SF_LLM_API_KEY", "sk-test")
+    monkeypatch.setenv("SF_LLM_BASE_URL", "https://api.openai.example/v1")
+    monkeypatch.setenv("SF_LLM_PRICE_IN", "0.10")
+    monkeypatch.setenv("SF_LLM_PRICE_OUT", "0.50")
+    bodies = []
+    class FakeResp(io.BytesIO):
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    def fake_urlopen(req, timeout=0):  # noqa: ARG001
+        body = json.loads(req.data); bodies.append(body)
+        if "temperature" in body:
+            raise rt.urllib.error.HTTPError(req.full_url, 400, "bad", {}, io.BytesIO(b'{"error":{"message":"Unsupported value: \'temperature\' does not support 0.2"}}'))
+        return FakeResp(json.dumps({"model": body["model"], "usage": {"prompt_tokens": 1000, "completion_tokens": 400},
+                                    "choices": [{"message": {"content": "# Memo\\n"}}]}).encode())
+    monkeypatch.setattr(rt.urllib.request, "urlopen", fake_urlopen)
+    m = {**AUTHORED, "run": [{"step": "memo", "kind": "llm", "template": "assets/t.md", "context": [], "out": "{out}/summary.json"}],
+         "outputs": [{"path": "{out}/summary.json", "checks": ["exists"]}]}
+    res = rt.execute({"run_id": "t-oai", "skill": {"kind": "authored", "slug": "llm", "manifest": m, "files": [{"path": "assets/t.md", "content": "# Memo\n"}]},
+                      "inputs": {"data": {"kind": "text", "content": "a,b\n", "ext": "csv"}}, "provider": "openai_compat", "model": "cheap-model"})
+    assert res["status"] == "succeeded", (res["error"], res["logs"])
+    assert len(bodies) == 2 and "temperature" not in bodies[1] and bodies[1]["max_completion_tokens"] > 0
+    assert res["usage"]["retries"] == 0
+    assert abs(res["cost"]["usd"] - (1000 * 0.10 + 400 * 0.50) / 1e6) < 1e-12 and "SF_LLM_PRICE" in res["cost"]["basis"]

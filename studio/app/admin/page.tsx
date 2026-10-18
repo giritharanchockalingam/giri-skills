@@ -1,7 +1,7 @@
-import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL } from "@/lib/factory/providers";
+import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
 import { getContext, fmtDate, type ApiKeyRow, type ConnectionRow, type PolicyRow, type AuditRow } from "@/lib/factory/db";
 import { can, ROLES, ROLE_HELP } from "@/lib/factory/roles";
-import { addMember, removeMember, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace } from "@/app/actions";
+import { addMember, removeMember, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace, useCompatForDrafts } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { RolePill } from "@/components/factory/Pills";
@@ -74,8 +74,10 @@ export default async function AdminPage() {
                   <dt>OpenAI-compatible</dt><dd>{compatPresent ? <span className="pass">configured · {process.env.SF_LLM_BASE_URL || DEFAULT_COMPAT_BASE_URL}</span> : <span className="fail">not configured — set SF_LLM_API_KEY (Groq free tier by default)</span>}</dd>
                   <dt>Anthropic</dt><dd>{anthropicPresent ? <span className="pass">configured</span> : <span className="muted">not configured (paid; optional)</span>}</dd>
                   <dt>Without a key</dt><dd className="caption">llm steps are skipped and reported, never faked.</dd>
+                  {compatPresent && <><dt>Model</dt><dd><code>{process.env.SF_LLM_MODEL || DEFAULT_COMPAT_MODEL}</code>{process.env.SF_LLM_PRICE_IN && process.env.SF_LLM_PRICE_OUT ? <span className="caption"> · ${process.env.SF_LLM_PRICE_IN} in / ${process.env.SF_LLM_PRICE_OUT} out per 1M tokens</span> : <span className="caption"> · no price set (SF_LLM_PRICE_IN/OUT) — cost and budget not tracked</span>}</dd></>}
                   <dt>Python runtime</dt><dd>{admin ? <RuntimeStatus /> : <span className="muted">admins can check the runtime here</span>}</dd>
                 </dl>
+                {admin && compatPresent && <div className="mt-4"><ActionForm action={useCompatForDrafts} submit="Use this model for all drafts with llm steps" submitClass="btn btn-secondary btn-sm" confirm="Switch every draft that has llm steps to this provider and model? Published versions are not changed." /></div>}
               </div>
               <div className="card card-pad">
                 <div className="h3 mb-2">Declared connections <span className="muted font-normal">({connRows.length})</span></div>
