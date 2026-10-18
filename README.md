@@ -1,6 +1,6 @@
 # giri-skills
 
-40 executable Agent Skills (agentskills.io format, each one a configurable agent: declared inputs → deterministic scripts → checked deliverables) for presales & solution architecture, enterprise app building, AI platform/agentic work, and career management — built to a Big 4 / Fortune 50 quality bar. Works with Claude Code, Claude (Cowork), Cursor, Codex, Gemini CLI, Copilot and any `SKILL.md`-compatible agent.
+61 executable Agent Skills covering the full **AI development life cycle** (11 stages, from strategy to improve — see [docs/ADLC.md](docs/ADLC.md)) plus presales and career shelves. Each one is a configurable agent: declared inputs → deterministic scripts → checked deliverables, with eval cases. Runnable, reviewable and publishable in the Skills Factory portal (`studio/`). Works with Claude Code, Claude (Cowork), Cursor, Codex, Gemini CLI, Copilot and any `SKILL.md`-compatible agent.
 
 ## Install
 
