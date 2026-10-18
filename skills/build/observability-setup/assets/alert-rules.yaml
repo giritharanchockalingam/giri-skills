@@ -3,7 +3,7 @@
 defaults:
   channel_notify: "#alerts-<app>"
   channel_page: "oncall-<app>"
-  owner: "[TO BE BASELINED — owner: ___]"
+  owner: "[TO BE BASELINED — owner: <role>]"
 
 rules:
   - id: A1-liveness

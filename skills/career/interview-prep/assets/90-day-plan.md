@@ -1,6 +1,6 @@
 # 90-Day Plan — <Role>, <Company>
 
-> Template. Fill only from the JD and sourced company facts. Unknowns: `[TO BE BASELINED — owner: ___]`.
+> Template. Fill only from the JD and sourced company facts. Unknowns: `[TO BE BASELINED — owner: <role>]`.
 
 ## Mandate (as I understand it)
 | Item | From JD / interview | Confirm with |

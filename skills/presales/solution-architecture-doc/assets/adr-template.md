@@ -4,7 +4,7 @@
 |---|---|
 | Status | proposed / accepted / superseded by ADR-nnn |
 | Date | <yyyy-mm-dd> |
-| Decision owner | <role, name> (client decisions: client role; `[TO BE BASELINED — owner: ___]` if unnamed) |
+| Decision owner | <role, name> (client decisions: client role; `[TO BE BASELINED — owner: <role>]` if unnamed) |
 | Decide by | <date> (proposed status only) |
 | Drivers addressed | <D1, D3 from the drivers table> |
 | Impact | cost / risk / lock-in / operating model (tick those affected) |
@@ -32,7 +32,7 @@ Weights: fit 25 · risk 20 · cost 15 · time 15 · operability 15 · lock-in 10
 | Neutral / to watch | | | |
 
 ## Assumptions behind this decision
-| Assumption | Source or `[TO BE BASELINED — owner: ___]` | If false |
+| Assumption | Source or `[TO BE BASELINED — owner: <role>]` | If false |
 |---|---|---|
 
 ## Related

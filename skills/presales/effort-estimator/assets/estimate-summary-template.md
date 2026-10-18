@@ -18,7 +18,7 @@
 | **Total** | | | | | |
 
 ## Assumptions
-| ID | Assumption | Value | Source or `[TO BE BASELINED — owner: ___]` | If false |
+| ID | Assumption | Value | Source or `[TO BE BASELINED — owner: <role>]` | If false |
 |---|---|---|---|---|
 | A-01 | Interface count | | | Re-run model; price per unit × count |
 | A-02 | Unit effort per complexity band | | | |

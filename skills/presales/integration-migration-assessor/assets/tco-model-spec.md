@@ -1,6 +1,6 @@
 # TCO / ROI Model — CSV Layout Specification
 
-Two CSV files. Every `amount` cell carries a `source` cell; an empty source is invalid — write `[TO BE BASELINED — owner: ___]` in `amount` instead.
+Two CSV files. Every `amount` cell carries a `source` cell; an empty source is invalid — write `[TO BE BASELINED — owner: <role>]` in `amount` instead.
 
 ## File 1: `tco-lines.csv` (one row per cost line per scenario per year)
 | # | Column | Type | Allowed values / format |
@@ -9,7 +9,7 @@ Two CSV files. Every `amount` cell carries a `source` cell; an empty source is i
 | 2 | `category` | enum | `licence` · `infrastructure` · `run_team` · `support_contract` · `incident_cost` · `migration_one_time` · `dual_run` · `training` · `decommission` · `other` |
 | 3 | `line` | text | Specific item (e.g., "Core licence — 4 vCores", "L2 support team — 3 FTE") |
 | 4 | `year` | int | 0 (one-time, at start) … 5 |
-| 5 | `amount` | number or marker | Currency amount or `[TO BE BASELINED — owner: ___]` |
+| 5 | `amount` | number or marker | Currency amount or `[TO BE BASELINED — owner: <role>]` |
 | 6 | `currency` | text | ISO code |
 | 7 | `source` | text | Document + page/section, or the client role who stated it, or `estimate-memo vX` |
 | 8 | `basis` | enum | `contract` · `invoice` · `budget` · `estimate` · `assumption` |
@@ -46,4 +46,4 @@ Mandatory assumption rows: decommission date; discount rate (if NPV used; else "
 | NPV (optional) | Σ net benefit ÷ (1 + r)^year, r from assumptions |
 | Sensitivity | Recompute 3-year net with the two highest-sensitivity assumptions at ±20% |
 
-Any derived output computed from a line marked `[TO BE BASELINED]` is itself reported as `[TO BE BASELINED — owner: ___]`, not as a number.
+Any derived output computed from a line marked `[TO BE BASELINED]` is itself reported as `[TO BE BASELINED — owner: <role>]`, not as a number.

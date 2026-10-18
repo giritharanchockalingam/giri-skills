@@ -6,7 +6,7 @@
 | Governing agreement | <MSA title, date> — this SOW is subject to it; order of precedence per MSA clause <n> |
 | Client | <legal entity> |
 | Supplier | <legal entity> |
-| Effective date | `[TO BE BASELINED — owner: ___]` |
+| Effective date | `[TO BE BASELINED — owner: <role>]` |
 | Term | <start> to <end> or until final acceptance |
 | Commercial model | Fixed / T&M / Milestone / Run-rate |
 | Version | 0.1 — draft |
@@ -85,7 +85,7 @@ Exactly one A per row.
 ## 11. Commercial terms
 | Component | Model | Amount | Payment trigger | Notes |
 |---|---|---|---|---|
-| | | `[TO BE BASELINED — owner: ___]` | | |
+| | | `[TO BE BASELINED — owner: <role>]` | | |
 
 Rate card (T&M only): per <rate-card reference>, valid until <date>.
 Invoicing: <monthly / on acceptance>; terms per MSA clause <n>. Expenses: <policy>. Exclusions: licenses, cloud consumption, third-party fees, taxes.

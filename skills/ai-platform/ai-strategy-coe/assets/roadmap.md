@@ -5,8 +5,8 @@
 ## Executive summary
 - Maturity: Level <n> overall; constraining dimension: <dimension> (evidence: <line>)
 - Operating model: <central | hub-and-spoke | federated>; transition trigger: <criterion>
-- Top-3 use cases (Now): <UC-xxx>, <UC-xxx>, <UC-xxx>; combined baselined value: [TO BE BASELINED — owner: ___]
-- Investment envelope FY<yy>: [TO BE BASELINED — owner: ___]
+- Top-3 use cases (Now): <UC-xxx>, <UC-xxx>, <UC-xxx>; combined baselined value: [TO BE BASELINED — owner: <role>]
+- Investment envelope FY<yy>: [TO BE BASELINED — owner: <role>]
 - First 90-day commitments: <gateway live>, <baselines signed>, <policy v1>
 
 ## Maturity

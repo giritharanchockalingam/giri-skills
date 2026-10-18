@@ -1,6 +1,6 @@
 # Proposal Section Library
 
-Use in the client's mandated order if an RFP defines one; otherwise this order. Each section shows: the opening "so what" pattern, required tables, and placeholders. Replace every `<…>` and `[TO BE BASELINED — owner: ___]`. Delete guidance lines (marked `>`) before shipping.
+Use in the client's mandated order if an RFP defines one; otherwise this order. Each section shows: the opening "so what" pattern, required tables, and placeholders. Replace every `<…>` and `[TO BE BASELINED — owner: <role>]`. Delete guidance lines (marked `>`) before shipping.
 
 ---
 
@@ -19,14 +19,14 @@ Your situation: <2–3 sentences in their numbers, quoting their evidence. Sourc
 The outcome we commit to:
 | Outcome | Baseline (source) | Target | Measured by | When |
 |---|---|---|---|---|
-| | `[TO BE BASELINED — owner: ___]` | | | |
+| | `[TO BE BASELINED — owner: <role>]` | | | |
 
 How (tied to win themes):
 - **T1 <theme headline>** — <one sentence benefit> (proof: <ref>)
 - **T2 …**
 - **T3 …**
 
-What it takes: <duration> · <team shape> · <price structure> `[TO BE BASELINED — owner: ___]` · first decision gate at <week n>.
+What it takes: <duration> · <team shape> · <price structure> `[TO BE BASELINED — owner: <role>]` · first decision gate at <week n>.
 
 ## 2. Understanding of your needs
 > Opens with their most consequential pain in their words.
@@ -103,7 +103,7 @@ Assumption register:
 
 | Component | Basis (fixed / T&M / run-rate) | Amount | Notes |
 |---|---|---|---|
-| | | `[TO BE BASELINED — owner: ___]` | |
+| | | `[TO BE BASELINED — owner: <role>]` | |
 
 Pricing assumptions: <interface counts, environments, client-provided items, rate validity>.
 Payment schedule: <milestone / monthly>. Exclusions: <travel, licenses, third-party fees, taxes>.

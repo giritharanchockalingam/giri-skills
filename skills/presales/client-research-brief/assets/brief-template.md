@@ -13,7 +13,7 @@ Prepared: <yyyy-mm-dd> · Angle: <service line / initiative we position> · Netw
 | Industry / segment | | |
 | HQ, footprint (sites, countries) | | |
 | Ownership (listed: ticker / private: PE, founder) | | |
-| Revenue, latest FY (public only) | `[TO BE BASELINED — owner: ___]` if private | |
+| Revenue, latest FY (public only) | `[TO BE BASELINED — owner: <role>]` if private | |
 | Employees (reported) | | |
 | Fiscal year end | | |
 

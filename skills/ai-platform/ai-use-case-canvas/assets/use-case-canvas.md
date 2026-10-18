@@ -7,7 +7,7 @@
 |---|---|---|
 | 1 | Problem and user | |
 | 2 | Decision or task affected | |
-| 3 | Current process and baseline | Volume: <>; time/unit: <>; error/cost: [TO BE BASELINED — owner: ___] |
+| 3 | Current process and baseline | Volume: <>; time/unit: <>; error/cost: [TO BE BASELINED — owner: <role>] |
 | 4 | Proposed AI capability | Pattern: <>; autonomy: <suggest / draft / act with approval / act> |
 | 5 | Data | Sources: <>; owner: <>; access: <>; sensitivity: <>; freshness: <> |
 | 6 | Feasibility | Known pattern: y/n; integrations exist: y/n; team: y/n; eval definable: y/n |

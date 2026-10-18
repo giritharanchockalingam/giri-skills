@@ -3,7 +3,7 @@
 ## Bottom line
 | Item | Value |
 |---|---|
-| Headline | 3-year net <amount or `[TO BE BASELINED — owner: ___]`> · payback <n months or marker> (undiscounted / NPV at <r>% per <source>) |
+| Headline | 3-year net <amount or `[TO BE BASELINED — owner: <role>]`> · payback <n months or marker> (undiscounted / NPV at <r>% per <source>) |
 | Confidence | H / M / L — <n> of <m> benefits baselined from client sources |
 | Excluded from headline | <benefits unbaselined, with owners> |
 | Sensitivity | Case <holds / flips> within the realistic range of <assumption>; baseline it first |

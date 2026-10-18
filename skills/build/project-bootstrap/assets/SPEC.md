@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Status | Draft |
-| Owner | [TO BE BASELINED — owner: ___] |
+| Owner | [TO BE BASELINED — owner: <role>] |
 | Last updated | {{DATE}} |
 | Tenancy | {{TENANCY}} |
 
@@ -29,13 +29,13 @@
 ## 4. Non-functional requirements
 | NFR | Target | How verified |
 |---|---|---|
-| Availability | [TO BE BASELINED — owner: ___] | uptime monitor |
+| Availability | [TO BE BASELINED — owner: <role>] | uptime monitor |
 | p95 latency (page) | ≤ 500 ms | Vercel Speed Insights |
 | p95 latency (API) | ≤ 300 ms | logs / tracing |
 | Data isolation | RLS on every tenant table | `rls_lint.py` in CI |
 | Auth | Supabase Auth; MFA for admin roles | e2e |
 | Audit | Every write to tenant data logged with actor + before/after | audit_log table |
-| Backup / RPO / RTO | [TO BE BASELINED — owner: ___] | restore drill |
+| Backup / RPO / RTO | [TO BE BASELINED — owner: <role>] | restore drill |
 | Accessibility | WCAG 2.2 AA on critical paths | axe in e2e |
 | Observability | Structured logs, error tracking, health endpoints | observability-setup |
 
@@ -66,7 +66,7 @@
 ## 9. Open questions
 | # | Question | Owner | Due |
 |---|---|---|---|
-| 1 | | [TO BE BASELINED — owner: ___] | |
+| 1 | | [TO BE BASELINED — owner: <role>] | |
 
 ## 10. Milestones
 | Milestone | Scope | Target |

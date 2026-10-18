@@ -25,7 +25,7 @@ Slide n — <Assertion title>
 So what: <one line>
 Body:
 <table or ≤60 words or chart spec: type, x, y, series, source>
-Source: <doc/page or [TO BE BASELINED — owner: ___]>
+Source: <doc/page or [TO BE BASELINED — owner: <role>]>
 Notes: <≤60 words>
 ```
 

@@ -61,8 +61,10 @@ TOKEN_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 OPT_GROUP_RE = re.compile(r"\[([^\[\]]*\{[^\[\]]*)\]")
 CONTEXT_LIMIT = 12 * 1024
 
-LLM_INSTRUCTION = ("Fill this template using ONLY the context files. Where the files do not say, "
-                   "leave `[TO BE BASELINED — owner: ___]`. Return the completed file only.")
+LLM_INSTRUCTION = ("Fill this template using ONLY the context files. Where the files do not say, write "
+                   "`[TO BE BASELINED — owner: <role>]` naming the accountable role (e.g. Client PMO, Delivery lead, "
+                   "Account owner) — never leave the owner blank. Use one marker per unknown fact; drop empty example "
+                   "rows instead of filling them with markers. Return the completed file only.")
 
 
 # ------------------------------------------------------------------ discovery

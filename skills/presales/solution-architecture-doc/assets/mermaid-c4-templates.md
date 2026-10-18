@@ -11,7 +11,7 @@ C4Context
   System(core, "<Solution name>", "<one-line purpose>")
   System_Ext(sys1, "<External system 1>", "<e.g., ERP>")
   System_Ext(sys2, "<External system 2>", "<e.g., SIS / OMS / MES / PSS>")
-  System_Ext(idp, "Identity provider", "<e.g., corporate IdP> [TO BE BASELINED — owner: ___]")
+  System_Ext(idp, "Identity provider", "<e.g., corporate IdP> [TO BE BASELINED — owner: <role>]")
   Rel(user1, core, "Uses", "HTTPS")
   Rel(core, sys1, "Reads/writes <data>", "REST / events")
   Rel(core, sys2, "Publishes <events>", "Async")
@@ -27,7 +27,7 @@ C4Container
   Person(user1, "<User role>")
   System_Boundary(sol, "<Solution name>") {
     Container(web, "<Web / portal>", "<framework placeholder>", "User-facing UI")
-    Container(gw, "API gateway", "<product or [TO BE BASELINED — owner: ___]>", "AuthN/Z, routing, rate limits, analytics")
+    Container(gw, "API gateway", "<product or [TO BE BASELINED — owner: <role>]>", "AuthN/Z, routing, rate limits, analytics")
     Container(svc1, "<Domain service A>", "<runtime>", "<responsibility>")
     Container(svc2, "<Domain service B>", "<runtime>", "<responsibility>")
     Container(events, "Event backbone", "<e.g., managed streaming>", "Async integration, replay, DLQ")
@@ -74,7 +74,7 @@ C4Component
 ```mermaid
 C4Deployment
   title Deployment — <Solution name> — production (target)
-  Deployment_Node(cloud, "<Cloud / DC> [TO BE BASELINED — owner: ___]", "Region: <region>") {
+  Deployment_Node(cloud, "<Cloud / DC> [TO BE BASELINED — owner: <role>]", "Region: <region>") {
     Deployment_Node(vpc, "Network boundary", "Private subnets, egress control") {
       Deployment_Node(k8s, "Compute", "<managed k8s / serverless>") {
         Container(gw, "API gateway")
@@ -82,13 +82,13 @@ C4Deployment
         Container(svc2, "<Domain service B>")
       }
       Deployment_Node(data, "Data tier", "Managed services") {
-        ContainerDb(db1, "<Operational store>", "", "Multi-AZ, PITR, RPO <n> min [TO BE BASELINED — owner: ___]")
+        ContainerDb(db1, "<Operational store>", "", "Multi-AZ, PITR, RPO <n> min [TO BE BASELINED — owner: <role>]")
         Container(events, "Event backbone", "", "Replication factor 3")
       }
     }
   }
   Deployment_Node(dr, "DR region", "<region>") {
-    ContainerDb(db1r, "<Operational store> replica", "", "RTO <n> h [TO BE BASELINED — owner: ___]")
+    ContainerDb(db1r, "<Operational store> replica", "", "RTO <n> h [TO BE BASELINED — owner: <role>]")
   }
   Rel(db1, db1r, "Async replication")
 ```
@@ -138,7 +138,7 @@ sequenceDiagram
 ## Migration wave timeline
 ```mermaid
 gantt
-  title Migration waves — <Client> (indicative; dates [TO BE BASELINED — owner: ___])
+  title Migration waves — <Client> (indicative; dates [TO BE BASELINED — owner: <role>])
   dateFormat  YYYY-MM-DD
   section Wave 0 — Foundation
   Landing zone, CI/CD, observability, harness :w0, 2026-01-01, 6w

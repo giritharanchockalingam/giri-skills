@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Status | Draft → In review → Approved → Shipped |
-| Owner | [TO BE BASELINED — owner: ___] |
+| Owner | [TO BE BASELINED — owner: <role>] |
 | Reviewers | |
 | Related | SPEC §__ · PRD __ · ADR __ |
 | Flag | `feature.<name>` |
@@ -45,7 +45,7 @@ What happens if we do nothing: …
 ## Metrics
 | Metric | Baseline | Target | Source / instrumentation | Review date |
 |---|---|---|---|---|
-| | [TO BE BASELINED — owner: ___] | | | |
+| | [TO BE BASELINED — owner: <role>] | | | |
 
 ## Phases (scope by phase)
 | Phase | Includes | Excludes | Exit criterion |

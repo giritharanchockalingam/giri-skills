@@ -11,7 +11,7 @@ Use this exact column order for the CSV/XLSX. Columns 1–9 come from the extrac
 | 5 | `text` | text | Verbatim requirement; no paraphrase | script, reviewed |
 | 6 | `category` | enum | `FUN` `TEC` `SEC` `COM` `DEL` `ADM` | analyst |
 | 7 | `mdo` | enum | `M` `D` `O` | analyst (per taxonomy §2) |
-| 8 | `weight` | text | Stated score/percent or `[TO BE BASELINED — owner: ___]` | analyst |
+| 8 | `weight` | text | Stated score/percent or `[TO BE BASELINED — owner: <role>]` | analyst |
 | 9 | `flags` | text | Semicolon list from `AMB DUP CON UNQ OOS INC` | analyst |
 | 10 | `compliance` | enum | `C` `P` `N` `Q` | owner, reviewed |
 | 11 | `evidence` | text | Catalog ref / cert (expiry) / project ref ID / product feature. Required when `C` | owner |

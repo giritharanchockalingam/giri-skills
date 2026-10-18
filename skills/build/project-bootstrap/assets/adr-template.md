@@ -4,7 +4,7 @@
 |---|---|
 | Status | Proposed / Accepted / Superseded by ADR-____ |
 | Date | {{DATE}} |
-| Deciders | [TO BE BASELINED — owner: ___] |
+| Deciders | [TO BE BASELINED — owner: <role>] |
 
 ## Context
 What forces are at play (business, technical, constraints)? Two to five sentences.

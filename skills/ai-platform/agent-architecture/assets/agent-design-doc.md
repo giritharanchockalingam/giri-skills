@@ -6,7 +6,7 @@
 | Item | Value |
 |---|---|
 | Job to be done | |
-| Success metric (baseline → target) | [TO BE BASELINED — owner: ___] |
+| Success metric (baseline → target) | [TO BE BASELINED — owner: <role>] |
 | Users / callers | |
 | Volume (runs/day) | |
 | Latency SLO / cost envelope per run | |

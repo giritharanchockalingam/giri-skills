@@ -16,11 +16,11 @@ lines. Find a request: search logs for `requestId=<id>`. Redacted keys: email, t
 ## SLOs (per critical journey; 30-day window)
 | Journey | SLI | SLO | Error budget | Measure | Owner |
 |---|---|---|---|---|---|
-| Sign-in | successful sign-ins / attempts (excl. bad password) | 99.5% | 0.5% | logs `action=auth.signin outcome` | [TO BE BASELINED — owner: ___] |
-| Primary create flow | 2xx / all server-action calls for `<domain>.create` | 99.5% | 0.5% | logs `action outcome` | [TO BE BASELINED — owner: ___] |
-| Page load (app) | requests with p95 < 1 s | 95% | 5% | Vercel Speed Insights / logs `durationMs` | [TO BE BASELINED — owner: ___] |
-| API (external) | non-5xx / all | 99.9% | 0.1% | Vercel | [TO BE BASELINED — owner: ___] |
-| Availability | health probes ok / all | 99.9% | ~43 min/month | uptime monitor | [TO BE BASELINED — owner: ___] |
+| Sign-in | successful sign-ins / attempts (excl. bad password) | 99.5% | 0.5% | logs `action=auth.signin outcome` | [TO BE BASELINED — owner: <role>] |
+| Primary create flow | 2xx / all server-action calls for `<domain>.create` | 99.5% | 0.5% | logs `action outcome` | [TO BE BASELINED — owner: <role>] |
+| Page load (app) | requests with p95 < 1 s | 95% | 5% | Vercel Speed Insights / logs `durationMs` | [TO BE BASELINED — owner: <role>] |
+| API (external) | non-5xx / all | 99.9% | 0.1% | Vercel | [TO BE BASELINED — owner: <role>] |
+| Availability | health probes ok / all | 99.9% | ~43 min/month | uptime monitor | [TO BE BASELINED — owner: <role>] |
 
 ### Error-budget policy
 | Budget remaining | Action |

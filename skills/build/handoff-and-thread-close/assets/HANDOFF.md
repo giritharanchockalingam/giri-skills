@@ -9,8 +9,8 @@
 - `path` — why
 
 ## Open items (owner)
-- … (owner: ___)
-- [TO BE BASELINED — owner: ___] …
+- … (owner: <role>)
+- [TO BE BASELINED — owner: <role>] …
 
 ## Decisions
 - … (ADR-NNNN)

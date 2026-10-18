@@ -7,8 +7,8 @@
 | Confidence | Firm / Provisional (unknown-factor share <x>%; owner to complete: ___) |
 | Band mix | Simple <n> · Medium <n> · Complex <n> · Very complex <n> |
 | Approach | Factory for Simple/Medium (<n>), design-led for Complex (<n>), spikes for Very complex (<n>) |
-| Waves | <n> waves; wave 0 foundation; cutovers outside <freeze windows>; complete by <date or `[TO BE BASELINED — owner: ___]`> |
-| TCO direction | <Lower / Higher / Undetermined> 3-yr net `[TO BE BASELINED — owner: ___]` until <assumptions> confirmed |
+| Waves | <n> waves; wave 0 foundation; cutovers outside <freeze windows>; complete by <date or `[TO BE BASELINED — owner: <role>]`> |
+| TCO direction | <Lower / Higher / Undetermined> 3-yr net `[TO BE BASELINED — owner: <role>]` until <assumptions> confirmed |
 | Decision asked | <e.g., approve wave 0 and inventory completion; confirm decommission target date> |
 
 ## Evidence base

@@ -6,7 +6,7 @@
 
 ### Posture and bottom line
 **Posture: Grow / Defend / Harvest / Enter.** Driven by: (1) <fact, source> (2) <fact, source> (3) <fact, source>.
-Target: <amount or `[TO BE BASELINED — owner: ___]`> · Booked: <amount, source> · Weighted pipeline: <amount if CRM supplies probabilities; else "unweighted <amount>"> · Gap: <computed or marker>.
+Target: <amount or `[TO BE BASELINED — owner: <role>]`> · Booked: <amount, source> · Weighted pipeline: <amount if CRM supplies probabilities; else "unweighted <amount>"> · Gap: <computed or marker>.
 
 ### Snapshot
 | Item | Value | Source |

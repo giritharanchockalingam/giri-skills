@@ -1,6 +1,6 @@
 # NFR Checklist
 
-For every applicable row: target (number + unit + condition), measurement method, source of the target (client statement / regulation / SLA / `[TO BE BASELINED — owner: ___]`), and design response. Mark non-applicable rows N/A with reason. Adjectives are not targets.
+For every applicable row: target (number + unit + condition), measurement method, source of the target (client statement / regulation / SLA / `[TO BE BASELINED — owner: <role>]`), and design response. Mark non-applicable rows N/A with reason. Adjectives are not targets.
 
 | ID | Category | NFR | Target pattern | Measurement method | Typical source | Design response examples |
 |---|---|---|---|---|---|---|

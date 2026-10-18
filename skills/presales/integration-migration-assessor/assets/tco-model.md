@@ -1,6 +1,6 @@
 # TCO / ROI — Markdown Layout (for the readout)
 
-Currency: <ISO> · Basis: undiscounted / NPV at <r>% (TCO-A-nn) · Decommission date assumed: <date or `[TO BE BASELINED — owner: ___]`> (TCO-A-01)
+Currency: <ISO> · Basis: undiscounted / NPV at <r>% (TCO-A-nn) · Decommission date assumed: <date or `[TO BE BASELINED — owner: <role>]`> (TCO-A-01)
 
 ## Run-rate comparison
 | Category | Current — Y1 | Y2 | Y3 | Target — Y1 | Y2 | Y3 | Source (current / target) |
@@ -16,7 +16,7 @@ Currency: <ISO> · Basis: undiscounted / NPV at <r>% (TCO-A-nn) · Decommission 
 ## One-time migration cost
 | Line | Amount | Source | Confidence |
 |---|---|---|---|
-| Migration delivery (P80) | `[TO BE BASELINED — owner: ___]` | estimate-memo vX | |
+| Migration delivery (P80) | `[TO BE BASELINED — owner: <role>]` | estimate-memo vX | |
 | Training / enablement | | | |
 | Decommission | | | |
 | **Total one-time** | | | |
@@ -31,7 +31,7 @@ Currency: <ISO> · Basis: undiscounted / NPV at <r>% (TCO-A-nn) · Decommission 
 | 4 | | | | |
 | 5 | | | | |
 
-Payback: <year or `[TO BE BASELINED — owner: ___]`> · 3-year net: <…> · 5-year net: <…>
+Payback: <year or `[TO BE BASELINED — owner: <role>]`> · 3-year net: <…> · 5-year net: <…>
 
 ## Sensitivity (±20% on the two highest-sensitivity assumptions)
 | Assumption | −20% → 3-yr net | Base | +20% → 3-yr net |

@@ -13,8 +13,8 @@
 - .env.example — env contract
 
 ## Open items (owner)
-- [TO BE BASELINED — owner: ___] NFR targets in SPEC §4
-- [TO BE BASELINED — owner: ___] Vercel + Supabase projects provisioned, secrets set in GitHub
+- [TO BE BASELINED — owner: <role>] NFR targets in SPEC §4
+- [TO BE BASELINED — owner: <role>] Vercel + Supabase projects provisioned, secrets set in GitHub
 
 ## Next thread starts with
 Read docs/SPEC.md, CLAUDE.md and this file. Plan the first feature: <feature name>. Produce the task-gated plan per spec-to-plan and wait for go.

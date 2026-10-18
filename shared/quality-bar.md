@@ -9,7 +9,7 @@ Standard: Big 4 / Fortune 50 executive-facing quality. If a partner or a CIO wou
 | Tables over prose | Anything with 3+ comparable items is a table. Prose only for narrative that cannot be tabulated. |
 | No filler | No "In today's fast-paced world", no hedging paragraphs, no closing pleasantries. |
 | No invented facts | Every number, date, name, rate, or role is either (a) from a provided source, (b) explicitly labeled an assumption, or (c) marked `TBD — owner: <name>`. Never fabricate a plausible figure. |
-| Mark unknowns | Use `[TO BE BASELINED — owner: ___]` for anything requiring client/stakeholder confirmation. |
+| Mark unknowns | Use `[TO BE BASELINED — owner: <role>]` for anything requiring client/stakeholder confirmation; always name the accountable role. |
 | Copy-paste ready | Output is final-form: correct headings, consistent units, consistent tense, no "insert X here" unless it is a declared template placeholder. |
 | Source every claim | External facts carry a source line (URL or document + page/slide). |
 | One topic per deliverable | Do not bolt unrelated findings onto a deliverable; list them under "Out of scope / parked". |

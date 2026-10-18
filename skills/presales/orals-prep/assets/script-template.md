@@ -1,6 +1,6 @@
 # Orals Script — <Client> — <Pursuit> — <date of orals>
 
-Format: <total min> total · <present min> presentation · <qa min> Q&A · Attendees: <names/roles or `[TO BE BASELINED — owner: ___]`> · Evaluation: <criteria and weights or marker>
+Format: <total min> total · <present min> presentation · <qa min> Q&A · Attendees: <names/roles or `[TO BE BASELINED — owner: <role>]`> · Evaluation: <criteria and weights or marker>
 
 ## Evaluation map
 | Criterion (weight) | Slide(s) | Speaker | Proof (number, source) | Risk if challenged |

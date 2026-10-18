@@ -1,6 +1,6 @@
 # Value Model — CSV Layout Specification
 
-Three files. Every numeric cell has a `source`; an empty source means the cell holds `[TO BE BASELINED — owner: ___]`.
+Three files. Every numeric cell has a `source`; an empty source means the cell holds `[TO BE BASELINED — owner: <role>]`.
 
 ## File 1: `benefits.csv` (one row per benefit lever)
 | # | Column | Type | Notes |
@@ -61,4 +61,4 @@ Mandatory rows: horizon; discounting (none / rate + source); currency; FY; decom
 | 3-yr / 5-yr net | Σ |
 | NPV | only if discount rate sourced |
 | Sensitivity | top-3 assumptions ±20% → 3-yr net; break-even |
-| Marker propagation | any derived value depending on a marker is reported as `[TO BE BASELINED — owner: ___]` |
+| Marker propagation | any derived value depending on a marker is reported as `[TO BE BASELINED — owner: <role>]` |
