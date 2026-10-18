@@ -431,6 +431,9 @@ for (const s of skills) {
   if (!s.agent) continue;
   copyRel(`skills/${s.id}/SKILL.md`);
   for (const sub of ["scripts", "assets", "references", "evals/fixtures", "evals/evals.json"]) copyRel(`skills/${s.id}/${sub}`);
+  // files a step reads from outside the skill (e.g. a wrapped upstream skill's ../../../vendor/<name>/SKILL.md)
+  const rawMd = readFileSync(join(ROOT, "skills", s.id, "SKILL.md"), "utf8");
+  for (const m of rawMd.matchAll(/\.\.\/\.\.\/\.\.\/(vendor\/[A-Za-z0-9._-]+\/[A-Za-z0-9._\/-]+)/g)) copyRel(m[1]);
 }
 const runtimeBytes = runtimeFiles.reduce((a, f) => a + f.size, 0);
 // one fetch instead of 450: every runtime file's text keyed by its repo-relative path (all are UTF-8 text; the build fails otherwise)
@@ -447,10 +450,11 @@ writeFileSync(join(RUNTIME, "bundle.json"), JSON.stringify(bundle));
   const paths = Object.keys(bundle).sort();
   const common = paths.filter((p) => p.startsWith("scripts/") || p.startsWith("shared/"));
   const pins = {};
+  const vendorRefs = (id) => [...readFileSync(join(ROOT, "skills", id, "SKILL.md"), "utf8").matchAll(/\.\.\/\.\.\/\.\.\/(vendor\/[A-Za-z0-9._-]+\/[A-Za-z0-9._\/-]+)/g)].map((m) => m[1]).sort();
   for (const s of skills) {
     if (!s.agent) continue;
     const h = createHash("sha256");
-    for (const p of [...common, ...paths.filter((x) => x.startsWith(`skills/${s.id}/`))]) h.update(p + "\0" + bundle[p] + "\0");
+    for (const p of [...common, ...paths.filter((x) => x.startsWith(`skills/${s.id}/`)), ...vendorRefs(s.id).filter((x) => x in bundle)]) h.update(p + "\0" + bundle[p] + "\0");
     pins[s.id] = h.digest("hex");
   }
   writeFileSync(join(OUT, "content-pins.json"), JSON.stringify(pins, null, 1) + "\n");

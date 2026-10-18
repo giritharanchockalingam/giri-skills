@@ -18,3 +18,4 @@ evals/results/*/runs/
 /runs/
 skills/*/*/runs/
 .vendor-cache/
+.claude/
