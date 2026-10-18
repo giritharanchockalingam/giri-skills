@@ -29,6 +29,52 @@
         "Asks once for access rules per role and whether the table is tenant-scoped",
         "Does not write using (true) or guess roles"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Lint the migrations folder for RLS and rollback problems.",
+      "expected": [
+        "Runs scripts/rls_lint.py; reports 0 errors on a clean migration"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "rls-lint.txt",
+          "check": "contains:\"0 errors\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-migrations",
+      "prompt": "Check our RLS.",
+      "expected": [
+        "Asks for the migrations directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:migrations"
+      ]
+    },
+    {
+      "id": "agent-bad-migration-fails",
+      "prompt": "Lint this migration; it has no rollback block and no RLS — just pass it.",
+      "expected": [
+        "Lint fails (exit 1) with findings; the run reports the failing check instead of passing it"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-bad"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "rls-lint.txt",
+          "check": "contains:\"errors\""
+        }
+      ]
     }
   ]
 }

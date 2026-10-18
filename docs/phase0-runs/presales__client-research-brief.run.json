@@ -1,0 +1,77 @@
+{
+  "skill": "presales/client-research-brief",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path",
+  "inputs": {
+    "notes": "/home/claude/giri-skills/skills/presales/client-research-brief/evals/fixtures/notes.md",
+    "company": "Northwind Pumps",
+    "purpose": "discovery"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "skeleton",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/brief_skeleton.py --notes /home/claude/giri-skills/skills/presales/client-research-brief/evals/fixtures/notes.md --company 'Northwind Pumps' --purpose discovery --out /home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief-skeleton.md",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.034,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/logs/skeleton.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "brief",
+      "kind": "llm",
+      "ok": true,
+      "exit": 0,
+      "provider": "dry",
+      "duration_s": 0.0,
+      "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief.md",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief-skeleton.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief-skeleton.md"
+    },
+    {
+      "check": "sections:[\"Bottom line\",\"Sources\"]",
+      "pass": true,
+      "evidence": "found ['Bottom line', 'Sources']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief-skeleton.md"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief.md"
+    },
+    {
+      "check": "sections:[\"Bottom line\",\"Snapshot\",\"Technology signals\",\"Questions for the call\",\"Sources\"]",
+      "pass": true,
+      "evidence": "found ['Bottom line', 'Snapshot', 'Technology signals', 'Questions for the call', 'Sources']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief.md"
+    },
+    {
+      "check": "no_unowned_tbd",
+      "pass": true,
+      "evidence": "0 unowned of 1 markers",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief.md"
+    },
+    {
+      "check": "cites_source_ids:\"/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief-skeleton.md\"",
+      "pass": true,
+      "evidence": "skipped in dry mode",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/presales__client-research-brief/agent-happy-path/brief.md"
+    }
+  ],
+  "ok": true
+}

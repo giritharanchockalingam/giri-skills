@@ -4,11 +4,28 @@ description: Use when the user asks "is this agent/LLM app good enough", "build 
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: cases, type: file, required: true, from: "raw cases CSV (input[, expected, must_contain, output …]) or a User:/Assistant: transcript"}
+      - {name: rubric, type: csv, required: false, default: "assets/eval-rubric.csv", from: "rubric CSV (references/rubric-design.md)"}
+      - {name: outputs, type: csv, required: false, from: "pre-recorded id,output CSV; if absent, outputs come from the `output`/assistant column of cases"}
+      - {name: threshold, type: string, required: false, default: "0.9"}
+    run:
+      - {step: golden, kind: script, cmd: "python3 -I scripts/build_golden.py {cases} --out {out}/golden-set.csv --outputs-out {out}/recorded-outputs.csv"}
+      - {step: evals, kind: script, cmd: "python3 -I scripts/run_evals.py --golden {out}/golden-set.csv --rubric {rubric} --outputs {outputs} --out {out}/scorecard.json --threshold {threshold} --skip-judge", stdout: "{out}/scorecard.txt", skip_if_missing: [outputs]}
+      - {step: evals-recorded, kind: script, cmd: "python3 -I scripts/run_evals.py --golden {out}/golden-set.csv --rubric {rubric} --outputs {out}/recorded-outputs.csv --out {out}/scorecard.json --threshold {threshold} --skip-judge", stdout: "{out}/scorecard.txt", skip_if_present: [outputs]}
+    outputs:
+      - {path: "{out}/golden-set.csv", checks: [exists, csv:[id,category,difficulty,input,must_contain,must_not_contain,source]]}
+      - {path: "{out}/scorecard.json", checks: [exists, json]}
+      - {path: "{out}/scorecard.txt", checks: [exists, contains:"GATE"]}
 ---
 
 # LLM Eval Harness
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-eval-harness --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-eval-harness`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - Before first release of any LLM feature or agent; before every prompt/model/tool change thereafter.

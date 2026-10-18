@@ -4,11 +4,29 @@ description: Use when the user asks to assess, score, plan, or build the case fo
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: inventory, type: csv, required: true, from: "interface inventory (columns: assets/inventory-columns.md)"}
+      - {name: rates, type: csv, required: true, from: "rate inputs key,value,unit,source (keys in scripts/tco.py --help); no prices are ever assumed"}
+      - {name: client, type: string, required: true}
+      - {name: waves, type: string, required: false, default: "3"}
+    run:
+      - {step: score, kind: script, cmd: "python3 -I scripts/score_inventory.py {inventory} --out {out}/scored.csv --waves {waves} --summary", stdout: "{out}/scoring-summary.md"}
+      - {step: tco, kind: script, cmd: "python3 -I scripts/tco.py {out}/scored.csv --rates {rates} --out {out}/tco.csv --summary {out}/tco-summary.md --json {out}/tco.json"}
+      - {step: readout, kind: llm, template: assets/assessment-readout-template.md, context: ["{out}/scoring-summary.md", "{out}/tco-summary.md", "references/migration-factory-method.md"], out: "{out}/readout.md"}
+    outputs:
+      - {path: "{out}/scored.csv", checks: [exists, csv:[interface_id,weighted_score,band,wave,retire_candidate]]}
+      - {path: "{out}/tco.csv", checks: [exists, csv:[scenario,category,line,year,amount,source]]}
+      - {path: "{out}/tco.json", checks: [exists, json]}
+      - {path: "{out}/readout.md", checks: [exists, sections:["Bottom line","Scoring results","Wave plan","TCO","Risks","Next steps"], no_unowned_tbd, numbers_trace_to:["{out}/scoring-summary.md","{out}/tco-summary.md"]]}
 ---
 
 # integration-migration-assessor
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/integration-migration-assessor --input <name>=<value> … --out <dir>` (see `--explain presales/integration-migration-assessor`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Assess <client>'s MuleSoft/Boomi/ESB/Informatica estate for migration to <target>."

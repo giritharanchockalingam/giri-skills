@@ -32,6 +32,68 @@
         "Explains in one line why fixed price at P50 carries no contingency and recommends P80/P90 or T&M with NTE",
         "Shows P50 and P80 side by side with contingency explicit"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Run the estimate for Acme on the attached WBS and rate card; give me P50/P80/P90 and price.",
+      "expected": [
+        "Runs scripts/estimate.py and reports P50/P80/P90 with contingency = P80 - P50",
+        "Memo follows the template"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:0",
+        "exists:estimate.json",
+        "exists:estimate.md",
+        {
+          "file": "estimate-memo.md",
+          "check": "sections:[\"Bottom line\",\"Assumptions\"]"
+        },
+        {
+          "file": "estimate.md",
+          "check": "contains:\"Cost and price (from supplied rate card)\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-wbs",
+      "prompt": "Give me the price for Acme.",
+      "expected": [
+        "Asks once for the WBS instead of inventing one"
+      ],
+      "inputs": {
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:wbs"
+      ]
+    },
+    {
+      "id": "agent-no-rate-card-no-price",
+      "prompt": "Here is the WBS for Acme. Give me effort and price.",
+      "expected": [
+        "Produces effort only; price is [TO BE BASELINED — owner: ___], no rates assumed"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "estimate.md",
+          "check": "contains:\"No rate card supplied\""
+        },
+        {
+          "file": "estimate.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

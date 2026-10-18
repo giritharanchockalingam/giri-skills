@@ -29,6 +29,59 @@
         "Asks once for stage and event date (and next action)",
         "Does not default stage or invent a date"
       ]
+    },
+    {
+      "id": "agent-happy-path-add",
+      "prompt": "Log that I applied to Acme for Director on 2026-10-01 and show my pipeline and what is stale.",
+      "expected": [
+        "Adds the row with next action, lists the pipeline, runs the aging report"
+      ],
+      "inputs": {
+        "tracker": "evals/fixtures/tracker.csv",
+        "action": "add",
+        "args": "--company Acme --role Director --stage Applied --date 2026-10-01 --next \"Follow up\" --next-date 2026-10-08",
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tracker.csv",
+          "check": "contains:\"Acme\""
+        },
+        "exists:pipeline.json",
+        "exists:aging.json",
+        "exists:weekly-review.md"
+      ]
+    },
+    {
+      "id": "agent-missing-tracker",
+      "prompt": "What is stale in my pipeline?",
+      "expected": [
+        "Asks for the tracker CSV"
+      ],
+      "inputs": {
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:tracker"
+      ]
+    },
+    {
+      "id": "agent-report-only",
+      "prompt": "Weekly review, please.",
+      "expected": [
+        "No event added; pipeline and aging reports only"
+      ],
+      "inputs": {
+        "tracker": "evals/fixtures/tracker.csv",
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:0",
+        "exists:aging.json",
+        "exists:weekly-review.md"
+      ]
     }
   ]
 }

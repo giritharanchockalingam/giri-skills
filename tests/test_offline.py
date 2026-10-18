@@ -7,6 +7,10 @@ import pytest
 
 from conftest import REPO_ROOT, SCRIPTS
 
+# repo-level tooling is held to the same offline rule
+SCRIPTS = {**SCRIPTS, "run_skill": "scripts/run_skill.py", "check_output": "scripts/check_output.py",
+           "skillmeta": "scripts/skillmeta.py"}
+
 NETWORK_IMPORT = re.compile(
     r"^\s*(import|from)\s+"
     r"(socket|urllib|requests|httpx|http\.client|ssl|websocket|aiohttp|urllib3)\b",

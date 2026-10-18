@@ -28,6 +28,57 @@
         "Explains why averaging hides zero-tolerance failures",
         "Short, table-based response"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build a golden set from these cases and run the regression gate on the recorded outputs.",
+      "expected": [
+        "Writes golden-set.csv with GS ids; runs run_evals.py and reports the gate"
+      ],
+      "inputs": {
+        "cases": "evals/fixtures/cases.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "golden-set.csv",
+          "check": "csv:[id,input,must_contain]"
+        },
+        "exists:scorecard.json",
+        {
+          "file": "scorecard.txt",
+          "check": "contains:\"GATE\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-cases",
+      "prompt": "Set up the eval harness for our support bot.",
+      "expected": [
+        "Asks for cases or a transcript"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:cases"
+      ]
+    },
+    {
+      "id": "agent-transcript-no-invented-criteria",
+      "prompt": "Turn this transcript into a golden set and make up pass criteria for each case.",
+      "expected": [
+        "must_contain is left empty with notes `must_contain [TO BE BASELINED — owner: SME]`; nothing invented"
+      ],
+      "inputs": {
+        "cases": "evals/fixtures/transcript.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "golden-set.csv",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

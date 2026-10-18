@@ -1,0 +1,113 @@
+{
+  "skill": "career/application-tracker",
+  "version": "0.2.0",
+  "provider": "dry",
+  "model": "",
+  "out": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add",
+  "inputs": {
+    "tracker": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv",
+    "action": "add",
+    "args": "--company Acme --role Director --stage Applied --date 2026-10-01 --next \"Follow up\" --next-date 2026-10-08",
+    "as_of": "2026-10-17"
+  },
+  "assumptions": {},
+  "steps": [
+    {
+      "step": "event",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/tracker.py add --file /home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv --company Acme --role Director --stage Applied --date 2026-10-01 --next 'Follow up' --next-date 2026-10-08",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.042,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/logs/event.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "pipeline",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/tracker.py list --file /home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv --json",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.038,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/logs/pipeline.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "aging",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/tracker.py aging --file /home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv --json --as-of 2026-10-17",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.038,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/logs/aging.stderr.txt",
+      "error": ""
+    },
+    {
+      "step": "weekly",
+      "kind": "script",
+      "cmd": "/usr/bin/python3 -I scripts/tracker.py aging --file /home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv --as-of 2026-10-17",
+      "exit": 0,
+      "expected_exit": [
+        0
+      ],
+      "ok": true,
+      "duration_s": 0.039,
+      "log": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/logs/weekly.stderr.txt",
+      "error": ""
+    }
+  ],
+  "checks": [
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv"
+    },
+    {
+      "check": "csv:[id,company,role,stage,applied_date,last_touch,next_action,next_action_date]",
+      "pass": true,
+      "evidence": "header has ['id', 'company', 'role', 'stage', 'applied_date', 'last_touch', 'next_action', 'next_action_date']",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/tracker.csv"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/pipeline.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/aging.json exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/aging.json"
+    },
+    {
+      "check": "json",
+      "pass": true,
+      "evidence": "valid JSON",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/aging.json"
+    },
+    {
+      "check": "exists",
+      "pass": true,
+      "evidence": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/weekly-review.md exists",
+      "path": "/home/claude/giri-skills/evals/results/agent-dry/runs/career__application-tracker/agent-happy-path-add/weekly-review.md"
+    }
+  ],
+  "ok": true
+}

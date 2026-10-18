@@ -4,11 +4,27 @@ description: Use when the user receives a job offer (or expects one) and asks to
 license: MIT
 metadata:
   domain: career
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: offers, type: csv, required: true, from: "offer comparison CSV (layout: assets/offer-comparison.csv)"}
+      - {name: horizon, type: string, required: false, default: "4"}
+      - {name: col, type: string, required: false, from: "user-supplied COL indices \"Columbus OH=100,Austin TX=108\"; without it, no COL adjustment is made"}
+      - {name: base_location, type: string, required: false}
+      - {name: tax, type: string, required: false, from: "effective tax rates per location"}
+    run:
+      - {step: compare-json, kind: script, cmd: "python3 -I scripts/compare.py --file {offers} --horizon {horizon} [--col {col}] [--base-location {base_location}] [--tax {tax}] --json", stdout: "{out}/comparison.json"}
+      - {step: compare-table, kind: script, cmd: "python3 -I scripts/compare.py --file {offers} --horizon {horizon} [--col {col}] [--base-location {base_location}] [--tax {tax}]", stdout: "{out}/comparison.md"}
+    outputs:
+      - {path: "{out}/comparison.json", checks: [exists, json, contains:"annualized_total"]}
+      - {path: "{out}/comparison.md", checks: [exists, contains:"annualized"]}
 ---
 
 # Offer Evaluator
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/offer-evaluator --input <name>=<value> … --out <dir>` (see `--explain career/offer-evaluator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Is this offer good?", "compare offer A vs B vs my current job", "adjust for moving to Austin", "what should I negotiate?", "help me decide".

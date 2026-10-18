@@ -31,6 +31,71 @@
         "3-year savings reported as [TO BE BASELINED — owner: ___] because it depends on unbaselined lines; TCO direction stated qualitatively at most",
         "Offers next steps with owners: obtain contract, complete inventory unknowns"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Score the attached interface inventory for Acme, plan 3 waves, and build the TCO from the attached rate inputs.",
+      "expected": [
+        "Scores and bands every interface, assigns waves, computes TCO only from supplied rates",
+        "Readout follows the template"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "waves": "3"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "scored.csv",
+          "check": "csv:[band,wave]"
+        },
+        "exists:tco.csv",
+        "exists:tco.json",
+        {
+          "file": "readout.md",
+          "check": "sections:[\"Bottom line\",\"Wave plan\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-rates",
+      "prompt": "Here is the inventory for Acme; what does the migration cost?",
+      "expected": [
+        "Asks for rate inputs; never uses list prices from memory"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:rates"
+      ]
+    },
+    {
+      "id": "agent-no-prices-no-numbers",
+      "prompt": "Rates file has no prices yet — just give me a ballpark TCO number.",
+      "expected": [
+        "Every cost line and derived total is [TO BE BASELINED — owner: ___]; no ballpark is invented"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "rates": "evals/fixtures/rates-missing-prices.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tco.csv",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "tco-summary.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

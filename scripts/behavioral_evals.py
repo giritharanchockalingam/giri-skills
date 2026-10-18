@@ -5,6 +5,9 @@ Modes:
   trigger  - does each eval prompt route to the right skill? (+ negative-set FP rate)
   quality  - do outputs produced WITH the skill beat outputs produced WITHOUT it?
   all      - both
+  agent    - does running the skill (scripts/run_skill.py) produce the deliverables and
+             pass its checks? Deterministic; --provider dry by default. Writes agent.csv
+             and adds `agent pass` / Works|Partial|Broken columns to scorecard.md.
 
 Providers: anthropic | openai | dry (canned responses; for CI and no-key runs).
 API keys are read from the environment only (ANTHROPIC_API_KEY / OPENAI_API_KEY)
@@ -23,6 +26,7 @@ import os
 import random
 import re
 import sys
+import subprocess
 import time
 from pathlib import Path
 
@@ -301,11 +305,131 @@ def project_cost(calls, model: str):
     return in_tok, out_tok, cost
 
 
+# ---------------------------------------------------------------- agent mode
+
+AGENT_HEADER = ["skill", "case_id", "check", "pass", "evidence"]
+SCORECARD_COLS = ["skill", "trigger acc", "FP rate", "without", "with", "lift", "verdict",
+                  "agent pass", "agent verdict"]
+
+
+def agent_verdict(rate):
+    if rate is None:
+        return ""
+    return "Works" if rate >= 0.9 else ("Partial" if rate >= 0.5 else "Broken")
+
+
+def read_scorecard_rows(path: Path) -> dict:
+    """Parse an existing scorecard table into {skill: {col: cell}} (blank when absent)."""
+    rows = {}
+    if not path.exists():
+        return rows
+    header = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if header is None:
+            header = cells
+            continue
+        if set(cells[0]) <= {"-"}:
+            continue
+        rows[cells[0]] = dict(zip(header, cells))
+    return rows
+
+
+def eval_case_checks(checks, exit_code: int, out_dir: Path, skill_dir: Path):
+    """Evaluate evals.json `checks`: 'exit:N', 'needs_input:<name>', 'exists:<file>'
+    or {"file": <relpath>, "check": <spec>}."""
+    import check_output  # local import: scripts/ is on sys.path via this file's dir
+    results = []
+    for c in checks:
+        if isinstance(c, dict):
+            spec, path = str(c.get("check", "")), out_dir / str(c.get("file", ""))
+            r = check_output.run_check(spec, str(path), mode="real", exit_code=exit_code,
+                                       out_dir=str(out_dir), cwd=str(skill_dir))
+            r["check"] = f"{c.get('file')}: {spec}"
+        else:
+            name, _, arg = str(c).partition(":")
+            if name == "exists":
+                r = check_output.run_check("exists", str(out_dir / arg), out_dir=str(out_dir))
+                r["check"] = str(c)
+            else:
+                r = check_output.run_check(str(c), None, exit_code=exit_code, out_dir=str(out_dir))
+        results.append(r)
+    return results
+
+
+def agent_mode(args, skills) -> int:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import skillmeta
+    out_dir = Path(args.out) if args.out else RESULTS_DIR / datetime.date.today().isoformat()
+    runs_dir = out_dir / "runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    runner = Path(__file__).resolve().parent / "run_skill.py"
+    rows, per_skill = [], {}
+    n_cases = 0
+    for s in skills:
+        meta = skillmeta.load_skill(s["dir"])
+        if not skillmeta.agent_block(meta):
+            continue
+        per_skill.setdefault(s["key"], [])
+        for c in s["cases"]:
+            if "inputs" not in c:
+                continue
+            n_cases += 1
+            cid = c.get("id", f"case-{n_cases}")
+            case_out = runs_dir / s["key"].replace("/", "__") / cid
+            cmd = [sys.executable, "-I", str(runner), s["key"], "--provider", args.provider,
+                   "--model", args.model, "--out", str(case_out)]
+            for k, v in (c.get("inputs") or {}).items():
+                v = str(v)
+                if "/" in v and not v.startswith("{") and (s["dir"] / v).exists():
+                    v = str(s["dir"] / v)
+                cmd += ["--input", f"{k}={v}"]
+            for k, v in (c.get("assume") or {}).items():
+                cmd += ["--assume", f"{k}={v}"]
+            r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+            (case_out / "runner.log").parent.mkdir(parents=True, exist_ok=True)
+            (case_out / "runner.log").write_text(redact(r.stdout + r.stderr), encoding="utf-8")
+            checks = c.get("checks") or ["exit:0"]
+            for res in eval_case_checks(checks, r.returncode, case_out, s["dir"]):
+                rows.append([s["key"], cid, res["check"], "1" if res["pass"] else "0", res["evidence"]])
+                per_skill[s["key"]].append(res["pass"])
+    with (out_dir / "agent.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(AGENT_HEADER)
+        w.writerows(rows)
+
+    existing = read_scorecard_rows(out_dir / "scorecard.md")
+    keys = sorted(set(existing) | {s["key"] for s in skills})
+    domain_order = {"presales": 0, "build": 1, "ai-platform": 2, "career": 3}
+    keys.sort(key=lambda k: (domain_order.get(k.split("/")[0], 9), k))
+    lines = ["# Behavioral eval scorecard",
+             f"_provider={args.provider} model={args.model} date={datetime.date.today().isoformat()}_",
+             f"_agent mode: {n_cases} cases run with scripts/run_skill.py; verdict Works >= 0.9, "
+             f"Partial >= 0.5, else Broken; blank = no agent cases_",
+             "",
+             "| " + " | ".join(SCORECARD_COLS) + " |",
+             "|" + "---|" * len(SCORECARD_COLS)]
+    for k in keys:
+        prev = existing.get(k, {})
+        passes = per_skill.get(k)
+        rate = (sum(passes) / len(passes)) if passes else None
+        cells = [prev.get(col, "") for col in SCORECARD_COLS[1:7]]
+        cells += [f"{rate:.2f}" if rate is not None else "", agent_verdict(rate)]
+        lines.append(f"| {k} | " + " | ".join(cells) + " |")
+    (out_dir / "scorecard.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    n_pass = sum(r[3] == "1" for r in rows)
+    print(f"agent mode: {n_cases} cases, {n_pass}/{len(rows)} checks passed; "
+          f"wrote {out_dir}/agent.csv, scorecard.md")
+    return 0
+
+
 # ---------------------------------------------------------------- main
 
 def build_args():
     ap = argparse.ArgumentParser(description="Behavioral evals: trigger accuracy + quality lift")
-    ap.add_argument("mode", choices=["trigger", "quality", "all"])
+    ap.add_argument("mode", choices=["trigger", "quality", "all", "agent"])
     ap.add_argument("--provider", default="dry", choices=["anthropic", "openai", "dry"])
     ap.add_argument("--model", default="claude-sonnet-4-5")
     ap.add_argument("--skills", action="append", default=None,
@@ -329,6 +453,8 @@ def main() -> int:
     skills = filter_skills(load_skills(), args.skills or ["skills/*/*"])
     if not skills:
         sys.exit("error: --skills matched no skills")
+    if args.mode == "agent":
+        return agent_mode(args, skills)
     ok_cases, broken = split_cases(skills)
     if args.max_cases > 0:
         # shuffle per skill so the cap is a random (seeded) sample, not a prefix

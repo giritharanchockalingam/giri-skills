@@ -4,11 +4,27 @@ description: Use when an RFP, RFI, RFQ, or tender document is received and the u
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: rfp, type: file, required: true, from: "the RFP document (.txt .md .docx .pdf)"}
+      - {name: capabilities, type: csv, required: true, from: "our capability inventory (columns: capability_id, keywords, status, evidence, owner, gap_condition, mitigation, category)"}
+      - {name: min_words, type: string, required: false, default: "4"}
+    run:
+      - {step: extract, kind: script, cmd: "python3 -I scripts/extract_requirements.py {rfp} --out {out}/requirements.csv --min-words {min_words}"}
+      - {step: score, kind: script, cmd: "python3 -I scripts/score_matrix.py {out}/requirements.csv --capabilities {capabilities} --out {out}/matrix.csv --gaps {out}/gaps.md --summary {out}/bid-score.json"}
+    outputs:
+      - {path: "{out}/requirements.csv", checks: [exists, csv:[req_id,client_id,text,mdo_hint]]}
+      - {path: "{out}/matrix.csv", checks: [exists, csv:[req_id,mdo,compliance,evidence,gap_condition,mitigation,owner,clarification_id]]}
+      - {path: "{out}/gaps.md", checks: [exists, sections:["Bottom line","Mandatory gaps","Clarification questions"], no_unowned_tbd]}
+      - {path: "{out}/bid-score.json", checks: [exists, json]}
 ---
 
 # rfp-compliance-matrix
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/rfp-compliance-matrix --input <name>=<value> … --out <dir>` (see `--explain presales/rfp-compliance-matrix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "We received an RFP from <client>; break it down."

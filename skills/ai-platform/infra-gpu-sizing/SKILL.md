@@ -4,11 +4,24 @@ description: Use when the user asks to size GPU or inference infrastructure, com
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: inputs, type: csv, required: true, from: "workload + price inputs key,value (layout: assets/gpu-sizing-inputs.csv); no throughput or price is ever assumed"}
+      - {name: overrides, type: args, required: false, from: "extra --set key=value pairs, e.g. \"--set peak_factor=3\""}
+    run:
+      - {step: size-json, kind: script, cmd: "python3 -I scripts/size.py --inputs {inputs} {overrides} --json", stdout: "{out}/sizing.json"}
+      - {step: size-table, kind: script, cmd: "python3 -I scripts/size.py --inputs {inputs} {overrides}", stdout: "{out}/sizing.txt"}
+    outputs:
+      - {path: "{out}/sizing.json", checks: [exists, json]}
+      - {path: "{out}/sizing.txt", checks: [exists, contains:"gpus_required"]}
 ---
 
 # Infra & GPU Sizing (inference)
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/infra-gpu-sizing --input <name>=<value> … --out <dir>` (see `--explain ai-platform/infra-gpu-sizing`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - Sizing inference capacity for a self-hosted or rented LLM/SLM; deciding self-host vs rental vs API; budgeting a pilot or rollout.

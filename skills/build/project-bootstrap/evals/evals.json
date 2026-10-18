@@ -29,6 +29,57 @@
         "Asks once for project name, purpose, target dir and tenancy model",
         "Does not invent a project name or scaffold into cwd unasked"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Bootstrap a new multi-tenant Next.js + Supabase app called demo-app.",
+      "expected": [
+        "Runs scripts/scaffold.py; SPEC, CLAUDE, HANDOFF, ADR and CI workflows exist"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "name": "demo-app",
+        "multi_tenant": "true"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/docs/SPEC.md",
+        "exists:proj/.github/workflows/ci.yml",
+        {
+          "file": "proj/docs/SPEC.md",
+          "check": "contains:\"multi-tenant\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-name",
+      "prompt": "Scaffold the repo skeleton.",
+      "expected": [
+        "Asks for the project name"
+      ],
+      "inputs": {
+        "target": "{out}/proj"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:name"
+      ]
+    },
+    {
+      "id": "agent-single-tenant-default",
+      "prompt": "Bootstrap demo-app; tenancy is not decided yet.",
+      "expected": [
+        "Scaffolds without the multi-tenant marker; tenancy decision left open in the ADR"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "name": "demo-app"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/CLAUDE.md",
+        "exists:proj/docs/HANDOFF.md"
+      ]
     }
   ]
 }

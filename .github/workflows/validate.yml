@@ -15,6 +15,8 @@ jobs:
         run: pip install -q pytest pandas openpyxl python-docx pypdf && python3 -m pytest -q tests/
       - name: Behavioral evals (dry)
         run: python3 scripts/behavioral_evals.py all --provider dry --skills 'skills/presales/*' --out evals/results/ci-dry
+      - name: Agent evals (dry) — run every wired skill against its fixtures
+        run: python3 scripts/behavioral_evals.py agent --provider dry --out evals/results/ci-agent
       - name: Spec validator (agentskills.io skills-ref)
         continue-on-error: true
         run: |

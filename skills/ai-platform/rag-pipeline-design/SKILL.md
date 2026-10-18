@@ -4,11 +4,25 @@ description: Use when the user has a knowledge, search, or question-answering us
 license: MIT
 metadata:
   domain: ai-platform
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: eval_set, type: csv, required: true, from: "retrieval eval set (layout: assets/retrieval-eval-set.csv)"}
+      - {name: k, type: string, required: false, default: "1,5,10"}
+      - {name: min_recall, type: string, required: false, from: "gate: fail when recall@at is below this"}
+      - {name: at, type: string, required: false, default: "5"}
+    run:
+      - {step: retrieval-metrics, kind: script, cmd: "python3 -I scripts/eval_retrieval.py --csv {eval_set} --k {k} --json {out}/retrieval-metrics.json [--min-recall {min_recall} --at {at}]", stdout: "{out}/retrieval-metrics.txt"}
+    outputs:
+      - {path: "{out}/retrieval-metrics.json", checks: [exists, json]}
+      - {path: "{out}/retrieval-metrics.txt", checks: [exists, contains:"recall"]}
 ---
 
 # RAG Pipeline Design
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/rag-pipeline-design --input <name>=<value> … --out <dir>` (see `--explain ai-platform/rag-pipeline-design`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - New knowledge assistant, document Q&A, policy/contract search, support knowledge base, code or ticket search.

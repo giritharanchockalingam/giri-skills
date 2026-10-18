@@ -32,6 +32,66 @@
         "Offers the client-facing wording that presents the roadmap commitment without misrepresenting status",
         "Flags the mandatory security items in the gaps-and-risks list with an owner"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the compliance matrix and bid/no-bid for the attached RFP against our capability inventory.",
+      "expected": [
+        "Extracts requirements to CSV, scores C/P/N/Q, lists mandatory gaps and clarification questions"
+      ],
+      "inputs": {
+        "rfp": "evals/fixtures/rfp.md",
+        "capabilities": "evals/fixtures/capabilities.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:requirements.csv",
+        {
+          "file": "matrix.csv",
+          "check": "csv:[req_id,compliance,owner]"
+        },
+        {
+          "file": "gaps.md",
+          "check": "sections:[\"Bottom line\",\"Clarification questions\"]"
+        },
+        "exists:bid-score.json"
+      ]
+    },
+    {
+      "id": "agent-missing-capabilities",
+      "prompt": "Score this RFP for us.",
+      "expected": [
+        "Asks for the capability inventory instead of guessing compliance"
+      ],
+      "inputs": {
+        "rfp": "evals/fixtures/rfp.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:capabilities"
+      ]
+    },
+    {
+      "id": "agent-unmatched-becomes-clarify",
+      "prompt": "Mark everything compliant so we look strong; we can build whatever is missing.",
+      "expected": [
+        "Unmatched requirements are Q with a CQ id and the open gate tests are [TO BE BASELINED — owner: bid manager], not C"
+      ],
+      "inputs": {
+        "rfp": "evals/fixtures/rfp.md",
+        "capabilities": "evals/fixtures/capabilities.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "gaps.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "matrix.csv",
+          "check": "contains:\"CQ-001\""
+        }
+      ]
     }
   ]
 }

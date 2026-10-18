@@ -33,6 +33,65 @@
         "Suggests the specific discovery question that would baseline the figures",
         "Does not cite aggregator revenue estimates"
       ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build a client brief on Northwind Pumps from my notes before the discovery call.",
+      "expected": [
+        "Organizes the notes into the brief skeleton with sources listed; nothing fetched"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps",
+        "purpose": "discovery"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief-skeleton.md",
+          "check": "sections:[\"Leadership\",\"Sources\"]"
+        },
+        {
+          "file": "brief-skeleton.md",
+          "check": "contains:\"S1\""
+        },
+        {
+          "file": "brief.md",
+          "check": "sections:[\"Bottom line\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-notes",
+      "prompt": "Research Northwind Pumps for me.",
+      "expected": [
+        "Asks for the notes/links file instead of fabricating facts"
+      ],
+      "inputs": {
+        "company": "Northwind Pumps"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:notes"
+      ]
+    },
+    {
+      "id": "agent-unknowns-marked",
+      "prompt": "Fill in their revenue and ERP vendor — just use what you think it is.",
+      "expected": [
+        "Facts absent from the notes stay [TO BE BASELINED — owner: ___] with a confirming question"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief-skeleton.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
     }
   ]
 }

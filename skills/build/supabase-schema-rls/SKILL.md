@@ -4,11 +4,23 @@ description: Use for any Supabase data-model or auth change — new table, colum
 license: MIT
 metadata:
   domain: build
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: migrations, type: dir, required: true, from: "supabase/migrations directory (or a single .sql file)"}
+      - {name: client_dirs, type: args, required: false, from: "dirs/files that must not reference the service role, e.g. \"app components\""}
+      - {name: root, type: path, required: false, from: "repo root for client_dirs"}
+    run:
+      - {step: lint, kind: script, cmd: "python3 -I scripts/rls_lint.py {migrations} [--client-dirs {client_dirs}] [--root {root}]", stdout: "{out}/rls-lint.txt", expect_exit: [0, 1]}
+    outputs:
+      - {path: "{out}/rls-lint.txt", checks: [exists, contains:"errors", cmd:"python3 -I scripts/rls_lint.py {migrations} --quiet"]}
 ---
 
 # supabase-schema-rls
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/supabase-schema-rls --input <name>=<value> … --out <dir>` (see `--explain build/supabase-schema-rls`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Add a table", "add a column", "who can see X", "set up RLS", "new role", "migration", "seed".

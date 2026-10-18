@@ -26,7 +26,7 @@ Then install the upstream skills these wrap (one-time): see [VENDORED.md](VENDOR
 shared/        quality-bar, writing-style, token-efficiency, stack-conventions (every skill reads these)
 skills/        presales/ · build/ · ai-platform/ · career/   — one folder per skill
   <skill>/     SKILL.md · references/ · assets/ · scripts/ · evals/evals.json
-scripts/       validate.py (CI) · install.sh · new-skill.sh
+scripts/       run_skill.py (agent runner) · check_output.py · behavioral_evals.py · validate.py (CI) · install.sh · new-skill.sh
 templates/     skill-template/ (used by new-skill.sh)
 docs/          CATALOG.md (design rationale and sources)
 ```
@@ -85,6 +85,17 @@ docs/          CATALOG.md (design rationale and sources)
 | `skills/career/jd-fit-scorer/assets/profile-keywords.example.txt` → `profile-keywords.txt` | jd-fit-scorer |
 
 Real versions are git-ignored by default (see `.gitignore`); keep them local.
+
+## Run a skill as an agent
+Skills at `metadata.version >= 0.2.0` declare inputs, run steps and checked outputs in `metadata.agent` (12 wired in phase 0; see `docs/PHASE0-REPORT.md`).
+```bash
+python3 scripts/run_skill.py --list                      # agent skills and their inputs
+python3 scripts/run_skill.py --explain presales/effort-estimator
+python3 scripts/run_skill.py presales/effort-estimator --input wbs=./wbs.csv --input rates=./rates.csv --input client=Acme --out ./runs/acme --provider dry
+cat ./runs/acme/run.json                                 # steps, checks, ok
+python3 scripts/behavioral_evals.py agent --provider dry  # run every agent eval case; scorecard gets Works/Partial/Broken
+```
+A missing required input exits 2 with `needs_input.json`; `--assume name=value` proceeds with a labeled assumption. `--provider dry` fills `llm` steps with the unfilled template (CI); `anthropic`/`openai` read the key from the environment only.
 
 ## Conventions
 - A skill is a routing layer: `SKILL.md` ≤ 300 lines; depth lives in `references/`.

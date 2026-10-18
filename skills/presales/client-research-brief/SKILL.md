@@ -4,11 +4,25 @@ description: Use when the user asks to research a company, account, or prospect 
 license: MIT
 metadata:
   domain: presales
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: notes, type: file, required: true, from: "notes/links file the user collected (.md or .txt); nothing is fetched"}
+      - {name: company, type: string, required: true}
+      - {name: purpose, type: string, required: false, default: "discovery", from: "discovery | proposal | exec-meeting | pitch"}
+    run:
+      - {step: skeleton, kind: script, cmd: "python3 -I scripts/brief_skeleton.py --notes {notes} --company {company} --purpose {purpose} --out {out}/brief-skeleton.md"}
+      - {step: brief, kind: llm, template: assets/brief-template.md, context: ["{out}/brief-skeleton.md", "{notes}", "references/research-method.md"], out: "{out}/brief.md"}
+    outputs:
+      - {path: "{out}/brief-skeleton.md", checks: [exists, sections:["Bottom line","Sources"]]}
+      - {path: "{out}/brief.md", checks: [exists, sections:["Bottom line","Snapshot","Technology signals","Questions for the call","Sources"], no_unowned_tbd, cites_source_ids:"{out}/brief-skeleton.md"]}
 ---
 
 # client-research-brief
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/client-research-brief --input <name>=<value> … --out <dir>` (see `--explain presales/client-research-brief`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Research <company> before the pitch on <date>."

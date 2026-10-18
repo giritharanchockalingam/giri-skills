@@ -4,11 +4,30 @@ description: Use when the user reports any application event (applied, recruiter
 license: MIT
 metadata:
   domain: career
-  version: 0.1.0
+  version: 0.2.0
   author: giri-skills
+  agent:
+    inputs:
+      - {name: tracker, type: csv, required: true, copy: true, from: "tracker CSV (layout: assets/tracker.csv); a copy in {out} is updated, the original is untouched"}
+      - {name: action, type: string, required: false, from: "add | update (applied to the copy before the reports)"}
+      - {name: args, type: args, required: false, from: "arguments for the action, e.g. \"--company X --role Y --stage Applied --date 2026-10-01\""}
+      - {name: as_of, type: string, required: false, from: "YYYY-MM-DD for the aging report (default today)"}
+    run:
+      - {step: event, kind: script, cmd: "python3 -I scripts/tracker.py {action} --file {tracker} {args}", stdout: "{out}/event.txt", skip_if_missing: [action]}
+      - {step: pipeline, kind: script, cmd: "python3 -I scripts/tracker.py list --file {tracker} --json", stdout: "{out}/pipeline.json"}
+      - {step: aging, kind: script, cmd: "python3 -I scripts/tracker.py aging --file {tracker} --json [--as-of {as_of}]", stdout: "{out}/aging.json"}
+      - {step: weekly, kind: script, cmd: "python3 -I scripts/tracker.py aging --file {tracker} [--as-of {as_of}]", stdout: "{out}/weekly-review.md"}
+    outputs:
+      - {path: "{out}/tracker.csv", checks: [exists, csv:[id,company,role,stage,applied_date,last_touch,next_action,next_action_date]]}
+      - {path: "{out}/pipeline.json", checks: [exists, json]}
+      - {path: "{out}/aging.json", checks: [exists, json]}
+      - {path: "{out}/weekly-review.md", checks: [exists]}
 ---
 
 # Application Tracker
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/application-tracker --input <name>=<value> … --out <dir>` (see `--explain career/application-tracker`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## When to use
 - "Log that I applied to X", "move Y to panel stage", "what's stale?", "run my weekly review", "show the pipeline".
