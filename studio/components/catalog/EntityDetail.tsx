@@ -6,6 +6,7 @@ import { RELATION_LABEL, type EntityRow, type RelatedRow } from "@/lib/db/entiti
 const KIND_LABEL: Record<string, string> = { repository: "Repository", service: "Service", database: "Database" };
 const SOURCE_LABEL: Record<string, string> = { github: "GitHub", vercel: "Vercel", supabase: "Supabase" };
 const HIDE = new Set(["prod_deploys"]);
+const LABEL: Record<string, string> = { deploys_30d: "successful production deploys (30 days)", failed_30d: "failed production deploys (30 days)", last_deploy: "last production deploy", production_url: "production URL" };
 
 /** Relations of an entity, grouped by how they read from this end, each with the evidence it was learned from. */
 export function RelatedList({ rels }: { rels: RelatedRow[] }) {
@@ -24,6 +25,10 @@ const show = (v: unknown): React.ReactNode => {
   if (v == null || v === "") return <span className="caption">—</span>;
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v)) return <LocalTime iso={v} />;
   if (typeof v === "string" && /^https:\/\//.test(v)) return <a className="link" href={v} target="_blank" rel="noreferrer">{v.replace("https://", "")}</a>;
+  if (typeof v === "object" && v && "state" in v && "at" in v) {
+    const d = v as { state: string | null; at: string | null; sha?: string | null };
+    return <>{(d.state ?? "unknown").toLowerCase()} · <LocalTime iso={d.at} />{d.sha ? <> · <code>{d.sha.slice(0, 7)}</code></> : null}</>;
+  }
   if (typeof v === "object") return <code className="mono-sm">{JSON.stringify(v).slice(0, 300)}</code>;
   return String(v);
 };
@@ -42,7 +47,7 @@ export function EntityDetail({ e, rels }: { e: EntityRow; rels: RelatedRow[] }) 
       <section className="card card-pad mb-4"><div className="h3" style={{ marginTop: 0 }}>Related</div><RelatedList rels={rels} /></section>
       <section className="card card-pad mb-4">
         <div className="h3" style={{ marginTop: 0 }}>Properties</div>
-        <dl className="kv">{props.map(([k, v]) => <div key={k}><dt>{k.replace(/_/g, " ")}</dt><dd>{show(v)}</dd></div>)}</dl>
+        <dl className="kv">{props.map(([k, v]) => <div key={k}><dt>{LABEL[k] ?? k.replace(/_/g, " ")}</dt><dd>{show(v)}</dd></div>)}</dl>
         {deploys && <p className="caption" style={{ margin: "8px 0 0" }}>{deploys.length} successful production deployment{deploys.length === 1 ? "" : "s"} in the last 90 days{deploys.length ? <>, newest <LocalTime iso={deploys[0]} /></> : ""}.</p>}
       </section>
     </>
