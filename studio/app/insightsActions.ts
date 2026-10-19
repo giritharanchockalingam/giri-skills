@@ -57,3 +57,13 @@ export async function removeBaseline(fd: FormData): Promise<void> {
   await ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: "roi.baseline.remove", p_entity_type: "skill", p_entity_id: skill, p_details: {} });
   revalidatePath("/insights");
 }
+
+/** Recompute delivery metrics for every catalog repository now (authors and admins). */
+export async function refreshDeliveryNow(): Promise<BaselineResult> {
+  const ctx = await requireWorkspace();
+  if (ctx.role !== "admin" && ctx.role !== "author") return { ok: false, message: "Authors and administrators refresh delivery metrics." };
+  const { refreshDelivery } = await import("@/lib/insights/deliveryRefresh");
+  const r = await refreshDelivery(ctx.supabase, ctx.workspace.id, ctx.user.id);
+  revalidatePath("/insights");
+  return { ok: r.errors.length === 0, message: `${r.ok} repositor${r.ok === 1 ? "y" : "ies"} measured${r.errors.length ? `; ${r.errors.join("; ")}` : ""}.` };
+}

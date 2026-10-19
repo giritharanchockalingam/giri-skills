@@ -27,6 +27,7 @@ export interface AssistantData {
   route(task: string, k: number): { skill: string; score: number }[];
   skill(id: string): SkillFact | null;
   initiatives?(): Promise<InitiativeFact[]>;
+  delivery?(): Promise<{ entity_id: string; key: string; computed_at: string; notes: string[]; d30: unknown; d90: unknown }[]>;
 }
 
 export interface Link { title: string; href: string }
@@ -183,7 +184,25 @@ const listInitiatives = tool({
   },
 });
 
-const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives];
+const deliveryMetrics = tool({
+  spec: { type: "function", function: { name: "delivery_metrics",
+    description: "Delivery (DORA-style) metrics per repository from GitHub: deploys per week (production deployments, else merges to the default branch), lead time (PR opened → merged, median and p75), change-failure proxy (revert/hotfix merges), open PRs, with DORA 2024 bands for frequency and lead time and notes on what was measured.",
+    parameters: { type: "object", properties: {
+      repository: { type: "string", description: "Only this repository (owner/name or name)." },
+      days: { type: "integer", enum: [30, 90], description: "Window (default 30)." } }, additionalProperties: false } } },
+  schema: z.object({ repository: z.string().max(200).optional(), days: z.union([z.literal(30), z.literal(90)]).optional() }),
+  async run(a, d) {
+    if (!d.delivery) return { content: { error: "delivery metrics are not available here" }, links: [], summary: "no delivery source" };
+    let rows = await d.delivery();
+    if (a.repository) { const hit = resolveRepo(a.repository, await d.repos()); rows = "repo" in hit ? rows.filter((r) => r.entity_id === hit.repo.id) : []; }
+    const w = a.days ?? 30;
+    return { content: { window_days: w, measured: rows.length, repositories: rows.map((r) => ({ repository: r.key, link: repoHref(r.entity_id), measured_at: r.computed_at, notes: r.notes, metrics: w === 90 ? r.d90 : r.d30 })),
+      definitions: "deploys.source 'merges' means GitHub deployments were not readable, so merges to the default branch are counted. lead_time is PR open→merge (approximates commit→production). change_failure is a revert/hotfix proxy; no incident data. Bands: DORA 2024 clusters.", page: "/insights#delivery" },
+      links: [{ title: "Delivery on Insights", href: "/insights#delivery" }], summary: `${rows.length} repositor${rows.length === 1 ? "y" : "ies"} measured` };
+  },
+});
+
+const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives, deliveryMetrics];
 export const TOOL_SPECS: ToolSpec[] = TOOLS.map((t) => t.spec);
 
 /** Run one tool call from the model. Bad names or arguments come back as tool errors the model can correct. */
