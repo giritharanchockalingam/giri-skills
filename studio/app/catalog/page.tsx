@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { requireWorkspace } from "@/lib/factory/db";
 import { loadCatalog, type CatalogEntityRow } from "@/lib/db/catalog";
 import { PageHead } from "@/components/PageHead";
+import { levelOf, factsOf, LEVEL_LABEL, type LevelOrNone } from "@/lib/scorecards/levels";
+import { LevelBadge } from "@/components/catalog/LevelBadge";
 import { githubConfig } from "@/lib/github/app";
 import { appManifest } from "@/lib/github/manifest";
 import { CreateGithubApp } from "@/components/catalog/CreateGithubApp";
@@ -60,6 +62,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const withMig = active.filter((e) => (e.properties.counts?.migrations ?? 0) > 0).length;
   const scoredRepos = active.filter((e) => scores.has(e.id));
   const passingRepos = scoredRepos.filter((e) => (scores.get(e.id) ?? []).every((r) => r.verdict === "pass" || r.verdict === "skipped")).length;
+  const levels = new Map(active.map((e) => [e.id, levelOf(factsOf(e.properties), scores.get(e.id) ?? [])]));
+  const levelCount = (l: LevelOrNone) => active.filter((e) => levels.get(e.id)?.level === l).length;
 
   return (
     <>
@@ -118,6 +122,12 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <div className="cat-tile"><b>{noTests}</b><span>without tests</span></div>
           <div className="cat-tile"><b>{scoredRepos.length ? `${passingRepos}/${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "scored repositories passing every check" : "not scored yet"}</span></div>
         </div>
+        <div className="card card-pad mb-4 level-strip">
+          <div className="flex flex-wrap items-center gap-3">
+            {(["gold", "silver", "bronze", "none", "n/a"] as LevelOrNone[]).map((l) => <span key={l} className="level-count"><LevelBadge level={l} /> <b>{levelCount(l)}</b></span>)}
+          </div>
+          <div className="caption">Levels: Bronze — every check that applies has run · Silver — none fails · Gold — all pass. <Link className="link" href="/initiatives">Initiatives</Link> set a level as a goal with an owner and a deadline.</div>
+        </div>
         {canScore && <div className="mb-4 flex flex-wrap items-center gap-3"><ScoreAll entities={active.map((e) => ({ id: e.id, key: e.key }))} label={scoredRepos.length ? "Re-run scorecards" : "Run scorecards"} />
           <span className="caption">Runs {CHECKS.length} checks where they apply ({CHECKS.map((c) => c.title.split(" (")[0]).join(", ")}) on each repository&apos;s current default branch. Read-only.</span></div>}
         <div className="flex flex-wrap gap-2 mb-4" aria-label="Filter by stack">
@@ -128,7 +138,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         </div>
         <div className="card">
           <div className="tablewrap"><table className="mini cat-table">
-            <thead><tr><th>Repository</th><th>Built with</th><th>Scorecard</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
+            <thead><tr><th>Repository</th><th>Built with</th><th>Level</th><th>Scorecard</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
             <tbody>{rows.map((e) => {
               const ap = e.properties.applicable ?? [];
               return (
@@ -137,6 +147,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                     {e.properties.description && <div className="caption">{e.properties.description}</div>}</td>
                   <td>{(e.properties.stack ?? []).filter((s) => s.id !== "tests").map((s) => <span key={s.id} className="chip chip-sm" title={s.evidence.join("\n")}>{s.label}</span>)}
                     {e.properties.tree_truncated && <div className="caption">very large repository: partial file list</div>}</td>
+                  <td><Link href={`/catalog/${e.id}`} title={levels.get(e.id)?.blockers.map((b) => `${b.title}: ${b.reason}`).join("\n") || LEVEL_LABEL[levels.get(e.id)?.level ?? "n/a"]}><LevelBadge level={levels.get(e.id)?.level ?? "n/a"} /></Link></td>
                   <td>{(scores.get(e.id) ?? []).length === 0 ? <span className="caption">not scored</span> : (
                     <Link href={`/catalog/${e.id}`} className="cat-score">{(scores.get(e.id) ?? []).sort((a, b) => a.check_id.localeCompare(b.check_id)).map((r) => (
                       <span key={r.check_id} className={`pill pill-sm ${VERDICT_CLASS[r.verdict] ?? ""}`} title={`${titleOf(r.check_id)}: ${r.summary}`}>{titleOf(r.check_id).split(" (")[0]}: {r.verdict}</span>

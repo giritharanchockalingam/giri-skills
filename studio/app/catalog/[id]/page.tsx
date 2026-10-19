@@ -7,6 +7,8 @@ import { ScoreAll } from "@/components/catalog/ScoreAll";
 import { CHECKS } from "@/lib/scorecards/checks";
 import { mdToHtml } from "@/lib/markdown.mjs";
 import { humanName } from "@/lib/names";
+import { levelOf, factsOf, LEVEL_LABEL, LEVEL_RULE } from "@/lib/scorecards/levels";
+import { LevelBadge } from "@/components/catalog/LevelBadge";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,6 +25,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
   const all = await listEntityResults(ctx.supabase, ctx.workspace.id, id);
   const latest = CHECKS.map((c) => all.find((r) => r.check_id === c.id)).filter((r): r is Res => !!r);
   const canScore = ctx.role === "admin" || ctx.role === "author";
+  const lv = levelOf(factsOf(e.properties), latest);
   const when = (iso: string) => new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
   return (
     <>
@@ -32,6 +35,14 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
         <Link className="link" href="/catalog">Back to catalog</Link>
         {canScore && <ScoreAll entities={[{ id: e.id, key: e.key }]} label="Re-run this scorecard" />}
       </div>
+      <section className="card card-pad mb-4 level-panel">
+        <div className="flex flex-wrap items-center gap-3"><LevelBadge level={lv.level} large /><span className="caption">{lv.level === "n/a" ? "No scorecard check applies to this repository yet." : `${lv.applicable.length} check(s) apply.`}</span></div>
+        {lv.next && (<>
+          <p style={{ margin: "10px 0 4px" }}>To reach <b>{LEVEL_LABEL[lv.next]}</b> ({LEVEL_RULE[lv.next]}):</p>
+          <ul className="level-blockers">{lv.blockers.map((b) => <li key={b.check_id}><b>{b.title}</b> — {b.reason}</li>)}</ul>
+        </>)}
+        {lv.level === "gold" && <p className="caption" style={{ margin: "8px 0 0" }}>Every applicable check passes.</p>}
+      </section>
       {latest.length === 0 && <p className="none">Not scored yet.</p>}
       {latest.map((r) => (
         <section key={r.id} className="card card-pad mb-4">

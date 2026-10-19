@@ -289,3 +289,26 @@ test("handler: an audit-log write failure still answers but says so", async () =
   assert.equal(r.status, 200);
   assert.match(String(r.body.warning), /audit log/);
 });
+
+test("tools: levels on the scorecard, below_level filter, initiatives with live progress", async () => {
+  const facts = { stackIds: ["nextjs"], counts: { migrations: 0, files: 40 } };   // nextjs + observability apply
+  const repos = [repo("acme/a", { facts }), repo("acme/b", { facts }), repo("acme/tools", { facts: { stackIds: ["python"], counts: { migrations: 0, files: 5 } } })];
+  const scores = [score("id-a", "nextjs", "pass"), score("id-a", "observability", "pass"), score("id-b", "nextjs", "fail"), score("id-b", "observability", "pass")];
+  const inis = [{ id: "i1", title: "All at Silver", description: "", target_level: "silver" as const, repos: [], owner: "Platform", due_on: "2099-01-01", status: "active" },
+    { id: "i2", title: "Old", description: "", target_level: "gold" as const, repos: [], owner: "x", due_on: "2020-01-01", status: "closed" }];
+  const d = data({ repos: async () => repos, scores: async () => scores, initiatives: async () => inis });
+
+  const card = await call("get_scorecard", { repository: "b" }, d);
+  const c = card.content as { level: string; next_level: { level: string; blocked_by: string[] } };
+  assert.equal(c.level, "Bronze");
+  assert.deepEqual(c.next_level.blocked_by, ["Next.js conventions: fails"]);
+
+  const below = await call("search_catalog", { below_level: "silver" }, d);
+  assert.deepEqual((below.content as { repositories: { repository: string }[] }).repositories.map((r) => r.repository), ["acme/b"], "acme/tools has no level, acme/a is Gold");
+
+  const ini = await call("list_initiatives", {}, d);
+  const rows = (ini.content as { initiatives: { title: string; progress: string; repositories: { repository: string; meets_target: boolean }[] }[] }).initiatives;
+  assert.deepEqual(rows.map((r) => [r.title, r.progress]), [["All at Silver", "1 of 2 repositories (50%)"]], "closed initiatives hidden by default");
+  assert.deepEqual(rows[0].repositories.map((r) => [r.repository, r.meets_target]), [["acme/b", false], ["acme/a", true]]);
+  assert.equal(((await call("list_initiatives", { include_closed: true }, d)).content as { initiatives: unknown[] }).initiatives.length, 2);
+});

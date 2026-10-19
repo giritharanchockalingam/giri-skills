@@ -1,7 +1,9 @@
 /* Data access for the assistant: the AssistantData port backed by the signed-in user's client (RLS scopes every
  * read to their workspace), plus the question log and its rate limit. Server only. */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AssistantData, RepoFact, RunFact, ScoreFact, SkillFact } from "@/lib/assistant/tools";
+import type { AssistantData, InitiativeFact, RepoFact, RunFact, ScoreFact, SkillFact } from "@/lib/assistant/tools";
+import { factsOf } from "@/lib/scorecards/levels";
+import { listInitiatives } from "@/lib/db/initiatives";
 import type { CatalogEntityRow } from "@/lib/db/catalog";
 import { computeInsights } from "@/lib/insights/compute";
 import { loadActivity } from "@/lib/insights/load";
@@ -23,7 +25,7 @@ export function assistantData(sb: SupabaseClient, ws: string): AssistantData {
       throwIf(error);
       return ((data ?? []) as CatalogEntityRow[]).map((e) => ({ id: e.id, key: e.key, title: e.title, url: e.url, owner: e.owner, archived: e.archived,
         description: e.properties?.description ?? null, stack: (e.properties?.stack ?? []).map((s) => s.label), lastActivity: e.last_activity_at,
-        applicable: (e.properties?.applicable ?? []).map((a) => ({ skill: a.skill, why: a.why })) }));
+        applicable: (e.properties?.applicable ?? []).map((a) => ({ skill: a.skill, why: a.why })), facts: factsOf(e.properties ?? {}) }));
     })()),
     scores: () => (scores ??= (async () => {
       const { data, error } = await sb.from("sf_scorecard_latest").select("entity_id, check_id, verdict, summary, created_at").eq("workspace_id", ws);
@@ -45,6 +47,7 @@ export function assistantData(sb: SupabaseClient, ws: string): AssistantData {
       const { acts, baselines, scores: sc } = await loadActivity(sb, ws, new Date(now - days * DAY).toISOString());
       return computeInsights(acts, baselines, sc, days, now);
     },
+    initiatives: async (): Promise<InitiativeFact[]> => listInitiatives(sb, ws),
     route: (task, k) => getRouter().route(task, undefined, k).map((h) => ({ skill: h.skill, score: h.score })),
     skill(id): SkillFact | null {
       const s = LIB.get(id);

@@ -891,3 +891,24 @@ details.disclosure[open] > summary::before { content: "▼"; }
   .nav-sheet .nav-hint { font-size: 13px; color: var(--ink-3); font-weight: 400; }
   body[data-nav-open="true"] { overflow: hidden; }
 }
+
+/* ───────────── Scorecard levels + initiatives ───────────── */
+.level { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--rule); white-space: nowrap; color: var(--ink-2); background: var(--paper); }
+.level::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--ink-3); }
+.level-gold { color: var(--hold); background: var(--hold-soft); border-color: transparent; }
+.level-gold::before { background: #d4a017; }
+.level-silver { color: var(--ink); background: var(--wash); }
+.level-silver::before { background: #9aa3ad; }
+.level-bronze { color: var(--rust); background: var(--rust-soft); border-color: transparent; }
+.level-bronze::before { background: #b0703c; }
+.level-none::before { background: transparent; border: 1px solid var(--ink-3); }
+.level-na { color: var(--ink-3); }
+.level-na::before { display: none; }
+.level-lg { font-size: 15px; padding: 4px 12px; }
+.level-count { display: inline-flex; align-items: center; gap: 6px; }
+.level-strip .caption { margin-top: 8px; }
+.level-blockers { margin: 4px 0 0 18px; font-size: 14px; }
+.progress { height: 8px; border-radius: 999px; background: var(--wash); overflow: hidden; border: 1px solid var(--rule-soft); }
+.progress > span { display: block; height: 100%; background: var(--sage); }
+.ini-repos { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.initiative.is-closed { opacity: .7; }
