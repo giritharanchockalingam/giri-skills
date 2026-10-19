@@ -912,3 +912,5 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .progress > span { display: block; height: 100%; background: var(--sage); }
 .ini-repos { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .initiative.is-closed { opacity: .7; }
+.decide { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+.action-form .select { max-width: 100%; }

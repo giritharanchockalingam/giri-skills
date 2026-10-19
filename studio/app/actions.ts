@@ -398,7 +398,9 @@ export async function savePolicy(_: ActionResult | null, fd: FormData): Promise<
     if (budget != null && (!Number.isFinite(budget) || budget < 0)) return fail("Monthly budget must be a non-negative number or empty.");
     const conc = Number(input.max_concurrency);
     if (!Number.isInteger(conc) || conc < 1 || conc > 50) return fail("Max concurrency must be an integer 1–50.");
-    const row = { workspace_id: ctx.workspace.id, allowed_tools: tools, allowed_providers: providers, monthly_budget_usd: budget, max_concurrency: conc };
+    const approval = input.action_approval || "model_steps";
+    if (!["none", "model_steps", "always"].includes(approval)) return fail("Action approval must be none, model_steps or always.");
+    const row = { workspace_id: ctx.workspace.id, allowed_tools: tools, allowed_providers: providers, monthly_budget_usd: budget, max_concurrency: conc, action_approval: approval };
     const { error } = await ctx.supabase.from("sf_policies").upsert(row, { onConflict: "workspace_id" });
     if (error) return fail(error.message);
     await audit(ctx, "policy.update", "workspace", ctx.workspace.id, row);

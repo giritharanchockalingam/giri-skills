@@ -132,6 +132,13 @@ export default async function AdminPage() {
                   <fieldset className="field"><legend className="field-label">Allowed providers</legend>{["none", "anthropic", "openai_compat"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_providers" value={t} defaultChecked={(pol?.allowed_providers ?? ["none", "anthropic", "openai_compat"]).includes(t)} disabled={!admin} /> {t}</label>)}</fieldset>
                   <div className="field"><label htmlFor="p-budget">Monthly budget (USD, estimated spend; empty = no limit)</label><input id="p-budget" name="monthly_budget_usd" className="input" type="number" min={0} step={0.01} defaultValue={pol?.monthly_budget_usd ?? ""} disabled={!admin} /></div>
                   <div className="field"><label htmlFor="p-conc">Max concurrent runs</label><input id="p-conc" name="max_concurrency" className="input" type="number" min={1} max={50} defaultValue={pol?.max_concurrency ?? 2} disabled={!admin} /></div>
+                  <div className="field span-2"><label htmlFor="p-appr">Self-service actions need a reviewer&apos;s approval</label>
+                    <select id="p-appr" name="action_approval" className="select" defaultValue={pol?.action_approval ?? "model_steps"} disabled={!admin}>
+                      <option value="model_steps">when the skill uses a model (default)</option>
+                      <option value="always">always</option>
+                      <option value="none">never</option>
+                    </select>
+                    <span className="hint">A reviewer or admin approves in the Inbox; nobody approves their own request. Enforced in the database.</span></div>
                 </div>
               </ActionForm>
             </div>

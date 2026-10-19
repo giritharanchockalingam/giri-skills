@@ -12,6 +12,7 @@ const links: { href: string; label: string; short?: string; hint?: string; match
   { href: "/insights", label: "Insights", hint: "Usage, spend and ROI", match: ["/insights"] },
   { href: "/automations", label: "Automations", hint: "Run on GitHub events", match: ["/automations"] },
   { href: "/assistant", label: "Assistant", hint: "Ask your workspace", match: ["/assistant"] },
+  { href: "/inbox", label: "Inbox", hint: "Approvals waiting on you", match: ["/inbox"] },
   { href: "/roles", label: "Roles & teams", hint: "Roles and talent pools", match: ["/roles", "/pools"] },
   { href: "/agents", label: "Playbooks", hint: "Skills chained into agents", match: ["/agents", "/agent-runs/"] },
   { href: "/repo/", label: "Library", hint: "Every skill", match: ["/repo", "/upstream/"] },

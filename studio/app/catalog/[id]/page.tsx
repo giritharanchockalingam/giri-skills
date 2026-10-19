@@ -9,11 +9,15 @@ import { mdToHtml } from "@/lib/markdown.mjs";
 import { humanName } from "@/lib/names";
 import { levelOf, factsOf, LEVEL_LABEL, LEVEL_RULE } from "@/lib/scorecards/levels";
 import { LevelBadge } from "@/components/catalog/LevelBadge";
+import { ActionPanel } from "@/components/catalog/ActionPanel";
+import { listActions } from "@/lib/db/actions";
+import { getPolicy } from "@/lib/factory/db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 const CLS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
 type Res = ScorecardResultRow;
+const ACTION_CLS: Record<string, string> = { succeeded: "pill-sage", failed: "pill-rust", rejected: "pill-rust", pending_approval: "pill-hold", running: "", approved: "" };
 
 /** One repository's scorecard: each check's verdict, the skill's own report as evidence, and the history. */
 export default async function EntityPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +30,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
   const latest = CHECKS.map((c) => all.find((r) => r.check_id === c.id)).filter((r): r is Res => !!r);
   const canScore = ctx.role === "admin" || ctx.role === "author";
   const lv = levelOf(factsOf(e.properties), latest);
+  const [actions, policy] = await Promise.all([listActions(ctx.supabase, ctx.workspace.id, { entityId: id, limit: 10 }), getPolicy(ctx)]);
   const when = (iso: string) => new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
   return (
     <>
@@ -42,6 +47,16 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
           <ul className="level-blockers">{lv.blockers.map((b) => <li key={b.check_id}><b>{b.title}</b> — {b.reason}</li>)}</ul>
         </>)}
         {lv.level === "gold" && <p className="caption" style={{ margin: "8px 0 0" }}>Every applicable check passes.</p>}
+      </section>
+      <section className="card card-pad mb-4" id="actions">
+        <div className="h3" style={{ marginTop: 0 }}>Run a skill on this repository</div>
+        <ActionPanel entityId={e.id} repo={e.key} approvalRule={policy?.action_approval ?? "model_steps"} />
+        {actions.length > 0 && (
+          <div className="tablewrap mt-4"><table className="mini"><thead><tr><th>When</th><th>Skill</th><th>Status</th><th>By</th><th>Result</th></tr></thead>
+            <tbody>{actions.map((a) => <tr key={a.id}><td className="caption">{when(a.created_at)}</td><td>{a.skill}</td>
+              <td><span className={`pill pill-sm ${ACTION_CLS[a.status] ?? ""}`}>{a.status.replace("_", " ")}</span></td>
+              <td className="caption">{a.requested_by_email ?? "—"}{a.decided_by_email ? ` · decided by ${a.decided_by_email}` : ""}</td>
+              <td>{a.run_id ? <Link className="link" href={`/runs/${a.run_id}`}>run</Link> : a.error ? <span className="caption ink-rust">{a.error}</span> : <span className="caption">—</span>}</td></tr>)}</tbody></table></div>)}
       </section>
       {latest.length === 0 && <p className="none">Not scored yet.</p>}
       {latest.map((r) => (
