@@ -31,26 +31,35 @@ export class LlmError extends Error {
 
 export function openAiChat(cfg: LlmConfig, fetchImpl: typeof fetch = fetch, timeoutMs = 45_000): Chat {
   return async (messages, tools) => {
-    let res: Response;
-    try {
-      res = await fetchImpl(`${cfg.baseUrl}/chat/completions`, {
-        method: "POST", signal: AbortSignal.timeout(timeoutMs),
-        headers: { Authorization: `Bearer ${cfg.key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: cfg.model, messages, ...(tools.length ? { tools, tool_choice: "auto" } : {}) }),
-      });
-    } catch (e) {
-      throw new LlmError(504, (e as Error).name === "TimeoutError" ? "the model did not answer in time" : `could not reach the model: ${(e as Error).message}`);
+    const payload: Record<string, unknown> = { model: cfg.model, messages, ...(tools.length ? { tools, tool_choice: "auto" } : {}) };
+    // Reasoning models that default to reasoning reject function tools unless reasoning is switched off ("set
+    // reasoning_effort to 'none'"); a model that does not know the parameter rejects it. Either way, adjust once and retry.
+    for (let attempt = 0; ; attempt++) {
+      let res: Response;
+      try {
+        res = await fetchImpl(`${cfg.baseUrl}/chat/completions`, {
+          method: "POST", signal: AbortSignal.timeout(timeoutMs),
+          headers: { Authorization: `Bearer ${cfg.key}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        throw new LlmError(504, (e as Error).name === "TimeoutError" ? "the model did not answer in time" : `could not reach the model: ${(e as Error).message}`);
+      }
+      const text = await res.text();
+      if (!res.ok) {
+        let msg = text.slice(0, 300);
+        try { msg = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? msg; } catch { /* keep the raw text */ }
+        if (res.status === 400 && attempt === 0 && /reasoning_effort/i.test(msg)) {
+          if ("reasoning_effort" in payload) delete payload.reasoning_effort; else payload.reasoning_effort = "none";
+          continue;
+        }
+        throw new LlmError(res.status, `model error ${res.status}: ${msg.replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-…")}`);
+      }
+      const j = JSON.parse(text) as { choices?: { message?: ChatReply["message"] }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const message = j.choices?.[0]?.message;
+      if (!message) throw new LlmError(502, "the model returned no message");
+      return { message: { content: message.content ?? null, tool_calls: message.tool_calls?.length ? message.tool_calls : undefined },
+        usage: { prompt: j.usage?.prompt_tokens ?? 0, completion: j.usage?.completion_tokens ?? 0 } };
     }
-    const text = await res.text();
-    if (!res.ok) {
-      let msg = text.slice(0, 300);
-      try { msg = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? msg; } catch { /* keep the raw text */ }
-      throw new LlmError(res.status, `model error ${res.status}: ${msg.replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-…")}`);
-    }
-    const j = JSON.parse(text) as { choices?: { message?: ChatReply["message"] }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
-    const message = j.choices?.[0]?.message;
-    if (!message) throw new LlmError(502, "the model returned no message");
-    return { message: { content: message.content ?? null, tool_calls: message.tool_calls?.length ? message.tool_calls : undefined },
-      usage: { prompt: j.usage?.prompt_tokens ?? 0, completion: j.usage?.completion_tokens ?? 0 } };
   };
 }

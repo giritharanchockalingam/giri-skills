@@ -79,6 +79,25 @@ test("llm client: provider errors become LlmError with the provider's message an
   await assert.rejects(slow([], []), (e: unknown) => e instanceof LlmError && e.status === 504);
 });
 
+test("llm: a reasoning model that refuses tools with reasoning on is retried once with reasoning_effort none", async () => {
+  const cfg = { baseUrl: "https://m.example/v1", model: "gpt-r", key: "k", priceIn: null, priceOut: null };
+  const bodies: Record<string, unknown>[] = [];
+  const refuse = { error: { message: "Function tools with reasoning_effort are not supported for gpt-r in /v1/chat/completions. To use function tools, use /v1/responses or set reasoning_effort to 'none'." } };
+  const ok = { choices: [{ message: { content: "done" } }], usage: { prompt_tokens: 3, completion_tokens: 1 } };
+  const fetchImpl = (async (_u: string, init: RequestInit) => {
+    const b = JSON.parse(String(init.body)); bodies.push(b);
+    return b.reasoning_effort === "none" ? new Response(JSON.stringify(ok)) : new Response(JSON.stringify(refuse), { status: 400 });
+  }) as unknown as typeof fetch;
+  const r = await openAiChat(cfg, fetchImpl)([{ role: "user", content: "hi" }], TOOL_SPECS);
+  assert.equal(r.message.content, "done");
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].reasoning_effort, undefined);
+  assert.equal(bodies[1].reasoning_effort, "none");
+  // a model that keeps refusing is not retried forever: the second 400 surfaces
+  const always = openAiChat(cfg, (async () => new Response(JSON.stringify(refuse), { status: 400 })) as unknown as typeof fetch);
+  await assert.rejects(always([], TOOL_SPECS), (e: unknown) => e instanceof LlmError && e.status === 400);
+});
+
 /* ---------------- tools ---------------- */
 test("resolveRepo: owner/name, bare name, unique partial; otherwise candidates", () => {
   const exact = resolveRepo("acme/billing-api", REPOS);
