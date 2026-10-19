@@ -100,3 +100,10 @@ Next: notifications (email/Slack on pending approvals and overdue initiatives); 
 - Tokens: VERCEL_TOKEN, VERCEL_TEAM_ID (sensitive), VERCEL_TEAM_SLUG (plain), SUPABASE_ACCESS_TOKEN — server env only; 401/403 name the exact fix (#22).
 - Live 2026-10-19: Vercel sync wrote giri-skills-studio → built_from giri-skills, last deploy = the commit just shipped. Supabase 403 projects_read and a single-project Vercel token: owner recreating both tokens (team scope; Projects: Read).
 Next: re-sync with the new tokens and verify relations (service → database); notifications; more scorecard checks; SQL suite in CI.
+
+## 2026-10-19 (late): UX review executed (PRs #27–#35)
+- Every item in the UX review is tracked, with its status and PR, in `docs/UX-REVIEW-2026-10-19.md`. All P0 items are done. The P1/P2 items still open are listed there; the biggest is assistant streaming and progress.
+- Batch D (#34): Home stat row, Library and Evaluations figures that add up, the Python runtime fails with a clear message after 90 s (Try again button), /skills and /workspace redirect, a 404 page that suggests destinations, readable playbook titles and a "Saved" badge.
+- Batch E (#35): a "How to read this table" legend on Evaluations, every table column has a header, Connect lists live tools first.
+- Verified live: the changed pages return the new copy, and no page scrolls sideways at 360 px.
+- `/home/claude/bin/ship.sh` now creates the branch itself when run from main.
