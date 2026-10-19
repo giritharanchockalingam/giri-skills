@@ -914,3 +914,6 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .initiative.is-closed { opacity: .7; }
 .decide { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
 .action-form .select { max-width: 100%; }
+a.cat-tile { color: inherit; transition: border-color .15s; }
+a.cat-tile:hover { border-color: var(--ink-3); }
+.cat-tile-on { border-color: var(--flame) !important; }

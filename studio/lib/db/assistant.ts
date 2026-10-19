@@ -26,7 +26,7 @@ export function assistantData(sb: SupabaseClient, ws: string): AssistantData {
       throwIf(error);
       return ((data ?? []) as CatalogEntityRow[]).map((e) => ({ id: e.id, key: e.key, title: e.title, url: e.url, owner: e.owner, archived: e.archived,
         description: e.properties?.description ?? null, stack: (e.properties?.stack ?? []).map((s) => s.label), lastActivity: e.last_activity_at,
-        applicable: (e.properties?.applicable ?? []).map((a) => ({ skill: a.skill, why: a.why })), facts: factsOf(e.properties ?? {}) }));
+        applicable: (e.properties?.applicable ?? []).map((a) => ({ skill: a.skill, why: a.why })), facts: factsOf(e.properties ?? {}), aiAssets: e.properties?.ai_assets }));
     })()),
     scores: () => (scores ??= (async () => {
       const { data, error } = await sb.from("sf_scorecard_latest").select("entity_id, check_id, verdict, summary, created_at").eq("workspace_id", ws);

@@ -6,6 +6,7 @@ import { refreshDelivery } from "@/lib/insights/deliveryRefresh";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { githubConfig, installationToken, listInstallationRepos, repoPaths, fileText, type GhRepo, type GithubConfig } from "./app.ts";
 import { detect, defaultOwner, CODEOWNERS_PATHS } from "./detect.ts";
+import { discoverAssets } from "./assets.ts";
 
 export const MAX_REPOS_PER_SYNC = 300;
 const CONCURRENCY = 6;
@@ -37,7 +38,7 @@ export async function profileRepo(token: string, repo: GhRepo, fetchImpl?: typeo
     properties: {
       description: repo.description, visibility: repo.private ? "private" : "public", fork: repo.fork, default_branch: repo.default_branch,
       language: repo.language, topics: repo.topics ?? [], stack: d.stack, applicable: d.applicable, counts: d.counts,
-      tree_truncated: truncated, owner_source: coPath,
+      tree_truncated: truncated, owner_source: coPath, ai_assets: discoverAssets(paths, { packageJson, requirements, pyproject }),
     },
   };
 }

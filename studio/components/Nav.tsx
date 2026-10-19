@@ -8,7 +8,7 @@ import { supabaseConfigured } from "@/lib/supabase/env";
 
 const links: { href: string; label: string; short?: string; hint?: string; match: string[] }[] = [
   { href: "/", label: "Home", hint: "What do you need done?", match: ["/"] },
-  { href: "/catalog", label: "Catalog", hint: "Your repositories and scorecards", match: ["/catalog", "/initiatives"] },
+  { href: "/catalog", label: "Catalog", hint: "Your repositories and scorecards", match: ["/catalog", "/initiatives", "/ai-assets"] },
   { href: "/insights", label: "Insights", hint: "Usage, spend and ROI", match: ["/insights"] },
   { href: "/automations", label: "Automations", hint: "Run on GitHub events", match: ["/automations"] },
   { href: "/assistant", label: "Assistant", hint: "Ask your workspace", match: ["/assistant"] },
