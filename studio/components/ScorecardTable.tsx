@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ScoreRow, Misroute, FailedItem, AgentCase } from "@/lib/data";
 import { skillHref, fmt } from "@/lib/data";
-import { isVerdictFilter, matchesVerdictFilter, verdictSeverity, isAgentFilter, matchesAgentFilter, agentVerdictSeverity, AGENT_COL_TIP, AGENT_FILTERS, type VerdictFilter, type AgentFilter } from "@/lib/verdict";
+import { isVerdictFilter, matchesVerdictFilter, verdictSeverity, isAgentFilter, matchesAgentFilter, agentVerdictSeverity, AGENT_COL_TIP, AGENT_FILTERS, AGENT_VERDICT_INFO, NO_AGENT_VERDICT, type VerdictFilter, type AgentFilter } from "@/lib/verdict";
 import { VerdictBadge, AgentBadge, Lift, Trig } from "./Badge";
 import { DomainFilter, VerdictFilterControl, ChoiceFilter } from "./FilterBar";
 import { Drawer } from "./Drawer";
@@ -87,6 +87,18 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
         <ChoiceFilter id="sc-runs" label="Runs" value={runs} onChange={(v) => setRuns(v)} options={AGENT_FILTERS.filter((f) => f.key !== "all")} />
         <span className="toolbar-count">{sorted.length} of {rows.length} skills · worst first</span>
       </div>
+
+      <details className="card card-pad read-legend">
+        <summary className="caption"><b>How to read this table</b></summary>
+        <dl className="legend-dl">
+          <dt>Verdict</dt><dd>From the model-judged evaluation: healthy, or which part (description, instructions) needs work.</dd>
+          <dt>Runs</dt><dd>Scripts only, no model. {AGENT_FILTERS.filter((f) => f.key !== "all").map((f) => `${f.label}: ${f.key === "none" ? NO_AGENT_VERDICT.explanation : AGENT_VERDICT_INFO[f.key as keyof typeof AGENT_VERDICT_INFO].explanation}`).join(" ")}</dd>
+          <dt>Trigger</dt><dd>{COL_TIPS.trigger}.</dd>
+          <dt>FP rate</dt><dd>False positives: {COL_TIPS.fp.toLowerCase()}. Lower is better.</dd>
+          <dt>Without / With</dt><dd>{COL_TIPS.without}; {COL_TIPS.with.toLowerCase()}.</dd>
+          <dt>Lift</dt><dd>{COL_TIPS.lift}: how much the skill helps. Wide screens show every column; phones show Trigger and Lift, the rest in each row&apos;s detail.</dd>
+        </dl>
+      </details>
 
       <div className="card">
         <div className="tablewrap"><table className="tbl only-desktop">

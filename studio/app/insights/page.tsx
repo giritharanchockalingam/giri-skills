@@ -98,7 +98,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
           <p className="caption">A run counts as work when it succeeded, was not on sample inputs (the shipped samples, which are labelled fictional) and was not an evaluation. Hours = counted runs × your baseline minutes.</p>
         </div>
         <div className="tablewrap"><table className="mini">
-          <thead><tr><th>Skill</th><th>Runs</th><th>Counted as work</th><th>Baseline (by hand)</th><th>Hours saved</th><th>Value</th>{admin && <th />}</tr></thead>
+          <thead><tr><th>Skill</th><th>Runs</th><th>Counted as work</th><th>Baseline (by hand)</th><th>Hours saved</th><th>Value</th>{admin && <th>Actions</th>}</tr></thead>
           <tbody>{ins.skills.length === 0 ? <tr><td colSpan={7} className="none">No runs in this period.</td></tr> : ins.skills.map((s) => (
             <tr key={s.skill}>
               <td>{s.skill.startsWith("workspace/") ? nameOf(s.skill) : <Link className="link" href={`/repo/${s.skill}`}>{nameOf(s.skill)}</Link>}</td>

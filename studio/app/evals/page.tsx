@@ -34,7 +34,7 @@ export default function EvalsPage() {
         title="What the evals"
         em="found"
         lead={conclusionSentence(s, a)}
-        caption={<>{modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} agent checks · {meta.spend} spend (est.) · {meta.date}</>}
+        caption={<>Last evaluation, {meta.date}: judged by {modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} agent checks · {meta.spend} model spend (estimated)</>}
       />
 
       <div className="summary-grid">
