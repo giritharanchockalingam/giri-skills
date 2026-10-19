@@ -351,6 +351,20 @@ select test_assert((select count(*) from sf_scorecard_latest) = 0, 'other worksp
 select test_expect_error($$insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, run_by)
   values ('$$ || :'ws_acme' || $$', '$$ || :'ent' || $$', 'rls', 'build/supabase-schema-rls', 'pass', auth.uid())$$, 'row-level security');
 
+-- ───────── Insights (0009): browser runs are the caller's own; ROI baselines admin-owned with owner + source ─────────
+select test_as('00000000-0000-0000-0000-000000000004');
+insert into sf_browser_runs (workspace_id, user_id, skill, status, example) values (:'ws_acme', auth.uid(), 'build/supabase-schema-rls', 'succeeded', true);
+select test_expect_error($$insert into sf_browser_runs (workspace_id, user_id, skill, status) values ('$$ || :'ws_acme' || $$', '00000000-0000-0000-0000-000000000001', 'a/b', 'succeeded')$$, 'row-level security');
+select test_expect_error($$update sf_browser_runs set status = 'failed'$$, 'permission denied');
+select test_expect_error($$insert into sf_roi_baselines (workspace_id, skill, manual_minutes, owner, source, set_by) values ('$$ || :'ws_acme' || $$', 'a/b', 30, 'me', 'guess', auth.uid())$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_roi_baselines (workspace_id, skill, manual_minutes, hourly_rate_usd, owner, source, set_by)
+  values (:'ws_acme', 'build/supabase-schema-rls', 45, 120, 'Platform lead', 'timed 5 manual reviews, Oct 2026', auth.uid());
+select test_expect_error($$insert into sf_roi_baselines (workspace_id, skill, manual_minutes, owner, source, set_by) values ('$$ || :'ws_acme' || $$', 'a/c', 0, 'x', 'none', auth.uid())$$, 'check');
+select test_expect_error($$insert into sf_roi_baselines (workspace_id, skill, manual_minutes, owner, source, set_by) values ('$$ || :'ws_acme' || $$', 'a/d', 10, 'x', '', auth.uid())$$, 'check');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_browser_runs) = 0 and (select count(*) from sf_roi_baselines) = 0, 'other workspace sees no runs or baselines');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

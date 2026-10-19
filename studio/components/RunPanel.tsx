@@ -7,6 +7,7 @@ import type { AgentInput, AgentSpec } from "@/lib/data";
 import { loadRuntime, runSkill, runner, type LogLine, type Progress, type RunInputValue, type RunResult } from "@/lib/runner";
 import { mdToHtml } from "@/lib/markdown.mjs";
 import { PassPill } from "./Badge";
+import { recordBrowserRun } from "@/app/insightsActions";
 
 const FILE_TYPES = new Set(["csv", "json", "md", "txt", "file", "sql"]);
 const MODELS = ["claude-sonnet-4-5", "claude-opus-4-1", "claude-haiku-4-5"];
@@ -116,6 +117,9 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skillId, demo]);
 
+  // whether the inputs are still exactly the skill's sample inputs (an example run is a demo, not work: not counted as ROI)
+  const [exampleFilled, setExampleFilled] = useState(false);
+  const edit = (name: string, patch: Partial<Draft>) => { setExampleFilled(false); setDraft(name, patch); };
   const fillAllFromExample = async () => {
     if (!demo) return;
     for (const i of inputs) {
@@ -127,11 +131,12 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
       else setDraft(i.name, { value: v });
     }
     for (const [k, v] of Object.entries(demo.assume)) setDraft(k, { assume: v });
+    setExampleFilled(true);
   };
 
   const onFile = (i: AgentInput, f: File | null) => {
     if (!f) return;
-    f.text().then((t) => setDraft(i.name, { text: t, fileName: f.name, fixture: false }));
+    f.text().then((t) => edit(i.name, { text: t, fileName: f.name, fixture: false }));
   };
 
   const buildRequest = () => {
@@ -158,8 +163,12 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     setRunning(true); setResult(null); setViewing(null); setLog([]);
     const { req, assumptions } = buildRequest();
     try {
+      const t0 = Date.now();
       const r = await runSkill({ skill: skillId, inputs: req, assumptions, providerKey: key || undefined, model, onLog: (l) => setLog((x) => [...x, l]) });
       setResult(r);
+      const checks = ((r.runJson as { checks?: { pass?: boolean }[] } | null)?.checks) ?? [];
+      void recordBrowserRun({ skill: skillId, status: r.needsInput ? "needs_input" : r.exitCode === 0 ? "succeeded" : "failed", example: exampleFilled || inputs.some((i) => drafts[i.name]?.fixture),
+        mode, checksPassed: checks.filter((c) => c.pass).length, checksTotal: checks.length, durationMs: Date.now() - t0 });
     } catch (e) {
       setLog((x) => [...x, { stream: "sys", text: `run failed: ${String((e as Error)?.message || e)}` }]);
     } finally { setRunning(false); }
@@ -239,7 +248,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                       {d.fixture && <div className="run-fixture-note">example fixture <code>{d.fileName}</code> — replace with your real file</div>}
                       {!d.fixture && d.fileName && <div className="caption">loaded <code>{d.fileName}</code></div>}
                       <textarea className="run-textarea" value={d.text} placeholder={`…or paste the ${i.type} content here`} spellCheck={false}
-                        onChange={(e) => setDraft(i.name, { text: e.target.value, fixture: false, fileName: d.fileName })} />
+                        onChange={(e) => edit(i.name, { text: e.target.value, fixture: false, fileName: d.fileName })} />
                     </>
                   )}
                   {i.type === "dir" && (
@@ -249,13 +258,13 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                         <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>Choose folder…
                           <input type="file" multiple hidden aria-label={`Choose a folder for ${i.name}`}
                             {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-                            onChange={async (e) => { if (!e.target.files?.length) return; const r = await readFolder(e.target.files); setDraft(i.name, { folder: r.files, folderNote: r.note, text: "", value: "", fixture: false }); }} />
+                            onChange={async (e) => { if (!e.target.files?.length) return; const r = await readFolder(e.target.files); edit(i.name, { folder: r.files, folderNote: r.note, text: "", value: "", fixture: false }); }} />
                         </label>
-                        <input type="file" className="input" aria-label={`Upload a file for ${i.name}`} onChange={(e) => { setDraft(i.name, { folder: null, folderNote: "" }); onFile(i, e.target.files?.[0] ?? null); }} />
+                        <input type="file" className="input" aria-label={`Upload a file for ${i.name}`} onChange={(e) => { edit(i.name, { folder: null, folderNote: "" }); onFile(i, e.target.files?.[0] ?? null); }} />
                       </div>
                       {d.folder && <div className="caption">{d.folderNote} <button type="button" className="link" onClick={() => setDraft(i.name, { folder: null, folderNote: "" })}>clear</button></div>}
                       <textarea className="run-textarea" value={d.text} placeholder="…or paste the file content here" spellCheck={false}
-                        onChange={(e) => setDraft(i.name, { text: e.target.value, value: "", fixture: false, fileName: d.fileName })} />
+                        onChange={(e) => edit(i.name, { text: e.target.value, value: "", fixture: false, fileName: d.fileName })} />
                       {fx && (
                         <div className="run-file-row">
                           <input id={`in-${i.name}`} className="input run-input-text" value={d.value} readOnly placeholder="(none)" />
@@ -266,20 +275,20 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                   )}
                   {i.type === "path" && (
                     <>
-                      <input id={`in-${i.name}`} className="input run-input-text" value={d.value} onChange={(e) => setDraft(i.name, { value: e.target.value })} />
+                      <input id={`in-${i.name}`} className="input run-input-text" value={d.value} onChange={(e) => edit(i.name, { value: e.target.value })} />
                       <div className="caption">An output target; <code>{"{out}"}</code> is this run&apos;s folder.</div>
                     </>
                   )}
                   {i.type === "flag" && (
-                    <label className="run-check"><input id={`in-${i.name}`} type="checkbox" checked={d.checked} onChange={(e) => setDraft(i.name, { checked: e.target.checked })} /> set <code>{i.flag || `--${i.name.replace(/_/g, "-")}`}</code></label>
+                    <label className="run-check"><input id={`in-${i.name}`} type="checkbox" checked={d.checked} onChange={(e) => edit(i.name, { checked: e.target.checked })} /> set <code>{i.flag || `--${i.name.replace(/_/g, "-")}`}</code></label>
                   )}
                   {!FILE_TYPES.has(i.type) && !["dir", "path", "flag"].includes(i.type) && (
                     <input id={`in-${i.name}`} className="input run-input-text" value={d.value} placeholder={i.default != null ? `default: ${i.default}` : demo?.inputs[i.name] ? `e.g. ${demo.inputs[i.name]}` : ""}
-                      onChange={(e) => setDraft(i.name, { value: e.target.value })} />
+                      onChange={(e) => edit(i.name, { value: e.target.value })} />
                   )}
                   <details className="run-assume"><summary className="caption">Assume instead{d.assume.trim() && <> — <code>{i.name}={d.assume}</code></>}</summary>
                     <label className="run-field mt-2"><span className="caption">Used only when the input above is empty; passed as <code>--assume {i.name}=…</code> and labelled <code>[ASSUMED]</code> in the outputs.</span>
-                      <input className="input run-input-text" value={d.assume} placeholder="value to assume" onChange={(e) => setDraft(i.name, { assume: e.target.value })} />
+                      <input className="input run-input-text" value={d.assume} placeholder="value to assume" onChange={(e) => edit(i.name, { assume: e.target.value })} />
                     </label>
                   </details>
                 </div>

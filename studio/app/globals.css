@@ -832,3 +832,18 @@ details.disclosure[open] > summary::before { content: "▼"; }
 /* top bar: 8 sections + account; the email is in the account icon's tooltip below wide desktop widths */
 .topnav { gap: 20px; }
 @media (max-width: 1360px) { .user-chip { display: none; } }
+
+/* ───────────────────────────── Insights ───────────────────────────── */
+.ins-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
+@media (max-width: 900px) { .ins-grid { grid-template-columns: 1fr; } }
+.ins-cols { display: flex; align-items: flex-end; gap: 6px; height: 170px; padding-top: 8px; border-bottom: 1px solid var(--rule); }
+.ins-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 18px; }
+.ins-col-bar { width: 100%; max-width: 34px; background: var(--deep); border-radius: 4px 4px 0 0; }
+.ins-col:hover .ins-col-bar { background: var(--flame); }
+.ins-col-v { font: 500 11px var(--mono); color: var(--ink-2); margin-bottom: 3px; }
+.ins-col-x { font: 500 10.5px var(--mono); color: var(--ink-3); margin-top: 4px; position: relative; top: 18px; height: 0; white-space: nowrap; }
+.ins-bars { width: 100%; border-collapse: collapse; } .ins-bars th { text-align: left; font-weight: 400; font-size: 13.5px; color: var(--ink-2); padding: 5px 8px 5px 0; white-space: nowrap; width: 1%; }
+.ins-bars td { padding: 5px 0; } .ins-bar { display: block; height: 12px; min-width: 0; background: var(--deep); border-radius: 0 4px 4px 0; }
+.ins-bars tr:hover .ins-bar { background: var(--flame); } .ins-n { font: 500 12.5px var(--mono); color: var(--ink-2); text-align: right; width: 40px; padding-left: 8px !important; }
+.ins-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; align-items: end; }
+.ins-form .field { margin: 0; } .ins-wide { grid-column: 1 / -1; }
