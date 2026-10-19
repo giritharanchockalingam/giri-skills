@@ -457,6 +457,16 @@ select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_action_runs) = 0, 'other workspace sees no actions');
 select test_expect_error($$select sf_action_decide('$$ || :'own' || $$', true, '')$$, 'not found');
 
+-- ───────── Delivery metrics (0015): authors/admins write snapshots for their workspace's entities; members read ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_delivery_snapshots (workspace_id, entity_id, metrics, computed_by) values (:'ws_acme', :'ent', '{"d30":{"merges":3}}', auth.uid());
+select test_expect_error($$insert into sf_delivery_snapshots (workspace_id, entity_id, metrics, computed_by) values ('$$ || :'ws_acme' || $$', '$$ || :'ent' || $$', '{}', '00000000-0000-0000-0000-000000000001')$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((select (metrics->'d30'->>'merges')::int from sf_delivery_latest where entity_id = :'ent') = 3, 'a consumer reads the latest delivery snapshot');
+select test_expect_error($$insert into sf_delivery_snapshots (workspace_id, entity_id, metrics, computed_by) values ('$$ || :'ws_acme' || $$', '$$ || :'ent' || $$', '{}', auth.uid())$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_delivery_snapshots) = 0, 'other workspace sees no delivery metrics');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

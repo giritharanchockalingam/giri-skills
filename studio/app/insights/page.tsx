@@ -5,6 +5,9 @@ import { loadActivity } from "@/lib/insights/load";
 import { computeInsights, CHANNEL_LABEL } from "@/lib/insights/compute";
 import { BaselineForm } from "@/components/insights/BaselineForm";
 import { removeBaseline } from "@/app/insightsActions";
+import { loadDelivery } from "@/lib/db/delivery";
+import { DeliveryTable } from "@/components/insights/DeliveryTable";
+import { RefreshDelivery } from "@/components/insights/RefreshDelivery";
 import { humanName } from "@/lib/names";
 import { CHECKS } from "@/lib/scorecards/checks";
 import { skills as repoSkills } from "@/lib/data";
@@ -25,6 +28,9 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const { acts, baselines, scores, truncated } = await loadActivity(ctx.supabase, ctx.workspace.id, since);
   const ins = computeInsights(acts, baselines, scores, days);
+  const delivery = await loadDelivery(ctx.supabase, ctx.workspace.id);
+  const dWin: 30 | 90 = days === 90 ? 90 : 30;
+  const notes = [...new Set(delivery.flatMap((r) => r.notes))];
   const admin = ctx.role === "admin";
   const maxWeek = Math.max(1, ...ins.weeks.map((w) => w.runs));
   const maxChan = Math.max(1, ...ins.channels.map((c) => c.runs));
@@ -47,6 +53,16 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
         <div className="cat-tile"><b>{usd(ins.spend.usd)}</b><span>LLM spend ({ins.spend.runsWithCost} costed run{ins.spend.runsWithCost === 1 ? "" : "s"})</span></div>
         <div className="cat-tile"><b>{ins.scorecards.repos ? `${ins.scorecards.passingAll}/${ins.scorecards.repos}` : "—"}</b><span>repositories passing every check</span></div>
       </div>
+
+      <section className="card mb-6" id="delivery">
+        <div className="card-pad" style={{ paddingBottom: 0 }}>
+          <div className="flex flex-wrap items-center justify-between gap-2"><div className="h3" style={{ margin: 0 }}>Delivery (DORA) — last {dWin} days</div>
+            {(ctx.role === "admin" || ctx.role === "author") && <RefreshDelivery />}</div>
+          <p className="caption">From GitHub, per repository. Deploys: production deployments GitHub recorded, else merges to the default branch. Lead time: pull request opened → merged (approximates DORA&apos;s commit → production). Change failure: share of merges that revert or hotfix (a proxy; no incident data). Bands: DORA 2024 clusters for deploy frequency and lead time; none for change failure (2024&apos;s bands are not ordered).</p>
+          {notes.map((n) => <p key={n} className="caption">ⓘ {n}</p>)}
+        </div>
+        <div className="card-pad">{delivery.length ? <DeliveryTable rows={delivery} window={dWin} /> : <p className="none" style={{ margin: 0 }}>Not measured yet — refresh, or sync the catalog.</p>}</div>
+      </section>
 
       <div className="ins-grid mb-6">
         <section className="card card-pad">

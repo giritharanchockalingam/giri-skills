@@ -9,7 +9,7 @@ export function appManifest(origin: string, name = "Skills Factory") {
     setup_url: `${origin}/api/github/callback`,
     request_oauth_on_install: true,
     setup_on_update: true,
-    default_permissions: { contents: "read", metadata: "read" },
+    default_permissions: { contents: "read", metadata: "read", pull_requests: "read", deployments: "read", checks: "write" },
     default_events: [] as string[],
   };
 }

@@ -2,6 +2,7 @@
  * Runs as the signed-in author/admin (RLS applies); reads GitHub with short-lived installation tokens.
  * Idempotent: entities are upserted by (workspace, kind, key); repos no longer visible are marked archived with the
  * reason, never silently deleted. Every sync is logged in sf_catalog_syncs with counts or the error. */
+import { refreshDelivery } from "@/lib/insights/deliveryRefresh";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { githubConfig, installationToken, listInstallationRepos, repoPaths, fileText, type GhRepo, type GithubConfig } from "./app.ts";
 import { detect, defaultOwner, CODEOWNERS_PATHS } from "./detect.ts";
@@ -87,6 +88,11 @@ export async function syncWorkspace(sb: SupabaseClient, workspaceId: string, use
       errors.push(`${inst.account_login}: ${msg}`);
       await finish({ status: "failed", error: msg.slice(0, 1000) });
     }
+  }
+  // delivery metrics ride along with the sync; a failure here is reported, never fatal to the catalog
+  if (total > 0) {
+    try { const d = await refreshDelivery(sb, workspaceId, userId); errors.push(...d.errors.map((m) => `delivery metrics — ${m}`)); }
+    catch (e) { errors.push(`delivery metrics: ${(e as Error).message}`); }
   }
   return { ok: errors.length === 0 || total > 0, message: `${total} repositor${total === 1 ? "y" : "ies"} synced${archivedN ? `, ${archivedN} no longer visible` : ""}${errors.length ? `; ${errors.length} problem(s)` : ""}.`, repos: total, archived: archivedN, errors };
 }

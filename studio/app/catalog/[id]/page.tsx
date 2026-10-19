@@ -12,6 +12,8 @@ import { LevelBadge } from "@/components/catalog/LevelBadge";
 import { ActionPanel } from "@/components/catalog/ActionPanel";
 import { listActions } from "@/lib/db/actions";
 import { getPolicy } from "@/lib/factory/db";
+import { loadDelivery } from "@/lib/db/delivery";
+import { DeliveryTable } from "@/components/insights/DeliveryTable";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,7 +32,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
   const latest = CHECKS.map((c) => all.find((r) => r.check_id === c.id)).filter((r): r is Res => !!r);
   const canScore = ctx.role === "admin" || ctx.role === "author";
   const lv = levelOf(factsOf(e.properties), latest);
-  const [actions, policy] = await Promise.all([listActions(ctx.supabase, ctx.workspace.id, { entityId: id, limit: 10 }), getPolicy(ctx)]);
+  const [actions, policy, delivery] = await Promise.all([listActions(ctx.supabase, ctx.workspace.id, { entityId: id, limit: 10 }), getPolicy(ctx), loadDelivery(ctx.supabase, ctx.workspace.id, id)]);
   const when = (iso: string) => new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
   return (
     <>
@@ -48,6 +50,12 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
         </>)}
         {lv.level === "gold" && <p className="caption" style={{ margin: "8px 0 0" }}>Every applicable check passes.</p>}
       </section>
+      {delivery.length > 0 && (
+        <section className="card card-pad mb-4" id="delivery">
+          <div className="h3" style={{ marginTop: 0 }}>Delivery — last 30 days</div>
+          <DeliveryTable rows={delivery} window={30} />
+          <p className="caption" style={{ margin: "6px 0 0" }}>Definitions and 90-day view on <Link className="link" href="/insights?days=90#delivery">Insights</Link>.</p>
+        </section>)}
       <section className="card card-pad mb-4" id="actions">
         <div className="h3" style={{ marginTop: 0 }}>Run a skill on this repository</div>
         <ActionPanel entityId={e.id} repo={e.key} approvalRule={policy?.action_approval ?? "model_steps"} />
