@@ -12,6 +12,12 @@ unsourced-numbers.csv: slide, number, context — every number (>= 3 significant
 $ / %) on a line that names no source (`source`, `per <doc>`, `[Sn]`, `(… 20xx)` count as sources).
 --apply reads the redline table in redline.md (| Slide # | Original title | Verdict | Reason | …)
 and fills verdict/reason for the matching slides; rows without a bracketed verdict are ignored.
+--draft-only --redline-out redline.md (build mode): no model step — writes a mechanical redline on the
+template's sections from the ledger alone: one row per slide, [TBD] + [SHARPEN] for slides with
+unsourced figures (each figure becomes an owned to-be-baselined marker in the rewritten slide),
+[SHARPEN] for a label title (<= 4 words, no figure, no verb of decision) or a body over 60 words,
+[KEEP] otherwise; a missing decision ask in slides 1-2 is listed under "Slides to add". Labelled as a
+draft; storyline untouched; the --apply step then fills the ledger from it.
 Nothing is invented; the ledger is the deck's own text. Exit 1 on a missing file, an unsupported
 extension, a text export without separators, or a pptx without python-pptx. Stdlib only, offline.
 """
@@ -111,7 +117,7 @@ def slides_from_pptx(path: Path) -> list[tuple[int, str, str]]:
     return out
 
 
-def build(deck: Path, ledger: Path, unsourced: Path) -> None:
+def build(deck: Path, ledger: Path, unsourced: Path, redline_out: Path | None = None) -> None:
     if not deck.is_file():
         die(f"file not found: {deck}")
     ext = deck.suffix.lower()
@@ -137,8 +143,74 @@ def build(deck: Path, ledger: Path, unsourced: Path) -> None:
         w = csv.DictWriter(f, fieldnames=LEDGER_COLS); w.writeheader(); w.writerows(rows)
     with unsourced.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["slide", "number", "context"]); w.writeheader(); w.writerows(uns)
+    if redline_out is not None:
+        redline_out.parent.mkdir(parents=True, exist_ok=True)
+        redline_out.write_text(draft_redline(rows, uns, deck.name), encoding="utf-8")
     print(f"ledger: {len(rows)} slides, {sum(len(r['numbers_found'].split('; ')) for r in rows if r['numbers_found'])} "
           f"numbers, {len(uns)} unsourced -> {ledger}, {unsourced}")
+
+
+DECK_TBD = "[TO BE BASELINED — owner: Deck owner]"
+DECISION_RE = re.compile(r"\b(decision|approve|approval|decide|ask)\b", re.I)
+
+
+def draft_redline(rows: list[dict], uns: list[dict], deck_name: str) -> str:
+    """Mechanical redline (no model step): checks from the rubric that the ledger alone can decide."""
+    by_slide: dict[int, list[dict]] = {}
+    for u in uns:
+        by_slide.setdefault(int(u["slide"]), []).append(u)
+    table, rewrites = [], []
+    for r in rows:
+        n, title, text = int(r["slide"]), r["title"], r["text"]
+        body = text.splitlines()[1:] if text.splitlines() and text.splitlines()[0].lstrip("# ").strip() == title else text.splitlines()
+        words = len(re.findall(r"\w+", " ".join(body)))
+        verdicts, reasons = [], []
+        figs = by_slide.get(n, [])
+        if figs:
+            verdicts += ["SHARPEN", "TBD"]
+            reasons.append(f"{len(figs)} figure(s) without a source")
+        if len(title.split()) <= 4 and not numbers_in(title) and not DECISION_RE.search(title):
+            verdicts.append("SHARPEN")
+            reasons.append("title is a label, not an assertion")
+        if words > 60:
+            verdicts.append("SHARPEN")
+            reasons.append(f"body has {words} words (limit 60)")
+        verdicts = list(dict.fromkeys(verdicts)) or ["KEEP"]
+        tbd_items = "; ".join(f"{u['number']} → {DECK_TBD}" for u in figs) or "—"
+        table.append(f"| {n} | {title.replace('|', '/')} | {' + '.join(f'[{v}]' for v in verdicts)} | "
+                     f"{'; '.join(reasons) or 'passes the mechanical checks'} | {DECK_TBD if 'SHARPEN' in verdicts else '—'} | "
+                     f"{'mark unsourced figures' if figs else '—'} | {tbd_items} | — |")
+        if verdicts != ["KEEP"]:
+            lines = []
+            for ln in body:
+                hits = [u["number"] for u in figs if u["context"] and ln.strip()[:160] == u["context"]]
+                pos, out_ln = 0, ""
+                for num in hits:                          # replace each figure once, left to right
+                    i = ln.find(num, pos)
+                    if i < 0:
+                        continue
+                    out_ln += ln[pos:i] + DECK_TBD
+                    pos = i + len(num)
+                lines.append(out_ln + ln[pos:])
+            rewrites += [f"Slide {n} — {DECK_TBD if 'title is a label, not an assertion' in reasons else title}",
+                         f"So what: {DECK_TBD}", "Body:"] + lines + \
+                        [f"Source: {DECK_TBD if figs else 'as on the slide'}", ""]
+    ask = any(DECISION_RE.search(r["text"]) for r in rows[:2])
+    out = [f"# Deck Redline — {deck_name} — draft", "",
+           "> Script draft — the model step was not run (draft only): mechanical checks from the rubric "
+           "(sources, title form, density); judgement on storyline and so-what is an owned marker.", "",
+           "## Bottom line", f"{DECK_TBD} — the decision the deck asks for, and whether the deck as found earns it.", "",
+           "## Redline table",
+           "| Slide # | Original title | Verdict | Reason | New title (assertion) | Body change (summary) | Source / `[TBD]` items | Moves to |",
+           "|---|---|---|---|---|---|---|---|"] + table + ["", "## Rewritten slides", "", "```"] + \
+          (rewrites or ["No slide needs a mechanical rewrite."]) + ["```", "", "## Unsourced numbers to baseline",
+                                                                  "| Slide | Number | Context | Owner |", "|---|---|---|---|"]
+    out += [f"| {u['slide']} | {u['number']} | {u['context'].replace('|', '/')} | {DECK_TBD} |" for u in uns] or \
+        ["| — | none | every figure names a source | — |"]
+    out += ["", "## Slides to add", "| Beat missing (storyline checklist) | Proposed slide | Why |", "|---|---|---|"]
+    out.append("| Decision ask | none — slides 1–2 state it | — |" if ask else
+               f"| Decision ask | Slide 1: the decision as an assertion, with owner and date | {DECK_TBD} |")
+    return "\n".join(out) + "\n"
 
 
 def apply(redline: Path, ledger: Path) -> None:
@@ -180,13 +252,16 @@ def main() -> int:
     ap.add_argument("--ledger", required=True, help="ledger.csv (written, or updated with --apply)")
     ap.add_argument("--unsourced", default="", help="unsourced-numbers.csv (build mode)")
     ap.add_argument("--apply", metavar="REDLINE_MD", help="fill verdict/reason in the ledger from redline.md")
+    ap.add_argument("--redline-out", default="", help="build mode: draft redline path (written with --draft-only)")
+    ap.add_argument("--draft-only", action="store_true", help="no model step: write --redline-out from the ledger")
     a = ap.parse_args()
     if a.apply:
         apply(Path(a.apply), Path(a.ledger))
         return 0
     if not a.deck or not a.unsourced:
         die("build mode needs a deck and --unsourced")
-    build(Path(a.deck), Path(a.ledger), Path(a.unsourced))
+    build(Path(a.deck), Path(a.ledger), Path(a.unsourced),
+          Path(a.redline_out) if a.draft_only and a.redline_out else None)
     return 0
 
 

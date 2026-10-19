@@ -18,6 +18,14 @@ What it does, deterministically:
   * cadence.csv — touch, date, channel, template, basis, stop_rule: the touches of the matching row of
     references/cadence.md, dated in business days from last_touch_date (or timeline_date where the row
     says so). A touch without a computable date is left for the user with its basis.
+Existing thread (--thread thread.md: the conversation so far, one `## YYYY-MM-DD — sent …` or
+`## YYYY-MM-DD — received …` heading per message): the touches you already sent are counted, the
+cadence is anchored on your first sent message and only the touches still due are listed (or the
+stop rule is reported when none remain), a reply from them is noted, and every fact already used in
+the thread is marked so the next touch adds a new element instead of repeating it.
+--draft-only --final message-final.md: no model step — writes the final message on
+assets/message-final-template.md's sections (Message = variant A, Alternate variant = B, Facts used,
+Cadence) from the filled skeleton, labelled as a draft; unfilled slots stay owned markers.
 Exit 1 on a missing/invalid context, an unknown type, a template section without variants, or a
 last_touch_date that is not YYYY-MM-DD. Stdlib only, offline.
 """
@@ -270,26 +278,95 @@ def build_cadence(ref: str, msg_type: str, ctx: dict, template_label: str) -> li
     return rows
 
 
+# ------------------------------------------------------------------ existing thread
+
+THREAD_HEAD_RE = re.compile(r"^##\s+(\d{4}-\d{2}-\d{2})\s*[—–-]\s*(sent|received)\b(.*)$", re.I)
+
+
+def read_thread(text: str) -> dict:
+    msgs, cur = [], None
+    for ln in text.splitlines():
+        m = THREAD_HEAD_RE.match(ln.strip())
+        if m:
+            try:
+                d = dt.date.fromisoformat(m.group(1))
+            except ValueError:
+                die(f"thread heading has an invalid date: {ln.strip()}")
+            cur = {"date": d, "dir": m.group(2).lower(), "note": m.group(3).strip(" ()—-"), "body": []}
+            msgs.append(cur)
+        elif cur is not None:
+            cur["body"].append(ln)
+    sent = [m_ for m_ in msgs if m_["dir"] == "sent"]
+    if not sent:
+        die("thread has no '## YYYY-MM-DD — sent' message")
+    return {"messages": msgs, "sent": sent, "received": [m_ for m_ in msgs if m_["dir"] == "received"],
+            "text": norm(" ".join(" ".join(m_["body"]) for m_ in msgs))}
+
+
+def used_in_thread(fact: str, thread: dict) -> bool:
+    words = [w for w in norm(fact.split(":", 1)[-1]).split() if len(w) > 3]
+    if not words:
+        return False
+    hits = sum(1 for w in words if w in thread["text"].split())
+    return hits / len(words) >= 0.6
+
+
 # ------------------------------------------------------------------ output
 
-def write_message(path: Path, msg_type: str, title: str, variants, ctx: dict, cadence: list[dict]) -> None:
+def write_message(path: Path, msg_type: str, title: str, variants, ctx: dict, cadence: list[dict],
+                  thread: dict | None = None, stop_note: str = "") -> list[dict]:
     L = [f"# {title} — {ctx['role']}, {ctx['company']}", "",
          f"Type: {msg_type} | Recipient: {ctx['recipient']} | Channel: {ctx.get('channel') or 'email'} | "
          f"Last touch: {ctx['last_touch_date']}", "",
          "Facts come only from context.json. Every unfilled slot is `[TO BE BASELINED — owner: Sender]` and listed "
          "below; the polish step fills a slot only when a listed fact supports it.", ""]
-    all_unfilled = []
+    if thread is not None:
+        sent, recv = thread["sent"], thread["received"]
+        L += ["## Thread so far", "",
+              f"{len(sent)} message(s) sent (first {sent[0]['date']}, last {sent[-1]['date']}); "
+              + (f"{len(recv)} reply(ies), last {recv[-1]['date']} — answer it before following up." if recv
+                 else "no reply yet."), ""]
+        if stop_note:
+            L += [f"**{stop_note}**", ""]
+    all_unfilled, filled = [], []
     for v in variants:
         text, unfilled = fill("\n".join(v["body"]), ctx)
         all_unfilled += [f"{v['key']}: {u}" for u in unfilled]
+        filled.append({"key": v["key"], "label": v["label"], "text": text.strip()})
         L += [f"## Variant {v['key']} — {v['label']}", "", text.strip(), ""]
     L += ["## Facts to work in (from context.json)", ""]
-    L += [f"- {f}" for f in ctx["_facts"]] or ["(none supplied — nothing specific can be cited)"]
+    L += [f"- {f}" + (" — already used in the thread; add a new element instead" if thread and used_in_thread(f, thread) else "")
+          for f in ctx["_facts"]] or ["(none supplied — nothing specific can be cited)"]
     L += ["", "## Unfilled placeholders", ""]
     L += [f"- {u}" for u in dict.fromkeys(all_unfilled)] or ["none"]
     L += ["", "## Cadence", "", "| Touch | Date | Channel | Basis |", "|---|---|---|---|"]
     L += [f"| {r['touch']} | {r['date'] or TBD} | {r['channel']} | {r['basis']} |" for r in cadence]
     L += [f"", f"Stop rule: {cadence[0]['stop_rule'] if cadence else '—'}",
+          "Log: add a row to tracker.csv (stage, touch date, next action).", ""]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(L), encoding="utf-8")
+    return filled
+
+
+def write_final(path: Path, title: str, msg_type: str, ctx: dict, filled: list[dict], cadence: list[dict],
+                thread: dict | None, stop_note: str) -> None:
+    """message-final.md without a model step: the filled variants on the final template's sections."""
+    L = [f"# {title} — {ctx['role']}, {ctx['company']}", "",
+         "> Script draft — the model polish step was not run (draft only): the filled skeleton, facts from "
+         "context.json only; unfilled slots stay owned markers.", ""]
+    if stop_note:
+        L += [f"**{stop_note}**", ""]
+    a, b = filled[0], (filled[1] if len(filled) > 1 else None)
+    L += ["## Message", f"Variant: {a['key']} — {a['label']}", "", a["text"], ""]
+    if b:
+        L += ["## Alternate variant", f"Variant: {b['key']} — {b['label']}", "", b["text"], ""]
+    L += ["## Facts used", "| Fact | Source |", "|---|---|"]
+    facts = [f for f in ctx["_facts"] if not (thread and used_in_thread(f, thread))]
+    L += [f"| {f.replace('|', '/')} | context.json" + (f" / {', '.join(ID_RE.findall(f))}" if ID_RE.search(f) else "") + " |"
+          for f in facts] or [f"| none supplied | {TBD} |"]
+    L += ["", "## Cadence", "| Touch | Date | Channel | Basis |", "|---|---|---|---|"]
+    L += [f"| {r['touch']} | {r['date'] or TBD} | {r['channel']} | {r['basis']} |" for r in cadence]
+    L += ["", f"Stop rule: {cadence[0]['stop_rule'] if cadence else '—'}",
           "Log: add a row to tracker.csv (stage, touch date, next action).", ""]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(L), encoding="utf-8")
@@ -311,14 +388,32 @@ def main() -> int:
     ap.add_argument("--cadence-ref", default="references/cadence.md")
     ap.add_argument("--message", required=True, help="output message.md")
     ap.add_argument("--cadence", required=True, help="output cadence.csv")
+    ap.add_argument("--thread", default="", help="the conversation so far (## YYYY-MM-DD — sent|received headings)")
+    ap.add_argument("--final", default="", help="final message path (written with --draft-only)")
+    ap.add_argument("--draft-only", action="store_true", help="no model step: write --final from the filled skeleton")
     a = ap.parse_args()
     ctx = load_context(a.context)
+    thread = read_thread(read(a.thread)) if a.thread else None
+    if thread is not None:
+        ctx["_last"] = thread["sent"][0]["date"]      # cadence days count from the first message sent
+        ctx["last_touch_date"] = thread["messages"][-1]["date"].isoformat()
     title, variants = load_variants(read(a.templates), TYPES[a.type]["section"])
     rows = build_cadence(read(a.cadence_ref), a.type, ctx, f"{TYPES[a.type]['section']}{variants[0]['key']} {variants[0]['label']}")
     if not rows:
         die("no touches found for this message type in cadence.md")
-    write_message(Path(a.message), a.type, title, variants, ctx, rows)
+    stop_note = ""
+    if thread is not None:
+        done = len(thread["sent"])
+        remaining = rows[done:]
+        if not remaining:
+            stop_note = f"Cadence exhausted after {done} touch(es) — stop rule: {rows[0]['stop_rule']}. Do not send another."
+            remaining = [{**rows[-1], "touch": "Stop", "date": "", "template": "none",
+                          "basis": f"{done} touch(es) already sent — {rows[0]['stop_rule']}"}]
+        rows = remaining
+    filled = write_message(Path(a.message), a.type, title, variants, ctx, rows, thread, stop_note)
     write_cadence(Path(a.cadence), rows)
+    if a.draft_only and a.final:
+        write_final(Path(a.final), title, a.type, ctx, filled, rows, thread, stop_note)
     print(f"{a.type}: {len(variants)} variants, {len(rows)} cadence touches; wrote {a.message}, {a.cadence}")
     return 0
 

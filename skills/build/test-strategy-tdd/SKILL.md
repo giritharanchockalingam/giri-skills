@@ -13,17 +13,26 @@ metadata:
       - {name: files, type: string, required: true, from: "comma-separated repo-relative source files the feature touches"}
       - {name: target, type: path, required: true, from: "repo root (tests/ created under it; existing tests never overwritten)"}
       - {name: dry_run, type: flag, required: false, flag: "--dry-run", from: "true to report only and write nothing"}
+      - {name: seed, type: dir, required: false, from: "evals/demos only: an existing repo layout copied to target first, so the example is never written to (evals/fixtures/repo-existing-suite)"}
     run:
+      - {step: seed, kind: script, cmd: "python3 -I scripts/seed_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
       - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold_tests.py {feature} --files {files} --target {target} {dry_run} --report {out}/scaffold-report.json --plan {out}/test-plan.md"}
     outputs:
       - {path: "{out}/scaffold-report.json", checks: [exists, json, contains:"written"]}
       - {path: "{out}/test-plan.md", checks: [exists, sections:["Pyramid","Criteria map","Red"]]}
+    modes:
+      new: {case: agent-happy-path, bring: "the feature's acceptance criteria and the files it touches"}
+      existing: {case: agent-mode-existing, bring: "your repo with the tests it already has"}
 ---
 
 # test-strategy-tdd
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/test-strategy-tdd --input <name>=<value> … --out <dir>` (see `--explain build/test-strategy-tdd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Stubs are `it.todo` / `test.fixme` per criterion — red first; replace each with a failing test before implementing.
+
+## Starting points
+- **New** — red stubs are written for every file the feature touches (vitest `it.todo`, Playwright `test.fixme`), with the pyramid and criteria map in `test-plan.md`.
+- **Existing** — test files you already have are kept, read and matched to the acceptance criteria; the plan lists which criteria they already cover and which to add, and stubs are written only where no test file exists.
 
 ## When to use
 - "Write tests for", "how should we test", "add coverage", before any task from `spec-to-plan`.

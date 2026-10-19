@@ -19,6 +19,9 @@ metadata:
     outputs:
       - {path: "{out}/review.json", checks: [exists, json, cmd:"python3 -I scripts/review.py --gate {path}"]}
       - {path: "{out}/review.md", checks: [exists, sections:["Summary","Blocking","Non-blocking","Tests","Files"], contains:"Verdict:"]}
+    modes:
+      new: {case: agent-mode-new, bring: "the diff of a brand-new module"}
+      existing: {case: agent-mode-existing, bring: "a change to existing code and your team's review rules"}
 ---
 
 # code-review-runner
@@ -27,6 +30,10 @@ Wraps `code-review` from mattpocock/skills (pinned in vendor/pins.json). Upstrea
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/code-review-runner --input <name>=<value> … --out <dir>` (see `--explain build/code-review-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The script always writes both outputs; the gate check on `review.json` then fails the run (exit 1) when any blocking finding remains, so a blocking diff is reported, never waved through.
+
+## Starting points
+- **New** — a diff that adds new files is reviewed on its added lines: standards findings, test verdict, verdict.
+- **Existing** — a change to code that already exists is reviewed together with your team's own rules file (custom regex rules and severity overrides), so the verdict follows the team's bar, not only the built-in one.
 
 ## When to use
 - Before merge: a quick, repeatable pass that catches the mechanical defects first.

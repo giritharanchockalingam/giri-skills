@@ -23,6 +23,12 @@ style warnings (nth-child/nth-of-type, XPath, generated class names, long CSS ch
 The base URL is read from the BASE_URL environment variable at test time; the JSON value is only a
 default, and a placeholder (`${…}`, `{{…}}`, `<…>`) makes the tests skip until BASE_URL is set.
 
+Existing suite (--existing <dir or file>): the team's current e2e tests (Python `def test_*` or
+Playwright TS/JS `test("…")` titles) are read; a flow whose name words all appear in one existing test
+name/title (or >= 60% of them) counts as covered and is not generated again. Only the uncovered flows
+are written to the test file, and the report gains an "Existing suite" section (flow → covering test,
+or "generated"). Every flow is still validated.
+
 Exit codes: 0 valid flows, test file written and compiles · 1 invalid flows (report written with the
 errors, no test file) or --verify-compiles failed · 2 missing input / unreadable JSON. Stdlib only;
 writes only --test-out / --report / --json.
@@ -234,13 +240,47 @@ def compiles(src: str, name: str = "test_flows.py") -> tuple[bool, str]:
         return False, f"SyntaxError line {e.lineno}: {e.msg}"
 
 
+# ------------------------------------------------------------------ existing suite
+
+PY_TEST = re.compile(r"^\s*(?:async\s+)?def\s+(test_\w+)\s*\(", re.M)
+TS_TEST = re.compile(r"""\btest(?:\.(?:only|skip|fixme))?\(\s*(["'`])(.+?)\1""")
+SUITE_EXT = {".py", ".ts", ".tsx", ".js", ".mjs"}
+
+
+def name_words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", re.sub(r"^test_", "", text.lower()).replace("_", " ")))
+
+
+def existing_tests(path: Path) -> list[dict]:
+    files = [path] if path.is_file() else sorted(p for p in path.rglob("*") if p.is_file() and p.suffix in SUITE_EXT
+                                                   and "node_modules" not in p.parts)
+    out = []
+    for f in files:
+        text = f.read_text(encoding="utf-8", errors="replace")
+        rel = f.name if path.is_file() else f.relative_to(path).as_posix()
+        out += [{"file": rel, "test": m.group(1)} for m in PY_TEST.finditer(text)]
+        out += [{"file": rel, "test": m.group(2)} for m in TS_TEST.finditer(text)]
+    return out
+
+
+def covering_test(flow_name: str, tests: list[dict]) -> dict | None:
+    fw = name_words(flow_name)
+    if not fw:
+        return None
+    for t in tests:
+        tw = name_words(t["test"])
+        if fw <= tw or len(fw & tw) / len(fw) >= 0.6:
+            return t
+    return None
+
+
 # ------------------------------------------------------------------ report
 
 def _cell(s) -> str:
     return str(s).replace("|", "\\|").replace("\n", " ")
 
 
-def render_report(doc, errors, warns, cov, compiled, source) -> str:
+def render_report(doc, errors, warns, cov, compiled, source, existing=None) -> str:
     banner = (f"Tests were **{HEADER.lower()}**: the file was generated and checked with compile(); "
               "no browser was launched." if compiled and compiled[0] else
               "No tests were generated (invalid flows) and nothing was executed.")
@@ -261,12 +301,21 @@ def render_report(doc, errors, warns, cov, compiled, source) -> str:
         out.append("")
     elif not errors:
         out += [f"{len(flows)} flow(s).", ""]
+    if existing is not None:
+        out += ["## Existing suite", "",
+                f"{existing['tests']} existing test(s) read from `{_cell(existing['source'])}`; covered flows are not generated again.", "",
+                "| Flow | Covered by | Action |", "|---|---|---|"]
+        for r in existing["flows"]:
+            by = f"`{_cell(r['file'])}` — {_cell(r['test'])}" if r.get("test") else "—"
+            out.append(f"| {_cell(r['flow'])} | {by} | {'kept (existing test)' if r.get('test') else 'generated'} |")
+        out.append("")
     out += ["## Generated tests", ""]
     if compiled is None:
         out += ["None — fix the errors under Flows and re-run.", ""]
     else:
         ok, msg = compiled
-        out += [f"- File: `test_flows.py` ({len(cov)} test function(s), pytest-playwright `page` fixture)",
+        n_gen = len(cov) if existing is None else sum(1 for r in existing["flows"] if not r.get("test"))
+        out += [f"- File: `test_flows.py` ({n_gen} test function(s), pytest-playwright `page` fixture)",
                 f"- Static check: {msg}" if ok else f"- Static check FAILED: {msg}",
                 f"- Execution: not run ({HEADER.lower()}); results exist only after you run it", ""]
     out += ["## Warnings", ""]
@@ -299,6 +348,7 @@ def main() -> int:
     ap.add_argument("--report", help="write flows-report.md here")
     ap.add_argument("--json", dest="json_out", help="optional: write the validation/coverage result as JSON")
     ap.add_argument("--verify-compiles", metavar="PY", help="only check that a generated file compiles")
+    ap.add_argument("--existing", help="existing e2e test dir or file; flows it already covers are not generated")
     a = ap.parse_args()
     if a.verify_compiles:
         p = Path(a.verify_compiles)
@@ -323,25 +373,44 @@ def main() -> int:
         print(f"error: flows file is not valid JSON: {e}", file=sys.stderr)
         return 2
     source = Path(a.flows).name
+    existing = None
+    if a.existing:
+        ep = Path(a.existing)
+        if not ep.exists():
+            print(f"error: --existing not found: {ep}", file=sys.stderr)
+            return 2
+        existing = {"source": ep.name, "tests": 0, "flows": []}
     errors, warns = validate(doc)
     cov, compiled = [], None
     if not errors:
         cov = coverage(doc)
-        src = generate(doc, source)
+        gen_doc = doc
+        if existing is not None:
+            tests = existing_tests(Path(a.existing))
+            existing["tests"] = len(tests)
+            for flow in doc["flows"]:
+                t = covering_test(flow["name"], tests)
+                existing["flows"].append({"flow": flow["name"], **(t or {})})
+            gen_doc = {**doc, "flows": [f for f, r in zip(doc["flows"], existing["flows"]) if not r.get("test")]}
+        src = generate(gen_doc, source)
         compiled = compiles(src)
         if compiled[0]:
             Path(a.test_out).write_text(src, encoding="utf-8")
         else:
             errors.append(f"generated file does not compile: {compiled[1]}")
-    Path(a.report).write_text(render_report(doc, errors, warns, cov, compiled, source), encoding="utf-8")
+    Path(a.report).write_text(render_report(doc, errors, warns, cov, compiled, source, existing), encoding="utf-8")
     if a.json_out:
         Path(a.json_out).write_text(json.dumps({"valid": not errors, "errors": errors, "warnings": warns,
-                                                "coverage": cov, "executed": False}, indent=2) + "\n", encoding="utf-8")
+                                                "coverage": cov, "existing": existing, "executed": False},
+                                               indent=2) + "\n", encoding="utf-8")
     if errors:
         for e in errors:
             print(f"invalid: {e}", file=sys.stderr)
         return 1
-    print(f"generated {len(cov)} test(s), {len(warns)} warning(s); compiled OK; not executed")
+    n_gen = len(cov) if existing is None else sum(1 for r in existing["flows"] if not r.get("test"))
+    print(f"generated {n_gen} test(s)" + (f" ({len(cov) - n_gen} flow(s) already covered by the existing suite)"
+                                          if existing is not None else "")
+          + f", {len(warns)} warning(s); compiled OK; not executed")
     return 0
 
 

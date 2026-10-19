@@ -12,18 +12,27 @@ metadata:
       - {name: notes, type: file, required: true, from: "notes/links file the user collected (.md or .txt); nothing is fetched"}
       - {name: company, type: string, required: true}
       - {name: purpose, type: string, required: false, default: "discovery", from: "discovery | proposal | exec-meeting | pitch"}
+      - {name: previous, type: md, required: false, from: "the brief written last time for this client; new material is marked and dropped sources listed"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model step: brief.md is written from the notes, every item cited, labelled as a draft"}
     run:
-      - {step: skeleton, kind: script, cmd: "python3 -I scripts/brief_skeleton.py --notes {notes} --company {company} --purpose {purpose} --out {out}/brief-skeleton.md"}
-      - {step: brief, kind: llm, template: assets/brief-template.md, context: ["{out}/brief-skeleton.md", "{notes}", "references/research-method.md"], out: "{out}/brief.md"}
+      - {step: skeleton, kind: script, cmd: "python3 -I scripts/brief_skeleton.py --notes {notes} --company {company} --purpose {purpose} [--previous {previous}] --out {out}/brief-skeleton.md --final {out}/brief.md {draft_only}"}
+      - {step: brief, kind: llm, template: assets/brief-template.md, context: ["{out}/brief-skeleton.md", "{notes}", "references/research-method.md"], out: "{out}/brief.md", skip_if_present: [draft_only]}
     outputs:
       - {path: "{out}/brief-skeleton.md", checks: [exists, sections:["Bottom line","Sources"]]}
       - {path: "{out}/brief.md", checks: [exists, sections:["Bottom line","Snapshot","Technology signals","Questions for the call","Sources"], no_unowned_tbd, cites_source_ids:"{out}/brief-skeleton.md"]}
+    modes:
+      new: {case: agent-mode-new, bring: "your notes and links on the company"}
+      existing: {case: agent-mode-existing, bring: "fresh notes plus the last brief on this client"}
 ---
 
 # client-research-brief
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/client-research-brief --input <name>=<value> … --out <dir>` (see `--explain presales/client-research-brief`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — your notes and links are sorted into the brief's sections with every source numbered; the model step writes the brief, or with `draft_only` the brief is your notes verbatim, each item cited, the so-what left as owned markers.
+- **Existing** — add `previous` (the last brief on this client): material already in it is carried, new material is marked NEW, and sources it cited that your notes no longer carry are listed to re-check or drop.
 
 ## When to use
 - "Research <company> before the pitch on <date>."

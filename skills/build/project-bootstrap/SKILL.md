@@ -12,8 +12,10 @@ metadata:
       - {name: target, type: path, required: true, from: "project directory to scaffold (created if absent)"}
       - {name: name, type: string, required: true, from: "project name"}
       - {name: multi_tenant, type: flag, required: false, flag: "--multi-tenant", from: "true to mark tenancy as multi-tenant"}
+      - {name: seed, type: dir, required: false, from: "evals/demos only: an existing repo layout copied to target first, so the example is never written to (evals/fixtures/repo-existing)"}
     run:
-      - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold.py --target {target} --name {name} {multi_tenant}", stdout: "{out}/scaffold.log"}
+      - {step: seed, kind: script, cmd: "python3 -I scripts/seed_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
+      - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold.py --target {target} --name {name} {multi_tenant} --report {out}/bootstrap-report.json", stdout: "{out}/scaffold.log"}
     outputs:
       - {path: "{target}/docs/SPEC.md", checks: [exists, sections:["Purpose"]]}
       - {path: "{target}/CLAUDE.md", checks: [exists]}
@@ -21,12 +23,20 @@ metadata:
       - {path: "{target}/docs/adr/0001-stack.md", checks: [exists]}
       - {path: "{target}/.github/workflows/ci.yml", checks: [exists, yaml]}
       - {path: "{target}/.env.example", checks: [exists]}
+      - {path: "{out}/bootstrap-report.json", checks: [exists, json, contains:"gaps"]}
+    modes:
+      new: {case: agent-happy-path, bring: "a project name and an empty folder"}
+      existing: {case: agent-mode-existing, bring: "your repo with the docs it already has"}
 ---
 
 # project-bootstrap
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/project-bootstrap --input <name>=<value> … --out <dir>` (see `--explain build/project-bootstrap`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — an empty folder gets the full skeleton: SPEC, CLAUDE.md, HANDOFF, ADRs, `.env.example`, CODEOWNERS, PR template and the three workflows.
+- **Existing** — your repo keeps every file it has; missing skeleton files are added, and each kept SPEC/CLAUDE/HANDOFF is compared with the standard and its missing sections listed as gaps to merge by hand (`bootstrap-report.json`).
 
 ## When to use
 - "New app", "new repo", "set up the project", "bootstrap", "start from scratch".

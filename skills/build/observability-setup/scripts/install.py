@@ -14,7 +14,9 @@ Copies the assets to their conventional paths:
 and appends every `process.env.X` the assets read to .env.example when missing (created if absent).
 An existing file is never overwritten: identical content -> skipped; different -> written beside it
 as `<file>.proposed` and listed for a manual merge. --dry-run writes nothing and reports what would
-happen. The reports list written / skipped / proposed / env_added. Exit 1 on bad input. Stdlib.
+happen. In an existing repo it also lists every `console.*` call in the app's source (.ts/.tsx/.js/.jsx,
+outside node_modules/.next/build output) so they can be replaced with lib/logger in minimal diffs.
+The reports list written / skipped / proposed / env_added / console_calls. Exit 1 on bad input. Stdlib.
 """
 from __future__ import annotations
 
@@ -35,6 +37,9 @@ MAPPING = [
     ("slo-starter.md", "docs/observability.md"),
 ]
 ENV_RE = re.compile(r"process\.env\.([A-Z][A-Z0-9_]*)")
+CONSOLE_RE = re.compile(r"\bconsole\.(log|info|warn|error|debug)\s*\(")
+SOURCE_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
+SKIP_DIRS = {"node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".vercel"}
 PLATFORM_VARS = {"NODE_ENV", "VERCEL_ENV", "VERCEL_GIT_COMMIT_SHA"}  # set by the platform, not by .env
 ENV_DOC = {
     "LOG_LEVEL": "debug|info|warn|error (default: info in production, debug elsewhere)",
@@ -43,6 +48,23 @@ ENV_DOC = {
     "HEALTH_CHECK_TOKEN": "bearer token required by /api/health/deep (generate: openssl rand -hex 32)",
     "NEXT_PUBLIC_SUPABASE_URL": "Supabase project URL",
 }
+
+
+def console_calls(target: Path, ours: set[str]) -> list[dict]:
+    """console.* calls in the repo's own source (files this script installs are excluded)."""
+    found = []
+    if not target.is_dir():
+        return found
+    for p in sorted(target.rglob("*")):
+        rel = p.relative_to(target).as_posix()
+        if not p.is_file() or p.suffix not in SOURCE_EXT or rel in ours or rel.endswith(".proposed") \
+                or any(part in SKIP_DIRS for part in p.relative_to(target).parts):
+            continue
+        for n, ln in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            m = CONSOLE_RE.search(ln)
+            if m:
+                found.append({"path": rel, "line": n, "call": f"console.{m.group(1)}"})
+    return found
 
 
 def die(msg: str) -> None:
@@ -103,6 +125,8 @@ def main() -> int:
         if not env_existed:
             report["written"].append(".env.example")
 
+    report["console_calls"] = console_calls(target, {rel for _, rel in MAPPING})
+
     rj, rm = Path(a.report_json), Path(a.report_md)
     rj.parent.mkdir(parents=True, exist_ok=True)
     rm.parent.mkdir(parents=True, exist_ok=True)
@@ -117,6 +141,8 @@ def main() -> int:
     lines += ["", "## Proposed (exists with different content — merge by hand)", ""]
     lines += [f"- `{p['path']}` → review `{p['proposed']}`" for p in report["proposed"]] + (["- none"] if not report["proposed"] else [])
     lines += ["", "## Env vars added to .env.example", ""] + [f"- `{v}` — {ENV_DOC.get(v, '')}" for v in report["env_added"]] + (["- none"] if not report["env_added"] else [])
+    lines += ["", "## Console calls to replace with lib/logger", ""]
+    lines += [f"- `{c['path']}:{c['line']}` — `{c['call']}`" for c in report["console_calls"]] or ["- none found"]
     lines += ["", "## Next steps", "",
               "1. Wire `requestId` in `middleware.ts` and set ESLint `no-console: error`.",
               "2. Replace `console.*` calls with `lib/logger` in minimal diffs.",

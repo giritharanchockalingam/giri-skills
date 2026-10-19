@@ -88,6 +88,36 @@
           "check": "contains:\"gate: FAIL\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our repo already has its own ci.yml and a package.json; add preview and prod without touching what we have.",
+      "expected": [
+        "The team's ci.yml is kept and validated (all required jobs present); preview.yml and prod.yml are added; npm scripts the workflows call but package.json lacks (build-storybook, test:e2e) are listed"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing-ci"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"action\\\": \\\"kept\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"package_json\\\": \\\"checked\\\"\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"calls `npm run test:e2e` — not in package.json scripts\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: PASS\""
+        }
+      ]
     }
   ]
 }

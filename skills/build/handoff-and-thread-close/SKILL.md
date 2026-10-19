@@ -19,12 +19,19 @@ metadata:
       - {step: handoff, kind: script, cmd: "python3 -I scripts/handoff.py --target {target} --state {state} [--since {since}] [--project {project}] --template assets/HANDOFF.md --out {out}/HANDOFF.md"}
     outputs:
       - {path: "{out}/HANDOFF.md", checks: [exists, sections:["State","Done this thread","Changed files","Open items","Next thread starts with"], max_lines:80]}
+    modes:
+      new: {case: agent-mode-new, bring: "a repo that has no handoff note yet"}
+      existing: {case: agent-happy-path, bring: "your repo and its current handoff note"}
 ---
 
 # handoff-and-thread-close
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/handoff-and-thread-close --input <name>=<value> … --out <dir>` (see `--explain build/handoff-and-thread-close`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Every changed file comes from `git diff --name-status`; copy the result to `docs/HANDOFF.md` (or pass `--write-to-repo` to the script) and commit it so the next run knows where this thread ended.
+
+## Starting points
+- **New** — a repo with no `docs/HANDOFF.md` gets its first one from the whole git history: commits, changed files with their why, a next-thread prompt.
+- **Existing** — the current `docs/HANDOFF.md` is read: only commits since it was last updated are summarised, and its open items are carried forward.
 
 ## When to use
 - End of a thread; topic change (rule: one topic per thread); context window filling; before a long pause.

@@ -11,19 +11,27 @@ metadata:
     inputs:
       - {name: diff, type: file, required: true, from: "unified diff of the change (`git diff main...HEAD > change.patch`)"}
       - {name: target, type: dir, required: false, from: "repo root to scan in full as well (callers, policies)"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model review step: security-review.md is written from the scan, labelled as a draft"}
     run:
-      - {step: scan, kind: script, cmd: "python3 -I scripts/scan.py --diff {diff} [--target {target}] --findings {out}/findings.csv --report {out}/review.md"}
-      - {step: review, kind: llm, template: assets/review-report.md, context: ["{out}/findings.csv", "{out}/review.md", "references/review-method.md", "references/severity-rubric.md"], out: "{out}/security-review.md"}
+      - {step: scan, kind: script, cmd: "python3 -I scripts/scan.py --diff {diff} [--target {target}] --findings {out}/findings.csv --report {out}/review.md --final {out}/security-review.md {draft_only}"}
+      - {step: review, kind: llm, template: assets/review-report.md, context: ["{out}/findings.csv", "{out}/review.md", "references/review-method.md", "references/severity-rubric.md"], out: "{out}/security-review.md", skip_if_present: [draft_only]}
     outputs:
       - {path: "{out}/findings.csv", checks: [exists, csv:[id,category,severity,file,line,evidence,recommendation], cmd:"python3 -I scripts/scan.py --gate {path}"]}
       - {path: "{out}/review.md", checks: [exists, sections:["Findings","Surfaces scanned","Method"]]}
       - {path: "{out}/security-review.md", checks: [exists, sections:["Findings","Threat model","Verification"]]}
+    modes:
+      new: {case: agent-mode-new, bring: "the diff of a new feature"}
+      existing: {case: agent-mode-existing, bring: "the diff and the existing repo it lands in"}
 ---
 
 # security-review
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/security-review --input <name>=<value> … --out <dir>` (see `--explain build/security-review`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The scan always writes its findings and the review step reasons on them; the gate check then fails the run (exit 1) when any critical/high finding remains, so a risky diff is reported, never waved through.
+
+## Starting points
+- **New** — the diff of a new feature is scanned on its added lines; the model step writes the traced review, or with `draft_only` the review record is written from the scan alone, labelled as a draft.
+- **Existing** — add `target` (the repo the change lands in): the existing code is scanned in full as well, so callers, handlers and components around the change are covered, and each file appears in the threat-model record.
 
 ## When to use
 - "Review this before merge", "is this safe", PR touching auth, tenancy, server actions, route handlers, migrations, env, file upload, external calls.

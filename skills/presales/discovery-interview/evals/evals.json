@@ -112,6 +112,30 @@
           "check": "csv_rows:evidence!empty"
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Prep me for a 45-minute discovery call with the CIO and VP Digital of a retailer; no notes yet.",
+      "expected": [
+        "Prep pack with time budget and question plan for both personas; five closes all open; pain matrix header only"
+      ],
+      "inputs": {
+        "vertical": "retail",
+        "personas": "CIO,VP Digital",
+        "minutes": "45",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "discovery-pack.md",
+          "check": "sections:[\"Time budget\",\"Question plan\",\"Five closes\"]"
+        },
+        {
+          "file": "pain-matrix.csv",
+          "check": "max_lines:1"
+        }
+      ]
     }
   ]
 }

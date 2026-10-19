@@ -107,6 +107,32 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Redline the Order Hub steering-committee deck; mechanical pass only, no model.",
+      "expected": [
+        "One row per slide; slide 3 [SHARPEN] + [TBD] with its four unsourced figures marked; label titles sharpened; storyline untouched; verdicts applied to the ledger"
+      ],
+      "inputs": {
+        "deck": "evals/fixtures/deck.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "redline.md",
+          "check": "contains:\"| 3 | Benefits | [SHARPEN] + [TBD] | 4 figure(s) without a source\""
+        },
+        {
+          "file": "redline.md",
+          "check": "contains:\"Run-cost saving of [TO BE BASELINED — owner: Deck owner] per year\""
+        },
+        {
+          "file": "ledger.csv",
+          "check": "csv_rows:verdict!empty"
+        }
+      ]
     }
   ]
 }

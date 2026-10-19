@@ -92,6 +92,66 @@
           "check": "sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]"
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Write the PRD for invoice export from this brief; no model step, I want the checked draft.",
+      "expected": [
+        "prd-final.md is the script draft, labelled as such; goals, metrics, non-goals and phases come from the brief"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief.json",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"Script draft — the model sharpen step was not run\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"40% of active tenants\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our existing PRD for exports (v0.3). Tighten it against the brief — keep our storyline.",
+      "expected": [
+        "Problem and Users kept; Goals, Non-goals, Metrics, Open questions sharpened with reasons; Phases, Exec summary and Engineering handoff added from the brief; Stories and Risks added as owned TBD; the unsourced 35% marked [TBD]"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief.json",
+        "existing": "evals/fixtures/prd-existing.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "PRD-redline.md",
+          "check": "contains:\"| Goals | [SHARPEN] | no goal names a measurable target |\""
+        },
+        {
+          "file": "PRD-redline.md",
+          "check": "contains:\"figure 35% is not in the brief\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"Admins spend hours every month-end copying invoices into spreadsheets.\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"> [ADD] missing — added from the brief\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
     }
   ]
 }

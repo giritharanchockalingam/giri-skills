@@ -58,7 +58,8 @@ def main() -> int:
     p = Path(a.matrix)
     if not p.is_file():
         die(f"matrix not found: {p}")
-    rows = list(csv.DictReader(p.open(encoding="utf-8")))
+    rows = [r for r in csv.DictReader(p.open(encoding="utf-8-sig"))
+            if not (r.get("action") or "").strip().startswith("#")]   # a leading `#` row is a fixture/comment note
     if not rows:
         die("matrix has no rows")
     header = list(rows[0].keys())

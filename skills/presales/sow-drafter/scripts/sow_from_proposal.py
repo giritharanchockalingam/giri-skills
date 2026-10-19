@@ -17,6 +17,14 @@ acceptance, phase, format) and assumptions-check.csv listing proposal assumption
 over (header only when the SOW is complete). Any missing acceptance criterion, date or amount is
 `[TO BE BASELINED — owner: Delivery lead]`; nothing is invented. Exit 1 when proposal.md is missing or has
 no scope/deliverables table. Stdlib only, offline.
+
+Existing SOW (--existing-sow SOW-v2.md --reconcile reconciliation.md): a SOW draft already in play (the
+client's paper or an earlier version) is reconciled against the approved proposal — every proposal
+deliverable is found in it or listed missing, acceptance criteria that are absent or subjective
+("reasonable satisfaction", "to be agreed", "best efforts") are flagged, deliverable ids the proposal
+does not have are flagged as scope added, proposal assumptions it does not carry are listed, and the
+change-control, acceptance and assumptions clauses are checked for presence. SOW.md is still drafted
+from the proposal, so the two can be compared side by side.
 """
 from __future__ import annotations
 
@@ -85,6 +93,69 @@ def val(c: list[str], i: int) -> str:
     return v if v and not v.startswith("[TO BE BASELINED") else ""
 
 
+SUBJECTIVE = re.compile(r"reasonable satisfaction|to be agreed|\btbd\b|best efforts|as required|sole discretion", re.I)
+CLAUSES = [("Change control", r"change control|change request"), ("Acceptance", r"acceptance"),
+           ("Assumptions", r"assumption")]
+
+
+def reconcile(existing: str, deliverables: list[dict], assumptions: list[dict], name: str) -> tuple[list[str], int]:
+    """Reconciliation of an existing SOW against the proposal; returns (lines, number of issues)."""
+    rows: dict[str, str] = {}          # deliverable id -> acceptance cell, from tables with a Deliverable column
+    header: list[str] | None = None
+    for ln in existing.splitlines():
+        if not ln.startswith("|"):
+            header = None
+            continue
+        c = cells(ln)
+        if header is None:
+            header = [h.lower() for h in c]
+            continue
+        if set("".join(c)) <= set("-: "):
+            continue
+        if any("deliverable" in h for h in header) and c and re.fullmatch(r"D-\d+", c[0].strip("` ")):
+            acc_i = next((i for i, h in enumerate(header) if "acceptance" in h), None)
+            rows.setdefault(c[0].strip("` "), c[acc_i] if acc_i is not None and acc_i < len(c) else "")
+    issues = 0
+    L = [f"# SOW reconciliation — {name} vs the approved proposal", "", "## Deliverables",
+         "| ID | Proposal deliverable | In this SOW | Acceptance in this SOW | Finding |", "|---|---|---|---|---|"]
+    for d in deliverables:
+        c = rows.get(d["id"])
+        if c is None:
+            issues += 1
+            L.append(f"| {d['id']} | {d['deliverable']} | no | — | missing — add it with the proposal's acceptance: {d['acceptance']} |")
+            continue
+        acc = "" if c.startswith("[TO BE BASELINED") else c
+        if not acc:
+            issues += 1
+            finding = f"no acceptance criterion — use the proposal's: {d['acceptance']}"
+        elif SUBJECTIVE.search(acc):
+            issues += 1
+            finding = f"subjective acceptance — replace with the proposal's: {d['acceptance']}"
+        else:
+            finding = "ok"
+        L.append(f"| {d['id']} | {d['deliverable']} | yes | {acc or '—'} | {finding} |")
+    extra = [k for k in rows if k not in {d['id'] for d in deliverables}]
+    for k in extra:
+        issues += 1
+        L.append(f"| {k} | — | yes | {rows[k] or '—'} | scope added: not in the approved proposal — "
+                 f"change request or remove ({TBD}) |")
+    L += ["", "## Assumptions", "| ID | Proposal assumption | In this SOW |", "|---|---|---|"]
+    for s_ in assumptions:
+        hit = s_["assumption"] in existing
+        issues += not hit
+        L.append(f"| {s_['id']} | {s_['assumption']} | {'yes' if hit else 'no — carry it over'} |")
+    if not assumptions:
+        L.append("| — | the proposal carries no assumption register | — |")
+    L += ["", "## Clauses", "| Clause | Present |", "|---|---|"]
+    heads = "\n".join(ln for ln in existing.splitlines() if ln.startswith("#"))
+    for label, rx in CLAUSES:
+        ok = re.search(rx, heads, re.I) is not None
+        issues += not ok
+        L.append(f"| {label} | {'yes' if ok else 'no — add the section from assets/sow-template.md'} |")
+    L.insert(2, f"**{issues} issue(s) to resolve before signature.**\n")
+    return L, issues
+
+
 def marker_or(v: str) -> str:
     return v or TBD
 
@@ -96,6 +167,8 @@ def main() -> int:
     ap.add_argument("--out", required=True, help="SOW.md")
     ap.add_argument("--deliverables", required=True, help="deliverables.csv")
     ap.add_argument("--assumptions-check", required=True, help="assumptions-check.csv")
+    ap.add_argument("--existing-sow", default="", help="a SOW draft already in play, to reconcile with the proposal")
+    ap.add_argument("--reconcile", default="", help="with --existing-sow: write the reconciliation here")
     a = ap.parse_args()
 
     prop, tmpl = read(a.proposal), read(a.template)
@@ -199,6 +272,11 @@ def main() -> int:
         w = csv.DictWriter(f, fieldnames=["id", "assumption", "status"])
         w.writeheader()
         w.writerows([{"id": s["id"], "assumption": s["assumption"], "status": "NOT IN SOW"} for s in missing])
+    if a.existing_sow:
+        rec, n_issues = reconcile(read(a.existing_sow), deliverables, assumptions, Path(a.existing_sow).name)
+        if a.reconcile:
+            Path(a.reconcile).write_text("\n".join(rec) + "\n", encoding="utf-8")
+        print(f"reconciliation: {Path(a.existing_sow).name} — {n_issues} issue(s)")
     n_tbd = sum(1 for d in deliverables if d["acceptance"] == TBD)
     print(f"SOW: {len(deliverables)} deliverables ({n_tbd} acceptance criteria to baseline), "
           f"{len(assumptions)} assumptions carried, {len(missing)} not carried, {len(out_of_scope)} out-of-scope -> {a.out}")

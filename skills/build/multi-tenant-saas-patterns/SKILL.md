@@ -14,17 +14,24 @@ metadata:
       - {name: exempt, type: string, required: false, from: "comma-separated global tables exempt from tenant_id (default: tenants,plans,feature_flags,profiles)"}
     run:
       - {step: policies, kind: script, cmd: "python3 -I scripts/rbac_to_sql.py {rbac} --out {out}/policies.sql"}
-      - {step: audit, kind: script, cmd: "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] --out {out}/audit.csv --report {out}/audit.md"}
+      - {step: audit, kind: script, cmd: "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] --rbac {rbac} --out {out}/audit.csv --report {out}/audit.md"}
     outputs:
       - {path: "{out}/policies.sql", checks: [exists, contains:"create policy", contains:"-- rollback:"]}
       - {path: "{out}/audit.csv", checks: [exists, csv:[table,file,has_tenant_id,rls_enabled,tenant_index,policies,exempt,status,findings], csv_rows:status~^(ok|finding)$]}
       - {path: "{out}/audit.md", checks: [exists, sections:["Tables","Rules"]]}
+    modes:
+      new: {case: agent-happy-path, bring: "your first migration; the starter role matrix is used"}
+      existing: {case: agent-mode-existing, bring: "your existing migrations folder and current role matrix"}
 ---
 
 # multi-tenant-saas-patterns
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/multi-tenant-saas-patterns --input <name>=<value> … --out <dir>` (see `--explain build/multi-tenant-saas-patterns`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The audit step exits 1 when a non-exempt table lacks tenant_id, RLS or a tenant-leading index; hand the findings and `policies.sql` to supabase-schema-rls for the migration.
+
+## Starting points
+- **New** — your first migration is audited for tenant_id, RLS, policies and a tenant-leading index, and RLS policies are generated from the starter RBAC matrix.
+- **Existing** — your whole migrations folder is replayed in order (columns and keys added later by `alter table`, tables dropped later), each table that still exists is audited, your own RBAC matrix is cross-checked against those tables, and policies are generated from it.
 
 ## When to use
 - "Add organisations/workspaces", "who can do what", "plans and limits", "feature flags per customer", "audit trail", "invite users", "switch tenant".

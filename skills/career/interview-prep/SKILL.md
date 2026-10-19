@@ -12,19 +12,27 @@ metadata:
       - {name: jd, type: file, required: true, from: "job description text file"}
       - {name: stories, type: md, required: true, from: "story bank with SB-nn ids and competency tags (layout: assets/story-bank.example.md)"}
       - {name: round, type: string, required: false, default: "hiring-manager", from: "recruiter | hiring-manager | panel | executive | case"}
+      - {name: previous_round, type: md, required: false, from: "your debrief notes from the earlier round (story ids told, questions asked); adds what is spent and what to lead with"}
     run:
-      - {step: prep, kind: script, cmd: "python3 -I scripts/prep.py --jd {jd} --stories {stories} --round {round} --competencies references/competency-map.md --questions references/question-bank.md --ask references/questions-to-ask.md --plan-template assets/90-day-plan.md --out-dir {out}"}
+      - {step: prep, kind: script, cmd: "python3 -I scripts/prep.py --jd {jd} --stories {stories} --round {round} --competencies references/competency-map.md --questions references/question-bank.md --ask references/questions-to-ask.md --plan-template assets/90-day-plan.md --out-dir {out} [--previous-round {previous_round}]"}
     outputs:
       - {path: "{out}/competency-map.csv", checks: [exists, csv:[competency,status,name,in_jd,jd_evidence,story_ids], csv_rows:status~^(mapped|GAP)$]}
       - {path: "{out}/prep-pack.md", checks: [exists, sections:["Competency","Stories by competency","Likely questions","Gaps"]]}
       - {path: "{out}/questions-to-ask.md", checks: [exists, sections:["Questions to ask"]]}
       - {path: "{out}/90-day-plan.md", checks: [exists, sections:["Mandate","Days 1","Days 31","Days 61","Focus areas from the JD"], no_unowned_tbd]}
+    modes:
+      new: {case: agent-happy-path, bring: "the job description and your story bank"}
+      existing: {case: agent-mode-existing, bring: "the job description, story bank and your last-round notes"}
 ---
 
 # Interview Prep (truth-locked)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/interview-prep --input <name>=<value> … --out <dir>` (see `--explain career/interview-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — the JD's competencies are mapped to your story bank (gaps stay gaps — nothing is invented), with the round's likely questions, questions to ask and a 90-day plan skeleton.
+- **Existing** — add your debrief from the last round: stories you already told are marked, competencies where every story is spent and JD competencies not shown yet are listed, and the questions already asked are kept for consistent follow-ups.
 
 ## When to use
 - "I have a panel interview Thursday", "grill me for the CIO round", "map my stories to this JD", "draft my 90-day plan", "what should I ask them".

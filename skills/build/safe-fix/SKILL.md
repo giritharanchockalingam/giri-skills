@@ -17,12 +17,18 @@ metadata:
       - {step: verify, kind: script, cmd: "python3 -I scripts/safefix.py verify --target {target} --cmd {cmd} [--baseline {baseline}] --out {out}/verify.json"}
     outputs:
       - {path: "{out}/verify.json", checks: [exists, json, contains:"collateral"]}
+    modes:
+      existing: {case: agent-happy-path, bring: "your repo, its test command and the fix you made"}
 ---
 
 # safe-fix
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/safe-fix --input <name>=<value> … --out <dir>` (see `--explain build/safe-fix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Typical flow: run once before the fix (writes `baseline.json`), apply the fix, run again with `--input baseline=<dir>/baseline.json`; any newly failing test is collateral and the run exits 1.
+
+## Starting points
+- **Existing** — the test suite is snapshotted before the fix (or your recorded baseline is used), re-run after it, and any test that was green and is now red is reported as collateral damage.
+- Only for existing: a fix always lands in code and a test suite that already exist; there is nothing to fix from scratch.
 
 ## When to use
 - "Fix this bug", an error message, stack trace, failing CI job, "it used to work", production incident follow-up.

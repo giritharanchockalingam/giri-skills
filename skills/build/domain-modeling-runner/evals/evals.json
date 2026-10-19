@@ -16,10 +16,22 @@
       },
       "checks": [
         "exit:0",
-        {"file": "model.md", "check": "mermaid_parses"},
-        {"file": "model.md", "check": "sections:[\"Diagram\",\"Entities\",\"Relationships\",\"Glossary\",\"Open questions\"]"},
-        {"file": "model.md", "check": "contains:\"Student 0+ to 0+ Course\""},
-        {"file": "model.md", "check": "contains:\"[TO BE BASELINED — owner: Domain expert]\""}
+        {
+          "file": "model.md",
+          "check": "mermaid_parses"
+        },
+        {
+          "file": "model.md",
+          "check": "sections:[\"Diagram\",\"Entities\",\"Relationships\",\"Glossary\",\"Open questions\"]"
+        },
+        {
+          "file": "model.md",
+          "check": "contains:\"Student 0+ to 0+ Course\""
+        },
+        {
+          "file": "model.md",
+          "check": "contains:\"[TO BE BASELINED — owner: Domain expert]\""
+        }
       ]
     },
     {
@@ -49,8 +61,14 @@
       },
       "checks": [
         "exit:1",
-        {"file": "model.md", "check": "contains:\"entity 'Instructor' is not defined\""},
-        {"file": "model.md", "check": "contains:\"N:M needs a join note\""}
+        {
+          "file": "model.md",
+          "check": "contains:\"entity 'Instructor' is not defined\""
+        },
+        {
+          "file": "model.md",
+          "check": "contains:\"N:M needs a join note\""
+        }
       ]
     },
     {
@@ -66,8 +84,47 @@
       },
       "checks": [
         "exit:0",
-        {"file": "modeling-review.md", "check": "sections:[\"Challenged terms\",\"Edge-case scenarios\",\"ADR candidates\"]"},
-        {"file": "modeling-review.md", "check": "no_unowned_tbd"}
+        {
+          "file": "modeling-review.md",
+          "check": "sections:[\"Challenged terms\",\"Edge-case scenarios\",\"ADR candidates\"]"
+        },
+        {
+          "file": "modeling-review.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our current enrollment model (model.json) and the revised entity and relationship files — what changes and what will the migration have to handle?",
+      "expected": [
+        "Validates the revised model; lists Term/Offering added, Section removed, Enrollment.grade removed, Enrollment.status added as required, Course.credits type change; migration impact for each breaking change"
+      ],
+      "inputs": {
+        "entities": "evals/fixtures/entities.csv",
+        "relationships": "evals/fixtures/relationships.csv",
+        "glossary": "evals/fixtures/glossary.csv",
+        "title": "Course enrollment",
+        "baseline": "evals/fixtures/model-current.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "model.md",
+          "check": "sections:[\"Changes vs current model\",\"Open questions\"]"
+        },
+        {
+          "file": "model.md",
+          "check": "contains:\"| Entities removed | Section |\""
+        },
+        {
+          "file": "model.md",
+          "check": "contains:\"Enrollment.status added as required: existing rows need a default or a backfill.\""
+        },
+        {
+          "file": "model.json",
+          "check": "contains:\"migration_impact\""
+        }
       ]
     }
   ]

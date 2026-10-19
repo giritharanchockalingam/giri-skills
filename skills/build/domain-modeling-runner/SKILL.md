@@ -14,12 +14,16 @@ metadata:
       - {name: glossary, type: csv, required: false, from: "glossary (layout: assets/glossary-template.csv): term,definition[,avoid ;-separated]"}
       - {name: title, type: string, required: false, default: "Domain model", from: "context name for the diagram title and glossary heading"}
       - {name: narrative, type: flag, required: false, flag: "--narrative", from: "true to have the LLM write the modeling review (challenged terms, edge-case scenarios, ADR candidates) from the model and the upstream method"}
+      - {name: baseline, type: json, required: false, from: "model.json this skill wrote for the model as it is today; adds 'Changes vs current model' with migration impact"}
     run:
-      - {step: model, kind: script, cmd: "python3 -I scripts/model.py --entities {entities} --relationships {relationships} [--glossary {glossary}] --title {title} --md {out}/model.md --json {out}/model.json"}
+      - {step: model, kind: script, cmd: "python3 -I scripts/model.py --entities {entities} --relationships {relationships} [--glossary {glossary}] [--baseline {baseline}] --title {title} --md {out}/model.md --json {out}/model.json"}
       - {step: modeling-review, kind: llm, template: assets/modeling-review-template.md, context: ["../../../vendor/domain-modeling/SKILL.md", "../../../vendor/domain-modeling/GLOSSARY-FORMAT.md", "../../../vendor/domain-modeling/ADR-FORMAT.md", "{out}/model.md", "{out}/model.json", "references/modeling-rules.md"], out: "{out}/modeling-review.md", skip_if_missing: [narrative]}
     outputs:
       - {path: "{out}/model.md", checks: [exists, sections:["Diagram","Entities","Relationships","Glossary","Open questions"], mermaid_parses, no_unowned_tbd]}
       - {path: "{out}/model.json", checks: [exists, json, cmd:"python3 -I scripts/model.py --check {path}"]}
+    modes:
+      new: {case: agent-happy-path, bring: "your entities, relationships and glossary terms"}
+      existing: {case: agent-mode-existing, bring: "today's model plus the entities and relationships you want"}
 ---
 
 # domain-modeling-runner
@@ -28,6 +32,10 @@ Wraps `domain-modeling` from mattpocock/skills (pinned in vendor/pins.json). Ups
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/domain-modeling-runner --input <name>=<value> … --out <dir>` (see `--explain build/domain-modeling-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Validation errors fail the run (exit 1) but both outputs are still written, so the gaps are listed under Open questions.
+
+## Starting points
+- **New** — entities, relationships and glossary become a validated model: Mermaid ER diagram, invariants, glossary, open questions.
+- **Existing** — add `baseline` (the `model.json` of today's model): the proposed model is validated the same way and compared with it — what is added, removed or changed — and every breaking change gets a migration-impact line to plan before building.
 
 ## When to use
 - Before schema, API or event design: get entities, keys and cardinalities agreed.

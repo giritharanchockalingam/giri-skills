@@ -92,6 +92,34 @@
       "checks": [
         "exit:1"
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "First handoff for this repo — there is no HANDOFF.md yet. Close the thread: slip search page done, booking rules next.",
+      "expected": [
+        "Range is the whole history (no previous HANDOFF); both commits listed; open items say none carried; no invented decisions"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-files-first",
+        "state": "partial — slip search page done, booking rules next",
+        "project": "slipway"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"feat: slip search page and booking service\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"none carried (no previous docs/HANDOFF.md open items)\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "sections:[\"State\",\"Done this thread\",\"Changed files\",\"Open items\",\"Next thread starts with\"]"
+        }
+      ]
     }
   ]
 }

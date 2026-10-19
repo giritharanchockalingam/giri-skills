@@ -13,21 +13,29 @@ metadata:
       - {name: rates, type: csv, required: true, from: "rate inputs key,value,unit,source (keys in scripts/tco.py --help); no prices are ever assumed"}
       - {name: client, type: string, required: true}
       - {name: waves, type: string, required: false, default: "3"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model step: readout.md is assembled from the scoring and TCO summaries, labelled as a draft"}
     run:
       - {step: score, kind: script, cmd: "python3 -I scripts/score_inventory.py {inventory} --out {out}/scored.csv --waves {waves} --summary", stdout: "{out}/scoring-summary.md"}
       - {step: tco, kind: script, cmd: "python3 -I scripts/tco.py {out}/scored.csv --rates {rates} --out {out}/tco.csv --summary {out}/tco-summary.md --json {out}/tco.json"}
-      - {step: readout, kind: llm, template: assets/assessment-readout-template.md, context: ["{out}/scoring-summary.md", "{out}/tco-summary.md", "references/migration-factory-method.md"], out: "{out}/readout.md"}
+      - {step: readout, kind: llm, template: assets/assessment-readout-template.md, context: ["{out}/scoring-summary.md", "{out}/tco-summary.md", "references/migration-factory-method.md"], out: "{out}/readout.md", skip_if_present: [draft_only]}
+      - {step: readout-draft, kind: script, cmd: "python3 -I scripts/readout_draft.py --scoring {out}/scoring-summary.md --tco {out}/tco-summary.md --client {client} --out {out}/readout.md", skip_if_missing: [draft_only]}
     outputs:
       - {path: "{out}/scored.csv", checks: [exists, csv:[interface_id,weighted_score,band,wave,retire_candidate]]}
       - {path: "{out}/tco.csv", checks: [exists, csv:[scenario,category,line,year,amount,source]]}
       - {path: "{out}/tco.json", checks: [exists, json]}
       - {path: "{out}/readout.md", checks: [exists, sections:["Bottom line","Scoring results","Wave plan","TCO","Risks","Next steps"], no_unowned_tbd, numbers_trace_to:["{out}/scoring-summary.md","{out}/tco-summary.md"]]}
+    modes:
+      existing: {case: agent-mode-existing, bring: "the interface inventory of the current estate and rate inputs"}
 ---
 
 # integration-migration-assessor
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/integration-migration-assessor --input <name>=<value> … --out <dir>` (see `--explain presales/integration-migration-assessor`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **Existing** — the inventory of your current estate is scored, banded and planned into waves, the TCO is built only from the rate inputs you supply, and the readout is written by the model step or, with `draft_only`, assembled from the two summaries with every figure copied verbatim.
+- Only for existing: an assessment always scores an integration estate that already runs; there is nothing to assess from scratch.
 
 ## When to use
 - "Assess <client>'s MuleSoft/Boomi/ESB/Informatica estate for migration to <target>."

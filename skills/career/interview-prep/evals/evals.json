@@ -111,6 +111,34 @@
           "check": "no_unowned_tbd"
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Panel round next week after the hiring-manager round; here are my debrief notes from that round.",
+      "expected": [
+        "SB-01 and SB-02 marked as told; vendor competency flagged as spent; risk/security and data/AI flagged as JD competencies not shown yet; the two asked questions listed"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "stories": "evals/fixtures/story-bank.md",
+        "round": "panel",
+        "previous_round": "evals/fixtures/debrief-round2.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "prep-pack.md",
+          "check": "sections:[\"Since the last round\",\"Stories by competency\"]"
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"| C5 Vendor and contract management | every story already told — bring new depth | SB-02 |\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"- How do you decide when to replace a systems integrator?\""
+        }
+      ]
     }
   ]
 }

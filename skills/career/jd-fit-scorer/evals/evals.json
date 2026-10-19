@@ -81,6 +81,33 @@
         "exit:0",
         "exists:fit.json"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Score this Senior Director JD against my existing résumé; my profile file only has my location and travel limits.",
+      "expected": [
+        "Requirements matched to résumé lines with MR-L ids as evidence (API gateway → MR-L22, MBA → MR-L40); constraints from the profile still applied; verdict computed"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "profile": "evals/fixtures/profile-constraints.txt",
+        "resume": "evals/fixtures/master-resume.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "fit.md",
+          "check": "contains:\"| Experience with API gateway and partner integration programs is required | must | MATCH | MR-L22:\""
+        },
+        {
+          "file": "fit.json",
+          "check": "contains:\"MR-L40: MBA\""
+        },
+        {
+          "file": "fit.md",
+          "check": "contains:\"constraint: location includes Columbus OH\""
+        }
+      ]
     }
   ]
 }

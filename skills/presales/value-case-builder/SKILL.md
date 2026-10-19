@@ -15,17 +15,25 @@ metadata:
       - {name: p80_cost_uplift, type: string, required: false, from: "P80/P50 uplift on cost as a fraction, from the estimate memo; without it P80 cost is [TO BE BASELINED]"}
       - {name: years, type: string, required: false, default: "5"}
       - {name: client, type: string, required: false, default: "<Client>"}
+      - {name: previous, type: json, required: false, from: "value-model.json of the earlier value case; adds what changed in the totals and in each benefit"}
     run:
-      - {step: model, kind: script, cmd: "python3 -I scripts/value_model.py {benefits} {costs} --years {years} [--discount-rate {discount_rate}] [--p80-cost-uplift {p80_cost_uplift}] --client {client} --json {out}/value-model.json --out {out}/value-case.md"}
+      - {step: model, kind: script, cmd: "python3 -I scripts/value_model.py {benefits} {costs} --years {years} [--discount-rate {discount_rate}] [--p80-cost-uplift {p80_cost_uplift}] [--previous {previous}] --client {client} --json {out}/value-model.json --out {out}/value-case.md"}
     outputs:
       - {path: "{out}/value-model.json", checks: [exists, json]}
       - {path: "{out}/value-case.md", checks: [exists, sections:["Bottom line","Cash flows","Sensitivity","Sources"], numbers_trace_to:"{out}/value-model.json"]}
+    modes:
+      new: {case: agent-happy-path, bring: "benefits and costs with their sources"}
+      existing: {case: agent-mode-existing, bring: "updated benefits and costs plus the last value case"}
 ---
 
 # value-case-builder
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/value-case-builder --input <name>=<value> … --out <dir>` (see `--explain presales/value-case-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — sourced benefits and costs become a CFO-grade value case: yearly cash flows, NPV, payback, P80 cost and sensitivity, with unbaselined rows kept out of the headline.
+- **Existing** — add `previous` (the earlier case's `value-model.json`): the refresh shows how benefits, costs, net, NPV, P80 cost and payback moved, and which benefits were added, removed, re-estimated or newly baselined.
 
 ## When to use
 - "Build the business case for <initiative>."

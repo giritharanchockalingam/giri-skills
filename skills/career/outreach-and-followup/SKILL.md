@@ -11,19 +11,28 @@ metadata:
     inputs:
       - {name: type, type: string, required: true, from: "referral-ask | recruiter-reply | thank-you | status-check | decline | negotiation-open"}
       - {name: context, type: json, required: true, from: "context.json: {recipient, company, role, last_touch_date, specifics:[...]} (layout: evals/fixtures/context-thank-you.json)"}
+      - {name: thread, type: md, required: false, from: "the conversation so far (## YYYY-MM-DD — sent / received headings); touches already sent are counted and facts already used are marked"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model polish step: message-final.md is the filled skeleton, labelled as a draft"}
     run:
-      - {step: fill, kind: script, cmd: "python3 -I scripts/fill.py --type {type} --context {context} --templates assets/message-templates.md --cadence-ref references/cadence.md --message {out}/message.md --cadence {out}/cadence.csv"}
-      - {step: polish, kind: llm, template: assets/message-final-template.md, context: ["{out}/message.md", "{out}/cadence.csv", "references/message-types.md"], out: "{out}/message-final.md"}
+      - {step: fill, kind: script, cmd: "python3 -I scripts/fill.py --type {type} --context {context} --templates assets/message-templates.md --cadence-ref references/cadence.md --message {out}/message.md --cadence {out}/cadence.csv [--thread {thread}] --final {out}/message-final.md {draft_only}"}
+      - {step: polish, kind: llm, template: assets/message-final-template.md, context: ["{out}/message.md", "{out}/cadence.csv", "references/message-types.md"], out: "{out}/message-final.md", skip_if_present: [draft_only]}
     outputs:
       - {path: "{out}/message.md", checks: [exists, sections:["Variant A","Unfilled placeholders","Cadence"]]}
       - {path: "{out}/cadence.csv", checks: [exists, csv:[touch,date,channel,template,basis,stop_rule], csv_rows:touch!empty]}
       - {path: "{out}/message-final.md", checks: [exists, sections:["Message","Facts used","Cadence"], no_unowned_tbd]}
+    modes:
+      new: {case: agent-mode-new, bring: "who you are writing to and the facts to use"}
+      existing: {case: agent-mode-existing, bring: "the conversation so far and the facts to use"}
 ---
 
 # Outreach and Follow-up
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/outreach-and-followup --input <name>=<value> … --out <dir>` (see `--explain career/outreach-and-followup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — a first message: the type's variants filled only from your facts, every missing slot listed, and the follow-up cadence dated; the model polishes it, or with `draft_only` the filled skeleton is final.
+- **Existing** — add the thread so far: the touches you already sent are counted, only the follow-ups still due are dated (or the stop rule is reported), a reply is flagged, and facts you already used are marked so the next touch adds something new.
 
 ## When to use
 - "Write a note to X asking for a referral", "reply to this recruiter", "thank-you after my panel", "it's been 10 days, nudge them", "decline this politely", "open the comp conversation".

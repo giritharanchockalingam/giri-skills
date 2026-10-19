@@ -104,6 +104,35 @@
           "check": "contains:\"exists — kept\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We already have a unit test file for the export service. Plan the tests for the export feature against what exists.",
+      "expected": [
+        "The existing export-service test is kept and read: criterion 3 (tenant rows) is covered, criteria 1 and 2 are listed to add; a red stub is written only for the server action"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature.md",
+        "files": "server/services/export-service.ts,server/actions/request-export.ts",
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing-suite"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/unit/server-actions-request-export.test.ts",
+        {
+          "file": "repo/tests/unit/server-services-export-service.test.ts",
+          "check": "contains:\"builds the CSV header row\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"criteria_missing\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"| `tests/unit/server-services-export-service.test.ts` | 2 | #3 |\""
+        }
+      ]
     }
   ]
 }

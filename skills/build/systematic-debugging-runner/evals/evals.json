@@ -17,9 +17,18 @@
       "checks": [
         "exit:0",
         "exists:debug.json",
-        {"file": "debug-log.md", "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"},
-        {"file": "debug-log.md", "check": "contains:\"regression-likely\""},
-        {"file": "debug-log.md", "check": "contains:\"Fix allowed: NO\""}
+        {
+          "file": "debug-log.md",
+          "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"
+        },
+        {
+          "file": "debug-log.md",
+          "check": "contains:\"regression-likely\""
+        },
+        {
+          "file": "debug-log.md",
+          "check": "contains:\"Fix allowed: NO\""
+        }
       ]
     },
     {
@@ -59,8 +68,14 @@
       },
       "checks": [
         "exit:0",
-        {"file": "debug-log.md", "check": "contains:\"src/cart/coupon.ts:14 in applyCoupon\""},
-        {"file": "debug-log.md", "check": "contains:\"[TO BE BASELINED — owner: Reporting engineer]\""}
+        {
+          "file": "debug-log.md",
+          "check": "contains:\"src/cart/coupon.ts:14 in applyCoupon\""
+        },
+        {
+          "file": "debug-log.md",
+          "check": "contains:\"[TO BE BASELINED — owner: Reporting engineer]\""
+        }
       ]
     },
     {
@@ -75,9 +90,18 @@
       },
       "checks": [
         "exit:0",
-        {"file": "debug-log.md", "check": "contains:\"java.lang.NullPointerException\""},
-        {"file": "investigation.md", "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"},
-        {"file": "investigation.md", "check": "no_unowned_tbd"}
+        {
+          "file": "debug-log.md",
+          "check": "contains:\"java.lang.NullPointerException\""
+        },
+        {
+          "file": "investigation.md",
+          "check": "sections:[\"Symptom\",\"Evidence\",\"Hypotheses\",\"Next experiment\"]"
+        },
+        {
+          "file": "investigation.md",
+          "check": "no_unowned_tbd"
+        }
       ]
     }
   ]

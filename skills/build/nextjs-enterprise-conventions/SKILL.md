@@ -10,17 +10,25 @@ metadata:
   agent:
     inputs:
       - {name: target, type: dir, required: true, from: "Next.js repo root (app/, components/, lib/, server/)"}
+      - {name: baseline, type: csv, required: false, from: "findings.csv from an earlier run — the recorded debt; known findings are listed but only new high-severity ones fail the gate"}
     run:
-      - {step: lint, kind: script, cmd: "python3 -I scripts/lint_conventions.py --target {target} --findings {out}/findings.csv --report {out}/report.md"}
+      - {step: lint, kind: script, cmd: "python3 -I scripts/lint_conventions.py --target {target} [--baseline {baseline}] --findings {out}/findings.csv --report {out}/report.md"}
     outputs:
       - {path: "{out}/findings.csv", checks: [exists, csv:[rule,file,line,snippet,severity]]}
       - {path: "{out}/report.md", checks: [exists, sections:["Summary","Findings","Rules"]]}
+    modes:
+      new: {case: agent-happy-path, bring: "a new repo before its first PR"}
+      existing: {case: agent-mode-existing, bring: "your existing repo and its recorded lint debt"}
 ---
 
 # nextjs-enterprise-conventions
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/nextjs-enterprise-conventions --input <name>=<value> … --out <dir>` (see `--explain build/nextjs-enterprise-conventions`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The lint step exits 1 on any high-severity finding, so a non-compliant repo fails the run by design; fix the findings in code, then re-run.
+
+## Starting points
+- **New** — a new repo is linted against every convention; any high-severity finding fails the gate.
+- **Existing** — add `baseline` (the `findings.csv` of an earlier run): each finding is marked known or new, the gate fails only on new high-severity findings, known debt stays listed, and baseline items no longer found are reported as resolved.
 
 ## When to use
 - Any new or modified file under `app/`, `components/`, `lib/`, `server/`.

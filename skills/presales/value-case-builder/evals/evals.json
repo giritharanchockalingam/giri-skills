@@ -99,6 +99,40 @@
           "check": "contains:\"not a value case yet\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Refresh the Northwind value case with the re-baselined split-shipment volume and the onboarding benefit; show the change against the Q2 case.",
+      "expected": [
+        "Change vs previous: benefits +729,000, payback 28 → 25 months; B-01 re-estimated (+288,000); B-03 added; every figure traces to value-model.json"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits.csv",
+        "costs": "evals/fixtures/costs.csv",
+        "discount_rate": "0.08",
+        "p80_cost_uplift": "0.15",
+        "client": "Northwind",
+        "previous": "evals/fixtures/value-model-previous.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "value-case.md",
+          "check": "sections:[\"Change vs previous value case\",\"Bottom line\"]"
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"| Payback month | 28 | 25 | −3 |\""
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"| B-01 Fewer split shipments | 1,440,000 | 1,728,000 | +288,000 | re-estimated |\""
+        },
+        {
+          "file": "value-case.md",
+          "check": "numbers_trace_to:value-model.json"
+        }
+      ]
     }
   ]
 }

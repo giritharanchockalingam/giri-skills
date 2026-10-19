@@ -18,6 +18,10 @@ container: containers inside the system boundary, with every integration as an e
 render anywhere Mermaid does. The integration map groups by pattern and lists waves; an NFR with
 no target or measure is `[TO BE BASELINED — owner: Solution architect]`; the decision-log stub carries one ADR
 row per pattern and per container technology. No number is invented.
+Current state (--current current.json, same layout, the estate as it runs today): adds "Change from
+current state" — containers kept, added, retired or re-platformed (technology changed), external
+systems added or retired, and integrations (by from → to) added, retired or with a changed pattern —
+plus one decision-log row per retirement and re-platform, so the transition is planned, not implied.
 Exit 1 on invalid JSON, missing keys, duplicate ids, or an integration endpoint that is not a
 container, actor or external system. Stdlib only, offline.
 """
@@ -157,14 +161,64 @@ def name_of(d: dict, ref: str) -> str:
     return d["external_systems"].get(ref, ref)
 
 
+def diff_current(cur: dict, d: dict) -> dict:
+    cc = {c["id"]: c for c in cur["containers"]}
+    tc = {c["id"]: c for c in d["containers"]}
+    ch = {"kept": [], "added": [], "retired": [], "replatformed": [],
+          "ext_added": [], "ext_retired": [], "int_added": [], "int_retired": [], "int_changed": []}
+    for i, c in tc.items():
+        if i not in cc:
+            ch["added"].append(c)
+        elif (cc[i].get("tech") or "") != (c.get("tech") or ""):
+            ch["replatformed"].append((cc[i], c))
+        else:
+            ch["kept"].append(c)
+    ch["retired"] = [c for i, c in cc.items() if i not in tc]
+    ch["ext_added"] = [(e, n) for e, n in d["external_systems"].items() if e not in cur["external_systems"]]
+    ch["ext_retired"] = [(e, n) for e, n in cur["external_systems"].items() if e not in d["external_systems"]]
+    ci = {(it["from"], it["to"]): it for it in cur["integrations"]}
+    ti = {(it["from"], it["to"]): it for it in d["integrations"]}
+    for k, it in ti.items():
+        if k not in ci:
+            ch["int_added"].append(it)
+        elif ci[k]["pattern"] != it["pattern"]:
+            ch["int_changed"].append((ci[k], it))
+    ch["int_retired"] = [it for k, it in ci.items() if k not in ti]
+    return ch
+
+
+def render_change(ch: dict, cur: dict, d: dict) -> list[str]:
+    L = ["## Change from current state", "",
+         f"Compared with the current state `{cur['system']}`: {len(ch['kept'])} container(s) kept, {len(ch['added'])} added, "
+         f"{len(ch['retired'])} retired, {len(ch['replatformed'])} re-platformed.", "",
+         "| Element | Change | Current | Target |", "|---|---|---|---|"]
+    L += [f"| {c['name']} (`{c['id']}`) | kept | {c.get('tech') or TBD} | {c.get('tech') or TBD} |" for c in ch["kept"]]
+    L += [f"| {o['name']} (`{o['id']}`) | re-platformed | {o.get('tech') or TBD} | {n.get('tech') or TBD} |" for o, n in ch["replatformed"]]
+    L += [f"| {c['name']} (`{c['id']}`) | added | — | {c.get('tech') or TBD} |" for c in ch["added"]]
+    L += [f"| {c['name']} (`{c['id']}`) | retired | {c.get('tech') or TBD} | — |" for c in ch["retired"]]
+    L += [f"| {n} (external) | added | — | external |" for _, n in ch["ext_added"]]
+    L += [f"| {n} (external) | retired | external | — |" for _, n in ch["ext_retired"]]
+    L += ["", "| Integration (from → to) | Change | Current pattern | Target pattern |", "|---|---|---|---|"]
+    L += [f"| {name_of(d, it['from'])} → {name_of(d, it['to'])} | added | — | {it['pattern']} |" for it in ch["int_added"]]
+    L += [f"| {name_of(cur, o['from'])} → {name_of(cur, o['to'])} | pattern changed | {o['pattern']} | {n['pattern']} |"
+          for o, n in ch["int_changed"]]
+    L += [f"| {name_of(cur, it['from'])} → {name_of(cur, it['to'])} | retired | {it['pattern']} | — |" for it in ch["int_retired"]]
+    if not (ch["int_added"] or ch["int_changed"] or ch["int_retired"]):
+        L.append("| — | no integration change | | |")
+    return L
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="components.json -> architecture.md (Mermaid C4) + nfr.csv")
     ap.add_argument("components")
     ap.add_argument("--out", required=True)
     ap.add_argument("--nfr", required=True, help="nfr.csv")
     ap.add_argument("--client", default="<Client>")
+    ap.add_argument("--current", default="", help="current-state components.json (same layout) for the change view")
     a = ap.parse_args()
     d = load(Path(a.components))
+    cur = load(Path(a.current)) if a.current else None
+    change = diff_current(cur, d) if cur else None
     nfrs = []
     for n in d.get("nfrs") or []:
         nfrs.append({"category": n["category"], "requirement": n["requirement"],
@@ -188,6 +242,8 @@ def main() -> int:
          "| Container | Technology | Responsibility |", "|---|---|---|"]
     for c in d["containers"]:
         L.append(f"| {c['name']} (`{c['id']}`) | {c.get('tech') or TBD} | {c.get('responsibility') or TBD} |")
+    if change:
+        L += [""] + render_change(change, cur, d)
     L += ["", "## Integration map (grouped by pattern)"]
     for pat, items in patterns.items():
         L += ["", f"### {pat}", "| ID | From | To | Protocol | Data | Wave |", "|---|---|---|---|---|---|"]
@@ -212,6 +268,11 @@ def main() -> int:
     for c in d["containers"]:
         if c.get("tech"):
             L.append(f"| ADR-{k:03d} | {c['name']} on {c['tech']} | {TBD} | proposed | {TBD} |"); k += 1
+    if change:
+        for c in change["retired"]:
+            L.append(f"| ADR-{k:03d} | Retire {c['name']} ({c.get('tech') or TBD}): decommission and data migration | {TBD} | proposed | {TBD} |"); k += 1
+        for o, n in change["replatformed"]:
+            L.append(f"| ADR-{k:03d} | Re-platform {n['name']}: {o.get('tech') or TBD} → {n.get('tech') or TBD} | {TBD} | proposed | {TBD} |"); k += 1
     if k == 1:
         L.append(f"| ADR-001 | {TBD} | | proposed | |")
     L += ["", "## Open items", "| Item | Owner | By |", "|---|---|---|",

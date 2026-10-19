@@ -93,6 +93,35 @@
           "check": "contains:\"Dry run\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We already have a hand-rolled logger and an .env.example; add health checks and alerts without clobbering anything.",
+      "expected": [
+        "lib/logger.ts is kept and the standard one is written beside it as lib/logger.ts.proposed; missing env vars are appended to the existing .env.example; the two console.* calls in app/api/orders/route.ts are listed"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing",
+        "project": "harborline"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/lib/logger.ts.proposed",
+        "exists:repo/app/api/health/route.ts",
+        {
+          "file": "repo/lib/logger.ts",
+          "check": "contains:\"hand-rolled logger\""
+        },
+        {
+          "file": "repo/.env.example",
+          "check": "contains:\"SUPABASE_ANON_KEY=\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"`app/api/orders/route.ts:7` — `console.error`\""
+        }
+      ]
     }
   ]
 }

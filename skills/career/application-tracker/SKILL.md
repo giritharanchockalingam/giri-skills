@@ -23,12 +23,19 @@ metadata:
       - {path: "{out}/pipeline.json", checks: [exists, json]}
       - {path: "{out}/aging.json", checks: [exists, json]}
       - {path: "{out}/weekly-review.md", checks: [exists]}
+    modes:
+      new: {case: agent-mode-new, bring: "an empty tracker and your first application"}
+      existing: {case: agent-report-only, bring: "your current tracker spreadsheet"}
 ---
 
 # Application Tracker
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/application-tracker --input <name>=<value> … --out <dir>` (see `--explain career/application-tracker`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — start from the empty tracker layout: your first application is logged and the pipeline and aging reports begin.
+- **Existing** — your current tracker is read (a copy is updated, the original is untouched): the pipeline, the aging report and the weekly review flag what is stale, overdue or missing a next action.
 
 ## When to use
 - "Log that I applied to X", "move Y to panel stage", "what's stale?", "run my weekly review", "show the pipeline".

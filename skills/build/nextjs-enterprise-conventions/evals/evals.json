@@ -90,6 +90,32 @@
           "check": "contains:\"Gate: FAIL\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our legacy repo has known convention debt recorded from the last lint. Check this branch — did we add anything new?",
+      "expected": [
+        "The three recorded high findings are marked known (listed, not gating); the console.log is new (medium); the raw-SQL baseline item is reported resolved; gate passes because no new high finding"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations",
+        "baseline": "evals/fixtures/baseline-findings.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "report.md",
+          "check": "contains:\"1 new, 3 known from the baseline, 1 resolved\""
+        },
+        {
+          "file": "report.md",
+          "check": "sections:[\"Findings\",\"Baseline\"]"
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:status~^(new|known)$"
+        }
+      ]
     }
   ]
 }

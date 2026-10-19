@@ -1,0 +1,1 @@
+{"_note": "FICTIONAL example repo for evals", "name": "ledgerly", "private": true, "scripts": {"test": "vitest run"}}

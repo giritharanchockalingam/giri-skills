@@ -103,6 +103,37 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Produce the Order Hub target architecture and show what changes from today's order management estate.",
+      "expected": [
+        "Change from current state: gateway and order store re-platformed, event backbone added, Legacy OMS and the fax gateway retired, ERP feed re-patterned; ADR rows for each retirement and re-platform"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components.json",
+        "client": "Northwind",
+        "current": "evals/fixtures/current-state.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "architecture.md",
+          "check": "sections:[\"Change from current state\",\"Container view\",\"Decision log\"]"
+        },
+        {
+          "file": "architecture.md",
+          "check": "contains:\"| API gateway (`gw`) | re-platformed | MuleSoft CloudHub | Apigee X |\""
+        },
+        {
+          "file": "architecture.md",
+          "check": "contains:\"Retire Legacy OMS (Oracle Forms): decommission and data migration\""
+        },
+        {
+          "file": "architecture.md",
+          "check": "mermaid_parses"
+        }
+      ]
     }
   ]
 }

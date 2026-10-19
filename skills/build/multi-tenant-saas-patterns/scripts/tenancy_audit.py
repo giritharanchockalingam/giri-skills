@@ -2,13 +2,20 @@
 """Audit migrations for tenant isolation basics: tenant_id column, RLS enabled, tenant-leading index.
 
     python3 -I scripts/tenancy_audit.py --migrations supabase/migrations --out audit.csv --report audit.md \
-        [--exempt tenants,plans,profiles]
+        [--exempt tenants,plans,profiles] [--rbac rbac-matrix.csv]
 
 Reads every .sql file (comments stripped) and, per `create table`, checks:
   has_tenant_id   a `tenant_id` column in the column list
   rls_enabled     `alter table <t> enable row level security`
   tenant_index    an index, primary key or unique constraint whose first column is tenant_id
   policies        number of `create policy … on <t>`
+Files are read in name order, as they are applied, so an existing migration history is audited as the
+schema it builds: `alter table <t> add column tenant_id` in a later file counts as the column,
+`alter table <t> add [constraint x] primary key|unique (tenant_id, …)` as the tenant-leading key, and a
+`drop table <t>` removes the table from the audit; `changed_in` lists the later files that altered it.
+--rbac: the RBAC matrix (assets/rbac-matrix.csv layout) is cross-checked against the audited tables —
+matrix resources with no table in the migrations, and tenant-scoped tables no matrix row covers — and
+reported under "RBAC coverage" (advisory: the gate is the per-table findings).
 Tables listed in --exempt (default: tenants, plans, feature_flags, profiles — global by design) are
 reported but not counted as findings. Writes audit.csv (table, file, has_tenant_id, rls_enabled,
 tenant_index, policies, exempt, status, findings) and audit.md. Exit 1 on bad input or when any
@@ -28,6 +35,10 @@ ENABLE_RLS = re.compile(r"alter\s+table\s+(?:only\s+)?(?:\w+\.)?\"?(\w+)\"?\s+en
 CREATE_INDEX = re.compile(r"create\s+(?:unique\s+)?index\s+(?:concurrently\s+)?(?:if\s+not\s+exists\s+)?\w*\s*on\s+(?:only\s+)?(?:\w+\.)?\"?(\w+)\"?\s*(?:using\s+\w+\s*)?\(\s*\"?(\w+)", re.I)
 CREATE_POLICY = re.compile(r"create\s+policy\s+\"?[\w-]+\"?\s+on\s+(?:\w+\.)?\"?(\w+)\"?", re.I)
 KEY_IN_TABLE = re.compile(r"(?:primary\s+key|unique)\s*\(\s*\"?(\w+)", re.I)
+ALTER_ADD_TENANT = re.compile(r"alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?(?:\w+\.)?\"?(\w+)\"?\s+add\s+(?:column\s+)?(?:if\s+not\s+exists\s+)?\"?tenant_id\"?\s+\w", re.I)
+ALTER_ADD_KEY = re.compile(r"alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?(?:\w+\.)?\"?(\w+)\"?\s+add\s+(?:constraint\s+\"?[\w-]+\"?\s+)?(?:primary\s+key|unique)\s*\(\s*\"?(\w+)", re.I)
+ALTER_ANY = re.compile(r"alter\s+table\s+(?:if\s+exists\s+)?(?:only\s+)?(?:\w+\.)?\"?(\w+)\"?", re.I)
+DROP_TABLE = re.compile(r"drop\s+table\s+(?:if\s+exists\s+)?((?:(?:\w+\.)?\"?\w+\"?\s*,\s*)*(?:\w+\.)?\"?\w+\"?)", re.I)
 TENANT_COL = re.compile(r"(?:^|[\s,(])\"?tenant_id\"?\s+\w", re.I)
 
 
@@ -55,23 +66,44 @@ def table_body(sql: str, start: int) -> str:
 
 
 def audit(files: list[Path], exempt: set[str]) -> list[dict]:
+    """Replay the migrations in order; one row per table that still exists at the end."""
     tables: dict[str, dict] = {}
     rls, idx, pol = set(), set(), {}
     for f in files:
         sql = strip_comments(f.read_text(encoding="utf-8", errors="replace"))
-        for m in CREATE_TABLE.finditer(sql):
+        events = [(m.start(), "create", m) for m in CREATE_TABLE.finditer(sql)]
+        events += [(m.start(), "drop", m) for m in DROP_TABLE.finditer(sql)]
+        for _, kind, m in sorted(events, key=lambda e: e[0]):
+            if kind == "drop":
+                for raw in m.group(1).split(","):
+                    name = raw.strip().split(".")[-1].strip('"').lower()
+                    tables.pop(name, None)
+                    rls.discard(name)
+                    idx.discard(name)
+                    pol.pop(name, None)
+                continue
             name = m.group(2).lower()
             body = table_body(sql, m.end() - 1)
-            t = tables.setdefault(name, {"table": name, "file": f.name, "has_tenant_id": False, "tenant_index": False})
+            t = tables.setdefault(name, {"table": name, "file": f.name, "has_tenant_id": False, "tenant_index": False,
+                                         "changed_in": []})
             t["has_tenant_id"] = t["has_tenant_id"] or bool(TENANT_COL.search(body))
             if any(k.group(1).lower() == "tenant_id" for k in KEY_IN_TABLE.finditer(body)):
                 idx.add(name)
+        for m in ALTER_ADD_TENANT.finditer(sql):
+            if m.group(1).lower() in tables:
+                tables[m.group(1).lower()]["has_tenant_id"] = True
+        idx |= {m.group(1).lower() for m in ALTER_ADD_KEY.finditer(sql) if m.group(2).lower() == "tenant_id"}
+        for m in ALTER_ANY.finditer(sql):
+            t = tables.get(m.group(1).lower())
+            if t and t["file"] != f.name and f.name not in t["changed_in"]:
+                t["changed_in"].append(f.name)
         rls |= {m.group(1).lower() for m in ENABLE_RLS.finditer(sql)}
         idx |= {m.group(1).lower() for m in CREATE_INDEX.finditer(sql) if m.group(2).lower() == "tenant_id"}
         for m in CREATE_POLICY.finditer(sql):
             pol[m.group(1).lower()] = pol.get(m.group(1).lower(), 0) + 1
     rows = []
     for name, t in sorted(tables.items()):
+        t["changed_in"] = ";".join(t["changed_in"])
         t["rls_enabled"] = name in rls
         t["tenant_index"] = name in idx
         t["policies"] = pol.get(name, 0)
@@ -93,12 +125,30 @@ def audit(files: list[Path], exempt: set[str]) -> list[dict]:
     return rows
 
 
+def rbac_coverage(path: Path, rows: list[dict]) -> dict:
+    """Matrix resources without a table, and tenant-scoped tables without a matrix row."""
+    if not path.is_file():
+        die(f"rbac matrix not found: {path}")
+    with path.open(encoding="utf-8-sig", newline="") as fh:
+        reader = csv.DictReader(fh)
+        if "resource" not in (reader.fieldnames or []):
+            die(f"rbac matrix has no 'resource' column: {path}")
+        resources = sorted({(r.get("resource") or "").strip().split(".")[-1].lower() for r in reader
+                            if (r.get("resource") or "").strip() and not (r.get("action") or "").startswith("#")})
+    tables = {r["table"] for r in rows}
+    scoped = sorted(r["table"] for r in rows if not r["exempt"])
+    return {"matrix": path.name, "resources": resources,
+            "resources_without_table": [x for x in resources if x not in tables],
+            "tables_without_rbac": [t for t in scoped if t not in resources]}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Audit migrations for tenant_id, RLS and tenant-leading indexes")
     ap.add_argument("--migrations", required=True, help="directory of .sql files (or one file)")
     ap.add_argument("--exempt", default=DEFAULT_EXEMPT, help=f"comma-separated global tables (default: {DEFAULT_EXEMPT})")
     ap.add_argument("--out", default="audit.csv")
     ap.add_argument("--report", default="audit.md")
+    ap.add_argument("--rbac", default="", help="RBAC matrix CSV to cross-check against the audited tables")
     a = ap.parse_args()
     src = Path(a.migrations)
     if src.is_file():
@@ -113,7 +163,9 @@ def main() -> int:
     rows = audit(files, exempt)
     if not rows:
         die("no `create table` statements found")
-    cols = ["table", "file", "has_tenant_id", "rls_enabled", "tenant_index", "policies", "exempt", "status", "findings"]
+    cov = rbac_coverage(Path(a.rbac), rows) if a.rbac else None
+    cols = ["table", "file", "has_tenant_id", "rls_enabled", "tenant_index", "policies", "exempt", "status", "findings",
+            "changed_in"]
     out, rep = Path(a.out), Path(a.report)
     out.parent.mkdir(parents=True, exist_ok=True)
     rep.parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +183,19 @@ def main() -> int:
     for r in rows:
         lines.append(f"| `{r['table']}` | {yn(r['has_tenant_id'])} | {yn(r['rls_enabled'])} | {yn(r['tenant_index'])} | "
                      f"{r['policies']} | {yn(r['exempt'])} | {r['findings'] or '—'} |")
+    altered = [r for r in rows if r["changed_in"]]
+    if altered:
+        lines += ["", "## Altered by later migrations", ""]
+        lines += [f"- `{r['table']}` — created in `{r['file']}`, altered in {', '.join(f'`{x}`' for x in r['changed_in'].split(';'))}"
+                  for r in altered]
+    if cov is not None:
+        lines += ["", "## RBAC coverage", "", f"Matrix `{cov['matrix']}`: {len(cov['resources'])} resource(s).", ""]
+        lines += [f"- `{x}` is in the matrix but no migration creates it — add the table or drop the rows"
+                  for x in cov["resources_without_table"]]
+        lines += [f"- `{t}` is tenant-scoped but no matrix row covers it — add its actions before generating policies"
+                  for t in cov["tables_without_rbac"]]
+        if not cov["resources_without_table"] and not cov["tables_without_rbac"]:
+            lines.append("- every matrix resource has a table and every tenant-scoped table has matrix rows")
     lines += ["", "## Rules", "",
               "- Every tenant-scoped table: `tenant_id not null`, `enable row level security`, ≥1 policy, composite index leading with `tenant_id` (shared/stack-conventions.md).",
               f"- Exempt (global) tables: {', '.join(sorted(exempt)) or 'none'} — still need RLS and a policy.",

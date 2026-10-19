@@ -17,6 +17,14 @@ What it does, deterministically:
   * candidate-bullets.md — for every supported JD must-have (then nice-to-have), the supporting
     master lines quoted VERBATIM with their ids. The script rewrites nothing; the llm step does, and
     scripts/check_traceability.py proves every bullet it writes still traces.
+--draft-only --final tailored-resume.md: no model step — the tailored résumé is assembled from master lines
+quoted verbatim with their ids (Summary = the master's summary lines; Selected experience = the lines
+that support JD keywords, must-haves first, under the master's own role headers; Skills = supported JD
+keywords without figures, each citing its lines; Education = the master's education lines), so
+check_traceability.py passes by construction. Labelled as a draft.
+--existing tailored.md --final tailored-resume.md: a résumé you already tailored is kept verbatim and
+extended — every supported JD keyword whose master lines it does not cite yet gets one verbatim, cited
+bullet under "Additions for this JD" — so the trace gate checks your text and the additions together.
 Exit 1 on a missing/empty file or a master résumé without MR-L ids. Stdlib only, offline.
 """
 from __future__ import annotations
@@ -28,6 +36,7 @@ import sys
 from pathlib import Path
 
 MR_LINE_RE = re.compile(r"^\s*(MR-L\d+)\s*\|\s*(.*)$")
+TBD_RESUME = "[TO BE BASELINED — owner: Candidate]"
 NICE_RE = re.compile(r"nice[- ]to[- ]have|preferred|a plus|is a plus|ideally|bonus|desirable|nice to", re.I)
 MUST_RE = re.compile(r"\bmust\b|\brequired\b|\brequire[sd]?\b|\bminimum\b", re.I)
 LABEL_RE = re.compile(r"^(must[- ]haves?|nice[- ]to[- ]haves?|required|preferred|requirements?|qualifications?|"
@@ -322,6 +331,77 @@ def write_bullets(rows: list[dict], master: list[tuple[str, str]], path: Path) -
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def master_layout(path: str) -> tuple[dict[str, str], dict[str, str]]:
+    """id -> enclosing '## ' section title, id -> enclosing '### ' role header (or '')."""
+    section, role, sec_of, role_of = "", "", {}, {}
+    for raw in read(path).splitlines():
+        if raw.startswith("## "):
+            section, role = raw[3:].strip(), ""
+        elif raw.startswith("### "):
+            role = raw[4:].strip()
+        m = MR_LINE_RE.match(raw)
+        if m:
+            sec_of[m.group(1)], role_of[m.group(1)] = section, role
+    return sec_of, role_of
+
+
+CITED_RE = re.compile(r"\[(MR-L\d+(?:\s*,\s*MR-L\d+)*)\]")
+DRAFT_LABEL = ("<!-- Script draft: the model step was not run (draft only). Every line is a master-résumé line quoted "
+               "verbatim with its id; reword it yourself, keeping the [MR-Lnn] ids. -->")
+
+
+def assemble_draft(rows: list[dict], master: list[tuple[str, str]], master_path: str, jd_title: str) -> str:
+    by_id = dict(master)
+    sec_of, role_of = master_layout(master_path)
+    L = [f"# Tailored résumé — {jd_title}", "", DRAFT_LABEL, "", "## Summary", ""]
+    summary = [mid for mid, _ in master if sec_of.get(mid, "").lower().startswith("summary")]
+    L += [f"- {by_id[mid]} [{mid}]" for mid in summary] or [f"- {TBD_RESUME}"]
+    picked: list[str] = []
+    for weight in ("must", "nice"):
+        for r in rows:
+            if r["weight"] == weight and r["present_in_master"] == "yes":
+                for mid in r["master_line_ids"].split(";"):
+                    if mid not in picked and role_of.get(mid):
+                        picked.append(mid)
+    L += ["", "## Selected experience", ""]
+    roles = list(dict.fromkeys(role_of[m] for m, _ in master if m in picked))
+    for role in roles:
+        L += [f"### {role}", ""] + [f"- {by_id[m]} [{m}]" for m, _ in master if m in picked and role_of[m] == role] + [""]
+    if not roles:
+        L += [f"- {TBD_RESUME}", ""]
+    L += ["## Skills", ""]
+    skills = [r for r in rows if r["present_in_master"] == "yes" and not re.search(r"\d", r["jd_keyword"])]
+    L += [f"- {r['jd_keyword']} [{', '.join(r['master_line_ids'].split(';')[:2])}]" for r in skills] or [f"- {TBD_RESUME}"]
+    edu = [mid for mid, _ in master if sec_of.get(mid, "").lower().startswith("education")]
+    L += ["", "## Education and certifications", ""] + ([f"- {by_id[m]} [{m}]" for m in edu] or [f"- {TBD_RESUME}"])
+    return "\n".join(L) + "\n"
+
+
+def extend_existing(existing: str, rows: list[dict], master: list[tuple[str, str]]) -> tuple[str, list[str]]:
+    by_id = dict(master)
+    cited = set()
+    for m in CITED_RE.finditer(existing):
+        cited |= {i.strip() for i in m.group(1).split(",")}
+    adds, keys = [], []
+    for weight in ("must", "nice"):
+        for r in rows:
+            if r["weight"] != weight or r["present_in_master"] != "yes":
+                continue
+            ids = r["master_line_ids"].split(";")
+            if cited & set(ids):
+                continue
+            mid = ids[0]
+            if mid not in {a[0] for a in adds}:
+                adds.append((mid, r["jd_keyword"]))
+            keys.append(r["jd_keyword"])
+    out = existing.rstrip("\n") + "\n"
+    if adds:
+        out += ("\n## Additions for this JD\n\n<!-- Verbatim master lines for JD keywords your résumé does not cite yet; "
+                "move each into place and reword, keeping the id. -->\n\n")
+        out += "\n".join(f"- {by_id[mid]} [{mid}]" for mid, _ in adds) + "\n"
+    return out, keys
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="JD keyword → master-résumé evidence map (truth-locked, no rewriting)")
     ap.add_argument("--jd", required=True, help="job description text file")
@@ -329,6 +409,9 @@ def main() -> int:
     ap.add_argument("--keyword-map", required=True, help="output CSV")
     ap.add_argument("--gap-list", required=True, help="output Markdown")
     ap.add_argument("--bullets", required=True, help="output Markdown (verbatim supporting lines)")
+    ap.add_argument("--final", default="", help="tailored résumé path (written with --draft-only or --existing)")
+    ap.add_argument("--draft-only", action="store_true", help="no model step: assemble --final from verbatim master lines")
+    ap.add_argument("--existing", default="", help="a résumé you already tailored, to check and extend for this JD")
     a = ap.parse_args()
     jd = read(a.jd)
     master = load_master(a.master)
@@ -339,6 +422,13 @@ def main() -> int:
     write_map(rows, Path(a.keyword_map))
     write_gaps(rows, Path(a.gap_list))
     write_bullets(rows, master, Path(a.bullets))
+    if a.existing and a.final:
+        text, missing = extend_existing(read(a.existing), rows, master)
+        Path(a.final).write_text(text, encoding="utf-8")
+        print(f"existing résumé kept; {len(missing)} supported JD keyword(s) it did not cite: {', '.join(missing) or 'none'}")
+    elif a.draft_only and a.final:
+        title = next((ln.strip() for ln in jd.splitlines() if ln.strip()), "role")[:100]
+        Path(a.final).write_text(assemble_draft(rows, master, a.master, title), encoding="utf-8")
     n_yes = sum(r["present_in_master"] == "yes" for r in rows)
     print(f"{len(rows)} JD keywords: {n_yes} supported, {len(rows) - n_yes} unsupported; "
           f"{len(master)} master lines; wrote {a.keyword_map}, {a.gap_list}, {a.bullets}")

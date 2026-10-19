@@ -14,9 +14,18 @@
       "checks": [
         "exit:0",
         "exists:review.json",
-        {"file": "review.md", "check": "sections:[\"Summary\",\"Blocking\",\"Non-blocking\",\"Tests\",\"Files\"]"},
-        {"file": "review.md", "check": "contains:\"Verdict: **PASS**\""},
-        {"file": "review.md", "check": "contains:\"src/cart/coupon.ts:15\""}
+        {
+          "file": "review.md",
+          "check": "sections:[\"Summary\",\"Blocking\",\"Non-blocking\",\"Tests\",\"Files\"]"
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"Verdict: **PASS**\""
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"src/cart/coupon.ts:15\""
+        }
       ]
     },
     {
@@ -43,9 +52,18 @@
       },
       "checks": [
         "exit:1",
-        {"file": "review.md", "check": "contains:\"Verdict: **BLOCK**\""},
-        {"file": "review.md", "check": "contains:\"app/reports/export.py:8\""},
-        {"file": "review.md", "check": "contains:\"AKIA[redacted]\""}
+        {
+          "file": "review.md",
+          "check": "contains:\"Verdict: **BLOCK**\""
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"app/reports/export.py:8\""
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"AKIA[redacted]\""
+        }
       ]
     },
     {
@@ -62,9 +80,65 @@
       },
       "checks": [
         "exit:0",
-        {"file": "review.md", "check": "contains:\"0 blocking, 2 warning, 0 info\""},
-        {"file": "review-two-axis.md", "check": "sections:[\"Standards\",\"Spec\",\"Summary\"]"},
-        {"file": "review-two-axis.md", "check": "no_unowned_tbd"}
+        {
+          "file": "review.md",
+          "check": "contains:\"0 blocking, 2 warning, 0 info\""
+        },
+        {
+          "file": "review-two-axis.md",
+          "check": "sections:[\"Standards\",\"Spec\",\"Summary\"]"
+        },
+        {
+          "file": "review-two-axis.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "First PR of the new loyalty module — review it before I merge.",
+      "expected": [
+        "Reviews the two new files; 0 blocking; tests changed alongside the source; verdict PASS"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-new-module.patch"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "review.md",
+          "check": "contains:\"Verdict: **PASS** — 0 blocking, 0 warning, 0 info.\""
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"Lines added / removed | 28 / 0\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Review this change to the existing coupon code against our team rules.",
+      "expected": [
+        "Applies the team rules file (TODO downgraded to warning, missing tests blocking) to a change of existing code; debug leftover and TODO are non-blocking warnings; verdict PASS"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-ok.patch",
+        "rules": "evals/fixtures/rules.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "review.md",
+          "check": "contains:\"Verdict: **PASS** — 0 blocking, 2 warning, 0 info.\""
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"CR-DEBUG\""
+        },
+        {
+          "file": "review.json",
+          "check": "contains:\"CR-TODO\""
+        }
       ]
     }
   ]

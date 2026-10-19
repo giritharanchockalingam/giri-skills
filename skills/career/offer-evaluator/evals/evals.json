@@ -76,6 +76,29 @@
         "exit:0",
         "exists:comparison.json"
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "I'm between roles and hold two offers — compare them; there's no current package.",
+      "expected": [
+        "Both offers computed; no delta-vs-current table because there is no Current row; COL adjustment only from the supplied indices"
+      ],
+      "inputs": {
+        "offers": "evals/fixtures/offers-no-current.csv",
+        "col": "Austin TX=108,Remote=100",
+        "base_location": "Remote"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "comparison.md",
+          "check": "contains:\"| Offer A | Austin TX |\""
+        },
+        {
+          "file": "comparison.json",
+          "check": "contains:\"annualized_total\""
+        }
+      ]
     }
   ]
 }

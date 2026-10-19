@@ -99,6 +99,36 @@
           "check": "contains:\"Gate: FAIL\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We retrofitted tenancy onto our app in a later migration. Audit the existing migrations and check our role matrix against them.",
+      "expected": [
+        "projects counts as tenant-scoped via the later alter table add column and index; project_exports is dropped and not audited; tenant_members key added by alter table counts; matrix resource tasks has no table; policies generated from the team's matrix"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-existing",
+        "rbac": "evals/fixtures/rbac-existing.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "audit.csv",
+          "check": "contains:\"projects,0001_projects.sql,true,true,true,2,false,ok,,0002_tenancy.sql\""
+        },
+        {
+          "file": "audit.md",
+          "check": "contains:\"`tasks` is in the matrix but no migration creates it\""
+        },
+        {
+          "file": "audit.md",
+          "check": "sections:[\"Altered by later migrations\",\"RBAC coverage\"]"
+        },
+        {
+          "file": "policies.sql",
+          "check": "contains:\"create policy projects_delete_admin_admin on public.projects\""
+        }
+      ]
     }
   ]
 }

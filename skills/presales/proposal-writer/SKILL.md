@@ -13,19 +13,28 @@ metadata:
       - {name: discovery, type: md, required: false, from: "discovery pack from discovery-interview (pain matrix is quoted into section 2)"}
       - {name: estimate, type: md, required: false, from: "estimate memo from effort-estimator (bottom line is quoted into pricing)"}
       - {name: value_case, type: md, required: false, from: "value-case.md from value-case-builder (bottom line is quoted into objectives)"}
+      - {name: existing, type: md, required: false, from: "a proposal draft the team already wrote; redlined against the win themes and inputs (storyline kept), no model step"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model sharpen step: the assembled draft becomes proposal-final.md"}
     run:
-      - {step: assemble, kind: script, cmd: "python3 -I scripts/assemble.py {win_themes} --library assets/section-library.md [--discovery {discovery}] [--estimate {estimate}] [--value-case {value_case}] --out {out}/proposal.md --placeholders {out}/placeholders.csv --sources {out}/sources.md"}
-      - {step: sharpen, kind: llm, template: assets/proposal-final-template.md, context: ["{out}/proposal.md", "{out}/sources.md", "{out}/placeholders.csv", "references/proposal-method.md"], out: "{out}/proposal-final.md"}
+      - {step: assemble, kind: script, cmd: "python3 -I scripts/assemble.py {win_themes} --library assets/section-library.md [--discovery {discovery}] [--estimate {estimate}] [--value-case {value_case}] --out {out}/proposal.md --placeholders {out}/placeholders.csv --sources {out}/sources.md --final {out}/proposal-final.md {draft_only} [--existing {existing}] --redline {out}/proposal-redline.md"}
+      - {step: sharpen, kind: llm, template: assets/proposal-final-template.md, context: ["{out}/proposal.md", "{out}/sources.md", "{out}/placeholders.csv", "references/proposal-method.md"], out: "{out}/proposal-final.md", skip_if_present: [existing, draft_only]}
     outputs:
       - {path: "{out}/proposal.md", checks: [exists, sections:["Executive summary","Understanding of your needs","Scope and deliverables","Risks and assumptions","Pricing","Why"], numbers_trace_to:"{out}/sources.md"]}
       - {path: "{out}/placeholders.csv", checks: [exists, csv:[placeholder,section,owner]]}
       - {path: "{out}/proposal-final.md", checks: [exists, sections:["Executive summary","Scope and deliverables","Pricing","Why"], no_unowned_tbd, numbers_trace_to:"{out}/sources.md"]}
+    modes:
+      new: {case: agent-mode-new, bring: "win themes, plus discovery pack and estimate memo"}
+      existing: {case: agent-mode-existing, bring: "your team's proposal draft plus the win themes and inputs"}
 ---
 
 # proposal-writer
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/proposal-writer --input <name>=<value> … --out <dir>` (see `--explain presales/proposal-writer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — win themes (and the discovery pack, estimate memo, value case when you have them) are assembled into a proposal on the section library; the model step sharpens it, or with `draft_only` the assembled draft is final. Every number traces to an input.
+- **Existing** — add `existing` (your team's draft): it is redlined against the library and the win themes — sections kept, missing ones added from the inputs, the executive summary sharpened where a theme is missing — and every figure no input backs is replaced by an owned marker in `proposal-final.md` and listed in `proposal-redline.md`.
 
 ## When to use
 - "Write the proposal for <client> based on the discovery synthesis and estimate."

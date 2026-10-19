@@ -10,7 +10,9 @@ metadata:
   agent:
     inputs:
       - {name: target, type: path, required: true, from: "repo root (created if absent); existing workflows are kept, never overwritten"}
+      - {name: seed, type: dir, required: false, from: "evals/demos only: an existing repo layout copied to target first, so the example is never written to (evals/fixtures/repo-existing-ci)"}
     run:
+      - {step: seed, kind: script, cmd: "python3 -I scripts/seed_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
       - {step: install, kind: script, cmd: "python3 -I scripts/install_ci.py --target {target} --report-json {out}/ci-report.json --report-md {out}/ci-report.md"}
     outputs:
       - {path: "{out}/ci-report.json", checks: [exists, json, contains:"jobs_found"]}
@@ -18,12 +20,19 @@ metadata:
       - {path: "{target}/.github/workflows/ci.yml", checks: [exists, yaml]}
       - {path: "{target}/.github/workflows/preview.yml", checks: [exists, yaml]}
       - {path: "{target}/.github/workflows/prod.yml", checks: [exists, yaml]}
+    modes:
+      new: {case: agent-happy-path, bring: "an empty or brand-new repo folder"}
+      existing: {case: agent-mode-existing, bring: "your repo with its current workflows and package.json"}
 ---
 
 # ci-cd-vercel-github
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The install step exits 1 when a kept (customised) workflow lacks a required job, because branch protection depends on those check names; merge the missing stage from `assets/workflows/` and re-run.
+
+## Starting points
+- **New** — point `target` at an empty folder: all three workflows are written from `assets/workflows/` and validated.
+- **Existing** — point `target` at your repo: customised workflows are kept and validated job by job, missing ones are added, and every `npm run` they call is checked against your package.json.
 
 ## When to use
 - New pipeline, pipeline change, flaky/failing workflow, adding a stage (e2e, RLS lint, coverage gate), release/rollback procedure.

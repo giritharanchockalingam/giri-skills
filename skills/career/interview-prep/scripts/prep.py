@@ -17,6 +17,11 @@ Writes, deterministically:
   * questions-to-ask.md — the question sets for the interviewers of this round type;
   * 90-day-plan.md — the plan skeleton with JD-derived focus headings; every unknown is
     `[TO BE BASELINED — owner: …]` with a named owner.
+Next round (--previous-round debrief.md: your notes from the earlier round): the SB ids you told and the
+questions they asked (lines ending in `?`) are read; prep-pack.md gains "Since the last round" — stories
+already told (do not retell them to the same people), competencies where every story was told (bring
+a fresh story or new depth), competencies not shown yet, and the questions already asked (expect
+follow-ups) — and each told story is marked in "Stories by competency".
 Exit 1 on a missing/empty file, a story bank without SB ids, or a competency map without C-codes.
 Stdlib only, offline.
 """
@@ -169,10 +174,11 @@ def round_questions(qbank: str, round_key: str) -> tuple[list[str], list[list[st
     return header, rows, extra
 
 
-def write_pack(rows, stories, jd, round_key, qbank, path: Path, jd_title: str) -> None:
+def write_pack(rows, stories, jd, round_key, qbank, path: Path, jd_title: str, debrief: str = "") -> None:
     by_code = {r["competency"]: r for r in rows}
     story_by_id = {s["id"]: s for s in stories}
     gaps = [r for r in rows if r["status"] == "GAP"]
+    since, told = since_last_round(debrief, rows, stories) if debrief else ([], set())
     L = [f"# Prep pack — {jd_title} — {round_key} round", "",
          "TRUTH LOCK: every story below is quoted from the story bank by id. A competency marked GAP has no "
          "story; prepare an honest 'closest experience and how I would approach it' answer or add a true "
@@ -192,7 +198,8 @@ def write_pack(rows, stories, jd, round_key, qbank, path: Path, jd_title: str) -
             continue
         for sid in r["story_ids"].split(";"):
             s = story_by_id[sid]
-            L.append(f"**[{sid}] {s['title']}** (tagged {', '.join(s['codes'])})")
+            L.append(f"**[{sid}] {s['title']}** (tagged {', '.join(s['codes'])})"
+                     + (" — told in the last round" if sid in told else ""))
             L.append("")
             L += [f"- {ln}" for ln in s["lines"]]
             L.append("")
@@ -212,6 +219,7 @@ def write_pack(rows, stories, jd, round_key, qbank, path: Path, jd_title: str) -
         L.append("| " + " | ".join(q) + f" | {link} |")
     if extra:
         L += [""] + extra
+    L += since
     L += ["", "## Gaps and how to handle them honestly", ""]
     if not gaps:
         L.append("None — every competency has at least one story in the bank.")
@@ -221,6 +229,36 @@ def write_pack(rows, stories, jd, round_key, qbank, path: Path, jd_title: str) -
                  f"experience and how you would approach it. Owner: user (add a true story or accept the gap).")
     L.append("")
     path.write_text("\n".join(L), encoding="utf-8")
+
+
+SB_RE = re.compile(r"\bSB-\d+\b")
+
+
+def since_last_round(debrief: str, rows, stories) -> tuple[list[str], set[str]]:
+    known = {s_["id"] for s_ in stories}
+    told = [x for x in dict.fromkeys(SB_RE.findall(debrief))]
+    unknown = [x for x in told if x not in known]
+    told_set = {x for x in told if x in known}
+    asked = [re.sub(r"^[-*•\s]*(?:asked:\s*)?", "", ln.strip(), flags=re.I) for ln in debrief.splitlines()
+             if ln.strip().endswith("?")]
+    L = ["", "## Since the last round", "",
+         f"Stories already told: {', '.join(sorted(told_set)) or 'none recorded'} — do not retell them to the same "
+         "interviewers; reference them in one line and go deeper or use another story."]
+    if unknown:
+        L.append(f"Not in the story bank (check the id): {', '.join(unknown)}.")
+    spent = [r for r in rows if r["status"] == "mapped" and set(r["story_ids"].split(";")) <= told_set]
+    fresh = [r for r in rows if r["status"] == "mapped" and r["in_jd"] == "yes"
+             and not set(r["story_ids"].split(";")) & told_set]
+    L += ["", "| Competency | Situation | Stories |", "|---|---|---|"]
+    L += [f"| {r['competency']} {r['name']} | every story already told — bring new depth | {r['story_ids'].replace(';', ', ')} |"
+          for r in spent]
+    L += [f"| {r['competency']} {r['name']} | in the JD, not shown yet — lead with it | {r['story_ids'].replace(';', ', ')} |"
+          for r in fresh]
+    if not spent and not fresh:
+        L.append("| — | nothing spent, nothing outstanding | |")
+    L += ["", "Questions already asked (expect follow-ups, keep answers consistent):", ""]
+    L += [f"- {q}" for q in asked] or ["- none recorded"]
+    return L, told_set
 
 
 def write_ask(ask_text: str, round_key: str, path: Path) -> None:
@@ -294,6 +332,7 @@ def main() -> int:
     ap.add_argument("--ask", default="references/questions-to-ask.md")
     ap.add_argument("--plan-template", default="assets/90-day-plan.md")
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--previous-round", default="", help="your debrief notes from the earlier round")
     a = ap.parse_args()
     jd = read(a.jd)
     stories = load_stories(read(a.stories))
@@ -304,7 +343,8 @@ def main() -> int:
     jd_title = next((ln.strip() for ln in jd.splitlines() if ln.strip()), "role")[:100]
     rows = build_map(comps, stories, jd)
     write_map(rows, out / "competency-map.csv")
-    write_pack(rows, stories, jd, a.round, qbank, out / "prep-pack.md", jd_title)
+    write_pack(rows, stories, jd, a.round, qbank, out / "prep-pack.md", jd_title,
+               read(a.previous_round) if a.previous_round else "")
     write_ask(ask, a.round, out / "questions-to-ask.md")
     write_plan(plan, rows, jd_title, jd, out / "90-day-plan.md")
     n_gap = sum(r["status"] == "GAP" for r in rows)

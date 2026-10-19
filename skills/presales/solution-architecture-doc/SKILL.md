@@ -11,17 +11,25 @@ metadata:
     inputs:
       - {name: components, type: json, required: true, from: "components.json: {system, actors, containers:[{id,name,tech,responsibility}], external_systems, integrations:[{from,to,pattern,protocol,data,wave}], nfrs:[{category,requirement,target,measure}]} (layout: evals/fixtures/components.json)"}
       - {name: client, type: string, required: false, default: "<Client>"}
+      - {name: current, type: json, required: false, from: "current-state components.json (same layout); adds the change from current state and transition ADR rows"}
     run:
-      - {step: arch, kind: script, cmd: "python3 -I scripts/arch_doc.py {components} --out {out}/architecture.md --nfr {out}/nfr.csv --client {client}"}
+      - {step: arch, kind: script, cmd: "python3 -I scripts/arch_doc.py {components} --out {out}/architecture.md --nfr {out}/nfr.csv --client {client} [--current {current}]"}
     outputs:
       - {path: "{out}/architecture.md", checks: [exists, mermaid_parses, sections:["System context","Container view","Integration map","Non-functional requirements","Decision log"]]}
       - {path: "{out}/nfr.csv", checks: [exists, csv:[category,requirement,target,measure], csv_rows:target!empty]}
+    modes:
+      new: {case: agent-happy-path, bring: "the target components, integrations and NFRs"}
+      existing: {case: agent-mode-existing, bring: "the target design plus the current-state estate"}
 ---
 
 # solution-architecture-doc
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/solution-architecture-doc --input <name>=<value> … --out <dir>` (see `--explain presales/solution-architecture-doc`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — the target components become an architecture document: C4 context and container diagrams, integration map by pattern, waves, NFR table and a decision-log stub.
+- **Existing** — add `current` (the estate as it runs today, same layout): the document gains a change view — containers kept, added, retired or re-platformed, integrations added, retired or re-patterned — and a decision-log row for every retirement and re-platform.
 
 ## When to use
 - "Produce the target architecture for <client>'s <initiative>."

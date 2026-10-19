@@ -1,0 +1,216 @@
+{
+  "_note": "fictional fixture \u2014 value-model.json of the Q2 Northwind value case (before B-03 was quantified and the B-01 volume was re-baselined), for the value-case-builder evals",
+  "as_of": "2026-06-30",
+  "years": 5,
+  "discount_rate": 0.08,
+  "p80_cost_uplift": 0.15,
+  "sensitivity_pct": 20,
+  "discount_rate_pct": 8.0,
+  "p80_cost_uplift_pct": 15.0,
+  "benefits": [
+    {
+      "benefit_id": "B-01",
+      "name": "Fewer split shipments",
+      "driver": "Margin leakage on online orders",
+      "unit_value": 18.0,
+      "units_per_year": 20000.0,
+      "ramp_pct": [
+        25.0,
+        75.0,
+        100.0
+      ],
+      "ramp_tbd": false,
+      "source": "VP Digital dashboard export 2026-08 p.3",
+      "in_headline": true,
+      "yearly": [
+        0.0,
+        90000.0,
+        270000.0,
+        360000.0,
+        360000.0,
+        360000.0
+      ],
+      "total": 1440000.0
+    },
+    {
+      "benefit_id": "B-02",
+      "name": "Integration run-cost reduction",
+      "driver": "Platform licence and run team",
+      "unit_value": 310000.0,
+      "units_per_year": 1.0,
+      "ramp_pct": [
+        50.0,
+        100.0,
+        100.0
+      ],
+      "ramp_tbd": false,
+      "source": "CIO licence schedule 2026-07",
+      "in_headline": true,
+      "yearly": [
+        0.0,
+        155000.0,
+        310000.0,
+        310000.0,
+        310000.0,
+        310000.0
+      ],
+      "total": 1395000.0
+    }
+  ],
+  "costs": [
+    {
+      "cost_id": "C-01",
+      "name": "Delivery (P50)",
+      "one_time": 640000.0,
+      "run_rate_per_year": null,
+      "start_year": 0,
+      "source": "estimate-memo v0.3",
+      "in_headline": true,
+      "yearly": [
+        640000.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "total": 640000.0
+    },
+    {
+      "cost_id": "C-02",
+      "name": "Target platform licence",
+      "one_time": null,
+      "run_rate_per_year": 95000.0,
+      "start_year": 1,
+      "source": "vendor quote Q-2291",
+      "in_headline": true,
+      "yearly": [
+        0.0,
+        95000.0,
+        95000.0,
+        95000.0,
+        95000.0,
+        95000.0
+      ],
+      "total": 475000.0
+    },
+    {
+      "cost_id": "C-03",
+      "name": "Dual run (year 1 only)",
+      "one_time": 120000.0,
+      "run_rate_per_year": null,
+      "start_year": 1,
+      "source": "TCO file tco.csv",
+      "in_headline": true,
+      "yearly": [
+        0.0,
+        120000.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "total": 120000.0
+    },
+    {
+      "cost_id": "C-04",
+      "name": "Change management",
+      "one_time": 45000.0,
+      "run_rate_per_year": null,
+      "start_year": 0,
+      "source": "[TO BE BASELINED \u2014 owner: Finance lead]",
+      "in_headline": true,
+      "yearly": [
+        45000.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "total": 45000.0
+    }
+  ],
+  "yearly": [
+    {
+      "year": 0,
+      "benefits": 0.0,
+      "costs": 685000.0,
+      "net": -685000.0,
+      "cumulative": -685000.0
+    },
+    {
+      "year": 1,
+      "benefits": 245000.0,
+      "costs": 215000.0,
+      "net": 30000.0,
+      "cumulative": -655000.0
+    },
+    {
+      "year": 2,
+      "benefits": 580000.0,
+      "costs": 95000.0,
+      "net": 485000.0,
+      "cumulative": -170000.0
+    },
+    {
+      "year": 3,
+      "benefits": 670000.0,
+      "costs": 95000.0,
+      "net": 575000.0,
+      "cumulative": 405000.0
+    },
+    {
+      "year": 4,
+      "benefits": 670000.0,
+      "costs": 95000.0,
+      "net": 575000.0,
+      "cumulative": 980000.0
+    },
+    {
+      "year": 5,
+      "benefits": 670000.0,
+      "costs": 95000.0,
+      "net": 575000.0,
+      "cumulative": 1555000.0
+    }
+  ],
+  "headline_valid": true,
+  "totals": {
+    "benefits": 2835000.0,
+    "costs": 1280000.0,
+    "net": 1555000.0,
+    "npv": 1029018.15,
+    "p80_cost": 1472000.0,
+    "payback_month": 28
+  },
+  "sensitivity": [
+    {
+      "benefit_id": "B-01",
+      "name": "Fewer split shipments",
+      "total": 1440000.0,
+      "net_minus": 1267000.0,
+      "net_base": 1555000.0,
+      "net_plus": 1843000.0,
+      "break_even_factor": -0.08,
+      "break_even_unit_value": null,
+      "holds_at_zero": true
+    },
+    {
+      "benefit_id": "B-02",
+      "name": "Integration run-cost reduction",
+      "total": 1395000.0,
+      "net_minus": 1276000.0,
+      "net_base": 1555000.0,
+      "net_plus": 1834000.0,
+      "break_even_factor": -0.11,
+      "break_even_unit_value": null,
+      "holds_at_zero": true
+    }
+  ],
+  "excluded_from_headline": [],
+  "unsourced": [
+    "C-04"
+  ],
+  "client": "Northwind"
+}

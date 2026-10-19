@@ -12,17 +12,26 @@ metadata:
       - {name: target, type: path, required: true, from: "Next.js repo root (created if absent)"}
       - {name: project, type: string, required: false, from: "project name for docs/observability.md (default: target dir name)"}
       - {name: dry_run, type: flag, required: false, flag: "--dry-run", from: "true to report only and write nothing"}
+      - {name: seed, type: dir, required: false, from: "evals/demos only: an existing repo layout copied to target first, so the example is never written to (evals/fixtures/repo-existing)"}
     run:
+      - {step: seed, kind: script, cmd: "python3 -I scripts/seed_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
       - {step: install, kind: script, cmd: "python3 -I scripts/install.py --target {target} [--project {project}] {dry_run} --report-json {out}/install-report.json --report-md {out}/install-report.md"}
     outputs:
       - {path: "{out}/install-report.json", checks: [exists, json, contains:"written"]}
       - {path: "{out}/install-report.md", checks: [exists, sections:["Written","Proposed","Env vars","Next steps"]]}
+    modes:
+      new: {case: agent-happy-path, bring: "an empty or brand-new app folder"}
+      existing: {case: agent-mode-existing, bring: "your running app's repo, logger and env file included"}
 ---
 
 # observability-setup
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten: a differing file gets a `.proposed` twin listed in the report for a manual merge.
+
+## Starting points
+- **New** — point `target` at an empty folder: logger, health routes, alert rules, SLO doc and `.env.example` are written.
+- **Existing** — point `target` at your repo: files you already have are never overwritten (a different one gets a `.proposed` copy to merge), missing env vars are appended to your `.env.example`, and every `console.*` call in your source is listed for replacement.
 
 ## When to use
 - First production release; after an incident with "we had no idea"; before an SLA commitment.

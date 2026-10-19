@@ -92,6 +92,63 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Build a client brief on Northwind Pumps from my notes before the discovery call; no model step.",
+      "expected": [
+        "brief.md has the template sections, every item from the notes with its [Sn] or notes-line citation; bottom line is the first three cited items; so-what left as owned markers"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps",
+        "purpose": "discovery",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief.md",
+          "check": "contains:\"Script draft — the model step was not run\""
+        },
+        {
+          "file": "brief.md",
+          "check": "contains:\"| S3 | https://example.com/northwind/cio-interview |\""
+        },
+        {
+          "file": "brief.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Refresh the Northwind Pumps brief from my new notes; here is the brief we wrote in April.",
+      "expected": [
+        "Lines already in the April brief are carried; the ERP news, CIO and quote are NEW; the 2023 CRM news source is listed as not re-confirmed"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps",
+        "purpose": "discovery",
+        "previous": "evals/fixtures/brief-previous.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief-skeleton.md",
+          "check": "sections:[\"Changes since the last brief\",\"Sources\"]"
+        },
+        {
+          "file": "brief-skeleton.md",
+          "check": "contains:\"NEW since last brief — verify and cite\""
+        },
+        {
+          "file": "brief.md",
+          "check": "contains:\"Not re-confirmed: https://example.com/news/northwind-crm-2023\""
+        }
+      ]
     }
   ]
 }

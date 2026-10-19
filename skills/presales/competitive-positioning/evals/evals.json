@@ -102,6 +102,36 @@
           "check": "contains:\"No wedge found\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Refresh the Northwind battle card: here is today's intel and the claims we used last quarter.",
+      "expected": [
+        "Changes since the last card: 'Lower blended rate' re-rated 2 → 4 and 'No certified Apigee engineers' withdrawn; wedges and landmines recomputed on current evidence"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities.csv",
+        "theirs": "evals/fixtures/their-claims.csv",
+        "concerns": "evals/fixtures/concerns.csv",
+        "client": "Northwind",
+        "alternative": "Incumbent SI",
+        "previous_claims": "evals/fixtures/their-claims-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "battle-card.md",
+          "check": "sections:[\"Changes since the last card\",\"Wedge\",\"Landmines\"]"
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"| Lower blended rate | re-rated | 2 → 4 |\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"| No certified Apigee engineers | withdrawn (not in the current intel) | 1 → — |\""
+        }
+      ]
     }
   ]
 }

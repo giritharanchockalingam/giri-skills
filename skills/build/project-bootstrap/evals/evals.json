@@ -80,6 +80,34 @@
         "exists:proj/CLAUDE.md",
         "exists:proj/docs/HANDOFF.md"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "This repo already has a CLAUDE.md and docs/SPEC.md. Bring it up to the bootstrap standard without overwriting them.",
+      "expected": [
+        "CLAUDE.md and docs/SPEC.md are kept verbatim; the rest of the skeleton is written; the sections each kept file lacks (e.g. SPEC Risks, CLAUDE Gates) are reported as gaps"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "seed": "evals/fixtures/repo-existing",
+        "name": "tidewater-booking"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/.github/workflows/ci.yml",
+        {
+          "file": "proj/docs/SPEC.md",
+          "check": "contains:\"instead of calling the harbour office\""
+        },
+        {
+          "file": "bootstrap-report.json",
+          "check": "contains:\"Non-functional requirements\""
+        },
+        {
+          "file": "scaffold.log",
+          "check": "contains:\"gap    CLAUDE.md: missing sections — Stack conventions, Gates, Where things live, Do not\""
+        }
+      ]
     }
   ]
 }

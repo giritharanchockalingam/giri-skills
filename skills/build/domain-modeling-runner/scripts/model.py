@@ -4,6 +4,7 @@
     python3 -I scripts/model.py --entities entities.csv --relationships relationships.csv \
         [--glossary glossary.csv] [--title "Ordering"] --md model.md --json model.json
     python3 -I scripts/model.py --check model.json      # contract check on a written model.json
+    ... --baseline current-model.json                     # existing model: what changes, and its migration impact
 
 Inputs
   entities.csv       entity, attribute, type, required, notes   (one row per attribute)
@@ -23,6 +24,12 @@ Outputs: model.md (Diagram with a ```mermaid erDiagram, Entities, Relationships,
 Open questions) and model.json. The glossary follows the vendored domain-modeling GLOSSARY format
 (**Term**: definition, _Avoid_: synonyms). Mermaid cardinality uses the text aliases (1, 0+) so the
 diagram carries no unbalanced brace markers; the title block uses Mermaid front matter.
+
+Existing model (--baseline): a model.json this script wrote earlier for the model as it is today. The new
+model is compared with it — entities, attributes (type, required) and relationships (cardinality, join)
+added, removed or changed — and each breaking change gets a migration-impact line (drop = data loss,
+new required attribute = default/backfill, type change = cast, cardinality change = re-key). Rendered
+as "Changes vs current model" in model.md and `changes` in model.json.
 
 Exit codes: 0 valid · 1 validation errors or --check failed · 2 missing/unreadable input or missing
 columns. Stdlib only; writes only --md / --json.
@@ -195,6 +202,99 @@ def build(ent_rows, rel_rows, gloss_rows, title: str, sources: dict) -> dict:
             "glossary": glossary, "invariants": invariants}
 
 
+# ------------------------------------------------------------------ baseline diff
+
+def load_baseline(path: Path) -> dict:
+    if not path.is_file():
+        raise InputError(f"baseline file not found: {path}")
+    try:
+        b = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as e:
+        raise InputError(f"baseline is not valid JSON: {e}") from e
+    if not isinstance(b, dict) or not isinstance(b.get("entities"), list) or not isinstance(b.get("relationships"), list):
+        raise InputError("baseline is not a model.json written by this script (needs entities[] and relationships[])")
+    return b
+
+
+def _rel_key(r: dict) -> tuple:
+    return (norm(r.get("from", "")), norm(r.get("to", "")), norm(r.get("name", "")))
+
+
+def diff_models(base: dict, m: dict, label: str) -> dict:
+    """What changes from the baseline (current) model to the new one, with migration impact."""
+    ch = {"baseline": label, "entities_added": [], "entities_removed": [], "attributes_added": [],
+          "attributes_removed": [], "attributes_changed": [], "relationships_added": [],
+          "relationships_removed": [], "relationships_changed": [], "migration_impact": []}
+    old = {norm(e["name"]): e for e in base["entities"]}
+    new = {norm(e["name"]): e for e in m["entities"]}
+    impact = ch["migration_impact"]
+    for k, e in new.items():
+        if k not in old:
+            ch["entities_added"].append(e["name"])
+    for k, e in old.items():
+        if k not in new:
+            ch["entities_removed"].append(e["name"])
+            impact.append(f"{e['name']} removed: dropping it loses its data — archive or migrate rows first.")
+            continue
+        oa = {a["name"].lower(): a for a in e.get("attributes", [])}
+        na = {a["name"].lower(): a for a in new[k]["attributes"]}
+        for n, a in na.items():
+            if n not in oa:
+                ch["attributes_added"].append({"entity": new[k]["name"], "attribute": a["name"], "required": a["required"]})
+                if a["required"]:
+                    impact.append(f"{new[k]['name']}.{a['name']} added as required: existing rows need a default or a backfill.")
+        for n, a in oa.items():
+            if n not in na:
+                ch["attributes_removed"].append({"entity": e["name"], "attribute": a["name"]})
+                impact.append(f"{e['name']}.{a['name']} removed: readers of this column break and its data is lost.")
+                continue
+            b = na[n]
+            for field in ("type", "required"):
+                if a.get(field) != b.get(field):
+                    ch["attributes_changed"].append({"entity": e["name"], "attribute": a["name"], "field": field,
+                                                     "from": a.get(field), "to": b.get(field)})
+                    if field == "type":
+                        impact.append(f"{e['name']}.{a['name']} type {a.get(field)} -> {b.get(field)}: "
+                                      "migrate with an explicit cast and check existing values fit.")
+                    elif b.get(field):
+                        impact.append(f"{e['name']}.{a['name']} becomes required: backfill nulls before the constraint.")
+    orel = {_rel_key(r): r for r in base["relationships"]}
+    nrel = {_rel_key(r): r for r in m["relationships"] if r["valid"]}
+    for k, r in nrel.items():
+        if k not in orel:
+            ch["relationships_added"].append(f"{r['from']} {r['cardinality']} {r['to']} ({r['name']})")
+    for k, r in orel.items():
+        if k not in nrel:
+            ch["relationships_removed"].append(f"{r.get('from')} {r.get('cardinality')} {r.get('to')} ({r.get('name')})")
+            continue
+        n_ = nrel[k]
+        for field in ("cardinality", "join"):
+            if r.get(field) != n_.get(field):
+                ch["relationships_changed"].append({"relationship": f"{n_['from']} -> {n_['to']} ({n_['name']})",
+                                                    "field": field, "from": r.get(field), "to": n_.get(field)})
+                impact.append(f"{n_['from']} -> {n_['to']} ({n_['name']}) {field} {r.get(field)} -> {n_.get(field)}: "
+                              "re-key the foreign key / join table and migrate existing links.")
+    return ch
+
+
+def render_changes(ch: dict) -> list[str]:
+    attr = lambda a: f"{a['entity']}.{a['attribute']}"  # noqa: E731
+    chg = lambda c: f"{c.get('entity', '') + '.' + c['attribute'] if 'attribute' in c else c['relationship']} " \
+                    f"{c['field']} {c['from']} → {c['to']}"  # noqa: E731
+    rows = [("Entities added", ch["entities_added"]), ("Entities removed", ch["entities_removed"]),
+            ("Attributes added", [attr(a) + (" (required)" if a["required"] else "") for a in ch["attributes_added"]]),
+            ("Attributes removed", [attr(a) for a in ch["attributes_removed"]]),
+            ("Attributes changed", [chg(c) for c in ch["attributes_changed"]]),
+            ("Relationships added", ch["relationships_added"]), ("Relationships removed", ch["relationships_removed"]),
+            ("Relationships changed", [chg(c) for c in ch["relationships_changed"]])]
+    out = ["## Changes vs current model", "", f"Compared with `{ch['baseline']}` (the model as it is today).", "",
+           "| Change | Items |", "|---|---|"]
+    out += [f"| {label} | {_cell('; '.join(xs))} |" for label, xs in rows]
+    out += ["", "Migration impact (owner: Tech lead — plan each in the migration before building):", ""]
+    out += [f"- [ ] {x}" for x in ch["migration_impact"]] or ["- none: the change is additive and optional"]
+    return out + [""]
+
+
 # ------------------------------------------------------------------ render
 
 def mermaid(m: dict) -> str:
@@ -256,6 +356,8 @@ def render_md(m: dict) -> str:
         if g["avoid"]:
             out.append(f"_Avoid_: {', '.join(g['avoid'])}")
         out.append("")
+    if m.get("changes"):
+        out += render_changes(m["changes"])
     out += ["## Open questions", ""]
     if m["errors"]:
         out += ["Errors (must be fixed; the run fails until they are):", ""] + [f"- {e}" for e in m["errors"]] + [""]
@@ -297,6 +399,8 @@ def main() -> int:
     ap.add_argument("--md", dest="md_out", help="write model.md here")
     ap.add_argument("--json", dest="json_out", help="write model.json here")
     ap.add_argument("--check", metavar="MODEL_JSON", help="exit 1 unless a written model.json is valid")
+    ap.add_argument("--baseline", metavar="MODEL_JSON",
+                    help="model.json of the model as it is today; adds what changes and its migration impact")
     a = ap.parse_args()
     if a.check:
         problems = check(Path(a.check))
@@ -314,6 +418,7 @@ def main() -> int:
         ents = read_csv(Path(a.entities), ENTITY_COLS[:4], "entities")
         rels = read_csv(Path(a.relationships), REL_COLS, "relationships")
         gloss = read_csv(Path(a.glossary), GLOSS_COLS[:1], "glossary") if a.glossary else []
+        base = load_baseline(Path(a.baseline)) if a.baseline else None
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -323,6 +428,8 @@ def main() -> int:
     sources = {"entities": Path(a.entities).name, "relationships": Path(a.relationships).name,
                "glossary": Path(a.glossary).name if a.glossary else ""}
     m = build(ents, rels, gloss, a.title.strip() or "Domain model", sources)
+    if base is not None:
+        m["changes"] = diff_models(base, m, Path(a.baseline).name)
     if a.md_out:
         Path(a.md_out).write_text(render_md(m), encoding="utf-8")
     if a.json_out:

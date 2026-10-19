@@ -12,17 +12,25 @@ metadata:
       - {name: spec, type: md, required: true, from: "docs/SPEC.md (or a ticket exported to Markdown)"}
       - {name: section, type: string, required: true, from: "heading text of the SPEC section to plan"}
       - {name: slug, type: string, required: false, from: "plan slug (default: from the heading)"}
+      - {name: repo, type: dir, required: false, from: "root of the existing codebase the plan changes; each named file is marked modify/create and migrations are checked"}
     run:
-      - {step: plan, kind: script, cmd: "python3 -I scripts/plan.py {spec} --section {section} [--slug {slug}] --template assets/plan-template.md --out {out}/plan.md --tasks {out}/tasks.csv"}
+      - {step: plan, kind: script, cmd: "python3 -I scripts/plan.py {spec} --section {section} [--slug {slug}] [--repo {repo}] --template assets/plan-template.md --out {out}/plan.md --tasks {out}/tasks.csv"}
     outputs:
       - {path: "{out}/plan.md", checks: [exists, sections:["Tasks","Gates","Rollback"]]}
       - {path: "{out}/tasks.csv", checks: [exists, csv:[id,task,acceptance,test,rollback,files,size], csv_rows:test!empty, csv_rows:rollback!empty]}
+    modes:
+      new: {case: agent-happy-path, bring: "the SPEC section for a feature not built yet"}
+      existing: {case: agent-mode-existing, bring: "the SPEC section and the repo it changes"}
 ---
 
 # spec-to-plan
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/spec-to-plan --input <name>=<value> … --out <dir>` (see `--explain build/spec-to-plan`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Fields the SPEC does not state come out as `[TO BE BASELINED — owner: ___]`; fill them (or the SPEC) before asking for the approve gate.
+
+## Starting points
+- **New** — the SPEC section becomes a task-gated plan: tasks with acceptance, tests, rollback, files and size; anything the SPEC does not say is an owned TBD.
+- **Existing** — add `repo`: every file a task names is looked up and marked modify or create, a task that edits an applied migration or numbers a new one out of order is flagged in a "Repo check" section before approve.
 
 ## When to use
 - "Plan this feature", "how should we build X", a ticket or SPEC section is handed over for implementation.

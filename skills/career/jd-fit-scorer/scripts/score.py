@@ -11,6 +11,12 @@ Usage:
 
 Profile file format: one skill per line; optional "| YEAR"; "#" comments;
 "!key: value" hard constraints (location, travel_max, comp_floor, clearance).
+
+Existing résumé (--resume master-resume.md): every `MR-Lnn | text` line (or `- bullet` line) of the
+résumé you already have is read as evidence too. A résumé line matches a requirement when it holds
+the requirement's words (share of the requirement's tokens, same threshold), and the evidence column
+cites its line id (e.g. `MR-L13: Consolidated 3 ERP instances…`), so a profile file with only the
+`!` constraints is enough when the résumé carries the skills.
 """
 from __future__ import annotations
 
@@ -52,6 +58,32 @@ def load_profile(path: Path) -> tuple[list[tuple[str, set[str]]], dict[str, str]
         text = line.split("|")[0].strip()
         skills.append((text, tokens(text)))
     return skills, constraints
+
+
+REQ_NOISE = {"must", "have", "has", "had", "required", "require", "requires", "preferred", "nice", "plus", "ideally",
+             "bonus", "desirable", "familiarity", "exposure", "more", "10+", "5+", "15+", "we", "value", "programs",
+             "program", "experience", "lead", "leading", "teams", "team"}
+
+
+def stems(toks: set[str]) -> set[str]:
+    """Crude prefix stems so 'consolidation' meets 'consolidated' (résumé matching only)."""
+    return {t[:6] if len(t) > 6 else t for t in toks}
+
+
+RESUME_LINE_RE = re.compile(r"^\s*(MR-L\d+)\s*\|\s*(.+?)\s*$")
+
+
+def load_resume(path: Path) -> list[tuple[str, set[str]]]:
+    """Résumé lines as evidence: (label, tokens) where label starts with 'MR-Lnn: ' or 'résumé: '."""
+    out = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        m = RESUME_LINE_RE.match(raw)
+        if m:
+            out.append((f"{m.group(1)}: {m.group(2)[:70]}", tokens(m.group(2))))
+        elif re.match(r"^\s*[-*•]\s+\S", raw) and not raw.lstrip().startswith(">"):
+            text = re.sub(r"^\s*[-*•]\s+", "", raw).strip()
+            out.append((f"résumé: {text[:70]}", tokens(text)))
+    return out
 
 
 def bucket(line: str) -> str:
@@ -106,10 +138,15 @@ def match(req: str, skills: list[tuple[str, set[str]]], threshold: float) -> tup
     if not rt:
         return "GAP", 0.0, ""
     best, best_skill = 0.0, ""
+    rcore = stems({t for t in rt if t not in REQ_NOISE and not t.isdigit()})
     for text, st in skills:
         if not st:
             continue
-        overlap = len(rt & st) / len(st)
+        if text.startswith(("MR-L", "résumé: ")):
+            # a résumé line is long: share of the requirement's content words (stemmed) that it holds
+            overlap = len(rcore & stems(st)) / len(rcore) if rcore else 0.0
+        else:
+            overlap = len(rt & st) / len(st)
         if overlap > best:
             best, best_skill = overlap, text
     if best >= 1.0:
@@ -196,12 +233,15 @@ def main() -> int:
     ap.add_argument("--profile", required=True, type=Path, help="profile keyword file")
     ap.add_argument("--threshold", type=float, default=0.5, help="token overlap for PARTIAL (default 0.5)")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of markdown")
+    ap.add_argument("--resume", type=Path, help="your existing résumé (MR-Lnn | lines or bullets) as extra evidence")
     a = ap.parse_args()
-    for p in (a.jd, a.profile):
+    for p in (a.jd, a.profile) + ((a.resume,) if a.resume else ()):
         if not p.exists():
             print(f"error: file not found: {p}", file=sys.stderr)
             return 2
     skills, constraints = load_profile(a.profile)
+    if a.resume:
+        skills += load_resume(a.resume)
     result = score(a.jd.read_text(encoding="utf-8"), skills, constraints, a.threshold)
     print(json.dumps(result, indent=2) if a.json else render(result))
     return 0

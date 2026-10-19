@@ -14,6 +14,11 @@ and airtime numbers (section "orals timing"), so every number in orals-script.md
 likely-questions.md = the standard evaluator questions from the question bank, one question per
 `[TO BE BASELINED` marker in the proposal ("what is the number?"), and one per assumption row.
 No proof line is written for a section that holds no number; it reads `[TO BE BASELINED — owner: Bid manager]`.
+Existing talk track (--talk-track track.md --check out.md): the team's current script, one line per
+speaker turn (`Name: …` or `**Name:** …`), is checked against the proposal and the timing: every figure
+it says that the proposal does not contain is flagged (cut it or source it in the proposal first),
+each speaker's spoken minutes (at 150 words per minute) are compared with the allocated airtime, and
+lines from people not in --speakers are listed. Written to --check; the generated script is unchanged.
 Exit 1 when proposal.md is missing / has no sections, --minutes < 10, or --speakers is empty.
 Stdlib only, offline.
 """
@@ -84,6 +89,53 @@ def bank_questions(path: str) -> list[tuple[str, str, str]]:
     return rows
 
 
+WPM = 150
+SPOKEN_NUM_RE = re.compile(r"(?<![\w.])[$€£]?\d[\d,]*(?:\.\d+)?(?:%|[kKmMbB]\b)?")
+
+
+def spoken_figures(text: str) -> list[str]:
+    """Figures as said, suffix kept ('$2.1M', '6.2%'); same threshold as numbers_in plus k/M/B amounts."""
+    out = []
+    for m in SPOKEN_NUM_RE.finditer(DATE_RE.sub(" ", text)):
+        tok = m.group(0)
+        core = tok.lstrip("$€£").rstrip("%kKmMbB")
+        if tok[0] in "$€£" or tok[-1] in "%kKmMbB" or sig(core) >= 3:
+            out.append(tok)
+    return out
+
+
+TURN_RE = re.compile(r"^\s*(?:[-*]\s*)?\**([A-Z][\w .'-]{0,40}?)\**\s*:\**\s*(.+)$")
+
+
+def check_talk_track(track: str, registry: list[dict], airtime: dict, speakers: list[str]) -> list[str]:
+    known = {r["number"] for r in registry if r["section"] != "orals timing"}
+    words: dict[str, int] = {}
+    untraced, strangers = [], []
+    for n, ln in enumerate(track.splitlines(), 1):
+        m = TURN_RE.match(ln)
+        if not m or ln.lstrip().startswith("#"):
+            continue
+        who, said = m.group(1).strip(), m.group(2)
+        words[who] = words.get(who, 0) + len(said.split())
+        if who not in speakers and who not in strangers:
+            strangers.append(who)
+        untraced += [(n, who, x) for x in spoken_figures(said) if x not in known]
+    L = ["# Talk track check", "", f"Checked against the proposal's number registry and the timed script ({WPM} words per minute).", "",
+         "## Figures not in the proposal", "| Line | Speaker | Figure | Action |", "|---|---|---|---|"]
+    L += [f"| {n} | {who} | {x} | cut it, or source it in the proposal first ({TBD}) |" for n, who, x in untraced] or \
+         ["| — | — | — | every figure traces to the proposal |"]
+    L += ["", "## Airtime vs spoken length", "| Speaker | Allocated min | Spoken min | Verdict |", "|---|---|---|---|"]
+    for s_ in speakers:
+        spoken = words.get(s_, 0) / WPM
+        alloc = airtime.get(s_, 0.0)
+        verdict = "no lines in the track" if not words.get(s_) else \
+            ("over — cut" if spoken > alloc * 1.1 else "under — room to add proof" if spoken < alloc * 0.5 else "fits")
+        L.append(f"| {s_} | {round(alloc, 1)} | {round(spoken, 1)} | {verdict} |")
+    L += ["", "## Speakers not in the line-up", ""]
+    L += [f"- {w}: has lines in the track but is not in --speakers — add them or reassign the lines" for w in strangers] or ["- none"]
+    return L
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="proposal.md -> orals-script.md + number-registry.csv + likely-questions.md")
     ap.add_argument("proposal")
@@ -92,7 +144,11 @@ def main() -> int:
     ap.add_argument("--question-bank", default="references/question-bank-and-red-team.md")
     ap.add_argument("--script", required=True); ap.add_argument("--registry", required=True)
     ap.add_argument("--questions", required=True)
+    ap.add_argument("--talk-track", default="", help="the team's existing talk track to check")
+    ap.add_argument("--check", default="", help="with --talk-track: write the check here")
     a = ap.parse_args()
+    if a.talk_track and not Path(a.talk_track).is_file():
+        die(f"talk track not found: {a.talk_track}")
     if a.minutes < 10 or a.minutes > 240:
         die("--minutes must be 10..240")
     speakers = [s.strip() for s in a.speakers.split(",") if s.strip()]
@@ -194,6 +250,9 @@ def main() -> int:
     if k == 0:
         Q.append(f"| 1 | {TBD} | | | | | |")
     Path(a.questions).write_text("\n".join(Q) + "\n", encoding="utf-8")
+    if a.talk_track and a.check:
+        C = check_talk_track(Path(a.talk_track).read_text(encoding="utf-8", errors="replace"), registry, airtime, speakers)
+        Path(a.check).write_text("\n".join(C) + "\n", encoding="utf-8")
     print(f"orals: {len(secs)} sections in {a.minutes} min, {len(speakers)} speakers, "
           f"{len(seen)} proposal numbers registered, {k} likely questions -> {a.script}")
     return 0

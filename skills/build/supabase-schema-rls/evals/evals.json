@@ -75,6 +75,26 @@
           "check": "contains:\"errors\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Lint our existing migrations (0001 and 0002 are applied in production) and make sure no client code touches the service role.",
+      "expected": [
+        "The open legacy policy projects_all is not reported because 0002 drops and replaces it; scratch_imports is not reported because 0003 drops it; 0001's missing rollback is not raised (applied); service role in server/ is fine; 0 errors"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/repo-existing/supabase/migrations",
+        "client_dirs": "app components",
+        "root": "evals/fixtures/repo-existing",
+        "applied_through": "0002_tenancy.sql"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "rls-lint.txt",
+          "check": "contains:\"rls_lint: 0 findings, 0 errors\""
+        }
+      ]
     }
   ]
 }

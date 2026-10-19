@@ -109,6 +109,60 @@
           "check": "contains:\"- CISSP certification\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Tailor my master résumé for the attached VP, Enterprise Applications JD — assemble it from my master lines, no model rewrite.",
+      "expected": [
+        "tailored-resume.md has Summary, Selected experience, Skills and Education from verbatim master lines with ids; traceability passes; gap keywords absent"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "master": "evals/fixtures/master-resume.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"- Consolidated 3 ERP instances onto one SAP S/4HANA tenant; closed 2 regional data centers. [MR-L13]\""
+        },
+        {
+          "file": "traceability.csv",
+          "check": "csv_rows:all_ids_exist~^yes$"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here's the résumé I tailored for a platform role in August. Adapt it for this VP JD without losing what I wrote.",
+      "expected": [
+        "The August résumé is kept verbatim and traces; supported JD keywords it does not cite (ERP consolidation, board committee, vendor contract) are added as verbatim cited bullets under Additions for this JD"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "master": "evals/fixtures/master-resume.md",
+        "existing": "evals/fixtures/tailored-previous.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"- Cut Azure spend 23% ($4.2M) in 18 months through a FinOps program. [MR-L14]\""
+        },
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"## Additions for this JD\""
+        },
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"- Presented quarterly technology updates to the board's audit and technology committee. [MR-L16]\""
+        },
+        {
+          "file": "traceability.csv",
+          "check": "csv_rows:numbers_in_bullet_found_in_cited_lines~^yes$"
+        }
+      ]
     }
   ]
 }

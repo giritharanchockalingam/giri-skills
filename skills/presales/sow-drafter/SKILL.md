@@ -10,18 +10,26 @@ metadata:
   agent:
     inputs:
       - {name: proposal, type: md, required: true, from: "approved proposal.md from proposal-writer (needs the Scope and deliverables table; assumptions register is carried over)"}
+      - {name: existing_sow, type: md, required: false, from: "a SOW draft already in play (client paper or earlier version); reconciled against the approved proposal"}
     run:
-      - {step: sow, kind: script, cmd: "python3 -I scripts/sow_from_proposal.py {proposal} --template assets/sow-template.md --out {out}/SOW.md --deliverables {out}/deliverables.csv --assumptions-check {out}/assumptions-check.csv"}
+      - {step: sow, kind: script, cmd: "python3 -I scripts/sow_from_proposal.py {proposal} --template assets/sow-template.md --out {out}/SOW.md --deliverables {out}/deliverables.csv --assumptions-check {out}/assumptions-check.csv [--existing-sow {existing_sow}] --reconcile {out}/sow-reconciliation.md"}
     outputs:
       - {path: "{out}/SOW.md", checks: [exists, sections:["Scope","Deliverables and acceptance","Assumptions","RACI","Change control"]]}
       - {path: "{out}/deliverables.csv", checks: [exists, csv:[id,deliverable,acceptance,phase,format], csv_rows:acceptance!empty]}
       - {path: "{out}/assumptions-check.csv", checks: [exists, max_lines:1]}
+    modes:
+      new: {case: agent-happy-path, bring: "the approved proposal"}
+      existing: {case: agent-mode-existing, bring: "the approved proposal and the SOW draft already in play"}
 ---
 
 # sow-drafter
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/sow-drafter --input <name>=<value> … --out <dir>` (see `--explain presales/sow-drafter`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — the approved proposal becomes a SOW on the template: scope in and out, deliverables with acceptance criteria, milestones, team, every assumption carried, the change-control clause verbatim.
+- **Existing** — add `existing_sow` (the client's paper or an earlier version): it is reconciled against the proposal — deliverables missing or added, subjective acceptance criteria, assumptions not carried, clauses absent — in `sow-reconciliation.md`, next to the SOW drafted from the proposal.
 
 ## When to use
 - "Turn the approved proposal into an SOW."

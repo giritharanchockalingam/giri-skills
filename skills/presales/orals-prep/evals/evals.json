@@ -102,6 +102,34 @@
           "check": "contains:\"What is the number for\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our current orals talk track for Northwind — check it against the proposal and the 60-minute slot.",
+      "expected": [
+        "The $2.1M licence saving is flagged as not in the proposal; 6.2%, 3% and 118 trace; Sam is listed as a speaker without a slot; airtime compared per speaker"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md",
+        "minutes": "60",
+        "speakers": "Giri,Priya,Alex",
+        "talk_track": "evals/fixtures/talk-track.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "talk-track-check.md",
+          "check": "contains:\"| 7 | Alex | $2.1M | cut it, or source it in the proposal first\""
+        },
+        {
+          "file": "talk-track-check.md",
+          "check": "contains:\"- Sam: has lines in the track but is not in --speakers\""
+        },
+        {
+          "file": "talk-track-check.md",
+          "check": "sections:[\"Figures not in the proposal\",\"Airtime vs spoken length\"]"
+        }
+      ]
     }
   ]
 }

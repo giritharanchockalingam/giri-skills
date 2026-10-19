@@ -14,6 +14,11 @@ template's standing rules. Objection grid = one row per concern with acknowledge
 ask-back: reframe and proof are pre-filled only from a matching capability's evidence, otherwise
 `[TO BE BASELINED — owner: Bid manager]`. A blank evidence or source cell becomes the marker; nothing is
 invented. Exit 1 on missing columns, strength outside 1-5 or non-numeric. Stdlib only, offline.
+
+Refresh (existing card): --previous-claims <their-claims.csv used for the last card> adds "Changes since
+the last card": claims that are new, withdrawn, or re-rated (with the old and new strength), and the
+wedges that no longer hold because their claim is now rated above 2 — so the team stops leaning on a
+wedge the evidence has closed. Rows whose first cell starts with `#` are notes and are skipped.
 """
 from __future__ import annotations
 
@@ -48,6 +53,22 @@ def read_csv(path: str, cols: list[str]) -> list[dict]:
     return rows
 
 
+def changes_since(prev: list[dict], theirs: list[dict], ours: list[dict]) -> list[str]:
+    before = {t["claim"].strip().lower(): t for t in prev}
+    now = {t["claim"].strip().lower(): t for t in theirs}
+    rows = [f"| {t['claim']} | new | — → {t['s']} |" for k, t in now.items() if k not in before]
+    rows += [f"| {t['claim']} | withdrawn (not in the current intel) | {t['s']} → — |" for k, t in before.items() if k not in now]
+    rows += [f"| {t['claim']} | re-rated | {before[k]['s']} → {t['s']} |" for k, t in now.items() if k in before and before[k]["s"] != t["s"]]
+    lost = [(o, before[k], now[k]) for k in before if k in now and before[k]["s"] <= 2 < now[k]["s"]
+            for o in ours if o["s"] >= 4 and overlap(o["capability"], before[k]["claim"])]
+    L = ["", "## Changes since the last card", "| Their claim | Change | Strength (was → now) |", "|---|---|---|"]
+    L += rows or ["| — | no change in their claims | |"]
+    if lost:
+        L += ["", "Wedges closed by the new evidence (stop leading with them):"]
+        L += [f"- {o['capability']} vs \"{t['claim']}\": they were {b['s']}, now {t['s']} ({t['source']})" for o, b, t in lost]
+    return L
+
+
 def strength(row: dict, where: str) -> int:
     raw = row.get("strength", "")
     if not re.fullmatch(r"[1-5]", raw):
@@ -69,6 +90,7 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--client", default="<Client>")
     ap.add_argument("--alternative", default="<Alternative>")
+    ap.add_argument("--previous-claims", default="", help="their-claims.csv used for the last card (refresh)")
     a = ap.parse_args()
     ours = read_csv(a.ours, ["capability", "evidence", "strength"])
     theirs = read_csv(a.theirs, ["claim", "source", "strength"])
@@ -78,6 +100,11 @@ def main() -> int:
     for i, r in enumerate(theirs, 1):
         r["s"] = strength(r, f"their-claims row {i}"); r["source"] = r["source"] or f"{TBD} (hypothesis)"
 
+    prev = None
+    if a.previous_claims:
+        prev = [r for r in read_csv(a.previous_claims, ["claim", "source", "strength"]) if not r["claim"].startswith("#")]
+        for i, r in enumerate(prev, 1):
+            r["s"] = strength(r, f"previous claims row {i}")
     wedges, near = [], []
     for o in ours:
         if o["s"] < 4:
@@ -113,6 +140,8 @@ def main() -> int:
     if near:
         L += ["", "Near-wedges (we are strong, they are weak, but no stated concern yet — ask in discovery):"]
         L += [f"- {w['ours']['capability']} vs \"{w['theirs']['claim']}\"" for w in near]
+    if prev is not None:
+        L += changes_since(prev, theirs, ours)
     L += ["", "## Landmines", "| Do not | Because | Instead |", "|---|---|---|",
           "| Name the alternative in any client document | it signals fear and invites comparison on their terms | ghost lines in the proposal |",
           "| Disparage the platform the client already owns | the sponsor chose it | position around the seams |"]

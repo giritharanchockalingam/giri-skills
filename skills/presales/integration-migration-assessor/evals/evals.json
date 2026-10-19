@@ -96,6 +96,35 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Score the Acme interface inventory, plan 3 waves and build the TCO from the rate file; readout without the model.",
+      "expected": [
+        "Bands, waves and TCO computed; readout.md carries Bottom line, Scoring results, Wave plan, TCO, Risks, Next steps with every figure copied from the summaries; payback outside the horizon raised as a risk"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "waves": "3",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "readout.md",
+          "check": "contains:\"- Payback: not within horizon · 3-year net: -169,000 USD\""
+        },
+        {
+          "file": "readout.md",
+          "check": "contains:\"| retire | 1 | 76 |\""
+        },
+        {
+          "file": "readout.md",
+          "check": "numbers_trace_to:[\"scoring-summary.md\",\"tco-summary.md\"]"
+        }
+      ]
     }
   ]
 }

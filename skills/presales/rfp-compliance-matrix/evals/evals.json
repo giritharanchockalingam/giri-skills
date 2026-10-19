@@ -92,6 +92,37 @@
           "check": "contains:\"CQ-001\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Addendum 1 changed the RFP. Re-run the compliance matrix and carry our reviewed answers from round 1 where nothing changed.",
+      "expected": [
+        "Unchanged clauses carry the round-1 answers (e.g. 4.1 stays P with its mitigation, status reviewed); 3.5 retention changed from five to seven years and is re-scored and flagged; 5.2 is new; 5.3 is withdrawn"
+      ],
+      "inputs": {
+        "rfp": "evals/fixtures/rfp.md",
+        "capabilities": "evals/fixtures/capabilities.csv",
+        "previous": "evals/fixtures/matrix-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "gaps.md",
+          "check": "sections:[\"Changes since the previous matrix\",\"Mandatory gaps\"]"
+        },
+        {
+          "file": "gaps.md",
+          "check": "contains:\"| 3.5 | changed | text differs — re-scored P (was C)\""
+        },
+        {
+          "file": "gaps.md",
+          "check": "contains:\"| 5.3 | withdrawn |\""
+        },
+        {
+          "file": "matrix.csv",
+          "check": "contains:\"client dependency written into the assumptions register\""
+        }
+      ]
     }
   ]
 }

@@ -12,18 +12,26 @@ metadata:
       - {name: proposal, type: md, required: true, from: "the submitted proposal.md (every number in the script must trace to it)"}
       - {name: speakers, type: string, required: true, from: "comma list of presenters in speaking order"}
       - {name: minutes, type: string, required: false, default: "60"}
+      - {name: talk_track, type: md, required: false, from: "the team's existing talk track (`Name: line` per turn); checked for figures not in the proposal, airtime and unlisted speakers"}
     run:
-      - {step: script, kind: script, cmd: "python3 -I scripts/orals.py {proposal} --minutes {minutes} --speakers {speakers} --question-bank references/question-bank-and-red-team.md --script {out}/orals-script.md --registry {out}/number-registry.csv --questions {out}/likely-questions.md"}
+      - {step: script, kind: script, cmd: "python3 -I scripts/orals.py {proposal} --minutes {minutes} --speakers {speakers} --question-bank references/question-bank-and-red-team.md --script {out}/orals-script.md --registry {out}/number-registry.csv --questions {out}/likely-questions.md [--talk-track {talk_track}] --check {out}/talk-track-check.md"}
     outputs:
       - {path: "{out}/orals-script.md", checks: [exists, sections:["Timed script","Airtime check","Number sheet","Handoffs"], numbers_trace_to:"{out}/number-registry.csv"]}
       - {path: "{out}/number-registry.csv", checks: [exists, csv:[number,section,context]]}
       - {path: "{out}/likely-questions.md", checks: [exists]}
+    modes:
+      new: {case: agent-happy-path, bring: "the submitted proposal and who presents"}
+      existing: {case: agent-mode-existing, bring: "the proposal and your team's current talk track"}
 ---
 
 # orals-prep
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/orals-prep --input <name>=<value> … --out <dir>` (see `--explain presales/orals-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — from the submitted proposal: a timed script skeleton with speakers, an airtime check, a number sheet every presenter keeps in front of them, and likely evaluator questions.
+- **Existing** — add your team's current talk track: every figure it says that the proposal does not contain is flagged, each speaker's spoken length is compared with their slot, and people with lines but no slot are listed (`talk-track-check.md`).
 
 ## When to use
 - "We are shortlisted; orals are Thursday — prepare us."

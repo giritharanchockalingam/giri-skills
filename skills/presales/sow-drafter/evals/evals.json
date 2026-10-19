@@ -95,6 +95,36 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Procurement sent back their SOW paper (v0.2). Check it against our approved proposal before we sign.",
+      "expected": [
+        "D-02's 'reasonable satisfaction' acceptance flagged with the proposal's criterion; D-03 missing; D-04 hypercare flagged as scope added; A-02 not carried; change-control clause missing — 5 issues"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md",
+        "existing_sow": "evals/fixtures/sow-existing.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "sow-reconciliation.md",
+          "check": "contains:\"**5 issue(s) to resolve before signature.**\""
+        },
+        {
+          "file": "sow-reconciliation.md",
+          "check": "contains:\"subjective acceptance — replace with the proposal's: Parallel-run variance ≤ 0.5% over 10 business days\""
+        },
+        {
+          "file": "sow-reconciliation.md",
+          "check": "contains:\"| D-04 | — | yes | three months of on-call support | scope added\""
+        },
+        {
+          "file": "sow-reconciliation.md",
+          "check": "sections:[\"Deliverables\",\"Assumptions\",\"Clauses\"]"
+        }
+      ]
     }
   ]
 }

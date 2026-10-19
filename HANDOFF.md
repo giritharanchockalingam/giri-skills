@@ -46,3 +46,11 @@ Optional model re-rank for the task router (top-3 → model pick, logged with co
 - Home = "What do you need done?" → skill match with plain "You get" line → "Try it on an example" auto-runs and scrolls to the Result.
 - Playbook run page: one-click "Run it on the example"; own inputs on request, labelled by description. Example inputs come from templates, then each step's own skill example (data/skill-demos.json), so tailored playbooks run too.
 - Known gaps: some playbook names are slugs (data); clean RLS example shows "0 findings" (true but underwhelming); no real users yet.
+
+## 2026-10-19 — lifecycle Home, MCP servers, new/existing starting points
+- Home: 5 phases / 11 stages + Business; "Starting new" vs "Improving what exists"; role filter; one-line outcome per skill (shared/skill-cards.json, CI-validated).
+- MCP: /api/mcp, /api/mcp/role|team|stage/<slug> (Streamable HTTP, stateless JSON). Auth = workspace API key. Tools = PUBLISHED skills in scope + find_skill + get_run; runs via lib/factory/apiRun.ts (same path as REST). Migration 0005 (sf_api_catalog, sf_api_talent) applied. Connect page has client configs.
+- Modes: every skill declares metadata.agent.modes (new/existing → eval case + "bring"). 78/78 pass `scripts/modes_check.py --run` (68 both, 10 existing-only with reasons); every stage covered (improve = existing by definition). In CI.
+- Folder inputs ({kind:"files"}) for brownfield: server runtime, validation, browser "Choose folder" (tests/worker.test.mjs runs the real worker on Pyodide).
+- 9 skills whose main deliverable is a model step take `draft_only` for model-free examples (script-written draft, labelled); full quality needs a provider key.
+- Owner actions: publish skills to expose them as tools; create an API key and connect a client (end-to-end MCP call not yet witnessed).

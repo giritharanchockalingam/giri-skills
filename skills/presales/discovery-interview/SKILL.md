@@ -21,12 +21,19 @@ metadata:
       - {path: "{out}/discovery-pack.md", checks: [exists, sections:["Time budget","Question plan","Five closes"]]}
       - {path: "{out}/five-closes.md", checks: [exists, sections:["Five closes"]]}
       - {path: "{out}/pain-matrix.csv", checks: [exists, csv:[pain,impact,urgency,evidence,owner]]}
+    modes:
+      new: {case: agent-mode-new, bring: "the client's industry and who will be on the call"}
+      existing: {case: agent-happy-path, bring: "your raw notes or transcript from the call"}
 ---
 
 # discovery-interview
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/discovery-interview --input <name>=<value> … --out <dir>` (see `--explain presales/discovery-interview`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — before the call: a timed question plan for the attendees' personas from the vertical's question bank, with the five closes all open and an empty pain matrix.
+- **Existing** — after the call: your notes or transcript are synthesised into the pain matrix and the five closes; anything the notes do not say stays an owned TBD.
 
 ## When to use
 - "Prep me for the discovery call with <client> on <topic>."

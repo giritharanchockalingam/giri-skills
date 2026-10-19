@@ -82,6 +82,34 @@
         "exists:aging.json",
         "exists:weekly-review.md"
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Start my job-search tracker: I applied to Bluewater Freight (fictional) for Director, Integration on 2026-10-10.",
+      "expected": [
+        "The empty tracker gets row 1 at stage Applied with the follow-up; pipeline and aging reports cover that one application"
+      ],
+      "inputs": {
+        "tracker": "evals/fixtures/new/tracker.csv",
+        "action": "add",
+        "args": "--company \"Bluewater Freight (fictional)\" --role \"Director, Integration\" --stage Applied --date 2026-10-10 --next \"Follow up with recruiter\" --next-date 2026-10-17 --notes fictional",
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tracker.csv",
+          "check": "contains:\"1,Bluewater Freight (fictional),\"Director, Integration\"\""
+        },
+        {
+          "file": "pipeline.json",
+          "check": "contains:\"Bluewater Freight (fictional)\""
+        },
+        {
+          "file": "aging.json",
+          "check": "json"
+        }
+      ]
     }
   ]
 }

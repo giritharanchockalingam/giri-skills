@@ -15,6 +15,10 @@ Totals in the JSON equal the sum of the yearly rows (reconciliation is asserted 
 A blank ramp_pct_y1..y3 is not assumed to be 100%: the benefit is excluded from the headline and its
 ramp is marked TBD. Rows that are entirely blank (e.g. ",,,," from Excel) are skipped; duplicate ids,
 a blank id on a data row, non-integer start_year and non-finite numbers are input errors.
+Refresh (--previous value-model.json of the earlier case): adds "Change vs previous value case" — the
+headline totals (benefits, costs, net, NPV, P80 cost, payback month) previous → now with the change,
+and each benefit added, removed, re-estimated, newly baselined or dropped — stored in value-model.json
+as `change` so every figure in the section traces to it.
 Exit 2 on missing columns, non-numeric cells, duplicate ids or an unreadable / non-UTF-8 file
 (repo convention). Stdlib only, offline.
 """
@@ -201,6 +205,54 @@ def model(benefits, costs, years, rate, uplift):
             "unsourced": [x.get("benefit_id") or x.get("cost_id") for x in unsourced]}
 
 
+def change_vs(prev: dict, m: dict) -> dict:
+    """Previous value-model.json vs this run: headline items and each benefit, with deltas."""
+    pt, t = prev.get("totals") or {}, m["totals"]
+    rows = []
+    for key, label in (("benefits", "Benefits (5-year)" if m["years"] == 5 else "Benefits"), ("costs", "Costs (P50 basis)"),
+                       ("net", "Net (undiscounted)"), ("npv", "NPV"), ("p80_cost", "P80 cost"),
+                       ("payback_month", "Payback month")):
+        old, new = pt.get(key), t.get(key)
+        rows.append({"item": label, "previous": old, "now": new,
+                     "delta": r2(new - old) if isinstance(old, (int, float)) and isinstance(new, (int, float)) else None})
+    before = {b["benefit_id"]: b for b in prev.get("benefits") or []}
+    bens = []
+    for b in m["benefits"]:
+        o = before.get(b["benefit_id"])
+        if o is None:
+            status = "added"
+        elif o.get("total") is None and b["total"] is not None:
+            status = "now baselined (enters the headline)"
+        elif o.get("total") is not None and b["total"] is None:
+            status = "dropped from the headline (no longer baselined)"
+        elif o.get("total") != b["total"]:
+            status = "re-estimated"
+        else:
+            status = "unchanged"
+        bens.append({"benefit_id": b["benefit_id"], "name": b["name"], "previous_total": o.get("total") if o else None,
+                     "now_total": b["total"], "status": status,
+                     "delta": r2(b["total"] - o["total"]) if o and o.get("total") is not None and b["total"] is not None else None})
+    for bid, o in before.items():
+        if bid not in {b["benefit_id"] for b in m["benefits"]}:
+            bens.append({"benefit_id": bid, "name": o.get("name", ""), "previous_total": o.get("total"), "now_total": None,
+                         "status": "removed", "delta": None})
+    return {"previous_client": prev.get("client", ""), "rows": rows, "benefits": bens}
+
+
+def render_change(ch: dict) -> list[str]:
+    def f(v):
+        return fmt(v) if v is not None else "—"
+
+    def d(v):
+        return "—" if v is None else ("+" if v >= 0 else "−") + fmt(abs(v))
+    L = ["## Change vs previous value case", "| Item | Previous | Now | Change |", "|---|---|---|---|"]
+    L += [f"| {r['item']} | {f(r['previous'])} | {f(r['now'])} | {d(r['delta'])} |" for r in ch["rows"]]
+    L += ["", "| Benefit | Previous total | Now total | Change | Status |", "|---|---|---|---|---|"]
+    L += [f"| {b['benefit_id']} {b['name']} | {f(b['previous_total'])} | {f(b['now_total'])} | {d(b['delta'])} | {b['status']} |"
+          for b in ch["benefits"]]
+    return L + [""]
+
+
 def render(m: dict, client: str) -> str:
     t, yrs = m["totals"], m["years"]
     rate_txt = f"{m['discount_rate'] * 100:g}%" if m["discount_rate"] is not None else TBD
@@ -220,6 +272,8 @@ def render(m: dict, client: str) -> str:
          f"| P80 cost | {p80_txt} |",
          f"| Benefits in headline | {n_head} of {len(m['benefits'])} |",
          f"| Excluded (unbaselined) | {', '.join(m['excluded_from_headline']) or 'none'} |", ""]
+    if m.get("change"):
+        L += render_change(m["change"])
     L += ["## Cash flows", "| Year | Benefits | Costs | Net | Cumulative |", "|---|---|---|---|---|"]
     for y in m["yearly"]:
         L.append(f"| {y['year']} | {fmt(y['benefits'])} | {fmt(y['costs'])} | {fmt(y['net'])} | {fmt(y['cumulative'])} |")
@@ -277,6 +331,7 @@ def main() -> int:
     ap.add_argument("--client", default="<Client>")
     ap.add_argument("--json", dest="json_out", default="", help="write value-model.json")
     ap.add_argument("--out", default="", help="write value-case.md")
+    ap.add_argument("--previous", default="", help="value-model.json of the previous value case, for the change section")
     a = ap.parse_args()
     if a.years < 1 or a.years > 20:
         die("--years must be 1..20")
@@ -288,6 +343,17 @@ def main() -> int:
     costs = read_csv(Path(a.costs), COST_COLS)
     m = model(benefits, costs, a.years, a.discount_rate, a.p80_cost_uplift)
     m["client"] = a.client
+    if a.previous:
+        pp = Path(a.previous)
+        if not pp.is_file():
+            die(f"previous value model not found: {pp}")
+        try:
+            prev = json.loads(pp.read_text(encoding="utf-8"))
+        except ValueError as e:
+            die(f"previous value model is not valid JSON: {e}")
+        if not isinstance(prev, dict) or not isinstance(prev.get("totals"), dict) or not isinstance(prev.get("benefits"), list):
+            die("previous value model is not a value-model.json from this script (needs totals and benefits)")
+        m["change"] = change_vs(prev, m)
     if a.json_out:
         Path(a.json_out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.json_out).write_text(json.dumps(m, indent=2), encoding="utf-8")

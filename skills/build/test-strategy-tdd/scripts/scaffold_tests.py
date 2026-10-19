@@ -9,9 +9,12 @@ feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each 
   components/**/*.tsx              -> component -> listed for a component test; nothing written
   everything else (.ts/.tsx)       -> unit      -> tests/unit/<path>.test.ts  (it.todo per criterion)
 Layer per file follows references/test-pyramid.md (validator / service / query / action / route /
-migration). Existing files are never overwritten (listed as skipped). --dry-run writes nothing.
-Writes scaffold-report.json ({written, skipped, components, would_write, files}) and test-plan.md
-(pyramid table + criteria map). Exit 1 on bad input (missing feature file, no bullets, no files). Stdlib.
+migration). Existing files are never overwritten (listed as skipped); each kept test file is read
+instead: its test titles (it/test, incl. .todo/.fixme/.skip/.only) are matched to the criteria
+(same words after normalising, or >= 60% of the criterion's words in one title) and the criteria it
+does not cover yet are listed to add by hand. --dry-run writes nothing.
+Writes scaffold-report.json ({written, skipped, components, would_write, files, existing_tests}) and
+test-plan.md (pyramid table + criteria map + existing tests). Exit 1 on bad input (missing feature file, no bullets, no files). Stdlib.
 """
 from __future__ import annotations
 
@@ -47,6 +50,26 @@ def parse_feature(text: str) -> tuple[str, list[str]]:
         if b:
             bullets.append(b.group(1).strip())
     return title or "feature", bullets
+
+
+TITLE_RE = re.compile(r"""\b(?:it|test)(?:\.(?:todo|fixme|skip|only))?\(\s*(["'`])(.+?)\1""")
+STOP = {"a", "an", "the", "and", "or", "of", "to", "is", "are", "be", "gets", "get", "with", "for", "in", "on", "its", "it", "s"}
+
+
+def words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if w not in STOP}
+
+
+def covers(title: str, criterion: str) -> bool:
+    """A test title covers a criterion when it has the same words or >= 60% of the criterion's words."""
+    cw, tw = words(criterion), words(title)
+    if not cw or not tw:
+        return False
+    return cw == tw or len(cw & tw) / len(cw) >= 0.6
+
+
+def existing_titles(text: str) -> list[str]:
+    return [m.group(2) for m in TITLE_RE.finditer(text)]
 
 
 def classify(rel: str) -> tuple[str, str, str, str]:
@@ -121,7 +144,7 @@ def main() -> int:
         die(f"target is not a directory: {target}")
 
     report = {"target": str(target), "dry_run": a.dry_run, "title": title, "criteria": bullets,
-              "written": [], "skipped": [], "components": [], "would_write": [], "files": []}
+              "written": [], "skipped": [], "components": [], "would_write": [], "files": [], "existing_tests": []}
     for rel in files:
         kind, ftype, layer, cover = classify(rel)
         if kind == "page":
@@ -138,6 +161,10 @@ def main() -> int:
         dest = target / test_rel
         if dest.exists():
             report["skipped"].append(test_rel)
+            titles = existing_titles(dest.read_text(encoding="utf-8", errors="replace"))
+            covered = [i for i, b in enumerate(bullets, 1) if any(covers(t, b) for t in titles)]
+            report["existing_tests"].append({"test": test_rel, "titles": titles, "criteria_covered": covered,
+                                             "criteria_missing": [i for i in range(1, len(bullets) + 1) if i not in covered]})
             continue
         if a.dry_run:
             report["would_write"].append(test_rel)
@@ -164,6 +191,13 @@ def main() -> int:
     tests = ", ".join(f"`{r['test']}`" for r in report["files"] if r["kind"] != "component") or "—"
     for i, b in enumerate(bullets, 1):
         lines.append(f"| {i} | {b} | {tests} |")
+    if report["existing_tests"]:
+        lines += ["", "## Existing tests (kept — add the missing criteria by hand)", "",
+                  "| Test file | Tests found | Criteria covered | Criteria to add |", "|---|---|---|---|"]
+        for e in report["existing_tests"]:
+            lines.append(f"| `{e['test']}` | {len(e['titles'])} | "
+                         f"{', '.join(f'#{i}' for i in e['criteria_covered']) or 'none'} | "
+                         f"{'; '.join(f'#{i} {bullets[i - 1]}' for i in e['criteria_missing']) or 'none'} |")
     lines += ["", "## Red → green", "",
               "1. Replace each `it.todo` / `test.fixme` with a failing test (assertion failure, not import error).",
               "2. Implement the minimum to pass; run the full unit suite after each task.",

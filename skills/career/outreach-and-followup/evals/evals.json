@@ -106,6 +106,65 @@
           "check": "contains:\"Touch 3,2026-03-30,email\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Thank-you note to Dana Okafor after today's panel; no model polish, I'll edit the draft.",
+      "expected": [
+        "message-final.md has Message, Alternate variant, Facts used and Cadence from the filled skeleton, labelled as a draft; facts only from context.json"
+      ],
+      "inputs": {
+        "type": "thank-you",
+        "context": "evals/fixtures/context-thank-you.json",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "message-final.md",
+          "check": "contains:\"Script draft — the model polish step was not run\""
+        },
+        {
+          "file": "message-final.md",
+          "check": "contains:\"open enrollment is the one window where nothing can slip\""
+        },
+        {
+          "file": "message-final.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "I messaged Priya on LinkedIn on 1 October about a referral and heard nothing. Draft the follow-up.",
+      "expected": [
+        "One touch counted as sent; only touches 2 and 3 are dated from the first message; the shared-history fact is marked as already used; the new ERP detail is the fact to add"
+      ],
+      "inputs": {
+        "type": "referral-ask",
+        "context": "evals/fixtures/context-referral-followup.json",
+        "thread": "evals/fixtures/thread-referral.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "message.md",
+          "check": "contains:\"1 message(s) sent (first 2026-10-01, last 2026-10-01); no reply yet.\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"already used in the thread; add a new element instead\""
+        },
+        {
+          "file": "cadence.csv",
+          "check": "contains:\"Touch 2,2026-10-08,LinkedIn\""
+        },
+        {
+          "file": "message-final.md",
+          "check": "contains:\"| new detail: the role's posting now lists ERP consolidation\""
+        }
+      ]
     }
   ]
 }

@@ -104,6 +104,61 @@
           "check": "numbers_trace_to:sources.md"
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Assemble the Northwind Order Hub proposal from the win themes, discovery pack and estimate memo; no model step.",
+      "expected": [
+        "proposal-final.md is the assembled draft, labelled; every number traces to sources.md"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes.json",
+        "discovery": "evals/fixtures/discovery-pack.md",
+        "estimate": "evals/fixtures/estimate-memo.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "proposal-final.md",
+          "check": "contains:\"Script draft — the model sharpen step was not run\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "numbers_trace_to:sources.md"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our proposal draft v0.4 for Northwind — tighten it against the win themes and the estimate, keep our storyline.",
+      "expected": [
+        "Team sections kept; missing sections added; executive summary sharpened for the two missing themes; the unsourced 40% cost cut replaced by an owned marker; USD 1,472,000 kept because the estimate memo backs it"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes.json",
+        "estimate": "evals/fixtures/estimate-memo.md",
+        "existing": "evals/fixtures/proposal-draft.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "proposal-redline.md",
+          "check": "contains:\"| Executive summary | [TBD] | figure 40% is in no input file\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "contains:\"cut integration run cost by [TO BE BASELINED — owner: Bid manager]\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "contains:\"Fixed price per wave; total USD 1,472,000 at P80.\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "numbers_trace_to:sources.md"
+        }
+      ]
     }
   ]
 }

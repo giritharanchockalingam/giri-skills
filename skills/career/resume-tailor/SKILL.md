@@ -11,9 +11,11 @@ metadata:
     inputs:
       - {name: jd, type: file, required: true, from: "job description text file"}
       - {name: master, type: md, required: true, from: "master résumé with MR-Lnn | line ids (layout: assets/master-resume.example.md)"}
+      - {name: existing, type: md, required: false, from: "a résumé you already tailored (cited [MR-Lnn] bullets); kept verbatim, checked, and extended for this JD — no model step"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model step: the tailored résumé is assembled from verbatim master lines, labelled as a draft"}
     run:
-      - {step: map, kind: script, cmd: "python3 -I scripts/tailor.py --jd {jd} --master {master} --keyword-map {out}/keyword-map.csv --gap-list {out}/gap-list.md --bullets {out}/candidate-bullets.md"}
-      - {step: draft, kind: llm, template: assets/tailored-resume-template.md, context: ["{out}/candidate-bullets.md", "{out}/keyword-map.csv", "{out}/gap-list.md", "{master}", "references/bullet-formula.md"], out: "{out}/tailored-resume.md"}
+      - {step: map, kind: script, cmd: "python3 -I scripts/tailor.py --jd {jd} --master {master} --keyword-map {out}/keyword-map.csv --gap-list {out}/gap-list.md --bullets {out}/candidate-bullets.md --final {out}/tailored-resume.md {draft_only} [--existing {existing}]"}
+      - {step: draft, kind: llm, template: assets/tailored-resume-template.md, context: ["{out}/candidate-bullets.md", "{out}/keyword-map.csv", "{out}/gap-list.md", "{master}", "references/bullet-formula.md"], out: "{out}/tailored-resume.md", skip_if_present: [existing, draft_only]}
       - {step: trace, kind: script, cmd: "python3 -I scripts/check_traceability.py --resume {out}/tailored-resume.md --master {master} --out {out}/traceability.csv"}
     outputs:
       - {path: "{out}/keyword-map.csv", checks: [exists, csv:[jd_keyword,present_in_master,master_line_ids,weight], csv_rows:present_in_master~^(yes|no)$]}
@@ -21,12 +23,19 @@ metadata:
       - {path: "{out}/candidate-bullets.md", checks: [exists, sections:["Candidate bullets"]]}
       - {path: "{out}/tailored-resume.md", checks: [exists, sections:["Summary","Selected experience","Skills"], no_unowned_tbd, cmd:"python3 -I scripts/check_traceability.py --resume {path} --master {master} --out {out}/traceability.csv"]}
       - {path: "{out}/traceability.csv", checks: [exists, csv:[bullet,cited_ids,all_ids_exist,numbers_in_bullet_found_in_cited_lines]]}
+    modes:
+      new: {case: agent-mode-new, bring: "the job description and your master résumé"}
+      existing: {case: agent-mode-existing, bring: "the job description, master résumé and a résumé you already tailored"}
 ---
 
 # Résumé Tailor (truth-locked)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/resume-tailor --input <name>=<value> … --out <dir>` (see `--explain career/resume-tailor`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — the JD's keywords are mapped to your master résumé (gaps go to you, never into the résumé); the model writes the tailored résumé, or with `draft_only` it is assembled from verbatim master lines; either way every bullet must trace to a master line.
+- **Existing** — add a résumé you already tailored: it is kept word for word, every bullet is traced against the master, and the supported JD keywords it does not cite yet are added as verbatim, cited bullets under "Additions for this JD".
 
 ## When to use
 - "Tailor my résumé for this JD", "make this ATS-friendly", "rewrite my summary for a VP role", "which keywords am I missing".

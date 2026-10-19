@@ -2,7 +2,10 @@
 """scaffold.py — write the docs/ADR/CI skeleton into a target directory.
 
 Idempotent: never overwrites an existing file. Re-running reports 0 writes.
-Stdlib only. Run offline: python3 -I scaffold.py --target <dir> --name "<project>" [--multi-tenant] [--dry-run]
+Existing repo: every kept Markdown file is read and compared with its template's `##` sections; the
+sections it lacks are reported as gaps (`gap    <file>: missing sections — A, B`) for a by-hand merge.
+--report writes the same as JSON {target, written[], kept[], gaps[{path, missing[]}]}.
+Stdlib only. Run offline: python3 -I scaffold.py --target <dir> --name "<project>" [--multi-tenant] [--dry-run] [--report r.json]
 
 Templates are read from ../assets relative to this script.
 """
@@ -10,6 +13,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -66,6 +71,27 @@ Adopt the standard stack without deviation unless listed below.
 """
 
 
+def section_names(markdown: str) -> list[str]:
+    """`##` headings with numbering and a trailing parenthetical removed: '## 1. Purpose (one paragraph)' -> 'Purpose'."""
+    out = []
+    for ln in markdown.splitlines():
+        m = re.match(r"^##\s+(.*)$", ln)
+        if not m:
+            continue
+        name = re.sub(r"^\d+(\.\d+)*\.?\s+", "", m.group(1)).strip()
+        name = re.sub(r"\s*\(.*\)\s*$", "", name).strip()
+        if name:
+            out.append(name)
+    return out
+
+
+def missing_sections(existing: str, template: str) -> list[str]:
+    """Template sections with no matching heading in the existing file (case-insensitive; a match is one name
+    containing the other, so '## Users' covers 'Users and jobs to be done')."""
+    heads = [h.lower() for h in section_names(existing)]
+    return [s for s in section_names(template) if not any(s.lower() in h or (len(h) >= 4 and h in s.lower()) for h in heads)]
+
+
 def render(text: str, name: str, tenancy: str) -> str:
     today = _dt.date.today().isoformat()
     return (
@@ -102,6 +128,7 @@ def main() -> int:
     ap.add_argument("--name", required=True, help="project name")
     ap.add_argument("--multi-tenant", action="store_true", help="mark tenancy as multi-tenant in SPEC/ADR")
     ap.add_argument("--dry-run", action="store_true", help="report without writing")
+    ap.add_argument("--report", default="", help="also write written/kept/gaps as JSON here")
     args = ap.parse_args()
 
     target = Path(args.target).resolve()
@@ -112,18 +139,32 @@ def main() -> int:
             target.mkdir(parents=True)
 
     written = skipped = 0
+    report = {"target": str(target), "dry_run": args.dry_run, "written": [], "kept": [], "gaps": []}
     for path, content in plan(target, args.name, args.multi_tenant):
+        rel = path.relative_to(target).as_posix()
         if path.exists():
             skipped += 1
-            print(f"keep   {path.relative_to(target)}")
+            report["kept"].append(rel)
+            print(f"keep   {rel}")
+            if path.suffix == ".md":
+                miss = missing_sections(path.read_text(encoding="utf-8", errors="replace"), content)
+                if miss:
+                    report["gaps"].append({"path": rel, "missing": miss})
+                    print(f"gap    {rel}: missing sections — {', '.join(miss)}")
             continue
         written += 1
+        report["written"].append(rel)
         print(f"{'would write' if args.dry_run else 'write '} {path.relative_to(target)}")
         if not args.dry_run:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
 
-    print(f"\n{'dry-run: ' if args.dry_run else ''}{written} written, {skipped} kept (never overwritten)")
+    print(f"\n{'dry-run: ' if args.dry_run else ''}{written} written, {skipped} kept (never overwritten)"
+          + (f", {len(report['gaps'])} kept file(s) with section gaps to merge by hand" if report["gaps"] else ""))
+    if args.report:
+        rp = Path(args.report)
+        rp.parent.mkdir(parents=True, exist_ok=True)
+        rp.write_text(json.dumps(report, indent=2), encoding="utf-8")
     return 0
 
 

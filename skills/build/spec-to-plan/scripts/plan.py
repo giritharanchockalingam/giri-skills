@@ -16,6 +16,12 @@ Inline `(accept: …; test: …; rollback: …)` after the task text works too. 
 give is `[TO BE BASELINED — owner: Tech lead]` — never invented. Writes plan.md on the template (Tasks,
 Gates, Rollback filled) and tasks.csv (id, task, acceptance, test, rollback, files, size). More than
 8 tasks is reported as a split warning. Exit 1 when the file, the section or any task is missing. Stdlib.
+
+Existing codebase (--repo DIR): every file a task names is looked up in the repo and marked `modify`
+(exists) or `create` (new); the plan gets a "Repo check" section and tasks.csv a repo_check column.
+Migrations get two extra checks, because an applied migration is never edited: a task that names an
+existing file under supabase/migrations is flagged (add a new migration instead), and a new migration
+whose number is not after the highest one in the repo is flagged as out of order.
 """
 from __future__ import annotations
 
@@ -102,6 +108,39 @@ def parse_tasks(lines: list[str]) -> list[dict]:
     return tasks
 
 
+MIGRATIONS_DIR = "supabase/migrations/"
+
+
+def task_paths(files: str) -> list[str]:
+    if files == TBD:
+        return []
+    return [p.strip().strip("`").lstrip("./") for p in re.split(r"[,;]", files) if p.strip().strip("`")]
+
+
+def repo_check(tasks: list[dict], repo: Path) -> list[str]:
+    """Mark each named file modify/create; flag edits to existing migrations and out-of-order numbers.
+    Sets t['repo_check'] per task and returns the problems (one line each)."""
+    mig_dir = repo / MIGRATIONS_DIR
+    nums = [int(m.group(1)) for f in (mig_dir.glob("*.sql") if mig_dir.is_dir() else [])
+            if (m := re.match(r"^(\d+)", f.name))]
+    latest = max(nums) if nums else None
+    problems = []
+    for t in tasks:
+        notes = []
+        for rel in task_paths(t["files"]):
+            exists = (repo / rel).exists()
+            notes.append(f"{rel}: {'modify' if exists else 'create'}")
+            if rel.startswith(MIGRATIONS_DIR):
+                m = re.match(r"^(\d+)", rel[len(MIGRATIONS_DIR):])
+                if exists:
+                    problems.append(f"{t['id']}: `{rel}` is an existing migration — never edit an applied one; add a new migration")
+                elif m and latest is not None and int(m.group(1)) <= latest:
+                    problems.append(f"{t['id']}: new migration `{rel}` is numbered at or before the latest existing one "
+                                    f"({latest:04d}) — renumber it after it")
+        t["repo_check"] = "; ".join(notes) if notes else "no files named"
+    return problems
+
+
 def replace_section(md: str, heading_startswith: str, body: list[str]) -> str:
     lines, out, i = md.splitlines(), [], 0
     while i < len(lines):
@@ -125,6 +164,7 @@ def main() -> int:
     ap.add_argument("--out", default="plan.md")
     ap.add_argument("--tasks", default="tasks.csv")
     ap.add_argument("--slug", default="", help="plan slug (default: from the section heading)")
+    ap.add_argument("--repo", default="", help="existing repo root: mark each file modify/create and check migrations")
     a = ap.parse_args()
     spec = Path(a.spec)
     if not spec.is_file():
@@ -136,6 +176,14 @@ def main() -> int:
     tasks = parse_tasks(body)
     if not tasks:
         die(f"section {a.section!r} has no bullet or numbered items to plan from")
+    problems = None
+    if a.repo:
+        if not Path(a.repo).is_dir():
+            die(f"repo not found: {a.repo}")
+        problems = repo_check(tasks, Path(a.repo))
+    else:
+        for t in tasks:
+            t["repo_check"] = ""
     slug = a.slug or re.sub(r"[^a-z0-9]+", "-", a.section.lower()).strip("-")
     today = dt.date.today().isoformat()
 
@@ -155,6 +203,12 @@ def main() -> int:
     gates = ["| Gate | Entry | Exit evidence |", "|---|---|---|"] + [f"| {g} | {e} | {x} |" for g, e, x in GATES]
     gates += ["", "A gate without its exit evidence is not passed. Order: plan → approve → build → test → verify."]
     md = md.replace("## Risks", "## Gates\n" + "\n".join(gates) + "\n\n## Risks", 1)
+    if problems is not None:
+        check = [f"Files looked up in `{Path(a.repo).resolve().name}`:", ""]
+        check += [f"- {t['id']}: {t['repo_check']}" for t in tasks]
+        check += ["", "Problems to resolve before approve:" if problems else "No problems found.", ""]
+        check += [f"- {p_}" for p_ in problems]
+        md = md.replace("## Gates\n", "## Repo check\n\n" + "\n".join(check).rstrip() + "\n\n## Gates\n", 1)
     rollback = [f"- {t['id']}: {t['rollback']}" for t in tasks]
     rollback.append(f"- Whole feature: {TBD} (revert tag / disable flag / down-migration)")
     md = replace_section(md, "Rollback", rollback)
@@ -163,11 +217,12 @@ def main() -> int:
     tasks_path.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(md, encoding="utf-8")
     with tasks_path.open("w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=["id", "task", "acceptance", "test", "rollback", "files", "size"])
+        w = csv.DictWriter(fh, fieldnames=["id", "task", "acceptance", "test", "rollback", "files", "size", "repo_check"])
         w.writeheader()
         w.writerows(tasks)
     n_tbd = sum(1 for t in tasks for k in ("acceptance", "test", "rollback", "files") if t[k] == TBD)
-    print(f"plan: {len(tasks)} task(s) from SPEC §{a.section}, {n_tbd} field(s) to be baselined -> {out}, {tasks_path}")
+    print(f"plan: {len(tasks)} task(s) from SPEC §{a.section}, {n_tbd} field(s) to be baselined"
+          + (f", {len(problems)} repo problem(s)" if problems else "") + f" -> {out}, {tasks_path}")
     return 0
 
 

@@ -11,12 +11,16 @@ metadata:
     inputs:
       - {name: flows, type: json, required: true, from: "user flows JSON (layout: assets/flows-template.json): base_url (URL or ${BASE_URL} placeholder) and flows[{name, steps[{action, selector?, value?}]}]"}
       - {name: narrative, type: flag, required: false, flag: "--narrative", from: "true to have the LLM write a test-plan review (reconnaissance, selector fixes, gaps) from the report and the upstream method"}
+      - {name: existing, type: dir, required: false, from: "your current e2e test folder (pytest-playwright or Playwright TS); flows it already covers are not generated again"}
     run:
-      - {step: generate, kind: script, cmd: "python3 -I scripts/gen_tests.py --flows {flows} --test-out {out}/test_flows.py --report {out}/flows-report.md"}
+      - {step: generate, kind: script, cmd: "python3 -I scripts/gen_tests.py --flows {flows} [--existing {existing}] --test-out {out}/test_flows.py --report {out}/flows-report.md"}
       - {step: plan-review, kind: llm, template: assets/test-plan-review-template.md, context: ["../../../vendor/webapp-testing/SKILL.md", "{out}/flows-report.md", "{out}/test_flows.py", "references/flow-format.md"], out: "{out}/test-plan-review.md", skip_if_missing: [narrative]}
     outputs:
       - {path: "{out}/test_flows.py", checks: [exists, contains:"GENERATED, NOT EXECUTED", cmd:"python3 -I scripts/gen_tests.py --verify-compiles {path}"]}
       - {path: "{out}/flows-report.md", checks: [exists, sections:["Flows","Generated tests","Warnings","How to run"], contains:"not executed"]}
+    modes:
+      new: {case: agent-happy-path, bring: "the user flows you want tested"}
+      existing: {case: agent-mode-existing, bring: "the user flows and your current end-to-end tests"}
 ---
 
 # webapp-testing-runner
@@ -25,6 +29,10 @@ Wraps `webapp-testing` from anthropics/skills (pinned in vendor/pins.json). Upst
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/webapp-testing-runner --input <name>=<value> … --out <dir>` (see `--explain build/webapp-testing-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Say plainly that the tests were generated and compiled, not executed; results exist only after the user runs them.
+
+## Starting points
+- **New** — every flow is validated and turned into a pytest-playwright test (generated and compile-checked, never executed here).
+- **Existing** — add your current e2e folder: its tests are read, flows they already cover are listed with the covering test and not generated again, and only the gaps are written.
 
 ## When to use
 - Turning a list of user journeys into a Playwright suite the team can run locally or in CI.

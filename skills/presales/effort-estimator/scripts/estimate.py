@@ -39,6 +39,14 @@ Usage:
     python3 -I estimate.py wbs.csv --json          # machine-readable summary
     python3 -I estimate.py wbs.csv --rates card.csv --currency USD --fx INR=0.012
 
+Existing estimate (re-estimate): --previous <estimate.json from the earlier run> adds "Change vs previous
+estimate" to the report — P50/P80/P90 and each phase, old → new with the delta, and price at P80 when
+both runs were costed in the same currency — so a revised WBS is explained, not just re-quoted.
+--draft-only --memo <path>: writes the estimate memo on assets/estimate-summary-template.md's sections
+(Bottom line, Basis of estimate, Assumptions, Risks, …) from this run alone, every figure exactly as in
+the Markdown report, labelled as a draft (the model step was not run); what the model cannot know is an
+owned to-be-baselined marker.
+
 Standard library only. Exit 0 ok; 2 input error.
 """
 from __future__ import annotations
@@ -519,6 +527,84 @@ def render_md(tasks, unresolved, sim, staff, cost, mix, pred_issues=None) -> str
     return "\n".join(L)
 
 
+def load_previous(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(data.get("total"), dict):
+        raise ValueError(f"{path.name} is not an estimate.json from this script (no 'total')")
+    tot = {int(k): float(v) for k, v in data["total"].items()}
+    phases = {ph: {int(k): float(v) for k, v in vals.items()} for ph, vals in (data.get("phases") or {}).items()}
+    cost = data.get("cost") or None
+    return {"total": tot, "phases": phases, "cost": cost}
+
+
+def change_lines(prev: dict, sim: dict, staff: dict, cost) -> list[str]:
+    def row(label, old, new):
+        if old is None:
+            return f"| {label} | — | {new:,.0f} | new |"
+        if new is None:
+            return f"| {label} | {old:,.0f} | — | removed |"
+        d = new - old
+        return f"| {label} | {old:,.0f} | {new:,.0f} | {'+' if d >= 0 else '−'}{abs(d):,.0f} |"
+    L = ["## Change vs previous estimate", "| Item | Previous | Now | Change |", "|---|---|---|---|"]
+    for q in (50, 80, 90):
+        L.append(row(f"Total P{q} (pd)", prev["total"].get(q), sim["total"][q]))
+    for ph in list(staff["phases"]) + [ph for ph in prev["phases"] if ph not in staff["phases"]]:
+        old = prev["phases"].get(ph, {}).get(80)
+        new = sim["phases"].get(ph, {}).get(80) if ph in staff["phases"] else None
+        L.append(row(f"{ph} P80 (pd)", old, new))
+    pc = prev.get("cost")
+    if cost is not None and pc and pc.get("currency") == cost.get("currency") and pc.get("price_p80") is not None:
+        L.append(row(f"Price @P80 ({cost['currency']})", float(pc["price_p80"]), cost["price_p80"]))
+    else:
+        L.append(f"| Price @P80 | not compared | | {TBD_EST} (both runs need a rate card in the same currency) |")
+    L.append("")
+    return L
+
+
+def render_memo(sim, staff, cost, mix, unresolved, change: list[str] | None, client: str = "") -> str:
+    """Estimate memo (no model step): every figure exactly as render_md prints it."""
+    tot = sim["total"]
+    cont = tot[80] - tot[50]
+    cur = (cost or {}).get("currency") or ""
+    jud = mix.get("JUD", 0.0)
+    L = [f"# Estimate Memo — {client or TBD_EST} — draft", "",
+         "> Script draft — the model step was not run (draft only): figures are copied from `estimate.md`; "
+         "judgements are owned markers.", "",
+         "## Bottom line", "| Item | Value | Basis |", "|---|---|---|",
+         f"| Effort quoted | {tot[80]:,.0f} person-days at P80 (P50 {tot[50]:,.0f}, P90 {tot[90]:,.0f}) | "
+         f"`scripts/estimate.py`, {sim['iterations']:,} iterations |",
+         f"| Confidence level used | {TBD_EST} | commercial model not supplied |",
+         f"| Duration | {TBD_EST} | the model computes effort only |",
+         f"| Price | " + (f"{cost['price_p80']:,.0f} {cur} at P80" if cost is not None else f"pending rate card — {TBD_EST}")
+         + " | supplied rate card |",
+         f"| Contingency | P80 − P50 = {cont:,.0f} person-days ({cont / tot[50] * 100 if tot[50] else 0:.0f}%) | shown as a line |",
+         "| Basis mix | " + " · ".join(f"{k} {v * 100:.0f}%" for k, v in sorted(mix.items())) + " | "
+         + ("flag: judgment above 30%" if jud > 0.30 else "within the 30% judgment limit") + " |", "",
+         "## Basis of estimate", "| Phase | P50 (pd) | P80 (pd) | P90 (pd) |", "|---|---|---|---|"]
+    for ph in staff["phases"]:
+        s_ = sim["phases"].get(ph, {50: 0, 80: 0, 90: 0})
+        L.append(f"| {ph} | {s_[50]:,.0f} | {s_[80]:,.0f} | {s_[90]:,.0f} |")
+    L += [f"| **Total** | {tot[50]:,.0f} | {tot[80]:,.0f} | {tot[90]:,.0f} |", ""]
+    if change:
+        L += change
+    L += ["## Assumptions", "| ID | Assumption | Source |", "|---|---|---|",
+          "| A-01 | Driver counts and unit efforts are as in the WBS | WBS basis and notes columns |",
+          f"| A-02 | Client SME availability | {TBD_EST} |",
+          f"| A-03 | Environments ready before the build phase | {TBD_EST} |",
+          "| A-04 | Rates as on the supplied rate card | " + ("rate card valid_until column" if cost is not None else TBD_EST) + " |", "",
+          "## Risks to the estimate and de-risking", "| Risk | Effect on estimate | De-risk action | Owner |", "|---|---|---|---|"]
+    for r in sim["variance"][:3]:
+        L.append(f"| {r['task_id']} {r['task']} | spread {r['spread']:,.0f} pd (P10 {r['p10']:,.0f} → P90 {r['p90']:,.0f}) | "
+                 f"{TBD_EST} | {TBD_EST} |")
+    if jud > 0.30:
+        L.append(f"| Expert judgment covers {jud * 100:.0f}% of effort | low confidence in the totals | "
+                 f"assessment phase before fixed pricing | {TBD_EST} |")
+    if unresolved:
+        L.append(f"| Unresolved WBS rows excluded from totals | totals are understated | baseline the rows | {TBD_EST} |")
+    L += ["", "## Exclusions", f"{TBD_EST}", ""]
+    return "\n".join(L)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("wbs", help="WBS CSV")
@@ -531,6 +617,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--fx", action="append", default=[], metavar="CUR=RATE",
                     help="Sourced FX rate into the reporting currency (1 CUR = RATE); repeatable")
     ap.add_argument("--as-of", default="", help="Date (YYYY-MM-DD) for rate validity checks; default today")
+    ap.add_argument("--previous", default="", help="estimate.json of the earlier run, for the change section")
+    ap.add_argument("--memo", default="", help="estimate memo path (written with --draft-only)")
+    ap.add_argument("--draft-only", action="store_true", help="no model step: write --memo from this run")
+    ap.add_argument("--client", default="", help="client name for the memo title")
     args = ap.parse_args(argv)
 
     wbs_path = Path(args.wbs)
@@ -577,6 +667,17 @@ def main(argv: list[str] | None = None) -> int:
     preds = predecessor_issues(tasks, unresolved)
     for msg in preds:
         print(f"warning: {msg}", file=sys.stderr)
+    change = None
+    if args.previous:
+        pp = Path(args.previous)
+        if not pp.is_file():
+            print(f"error: previous estimate not found: {pp}", file=sys.stderr)
+            return 2
+        try:
+            change = change_lines(load_previous(pp), sim, staffing(tasks), cost)
+        except (ValueError, TypeError, AttributeError) as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
 
     if args.json:
         print(json.dumps({"total": sim["total"], "phases": sim["phases"], "basis_mix": mix,
@@ -585,6 +686,10 @@ def main(argv: list[str] | None = None) -> int:
                           "cost": cost}, indent=2, default=float))
         return 0
     md = render_md(tasks, unresolved, sim, staff, cost, mix, preds)
+    if change:
+        md = md.replace("## Duration", "\n".join(change) + "\n## Duration", 1)
+    if args.draft_only and args.memo:
+        Path(args.memo).write_text(render_memo(sim, staff, cost, mix, unresolved, change, args.client), encoding="utf-8")
     if args.out:
         Path(args.out).write_text(md, encoding="utf-8")
         print(f"wrote {args.out}")

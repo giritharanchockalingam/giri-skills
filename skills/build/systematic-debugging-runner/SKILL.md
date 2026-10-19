@@ -19,6 +19,8 @@ metadata:
     outputs:
       - {path: "{out}/debug.json", checks: [exists, json, cmd:"python3 -I scripts/debug_log.py --validate {path}"]}
       - {path: "{out}/debug-log.md", checks: [exists, sections:["Symptom","Evidence","Hypotheses","Next experiment","Fix gate"], contains:"Fix allowed: NO", no_unowned_tbd]}
+    modes:
+      existing: {case: agent-happy-path, bring: "the failure log, recent diff and repro steps"}
 ---
 
 # systematic-debugging-runner
@@ -27,6 +29,10 @@ Wraps `systematic-debugging` from obra/superpowers (pinned in vendor/pins.json).
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/systematic-debugging-runner --input <name>=<value> … --out <dir>` (see `--explain build/systematic-debugging-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. A log with no parsable exception stops the run (script exit 2) instead of inventing a symptom.
+
+## Starting points
+- **Existing** — the failure log (with the recent diff and repro steps when you have them) becomes an evidence-first debug log: symptom, evidence, ranked hypotheses, the next experiment, and a fix gate that stays closed until the root cause is proven.
+- Only for existing: debugging always starts from a failure in code that already runs; there is no from-scratch starting point.
 
 ## When to use
 - A failing test, CI job or crash with a stack trace, before proposing any fix.

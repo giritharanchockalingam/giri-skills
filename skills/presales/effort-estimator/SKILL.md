@@ -15,20 +15,29 @@ metadata:
       - {name: iterations, type: string, required: false, default: "20000"}
       - {name: currency, type: string, required: false, from: "reporting currency (ISO code) when the rate card mixes currencies"}
       - {name: fx, type: string, required: false, from: "sourced FX rates into the reporting currency, comma list CUR=rate (1 CUR = rate reporting currency), e.g. INR=0.012; needed with currency for a mixed-currency card"}
+      - {name: previous, type: json, required: false, from: "estimate.json from the earlier run; adds the change vs the previous estimate (totals, phases, price)"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model step: estimate-memo.md is written from this run's figures, labelled as a draft"}
     run:
       - {step: model-json, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --json", stdout: "{out}/estimate.json"}
-      - {step: model-report, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --out {out}/estimate.md"}
-      - {step: memo, kind: llm, template: assets/estimate-summary-template.md, context: ["{out}/estimate.md", "{out}/estimate.json", "references/estimation-method.md"], out: "{out}/estimate-memo.md"}
+      - {step: model-report, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --out {out}/estimate.md [--previous {previous}] --memo {out}/estimate-memo.md --client {client} {draft_only}"}
+      - {step: memo, kind: llm, template: assets/estimate-summary-template.md, context: ["{out}/estimate.md", "{out}/estimate.json", "references/estimation-method.md"], out: "{out}/estimate-memo.md", skip_if_present: [draft_only]}
     outputs:
       - {path: "{out}/estimate.json", checks: [exists, json]}
       - {path: "{out}/estimate.md", checks: [exists, sections:["Bottom line","Basis mix","By phase","Staffing"]]}
       - {path: "{out}/estimate-memo.md", checks: [exists, sections:["Bottom line","Basis of estimate","Assumptions","Risks"], no_unowned_tbd, numbers_trace_to:"{out}/estimate.md"]}
+    modes:
+      new: {case: agent-mode-new, bring: "a WBS filled in from the template and a rate card"}
+      existing: {case: agent-mode-existing, bring: "your revised WBS plus the earlier estimate's results"}
 ---
 
 # effort-estimator
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/effort-estimator --input <name>=<value> … --out <dir>` (see `--explain presales/effort-estimator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — your WBS (and rate card) is modelled: P10–P90 effort, phases, variance contributors, staffing, cost and price; the model step writes the memo, or with `draft_only` the memo is written from the run's figures, every number traceable.
+- **Existing** — add `previous` (the earlier run's `estimate.json`): the re-estimate shows what changed — totals, each phase and price at P80, previous → now — in the report and the memo.
 
 ## When to use
 - "Size the <initiative> engagement."

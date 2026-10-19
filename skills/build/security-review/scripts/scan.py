@@ -4,6 +4,7 @@
     python3 -I scripts/scan.py --diff change.patch --findings findings.csv --report review.md
     python3 -I scripts/scan.py --target <repo> --findings findings.csv --report review.md
     python3 -I scripts/scan.py --gate findings.csv        # exit 1 if any critical/high finding
+    ... --final security-review.md --draft-only           # no model step: the review record from the scan
 
 Detectors (file:line evidence; secrets are redacted in the evidence column):
   SEC1 action-without-auth      high      "use server" file exporting async functions with no
@@ -18,6 +19,10 @@ With --diff only added lines are scanned (--target adds a full-repo scan) (conte
 findings.csv (id, category, severity, file, line, evidence, recommendation) and review.md.
 Exit 0 after writing (findings or not); the gate is a separate call so an LLM step can reason on
 the findings first. Exit 1 on bad input or in --gate mode when critical/high findings exist. Stdlib.
+--draft-only --final <path>: writes the review record on the assets/review-report.md sections (Findings,
+Threat model record, Surfaces reviewed, Verification) from the scan alone, labelled as a draft: findings
+are scanner candidates (not traced entry → sink), and every judgement the scan cannot make — trust model,
+trace, regression test — is an owned to-be-baselined marker.
 """
 from __future__ import annotations
 
@@ -183,6 +188,47 @@ def write_outputs(findings: list[dict], fpath: Path, rpath: Path, scope: str, n_
     rpath.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_final(findings: list[dict], fpath: Path, scope: str, n_files: int, file_names: list[str]) -> None:
+    """Deterministic review record (no model step) on the review-report template's sections."""
+    tbd = lambda role: f"[TO BE BASELINED — owner: {role}]"  # noqa: E731
+    counts = {s_: sum(1 for f in findings if f["severity"] == s_) for s_ in SEV_ORDER}
+    verdict = "BLOCK" if counts["critical"] or counts["high"] else "MERGE (scanner candidates only — trace before sign-off)"
+    lines = [f"# Security Review — {scope}", "",
+             "> Script draft — the model review step was not run (draft only): findings are scanner candidates, "
+             "not traced entry → sink; owned markers show what a reviewer must still decide.", "",
+             "| Field | Value |", "|---|---|",
+             f"| Scope | {scope} ({n_files} file(s)) |", f"| Reviewer | {tbd('Security reviewer')} |",
+             f"| Trust model | {tbd('Tech lead')} |", f"| Verdict | {verdict} |", "",
+             "## Findings (worst first)", "",
+             "| # | Sev | Confidence | Title | Trace (entry → sink) | Fix | Test | Status |", "|---|---|---|---|---|---|---|---|"]
+    for f in findings:
+        lines.append(f"| {f['id']} | {f['severity']} | candidate (scanner) | {f['category']} ({f['rule']}) | "
+                     f"`{f['file']}:{f['line']}` → {tbd('Security reviewer')} | {f['recommendation']} | "
+                     f"{tbd('Developer')} | open |")
+    if not findings:
+        lines.append("| — | — | — | no scanner findings | — | — | — | — |")
+    lines += ["", "## Threat model record", "",
+              "| Change | Who reaches | Control in diff? | Findings |", "|---|---|---|---|"]
+    by_file: dict[str, list[str]] = {}
+    for f in findings:
+        by_file.setdefault(f["file"], []).append(f["id"])
+    for name in file_names:
+        ids = by_file.get(name, [])
+        lines.append(f"| `{name}` | {tbd('Tech lead')} | {'no → ' + ', '.join(ids) if ids else 'no scanner finding'} | "
+                     f"{', '.join(ids) or '—'} |")
+    lines += ["", "## Surfaces reviewed", "", "| Surface | Files |", "|---|---|"]
+    lines += [f"| {k} | {v} |" for k, v in surfaces(findings, n_files).items()]
+    lines += ["", "## Verification", "", "| Check | Result |", "|---|---|",
+              f"| `scan.py --gate findings.csv` | {'BLOCK — ' + str(counts['critical'] + counts['high']) + ' critical/high' if counts['critical'] or counts['high'] else 'pass — no critical/high'} |",
+              f"| `rls_lint.py` (supabase-schema-rls) | not run by this skill — {tbd('Developer')} |",
+              f"| Regression tests for Critical/High | {tbd('Developer') if counts['critical'] or counts['high'] else 'none required by the scan'} |",
+              f"| Re-trace after fix | {tbd('Security reviewer')} |", "",
+              "## Out of scope / parked", "",
+              "- IDOR, mass assignment, missing RLS policies and logic flaws are not detected by the scan."]
+    fpath.parent.mkdir(parents=True, exist_ok=True)
+    fpath.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def surfaces(findings: list[dict], n_files: int) -> dict:
     cats = {}
     for f in findings:
@@ -214,6 +260,8 @@ def main() -> int:
     ap.add_argument("--gate", metavar="FINDINGS_CSV", help="exit 1 if the findings file has critical/high rows")
     ap.add_argument("--findings", default="findings.csv")
     ap.add_argument("--report", default="review.md")
+    ap.add_argument("--final", default="", help="review record path (written with --draft-only)")
+    ap.add_argument("--draft-only", action="store_true", help="no model step: write --final from the scan")
     a = ap.parse_args()
     if a.gate:
         return gate(Path(a.gate))
@@ -243,6 +291,8 @@ def main() -> int:
         if Path(path).suffix in EXTS:
             findings += scan_file(path, info)
     write_outputs(findings, Path(a.findings), Path(a.report), scope, len(files))
+    if a.draft_only and a.final:
+        write_final(findings, Path(a.final), scope, len(files), sorted(files))
     for f in findings:
         print(f"{f['id']} {f['severity']:8} {f['rule']} {f['file']}:{f['line']}")
     print(f"{len(findings)} finding(s) in {len(files)} file(s) -> {a.findings}, {a.report}")

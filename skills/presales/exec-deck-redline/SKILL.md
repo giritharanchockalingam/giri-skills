@@ -10,20 +10,27 @@ metadata:
   agent:
     inputs:
       - {name: deck, type: file, required: true, from: "deck.pptx (needs python-pptx, see requirements-optional.txt) or a deck.md/.txt export with '--- slide N ---' separators (layout: evals/fixtures/deck.md)"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model step: a mechanical redline (sources, title form, density) is written from the ledger, labelled as a draft"}
     run:
-      - {step: ledger, kind: script, cmd: "python3 -I scripts/redline.py {deck} --ledger {out}/ledger.csv --unsourced {out}/unsourced-numbers.csv"}
-      - {step: redline, kind: llm, template: assets/redline-template.md, context: ["{out}/ledger.csv", "{out}/unsourced-numbers.csv", "assets/redline-rubric.md", "assets/storyline-checklist.md"], out: "{out}/redline.md"}
+      - {step: ledger, kind: script, cmd: "python3 -I scripts/redline.py {deck} --ledger {out}/ledger.csv --unsourced {out}/unsourced-numbers.csv --redline-out {out}/redline.md {draft_only}"}
+      - {step: redline, kind: llm, template: assets/redline-template.md, context: ["{out}/ledger.csv", "{out}/unsourced-numbers.csv", "assets/redline-rubric.md", "assets/storyline-checklist.md"], out: "{out}/redline.md", skip_if_present: [draft_only]}
       - {step: apply, kind: script, cmd: "python3 -I scripts/redline.py --apply {out}/redline.md --ledger {out}/ledger.csv"}
     outputs:
       - {path: "{out}/ledger.csv", checks: [exists, csv:[slide,title,text,verdict,reason,numbers_found], csv_rows:slide~^[0-9]+$, csv_rows:verdict!empty]}
       - {path: "{out}/unsourced-numbers.csv", checks: [exists, csv:[slide,number,context]]}
       - {path: "{out}/redline.md", checks: [exists, sections:["Redline table","Rewritten slides","Unsourced numbers"], no_unowned_tbd, numbers_trace_to:"{out}/ledger.csv"]}
+    modes:
+      existing: {case: agent-mode-existing, bring: "the deck you want redlined"}
 ---
 
 # exec-deck-redline
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/exec-deck-redline --input <name>=<value> … --out <dir>` (see `--explain presales/exec-deck-redline`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **Existing** — your deck is read slide by slide into a ledger with every unsourced figure listed; the model step writes the redline (storyline kept, [KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD]), or with `draft_only` a mechanical redline flags unsourced figures, label titles and dense slides; the verdicts are applied back to the ledger.
+- Only for existing: a redline always starts from a deck that already exists; to build a deck from nothing, start with proposal-writer or value-case-builder.
 
 ## When to use
 - "Redline this steering-committee deck."

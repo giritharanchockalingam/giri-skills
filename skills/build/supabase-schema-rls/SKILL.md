@@ -12,16 +12,24 @@ metadata:
       - {name: migrations, type: dir, required: true, from: "supabase/migrations directory (or a single .sql file)"}
       - {name: client_dirs, type: args, required: false, from: "dirs/files that must not reference the service role, e.g. \"app components\""}
       - {name: root, type: path, required: false, from: "repo root for client_dirs"}
+      - {name: applied_through, type: string, required: false, from: "file name of the last migration already applied (e.g. 0002_tenancy.sql); no missing-rollback finding for applied ones"}
     run:
-      - {step: lint, kind: script, cmd: "python3 -I scripts/rls_lint.py {migrations} [--client-dirs {client_dirs}] [--root {root}]", stdout: "{out}/rls-lint.txt", expect_exit: [0, 1]}
+      - {step: lint, kind: script, cmd: "python3 -I scripts/rls_lint.py {migrations} [--client-dirs {client_dirs}] [--root {root}] [--applied-through {applied_through}]", stdout: "{out}/rls-lint.txt", expect_exit: [0, 1]}
     outputs:
-      - {path: "{out}/rls-lint.txt", checks: [exists, contains:"errors", cmd:"python3 -I scripts/rls_lint.py {migrations} --quiet"]}
+      - {path: "{out}/rls-lint.txt", checks: [exists, contains:"errors", cmd:"python3 -I scripts/rls_lint.py {migrations} --quiet --applied-through={applied_through}"]}
+    modes:
+      new: {case: agent-happy-path, bring: "the first migration of your new schema"}
+      existing: {case: agent-mode-existing, bring: "your existing migrations folder and app code"}
 ---
 
 # supabase-schema-rls
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/supabase-schema-rls --input <name>=<value> … --out <dir>` (see `--explain build/supabase-schema-rls`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — your first migrations are linted against every rule (RLS on, policies present, tenant predicate, `with check`, roles, rollback block).
+- **Existing** — the whole history is replayed in order: policies later dropped or replaced and tables later dropped are judged by what is live now, columns added later count, client code is scanned for the service role, and migrations already applied (`applied_through`) are not asked for a rollback block they can no longer get.
 
 ## When to use
 - "Add a table", "add a column", "who can see X", "set up RLS", "new role", "migration", "seed".

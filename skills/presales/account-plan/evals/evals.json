@@ -110,6 +110,41 @@
           "check": "csv_rows:owner~^\\[TO BE BASELINED"
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Quarterly refresh of the Northwind plan: here are this quarter's exports and last quarter's plays and pipeline.",
+      "expected": [
+        "Since last plan: P2 done, Data and AI and Dana Ortiz plays carried over with last quarter's owner to confirm, Raj Patel play closed by events; pipeline delta shows Apigee added, EDI renewal removed, Order Hub stage/value/date changes"
+      ],
+      "inputs": {
+        "stakeholders": "evals/fixtures/stakeholders.csv",
+        "pipeline": "evals/fixtures/pipeline.csv",
+        "services": "evals/fixtures/services.csv",
+        "client": "Northwind",
+        "as_of": "2026-10-01",
+        "previous_plays": "evals/fixtures/plays-previous.csv",
+        "previous_pipeline": "evals/fixtures/pipeline-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "account-plan.md",
+          "check": "sections:[\"Since last plan\",\"90-day plays\"]"
+        },
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"| P4 | Re-establish contact with Raj Patel (VP Supply Chain) | closed by events\""
+        },
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"| Order Hub wave 1 | changed | stage discovery → proposal; value 1200000 → 1472000\""
+        },
+        {
+          "file": "plays.csv",
+          "check": "contains:\"Priya (last quarter's owner — confirm)\""
+        }
+      ]
     }
   ]
 }

@@ -14,17 +14,26 @@ metadata:
       - {name: services, type: csv, required: true, from: "services.csv: service, status_at_account in active|proposed|none (layout: evals/fixtures/services.csv)"}
       - {name: client, type: string, required: false, default: "<Client>"}
       - {name: as_of, type: string, required: false, from: "yyyy-mm-dd; enables stale-contact (90 days) detection"}
+      - {name: previous_plays, type: csv, required: false, from: "last quarter's plays.csv (optional status column: done | open | dropped) for the refresh"}
+      - {name: previous_pipeline, type: csv, required: false, from: "last quarter's pipeline.csv, for the pipeline delta"}
     run:
-      - {step: plan, kind: script, cmd: "python3 -I scripts/account_plan.py {stakeholders} {pipeline} {services} --out {out}/account-plan.md --plays {out}/plays.csv --client {client} [--as-of {as_of}]"}
+      - {step: plan, kind: script, cmd: "python3 -I scripts/account_plan.py {stakeholders} {pipeline} {services} --out {out}/account-plan.md --plays {out}/plays.csv --client {client} [--as-of {as_of}] [--previous-plays {previous_plays}] [--previous-pipeline {previous_pipeline}]"}
     outputs:
       - {path: "{out}/account-plan.md", checks: [exists, sections:["Stakeholder map","White-space matrix","Pipeline","90-day plays"]]}
       - {path: "{out}/plays.csv", checks: [exists, csv:[play_id,play,addresses,owner,date,success_measure], csv_rows:owner!empty]}
+    modes:
+      new: {case: agent-happy-path, bring: "stakeholder list, CRM pipeline export and service coverage"}
+      existing: {case: agent-mode-existing, bring: "this quarter's exports plus last quarter's plays and pipeline"}
 ---
 
 # account-plan
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/account-plan --input <name>=<value> … --out <dir>` (see `--explain presales/account-plan`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — stakeholders, pipeline and service coverage become a 90-day plan: stakeholder map, white space, pipeline, risks and plays with owned TBDs.
+- **Existing** — add last quarter's plays and pipeline: the refresh says which plays were done, carried over (with last quarter's owner to confirm), dropped or closed by events, which plays are new, and how each opportunity moved since the last plan.
 
 ## When to use
 - "Build the Q<n> account plan for <client>."

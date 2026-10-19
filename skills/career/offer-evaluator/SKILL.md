@@ -20,12 +20,19 @@ metadata:
     outputs:
       - {path: "{out}/comparison.json", checks: [exists, json, contains:"annualized_total"]}
       - {path: "{out}/comparison.md", checks: [exists, contains:"annualized"]}
+    modes:
+      new: {case: agent-mode-new, bring: "the offers you hold, with no current package to compare"}
+      existing: {case: agent-happy-path, bring: "the offers plus your current package"}
 ---
 
 # Offer Evaluator
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/offer-evaluator --input <name>=<value> … --out <dir>` (see `--explain career/offer-evaluator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — the offers alone (e.g. between roles, no current package): year-1 cash, recurring and annualized totals, COL-adjusted only with indices you supply.
+- **Existing** — include your current package as the `Current` row: every offer is also shown as the change against what you have today, recurring and COL-adjusted.
 
 ## When to use
 - "Is this offer good?", "compare offer A vs B vs my current job", "adjust for moving to Austin", "what should I negotiate?", "help me decide".

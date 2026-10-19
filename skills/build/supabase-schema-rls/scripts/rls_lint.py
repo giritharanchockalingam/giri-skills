@@ -13,6 +13,13 @@ Checks (all static, stdlib only; run with: python3 -I rls_lint.py supabase/migra
   RLS009  service-role usage in client directories (--client-dirs)
   RLS010  `using (true)` on a non-select policy, or on select without `to anon` being intentional (warn)
 
+Existing migration history: files are replayed in name order, as they are applied — `drop policy`
+withdraws the findings of the policy it drops (the replaced policy is judged, not the old one), `drop
+table` removes the table, and `alter table … add column tenant_id` makes a table tenant-scoped.
+--applied-through <file>: migrations up to and including that file name are already applied; RLS007
+is not raised for them (an applied migration is never edited, so its missing rollback cannot be fixed
+there) — every other finding still stands, because it describes the schema as it is.
+
 Exit 1 if any error-level finding. Use --warn-only to downgrade everything to warnings.
 """
 from __future__ import annotations
@@ -50,6 +57,14 @@ USING_TRUE_RE = re.compile(r"\busing\s*\(\s*true\s*\)", re.I)
 SERVICE_ROLE_RE = re.compile(
     r"SUPABASE_SERVICE_ROLE_KEY|service_role|serviceRoleKey|createAdminClient|supabaseAdmin",
 )
+DROP_POLICY_RE = re.compile(
+    r"drop\s+policy\s+(?:if\s+exists\s+)?\"?(?P<pname>\w+)\"?\s+on\s+(?:(?P<schema>\w+)\.)?\"?(?P<table>\w+)\"?",
+    re.I,
+)
+DROP_TABLE_RE = re.compile(
+    r"drop\s+table\s+(?:if\s+exists\s+)?(?P<names>(?:(?:\w+\.)?\"?\w+\"?\s*,\s*)*(?:\w+\.)?\"?\w+\"?)",
+    re.I,
+)
 COMMENT_RE = re.compile(r"--[^\n]*|/\*.*?\*/", re.S)
 
 IGNORE_TABLES = {"schema_migrations", "supabase_migrations"}
@@ -84,7 +99,11 @@ def line_of(text: str, pos: int) -> int:
     return text.count("\n", 0, pos) + 1
 
 
-def lint_migrations(mig_dir: Path, findings: list[Finding]) -> None:
+def _key(schema, name) -> str:
+    return f"{(schema or 'public').lower()}.{name.lower()}"
+
+
+def lint_migrations(mig_dir: Path, findings: list[Finding], applied_through: str = "") -> None:
     files = [mig_dir] if mig_dir.is_file() else sorted(mig_dir.glob("*.sql"))
     if not files:
         findings.append(Finding("RLS000", "warn", str(mig_dir), 0, "no .sql migrations found"))
@@ -95,11 +114,19 @@ def lint_migrations(mig_dir: Path, findings: list[Finding]) -> None:
 
     for f in files:
         raw = f.read_text(encoding="utf-8", errors="replace")
-        if not ROLLBACK_RE.search(raw):
+        applied = bool(applied_through) and f.name <= applied_through
+        if not ROLLBACK_RE.search(raw) and not applied:
             findings.append(Finding("RLS007", "error", str(f), 1, "missing `-- rollback:` block"))
         sql = strip_comments(raw)
         all_sql.append((f, sql))
-        for m in CREATE_TABLE_RE.finditer(sql):
+        events = [(m.start(), "create", m) for m in CREATE_TABLE_RE.finditer(sql)]
+        events += [(m.start(), "drop", m) for m in DROP_TABLE_RE.finditer(sql)]
+        for _, kind, m in sorted(events, key=lambda e: e[0]):
+            if kind == "drop":
+                for raw_name in m.group("names").split(","):
+                    parts = raw_name.strip().replace('"', "").split(".")
+                    tables.pop(_key(parts[0] if len(parts) == 2 else None, parts[-1]), None)
+                continue
             name = m.group("name").lower()
             if name in IGNORE_TABLES:
                 continue
@@ -113,6 +140,7 @@ def lint_migrations(mig_dir: Path, findings: list[Finding]) -> None:
             if key in tables:
                 tables[key].tenant_scoped = True
 
+    pending: dict[tuple[str, str], list[Finding]] = {}   # (table, policy) -> its findings, withdrawn on drop policy
     for f, sql in all_sql:
         for m in ENABLE_RLS_RE.finditer(sql):
             key = f"{(m.group('schema') or 'public').lower()}.{m.group('name').lower()}"
@@ -122,8 +150,29 @@ def lint_migrations(mig_dir: Path, findings: list[Finding]) -> None:
                 # table created outside this migration set; still fine
                 tables.setdefault(key, Table(m.group("name").lower(), "public", str(f), line_of(sql, m.start()), False)).rls_enabled = True
 
-        for m in POLICY_RE.finditer(sql):
+        events = [(m.start(), "create", m) for m in POLICY_RE.finditer(sql)]
+        events += [(m.start(), "drop", m) for m in DROP_POLICY_RE.finditer(sql)]
+        events += [(m.start(), "drop_table", m) for m in DROP_TABLE_RE.finditer(sql)]
+        for _, kind, m in sorted(events, key=lambda e: e[0]):
+            if kind == "drop_table":                # its policies go with it: withdraw their findings
+                for raw_name in m.group("names").split(","):
+                    parts = raw_name.strip().replace('"', "").split(".")
+                    gone = _key(parts[0] if len(parts) == 2 else None, parts[-1])
+                    for pk in [pk for pk in pending if pk[0] == gone]:
+                        for fd in pending.pop(pk):
+                            findings.remove(fd)
+                        if gone in tables and pk[1] in tables[gone].policies:
+                            tables[gone].policies.remove(pk[1])   # a re-created table starts without them
+                continue
             key = f"{(m.group('schema') or 'public').lower()}.{m.group('table').lower()}"
+            if kind == "drop":
+                pname = m.group("pname")
+                for fd in pending.pop((key, pname), []):
+                    findings.remove(fd)
+                if key in tables and pname in tables[key].policies:
+                    tables[key].policies.remove(pname)
+                continue
+            before = len(findings)
             rest = m.group("rest")
             ln = line_of(sql, m.start())
             op = (FOR_RE.search(rest).group(1).lower() if FOR_RE.search(rest) else "all")
@@ -145,6 +194,7 @@ def lint_migrations(mig_dir: Path, findings: list[Finding]) -> None:
             if USING_TRUE_RE.search(rest):
                 lvl = "warn" if op == "select" else "error"
                 findings.append(Finding("RLS010", lvl, str(f), ln, f"policy {m.group('pname')} uses `using (true)` on {op}"))
+            pending[(key, m.group("pname"))] = pending.get((key, m.group("pname")), []) + findings[before:]
 
         for m in SECDEF_FN_RE.finditer(sql):
             tail = m.group("tail")
@@ -183,6 +233,8 @@ def main() -> int:
     ap.add_argument("--root", default=".", help="repo root for --client-dirs")
     ap.add_argument("--warn-only", action="store_true")
     ap.add_argument("--quiet", action="store_true", help="print only the summary line")
+    ap.add_argument("--applied-through", default="", metavar="FILE",
+                    help="migration file name up to which the history is already applied (no RLS007 for those)")
     args = ap.parse_args()
 
     findings: list[Finding] = []
@@ -190,7 +242,7 @@ def main() -> int:
     if not (mig.is_dir() or (mig.is_file() and mig.suffix.lower() == ".sql")):
         print(f"error: not a migrations directory or a .sql file: {mig}", file=sys.stderr)
         return 2
-    lint_migrations(mig, findings)
+    lint_migrations(mig, findings, Path(args.applied_through).name if args.applied_through else "")
     lint_client_dirs(args.client_dirs, Path(args.root), findings)
 
     findings.sort(key=lambda x: (x.file, x.line, x.code))

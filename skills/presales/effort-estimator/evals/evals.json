@@ -94,6 +94,63 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Run the estimate for Acme on the attached WBS and rate card; memo from the model output only, no LLM.",
+      "expected": [
+        "estimate-memo.md has Bottom line, Basis of estimate, Assumptions, Risks; every figure traces to estimate.md; labelled as a draft"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "estimate-memo.md",
+          "check": "contains:\"| Effort quoted | 246 person-days at P80 (P50 223, P90 259)\""
+        },
+        {
+          "file": "estimate-memo.md",
+          "check": "numbers_trace_to:estimate.md"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We revised the Acme WBS (more interfaces, environment build added). Re-estimate and show what changed against the v0.1 estimate.",
+      "expected": [
+        "Change vs previous estimate: P80 225 → 246 (+21), Phase 3 new, price at P80 204,080 → 216,160; the memo repeats the change table with traceable figures"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "previous": "evals/fixtures/estimate-previous.json",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "estimate.md",
+          "check": "contains:\"| Total P80 (pd) | 225 | 246 | +21 |\""
+        },
+        {
+          "file": "estimate.md",
+          "check": "contains:\"| Phase 3 - Cutover P80 (pd) | — | 15 | new |\""
+        },
+        {
+          "file": "estimate-memo.md",
+          "check": "contains:\"| Price @P80 (USD) | 204,080 | 216,160 | +12,080 |\""
+        },
+        {
+          "file": "estimate-memo.md",
+          "check": "numbers_trace_to:estimate.md"
+        }
+      ]
     }
   ]
 }

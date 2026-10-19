@@ -93,6 +93,55 @@
           "check": "contains:\"Scanner verdict: BLOCK\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Security review of the new invoice feature diff before merge; scan-only record is fine.",
+      "expected": [
+        "Added lines scanned; no critical/high; security-review.md written from the scan and labelled as a draft"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-clean.patch",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "security-review.md",
+          "check": "contains:\"Script draft — the model review step was not run\""
+        },
+        {
+          "file": "security-review.md",
+          "check": "sections:[\"Findings\",\"Threat model\",\"Verification\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Review this diff together with the repo it lands in — I want the surrounding handlers and components checked too.",
+      "expected": [
+        "Repo scanned in full plus the diff; the existing ReleaseNotes component is flagged medium (dangerouslySetInnerHTML); gate passes; every scanned file appears in the threat-model record"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-clean.patch",
+        "target": "evals/fixtures/repo-existing",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "contains:\"components/ReleaseNotes.tsx\""
+        },
+        {
+          "file": "security-review.md",
+          "check": "contains:\"| `server/actions/save-note.ts` |\""
+        },
+        {
+          "file": "security-review.md",
+          "check": "contains:\"pass — no critical/high\""
+        }
+      ]
     }
   ]
 }

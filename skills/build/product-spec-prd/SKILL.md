@@ -10,18 +10,27 @@ metadata:
   agent:
     inputs:
       - {name: brief, type: json, required: true, from: "brief.json: {feature, problem, users[], goals[], non_goals[], metrics[{name,target,baseline}], phases[{name,scope[]}]} (layout: evals/fixtures/brief.json)"}
+      - {name: existing, type: md, required: false, from: "the team's existing PRD to redline against the brief (storyline kept; [KEEP]/[SHARPEN]/[ADD]/[TBD]); no model step"}
+      - {name: draft_only, type: flag, required: false, flag: "--draft-only", from: "true to skip the model sharpen step: the checked script draft becomes prd-final.md"}
     run:
-      - {step: prd, kind: script, cmd: "python3 -I scripts/prd.py {brief} --template assets/prd-template.md --out {out}/PRD.md"}
-      - {step: sharpen, kind: llm, template: assets/prd-template.md, context: ["{out}/PRD.md", "references/prd-method.md", "references/prd-review-checklist.md"], out: "{out}/prd-final.md"}
+      - {step: prd, kind: script, cmd: "python3 -I scripts/prd.py {brief} --template assets/prd-template.md --out {out}/PRD.md --final {out}/prd-final.md {draft_only} [--existing {existing}] --redline {out}/PRD-redline.md"}
+      - {step: sharpen, kind: llm, template: assets/prd-template.md, context: ["{out}/PRD.md", "references/prd-method.md", "references/prd-review-checklist.md"], out: "{out}/prd-final.md", skip_if_present: [existing, draft_only]}
     outputs:
       - {path: "{out}/PRD.md", checks: [exists, sections:["Problem","Users","Goals","Non-goals","Metrics","Phases","Engineering handoff"]]}
       - {path: "{out}/prd-final.md", checks: [exists, sections:["Problem","Goals","Non-goals","Metrics","Phases"], no_unowned_tbd]}
+    modes:
+      new: {case: agent-mode-new, bring: "a short brief: problem, users, goals, metrics, phases"}
+      existing: {case: agent-mode-existing, bring: "your existing PRD and the brief's facts"}
 ---
 
 # product-spec-prd
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/product-spec-prd --input <name>=<value> … --out <dir>` (see `--explain build/product-spec-prd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Every brief field the script cannot find becomes `[TO BE BASELINED — owner: ___]`; the sharpen step may tighten wording but must not invent numbers, users or dates.
+
+## Starting points
+- **New** — your brief becomes a PRD on the template (`PRD.md`); the model step sharpens it into `prd-final.md`, or with `draft_only` the checked script draft is the final PRD. Nothing the brief does not say is invented.
+- **Existing** — add `existing` (your current PRD): it is redlined section by section against the brief and the review checklist — [KEEP], [SHARPEN], [ADD], and every figure the brief does not back marked [TBD] with an owner — and `prd-final.md` is your PRD with the redline applied, storyline unchanged.
 
 ## When to use
 - A feature idea, customer ask, or roadmap item needs a definition engineers can plan from.

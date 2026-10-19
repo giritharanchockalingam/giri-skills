@@ -14,16 +14,24 @@ metadata:
       - {name: concerns, type: csv, required: true, from: "concerns.csv: stakeholder, concern — from discovery (layout: evals/fixtures/concerns.csv)"}
       - {name: client, type: string, required: false, default: "<Client>"}
       - {name: alternative, type: string, required: false, default: "<Alternative>"}
+      - {name: previous_claims, type: csv, required: false, from: "their-claims.csv behind the last battle card; adds what changed and which wedges closed"}
     run:
-      - {step: card, kind: script, cmd: "python3 -I scripts/battle_card.py {ours} {theirs} {concerns} --out {out}/battle-card.md --client {client} --alternative {alternative}"}
+      - {step: card, kind: script, cmd: "python3 -I scripts/battle_card.py {ours} {theirs} {concerns} --out {out}/battle-card.md --client {client} --alternative {alternative} [--previous-claims {previous_claims}]"}
     outputs:
       - {path: "{out}/battle-card.md", checks: [exists, contains:"INTERNAL — do not distribute", sections:["Wedge","Landmines","Objection handling","Intelligence gaps"]]}
+    modes:
+      new: {case: agent-happy-path, bring: "your capabilities, their claims and stakeholder concerns"}
+      existing: {case: agent-mode-existing, bring: "today's intel plus the claims behind your last card"}
 ---
 
 # competitive-positioning
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/competitive-positioning --input <name>=<value> … --out <dir>` (see `--explain presales/competitive-positioning`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — capabilities, their claims and stakeholder concerns become a battle card: wedge, landmines, objection grid, ghost lines and intelligence gaps, evidence-rated.
+- **Existing** — add the claims behind your last card: the refresh lists claims that are new, withdrawn or re-rated and any wedge the new evidence has closed, so the team stops leading with it.
 
 ## When to use
 - "How do we beat the incumbent at <client>?"

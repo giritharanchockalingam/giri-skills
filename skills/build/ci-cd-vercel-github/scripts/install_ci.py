@@ -10,8 +10,11 @@ job names per workflow:
   ci.yml       lint-typecheck-test, rls-lint, secrets-scan
   preview.yml  deploy-preview, e2e
   prod.yml     verify-tag, migrate-staging, migrate-prod, deploy-prod
-A `concurrency:` block is recommended and reported as a warning when absent. Writes ci-report.json
-(per workflow: workflow, action, path, valid, jobs_found, missing_jobs, warnings) and ci-report.md.
+A `concurrency:` block is recommended and reported as a warning when absent. When the target already
+has a package.json, every `npm run <script>` a workflow calls is checked against its "scripts" and
+missing ones are listed (a warning, not a gate failure: the team adds the script or edits the step).
+Writes ci-report.json (per workflow: workflow, action, path, valid, jobs_found, missing_jobs, warnings,
+npm_scripts_missing; plus package_json) and ci-report.md.
 Exit 1 on bad input or when any required job is missing / a workflow is structurally invalid —
 the branch-protection check names depend on those job names. Stdlib, offline.
 """
@@ -31,6 +34,20 @@ REQUIRED = {
     "prod.yml": ["verify-tag", "migrate-staging", "migrate-prod", "deploy-prod"],
 }
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):", re.M)
+NPM_RUN = re.compile(r"\bnpm run ([A-Za-z0-9:_.-]+)")
+
+
+def package_scripts(target: Path) -> set[str] | None:
+    """The "scripts" names in <target>/package.json, or None when there is no package.json."""
+    pj = target / "package.json"
+    if not pj.is_file():
+        return None
+    try:
+        data = json.loads(pj.read_text(encoding="utf-8"))
+    except ValueError as e:
+        die(f"package.json is not valid JSON: {e}")
+    scripts = data.get("scripts") if isinstance(data, dict) else None
+    return set(scripts) if isinstance(scripts, dict) else set()
 
 
 def die(msg: str) -> None:
@@ -80,6 +97,7 @@ def main() -> int:
     wf_dir = target / ".github" / "workflows"
     wf_dir.mkdir(parents=True, exist_ok=True)
 
+    scripts = package_scripts(target)
     rows = []
     for name, required in REQUIRED.items():
         dest = wf_dir / name
@@ -88,11 +106,15 @@ def main() -> int:
         else:
             dest.write_text((ASSETS / name).read_text(encoding="utf-8"), encoding="utf-8")
             action = "written"
-        res = validate(dest.read_text(encoding="utf-8", errors="replace"), required)
+        text = dest.read_text(encoding="utf-8", errors="replace")
+        res = validate(text, required)
+        called = sorted(set(NPM_RUN.findall(text)))
+        res["npm_scripts_missing"] = [] if scripts is None else [c for c in called if c not in scripts]
         rows.append({"workflow": name, "action": action, "path": f".github/workflows/{name}", **res})
 
     failed = [r for r in rows if not r["valid"] or r["missing_jobs"]]
     report = {"target": str(target), "ok": not failed, "workflows": rows,
+              "package_json": "absent" if scripts is None else "checked",
               "required_checks": ["ci / lint-typecheck-test", "ci / rls-lint", "preview / e2e"]}
     rj, rm = Path(a.report_json), Path(a.report_md)
     rj.parent.mkdir(parents=True, exist_ok=True)
@@ -107,6 +129,13 @@ def main() -> int:
     for r in rows:
         lines.append(f"| `{r['path']}` | {r['action']} | {'yes' if r['valid'] else 'no: ' + '; '.join(r['problems'])} | "
                      f"{', '.join(r['jobs_found']) or '—'} | {', '.join(r['missing_jobs']) or '—'} | {'; '.join(r['warnings']) or '—'} |")
+    lines += ["", "## package.json scripts", ""]
+    if scripts is None:
+        lines.append("No package.json in the target yet — not checked; every `npm run` the workflows call must exist once it is added.")
+    else:
+        gaps = [(r["path"], s_) for r in rows for s_ in r["npm_scripts_missing"]]
+        lines += [f"- `{p_}` calls `npm run {s_}` — not in package.json scripts" for p_, s_ in gaps] or \
+                 ["Every `npm run` the workflows call exists in package.json."]
     lines += ["", "## Branch protection (required checks)", ""] + [f"- `{c}`" for c in report["required_checks"]]
     lines += ["", "## Next steps", "",
               "1. Confirm every `npm run <script>` the workflows call exists in package.json.",

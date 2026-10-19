@@ -26,6 +26,13 @@ Usage:
     python3 -I score_matrix.py requirements.csv --capabilities caps.csv \
         --out matrix.csv --gaps gaps.md --summary bid-score.json [--min-overlap 0.5]
 
+Existing matrix (--previous matrix.csv from the earlier round, e.g. before an addendum): a requirement
+with the same clause (client_id, else req_id) and the same text keeps the reviewed answer — compliance,
+evidence, gap, mitigation, owner, response section and status — flagged `carried`; a clause whose text
+changed is re-scored and flagged `changed (was <C/P/N/Q>)`; a clause not in the previous matrix is
+flagged `new`; previous clauses no longer in the RFP are listed as withdrawn. gaps.md gains "Changes
+since the previous matrix". Rows whose req_id starts with `#` are notes and are skipped.
+
 Exit codes: 0 ok; 1 bad input (missing file, missing columns, no rows). Stdlib only.
 """
 from __future__ import annotations
@@ -127,6 +134,61 @@ def score(reqs: list[dict], caps: list[dict], min_overlap: float):
     return matrix
 
 
+CARRY = ("compliance", "evidence", "gap_condition", "mitigation", "owner", "response_section", "status",
+         "clarification_id", "category")
+
+
+def _clause(r: dict) -> str:
+    return (r.get("client_id") or r.get("req_id") or "").strip()
+
+
+def _norm(text: str) -> str:
+    return " ".join(WORD_RE.findall((text or "").lower()))
+
+
+def apply_previous(matrix: list[dict], prev: list[dict]) -> dict:
+    """Carry reviewed answers for unchanged clauses; flag changed/new; return the change summary."""
+    before = {_clause(r): r for r in prev if _clause(r) and not (r.get("req_id") or "").startswith("#")}
+    seen, changes = set(), {"carried": [], "changed": [], "new": [], "withdrawn": []}
+    for row in matrix:
+        key = _clause(row)
+        old = before.get(key)
+        if old is None:
+            row["flags"] = (row["flags"] + "; " if row["flags"] else "") + "new"
+            changes["new"].append(key)
+            continue
+        seen.add(key)
+        if _norm(old.get("text", "")) == _norm(row["text"]):
+            for c in CARRY:
+                if c in ("owner", "category"):            # keep the inventory's value when the old cell is blank
+                    if (old.get(c) or "").strip():
+                        row[c] = old[c].strip()
+                elif c in old:                            # the reviewed answer wins, blanks included (a resolved Q has no CQ)
+                    row[c] = (old.get(c) or "").strip()
+            if row["compliance"] != "Q":
+                row["clarification_id"] = ""              # an answered clarification no longer needs a CQ
+            row["flags"] = "carried"
+            changes["carried"].append(key)
+        else:
+            row["flags"] = (row["flags"] + "; " if row["flags"] else "") + f"changed (was {old.get('compliance', '?')})"
+            changes["changed"].append((key, old.get("compliance", "?"), row["compliance"]))
+    changes["withdrawn"] = [(k, r.get("text", "")) for k, r in before.items() if k not in seen]
+    return changes
+
+
+def render_changes(ch: dict) -> list[str]:
+    L = ["", "## Changes since the previous matrix",
+         f"{len(ch['carried'])} carried with their reviewed answer · {len(ch['changed'])} changed · "
+         f"{len(ch['new'])} new · {len(ch['withdrawn'])} withdrawn.", "",
+         "| Clause | Change | Detail |", "|---|---|---|"]
+    L += [f"| {k} | changed | text differs — re-scored {now} (was {was}); re-review the answer |" for k, was, now in ch["changed"]]
+    L += [f"| {k} | new | not in the previous matrix — review the drafted answer |" for k in ch["new"]]
+    L += [f"| {k} | withdrawn | {t[:100].replace('|', '/')} — drop it from the response |" for k, t in ch["withdrawn"]]
+    if not (ch["changed"] or ch["new"] or ch["withdrawn"]):
+        L.append("| — | none | every clause carried |")
+    return L
+
+
 def gate(matrix: list[dict]) -> dict:
     mand = [r for r in matrix if r["mdo"] == "M"]
     m_c = sum(r["compliance"] == "C" for r in mand)
@@ -187,12 +249,15 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path, required=True, help="matrix CSV path")
     ap.add_argument("--gaps", type=Path, help="gaps/bid-gate Markdown path")
     ap.add_argument("--summary", type=Path, help="bid score JSON path")
+    ap.add_argument("--previous", type=Path, help="matrix.csv from the earlier round (addendum / re-bid)")
     ap.add_argument("--min-overlap", type=float, default=0.5,
                     help="share of a capability's keywords that must hit (default 0.5)")
     a = ap.parse_args(argv)
     reqs = read_csv(a.requirements, REQ_COLS, "requirements CSV")
     caps = read_csv(a.capabilities, CAP_COLS, "capabilities CSV")
     matrix = score(reqs, caps, a.min_overlap)
+    changes = apply_previous(matrix, read_csv(a.previous, {"req_id", "text", "compliance"}, "previous matrix")) \
+        if a.previous else None
     g = gate(matrix)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     with a.out.open("w", newline="", encoding="utf-8") as f:
@@ -200,11 +265,16 @@ def main(argv=None) -> int:
         w.writeheader()
         w.writerows(matrix)
     if a.gaps:
-        a.gaps.write_text(render_gaps(matrix, g), encoding="utf-8")
+        text = render_gaps(matrix, g)
+        if changes is not None:
+            text = text.rstrip("\n") + "\n" + "\n".join(render_changes(changes)) + "\n"
+        a.gaps.write_text(text, encoding="utf-8")
     if a.summary:
         counts = {k: sum(r["compliance"] == k for r in matrix) for k in "CPNQ"}
-        a.summary.write_text(json.dumps({"requirements": len(matrix), "counts": counts, "gate": g},
-                                        indent=2), encoding="utf-8")
+        summary = {"requirements": len(matrix), "counts": counts, "gate": g}
+        if changes is not None:
+            summary["changes"] = {k: len(v) for k, v in changes.items()}
+        a.summary.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(f"{len(matrix)} requirements scored -> {a.out}; gate: {g['verdict']}")
     return 0
 

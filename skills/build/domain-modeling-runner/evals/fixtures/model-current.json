@@ -1,0 +1,209 @@
+{
+  "_note": "fictional fixture \u2014 the course-enrollment model as it is today (v1), written by scripts/model.py; invented for the domain-modeling-runner evals",
+  "skill": "domain-modeling-runner",
+  "title": "Course enrollment (current)",
+  "sources": {
+    "entities": "entities-v1.csv",
+    "relationships": "relationships-v1.csv",
+    "glossary": ""
+  },
+  "valid": true,
+  "errors": [],
+  "warnings": [
+    "W2 glossary term Student: entity has no glossary definition",
+    "W2 glossary term Course: entity has no glossary definition",
+    "W2 glossary term Enrollment: entity has no glossary definition",
+    "W2 glossary term Section: entity has no glossary definition"
+  ],
+  "entities": [
+    {
+      "name": "Student",
+      "attributes": [
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "required": true,
+          "identifier": true,
+          "foreign_key": false,
+          "notes": "PK"
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "required": true,
+          "identifier": false,
+          "foreign_key": false,
+          "notes": "unique per student"
+        },
+        {
+          "name": "display_name",
+          "type": "string",
+          "required": false,
+          "identifier": false,
+          "foreign_key": false,
+          "notes": ""
+        }
+      ],
+      "identifier": "student_id"
+    },
+    {
+      "name": "Course",
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "identifier": true,
+          "foreign_key": false,
+          "notes": ""
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true,
+          "identifier": false,
+          "foreign_key": false,
+          "notes": "catalog code"
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "identifier": false,
+          "foreign_key": false,
+          "notes": ""
+        },
+        {
+          "name": "credits",
+          "type": "integer",
+          "required": true,
+          "identifier": false,
+          "foreign_key": false,
+          "notes": ""
+        }
+      ],
+      "identifier": "id"
+    },
+    {
+      "name": "Enrollment",
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "identifier": true,
+          "foreign_key": false,
+          "notes": ""
+        },
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "required": true,
+          "identifier": false,
+          "foreign_key": true,
+          "notes": "FK references Student"
+        },
+        {
+          "name": "course_id",
+          "type": "uuid",
+          "required": true,
+          "identifier": false,
+          "foreign_key": true,
+          "notes": "FK references Course"
+        },
+        {
+          "name": "grade",
+          "type": "string",
+          "required": false,
+          "identifier": false,
+          "foreign_key": false,
+          "notes": "letter grade"
+        }
+      ],
+      "identifier": "id"
+    },
+    {
+      "name": "Section",
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "required": true,
+          "identifier": true,
+          "foreign_key": false,
+          "notes": ""
+        },
+        {
+          "name": "course_id",
+          "type": "uuid",
+          "required": true,
+          "identifier": false,
+          "foreign_key": true,
+          "notes": "FK references Course"
+        }
+      ],
+      "identifier": "id"
+    }
+  ],
+  "relationships": [
+    {
+      "from": "Student",
+      "to": "Course",
+      "cardinality": "N:M",
+      "name": "enrolls in",
+      "notes": "join: Enrollment",
+      "join": "Enrollment",
+      "valid": true
+    },
+    {
+      "from": "Course",
+      "to": "Section",
+      "cardinality": "1:N",
+      "name": "is split into",
+      "notes": "",
+      "join": null,
+      "valid": true
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Student",
+      "definition": "[TO BE BASELINED \u2014 owner: Domain expert]",
+      "avoid": [],
+      "defined": false
+    },
+    {
+      "term": "Course",
+      "definition": "[TO BE BASELINED \u2014 owner: Domain expert]",
+      "avoid": [],
+      "defined": false
+    },
+    {
+      "term": "Enrollment",
+      "definition": "[TO BE BASELINED \u2014 owner: Domain expert]",
+      "avoid": [],
+      "defined": false
+    },
+    {
+      "term": "Section",
+      "definition": "[TO BE BASELINED \u2014 owner: Domain expert]",
+      "avoid": [],
+      "defined": false
+    }
+  ],
+  "invariants": [
+    "Every Student has a unique student_id.",
+    "Every Student has email set.",
+    "Every Course has a unique id.",
+    "Every Course has code set.",
+    "Every Course has title set.",
+    "Every Course has credits set.",
+    "Every Enrollment has a unique id.",
+    "Every Enrollment has student_id set.",
+    "Every Enrollment has course_id set.",
+    "Every Section has a unique id.",
+    "Every Section has course_id set.",
+    "A Student\u2013Course pair appears at most once in Enrollment (enrolls in).",
+    "Every Section belongs to exactly one Course (is split into)."
+  ]
+}

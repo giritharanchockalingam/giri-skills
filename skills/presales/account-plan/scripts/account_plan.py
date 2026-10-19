@@ -14,6 +14,14 @@ one per service with status none, one per stakeholder with stance <= 0 and influ
 stakeholder flagged departure_risk. Play owner and date are `[TO BE BASELINED — owner: Account owner]` (the
 plan never assigns people it was not told about); plays.csv carries the same rows. Blank pipeline
 values become the marker and are excluded from the total, which then says so.
+Quarterly refresh (existing plan): --previous-plays last quarter's plays.csv (optional `status` column:
+done | open | dropped; blank = open) and/or --previous-pipeline last quarter's pipeline.csv. The plan
+then gains "Since last plan": each previous play is done, carried over (its trigger still fires — the
+new play is marked "carried from <id>"), dropped, or closed by events (still open but no longer
+triggered — confirm with the account team; a carried play keeps last quarter's owner, marked to confirm);
+new plays are listed as new; and the pipeline delta lists
+opportunities added, removed, and stage / value / close-date changes. Rows whose first cell starts
+with `#` are notes and are skipped.
 Exit 1 on missing columns, stance/influence out of range, non-numeric values or an unknown
 status. Stdlib only, offline.
 """
@@ -48,6 +56,59 @@ def read_csv(path: str, cols: list[str]) -> list[dict]:
     if missing:
         die(f"{p.name}: missing columns {missing}")
     return rows
+
+
+def read_previous(path: str, cols: list[str]) -> list[dict]:
+    """Last quarter's CSV; `#` note rows skipped; may be empty."""
+    p = Path(path)
+    if not p.is_file():
+        die(f"file not found: {p}")
+    with p.open(encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        missing = [c for c in cols if c not in (reader.fieldnames or [])]
+        if missing:
+            die(f"{p.name}: missing columns {missing}")
+        rows = [{k: (v or "").strip() for k, v in r.items() if k} for r in reader]
+    return [r for r in rows if r.get(cols[0]) and not r[cols[0]].startswith("#")]
+
+
+def since_last(plays: list[dict], prev_plays: list[dict] | None, pipe: list[dict], prev_pipe: list[dict] | None) -> list[str]:
+    L = ["", "## Since last plan", ""]
+    if prev_plays is not None:
+        current = {p["play"]: p for p in plays}
+        rows = []
+        for pp in prev_plays:
+            status = (pp.get("status") or "open").lower()
+            if status not in ("done", "open", "dropped"):
+                die(f"previous plays {pp['play_id']}: status must be done | open | dropped, got {status!r}")
+            now = current.get(pp["play"])
+            if status in ("done", "dropped"):
+                outcome = status
+            elif now:
+                outcome = f"carried over as {now['play_id']}"
+                now["addresses"] += f" (carried from {pp['play_id']}, last quarter)"
+                now["carried"] = True
+                if pp.get("owner"):
+                    now["owner"] = f"{pp['owner']} (last quarter's owner — confirm)"
+            else:
+                outcome = "closed by events — trigger no longer fires; confirm with the account team"
+            rows.append(f"| {pp['play_id']} | {pp['play']} | {outcome} |")
+        L += ["| Last quarter | Play | Outcome |", "|---|---|---|"] + (rows or ["| — | none recorded | |"])
+        new = [p for p in plays if not p.get("carried") and p["play"] not in {pp["play"] for pp in prev_plays}]
+        L += ["", f"New this quarter: {', '.join(p['play_id'] for p in new) or 'none'}.", ""]
+    if prev_pipe is not None:
+        before = {p["opportunity"]: p for p in prev_pipe}
+        after = {p["opportunity"]: p for p in pipe}
+        rows = [f"| {o} | added | {after[o]['stage'] or TBD} |" for o in after if o not in before]
+        rows += [f"| {o} | removed (won, lost or merged — confirm) | was {before[o]['stage'] or TBD} |" for o in before if o not in after]
+        for o in after:
+            if o in before:
+                ch = [f"{col} {before[o].get(col) or '—'} → {after[o].get(col) or '—'}" for col in ("stage", "value", "close_date")
+                      if (before[o].get(col) or "") != (after[o].get(col) or "")]
+                if ch:
+                    rows.append(f"| {o} | changed | {'; '.join(ch)} |")
+        L += ["| Opportunity | Change | Detail |", "|---|---|---|"] + (rows or ["| — | no change since last plan | |"])
+    return L
 
 
 def int_in(row: dict, col: str, lo: int, hi: int, where: str) -> int:
@@ -89,6 +150,8 @@ def main() -> int:
     ap.add_argument("--out", required=True); ap.add_argument("--plays", required=True)
     ap.add_argument("--client", default="<Client>")
     ap.add_argument("--as-of", default="", help="yyyy-mm-dd; enables stale-contact detection")
+    ap.add_argument("--previous-plays", default="", help="last quarter's plays.csv (optional status: done|open|dropped)")
+    ap.add_argument("--previous-pipeline", default="", help="last quarter's pipeline.csv, for the pipeline delta")
     a = ap.parse_args()
     as_of = date_or_none(a.as_of, "--as-of")
     stk = read_csv(a.stakeholders, ["name", "role", "stance", "influence", "last_contact", "departure_risk"])
@@ -129,6 +192,11 @@ def main() -> int:
     for i, p in enumerate(plays, 1):
         p.update({"play_id": f"P{i}", "owner": TBD, "date": TBD, "success_measure": TBD})
 
+    refresh = []
+    if a.previous_plays or a.previous_pipeline:
+        prev_plays = read_previous(a.previous_plays, ["play_id", "play"]) if a.previous_plays else None
+        prev_pipe = read_previous(a.previous_pipeline, ["opportunity", "stage", "value", "close_date"]) if a.previous_pipeline else None
+        refresh = since_last(plays, prev_plays, pipe, prev_pipe)
     known = [p for p in pipe if p["value_f"] is not None]
     total = sum(p["value_f"] for p in known)
     L = [f"# Account Plan — {a.client} — 90-day plan" + (f" (as of {as_of})" if as_of else ""), "",
@@ -164,13 +232,15 @@ def main() -> int:
           for s in stk if s["stale"] and not s["risk"]]
     if L[-1].startswith("|---"):
         L.append("| none identified from inputs | | | |")
+    L += refresh
     L += ["", "## 90-day plays", "| # | Play | Addresses | Owner | Date | Success measure |", "|---|---|---|---|---|---|"]
     L += [f"| {p['play_id']} | {p['play']} | {p['addresses']} | {p['owner']} | {p['date']} | {p['success_measure']} |" for p in plays] \
         or ["| — | no play triggered by the inputs | | | | |"]
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text("\n".join(L) + "\n", encoding="utf-8")
     with Path(a.plays).open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["play_id", "play", "type", "addresses", "owner", "date", "success_measure"])
+        w = csv.DictWriter(f, fieldnames=["play_id", "play", "type", "addresses", "owner", "date", "success_measure"],
+                           extrasaction="ignore")
         w.writeheader(); w.writerows(plays)
     print(f"account plan: {len(stk)} stakeholders, {len(pipe)} opportunities, {len(plays)} plays -> {a.out}, {a.plays}")
     return 0

@@ -16,6 +16,16 @@ What it does, deterministically:
     placeholders.csv (placeholder, section, owner) so nothing silent remains;
   * writes sources.md = the concatenation of every supplied input, the trace target for numbers.
 Nothing is invented: no number, date, role or reference appears that is not in an input file.
+
+    ... --final proposal-final.md --draft-only           # no model step: the assembled draft is final
+    ... --existing team-draft.md --redline proposal-redline.md --final proposal-final.md
+
+--draft-only writes --final as the assembled draft, labelled (the sharpen step did not run).
+--existing redlines a proposal draft the team already wrote, keeping its storyline: each library
+section is [KEEP] (present), [ADD] (missing: the assembled section is appended, marked), and the
+executive summary is [SHARPEN]ed when a win theme is not in it; every figure in the team draft that
+no input file contains is [TBD]: in --final it is replaced by an owned to-be-baselined marker (so the
+final traces to sources.md), and --redline lists the original figure.
 Exit 1 on a missing/invalid win-themes file or a library without sections. Stdlib only, offline.
 """
 from __future__ import annotations
@@ -100,6 +110,96 @@ def section_of(md: str, heading: str) -> list[str]:
     return [ln for ln in out if ln.strip()]
 
 
+FIG_RE = re.compile(r"(?<![\w.])[$€£]?\d[\d,]*(?:\.\d+)?(?:%|[kKmMbB]\b)?")
+DATE_RE = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b")
+DRAFT_LABEL = "> Script draft — the model sharpen step was not run (draft only); content is the assembled draft."
+
+
+def _norm_title(t: str) -> str:
+    t = re.sub(r"^\d+\.\s*", "", t.strip())
+    t = re.sub(r"\s*\(.*\)\s*$", "", t)
+    return t.replace("<our firm>", "").strip().lower()
+
+
+def _figures(text: str) -> list[str]:
+    out = []
+    for m in FIG_RE.finditer(DATE_RE.sub(" ", text)):
+        tok = m.group(0)
+        core = re.sub(r"[^\d]", "", tok)
+        if tok[0] in "$€£" or tok[-1] in "%kKmMbB" or len(core.lstrip("0")) >= 3:
+            out.append(tok)
+    return out
+
+
+def _known(tok: str, source_text: str) -> bool:
+    core = tok.lstrip("$€£")
+    return core in source_text or core.replace(",", "") in source_text.replace(",", "")
+
+
+def redline_existing(existing: str, assembled: str, themes: list[dict], sources_text: str, name: str):
+    """(rows, final_text): the team draft with markers; assembled sections appended where missing."""
+    ex_secs, cur, pre = [], None, []
+    for ln in existing.splitlines():
+        if ln.startswith("## "):
+            cur = [ln, []]
+            ex_secs.append(cur)
+        elif cur:
+            cur[1].append(ln)
+        else:
+            pre.append(ln)
+    as_secs, cur = [], None
+    for ln in assembled.splitlines():
+        if ln.startswith("## "):
+            cur = [ln, []]
+            as_secs.append(cur)
+        elif cur:
+            cur[1].append(ln)
+    rows, adds = [], []
+    for head, body in as_secs:
+        key = _norm_title(head[3:])
+        hit = next((sec for sec in ex_secs if key and (key in _norm_title(sec[0][3:]) or
+                                                       (len(_norm_title(sec[0][3:])) >= 3 and _norm_title(sec[0][3:]) in key))), None)
+        label = re.sub(r"^\d+\.\s*", "", head[3:].strip())
+        if hit is None:
+            rows.append({"section": label, "verdict": "ADD", "note": "missing — assembled section added"})
+            adds.append([head, "> [ADD] missing from the team draft — assembled from the library and inputs"] + body)
+            continue
+        if key.startswith("executive summary"):
+            text = " ".join(hit[1]).lower()
+            missing = [t["theme"] for t in themes if t["theme"].lower() not in text]
+            if missing:
+                rows.append({"section": label, "verdict": "SHARPEN", "note": "win theme(s) not in it: " + "; ".join(missing)})
+                hit[1] = [f"> [SHARPEN] thread the win theme(s): {'; '.join(missing)}"] + hit[1]
+                continue
+        rows.append({"section": label, "verdict": "KEEP", "note": "present"})
+    for sec in ex_secs:
+        new_body = []
+        for ln in sec[1]:
+            if ln.startswith("> ["):
+                new_body.append(ln)
+                continue
+            for tok in _figures(ln):
+                if not _known(tok, sources_text):
+                    rows.append({"section": re.sub(r"^\d+\.\s*", "", sec[0][3:].strip()), "verdict": "TBD",
+                                 "note": f"figure {tok} is in no input file — source it or cut it"})
+                    ln = ln.replace(tok, TBD, 1)
+            new_body.append(ln)
+        sec[1] = new_body
+    note = (f"> Redlined by proposal-writer against the win themes and input files (no model step): storyline kept; "
+            "[SHARPEN] / [ADD] markers and owned to-be-baselined markers show what to change.")
+    lines = pre[:1] + ["", note] + pre[1:]
+    for head, body in ex_secs:
+        lines += [head] + body
+    for block in adds:
+        lines += [""] + block
+    counts = {v: sum(1 for r in rows if r["verdict"] == v) for v in ("KEEP", "SHARPEN", "ADD", "TBD")}
+    red = [f"# Proposal redline — {name}", "",
+           f"**{counts['KEEP']} keep, {counts['SHARPEN']} sharpen, {counts['ADD']} add, {counts['TBD']} unsourced figure(s).** "
+           "Storyline kept; nothing rewritten.", "", "## Redline table", "", "| Section | Verdict | Note |", "|---|---|---|"]
+    red += [f"| {r['section']} | [{r['verdict']}] | {r['note']} |" for r in rows]
+    return rows, "\n".join(lines).rstrip("\n") + "\n", "\n".join(red) + "\n"
+
+
 def table_rows(lines: list[str]) -> list[str]:
     return [ln for ln in lines if ln.startswith("|") and not set(ln.replace("|", "").strip()) <= set("-: ")]
 
@@ -140,7 +240,13 @@ def main() -> int:
     ap.add_argument("--out", required=True, help="proposal.md")
     ap.add_argument("--placeholders", required=True, help="placeholders.csv")
     ap.add_argument("--sources", default="", help="sources.md (concatenated inputs for number tracing)")
+    ap.add_argument("--final", default="", help="final proposal path (written with --draft-only or --existing)")
+    ap.add_argument("--draft-only", action="store_true", help="no model step: write --final from the assembled draft")
+    ap.add_argument("--existing", default="", help="a proposal draft the team already wrote, to redline")
+    ap.add_argument("--redline", default="", help="with --existing: write the redline table here")
     a = ap.parse_args()
+    if a.existing and not Path(a.existing).is_file():
+        die(f"existing draft not found: {a.existing}")
 
     wt = load_themes(a.win_themes)
     client, initiative, themes = str(wt["client"]), str(wt["initiative"]), wt["themes"]
@@ -187,7 +293,8 @@ def main() -> int:
         w = csv.DictWriter(f, fieldnames=["placeholder", "section", "owner"])
         w.writeheader()
         w.writerows(registry)
-    if a.sources:
+    parts = []
+    if a.sources or a.existing:
         parts = [f"# Sources for {client} — {initiative}", "", "## win-themes.json", "",
                  json.dumps(wt, indent=2)]
         for name, text in (("discovery pack", discovery), ("estimate memo", estimate), ("value case", value),
@@ -195,7 +302,20 @@ def main() -> int:
                             read(a.library))):
             if text:
                 parts += ["", f"## {name}", "", text]
-        Path(a.sources).write_text("\n".join(parts) + "\n", encoding="utf-8")
+        if a.sources:
+            Path(a.sources).write_text("\n".join(parts) + "\n", encoding="utf-8")
+    if a.existing:
+        assembled = "\n".join(doc)
+        rows, final, red = redline_existing(read(a.existing), assembled, themes, "\n".join(parts), Path(a.existing).name)
+        if a.final:
+            Path(a.final).write_text(final, encoding="utf-8")
+        if a.redline:
+            Path(a.redline).write_text(red, encoding="utf-8")
+        print(f"redline: {Path(a.existing).name} — " + ", ".join(
+            f"{sum(1 for r in rows if r['verdict'] == v)} {v.lower()}" for v in ("KEEP", "SHARPEN", "ADD", "TBD")))
+    elif a.draft_only and a.final:
+        body = out.read_text(encoding="utf-8").splitlines()
+        Path(a.final).write_text("\n".join(body[:1] + ["", DRAFT_LABEL] + body[1:]) + "\n", encoding="utf-8")
     print(f"proposal: {len(library) - len(SKIP_SECTIONS)} sections, {len(themes)} themes threaded, "
           f"{len(registry)} placeholders registered -> {out}")
     return 0

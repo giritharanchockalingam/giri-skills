@@ -12,20 +12,28 @@ metadata:
       - {name: rfp, type: file, required: true, from: "the RFP document (.txt .md .docx .pdf)"}
       - {name: capabilities, type: csv, required: true, from: "our capability inventory (columns: capability_id, keywords, status, evidence, owner, gap_condition, mitigation, category)"}
       - {name: min_words, type: string, required: false, default: "4"}
+      - {name: previous, type: csv, required: false, from: "matrix.csv from the earlier round (before an addendum or re-bid); reviewed answers for unchanged clauses are carried"}
     run:
       - {step: extract, kind: script, cmd: "python3 -I scripts/extract_requirements.py {rfp} --out {out}/requirements.csv --min-words {min_words}"}
-      - {step: score, kind: script, cmd: "python3 -I scripts/score_matrix.py {out}/requirements.csv --capabilities {capabilities} --out {out}/matrix.csv --gaps {out}/gaps.md --summary {out}/bid-score.json"}
+      - {step: score, kind: script, cmd: "python3 -I scripts/score_matrix.py {out}/requirements.csv --capabilities {capabilities} [--previous {previous}] --out {out}/matrix.csv --gaps {out}/gaps.md --summary {out}/bid-score.json"}
     outputs:
       - {path: "{out}/requirements.csv", checks: [exists, csv:[req_id,client_id,text,mdo_hint]]}
       - {path: "{out}/matrix.csv", checks: [exists, csv:[req_id,mdo,compliance,evidence,gap_condition,mitigation,owner,clarification_id]]}
       - {path: "{out}/gaps.md", checks: [exists, sections:["Bottom line","Mandatory gaps","Clarification questions"], no_unowned_tbd]}
       - {path: "{out}/bid-score.json", checks: [exists, json]}
+    modes:
+      new: {case: agent-happy-path, bring: "the RFP document and your capability inventory"}
+      existing: {case: agent-mode-existing, bring: "the revised RFP plus your reviewed matrix from the last round"}
 ---
 
 # rfp-compliance-matrix
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/rfp-compliance-matrix --input <name>=<value> … --out <dir>` (see `--explain presales/rfp-compliance-matrix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — the RFP is split into requirements, each scored against your capability inventory (C/P/Q with evidence and owner), with mandatory gaps, clarification questions and a provisional bid gate.
+- **Existing** — add `previous` (your reviewed matrix from the last round): unchanged clauses keep their reviewed answer, changed clauses are re-scored and flagged for re-review, new clauses are flagged, and withdrawn ones are listed to drop from the response.
 
 ## When to use
 - "We received an RFP from <client>; break it down."
