@@ -24,9 +24,9 @@ export default async function SkillLayout({ children, params }: { children: Reac
   return (
     <>
       <DetailHead
-        crumbs={<><Link href="/pipeline" className="link">Pipeline</Link> <span aria-hidden="true">›</span> {d.skill.slug}</>}
+        crumbs={<><Link href="/pipeline" className="link">Publish pipeline</Link> <span aria-hidden="true">›</span> {d.skill.name}</>}
         title={d.skill.name}
-        pills={<><SkillPill status={d.skill.status} small /><VersionPill status={d.version.status} small /></>}
+        pills={d.skill.status === d.version.status ? <SkillPill status={d.skill.status} small /> : <><SkillPill status={d.skill.status} small /><span className="caption">latest v{d.version.version}</span><VersionPill status={d.version.status} small /></>}
         description={d.skill.purpose || "No purpose written yet — add one under Instructions."}
         meta={<>{d.published ? <>Published <b>v{d.published.version}</b></> : "Not published yet"} · {d.versions.length} version{d.versions.length === 1 ? "" : "s"} · latest v{d.version.version} · owner {d.skill.owner_id === d.ctx.user.id ? "you" : d.skill.owner_id.slice(0, 8)}</>}
         stats={[

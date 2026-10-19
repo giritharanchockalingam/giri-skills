@@ -68,7 +68,12 @@ export default async function ReleasePage({ params, searchParams }: { params: Pr
                   <div>
                     <p className="sub mb-2">Publishing makes v{d.version.version} the version consumers and the API run, supersedes the current published version, and freezes it forever.</p>
                     <ActionForm action={publishVersion} submit="Publish version" hidden={hidden} disabled={!s?.publishable} confirm={`Publish v${d.version.version}? This supersedes any published version and cannot be edited afterwards.`} />
-                    {!s?.publishable && <p className="caption mt-2">Disabled until both gates are met. The server enforces the same rule.</p>}
+                    {!s?.publishable && (
+                      <div className="notice notice-hold mt-2">
+                        <b>Not yet:</b> {gates.filter((g) => !g.met).map((g) => g.label).join(" and ") || "a release gate"} {gates.filter((g) => !g.met).length === 1 ? "is" : "are"} not met.
+                        <div className="mt-2"><GateList gates={gates.filter((g) => !g.met)} compact /></div>
+                        {na && <p className="caption" style={{ margin: "6px 0 0" }}>Next: <b>{na.label}</b> ({na.who}).</p>}
+                      </div>)}
                   </div>
                 )}
               </div>

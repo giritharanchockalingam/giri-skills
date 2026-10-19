@@ -1,4 +1,5 @@
 "use client";
+import type { Gate } from "@/lib/factory/funnel";
 import { matches } from "@/lib/search";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import type { SkillStatus } from "@/lib/factory/db";
 import type { VersionStatus } from "@/lib/factory/release";
 
 export interface CatalogItem {
-  id: string; slug: string; name: string; purpose: string; status: SkillStatus; updated_at: string; source: "repo" | "authored";
+  id: string; slug: string; name: string; purpose: string; status: SkillStatus; updated_at: string; source: "repo" | "authored"; gate?: Gate;
   publishedVersion: number | null; workingVersion: number | null; workingStatus: VersionStatus | null;
   evalPassRate: number | null; evalCurrent: boolean | null; cases: number; approval: "valid" | "stale" | "none";
   stage: string | null;
@@ -19,6 +20,11 @@ export interface CatalogItem {
 const STATUS_OPTS = [{ key: "published", label: "Published" }, { key: "draft", label: "Draft" }, { key: "retired", label: "Retired" }] as const;
 const SOURCE_OPTS = [{ key: "repo", label: "From repository" }, { key: "authored", label: "Authored" }] as const;
 
+/** The next action for a skill at each funnel stage, and the tab where it happens. */
+const NEXT: Partial<Record<Gate, { label: string; tab: string }>> = {
+  draft: { label: "Add test cases", tab: "evaluations" }, needs_eval: { label: "Run evaluation", tab: "evaluations" },
+  below_bar: { label: "Improve, re-evaluate", tab: "evaluations" }, needs_approval: { label: "Request review", tab: "release" }, ready: { label: "Publish", tab: "release" },
+};
 const evidence = (i: CatalogItem) => (i.evalPassRate == null ? (i.cases ? `${i.cases} case${i.cases === 1 ? "" : "s"}, not run` : "no cases") : `${Math.round(i.evalPassRate * 100)}% pass${i.evalCurrent ? "" : " (outdated)"}`);
 
 export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all" }: { items: CatalogItem[]; canCreate: boolean; stageOpts: readonly { key: string; label: string }[]; initialStage?: string }) {
@@ -52,20 +58,21 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
       </div>
       <div className="card">
         <div className="tablewrap"><table className="tbl only-desktop">
-          <thead><tr><th>Skill</th><th>Status</th><th>Published</th><th>In progress</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th style={{ width: "34%" }}>Purpose</th></tr></thead>
+          <thead><tr><th>Skill</th><th>Status</th><th>Published</th><th title="The draft, in-review or approved version being worked on">Working version</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th>Next step</th><th style={{ width: "28%" }}>Purpose</th></tr></thead>
           <tbody>
             {filtered.map((i) => (
               <tr key={i.id} className="clickable" tabIndex={0} onClick={() => go(i.slug)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(i.slug); } }}>
-                <td><Link href={`/skills/${i.slug}`} className="cell-name" onClick={(e) => e.stopPropagation()}>{i.name}</Link><div className="caption">{i.slug} · {i.source === "repo" ? "repository" : "authored"}</div></td>
+                <td><Link href={`/skills/${i.slug}`} className="cell-name" onClick={(e) => e.stopPropagation()}>{i.name}</Link><div className="caption">{i.source === "repo" ? "from the library" : "authored here"}{i.slug !== i.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") ? ` · ${i.slug}` : ""}</div></td>
                 <td><SkillPill status={i.status} /></td>
                 <td className="muted">{i.publishedVersion != null ? `v${i.publishedVersion}` : "—"}</td>
                 <td>{i.workingVersion != null && i.workingStatus ? <span className="flex items-center gap-2"><span className="muted">v{i.workingVersion}</span><VersionPill status={i.workingStatus} small /></span> : <span className="muted">—</span>}</td>
                 <td className="ink-2">{evidence(i)}</td>
                 <td>{i.approval === "valid" ? <span className="pass">valid</span> : i.approval === "stale" ? <span className="fail">stale</span> : <span className="muted">none</span>}</td>
+                <td>{i.gate && NEXT[i.gate] ? <Link href={`/skills/${i.slug}/${NEXT[i.gate]!.tab}`} className="link" onClick={(e) => e.stopPropagation()}>{NEXT[i.gate]!.label}</Link> : <span className="muted">—</span>}</td>
                 <td className="desc" title={i.purpose}><span>{i.purpose || <span className="none">No purpose written yet</span>}</span></td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={7} className="none">No skills match.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={8} className="none">No skills match.</td></tr>}
           </tbody>
         </table></div>
         <div className="row-list only-mobile">

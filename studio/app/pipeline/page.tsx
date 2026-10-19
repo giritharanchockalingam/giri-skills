@@ -20,6 +20,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   const { skills, versions, states } = await loadPipeline(ctx.supabase, ctx.workspace.id);
   const [funnel, counts] = await Promise.all([loadFunnel(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id)]);
   const gate = (GATE_ORDER as string[]).includes(sp.gate ?? "") ? (sp.gate as Gate) : null;
+  const gateBySlug = new Map(funnel.map((f) => [f.slug, f.gate]));
   const inGate = gate ? new Set(funnel.filter((f) => f.gate === gate).map((f) => f.slug)) : null;
   const stateById = new Map(states.map((s) => [s.version_id, s]));
   const items: CatalogItem[] = skills.map((s) => {
@@ -34,6 +35,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       evalPassRate: st?.latest_eval_pass_rate == null ? null : Number(st.latest_eval_pass_rate), evalCurrent: st?.eval_current ?? null, cases: st?.eval_case_count ?? 0,
       approval: st?.approval_valid ? "valid" : st?.approval_stale ? "stale" : "none",
       stage: vs[0]?.source.kind === "repo" ? stageOfRepoSkill(vs[0].source.repo_skill) : null,
+      gate: gateBySlug.get(s.slug),
     };
   });
   const imported = new Set(versions.filter((v) => v.source.kind === "repo").map((v) => v.source.repo_skill));
