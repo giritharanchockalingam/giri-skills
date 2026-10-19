@@ -15,6 +15,16 @@ import { PassPill } from "@/components/Badge";
 import { RunPill } from "@/components/factory/Pills";
 
 export const dynamic = "force-dynamic";
+/** One output check in words: "report.md: has sections Summary, Findings" instead of raw JSON. */
+const checkText = (x: unknown): string => {
+  if (typeof x === "string") return x;
+  if (x && typeof x === "object") {
+    const o = x as Record<string, unknown>;
+    const what = Object.entries(o).filter(([k]) => k !== "path").map(([k, v]) => `${k.replace(/_/g, " ")} ${Array.isArray(v) ? v.join(", ") : typeof v === "object" ? JSON.stringify(v) : String(v)}`).join("; ");
+    return o.path ? `${String(o.path).split("/").pop()}: ${what}` : what;
+  }
+  return String(x);
+};
 
 export default async function EvaluationsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string; edit?: string }> }) {
   const { slug } = await params; const { v, edit } = await searchParams;
@@ -43,8 +53,10 @@ export default async function EvaluationsPage({ params, searchParams }: { params
                   <div className="min-w-0">
                     <div className="name">{c.name}</div>
                     {c.notes && <div className="caption" style={{ overflowWrap: "anywhere" }}>{c.notes.slice(0, 200)}</div>}
-                    <div className="mono-sm mt-1">inputs: {Object.entries(c.inputs).map(([k, val]) => `${k}=${typeof val === "object" && val && "path" in (val as object) ? `fixture:${(val as { path: string }).path}` : String(val).slice(0, 40)}`).join(", ") || "(none)"}</div>
-                    <div className="mono-sm">checks: {c.checks.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join(" · ")}</div>
+                    <dl className="kv case-kv mt-1">
+                      <div><dt>Inputs</dt><dd>{Object.entries(c.inputs).map(([k, val]) => <span key={k} className="audit-kv"><b>{k}</b> {typeof val === "object" && val && "path" in (val as object) ? <>example file <code>{(val as { path: string }).path.split("/").pop()}</code></> : String(val).slice(0, 60)}</span>)}{!Object.keys(c.inputs).length && "none"}</dd></div>
+                      <div><dt>Checks</dt><dd>{c.checks.map((x, j) => <span key={j} className="audit-kv">{checkText(x)}</span>)}</dd></div>
+                    </dl>
                   </div>
                   {canEdit && <div className="flex gap-2"><Link href={`/skills/${slug}/evaluations?v=${d.version.version}&edit=${c.id}#case-form`} className="btn btn-secondary btn-sm">Edit</Link>
                     <ActionForm action={deleteEvalCase} submit="Delete" submitClass="btn btn-danger btn-sm" confirm={`Delete case “${c.name}”?`} hidden={{ case_id: c.id, slug }} /></div>}
