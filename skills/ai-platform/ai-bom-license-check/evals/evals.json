@@ -70,6 +70,28 @@
         {"file": "license-report.md", "check": "contains:\"**Release gate: FAIL** — 2 blocked\""},
         {"file": "aibom.json", "check": "contains:\"\\\"value\\\": \\\"fail\\\"\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here's the AI-BOM we kept from the 2026.08 release. Re-check it against our current licence policy before the next release.",
+      "expected": [
+        "Reads the existing CycloneDX BOM (components and services) instead of asking for a fresh component list, and says so in the Method",
+        "Re-decides every entry under the current policy: Llama stays review (conditional commercial terms), the vendor terms go to Legal counsel, the framework licence spelling normalises to Apache-2.0; gate PASS"
+      ],
+      "inputs": {
+        "bom": "evals/fixtures/aibom-last-release.json",
+        "policy": "evals/fixtures/policy.csv",
+        "system": "Northwind Billing Assistant 2026.08"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "license-report.md", "check": "contains:\"**Release gate: PASS** — 0 blocked, 2 need review, 5 allowed, of 7 components (1 with an unrecognised licence).\""},
+        {"file": "license-report.md", "check": "contains:\"- BOM input: existing CycloneDX BOM `aibom-last-release.json` (7 components and services re-checked).\""},
+        {"file": "aibom.csv", "check": "contains:\"nw-orchestrator,library,0.12.0,\\\"Apache License, Version 2.0\\\",Apache-2.0,allow\""},
+        {"file": "aibom.csv", "check": "contains:\"nw-dispute-templates,dataset,1.2,CC-BY-4.0 AND MIT,CC-BY-4.0 AND MIT,allow\""},
+        {"file": "aibom.csv", "check": "contains:\"nw-embeddings-api,service,v1,Vendor Terms 2025,unknown,review\""},
+        {"file": "license-report.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

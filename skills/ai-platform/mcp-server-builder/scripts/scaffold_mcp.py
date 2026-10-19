@@ -2,7 +2,7 @@
 """Scaffold a minimal, stdlib-only MCP-style server (JSON-RPC over stdio) from a tools list.
 
     python3 -I scripts/scaffold_mcp.py tools.json --target ./my-server [--lang python] \
-        [--name my-server] [--report scaffold-report.json]
+        [--name my-server] [--from-existing ./server-today] [--report scaffold-report.json]
 
 tools.json: a list (or {"tools": [...]}) of {name, description, input_schema|inputSchema,
 output_schema|outputSchema}. name must match ^[a-z][a-z0-9_]*$ and be unique; schemas must be
@@ -15,6 +15,12 @@ Writes under --target (created if absent):
   tools/<name>.json    one contract per tool (source of truth for schemas)
   tests/test_tools.py  pytest: tools/list returns every tool with its schema; stubs report NotImplemented
   README.md            tool table, run, test, next steps
+Brownfield (--from-existing DIR): extend a server this skill scaffolded earlier. DIR is copied to --target
+(or extended in place when DIR is --target). Tools in tools.json that the server lacks get a contract file,
+a handler stub inserted into server.py before TOOL_HANDLERS and an entry in it, and a README row; existing
+handler bodies are never touched. A tool whose contract in tools.json differs from tools/<name>.json is
+reported as contract_changed (keys listed; the deployed contract is not overwritten); tools the server
+has but tools.json lacks are reported as existing_only and kept.
 Idempotent: never overwrites an existing file (reported as skipped). The report (JSON) lists every
 path with written|skipped. Only --lang python is supported; anything else exits 1. Stdlib only.
 """
@@ -23,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -165,7 +172,7 @@ HANDLER_TEMPLATE = '''def {name}(arguments: dict) -> dict:
     raise NotImplementedError("{name}: stub — implement against tools/{name}.json")
 '''
 
-TEST_TEMPLATE = '''"""Scaffolded contract tests: tools/list matches tools/*.json; stubs answer NOT_IMPLEMENTED."""
+TEST_TEMPLATE = '''"""Scaffolded contract tests: tools/list matches tools/*.json; stubs answer NOT_IMPLEMENTED (implemented handlers are skipped there)."""
 from __future__ import annotations
 
 import json
@@ -201,6 +208,8 @@ def test_call_stub_reports_not_implemented_with_schema():
         args = {k: None for k in (contract["inputSchema"].get("required") or [])}
         res = server.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                              "params": {"name": name, "arguments": args}})
+        if "result" in res and not res["result"].get("isError"):
+            continue  # handler implemented: cover it with its own tests
         assert res["result"]["isError"] is True
         assert res["result"]["structuredContent"]["error"]["code"] == "NOT_IMPLEMENTED"
         assert res["result"]["structuredContent"]["schema"]["inputSchema"] == contract["inputSchema"]
@@ -264,6 +273,66 @@ def write_new(path: Path, text: str, report: list[dict]) -> None:
     report.append({"path": str(path), "status": "written"})
 
 
+MAP_ANCHOR = "\nTOOL_HANDLERS = {\n"
+
+
+def readme_rows(tools: list[dict]) -> list[str]:
+    return [f"| `{t['name']}` | {t['description']} | {(t.get('x-contract') or {}).get('side_effect', '[TO BE BASELINED — owner: MCP server owner]')} | stub |"
+            for t in tools]
+
+
+def extend_existing(src: Path, target: Path, tools: list[dict], report: list[dict]) -> dict:
+    """Add the tools the existing server lacks; report contract drift. Never rewrites a handler body."""
+    if not src.is_dir():
+        die(f"--from-existing is not a directory: {src}")
+    if src.resolve() != target.resolve():
+        if target.exists() and any(target.iterdir()):
+            die(f"target {target} must be empty or absent when extending a copy of {src}")
+        shutil.copytree(src, target, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc"))
+    server = target / "server.py"
+    text = server.read_text(encoding="utf-8") if server.is_file() else ""
+    if MAP_ANCHOR not in text:
+        die(f"{server}: not a server scaffolded by this skill (no TOOL_HANDLERS map)")
+    deployed = {}
+    for cp in sorted((target / "tools").glob("*.json")):
+        try:
+            deployed[cp.stem] = json.loads(cp.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            die(f"{cp}: invalid JSON: {e}")
+    new = [t for t in tools if t["name"] not in deployed]
+    changed = []
+    for t in tools:
+        if t["name"] in deployed and deployed[t["name"]] != t:
+            keys = sorted(k for k in set(t) | set(deployed[t["name"]]) if t.get(k) != deployed[t["name"]].get(k))
+            changed.append({"name": t["name"], "keys": keys})
+    existing_only = sorted(set(deployed) - {t["name"] for t in tools})
+    for t in new:
+        if re.search(rf"^def {re.escape(t['name'])}\(", text, re.M):
+            die(f"server.py already defines {t['name']}() but has no tools/{t['name']}.json; resolve by hand")
+    if new:
+        handlers = "".join("\n" + HANDLER_TEMPLATE.format(name=t["name"], description=t["description"].replace('"', "'")) + "\n"
+                           for t in new)
+        entries = "".join(f"    {t['name']!r}: {t['name']},\n" for t in new)
+        head, _, tail = text.partition(MAP_ANCHOR)
+        close = tail.index("\n}")
+        tail = tail[:close + 1] + entries + tail[close + 1:]
+        server.write_text(head.rstrip("\n") + "\n\n" + handlers + MAP_ANCHOR + tail, encoding="utf-8")
+        report.append({"path": str(server), "status": "extended", "reason": f"added {len(new)} handler stub(s)"})
+    else:
+        report.append({"path": str(server), "status": "skipped", "reason": "no new tools"})
+    readme = target / "README.md"
+    if new and readme.is_file():
+        lines = readme.read_text(encoding="utf-8").split("\n")
+        last = max((i for i, ln in enumerate(lines) if ln.startswith("| `")), default=None)
+        if last is not None:
+            lines[last + 1:last + 1] = readme_rows(new)
+            readme.write_text("\n".join(lines), encoding="utf-8")
+            report.append({"path": str(readme), "status": "extended", "reason": f"added {len(new)} tool row(s)"})
+    return {"mode": "extend", "from": str(src), "added_tools": [t["name"] for t in new],
+            "contract_changed": changed, "existing_only_tools": existing_only}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="tools.json -> minimal stdlib MCP-style server + tests + README")
     ap.add_argument("tools")
@@ -271,6 +340,7 @@ def main() -> int:
     ap.add_argument("--lang", default="python", help="only 'python' is supported")
     ap.add_argument("--name", default="", help="server name (default: target dir name)")
     ap.add_argument("--report", default="", help="write the scaffold report JSON here (default: stdout)")
+    ap.add_argument("--from-existing", default="", help="server directory to extend (copied to --target unless it is --target)")
     a = ap.parse_args()
     if a.lang != "python":
         die(f"--lang {a.lang!r} not supported; only python (stdlib) is scaffolded")
@@ -280,19 +350,20 @@ def main() -> int:
         die(f"target is not a directory: {target}")
     name = a.name or target.name or "mcp-server"
     report: list[dict] = []
+    ext = extend_existing(Path(a.from_existing), target, tools, report) if a.from_existing else None
 
     handlers = "\n\n".join(HANDLER_TEMPLATE.format(name=t["name"], description=t["description"].replace('"', "'"))
                            for t in tools)
     handler_map = "\n".join(f"    {t['name']!r}: {t['name']}," for t in tools)
-    write_new(target / "server.py", SERVER_TEMPLATE.format(name=name, handlers=handlers, handler_map=handler_map), report)
+    if ext is None:
+        write_new(target / "server.py", SERVER_TEMPLATE.format(name=name, handlers=handlers, handler_map=handler_map), report)
     for t in tools:
         write_new(target / "tools" / f"{t['name']}.json", json.dumps(t, indent=2) + "\n", report)
     write_new(target / "tests" / "__init__.py", "", report)
     write_new(target / "tests" / "test_tools.py", TEST_TEMPLATE, report)
     readme = [f"# {name}", "", "Minimal MCP-style server (JSON-RPC 2.0 over stdio, Python stdlib). Scaffolded; every tool is a stub.",
               "", "## Tools", "| Tool | Purpose | Side effect | Status |", "|---|---|---|---|"]
-    readme += [f"| `{t['name']}` | {t['description']} | {(t.get('x-contract') or {}).get('side_effect', '[TO BE BASELINED — owner: MCP server owner]')} | stub |"
-               for t in tools]
+    readme += readme_rows(tools)
     readme += ["", "## Run", "```", "python3 server.py", "```",
                "One JSON-RPC message per line on stdin; responses on stdout; nothing else is written to stdout.",
                "", "## Test", "```", "python3 -m pytest -q tests", "```",
@@ -301,16 +372,23 @@ def main() -> int:
                "2. Add auth/scoping from the transport context (never from arguments), timeouts, rate limits, result caps.",
                "3. Work through `references/testing-checklist.md` in the mcp-server-builder skill.",
                "", "Sample data only; no credentials are read or stored by the scaffold."]
-    write_new(target / "README.md", "\n".join(readme) + "\n", report)
+    if ext is None or not (target / "README.md").exists():
+        write_new(target / "README.md", "\n".join(readme) + "\n", report)
 
     summary = {"server": name, "target": str(target), "lang": a.lang, "tools": [t["name"] for t in tools],
                "written": sum(r["status"] == "written" for r in report),
                "skipped": sum(r["status"] == "skipped" for r in report), "files": report}
+    if ext is not None:
+        summary["extended"] = sum(r["status"] == "extended" for r in report)
+        summary.update(ext)
     text = json.dumps(summary, indent=2) + "\n"
     if a.report:
         Path(a.report).parent.mkdir(parents=True, exist_ok=True)
         Path(a.report).write_text(text, encoding="utf-8")
         print(f"scaffold: {summary['written']} written, {summary['skipped']} skipped, {len(tools)} tools -> {target}")
+        if ext is not None:
+            print(f"extended: added {ext['added_tools'] or 'none'}; contract changed: "
+                  f"{[c['name'] for c in ext['contract_changed']] or 'none'}; existing only: {ext['existing_only_tools'] or 'none'}")
     else:
         sys.stdout.write(text)
     return 0

@@ -68,3 +68,60 @@ def test_pii_guard_and_bad_input_exit_1(tmp_path):
     spec.write_text("# nothing\n", encoding="utf-8")
     assert run_script(SCRIPT, str(spec), "--out-dir", str(tmp_path)).returncode == 1
     assert run_script(SCRIPT, str(tmp_path / "no.md"), "--out-dir", str(tmp_path)).returncode == 1
+
+
+# --- brownfield: extend a demo that already ships (--existing) ---
+
+def _extend(tmp_path, spec, existing=FX / "existing-demo", out=None):
+    out = out or tmp_path / "out"
+    r = run_script(SCRIPT, str(spec), "--existing", str(existing), "--out-dir", str(out), "--seed", "7")
+    return r, out
+
+
+def test_extend_keeps_existing_rows_and_records_changes(tmp_path):
+    r, out = _extend(tmp_path, FX / "demo-spec-v2.md")
+    assert r.returncode == 0, r.stderr
+    old_t, new_t = rows(FX / "existing-demo/data/tickets.csv"), rows(out / "data/tickets.csv")
+    assert len(new_t) == 150
+    for o, n in zip(old_t, new_t[:120]):
+        assert {k: v for k, v in o.items() if k != "csat"} == {k: v for k, v in n.items() if k != "channel"}
+    assert all("csat" not in n and n["channel"] in {"email", "chat", "phone-transcript"} for n in new_t)
+    assert new_t[149]["ticket_id"] == "T000150"
+    assert rows(FX / "existing-demo/data/customers.csv") == rows(out / "data/customers.csv")
+    m = json.loads((out / "data-manifest.json").read_text())
+    ch = {c["entity"]: c for c in m["extended_from"]["changes"]}
+    assert ch["tickets"]["rows_added"] == 30 and ch["tickets"]["columns_added"] == ["channel"]
+    assert ch["kb_articles"] == {"entity": "kb_articles", "change": "added", "rows": 20}
+    assert m["pii_guard"] == "passed"
+    ids = {c["customer_id"] for c in rows(out / "data/customers.csv")}
+    assert all(t["customer_id"] in ids for t in new_t)
+
+
+def test_extend_is_deterministic_and_identity_on_same_spec(tmp_path):
+    r1, o1 = _extend(tmp_path, FX / "demo-spec-v2.md", out=tmp_path / "a")
+    r2, o2 = _extend(tmp_path, FX / "demo-spec-v2.md", out=tmp_path / "b")
+    assert (o1 / "data/tickets.csv").read_text() == (o2 / "data/tickets.csv").read_text()
+    r3, o3 = _extend(tmp_path, FX / "demo-spec.md", out=tmp_path / "c")
+    assert r3.returncode == 0
+    for name in ("customers", "tickets"):
+        assert (o3 / f"data/{name}.csv").read_text() == (FX / f"existing-demo/data/{name}.csv").read_text()
+
+
+def test_extend_trim_redraws_dangling_refs_and_retype(tmp_path):
+    spec = (FX / "demo-spec.md").read_text(encoding="utf-8")
+    spec = spec.replace("| customers | 50 |", "| customers | 10 |").replace(
+        "| priority | int | 2 | min=1; max=4 |", "| priority | enum | p2 | values=p1|p2|p3 |")
+    sp = tmp_path / "spec.md"
+    sp.write_text(spec, encoding="utf-8")
+    r, out = _extend(tmp_path, sp)
+    assert r.returncode == 0, r.stderr
+    ch = {c["entity"]: c for c in json.loads((out / "data-manifest.json").read_text())["extended_from"]["changes"]}
+    assert ch["customers"]["rows_trimmed"] == 40
+    assert ch["tickets"]["refs_redrawn"] > 0 and ch["tickets"]["columns_regenerated"] == ["priority"]
+    ids = {c["customer_id"] for c in rows(out / "data/customers.csv")}
+    assert all(t["customer_id"] in ids and t["priority"] in {"p1", "p2", "p3"} for t in rows(out / "data/tickets.csv"))
+
+
+def test_extend_requires_manifest(tmp_path):
+    r, _ = _extend(tmp_path, FX / "demo-spec-v2.md", existing=tmp_path)
+    assert r.returncode == 1 and "no data-manifest.json" in r.stderr

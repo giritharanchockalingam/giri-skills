@@ -86,6 +86,28 @@
         {"file": "fairness-report.md", "check": "contains:\"highest selection rate\""},
         {"file": "fairness-report.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Quarterly fairness re-check on the live model's decisions; compare with last quarter's check (reference group A, flag groups under 5).",
+      "expected": [
+        "Reads last quarter's fairness.json: verdict FAIL -> PASS; all four breaches resolved; group B selection rate 0.1 -> 0.3; no new breach"
+      ],
+      "inputs": {
+        "predictions": "evals/fixtures/predictions.csv",
+        "thresholds": "evals/fixtures/thresholds.csv",
+        "reference_group": "A",
+        "min_sample": "5",
+        "previous": "evals/fixtures/previous-fairness.json"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "fairness-report.md", "check": "sections:[\"Verdict\",\"Change since last check\",\"Limits\"]"},
+        {"file": "fairness-report.md", "check": "contains:\"verdict FAIL → PASS\""},
+        {"file": "fairness-report.md", "check": "contains:\"| B | 0.1000 | 0.3000 | +0.2000 |\""},
+        {"file": "fairness-report.md", "check": "contains:\"New breaches: none.\""},
+        {"file": "fairness.json", "check": "contains:\"\\\"resolved_breaches\\\"\""}
+      ]
     }
   ]
 }

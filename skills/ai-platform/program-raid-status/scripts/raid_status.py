@@ -17,7 +17,7 @@ Computes (references/method.md):
 
 Usage:
   python3 -I raid_status.py --raid raid.csv --milestones milestones.csv --as-of YYYY-MM-DD
-      [--thresholds thresholds.csv] [--strict] --out-dir OUT
+      [--thresholds thresholds.csv] [--previous last-status.json] [--strict] --out-dir OUT
   python3 -I raid_status.py --verify OUT/status.csv --as-of YYYY-MM-DD   (or raid-actions.csv)
 
 Inputs:
@@ -27,6 +27,10 @@ Inputs:
               depends_on '|'-separated ids; status not_started|in_progress|blocked|done.
   thresholds  CSV key,value: green_max_slip_days, amber_max_slip_days, red_exposure.
   Lines starting with '#' are comments.
+
+Brownfield (--previous): the status.json of the last report. The run adds "since_previous": overall RAG
+then and now, per milestone forecast movement (days) and RAG change, milestones completed since, RAID
+items opened and closed since — in status.json and a "Since last report" section of the report.
 
 Outputs (in --out-dir): status.csv, raid-actions.csv, status-report.md (with a mermaid flowchart
 of the critical path), status.json.
@@ -328,6 +332,71 @@ def build(ms, raid, as_of: dt.date, t: dict) -> dict:
                        "rag": {k: sum(1 for s in status_rows if s["rag"] == k) for k in RAG_ORDER}}}
 
 
+def load_previous(path: Path) -> dict:
+    try:
+        prev = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as e:
+        raise InputError(f"previous status not found: {path}") from e
+    except json.JSONDecodeError as e:
+        raise InputError(f"previous status is not JSON: {e}") from e
+    if not isinstance(prev, dict) or not {"as_of", "overall_rag", "milestones", "raid_actions"} <= set(prev):
+        raise InputError("previous status must be a status.json from this skill (as_of, overall_rag, milestones, raid_actions)")
+    return prev
+
+
+def since_previous(st: dict, prev: dict) -> dict:
+    """What moved between the last report and this one."""
+    if prev["as_of"] >= st["as_of"]:
+        raise InputError(f"previous status as_of {prev['as_of']} is not before {st['as_of']}")
+    pm = {m["id"]: m for m in prev["milestones"]}
+    moves = []
+    for m in st["milestones"]:
+        p = pm.get(m["id"])
+        if p is None:
+            moves.append({"id": m["id"], "change": "added", "forecast_moved_days": None,
+                          "rag_before": None, "rag_now": m["rag"]})
+            continue
+        moved = (dt.date.fromisoformat(m["forecast"]) - dt.date.fromisoformat(p["forecast"])).days
+        if moved or p["rag"] != m["rag"]:
+            change = "completed" if m["rag"] == "complete" and p["rag"] != "complete" else \
+                     ("slipped" if moved > 0 else "pulled in" if moved < 0 else "rag changed")
+            moves.append({"id": m["id"], "change": change, "forecast_moved_days": moved,
+                          "rag_before": p["rag"], "rag_now": m["rag"]})
+    for mid in sorted(set(pm) - {m["id"] for m in st["milestones"]}):
+        moves.append({"id": mid, "change": "removed", "forecast_moved_days": None, "rag_before": pm[mid]["rag"],
+                      "rag_now": None})
+    prev_open = {a["id"] for a in prev["raid_actions"]}
+    now_open = {a["id"] for a in st["raid_actions"]}
+    end_prev = {m["id"]: m["forecast"] for m in prev["milestones"]}
+    return {"previous_as_of": prev["as_of"], "overall_before": prev["overall_rag"], "overall_now": st["overall_rag"],
+            "milestone_changes": moves,
+            "slipped_total_days": sum(x["forecast_moved_days"] for x in moves
+                                      if x["forecast_moved_days"] and x["forecast_moved_days"] > 0),
+            "raid_opened": sorted(now_open - prev_open), "raid_closed": sorted(prev_open - now_open),
+            "critical_path_before": prev.get("critical_path", []), "critical_path_now": st["critical_path"],
+            "end_milestone": st["critical_path"][-1] if st["critical_path"] else None,
+            "end_forecast_before": end_prev.get(st["critical_path"][-1]) if st["critical_path"] else None}
+
+
+def render_since(sp: dict, st: dict) -> list[str]:
+    L = ["", "## Since last report", "",
+         f"Compared with the report as of {sp['previous_as_of']}: overall RAG {sp['overall_before'].upper()} → "
+         f"{sp['overall_now'].upper()}; {len(sp['milestone_changes'])} milestone change(s); "
+         f"RAID opened: {', '.join(sp['raid_opened']) or 'none'}; closed: {', '.join(sp['raid_closed']) or 'none'}."]
+    if sp["milestone_changes"]:
+        L += ["", "| ID | Change | Forecast moved (days) | RAG before | RAG now |", "|---|---|---|---|---|"]
+        for x in sp["milestone_changes"]:
+            mv = "—" if x["forecast_moved_days"] is None else f"{x['forecast_moved_days']:+d}"
+            L.append(f"| {x['id']} | {x['change']} | {mv} | {x['rag_before'] or '—'} | {x['rag_now'] or '—'} |")
+    if sp["end_milestone"] and sp["end_forecast_before"]:
+        now = next(m["forecast"] for m in st["milestones"] if m["id"] == sp["end_milestone"])
+        if now != sp["end_forecast_before"]:
+            L += ["", f"End of the critical path ({sp['end_milestone']}) moved from {sp['end_forecast_before']} to {now}."]
+    if sp["critical_path_before"] and sp["critical_path_before"] != sp["critical_path_now"]:
+        L += ["", f"Critical path changed: {' → '.join(sp['critical_path_before'])} → now {' → '.join(sp['critical_path_now'])}."]
+    return L
+
+
 def label(text: str) -> str:
     return re.sub(r"[\[\]{}()\"<>|]", " ", text).replace("  ", " ").strip()
 
@@ -375,7 +444,10 @@ def render(st: dict, strict: bool) -> str:
                  f"{s['on_critical_path']} | {s['status']} | {s['owner']} |")
     L += ["", f"RAG thresholds: green ≤ {t['green_max_slip_days']} days slip; amber ≤ {t['amber_max_slip_days']} days; "
           "red above, or forecast date already passed while not done (late).",
-          "", "## Critical path", "",
+          ]
+    if st.get("since_previous"):
+        L += render_since(st["since_previous"], st)
+    L += ["", "## Critical path", "",
           f"Longest chain through `depends_on` by duration_days: {' → '.join(st['critical_path'])} = "
           f"{st['critical_path_days']} days. A slip on any of these moves the end date.", ""]
     if st.get("critical_path_ties"):
@@ -476,6 +548,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--as-of", dest="as_of", help="status date YYYY-MM-DD (required; never defaults to today)")
     ap.add_argument("--thresholds", type=Path)
     ap.add_argument("--strict", action="store_true", help="exit 1 when overall RAG is red")
+    ap.add_argument("--previous", type=Path, help="status.json of the last report (adds 'Since last report')")
     ap.add_argument("--out-dir", type=Path)
     ap.add_argument("--verify", type=Path, help="re-verify status.csv or raid-actions.csv and exit")
     args = ap.parse_args(argv)
@@ -486,6 +559,8 @@ def main(argv: list[str] | None = None) -> int:
         if not (args.raid and args.milestones and args.out_dir and as_of):
             raise InputError("--raid, --milestones, --as-of and --out-dir are required")
         st = build(load_milestones(args.milestones), load_raid(args.raid), as_of, load_thresholds(args.thresholds))
+        if args.previous:
+            st["since_previous"] = since_previous(st, load_previous(args.previous))
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

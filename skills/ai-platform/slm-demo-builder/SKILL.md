@@ -12,16 +12,24 @@ metadata:
       - {name: spec, type: md, required: true, from: "demo spec (assets/demo-spec.md layout) with §7 entity field tables: | Field | Type | Example | Constraints | (fixture: evals/fixtures/demo-spec.md)"}
       - {name: rows, type: string, required: false, default: "200", from: "rows per entity unless the spec's volume table says otherwise"}
       - {name: seed, type: string, required: false, default: "42"}
+      - {name: existing, type: dir, required: false, from: "the demo folder that ships today (data-manifest.json + data/); extended without moving planted rows"}
     run:
-      - {step: synthetic, kind: script, cmd: "python3 -I scripts/gen_synthetic.py {spec} --out-dir {out} --rows {rows} --seed {seed}"}
+      - {step: synthetic, kind: script, cmd: "python3 -I scripts/gen_synthetic.py {spec} --out-dir {out} --rows {rows} --seed {seed} [--existing {existing}]"}
     outputs:
       - {path: "{out}/data-manifest.json", checks: [exists, json, contains:"\"pii_guard\": \"passed\"", contains:"\"email_domain\": \"example.com\""]}
+    modes:
+      new:      {case: agent-happy-path, bring: "a demo spec filled in from the template"}
+      existing: {case: agent-mode-existing, bring: "your demo's current data folder and the updated spec"}
 ---
 
 # SLM / Agent Demo Builder
 
 ## How to run
 This skill is executable. Write the demo spec (with the §7 entity field tables), then run `python3 scripts/run_skill.py ai-platform/slm-demo-builder --input spec=<demo-spec.md> [--input rows=N --input seed=S] --out <dir>` (see `--explain ai-platform/slm-demo-builder`). Report the `run.json` results; do not hand-write the synthetic dataset the script produces (`data/<entity>.csv`, `data-manifest.json`). A spec that declares an SSN / credit-card / phone field is refused (exit 1) by the PII guard; fix the spec.
+
+## Starting points
+- **New** — generate seeded, PII-guarded synthetic data from a filled-in demo spec.
+- **Existing** — pass the demo's current data folder as `existing` with the updated spec: existing rows keep their values (planted cases stay put), new columns, rows and entities are added, dropped columns removed, and the manifest records every change under `extended_from`.
 
 ## When to use
 - Adding a demo to a showroom or experience studio; preparing a client-specific walkthrough; turning a prototype into a repeatable 10-minute story.

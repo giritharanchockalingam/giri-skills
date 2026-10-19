@@ -1,0 +1,7 @@
+# fictional fixture — the training catalogue an invented company already runs for its assistant rollout (built for end users in 2026-Q1); tests only
+module_id,title,hours,audience,level,format,mandatory_for
+NW-T01,Responsible AI policy acknowledgement,0.5,none|user|builder|overseer,1,e-learning,
+NW-T02,Getting started with the billing assistant,1,user,1,e-learning,
+NW-T03,Prompt clinic: better answers for billing queries,2,user,2,workshop,
+NW-T04,AI engineering bootcamp,16,builder,3,hands-on lab,
+NW-T05,AI briefing for managers,1,overseer,2,briefing,

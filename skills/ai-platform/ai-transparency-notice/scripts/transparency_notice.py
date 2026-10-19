@@ -10,7 +10,7 @@ never claims compliance.
 
 Usage:
   python3 -I transparency_notice.py --facts facts.csv [--classification classification.json] \
-      [--max-grade 8] [--strict] --out-dir OUT
+      [--max-grade 8] [--strict] [--published-notice current-notice.md] --out-dir OUT
   python3 -I transparency_notice.py --verify OUT/notice.md      # re-grade and compare with transparency.json
 
 Inputs:
@@ -19,9 +19,15 @@ Inputs:
                   tier (or risk_tier/classification/category) and basis (or reasons/rationale).
   max_grade       reading-grade ceiling for the notice (default 8).
   strict          exit 1 when a fact the notice needs is missing.
+  published_notice  optional: the notice users see today (Markdown or text, any author). It is
+                  redlined sentence by sentence against the new notice: unchanged, changed (token
+                  Jaccard >= 0.5 to one published sentence), added, and removed. A removed sentence is
+                  a published claim the current facts no longer support; the redline says to withdraw
+                  or re-source it, never to keep it silently.
 Missing facts -> [TO BE BASELINED — owner: Product owner].
 
-Outputs (in --out-dir): notice.md, system-card.md, disclosure-checklist.csv, transparency.json.
+Outputs (in --out-dir): notice.md, system-card.md, disclosure-checklist.csv, transparency.json,
+and notice-redline.md when --published-notice is given.
 Exit codes: 0 written and grade within max · 1 grade above max, or --strict with notice facts
 missing — outputs still written · 2 missing/invalid input.
 Stdlib only; no network; writes only inside --out-dir.
@@ -218,6 +224,90 @@ def build(facts: dict, classification: dict | None, max_grade: float, strict: bo
             "missing_facts": missing_facts, "checklist": checklist, "counts": counts, "strict": strict}
 
 
+# ------------------------------------------------------------------ redline
+COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+TOKEN_RE = re.compile(r"[a-z0-9]+")
+CHANGED_MIN_SIMILARITY = 0.5
+
+
+def split_sentences(body: str) -> list[str]:
+    return [s.strip() for s in SPLIT_RE.split(body) if s.strip()]
+
+
+def load_published(path: Path) -> list[str]:
+    if not Path(path).is_file():
+        raise InputError(f"published notice file not found: {path}")
+    text = COMMENT_RE.sub("", Path(path).read_text(encoding="utf-8-sig"))
+    sentences = split_sentences(notice_body(text))
+    if not sentences:
+        raise InputError("published notice has no sentences")
+    return sentences
+
+
+def _tokens(s: str) -> set[str]:
+    """Lower-case words; every number counts as the same token, so a new date or figure reads as a change."""
+    return {"<num>" if tok.isdigit() else tok for tok in TOKEN_RE.findall(s.lower())}
+
+
+def similarity(a: str, b: str) -> float:
+    ta, tb = _tokens(a), _tokens(b)
+    return len(ta & tb) / len(ta | tb) if ta | tb else 0.0
+
+
+def redline(published: list[str], new: list[str]) -> list[dict]:
+    """Rows in new-notice order (removed rows last): status unchanged | changed | added | removed."""
+    pairs: dict[int, tuple[int, float]] = {}
+    used: set[int] = set()
+    for i, s in enumerate(new):  # exact matches first
+        j = next((j for j, p in enumerate(published) if j not in used and p == s), None)
+        if j is not None:
+            pairs[i] = (j, 1.0)
+            used.add(j)
+    cands = sorted(((similarity(s, p), i, j) for i, s in enumerate(new) if i not in pairs
+                    for j, p in enumerate(published) if j not in used), key=lambda x: (-x[0], x[1], x[2]))
+    for sim, i, j in cands:  # then best one-to-one near matches
+        if sim < CHANGED_MIN_SIMILARITY:
+            break
+        if i in pairs or j in used:
+            continue
+        pairs[i] = (j, sim)
+        used.add(j)
+    rows = []
+    for i, s in enumerate(new):
+        if i in pairs:
+            j, sim = pairs[i]
+            rows.append({"status": "unchanged" if published[j] == s else "changed", "published": published[j], "new": s,
+                         "similarity": round(sim, 2)})
+        else:
+            rows.append({"status": "added", "published": "", "new": s, "similarity": 0.0})
+    rows += [{"status": "removed", "published": p, "new": "", "similarity": 0.0}
+             for j, p in enumerate(published) if j not in used]
+    return rows
+
+
+def redline_md(res: dict, source: str) -> str:
+    rl, k = res["redline"], res["redline_counts"]
+    pub = res["published_readability"]
+    L = [f"# Notice redline: {fv(res['facts'], 'system_name') or TBD}", "",
+         "## Summary", "",
+         f"- Published notice: `{source}` — {pub['word_count']} words, grade {pub['grade']}.",
+         f"- New notice: {res['readability']['word_count']} words, grade {res['readability']['grade']} "
+         f"(max {res['max_grade']:g}).",
+         f"- Sentences: {k['unchanged']} unchanged, {k['changed']} changed, {k['added']} added, {k['removed']} removed.",
+         "", "## Redline", "", "| Status | Published | New |", "|---|---|---|"]
+    L += [f"| {r['status']} | {md_cell(r['published']) or '—'} | {md_cell(r['new']) or '—'} |" for r in rl]
+    L += ["", "## Removed claims", ""]
+    removed = [r["published"] for r in rl if r["status"] == "removed"]
+    if removed:
+        L += [f"- \"{md_cell(s)}\" — no current fact supports this sentence: withdraw it from the published notice, "
+              f"or add the fact (with its source) to the facts file and re-run. Owner: Product owner." for s in removed]
+    else:
+        L.append("None: every published sentence is still supported by a current fact.")
+    L += ["", "Every new sentence comes from a fact in the facts file; this redline does not claim compliance.", ""]
+    return "\n".join(L)
+
+
 # ------------------------------------------------------------------ render
 def notice_md(res: dict) -> str:
     lines = ["# About this AI assistant", ""]
@@ -272,6 +362,10 @@ def card_md(res: dict) -> str:
              f"{r['grade']} (max {res['max_grade']:g}){'' if res['grade_ok'] else ' — ABOVE MAX, rewrite the facts in plainer words'}.")
     L.append(f"- Disclosure checklist (EU AI Act Art. 50): {k['provided']} provided, {k['partial']} partial, "
              f"{k['missing']} missing, {k['to confirm']} to confirm, {k['not applicable']} not applicable.")
+    if res.get("redline_counts"):
+        rk = res["redline_counts"]
+        L.append(f"- Published notice redlined: {rk['unchanged']} unchanged, {rk['changed']} changed, {rk['added']} added, "
+                 f"{rk['removed']} removed sentence(s); see notice-redline.md.")
     if res["missing_facts"]:
         L.append(f"- Facts not supplied: {', '.join(res['missing_facts'])} — {TBD}.")
     else:
@@ -303,6 +397,7 @@ def summary_json(res: dict) -> dict:
         "notice_missing_facts": res["notice_missing"], "missing_facts": res["missing_facts"],
         "checklist": res["counts"], "classification": res["classification"], "strict": res["strict"],
         "note": "Not a legal determination; does not claim compliance.",
+        **({"redline": res["redline_counts"]} if res.get("redline_counts") else {}),
     }
 
 
@@ -332,6 +427,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-grade", type=str)
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--out-dir", type=Path)
+    ap.add_argument("--published-notice", type=Path, help="the notice users see today, to redline")
     ap.add_argument("--verify", type=Path, help="notice.md to re-grade against transparency.json beside it")
     args = ap.parse_args(argv)
     if args.verify:
@@ -348,6 +444,12 @@ def main(argv: list[str] | None = None) -> int:
             if max_grade <= 0:
                 raise InputError("--max-grade must be above 0")
         res = build(load_facts(args.facts), load_classification(args.classification), max_grade, args.strict)
+        if args.published_notice:
+            published = load_published(args.published_notice)
+            res["redline"] = redline(published, split_sentences(" ".join(s["text"] for s in res["sentences"])))
+            res["redline_counts"] = {s: sum(1 for r in res["redline"] if r["status"] == s)
+                                     for s in ("unchanged", "changed", "added", "removed")}
+            res["published_readability"] = readability(" ".join(published))
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -358,6 +460,8 @@ def main(argv: list[str] | None = None) -> int:
     (out / "disclosure-checklist.csv").write_text(checklist_csv(res), encoding="utf-8")
     (out / "transparency.json").write_text(json.dumps(summary_json(res), indent=2, sort_keys=True, ensure_ascii=False)
                                            + "\n", encoding="utf-8")
+    if res.get("redline"):
+        (out / "notice-redline.md").write_text(redline_md(res, args.published_notice.name), encoding="utf-8")
     code = 0
     if not res["grade_ok"]:
         print(f"gate FAILED: notice reading grade {res['readability']['grade']} above max {max_grade:g}", file=sys.stderr)

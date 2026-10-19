@@ -13,17 +13,25 @@ metadata:
       - {name: prices, type: csv, required: true, from: "user price sheet per 1M tokens with source and as_of (layout: assets/prices-template.csv); never hardcoded"}
       - {name: assignment, type: csv, required: true, from: "feature -> model, optional ';'-separated eligible_models for the what-if (layout: assets/assignment-template.csv)"}
       - {name: budget_usd_month, type: string, required: false, from: "monthly budget in the price-sheet currency (absent = to be baselined)"}
+      - {name: actuals, type: csv, required: false, from: "billed cost per feature for one month: feature,actual_cost[,actual_requests],period,source (e.g. from the API invoice or billing export); adds modelled-vs-actual variance"}
     run:
-      - {step: cost-model, kind: script, cmd: "python3 -I scripts/cost_model.py --workload {workload} --prices {prices} --assignment {assignment} [--budget {budget_usd_month}] --out {out}"}
+      - {step: cost-model, kind: script, cmd: "python3 -I scripts/cost_model.py --workload {workload} --prices {prices} --assignment {assignment} [--budget {budget_usd_month}] [--actuals {actuals}] --out {out}"}
     outputs:
       - {path: "{out}/cost-model.json", checks: [exists, json, contains:"monthly_total"]}
       - {path: "{out}/cost-model.md", checks: [exists, sections:["Monthly total","By feature","What-if","Budget","Sources"], no_unowned_tbd, numbers_trace_to:"{out}/cost-model.json"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "planned volumes, your price sheet and model choices"}
+      existing: {case: agent-mode-existing, bring: "your model inputs plus last month's bill per feature"}
 ---
 
 # LLM Cost Model (API token economics)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-cost-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-cost-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`cost-model.json`, `cost-model.md`). A total above the supplied budget fails the run (exit 1) on purpose; with no budget, the Budget section reads `[TO BE BASELINED — owner: FinOps lead]`.
+
+## Starting points
+- **New** — forecast monthly cost from planned volumes, your dated price sheet and the model assignment.
+- **Existing** — also pass last month's bill per feature as `actuals`: cost-model.md adds "Actuals vs model" (variance and variance % per feature, actual cost per request, billed spend the model does not cover, billed spend against the budget).
 
 ## When to use
 - Pricing a set of LLM-backed features on hosted APIs before launch, or re-forecasting after a price or volume change.

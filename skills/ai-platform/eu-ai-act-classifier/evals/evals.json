@@ -79,6 +79,23 @@
         {"file": "obligations.csv", "check": "contains:\"PRO-5-1-F,Art. 5(1)(f)\""},
         {"file": "ai-act-report.md", "check": "contains:\"Gate: FAIL (exit 1)\""}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "We are designing a credit pre-screen for new customers. Where does it sit under the AI Act and what will we owe?",
+      "expected": [
+        "Tier high-risk via Annex III; no evidence supplied, so every obligation is open with its date; in_force not assessed because no as_of was given"
+      ],
+      "inputs": {
+        "system": "evals/fixtures/system-high-risk.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "classification.json", "check": "contains:\"\\\"tier\\\": \\\"high-risk\\\"\""},
+        {"file": "obligations.csv", "check": "contains:\"HR-DATA,Art. 10,\""},
+        {"file": "obligations.csv", "check": "contains:\",open,not assessed (no --as-of),\""},
+        {"file": "ai-act-report.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

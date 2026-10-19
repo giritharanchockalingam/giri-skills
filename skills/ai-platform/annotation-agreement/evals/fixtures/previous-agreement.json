@@ -1,0 +1,354 @@
+{
+  "_note": "Fictional fixture: agreement.json produced by scripts/agreement.py from evals/fixtures/labels-round1.csv (pilot round, before the guideline revision) with evals/fixtures/guidelines.md. Invented labels; not real data.",
+  "alpha_band": "below 0.667",
+  "annotators": [
+    "ann_a",
+    "ann_b",
+    "ann_c"
+  ],
+  "coincidence": {
+    "n": 46.0,
+    "n_c": {
+      "billing_dispute": 14.0,
+      "other": 8.0,
+      "payment_failed": 8.0,
+      "plan_change": 6.0,
+      "refund_request": 10.0
+    }
+  },
+  "confusion_pairs": [
+    {
+      "count": 12,
+      "label_a": "billing_dispute",
+      "label_b": "refund_request"
+    },
+    {
+      "count": 5,
+      "label_a": "other",
+      "label_b": "plan_change"
+    },
+    {
+      "count": 4,
+      "label_a": "billing_dispute",
+      "label_b": "payment_failed"
+    },
+    {
+      "count": 2,
+      "label_a": "other",
+      "label_b": "payment_failed"
+    },
+    {
+      "count": 1,
+      "label_a": "billing_dispute",
+      "label_b": "other"
+    },
+    {
+      "count": 1,
+      "label_a": "billing_dispute",
+      "label_b": "plan_change"
+    }
+  ],
+  "defined": {
+    "billing_dispute": true,
+    "other": true,
+    "payment_failed": true,
+    "plan_change": false,
+    "refund_request": false
+  },
+  "disputed": [
+    {
+      "agreement": 0.0,
+      "item_id": "NW-011",
+      "labels": "billing_dispute:1;other:1;plan_change:1",
+      "majority": "tie",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-002",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-003",
+      "labels": "payment_failed:2;billing_dispute:1",
+      "majority": "payment_failed",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-004",
+      "labels": "plan_change:2;other:1",
+      "majority": "plan_change",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-005",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-006",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-009",
+      "labels": "payment_failed:2;billing_dispute:1",
+      "majority": "payment_failed",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-010",
+      "labels": "billing_dispute:2;refund_request:1",
+      "majority": "billing_dispute",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-012",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-013",
+      "labels": "payment_failed:2;other:1",
+      "majority": "payment_failed",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-014",
+      "labels": "other:2;plan_change:1",
+      "majority": "other",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-015",
+      "labels": "billing_dispute:2;refund_request:1",
+      "majority": "billing_dispute",
+      "n_ratings": 3
+    }
+  ],
+  "fleiss": {
+    "band": "n/a",
+    "kappa": null,
+    "reason": "items have different numbers of ratings ([2, 3]); Fleiss' kappa needs the same number per item \u2014 use alpha"
+  },
+  "gate": null,
+  "guideline_gaps": [
+    "refund_request"
+  ],
+  "guidelines_supplied": true,
+  "items": [
+    {
+      "agreement": 1.0,
+      "item_id": "NW-001",
+      "labels": "billing_dispute:3",
+      "majority": "billing_dispute",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-002",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-003",
+      "labels": "payment_failed:2;billing_dispute:1",
+      "majority": "payment_failed",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-004",
+      "labels": "plan_change:2;other:1",
+      "majority": "plan_change",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-005",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-006",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 1.0,
+      "item_id": "NW-007",
+      "labels": "other:3",
+      "majority": "other",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 1.0,
+      "item_id": "NW-008",
+      "labels": "plan_change:2",
+      "majority": "plan_change",
+      "n_ratings": 2
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-009",
+      "labels": "payment_failed:2;billing_dispute:1",
+      "majority": "payment_failed",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-010",
+      "labels": "billing_dispute:2;refund_request:1",
+      "majority": "billing_dispute",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.0,
+      "item_id": "NW-011",
+      "labels": "billing_dispute:1;other:1;plan_change:1",
+      "majority": "tie",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-012",
+      "labels": "refund_request:2;billing_dispute:1",
+      "majority": "refund_request",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-013",
+      "labels": "payment_failed:2;other:1",
+      "majority": "payment_failed",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-014",
+      "labels": "other:2;plan_change:1",
+      "majority": "other",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 0.333333,
+      "item_id": "NW-015",
+      "labels": "billing_dispute:2;refund_request:1",
+      "majority": "billing_dispute",
+      "n_ratings": 3
+    },
+    {
+      "agreement": 1.0,
+      "item_id": "NW-016",
+      "labels": "payment_failed:2",
+      "majority": "payment_failed",
+      "n_ratings": 2
+    }
+  ],
+  "krippendorff_alpha": 0.320652,
+  "label_agreement": [
+    {
+      "agreement": 0.357143,
+      "defined_in_guidelines": true,
+      "label": "billing_dispute",
+      "n": 14
+    },
+    {
+      "agreement": 0.5,
+      "defined_in_guidelines": true,
+      "label": "other",
+      "n": 8
+    },
+    {
+      "agreement": 0.625,
+      "defined_in_guidelines": true,
+      "label": "payment_failed",
+      "n": 8
+    },
+    {
+      "agreement": 0.5,
+      "defined_in_guidelines": false,
+      "label": "plan_change",
+      "n": 6
+    },
+    {
+      "agreement": 0.4,
+      "defined_in_guidelines": false,
+      "label": "refund_request",
+      "n": 10
+    }
+  ],
+  "labels_not_in_guidelines": [
+    "plan_change",
+    "refund_request"
+  ],
+  "labels_used": [
+    "billing_dispute",
+    "other",
+    "payment_failed",
+    "plan_change",
+    "refund_request"
+  ],
+  "low_agreement_labels": [
+    "billing_dispute",
+    "refund_request"
+  ],
+  "min_agreement": null,
+  "n_annotators": 3,
+  "n_items": 16,
+  "n_pairable_items": 16,
+  "n_ratings": 46,
+  "pairs": [
+    {
+      "band": "fair",
+      "expected": 0.208889,
+      "kappa": 0.325843,
+      "n_items": 15,
+      "note": "",
+      "observed": 0.466667,
+      "pair": "ann_a|ann_b"
+    },
+    {
+      "band": "moderate",
+      "expected": 0.219388,
+      "kappa": 0.45098,
+      "n_items": 14,
+      "note": "",
+      "observed": 0.571429,
+      "pair": "ann_a|ann_c"
+    },
+    {
+      "band": "slight",
+      "expected": 0.235556,
+      "kappa": 0.040698,
+      "n_items": 15,
+      "note": "",
+      "observed": 0.266667,
+      "pair": "ann_b|ann_c"
+    }
+  ],
+  "percent_agreement": 0.479167,
+  "single_rated_items": [],
+  "status": "ok",
+  "tbd_owner": "Annotation lead"
+}

@@ -18,12 +18,19 @@ Inputs:
          gate names), daily_requests, min_observed_requests, rollback_time_min, canary_steps
          ("1;5;25"), owner_<role> for role in eval_lead, sre_oncall, release_manager,
          product_owner.
+         A rollout already under way adds current_stage (a stage id of this plan: offline_eval,
+         shadow, canary_1..canary_k, ga) and current_stage_observed_requests; the metric facts are
+         then the live readings for that stage. The plan reports where the rollout is and the
+         decision for the current stage: ROLL BACK when one of its gates is not met, HOLD when a
+         gate is not measured, the stage has no gate or too few requests have been observed,
+         otherwise PROMOTE to the next stage (COMPLETE at GA).
   gates  CSV stage,metric,min,max[,source,notes]; stage in offline_eval|shadow|canary|ga;
          at least one of min/max per row. Lines starting with '#' are comments.
 
 Outputs (in --out-dir): release-plan.md (Readiness, Stages, Gates, Rollback, Owners), gates.json.
-Exit codes: 0 plan written and first-stage gates met · 1 a first-stage gate is not met (or the
-first stage has no gate) — outputs are still written · 2 missing/invalid required input.
+Exit codes: 0 plan written and first-stage gates met (and, in flight, no roll-back) · 1 a first-stage
+gate is not met (or the first stage has no gate), or the current stage must roll back — outputs are
+still written · 2 missing/invalid required input.
 Stdlib only; no network; writes only inside --out-dir.
 """
 from __future__ import annotations
@@ -154,6 +161,60 @@ def owner(facts: dict[str, str], role: str) -> str:
     return facts.get(f"owner_{role}") or TBD_OWNER
 
 
+def current_position(facts: dict[str, str], stages: list[dict], evaluated: list[dict], n_req) -> dict | None:
+    """Where a rollout already under way stands, and the decision for its current stage."""
+    cur = facts.get("current_stage", "").strip().lower()
+    if not cur:
+        return None
+    ids = [s["id"] for s in stages]
+    if cur not in ids:
+        raise InputError(f"current_stage {cur!r} is not a stage of this plan: {', '.join(ids)}")
+    i = ids.index(cur)
+    st = stages[i]
+    nxt = stages[i + 1] if i + 1 < len(stages) else None
+    gs = [g for g in evaluated if g["stage"] == st["gate_stage"]]
+    raw_obs = facts.get("current_stage_observed_requests", "")
+    observed = to_float(raw_obs)
+    if raw_obs and (observed is None or observed < 0):
+        raise InputError(f"current_stage_observed_requests must be a number >= 0, got {raw_obs!r}")
+    needs_obs = st["id"] not in ("offline_eval", "ga")
+    reasons = []
+    breached = [g["metric"] for g in gs if g["status"] == "NOT MET"]
+    unmeasured = [g["metric"] for g in gs if g["status"] == "not measured"]
+    remaining = None
+    if breached:
+        decision = "ROLL BACK"
+        reasons.append("gate not met now: " + ", ".join(breached))
+    else:
+        if not gs:
+            reasons.append(f"no {st['gate_stage']} gate supplied: {TBD_OWNER}")
+        if unmeasured:
+            reasons.append("gate not measured: " + ", ".join(unmeasured))
+        if needs_obs:
+            if observed is None or n_req is None:
+                reasons.append(f"observed vs required requests unknown: {TBD_OWNER}")
+            elif observed < n_req:
+                remaining = n_req - observed
+                reasons.append(f"{fmt(observed)} requests observed, {fmt(n_req)} required")
+        if reasons:
+            decision = "HOLD"
+        elif nxt is None:
+            decision = "COMPLETE"
+            reasons.append("every ga gate holds at GA")
+        else:
+            decision = "PROMOTE"
+            reasons.append(f"every {st['gate_stage']} gate met" + (f"; {fmt(observed)} requests observed, "
+                                                                   f"{fmt(n_req)} required" if needs_obs else ""))
+    return {"stage": st["id"], "stage_name": st["name"], "traffic_pct": st["traffic_pct"],
+            "observed_requests": num(observed) if observed is not None else None,
+            "required_requests": num(n_req) if (n_req is not None and needs_obs) else None,
+            "remaining_requests": num(remaining) if remaining is not None else None,
+            "gates_met_now": sum(1 for g in gs if g["status"] == "met"), "gates_total": len(gs),
+            "decision": decision, "next_stage": nxt["id"] if (nxt and decision == "PROMOTE") else None,
+            "next_stage_name": nxt["name"] if (nxt and decision == "PROMOTE") else None,
+            "reasons": reasons, "decision_owner": st["owner"] if decision != "ROLL BACK" else owner(facts, STEP_ROLE["rollback"])}
+
+
 def build(facts: dict[str, str], gates: list[dict]) -> dict:
     evaluated = [evaluate_gate(g, facts) for g in gates]
     steps, steps_basis = canary_steps(facts)
@@ -192,6 +253,7 @@ def build(facts: dict[str, str], gates: list[dict]) -> dict:
         if g["min"] is not None:
             triggers.append({"stage": g["stage"], "metric": g["metric"], "condition": f"< {fmt(g['min'])}", "threshold": g["min"]})
     rb = to_float(facts.get("rollback_time_min", ""))
+    current = current_position(facts, stages, evaluated, n_req)
     return {
         "system_name": facts["system_name"],
         "risk_tier": facts["risk_tier"],
@@ -208,6 +270,7 @@ def build(facts: dict[str, str], gates: list[dict]) -> dict:
         "rollback_triggers": triggers,
         "rollback_owner": owner(facts, STEP_ROLE["rollback"]),
         "owners": {ROLES[r]: owner(facts, r) for r in ROLES},
+        "current": current,
     }
 
 
@@ -230,6 +293,14 @@ def render(plan: dict) -> str:
         L.append("**READY**: every offline_eval gate is met now; the rollout may start (Shadow after offline sign-off).")
     else:
         L.append("**NOT READY**: first-stage blockers: " + ", ".join(plan["first_stage_blockers"]) + ".")
+    cur = plan.get("current")
+    if cur:
+        target = f" to {cur['next_stage_name']}" if cur["next_stage_name"] else ""
+        why = "; ".join(cur["reasons"])
+        L += ["", f"**In flight — {cur['stage_name']} ({fmt(cur['traffic_pct'])}% traffic): {cur['decision']}{target}.** "
+              f"{why[:1].upper()}{why[1:]}. Decision owner: {cur['decision_owner']}."]
+        if cur["remaining_requests"] is not None:
+            L.append(f"Requests still to observe at this stage: {fmt(cur['remaining_requests'])}.")
     L += ["", "| Stage | Gates met now | Gates total |", "|---|---|---|"]
     for st in STAGES:
         gs = [g for g in plan["gates"] if g["stage"] == st]
@@ -282,6 +353,14 @@ def main(argv: list[str] | None = None) -> int:
     if not plan["first_stage_ready"]:
         print("first-stage gate(s) not met: " + ", ".join(plan["first_stage_blockers"]), file=sys.stderr)
         return 1
+    cur = plan["current"]
+    if cur and cur["decision"] == "ROLL BACK":
+        print(f"current stage {cur['stage']}: ROLL BACK — " + "; ".join(cur["reasons"]), file=sys.stderr)
+        return 1
+    if cur:
+        print(f"release plan written: in flight at {cur['stage']}, decision {cur['decision']}"
+              + (f" to {cur['next_stage']}" if cur["next_stage"] else ""))
+        return 0
     print(f"release plan written: {len(plan['stages'])} stages, first stage ready")
     return 0
 

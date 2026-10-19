@@ -81,6 +81,44 @@
       "checks": [
         "exit:1"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our ticket MCP server already runs search_tickets (implemented) and read_ticket. Add add_comment and close_ticket from the v2 contracts without touching what works.",
+      "expected": [
+        "Copies the existing server, adds stubs and contracts for add_comment and close_ticket, keeps the implemented search_tickets body, reports read_ticket's x-contract drift without overwriting it; the server's own tests pass"
+      ],
+      "inputs": {
+        "tools": "evals/fixtures/tools-v2.json",
+        "existing_server": "evals/fixtures/existing-server"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"name\\\": \\\"read_ticket\\\"\""
+        },
+        {
+          "file": "server/server.py",
+          "check": "contains:\"items = [t for t in SAMPLE_TICKETS if t[\\\"status\\\"] == arguments.get(\\\"status\\\")][:limit]\""
+        },
+        {
+          "file": "server/server.py",
+          "check": "contains:\"    'close_ticket': close_ticket,\""
+        },
+        {
+          "file": "server/README.md",
+          "check": "contains:\"| `add_comment` | Add an internal comment to a ticket. Not visible to the customer. | write | stub |\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"extended\\\": 2\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"existing_only_tools\\\": []\""
+        }
+      ]
     }
   ]
 }

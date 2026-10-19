@@ -19,9 +19,15 @@ Inputs:
   --labels         CSV item_id,annotator,label (blank label = not rated; '#' lines are comments)
   --guidelines     optional Markdown annotation guidelines
   --min-agreement  optional minimum Krippendorff's alpha; below it the run exits 1
+  --previous       optional agreement.json from an earlier labelling round (e.g. the pilot before a
+                   guideline revision); the report adds "Change since previous round" (alpha, percent
+                   agreement and per-label agreement then vs now, labels added or dropped). Only the
+                   summary figures are read from it and stored as `previous_round`, so --verify
+                   re-derives the section from agreement.json alone.
 
 Usage:
-  python3 -I agreement.py --labels l.csv [--guidelines g.md] [--min-agreement 0.667] --out-dir <dir>
+  python3 -I agreement.py --labels l.csv [--guidelines g.md] [--min-agreement 0.667] \
+      [--previous round1/agreement.json] --out-dir <dir>
   python3 -I agreement.py --verify <dir>/agreement-report.md --labels l.csv
 
 Writes agreement.json, disputed-items.csv, label-agreement.csv, agreement-report.md.
@@ -270,6 +276,61 @@ def render_labels(r: dict) -> str:
     return buf.getvalue()
 
 
+def load_previous(path: Path) -> dict:
+    """Summary of an earlier round's agreement.json (status ok only)."""
+    if not path.is_file():
+        raise InputError(f"previous round file not found: {path}")
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise InputError(f"previous round is not valid JSON: {e}") from e
+    if not isinstance(doc, dict) or "krippendorff_alpha" not in doc or "label_agreement" not in doc:
+        raise InputError("previous round must be an agreement.json from this script")
+    if doc.get("status") != "ok":
+        raise InputError("previous round has no agreement score (status is not ok); nothing to compare")
+    labels = {}
+    for lab in doc["label_agreement"]:
+        if not isinstance(lab, dict) or "label" not in lab:
+            raise InputError("previous round: label_agreement rows need a label")
+        labels[str(lab["label"])] = lab.get("agreement")
+    return {"source": path.name, "krippendorff_alpha": doc["krippendorff_alpha"],
+            "percent_agreement": doc.get("percent_agreement"), "n_pairable_items": doc.get("n_pairable_items"),
+            "n_disputed": len(doc.get("disputed") or []), "label_agreement": labels}
+
+
+def _chg(now, was) -> str:
+    return "n/a" if now is None or was is None else f"{now - was:+.3f}"
+
+
+def render_previous(r: dict) -> list[str]:
+    pv = r["previous_round"]
+    a, pa = r["krippendorff_alpha"], pv["krippendorff_alpha"]
+    trend = ("n/a" if a is None or pa is None else "improved" if a > pa + 1e-9 else
+             "declined" if a < pa - 1e-9 else "unchanged")
+    L = ["", "## Change since previous round", "",
+         f"Compared with `{pv['source']}`: alpha {trend} ({f3(pa)} → {f3(a)}).", "",
+         "| Statistic | Previous round | This round | Change |", "|---|---|---|---|",
+         f"| Krippendorff's alpha | {f3(pa)} | {f3(a)} | {_chg(a, pa)} |",
+         f"| Percent agreement | {f3(pv['percent_agreement'])} | {f3(r['percent_agreement'])} | "
+         f"{_chg(r['percent_agreement'], pv['percent_agreement'])} |",
+         f"| Disputed items | {pv['n_disputed']} | {len(r['disputed'])} | {len(r['disputed']) - pv['n_disputed']:+d} |",
+         "", "| Label | Previous agreement | This round | Change |", "|---|---|---|---|"]
+    now = {lab["label"]: lab["agreement"] for lab in r["label_agreement"]}
+    for lab in sorted(set(now) | set(pv["label_agreement"])):
+        if lab not in pv["label_agreement"]:
+            L.append(f"| {lab} | — | {f3(now[lab])} | new label |")
+        elif lab not in now:
+            L.append(f"| {lab} | {f3(pv['label_agreement'][lab])} | — | not used this round |")
+        else:
+            L.append(f"| {lab} | {f3(pv['label_agreement'][lab])} | {f3(now[lab])} | "
+                     f"{_chg(now[lab], pv['label_agreement'][lab])} |")
+    worse = [lab for lab in sorted(now) if lab in pv["label_agreement"] and now[lab] is not None
+             and pv["label_agreement"][lab] is not None and now[lab] < pv["label_agreement"][lab] - 1e-9]
+    L += ["", "Labels whose agreement fell: " + (", ".join(f"`{x}`" for x in worse) +
+                                                 f" — review their guideline wording ({TBB})." if worse else "none.")]
+    return L
+
+
 def render_md(r: dict, max_disputed: int = 25) -> str:
     L = ["# Annotation agreement", ""]
     if r["status"] != "ok":
@@ -360,6 +421,8 @@ def render_md(r: dict, max_disputed: int = 25) -> str:
             L += ["", "Clarify the boundary between the most-confused pairs: "
                   + "; ".join(f"`{c['label_a']}` vs `{c['label_b']}` ({c['count']})" for c in top) + "."]
 
+    if r.get("previous_round"):
+        L += render_previous(r)
     L += ["", "## Method & limits", "",
           "- Krippendorff's alpha (nominal) from the coincidence matrix: alpha = 1 − (n − 1) · Σ_{c≠k} o_ck / "
           "Σ_{c≠k} n_c·n_k; items with fewer than 2 ratings are not pairable and are excluded. Verified against "
@@ -389,9 +452,12 @@ def to_json(r: dict) -> str:
     return json.dumps(rnd({**r, "tbd_owner": OWNER}), indent=2, sort_keys=True) + "\n"
 
 
-def build(labels: Path, min_agreement: float | None, defined: dict[str, bool] | None) -> tuple[dict, dict[str, str], int]:
+def build(labels: Path, min_agreement: float | None, defined: dict[str, bool] | None,
+          previous: dict | None = None) -> tuple[dict, dict[str, str], int]:
     r = analyse(read_labels(labels), min_agreement, defined)
     r["defined"] = defined
+    if previous is not None:
+        r["previous_round"] = previous
     files = {"agreement.json": to_json(r), "disputed-items.csv": render_disputed(r),
              "label-agreement.csv": render_labels(r), "agreement-report.md": render_md(r)}
     code = 0
@@ -419,7 +485,7 @@ def verify(path: Path, labels: Path) -> int:
         return 1
     doc = json.loads(meta.read_text(encoding="utf-8"))
     try:
-        _, files, _ = build(labels, doc.get("min_agreement"), doc.get("defined"))
+        _, files, _ = build(labels, doc.get("min_agreement"), doc.get("defined"), doc.get("previous_round"))
     except InputError as e:
         print(f"verify: cannot re-derive: {e}")
         return 1
@@ -435,6 +501,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--labels", type=Path, help="CSV item_id,annotator,label")
     ap.add_argument("--guidelines", type=Path, help="optional Markdown annotation guidelines")
     ap.add_argument("--min-agreement", help="optional minimum Krippendorff's alpha (gate)")
+    ap.add_argument("--previous", type=Path, help="optional agreement.json from an earlier labelling round")
     ap.add_argument("--out-dir", type=Path)
     ap.add_argument("--verify", type=Path, help="re-derive one output from --labels and its sibling agreement.json")
     a = ap.parse_args(argv)
@@ -455,7 +522,8 @@ def main(argv: list[str] | None = None) -> int:
             text = a.guidelines.read_text(encoding="utf-8")
             labs = sorted({lab for _, _, lab in read_labels(a.labels)})
             defined = {lab: defined_in(lab, text) for lab in labs}
-        r, files, code = build(a.labels, mn, defined)
+        previous = load_previous(a.previous) if a.previous is not None else None
+        r, files, code = build(a.labels, mn, defined, previous)
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

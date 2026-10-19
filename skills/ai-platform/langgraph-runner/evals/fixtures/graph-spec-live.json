@@ -1,0 +1,104 @@
+{
+  "_note": "fictional fixture \u2014 the ticket-triage graph as it runs today (v1: no retry loop, no attempts counter, drafts held as a list)",
+  "name": "ticket_triage",
+  "state": [
+    {
+      "name": "messages",
+      "type": "messages",
+      "reducer": "add_messages"
+    },
+    {
+      "name": "intent",
+      "type": "str"
+    },
+    {
+      "name": "kb_hits",
+      "type": "list",
+      "reducer": "add"
+    },
+    {
+      "name": "draft",
+      "type": "list",
+      "reducer": "add"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "classify",
+      "kind": "llm",
+      "description": "Classify the ticket intent",
+      "reads": [
+        "messages"
+      ],
+      "writes": [
+        "intent"
+      ]
+    },
+    {
+      "name": "route",
+      "kind": "router",
+      "description": "Route by intent",
+      "reads": [
+        "intent"
+      ]
+    },
+    {
+      "name": "search_kb",
+      "kind": "tool",
+      "description": "Search the knowledge base",
+      "reads": [
+        "messages"
+      ],
+      "writes": [
+        "kb_hits"
+      ]
+    },
+    {
+      "name": "draft_reply",
+      "kind": "llm",
+      "description": "Draft a reply from KB hits",
+      "reads": [
+        "messages",
+        "kb_hits"
+      ],
+      "writes": [
+        "draft"
+      ]
+    },
+    {
+      "name": "escalate",
+      "kind": "function",
+      "description": "Hand off to a human queue",
+      "reads": [
+        "messages"
+      ],
+      "writes": [
+        "messages"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "classify",
+      "to": "route"
+    },
+    {
+      "from": "search_kb",
+      "to": "draft_reply"
+    }
+  ],
+  "conditional_edges": [
+    {
+      "from": "route",
+      "routes": {
+        "answerable": "search_kb",
+        "complaint": "escalate"
+      }
+    }
+  ],
+  "entry": "classify",
+  "finish": [
+    "draft_reply",
+    "escalate"
+  ]
+}

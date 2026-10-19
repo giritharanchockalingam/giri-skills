@@ -106,6 +106,29 @@ A missing required input exits 2 with `needs_input.json`; `--assume name=value` 
 
 Every script is stdlib-only. One optional dependency exists: `exec-deck-redline` reads `.pptx` decks through python-pptx (`pip install -r requirements-optional.txt`); without it, export the deck to `deck.md` with `--- slide N ---` separators (the eval fixtures use that form, so tests and CI never need the package).
 
+## Starting new or improving what exists
+
+Every skill declares which starting points it serves (`metadata.agent.modes`): **new** (greenfield: nothing built yet)
+and/or **existing** (brownfield: an existing repo, migrations folder, register, deck, log…), each with a runnable example.
+
+```bash
+python3 scripts/run_skill.py --demo build/supabase-schema-rls --mode existing   # run the brownfield example
+python3 scripts/modes_check.py --run                                             # CI: every mode green, every stage covered
+```
+
+## Use the skills as MCP servers
+
+The studio exposes every workspace, role, team and lifecycle stage as a remote MCP server (Streamable HTTP):
+`/api/mcp`, `/api/mcp/role/<slug>`, `/api/mcp/team/<slug>`, `/api/mcp/stage/<id>`. Auth is a workspace API key
+(`Authorization: Bearer sf_live_…`). Tools are the workspace's **published** skills in scope plus `find_skill` and
+`get_run`; calls run the published version with the workspace's limits and are recorded like any API run. Folder
+inputs take `{"relative/path": "content"}`. Copy-paste setup for Claude Code, Claude Desktop, Cursor and VS Code is
+on the studio's **Connect** page.
+
+```bash
+claude mcp add --transport http skills-workspace https://<studio>/api/mcp --header "Authorization: Bearer $SF_API_KEY"
+```
+
 ## Conventions
 - A skill is a routing layer: `SKILL.md` ≤ 300 lines; depth lives in `references/`.
 - No invented numbers — `[TO BE BASELINED — owner: ___]` instead.

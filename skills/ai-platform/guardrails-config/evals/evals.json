@@ -83,6 +83,45 @@
         {"file": "guardrails.md", "check": "contains:\"[TO BE BASELINED — owner: AI security lead]\""},
         {"file": "guardrails.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is the guardrail rule set live today and our revised policy. Show what changes, what gets looser, and which test decisions flip.",
+      "expected": [
+        "Diffs the revised policy against the live rules: 7 changes, 6 tightened, 1 loosened (legal advice no longer blocked) flagged for sign-off; 6 test decisions change from the live rules and all 14 cases match the new rules"
+      ],
+      "inputs": {
+        "policy": "evals/fixtures/policy.json",
+        "tests": "evals/fixtures/test-inputs.csv",
+        "baseline": "evals/fixtures/live-guardrails.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "guardrails.md",
+          "check": "sections:[\"Rule set\",\"PII handling\",\"Tool allowlist\",\"Test results\",\"Changes vs live rules\",\"Limits\"]"
+        },
+        {
+          "file": "guardrails.md",
+          "check": "contains:\"7 rule change(s), 6 tightened, 1 loosened\""
+        },
+        {
+          "file": "guardrails.md",
+          "check": "contains:\"| blocked topic | legal advice | block | absent | loosened |\""
+        },
+        {
+          "file": "guardrails.md",
+          "check": "contains:\"| T12 | in | allow | block | block | yes |\""
+        },
+        {
+          "file": "guardrail-tests.json",
+          "check": "contains:\"\\\"loosened\\\": 1\""
+        },
+        {
+          "file": "guardrail-tests.json",
+          "check": "cmd:\"python3 scripts/guard.py --scan-pii {path}\""
+        }
+      ]
     }
   ]
 }

@@ -8,6 +8,9 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-mode-new, bring: "a description of the processing and its personal data"}
+      existing: {case: agent-happy-path, bring: "your processing description plus the risk register you keep"}
     inputs:
       - {name: processing, type: csv, required: true, from: "processing description key,value,source,notes (layout: assets/processing-template.csv) - controller, purpose, lawful_basis, data_subjects, retention, transfers, and yes|no screening keys"}
       - {name: pii_inventory, type: csv, required: false, from: "pii-inventory.csv from ai-platform/pii-data-inventory; PII columns with TBD handling become risks"}
@@ -24,6 +27,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/dpia --input <name>=<value> … --out <dir>` (see `--explain ai-platform/dpia`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dpia.md`, `dpia-risks.csv`, `screening.json`). **Gate:** a high residual risk with no measure fails the run (exit 1) on purpose — the DPIA is still written and states it cannot be signed off. Not legal advice.
+
+## Starting points
+- **New:** a processing description (and, if you have it, the PII inventory) gives the screening and a first risk list; risks from undecided PII handling are owned by the DPO and stay unscored.
+- **Existing:** add the risk register you already keep (`risks`); its likelihood, severity, measures, owners and residual levels are scored and drive the Art. 36 consultation call.
 
 ## When to use
 - ADLC govern stage: before an AI system that processes personal data goes live, or when its purpose, data or model changes.

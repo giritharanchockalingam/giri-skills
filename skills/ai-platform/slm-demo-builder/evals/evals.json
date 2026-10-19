@@ -83,6 +83,45 @@
       "checks": [
         "exit:1"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our triage showroom demo ships today. v0.2 of the spec adds a channel field, 30 more tickets and KB articles, and drops csat — regenerate without moving the planted cases.",
+      "expected": [
+        "Keeps all 50 customers and the first 120 tickets value-for-value (C00008 and T000017 unchanged apart from the new channel column), adds 30 tickets and 20 KB articles, removes csat; manifest records the changes; PII guard passes"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/demo-spec-v2.md",
+        "existing": "evals/fixtures/existing-demo",
+        "seed": "7"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "data-manifest.json",
+          "check": "contains:\"\\\"pii_guard\\\": \\\"passed\\\"\""
+        },
+        {
+          "file": "data-manifest.json",
+          "check": "contains:\"\\\"rows_added\\\": 30\""
+        },
+        {
+          "file": "data/customers.csv",
+          "check": "contains:\"C00008,Tomas Castillo,tomas.castillo8@example.com,enterprise,2024-04-01,true\""
+        },
+        {
+          "file": "data/tickets.csv",
+          "check": "contains:\"T000017,C00017,open,2,2026-01-07,Review renewal contact ticket pending customer.,\""
+        },
+        {
+          "file": "data/kb_articles.csv",
+          "check": "contains:\"KB0003,\""
+        },
+        {
+          "file": "data/tickets.csv",
+          "check": "contains:\"ticket_id,customer_id,status,priority,opened,subject,channel\""
+        }
+      ]
     }
   ]
 }

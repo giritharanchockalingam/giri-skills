@@ -89,6 +89,26 @@
         {"file": "slo-spec.md", "check": "contains:\"**BREACHED: availability.**\""},
         {"file": "slos.csv", "check": "contains:\"latency,0.9,1650,0.94748,0.525,0.250,met,agreed target\""}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "We're piloting the Contoso Claims Triage Assistant and have no SLOs at all yet. Here are two days of pilot logs — propose where to start.",
+      "expected": [
+        "Every objective is proposed from the pilot data and marked TBD for the Product owner; nothing is presented as agreed; the alerting window is TBD for the SRE lead"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/requests-pilot.csv",
+        "system": "Contoso Claims Triage Assistant (fictional)"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "slos.csv", "check": "csv_rows:status~^proposed$"},
+        {"file": "slos.csv", "check": "contains:\"latency,0.95,2000,0.99365,0.127,0.000,proposed,[TO BE BASELINED — owner: Product owner]\""},
+        {"file": "slos.csv", "check": "contains:\"quality,0.95,,0.95703,0.859,0.000,proposed\""},
+        {"file": "slo-spec.md", "check": "contains:\"**No agreed targets.**\""},
+        {"file": "slo-spec.md", "check": "contains:\"320 requests\""},
+        {"file": "slo-spec.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

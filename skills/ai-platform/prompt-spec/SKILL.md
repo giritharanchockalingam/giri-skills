@@ -10,18 +10,26 @@ metadata:
   agent:
     inputs:
       - {name: spec, type: json, required: true, from: "prompt spec JSON: id, version, role, task, variables, output_schema, constraints, examples, max_input_tokens (layout: assets/prompt-spec-template.json)"}
+      - {name: previous, type: json, required: false, from: "prompt spec JSON of the version in production; every change is classified major/minor/patch and the version bump is enforced"}
     run:
-      - {step: lint-render, kind: script, cmd: "python3 -I scripts/prompt_spec.py --spec {spec} --out-dir {out}"}
+      - {step: lint-render, kind: script, cmd: "python3 -I scripts/prompt_spec.py --spec {spec} [--previous {previous}] --out-dir {out}"}
     outputs:
       - {path: "{out}/prompt-lint.json", checks: [exists, json, contains:"\"status\": \"pass\"", contains:"chars / 4"]}
       - {path: "{out}/prompt.md", checks: [exists, sections:["System","User","Variables","Regression cases"], contains:"<!-- prompt-spec:", no_unowned_tbd]}
       - {path: "{out}/prompt-tests.jsonl", checks: [exists, contains:"\"prompt_version\"", cmd:"python3 -I scripts/prompt_spec.py --verify-tests {path}"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "a prompt spec written from the template"}
+      existing: {case: agent-mode-existing, bring: "the new spec plus the spec of the version in production"}
 ---
 
 # Prompt Spec
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/prompt-spec --input <name>=<value> … --out <dir>` (see `--explain ai-platform/prompt-spec`). Report the `run.json` results; do not hand-write the deliverables the script produces (`prompt.md`, `prompt-lint.json`, `prompt-tests.jsonl`). Any error-severity finding exits 1 on purpose: `prompt-lint.json` is written, the prompt and tests are not.
+
+## Starting points
+- **New** — lint a spec written from `assets/prompt-spec-template.json`, render the versioned prompt and its regression cases.
+- **Existing** — also pass the spec of the version in production as `previous`: each change is classed major, minor or patch for callers and consumers, the version must rise by at least that level (`E-VERSION-BUMP` blocks the render otherwise), and prompt.md adds "Changes since v<previous>".
 
 ## When to use
 - Moving a prompt from a notebook or chat into a product: give it an id, a semver version and a contract.

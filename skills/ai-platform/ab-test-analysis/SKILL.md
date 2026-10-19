@@ -17,12 +17,18 @@ metadata:
       - {path: "{out}/ab-results.csv", checks: [exists, csv:[metric,role,variant,n,rate_or_mean,diff,ci_low,ci_high,rel_lift,p_value,p_adj,significant], "csv_rows:significant~^(yes|no|control)$", "csv_rows:p_value~^(n/a|[01]\\.\\d{6})$", cmd:"python3 -I scripts/ab_test.py --verify {path} --results {results}"]}
       - {path: "{out}/ab-report.md", checks: [exists, sections:["Summary","Sample ratio check","Results","Guardrails","Decision","Method & limits"], no_unowned_tbd, cmd:"python3 -I scripts/ab_test.py --verify {path} --results {results}"]}
       - {path: "{out}/ab.json", checks: [exists, json, contains:"\"srm_detected\"", cmd:"python3 -I scripts/ab_test.py --verify {path} --results {results}"]}
+    modes:
+      existing: {case: agent-happy-path, bring: "the results export from an experiment that already ran"}
 ---
 
 # A/B Test Analysis (AI variants)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ab-test-analysis --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ab-test-analysis`). Report the `run.json` results; do not hand-write the deliverables the script produces (`ab-results.csv`, `ab-report.md`, `ab.json`). A sample ratio mismatch fails the run (exit 1) on purpose: every output is still written, and the decision reads "untrustworthy". Each output passes `--verify`, which re-derives it from the results and the config recorded in `ab.json`.
+
+## Starting points
+- **Existing** — you bring the per-variant results of an experiment that has run (plus its pre-registered config); the skill checks the split, tests every metric and returns ship / don't ship / inconclusive.
+- Only for existing: an A/B analysis always reads results from an experiment that already ran; pre-launch sizing without results belongs in the experiment design, not here.
 
 ## When to use
 - ADLC improve stage: a prompt, model, retrieval or agent change ran as an online experiment and the team needs ship / don't ship / inconclusive with the statistics behind it.

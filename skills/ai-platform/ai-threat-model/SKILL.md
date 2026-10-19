@@ -8,6 +8,9 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-no-controls-not-invented, bring: "the components and data flows of a design on paper"}
+      existing: {case: agent-happy-path, bring: "your system's design plus its current control register"}
     inputs:
       - {name: components, type: csv, required: true, from: "DFD elements id,name,kind,trust_zone,handles_pii,write_actions,internet_facing (layout: assets/components-template.csv; kind user|app|llm|retriever|vector_store|tool|data_store|external_api|agent)"}
       - {name: flows, type: csv, required: true, from: "data flows from,to,data,crosses_trust_boundary (layout: assets/flows-template.csv)"}
@@ -25,6 +28,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-threat-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-threat-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`threats.csv`, `dfd.md`, `threat-report.md`). With `max_open_high` set, the run is a gate: more open high threats than the limit fails the run (exit 1) and all outputs are still written.
+
+## Starting points
+- **New:** components and flows of a design not yet built give every threat, all open and owned by the Security architect until controls exist.
+- **Existing:** add the control register you already keep (`controls`); each in-place or planned control closes or downgrades its threats, and only the residual open threats count toward the gate.
 
 ## When to use
 - ADLC architecture stage: the component and data-flow design of an LLM app, RAG pipeline or agent is drafted and needs a security review before build.

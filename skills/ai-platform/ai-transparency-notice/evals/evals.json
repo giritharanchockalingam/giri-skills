@@ -96,6 +96,26 @@
         {"file": "transparency.json", "check": "contains:\"\\\"strict\\\": true\""},
         {"file": "notice.md", "check": "contains:\"It is here to answer questions about your bill.\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here are the current facts for the Northwind Billing Assistant and the notice we published in March. Redline the published notice.",
+      "expected": [
+        "Reads the published notice: 6 sentences unchanged, 3 changed (purpose, limitations, date), 3 added; 'Every answer is checked by our billing team.' removed as a claim the facts no longer support, owned by the Product owner"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts.csv",
+        "classification": "evals/fixtures/classification.json",
+        "published_notice": "evals/fixtures/published-notice.md"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "notice-redline.md", "check": "sections:[\"Summary\",\"Redline\",\"Removed claims\"]"},
+        {"file": "notice-redline.md", "check": "contains:\"Sentences: 6 unchanged, 3 changed, 3 added, 1 removed.\""},
+        {"file": "notice-redline.md", "check": "contains:\"| removed | Every answer is checked by our billing team. | — |\""},
+        {"file": "notice-redline.md", "check": "no_unowned_tbd"},
+        {"file": "system-card.md", "check": "contains:\"Published notice redlined: 6 unchanged, 3 changed, 3 added, 1 removed\""}
+      ]
     }
   ]
 }

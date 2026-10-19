@@ -12,17 +12,26 @@ metadata:
       - {name: canvas, type: md, required: true, from: "filled use-case canvas (ai-use-case-canvas assets/use-case-canvas.md layout; fixture: evals/fixtures/use-case-canvas.md)"}
       - {name: controls, type: md, required: false, default: "references/controls-catalog.md", from: "controls catalog with the | ID | Control | Addresses | table"}
       - {name: name, type: string, required: false, from: "system name for the model card (default: canvas title)"}
+      - {name: existing, type: csv, required: false, from: "existing risk register to carry forward, e.g. last quarter's risk-register.csv (this skill's columns, or the assets/risk-register.csv layout); matched by category"}
     run:
-      - {step: register, kind: script, cmd: "python3 -I scripts/risk_register.py {canvas} --out-dir {out} --controls {controls} [--name {name}] --template assets/model-card.md"}
+      - {step: register, kind: script, cmd: "python3 -I scripts/risk_register.py {canvas} --out-dir {out} --controls {controls} [--name {name}] [--existing {existing}] --template assets/model-card.md"}
     outputs:
       - {path: "{out}/risk-register.csv", checks: [exists, csv:[risk_id,category,description,likelihood,impact,rating,control_id,control,owner], csv_rows:control!empty, csv_rows:rating!empty]}
+      - {path: "{out}/register-diff.csv", checks: [exists, csv:[risk_id,category,field,previous,current,change], no_unowned_tbd]}
       - {path: "{out}/model-card.md", checks: [exists, sections:["Intended use","Out-of-scope uses","Data","Limitations","Controls in place","Monitoring"], no_unowned_tbd, contains:"legal review required"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "a filled use-case canvas for the AI idea"}
+      existing: {case: agent-mode-existing, bring: "the updated canvas and last quarter's risk register"}
 ---
 
 # AI Governance & Risk Review
 
 ## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-governance-risk --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-governance-risk`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`risk-register.csv`, `model-card.md`). Scores the canvas cannot support stay `[TO BE BASELINED — owner: ___]`; a High risk with no mapped control fails the run (exit 1) on purpose.
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-governance-risk --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-governance-risk`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`risk-register.csv`, `register-diff.csv`, `model-card.md`). Scores the canvas cannot support stay `[TO BE BASELINED — owner: ___]`; a High risk with no mapped control fails the run (exit 1) on purpose.
+
+## Starting points
+- **New** — a new AI use case: bring the filled use-case canvas; the register is scored only where the canvas supports it and everything else is TBD for the AI risk lead.
+- **Existing** — bring the updated canvas and last quarter's risk register; risk IDs stay stable, the canvas wins where it supports a value, reviewed scores, owners and still-valid controls carry forward (labelled for re-confirmation), and `register-diff.csv` lists every change, including rows that could not be carried.
 
 ## When to use
 - Pre-launch risk review of an AI use case; building or refreshing the AI risk register; model documentation; regulatory mapping at summary level.
@@ -36,6 +45,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Model(s): provider/open-weights, version, fine-tuned?, hosting location | yes | user |
 | Deployment context: internal / employee-facing / customer-facing / regulated decision | yes | user |
 | Existing controls and policies | no | user |
+| Existing risk register (e.g. last quarter's `risk-register.csv`) | no | AI risk lead; carried forward by category, changes in `register-diff.csv` |
 | Applicable regulations the org already tracks | no | user; otherwise summary mapping only |
 
 If the use case, data categories, or deployment context are missing, ask once.
@@ -53,6 +63,7 @@ If the use case, data categories, or deployment context are missing, ask once.
 ## Output
 - `ai-risk-review-<use-case>.md`: tiering, risk register table, controls, model card, framework mapping, decision, next steps.
 - `risk-register.csv` filled.
+- `register-diff.csv` — every carry-forward and change against the existing register (header only when none was given).
 
 ## Self-check
 - [ ] Both internal tier and EU AI Act summary tier stated with criteria
@@ -67,4 +78,4 @@ If the use case, data categories, or deployment context are missing, ask once.
 - `references/risk-taxonomy.md` — risk categories, scenarios, tiering
 - `references/controls-catalog.md` — controls by risk with evidence expectations
 - `references/regulatory-mapping.md` — NIST AI RMF functions, EU AI Act tiers (summary)
-- `scripts/risk_register.py` — canvas + controls catalog → `risk-register.csv` + `model-card.md`; exit 1 if a High risk has no control
+- `scripts/risk_register.py` — canvas + controls catalog (+ optional existing register) → `risk-register.csv` + `register-diff.csv` + `model-card.md`; exit 1 if a High risk has no control

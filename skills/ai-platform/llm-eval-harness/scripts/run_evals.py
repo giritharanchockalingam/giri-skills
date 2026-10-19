@@ -284,6 +284,19 @@ def gate(score: dict, threshold: float | None, category_min: float | None, basel
     return (not reasons), reasons
 
 
+def compare_baseline(score: dict, baseline: dict) -> dict:
+    """Per-case comparison with a previous scorecard (same layout): what flipped, what is new."""
+    base_cases = {c.get("id"): bool(c.get("pass")) for c in baseline.get("cases", []) if c.get("id")}
+    now = {c["id"]: c["pass"] for c in score["cases"]}
+    base_rate = baseline.get("overall_pass_rate")
+    return {"baseline_pass_rate": base_rate,
+            "delta": round(score["overall_pass_rate"] - base_rate, 4) if isinstance(base_rate, (int, float)) else None,
+            "newly_failing": sorted(i for i, ok in now.items() if i in base_cases and base_cases[i] and not ok),
+            "newly_passing": sorted(i for i, ok in now.items() if i in base_cases and not base_cases[i] and ok),
+            "new_cases": sorted(i for i in now if i not in base_cases),
+            "dropped_cases": sorted(i for i in base_cases if i not in now)}
+
+
 def print_scorecard(score: dict, passed: bool, reasons: list[str]) -> None:
     print("category".ljust(24) + "n".rjust(6) + "pass_rate".rjust(12) + "  failures")
     for cat, c in sorted(score["by_category"].items()):
@@ -291,6 +304,12 @@ def print_scorecard(score: dict, passed: bool, reasons: list[str]) -> None:
               + "  " + ", ".join(c["failures"][:8]) + (" …" if len(c["failures"]) > 8 else ""))
     print(f"overall n={score['n']} pass_rate={score['overall_pass_rate']:.3f} "
           f"zero_tolerance_failures={score['zero_tolerance_failures']} errors={score['errors']}")
+    vb = score.get("vs_baseline")
+    if vb:
+        delta = "n/a" if vb["delta"] is None else f"{vb['delta']:+.3f}"
+        print(f"vs baseline pass_rate={vb['baseline_pass_rate']} delta={delta} "
+              f"newly_failing={','.join(vb['newly_failing']) or '-'} newly_passing={','.join(vb['newly_passing']) or '-'} "
+              f"new_cases={len(vb['new_cases'])} dropped_cases={len(vb['dropped_cases'])}")
     print("GATE PASSED" if passed else "GATE FAILED: " + "; ".join(reasons))
 
 
@@ -314,6 +333,8 @@ def main(argv: list[str] | None = None) -> int:
     baseline = json.loads(args.baseline.read_text(encoding="utf-8")) if args.baseline else None
     score = run(golden, rubric, load_outputs(args.outputs), skip_judge=args.skip_judge)
     score["meta"] = json.loads(args.meta)
+    if baseline:
+        score["vs_baseline"] = compare_baseline(score, baseline)
     passed, reasons = gate(score, args.threshold, args.category_min, baseline, args.max_regression)
     score["gate"] = {"passed": passed, "reasons": reasons}
     print_scorecard(score, passed, reasons)

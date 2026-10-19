@@ -18,12 +18,19 @@ metadata:
       - {path: "{out}/slos.csv", checks: [exists, csv:[sli,objective,threshold,observed,budget_consumed,burn_rate,status], "csv_rows:status~^(met|at-risk|breached|proposed)$", "csv_rows:observed~^[01]\\.\\d{5}$", cmd:"python3 -I scripts/slo.py --verify {path}"]}
       - {path: "{out}/slo-spec.md", checks: [exists, sections:["Summary","SLIs and objectives","Error budgets","Alerting policy","Method"], no_unowned_tbd, cmd:"python3 -I scripts/slo.py --verify {path}"]}
       - {path: "{out}/slo.json", checks: [exists, json, contains:"\"verdict\""]}
+    modes:
+      new:      {case: agent-mode-new, bring: "a few days of request logs from your pilot"}
+      existing: {case: agent-happy-path, bring: "the request log from production and your agreed targets"}
 ---
 
 # AI SLO Definition
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-slo-definition --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-slo-definition`). Report the `run.json` results; do not hand-write the deliverables the script produces (`slos.csv`, `slo-spec.md`, `slo.json`). An agreed SLO with budget consumed above 1 fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which recomputes budgets, alerts and statuses from the counts in `slo.json`.
+
+## Starting points
+- **New** — no SLOs yet: bring a pilot request log; every objective is proposed from the observed data and marked for the Product owner to agree.
+- **Existing** — bring the production request log and the targets already agreed; the skill measures each SLI against them, computes budget burn and flags breaches.
 
 ## When to use
 - ADLC requirements stage: turn "it should be fast and reliable" into measurable SLIs, objectives and error budgets before build sign-off.

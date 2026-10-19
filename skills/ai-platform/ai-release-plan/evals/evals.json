@@ -59,6 +59,26 @@
         {"file": "release-plan.md", "check": "contains:\"NOT READY\""},
         {"file": "gates.json", "check": "contains:\"\\\"first_stage_ready\\\": false\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Claims summariser v2 has been at the 5% canary since last week. Here are today's live readings — can we move to the next step?",
+      "expected": [
+        "Reads the rollout's current stage and live readings, evaluates the canary gates now, and decides PROMOTE to Canary 2 because every canary gate is met and enough requests were observed",
+        "Names the decision owner (Release manager) and keeps the rollback triggers for the remaining stages"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts-in-flight.csv",
+        "gates": "evals/fixtures/gates.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "release-plan.md", "check": "contains:\"**In flight — Canary 1 (5% traffic): PROMOTE to Canary 2.** Every canary gate met; 2350 requests observed, 2000 required.\""},
+        {"file": "gates.json", "check": "contains:\"\\\"decision\\\": \\\"PROMOTE\\\"\""},
+        {"file": "gates.json", "check": "contains:\"\\\"next_stage\\\": \\\"canary_2\\\"\""},
+        {"file": "release-plan.md", "check": "contains:\"| canary | error_rate | <= 0.01 | 0.006 | met |\""},
+        {"file": "release-plan.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

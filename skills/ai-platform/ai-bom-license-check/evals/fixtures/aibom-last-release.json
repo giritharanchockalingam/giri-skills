@@ -1,0 +1,39 @@
+{
+  "_note": "FICTIONAL fixture: the AI-BOM kept from the invented Northwind Billing Assistant's previous release (2026.08); names and URLs are placeholders",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 3,
+  "metadata": {"component": {"type": "application", "bom-ref": "system", "name": "Northwind Billing Assistant 2026.08"}},
+  "components": [
+    {"type": "machine-learning-model", "bom-ref": "m1", "name": "nw-billing-llm", "version": "3.0-ft4",
+     "licenses": [{"expression": "LicenseRef-Llama-3.1-Community"}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/models/nw-billing-llm"}],
+     "properties": [{"name": "giri-skills:use", "value": "commercial"}]},
+    {"type": "data", "bom-ref": "d1", "name": "nw-invoice-faq", "version": "2026.06",
+     "licenses": [{"license": {"id": "CC-BY-4.0"}}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/data/nw-invoice-faq"}],
+     "properties": [{"name": "giri-skills:use", "value": "commercial"}]},
+    {"type": "data", "bom-ref": "d2", "name": "nw-dispute-templates", "version": "1.2",
+     "licenses": [{"license": {"id": "CC-BY-4.0"}}, {"license": {"id": "MIT"}}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/data/nw-dispute-templates"}],
+     "properties": [{"name": "giri-skills:use", "value": "internal"}]},
+    {"type": "library", "bom-ref": "l1", "name": "nw-agent-runtime", "version": "1.3.9",
+     "licenses": [{"license": {"id": "MIT"}}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/lib/nw-agent-runtime"}],
+     "properties": [{"name": "giri-skills:use", "value": "redistribution"}]},
+    {"type": "framework", "bom-ref": "l2", "name": "nw-orchestrator", "version": "0.12.0",
+     "licenses": [{"license": {"name": "Apache License, Version 2.0"}}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/lib/nw-orchestrator"}],
+     "properties": [{"name": "giri-skills:use", "value": "commercial"}]},
+    {"type": "library", "bom-ref": "l3", "name": "nw-pdf-parser", "version": "0.8.2",
+     "licenses": [{"expression": "MIT OR Apache-2.0"}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/lib/nw-pdf-parser"}],
+     "properties": [{"name": "giri-skills:use", "value": "commercial"}]}
+  ],
+  "services": [
+    {"bom-ref": "s1", "name": "nw-embeddings-api", "version": "v1",
+     "licenses": [{"license": {"name": "Vendor Terms 2025"}}],
+     "externalReferences": [{"type": "website", "url": "https://example.com/svc/nw-embeddings"}],
+     "properties": [{"name": "giri-skills:use", "value": "internal"}]}
+  ]
+}

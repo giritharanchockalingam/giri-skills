@@ -72,6 +72,44 @@
         {"file": "prompt-lint.json", "check": "contains:\"E-BUDGET\""},
         {"file": "prompt-lint.json", "check": "contains:\"an estimate, not a tokenizer count\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is v1.2.0 of the triage prompt and the v1.1.0 spec that runs in production. Lint it, list what changed and confirm the version bump is right.",
+      "expected": [
+        "Diffs v1.2.0 against production v1.1.0: task text, a new safety constraint, optional channel variable and optional entities output property (minor) plus examples (patch); required bump minor equals the actual bump; renders"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/prompt-spec.json",
+        "previous": "evals/fixtures/prompt-spec-v1.1.0.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "prompt-lint.json",
+          "check": "contains:\"\\\"required_bump\\\": \\\"minor\\\"\""
+        },
+        {
+          "file": "prompt-lint.json",
+          "check": "contains:\"\\\"status\\\": \\\"pass\\\"\""
+        },
+        {
+          "file": "prompt.md",
+          "check": "sections:[\"System\",\"User\",\"Variables\",\"Regression cases\",\"Changes since v1.1.0\"]"
+        },
+        {
+          "file": "prompt.md",
+          "check": "contains:\"| output_schema | `$.entities` | property added | minor |\""
+        },
+        {
+          "file": "prompt.md",
+          "check": "contains:\"| variables | `channel` | optional variable added | minor |\""
+        },
+        {
+          "file": "prompt-tests.jsonl",
+          "check": "cmd:\"python3 -I scripts/prompt_spec.py --verify-tests {path}\""
+        }
+      ]
     }
   ]
 }

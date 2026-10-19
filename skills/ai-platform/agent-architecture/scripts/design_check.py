@@ -2,7 +2,7 @@
 """Gate an agent design doc and its tool contracts before build.
 
     python3 -I scripts/design_check.py agent-design-doc.md tool-contracts.json \
-        --out design-check.csv [--schema assets/tool-contract.schema.json]
+        --out design-check.csv [--schema assets/tool-contract.schema.json] [--answers answers.json]
 
 Doc (assets/agent-design-doc.md layout): every required section heading must be present
 (Job and success metric, Pattern decision, State schema, Graph, Tool contracts, HITL checkpoints,
@@ -15,6 +15,11 @@ schema's required keys (x-contract with side_effect, idempotent, scopes, timeout
 checked minimally against the schema's `type` per property (string / object / array / boolean /
 integer). No JSON-Schema library: required keys + top-level types only.
 
+With --answers (the six decision-tree answers, as for scripts/pattern.py) the doc's declared pattern
+(`**Decision:** <pattern> because ...`) is compared with the pattern the tree gives for those answers
+and one more row is written ("Pattern matches decision tree"). This is how an existing agent's doc is
+re-checked when its answers change (e.g. production evidence that a single agent fails a rubric).
+
 Writes design-check.csv: item, kind (section|doc|contract), present (yes|no), issue.
 Exit 1 when any required section is missing or any contract is invalid; exit 0 otherwise.
 Stdlib only.
@@ -23,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.util
 import json
 import re
 import sys
@@ -64,6 +70,27 @@ def check_doc(text: str) -> list[dict]:
     rows.append({"item": "Graph diagram", "kind": "doc", "present": "yes" if has_mermaid else "no",
                  "issue": "" if has_mermaid else "no ```mermaid block"})
     return rows
+
+
+def tree_pattern(answers_path: Path) -> str:
+    """Pattern the decision tree gives for the answers, via scripts/pattern.py (one source of truth)."""
+    spec = importlib.util.spec_from_file_location("agent_pattern", HERE / "pattern.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.dont_write_bytecode = True  # never leave __pycache__ inside the skill
+    spec.loader.exec_module(mod)
+    ans, _ = mod.load_answers(str(answers_path))  # exits 1 with the reason on a missing/invalid answer
+    return mod.decide(ans)[0]
+
+
+def check_pattern(text: str, expected: str) -> dict:
+    item = {"item": "Pattern matches decision tree", "kind": "doc"}
+    m = re.search(r"^\*\*Decision:\*\*\s*(.+?)(?:\s+because\b|$)", text, re.M)
+    if not m:
+        return {**item, "present": "no", "issue": f"no `**Decision:**` line to compare; decision tree gives {expected}"}
+    declared = m.group(1).strip().rstrip(".;,")
+    if declared.lower() != expected.lower():
+        return {**item, "present": "no", "issue": f"doc declares {declared}; decision tree gives {expected}"}
+    return {**item, "present": "yes", "issue": ""}
 
 
 def _get(tool: dict, key: str):
@@ -117,6 +144,7 @@ def main() -> int:
     ap.add_argument("contracts")
     ap.add_argument("--out", required=True)
     ap.add_argument("--schema", default=str(SKILL / "assets" / "tool-contract.schema.json"))
+    ap.add_argument("--answers", help="decision-tree answers.json; adds a row comparing the doc's pattern with the tree's")
     a = ap.parse_args()
     doc = Path(a.doc)
     if not doc.is_file():
@@ -128,7 +156,12 @@ def main() -> int:
         die("tool contracts must be a JSON list (or {\"tools\": [...]})")
     schema = load_json(Path(a.schema), "schema")
 
-    rows = check_doc(doc.read_text(encoding="utf-8"))
+    text = doc.read_text(encoding="utf-8")
+    rows = check_doc(text)
+    if a.answers:
+        if not Path(a.answers).is_file():
+            die(f"answers not found: {a.answers}")
+        rows.append(check_pattern(text, tree_pattern(Path(a.answers))))
     if not contracts:
         rows.append({"item": "tool contracts", "kind": "contract", "present": "no", "issue": "no contracts supplied"})
     rows += [check_contract(t, i, schema) for i, t in enumerate(contracts)]

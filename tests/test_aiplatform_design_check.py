@@ -59,3 +59,55 @@ def test_bad_input_exits_1(tmp_path):
     empty.write_text("[]", encoding="utf-8")
     r = run_script(SCRIPT, str(FX / "agent-design-doc.md"), str(empty), "--out", str(tmp_path / "x.csv"))
     assert r.returncode == 1 and "no contracts supplied" in r.stdout + r.stderr
+
+
+# ---------------------------------------------------------------- existing agent: --answers cross-check
+
+def test_existing_agent_doc_matches_tree(tmp_path):
+    out = tmp_path / "dc.csv"
+    r = run_script(SCRIPT, str(FX / "agent-design-doc-existing.md"), str(FX / "tool-contracts-existing.json"),
+                   "--answers", str(FX / "answers-existing.json"), "--out", str(out))
+    assert r.returncode == 0, r.stderr
+    rs = rows(out)
+    assert len(rs) == 16 and all(x["present"] == "yes" for x in rs.values())
+    assert rs["Pattern matches decision tree"]["kind"] == "doc"
+    assert "tool[1] issue_credit_note" in rs
+
+
+def test_existing_doc_pattern_drift_is_a_gap(tmp_path):
+    # the live doc declares Generator + evaluator; answers that say a single agent fits give Single agent
+    out = tmp_path / "dc.csv"
+    r = run_script(SCRIPT, str(FX / "agent-design-doc-existing.md"), str(FX / "tool-contracts-existing.json"),
+                   "--answers", str(FX / "answers.json"), "--out", str(out))
+    assert r.returncode == 1
+    row = rows(out)["Pattern matches decision tree"]
+    assert row["present"] == "no"
+    assert row["issue"] == "doc declares Generator + evaluator; decision tree gives Single agent"
+
+
+def test_pattern_check_needs_decision_line(tmp_path):
+    doc = tmp_path / "d.md"
+    doc.write_text((FX / "agent-design-doc.md").read_text(encoding="utf-8").replace("**Decision:**", "Decision:"),
+                   encoding="utf-8")
+    out = tmp_path / "dc.csv"
+    r = run_script(SCRIPT, str(doc), str(FX / "tool-contracts.json"), "--answers", str(FX / "answers.json"),
+                   "--out", str(out))
+    assert r.returncode == 1
+    assert rows(out)["Pattern matches decision tree"]["issue"].startswith("no `**Decision:**` line to compare")
+
+
+def test_answers_invalid_or_missing_exit_1(tmp_path):
+    bad = tmp_path / "a.json"
+    bad.write_text(json.dumps({"q1_steps_enumerable": "maybe"}), encoding="utf-8")
+    r = run_script(SCRIPT, str(FX / "agent-design-doc.md"), str(FX / "tool-contracts.json"), "--answers", str(bad),
+                   "--out", str(tmp_path / "x.csv"))
+    assert r.returncode == 1 and "unanswered" in r.stderr
+    r = run_script(SCRIPT, str(FX / "agent-design-doc.md"), str(FX / "tool-contracts.json"),
+                   "--answers", str(tmp_path / "none.json"), "--out", str(tmp_path / "x.csv"))
+    assert r.returncode == 1 and "answers not found" in r.stderr
+
+
+def test_without_answers_rows_unchanged(tmp_path):
+    out = tmp_path / "dc.csv"
+    run_script(SCRIPT, str(FX / "agent-design-doc-existing.md"), str(FX / "tool-contracts-existing.json"), "--out", str(out))
+    assert "Pattern matches decision tree" not in rows(out)

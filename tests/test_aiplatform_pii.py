@@ -142,3 +142,59 @@ def test_no_network_imports():
     src = (REPO_ROOT / SCRIPT).read_text(encoding="utf-8")
     for bad in ("import socket", "import urllib", "import requests", "import subprocess", "urlopen("):
         assert bad not in src
+
+
+# --- brownfield: changes since the last inventory (--previous) ---
+
+def _scan_prev(tmp_path, previous: Path, data: Path = FIX / "customers-sample.csv"):
+    out = tmp_path / "out"
+    r = run_script(SCRIPT, "--data", str(data), "--policy", str(FIX / "policy.csv"), "--previous", str(previous),
+                   "--out-dir", str(out))
+    rows = {x["column"]: x for x in csv.DictReader((out / "pii-inventory.csv").open(encoding="utf-8"))} \
+        if (out / "pii-inventory.csv").exists() else {}
+    md = (out / "pii-report.md").read_text(encoding="utf-8") if (out / "pii-report.md").exists() else ""
+    return r, rows, md
+
+
+def test_previous_inventory_changes_classified(tmp_path):
+    r, rows, md = _scan_prev(tmp_path, FIX / "inventory-previous.csv")
+    assert r.returncode == 0, r.stderr
+    assert rows["last_login_ip"]["change_vs_previous"] == "new"
+    assert rows["comment"]["change_vs_previous"] == "pii-added"
+    assert rows["card_number"]["change_vs_previous"] == "handling-changed"
+    assert rows["email"]["change_vs_previous"] == "unchanged"
+    assert "| fax_number | removed | was phone | mask |" in md
+    assert "4 column change(s)" in md
+    leak = run_script(SCRIPT, "--leak-check", str(tmp_path / "out/pii-report.md"), "--data", str(FIX / "customers-sample.csv"))
+    assert leak.returncode == 0
+
+
+def test_previous_same_as_current_reports_no_change(tmp_path):
+    first = tmp_path / "first"
+    r = run_script(SCRIPT, "--data", str(FIX / "customers-sample.csv"), "--policy", str(FIX / "policy.csv"),
+                   "--out-dir", str(first))
+    assert r.returncode == 0
+    r, rows, md = _scan_prev(tmp_path, first / "pii-inventory.csv")
+    assert {x["change_vs_previous"] for x in rows.values()} == {"unchanged"}
+    assert "0 column change(s)" in md and "PII that was not in the last inventory" not in md
+
+
+def test_previous_pii_removed(tmp_path):
+    prev = tmp_path / "prev.csv"
+    prev.write_text("column,pii_types,handling\nproduct_name,name,tokenize\n", encoding="utf-8")
+    _, rows, _ = _scan_prev(tmp_path, prev)
+    assert rows["product_name"]["change_vs_previous"] == "pii-removed"
+
+
+def test_bad_previous_exits_2(tmp_path):
+    prev = tmp_path / "prev.csv"
+    prev.write_text("col,types\nx,y\n", encoding="utf-8")
+    r, _, _ = _scan_prev(tmp_path, prev)
+    assert r.returncode == 2 and "previous inventory needs columns" in r.stderr
+
+
+def test_no_previous_keeps_original_layout(tmp_path):
+    out = tmp_path / "o"
+    run_script(SCRIPT, "--data", str(FIX / "customers-sample.csv"), "--out-dir", str(out))
+    header = (out / "pii-inventory.csv").read_text(encoding="utf-8").splitlines()[0]
+    assert header == "column,pii_types,match_rate,rows_scanned,handling,matches,basis"

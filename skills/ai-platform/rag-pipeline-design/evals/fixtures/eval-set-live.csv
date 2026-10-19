@@ -1,0 +1,8 @@
+query_id,query,expected_doc_ids,retrieved_doc_ids,query_type,notes
+Q001,What is the daily meal per diem for domestic travel?,doc-travel-policy-sec4,doc-travel-policy-sec4|doc-travel-policy-sec2|doc-expense-faq,fact,fictional fixture: live hybrid retriever results
+Q002,How do I submit an expense report?,doc-expense-howto|doc-expense-faq,doc-expense-howto|doc-expense-faq|doc-travel-policy-sec1,procedure,fictional fixture
+Q003,Who approves international travel over 10 days?,doc-travel-policy-sec7,doc-travel-policy-sec7|doc-hr-approvals,fact,fictional fixture
+Q004,What is the weather in Paris?,,,out_of_scope,fictional fixture — retriever now returns nothing below the score floor
+Q005,Can I book business class on flights over 8 hours?,doc-travel-policy-sec5,doc-travel-policy-sec4|doc-travel-policy-sec2|doc-hr-approvals,fact,fictional fixture: regression after the keyword weighting change
+Q006,How are mileage rates set?,doc-expense-faq,doc-hr-approvals|doc-expense-faq|doc-travel-policy-sec1,fact,fictional fixture
+Q007,Is a hotel minibar reimbursable?,doc-expense-faq,doc-expense-faq|doc-travel-policy-sec4,fact,fictional fixture: query added from production logs

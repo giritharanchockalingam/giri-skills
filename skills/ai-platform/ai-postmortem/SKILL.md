@@ -21,12 +21,18 @@ metadata:
       - {path: "{out}/timings.json", checks: [exists, json, contains:"\"timings_min\"", contains:"\"strict_gate\"", cmd:"python3 -I scripts/postmortem.py --verify {path}"]}
       - {path: "{out}/actions.csv", checks: [exists, csv:[action,type,owner,due,factor,status], no_unowned_tbd, cmd:"python3 -I scripts/postmortem.py --verify {path}"]}
       - {path: "{out}/eval-cases.csv", checks: [exists, csv:[id,category,difficulty,input,expected,must_contain,must_not_contain,expected_json_valid,weight,source,notes], no_unowned_tbd, cmd:"python3 -I scripts/postmortem.py --verify {path}"]}
+    modes:
+      existing: {case: agent-happy-path, bring: "the incident facts and timeline from an incident that happened"}
 ---
 
 # AI Postmortem (blameless, measured, owned)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-postmortem --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-postmortem`). Report the `run.json` results; do not hand-write the deliverables the script produces (`postmortem.md`, `timings.json`, `actions.csv`, `eval-cases.csv`). With `strict=true` the run is a gate: it exits 1 when a factor has no action or an action has no owner, and still writes every output so the gaps are visible.
+
+## Starting points
+- **Existing** — you bring the facts and timeline of an incident that happened (plus factors and actions when known); the skill measures the timings, checks the actions cover every factor and turns the failure into eval cases.
+- Only for existing: a postmortem always concerns an incident that has already happened; a live incident goes to `ai-incident-runbook`.
 
 ## When to use
 - After an AI incident is mitigated: bad answers at scale, prompt-injection exploit, cost runaway, outage, harmful output, data leak.

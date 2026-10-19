@@ -15,16 +15,23 @@ metadata:
       - {name: name, type: string, required: false, default: "<agent>"}
     run:
       - {step: pattern, kind: script, cmd: "python3 -I scripts/pattern.py {answers} --out {out}/pattern.md --name {name}"}
-      - {step: design-check, kind: script, cmd: "python3 -I scripts/design_check.py {design_doc} {contracts} --out {out}/design-check.csv --schema assets/tool-contract.schema.json"}
+      - {step: design-check, kind: script, cmd: "python3 -I scripts/design_check.py {design_doc} {contracts} --out {out}/design-check.csv --schema assets/tool-contract.schema.json --answers {answers}"}
     outputs:
       - {path: "{out}/pattern.md", checks: [exists, sections:["Rationale","Escalation trail","Rejected patterns","Human-in-the-loop","Budgets"], no_unowned_tbd]}
       - {path: "{out}/design-check.csv", checks: [exists, csv:[item,kind,present,issue], csv_rows:present~^yes$]}
+    modes:
+      new:      {case: agent-happy-path, bring: "your answers to six questions and a first design draft"}
+      existing: {case: agent-mode-existing, bring: "your live agent's design doc, tool contracts and current answers"}
 ---
 
 # Agent Architecture
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/agent-architecture --input <name>=<value> … --out <dir>` (see `--explain ai-platform/agent-architecture`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`pattern.md`, `design-check.csv`). A failed design check (exit 1) is the gate working: fix the doc or contracts and re-run.
+
+## Starting points
+- **New** — an agent idea: answer the six decision-tree questions and draft the design doc from `assets/agent-design-doc.md`; the skill picks the pattern and gates the draft and its tool contracts before build.
+- **Existing** — an agent already running: bring its design doc, tool contracts and the six answers re-taken with production evidence; the skill re-derives the pattern, flags a doc whose declared pattern no longer matches the tree, and re-gates sections and contracts.
 
 ## When to use
 - Designing a new agentic system or reviewing one: pattern, state, tools, control flow, HITL, failure handling.
@@ -73,4 +80,4 @@ If the job statement or the action list is missing, ask once. Never design an ag
 - `references/hitl-placement.md` — where humans go and what they see
 - `references/failure-modes.md` — failure modes with detection and mitigation
 - `scripts/pattern.py` — six decision-tree answers → `pattern.md` (pattern, rationale, rejected patterns)
-- `scripts/design_check.py` — design doc + tool contracts → `design-check.csv`; exit 1 on a missing section or invalid contract
+- `scripts/design_check.py` — design doc + tool contracts → `design-check.csv`; exit 1 on a missing section or invalid contract, or (with `--answers`) when the doc's declared pattern differs from the decision tree's

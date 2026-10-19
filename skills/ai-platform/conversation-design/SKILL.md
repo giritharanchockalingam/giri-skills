@@ -8,6 +8,9 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-mode-new, bring: "draft intents and sample messages from people you will serve"}
+      existing: {case: agent-happy-path, bring: "your assistant's intent catalog and labelled real user messages"}
     inputs:
       - {name: intents, type: csv, required: true, from: "intent catalog intent,description,examples(pipe-separated),response_type answer|action|handoff|clarify,handoff yes/no,owner (layout: assets/intents-template.csv)"}
       - {name: utterances, type: csv, required: true, from: "real or sampled user messages utterance[,expected_intent] (layout: assets/utterances-template.csv); echoed to 80 characters at most"}
@@ -25,6 +28,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/conversation-design --input <name>=<value> … --out <dir>` (see `--explain ai-platform/conversation-design`). Report the `run.json` results; do not hand-write the deliverables the script produces (`routing.csv`, `intent-quality.csv`, `conversation-spec.md`). Accuracy below a supplied `min_accuracy` fails the run (exit 1) on purpose; the outputs are still written so the misses are visible.
+
+## Starting points
+- **New:** first-draft intents and unlabelled sample messages give a coverage figure, the messages nothing catches, thin and confusable intents, and the persona keys still to decide.
+- **Existing:** your live intent catalog, persona and labelled real messages give per-intent precision and recall, misroutes and an accuracy gate for edits to the catalog.
 
 ## When to use
 - ADLC requirements stage: before building an assistant, to agree the intent catalog, response types, fallback and the human hand-off path.

@@ -6,6 +6,17 @@ Usage:
         [--freshness-column COL --as-of YYYY-MM-DD --max-age-days N]
   python3 -I validate_contract.py --verify OUTPUT_FILE --contract C --data D [same freshness args]
         # exit 0 when OUTPUT_FILE is byte-identical to what this script produces for the inputs
+  python3 -I validate_contract.py --data data.csv --draft-contract OUT/contract-draft.csv --out-dir OUT
+        # no contract yet: draft one from the extract, then validate the extract against the draft
+
+Draft (--draft-contract D, used only when --contract is not given): if D does not exist it is written
+  from the data — type from the values; required when the extract has no nulls; unique only for an
+  all-distinct, null-free column named like a key (id, *_id, key, *_key, code, *_code); enum for text
+  with at most 10 distinct values each seen at least twice on average; max_null_rate = the observed null
+  rate rounded up to 3 dp when there are nulls; min/max, regex and owner left blank (the observed range
+  goes in `notes`); severity warn for every rule. Its first line marks it as a DRAFT; while that line is
+  present the report says the contract is a draft and that a pass is by construction. If D exists (a
+  draft under review), it is used as the contract as it stands.
 
 Contract (CSV, layout assets/contract-template.csv), one row per expected column:
   column, type, required, unique, min, max, allowed, regex, max_null_rate, severity, owner
@@ -28,7 +39,7 @@ Examples: at most 3 distinct failing values per violation, each truncated to 40 
 Text columns' values never appear in profile.csv (min/max are reported for numeric and
   date-like columns only).
 
-Outputs: OUT/violations.csv, OUT/profile.csv, OUT/contract-report.md
+Outputs: OUT/violations.csv, OUT/profile.csv, OUT/contract-report.md (+ the drafted contract, if any)
 Exit codes: 0 no error-severity violation · 1 at least one error-severity violation (outputs
   still written) or --verify mismatch · 2 missing or invalid input.
 Stdlib only; reads only the given files; writes only into --out-dir.
@@ -599,6 +610,55 @@ def build_profile(header, body) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------ draft contract
+
+DRAFT_MARK = "# DRAFT contract inferred by validate_contract.py"
+KEY_NAME_RE = re.compile(r"(^|_)(id|key|code)$", re.I)
+ENUM_MAX_VALUES = 10
+
+
+def is_draft(path: Path) -> bool:
+    try:
+        first = Path(path).read_text(encoding="utf-8-sig").splitlines()[:1]
+    except (OSError, UnicodeDecodeError):
+        return False
+    return bool(first) and first[0].startswith(DRAFT_MARK)
+
+
+def draft_contract(header: list[str], body: list[list[str]], data_name: str) -> str:
+    """A reviewable contract proposal from one extract; every rule at warn severity, no owner invented."""
+    n = len(body)
+    rows = []
+    for i, h in enumerate(header):
+        vals = [row[i] for row in body]
+        nonnull = [v.strip() for v in vals if not is_null(v)]
+        nulls = n - len(nonnull)
+        typ = infer_type(nonnull)
+        allowed, note = "", f"inferred from {len(nonnull)}/{n} non-null values"
+        if typ == "empty":
+            typ, note = "string", f"all {n} values null in the extract; type unknown — set it"
+        distinct = sorted(set(nonnull))
+        if typ == "string" and nonnull and len(distinct) <= ENUM_MAX_VALUES and len(distinct) * 2 <= len(nonnull):
+            typ, allowed = "enum", "|".join(distinct)
+            note += f"; {len(distinct)} distinct values seen — confirm the full code list"
+        if typ in NUMERIC + DATELIKE and nonnull:
+            parsed = sorted(zip((parse_value(typ, v) for v in nonnull), nonnull), key=lambda t: t[0])
+            note += f"; observed {parsed[0][1]} to {parsed[-1][1]} — set min/max"
+        unique = (nulls == 0 and n >= 2 and len(distinct) == n and bool(KEY_NAME_RE.search(h.strip())))
+        mnr = "" if nulls == 0 else f"{math.ceil(nulls / n * 1000) / 1000:.3f}"
+        rows.append({"column": h, "type": typ, "required": "yes" if nulls == 0 else "no",
+                     "unique": "yes" if unique else "no", "min": "", "max": "", "allowed": allowed, "regex": "",
+                     "max_null_rate": mnr, "severity": "warn", "owner": "", "notes": note})
+    buf = io.StringIO()
+    buf.write(f"{DRAFT_MARK} from {data_name} ({n} rows). Review every row with the Data owner, set min/max, "
+              "severity and owner, then delete this line.\n")
+    w = csv.DictWriter(buf, fieldnames=[*CONTRACT_COLS, "notes"], lineterminator="\n")
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: csv_safe(v) for k, v in r.items()})
+    return buf.getvalue()
+
+
 # ------------------------------------------------------------------ rendering
 
 def csv_text(fields: list[str], rows: list[dict]) -> str:
@@ -624,7 +684,8 @@ def verdict(viol) -> str:
     return "PASS WITH WARNINGS" if viol else "PASS"
 
 
-def render_md(contract_name, data_name, contract, notes, header, body, viol, profile, fresh_info) -> str:
+def render_md(contract_name, data_name, contract, notes, header, body, viol, profile, fresh_info,
+              draft: bool = False) -> str:
     errors = sum(1 for v in viol if v["severity"] == "error")
     warns = len(viol) - errors
     vd = verdict(viol)
@@ -636,9 +697,14 @@ def render_md(contract_name, data_name, contract, notes, header, body, viol, pro
         f"- Verdict: **{vd}** — {errors} error-severity and {warns} warn-severity violations.",
         f"- Rows checked: {len(body)}; data columns: {len(header)}; contract columns: {len(contract)}.",
         f"- Freshness: {fresh_info['status']}.",
-        f"- Violations without a named owner: {tbd_owned} (owner {TBD_OWNER}).", "",
-        "## Verdict", "",
+        f"- Violations without a named owner: {tbd_owned} (owner {TBD_OWNER}).",
     ]
+    if draft:
+        lines.append(f"- Contract: **DRAFT** inferred from an extract by this script — every rule is a proposal at warn "
+                     f"severity. The Data owner confirms types, keys, allowed values and null limits, sets min/max, "
+                     f"severity and owners, and deletes the DRAFT line before the contract gates loads "
+                     f"(owner {TBD_OWNER}).")
+    lines += ["", "## Verdict", ""]
     if vd == "FAIL":
         lines.append(f"**FAIL** — do not use this dataset for training, RAG ingestion or evaluation until the "
                      f"{errors} error-severity violation(s) are fixed at source and the run passes. The run exits 1.")
@@ -647,6 +713,10 @@ def render_md(contract_name, data_name, contract, notes, header, body, viol, pro
                      "their owners before use.")
     else:
         lines.append("**PASS** — the dataset meets every rule in the contract.")
+    if draft:
+        lines.append("")
+        lines.append("The contract is a draft: where it was inferred from this same extract, a pass shows only that the "
+                     "draft is consistent with it — it is not evidence of data quality.")
     lines += ["", "## Violations", ""]
     if not viol:
         lines.append("None.")
@@ -685,23 +755,45 @@ def render_md(contract_name, data_name, contract, notes, header, body, viol, pro
     return "\n".join(lines)
 
 
+def resolve_contract(args, header, body) -> tuple[Path, str | None]:
+    """(contract path, draft text to write or None). --contract wins; else --draft-contract (used if it exists)."""
+    if args.contract:
+        return Path(args.contract), None
+    if not args.draft_contract:
+        raise InputError("--contract is required (or --draft-contract PATH to draft one from the data)")
+    d = Path(args.draft_contract)
+    if d.is_file():
+        return d, None
+    if args.verify:
+        raise InputError(f"--verify needs the drafted contract, not found: {d}")
+    return d, draft_contract(header, body, Path(args.data).name)
+
+
 def produce(args) -> tuple[dict[str, str], list[dict]]:
-    contract, notes = load_contract(args.contract)
     header, body, ragged = load_data(args.data)
+    cpath, draft_text = resolve_contract(args, header, body)
+    if draft_text is not None:
+        cpath.parent.mkdir(parents=True, exist_ok=True)
+        cpath.write_text(draft_text, encoding="utf-8")
+        print(f"drafted contract from {Path(args.data).name}: {cpath}")
+    args.contract = str(cpath)
+    contract, notes = load_contract(cpath)
     fresh = freshness_params(args.freshness_column, args.as_of, args.max_age_days)
     viol, profile, fresh_info = check(contract, notes, header, body, ragged, fresh)
     files = {
         "violations.csv": csv_text(VIOL_FIELDS, viol),
         "profile.csv": csv_text(PROFILE_FIELDS, profile),
         "contract-report.md": render_md(Path(args.contract).name, Path(args.data).name, contract, notes, header,
-                                        body, viol, profile, fresh_info),
+                                        body, viol, profile, fresh_info, draft=is_draft(cpath)),
     }
     return files, viol
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--contract", type=Path, help="contract CSV (assets/contract-template.csv) or ODCS v3 YAML subset")
+    ap.add_argument("--contract", default="", help="contract CSV (assets/contract-template.csv) or ODCS v3 YAML subset")
+    ap.add_argument("--draft-contract", default="", metavar="PATH",
+                    help="without --contract: draft a contract from the data to PATH (or use PATH if it exists)")
     ap.add_argument("--data", type=Path, help="dataset CSV with a header row")
     ap.add_argument("--freshness-column", default="", help="date/datetime column for the freshness check")
     ap.add_argument("--as-of", default="", help="as-of date YYYY-MM-DD for the freshness check")

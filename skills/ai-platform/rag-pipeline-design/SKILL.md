@@ -13,17 +13,26 @@ metadata:
       - {name: k, type: string, required: false, default: "1,5,10"}
       - {name: min_recall, type: string, required: false, from: "gate: fail when recall@at is below this"}
       - {name: at, type: string, required: false, default: "5"}
+      - {name: baseline, type: json, required: false, from: "retrieval-metrics.json from an earlier run (e.g. the last release); adds metric deltas and queries newly missed / found"}
+      - {name: max_drop, type: string, required: false, from: "with baseline: fail when recall@at falls by more than this, e.g. 0.05; no default"}
     run:
-      - {step: retrieval-metrics, kind: script, cmd: "python3 -I scripts/eval_retrieval.py --csv {eval_set} --k {k} --json {out}/retrieval-metrics.json [--min-recall {min_recall} --at {at}]", stdout: "{out}/retrieval-metrics.txt"}
+      - {step: retrieval-metrics, kind: script, cmd: "python3 -I scripts/eval_retrieval.py --csv {eval_set} --k {k} --json {out}/retrieval-metrics.json [--min-recall {min_recall} --at {at}] [--baseline {baseline}] [--max-drop {max_drop} --at {at}]", stdout: "{out}/retrieval-metrics.txt"}
     outputs:
       - {path: "{out}/retrieval-metrics.json", checks: [exists, json]}
       - {path: "{out}/retrieval-metrics.txt", checks: [exists, contains:"recall"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "test questions with your prototype retriever's results"}
+      existing: {case: agent-mode-existing, bring: "your live retriever's results and the last release's metrics"}
 ---
 
 # RAG Pipeline Design
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/rag-pipeline-design --input <name>=<value> … --out <dir>` (see `--explain ai-platform/rag-pipeline-design`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — measure a prototype retriever on a labelled eval set (recall@k, MRR, coverage) while you design the pipeline.
+- **Existing** — run the live retriever's results against the last release's `retrieval-metrics.json` as `baseline`: the output adds `vs_baseline` (every metric's delta, queries newly missed and newly found, queries added to the set); `max_drop` fails the run when recall@`at` falls by more than it.
 
 ## When to use
 - New knowledge assistant, document Q&A, policy/contract search, support knowledge base, code or ticket search.

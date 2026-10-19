@@ -84,3 +84,36 @@ def test_empty_golden_set(tmp_path):
         "--outputs", str(out_csv), "--skip-judge",
     )
     assert r.returncode == 1
+
+
+# --- brownfield: per-case comparison with the last release's scorecard ---
+
+def test_vs_baseline_lists_newly_failing_and_regression_gate(tmp_path):
+    base_dir = tmp_path / "base"
+    base_dir.mkdir()
+    r, base_path = _run(base_dir, PASSING_OUTPUTS)
+    assert r.returncode == 0
+    worse = dict(PASSING_OUTPUTS, **{"GS-0001": "Refunds depend on the plan."})
+    r, sc = _run(tmp_path, worse, "--baseline", str(base_path), "--max-regression", "0.02")
+    score = json.loads(sc.read_text(encoding="utf-8"))
+    assert r.returncode == 1
+    vb = score["vs_baseline"]
+    assert vb["newly_failing"] == ["GS-0001"] and vb["newly_passing"] == [] and vb["new_cases"] == []
+    assert vb["delta"] < 0 and any(x.startswith("regression:") for x in score["gate"]["reasons"])
+    assert "newly_failing=GS-0001" in r.stdout
+
+
+def test_vs_baseline_report_only_without_max_regression(tmp_path):
+    base = tmp_path / "base.json"
+    base.write_text(json.dumps({"overall_pass_rate": 1.0, "cases": [{"id": "GS-0001", "pass": True},
+                                                                    {"id": "GS-0099", "pass": True}]}))
+    r, sc = _run(tmp_path, PASSING_OUTPUTS, "--baseline", str(base))
+    score = json.loads(sc.read_text(encoding="utf-8"))
+    assert r.returncode == 0
+    vb = score["vs_baseline"]
+    assert vb["dropped_cases"] == ["GS-0099"] and vb["new_cases"] == ["GS-0002", "GS-0003", "GS-0004"]
+
+
+def test_no_baseline_no_comparison(tmp_path):
+    _, sc = _run(tmp_path, PASSING_OUTPUTS)
+    assert "vs_baseline" not in json.loads(sc.read_text(encoding="utf-8"))

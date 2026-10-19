@@ -2,6 +2,7 @@
 """Lint a prompt spec, then render a versioned prompt and its regression test cases.
 
     python3 -I scripts/prompt_spec.py --spec prompt-spec.json --out-dir runs/x
+    python3 -I scripts/prompt_spec.py --spec v2.json --previous v1.json --out-dir runs/x   # change + bump check
     python3 -I scripts/prompt_spec.py --verify-tests runs/x/prompt-tests.jsonl   # structural check
 
 Spec JSON (assets/prompt-spec-template.json):
@@ -17,6 +18,13 @@ Lint rules (references/lint-rules.md), each finding {code, severity, where, mess
     type, properties, required, enum, items; other keywords are reported and ignored)
   * token budget: chars/4 of the rendered system + user prompt per example — an ESTIMATE,
     labelled as such — must not exceed max_input_tokens
+Brownfield (--previous SPEC): the spec of the version in production. Every change is classified by its
+impact on callers and consumers — major: output property or required output field removed, output type
+changed, output enum value added, required variable added or made required; minor: role/task/constraint
+text changed, optional variable added, variable removed or made optional, output property added, enum
+value removed; patch: examples, max_input_tokens or descriptions. The version must move up by at least
+the required level (E-VERSION-BUMP, E-VERSION-DOWN; a different id is E-PREV-ID). prompt-lint.json gains
+"changes_vs_previous" and prompt.md a "Changes since v<previous>" section.
 Then (only when no error-severity finding exists) renders:
   prompt.md          versioned system/user template with a header table
   prompt-tests.jsonl one regression case per example, ready for an eval harness
@@ -263,11 +271,131 @@ def lint(spec) -> tuple[list[dict], dict]:
     return F, facts
 
 
+BUMP_RANK = {"none": 0, "patch": 1, "minor": 2, "major": 3}
+
+
+def _semver(v: str) -> tuple[int, int, int] | None:
+    m = re.match(r"^(\d+)\.(\d+)\.(\d+)", str(v))
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def schema_changes(old, new, path: str = "$") -> list[tuple[str, str, str]]:
+    """(where, change, level) for an output-schema change, judged from the consumer's side."""
+    out: list[tuple[str, str, str]] = []
+    if not isinstance(old, dict) or not isinstance(new, dict):
+        return out if old == new else [(path, "schema replaced", "major")]
+    if old.get("type") != new.get("type"):
+        out.append((path, f"type {old.get('type')} -> {new.get('type')}", "major"))
+    oe, ne = old.get("enum") or [], new.get("enum") or []
+    for x in ne:
+        if x not in oe and oe:
+            out.append((path, f"enum value {x!r} added", "major"))
+    for x in oe:
+        if x not in ne and ne:
+            out.append((path, f"enum value {x!r} removed", "minor"))
+    if oe and not ne:
+        out.append((path, "enum restriction removed", "major"))
+    if ne and not oe:
+        out.append((path, "enum restriction added", "minor"))
+    op, np_ = old.get("properties") or {}, new.get("properties") or {}
+    for k in np_:
+        if k not in op:
+            out.append((f"{path}.{k}", "property added", "minor"))
+        else:
+            out += schema_changes(op[k], np_[k], f"{path}.{k}")
+    for k in op:
+        if k not in np_:
+            out.append((f"{path}.{k}", "property removed", "major"))
+    orq, nrq = set(old.get("required") or []), set(new.get("required") or [])
+    for k in sorted(nrq - orq):
+        out.append((f"{path}.{k}", "now required", "minor"))
+    for k in sorted(orq - nrq):
+        out.append((f"{path}.{k}", "no longer required", "major"))
+    if "items" in old or "items" in new:
+        out += schema_changes(old.get("items"), new.get("items"), f"{path}[]")
+    return out
+
+
+def _short(text: str, n: int = 60) -> str:
+    return text if len(text) <= n else text[:n - 1].rstrip() + "…"
+
+
+def compare_previous(spec: dict, prev: dict) -> tuple[dict, list[tuple[str, str, str]]]:
+    """Change list, required and actual bump; plus findings (code, where, message) to add as errors."""
+    changes: list[dict] = []
+
+    def add(area, where, change, level):
+        changes.append({"area": area, "where": where, "change": change, "level": level})
+
+    errors: list[tuple[str, str, str]] = []
+    if prev.get("id") != spec.get("id"):
+        errors.append(("E-PREV-ID", "id", f"previous spec id {prev.get('id')!r} differs from {spec.get('id')!r}"))
+    for k in ("role", "task"):
+        if str(prev.get(k, "")).strip() != str(spec.get(k, "")).strip():
+            add("instructions", k, "text changed", "minor")
+    pc = [str(c).strip() for c in prev.get("constraints") or []]
+    nc = [str(c).strip() for c in spec.get("constraints") or []]
+    for c in nc:
+        if c not in pc:
+            add("instructions", "constraints", f"added: {_short(c)}", "minor")
+    for c in pc:
+        if c not in nc:
+            add("instructions", "constraints", f"removed: {_short(c)}", "minor")
+    pv = {v.get("name"): v for v in prev.get("variables") or [] if isinstance(v, dict)}
+    nv = {v.get("name"): v for v in spec.get("variables") or [] if isinstance(v, dict)}
+    for n, v in nv.items():
+        if n not in pv:
+            add("variables", n, "required variable added" if v.get("required") else "optional variable added",
+                "major" if v.get("required") else "minor")
+        elif bool(pv[n].get("required")) != bool(v.get("required")):
+            add("variables", n, "now required" if v.get("required") else "now optional",
+                "major" if v.get("required") else "minor")
+        elif pv[n].get("description") != v.get("description"):
+            add("variables", n, "description changed", "patch")
+    for n in pv:
+        if n not in nv:
+            add("variables", n, "variable removed", "minor")
+    for where, change, level in schema_changes(prev.get("output_schema"), spec.get("output_schema")):
+        add("output_schema", where, change, level)
+    if prev.get("examples") != spec.get("examples"):
+        add("examples", "examples", f"{len(prev.get('examples') or [])} -> {len(spec.get('examples') or [])} example(s)", "patch")
+    if prev.get("max_input_tokens") != spec.get("max_input_tokens"):
+        add("budget", "max_input_tokens", f"{prev.get('max_input_tokens')} -> {spec.get('max_input_tokens')}", "patch")
+    required = max((c["level"] for c in changes), key=BUMP_RANK.get, default="none")
+    a, b = _semver(prev.get("version", "")), _semver(spec.get("version", ""))
+    if a is None or b is None:
+        actual = "unknown"
+    elif b < a:
+        actual = "downgrade"
+    elif b == a:
+        actual = "none"
+    else:
+        actual = "major" if b[0] > a[0] else "minor" if b[1] > a[1] else "patch"
+    if actual == "downgrade":
+        errors.append(("E-VERSION-DOWN", "version", f"version {spec.get('version')} is lower than previous {prev.get('version')}"))
+    elif actual != "unknown" and BUMP_RANK[actual] < BUMP_RANK[required]:
+        errors.append(("E-VERSION-BUMP", "version",
+                       f"changes need at least a {required} bump from {prev.get('version')}; got {actual} ({spec.get('version')})"))
+    return {"previous_version": prev.get("version"), "changes": changes, "required_bump": required,
+            "actual_bump": actual}, errors
+
+
+def render_changes_md(cv: dict) -> list[str]:
+    L = ["", f"## Changes since v{cv['previous_version']}", "",
+         f"{len(cv['changes'])} change(s); required bump: **{cv['required_bump']}**; actual bump: **{cv['actual_bump']}**. "
+         "Levels are judged from callers (variables) and consumers (output schema)."]
+    if cv["changes"]:
+        L += ["", "| Area | Where | Change | Level |", "|---|---|---|---|"]
+        for c in cv["changes"]:
+            L.append(f"| {c['area']} | `{c['where']}` | {str(c['change']).replace('|', '/')} | {c['level']} |")
+    return L
+
+
 def summary(findings: list[dict]) -> dict:
     return {s: sum(f["severity"] == s for f in findings) for s in ("error", "warning", "info")}
 
 
-def render_prompt_md(spec: dict, facts: dict, sha: str) -> str:
+def render_prompt_md(spec: dict, facts: dict, sha: str, cv: dict | None = None) -> str:
     L = [f"<!-- prompt-spec: {spec['id']} v{spec['version']} · spec sha256 {sha} · do not edit; edit the spec and re-render -->",
          f"# Prompt {spec['id']} — v{spec['version']}", "",
          "| Field | Value |", "|---|---|",
@@ -286,6 +414,8 @@ def render_prompt_md(spec: dict, facts: dict, sha: str) -> str:
     L += ["", "## Regression cases", "", "| Case | Input token estimate (chars/4) |", "|---|---|"]
     for e in facts["examples"]:
         L.append(f"| {case_id(spec, e['index'])} | {e['tokens_estimate']} |")
+    if cv is not None:
+        L += render_changes_md(cv)
     return "\n".join(L) + "\n"
 
 
@@ -348,6 +478,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spec", type=Path, help="prompt spec JSON")
     ap.add_argument("--out-dir", type=Path, help="directory for prompt.md, prompt-lint.json, prompt-tests.jsonl")
+    ap.add_argument("--previous", type=Path, help="spec JSON of the version in production (change + bump check)")
     ap.add_argument("--verify-tests", type=Path, metavar="JSONL", help="structurally check a prompt-tests.jsonl")
     a = ap.parse_args(argv)
     if a.verify_tests:
@@ -372,6 +503,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: spec is not valid JSON: {e}", file=sys.stderr)
         return 2
     findings, facts = lint(spec)
+    cv = None
+    if a.previous:
+        try:
+            prev = json.loads(a.previous.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            print(f"error: previous spec not found: {a.previous}", file=sys.stderr)
+            return 2
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            print(f"error: previous spec is not valid JSON: {e}", file=sys.stderr)
+            return 2
+        if isinstance(spec, dict) and isinstance(prev, dict):
+            cv, errs = compare_previous(spec, prev)
+            findings += [{"code": c, "severity": "error", "where": w, "message": m} for c, w, m in errs]
     sev_order = {"error": 0, "warning": 1, "info": 2}
     findings.sort(key=lambda f: (sev_order[f["severity"]], f["code"], f["where"]))
     counts = summary(findings)
@@ -388,6 +532,8 @@ def main(argv: list[str] | None = None) -> int:
         "max_input_tokens": spec.get("max_input_tokens") if isinstance(spec, dict) else None,
         "findings": findings,
     }
+    if cv is not None:
+        report["changes_vs_previous"] = cv
     (a.out_dir / "prompt-lint.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     if not ok:
         for f in findings:
@@ -396,7 +542,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"lint failed: {counts['error']} error(s), {counts['warning']} warning(s); "
               f"prompt.md and prompt-tests.jsonl not rendered", file=sys.stderr)
         return 1
-    (a.out_dir / "prompt.md").write_text(render_prompt_md(spec, facts, sha), encoding="utf-8")
+    (a.out_dir / "prompt.md").write_text(render_prompt_md(spec, facts, sha, cv), encoding="utf-8")
     tests = build_tests(spec, facts)
     with (a.out_dir / "prompt-tests.jsonl").open("w", encoding="utf-8") as f:
         for t in tests:

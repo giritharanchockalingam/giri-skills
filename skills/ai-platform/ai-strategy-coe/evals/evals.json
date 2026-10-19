@@ -106,6 +106,26 @@
           "check": "contains:\"score given without evidence\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is this quarter's re-scored backlog for Northwind and last quarter's ranked portfolio. Re-rank it and show what moved.",
+      "expected": [
+        "Reads the earlier portfolio: UC-009 and UC-005 new; UC-003 drops from Now to Next; UC-010 listed as no longer in the list; nothing carried over from earlier scores"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases.csv",
+        "scorecard": "evals/fixtures/maturity-scorecard.csv",
+        "org": "Northwind",
+        "previous_portfolio": "evals/fixtures/previous-portfolio.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "portfolio.md", "check": "sections:[\"Ranked portfolio\",\"Band summary\",\"Changes since last review\"]"},
+        {"file": "portfolio.md", "check": "contains:\"| UC-003 | Internal policy assistant (RAG) | 2 | 4 | down 2 | Now | Next |\""},
+        {"file": "portfolio.md", "check": "contains:\"| UC-010 | Field service visit summariser | 5 | — | no longer in the list | Later | — |\""},
+        {"file": "portfolio.csv", "check": "csv:[rank,id,band,previous_rank,previous_band,movement]"}
+      ]
     }
   ]
 }

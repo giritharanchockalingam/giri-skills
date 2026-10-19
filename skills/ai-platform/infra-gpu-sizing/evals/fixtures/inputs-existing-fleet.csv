@@ -1,0 +1,17 @@
+key,value,unit,source,as_of_date,notes
+daily_active_users,1450,count,fictional gateway logs (30-day median),2026-10-01,fictional fixture: measured in production
+requests_per_user_per_day,12,count,fictional gateway logs (30-day median),2026-10-01,
+tokens_in_per_request,1600,tokens,fictional trace sample,2026-10-01,
+tokens_out_per_request,300,tokens,fictional trace sample,2026-10-01,
+active_hours_per_day,10,hours,fictional gateway logs,2026-10-01,
+peak_factor,2.2,multiplier,fictional gateway logs (p99 hour / mean hour),2026-10-01,
+calls_per_request,2,count,fictional trace sample,2026-10-01,agentic multiplier
+decode_tokens_per_s_per_gpu,1400,tokens/s,fictional benchmark run,2026-09-01,
+prefill_tokens_per_s_per_gpu,9000,tokens/s,fictional benchmark run,2026-09-01,
+utilization_target,0.6,fraction,,,
+spare_gpus,1,count,,,
+gpus_per_replica,1,count,,,
+rental_usd_per_gpu_hour,2.10,USD,fictional rental price list,2026-09-01,
+rental_hours_per_month,730,hours,,,
+current_gpus,6,count,fictional cluster inventory,2026-10-01,fictional fixture: fleet serving the workload today
+current_cost_usd_per_month,9198,USD,fictional October invoice,2026-10-01,6 GPUs x 730 h x 2.10

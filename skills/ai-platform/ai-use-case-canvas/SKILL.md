@@ -8,10 +8,14 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "your answers to the canvas questions about one AI idea"}
+      existing: {case: agent-mode-existing, bring: "updated answers plus the scores from the idea's last review"}
     inputs:
       - {name: answers, type: json, required: true, from: "answers.json: the canvas cells (problem_user, decision, current_process, capability, data, feasibility, value, risks), scores with evidence, build_buy factors, next_step (layout: evals/fixtures/answers.json)"}
+      - {name: previous, type: json, required: false, from: "score.json from an earlier canvas of the same idea (re-review); decision.md then shows then-vs-now scores, verdict and decision"}
     run:
-      - {step: canvas, kind: script, cmd: "python3 -I scripts/canvas.py {answers} --out-dir {out} --template assets/use-case-canvas.md"}
+      - {step: canvas, kind: script, cmd: "python3 -I scripts/canvas.py {answers} --out-dir {out} --template assets/use-case-canvas.md [--previous {previous}]"}
     outputs:
       - {path: "{out}/canvas.md", checks: [exists, contains:"**Verdict:**", contains:"| 9 | Build / buy / partner |", no_unowned_tbd, max_lines:60]}
       - {path: "{out}/decision.md", checks: [exists, sections:["Factors stated","Verdict"], contains:"**Decision:**"]}
@@ -22,6 +26,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below (one `answers.json`; blanks are allowed and become owned `[TO BE BASELINED]` markers), then run `python3 scripts/run_skill.py ai-platform/ai-use-case-canvas --input answers=<file> --out <dir>` (see `--explain ai-platform/ai-use-case-canvas`). Report the `run.json` results; do not hand-write the deliverables the script produces (`canvas.md`, `decision.md`, `score.json`).
+
+## Starting points
+- **New:** your answers about one idea fill the canvas, score it and make the build, buy or partner call.
+- **Existing:** add the `score.json` from the idea's last canvas (`previous`); decision.md adds then-vs-now scores, priority, verdict and decision, so a re-review shows what moved and why.
 
 ## When to use
 - First-pass qualification of one idea in under an hour; intake form for a CoE; pre-read for a sponsor conversation.

@@ -21,12 +21,18 @@ metadata:
       - {path: "{out}/anomalies.csv", checks: [exists, csv:[date,team,cost_usd,trailing_mean_usd,trailing_sd_usd,threshold_usd,prior_days], cmd:"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}"]}
       - {path: "{out}/budget.csv", checks: [exists, csv:[team,month,budget,actual,forecast,variance,status], "csv_rows:status~^(OVER BUDGET|WITHIN BUDGET|NO BUDGET|NOT STARTED)$", cmd:"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}"]}
       - {path: "{out}/finops-report.md", checks: [exists, sections:["Summary","Spend by team","Unit economics","Anomalies","Budgets","Unpriced usage","Method"], no_unowned_tbd, numbers_trace_to:["{out}/showback.csv","{out}/anomalies.csv","{out}/budget.csv"], cmd:"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}"]}
+    modes:
+      existing: {case: agent-happy-path, bring: "your AI gateway usage export and the current price sheet"}
 ---
 
 # AI FinOps Chargeback (showback)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-finops-chargeback --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-finops-chargeback`). Report the `run.json` results; do not hand-write the deliverables the script produces (`showback.csv`, `anomalies.csv`, `budget.csv`, `finops-report.md`). Every dollar figure in the report traces to the CSVs, and each output is re-verified against the inputs with `--verify`. With `strict=true` the run is a gate: a team forecast over budget exits 1, with complete outputs.
+
+## Starting points
+- **Existing** — you bring metered usage from the AI gateway, the dated price sheet and (optionally) team budgets; the skill allocates the spend, flags anomalies and forecasts each budget.
+- Only for existing: chargeback allocates spend that has already been metered; pricing a workload before launch goes to `llm-cost-model`.
 
 ## When to use
 - ADLC operate stage: monthly showback of AI spend to the teams and features that consume it, before Finance decides on chargeback.

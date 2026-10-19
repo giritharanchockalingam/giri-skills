@@ -73,6 +73,23 @@
         {"file": "screening.json", "check": "contains:\"\\\"signoff_status\\\": \\\"blocked\\\"\""},
         {"file": "dpia-risks.csv", "check": "contains:\"Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high\""}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Start the DPIA for the Northwind Billing Assistant; we have the processing description and the PII scan, but no risk register yet.",
+      "expected": [
+        "Screening done from the processing facts; the two PII columns with undecided handling become unscored risks owned by the Data protection officer; residual conclusion marked provisional; no risk invented"
+      ],
+      "inputs": {
+        "processing": "evals/fixtures/processing.csv",
+        "pii_inventory": "evals/fixtures/pii-inventory.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "dpia-risks.csv", "check": "contains:\"Personal data in column 'date_of_birth' (dob) has no decided handling,pii_inventory:date_of_birth,\""},
+        {"file": "dpia.md", "check": "contains:\"2 risk(s) still carry TBD fields\""},
+        {"file": "dpia.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

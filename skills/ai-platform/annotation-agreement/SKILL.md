@@ -8,12 +8,16 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "labels from your pilot round and your draft guidelines"}
+      existing: {case: agent-mode-existing, bring: "this round's labels plus last round's agreement results"}
     inputs:
       - {name: labels, type: csv, required: true, from: "one row per rating item_id,annotator,label (layout: assets/labels-template.csv); blank label = not rated"}
       - {name: guidelines, type: md, required: false, from: "annotation guidelines in Markdown (layout: assets/guidelines-template.md); without it guideline coverage is TBD for the Annotation lead"}
       - {name: min_agreement, type: string, required: false, from: "minimum Krippendorff's alpha agreed with the eval or data owner (e.g. 0.667 or 0.800); absent = no gate"}
+      - {name: previous, type: json, required: false, from: "agreement.json from an earlier labelling round (e.g. the pilot); the report adds alpha and per-label change"}
     run:
-      - {step: agreement, kind: script, cmd: "python3 -I scripts/agreement.py --labels {labels} [--guidelines {guidelines}] [--min-agreement {min_agreement}] --out-dir {out}"}
+      - {step: agreement, kind: script, cmd: "python3 -I scripts/agreement.py --labels {labels} [--guidelines {guidelines}] [--min-agreement {min_agreement}] [--previous {previous}] --out-dir {out}"}
     outputs:
       - {path: "{out}/agreement.json", checks: [exists, json, contains:"\"krippendorff_alpha\"", cmd:"python3 -I scripts/agreement.py --verify {path} --labels {labels}"]}
       - {path: "{out}/disputed-items.csv", checks: [exists, csv:[item_id,labels,majority,agreement], contains:"item_id,labels,majority,agreement", cmd:"python3 -I scripts/agreement.py --verify {path} --labels {labels}"]}
@@ -25,6 +29,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/annotation-agreement --input <name>=<value> … --out <dir>` (see `--explain ai-platform/annotation-agreement`). Report the `run.json` results; do not hand-write the deliverables the script produces (`agreement.json`, `disputed-items.csv`, `label-agreement.csv`, `agreement-report.md`). Alpha below `min_agreement` fails the run (exit 1) with every output written. If no item has two or more ratings the run exits 1 and reports no score. Each output passes `--verify`, which re-derives it from the labels and the settings recorded in `agreement.json`.
+
+## Starting points
+- **New:** labels from a pilot round (and draft guidelines) give alpha, disputed items and the label boundaries to sharpen before labelling at scale.
+- **Existing:** add the `agreement.json` from the previous round (`previous`); the report adds alpha, percent agreement, disputed items and per-label agreement then vs now, and names labels whose agreement fell.
 
 ## When to use
 - ADLC data stage: before human labels become an eval golden set, an LLM-as-judge calibration set or fine-tuning data.

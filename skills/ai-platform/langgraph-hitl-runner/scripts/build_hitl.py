@@ -24,7 +24,14 @@ Warnings: memory checkpointer (dev only); escalate without escalate_to; on_timeo
 The scaffold is generated as text and verified with compile()/ast.parse. It is NOT executed
 and langgraph is NOT imported here.
 
-Usage: python3 -I build_hitl.py --spec approvals.json --out-dir OUT
+Brownfield (--graph-spec): pass the graph spec of the existing agent (langgraph-runner layout: name,
+state, nodes, edges, conditional_edges, entry). Gates are then fitted to that graph: every before_node
+must be a node of it (error otherwise), editable fields must be state fields of it (state_fields is taken
+from the graph when the spec omits it), the incoming edges to rewire to each approve_<node> are listed,
+and tool nodes left without a gate are named. A graph-name mismatch is a warning. Output: validation.json
+"graph_fit" and hitl.md "Fit to existing graph".
+
+Usage: python3 -I build_hitl.py --spec approvals.json [--graph-spec existing-graph.json] --out-dir OUT
 Writes OUT/validation.json and OUT/hitl.md always; OUT/hitl.py only when valid.
 Exit: 0 valid · 1 validation errors · 2 spec missing or not JSON. Stdlib only.
 """
@@ -150,6 +157,54 @@ def validate(spec: dict) -> dict:
         gates.append(g)
     return {"graph": graph, "checkpointer": cp, "gates": gates, "errors": errors, "warnings": warnings,
             "state_fields": sorted(declared) if declared is not None else None}
+
+
+def load_graph(path: Path) -> dict:
+    """Minimal read of a langgraph-runner graph spec: name, state names, nodes {name: kind}, incoming edges."""
+    g = load_spec(path)
+    nodes = {str(n.get("name")): str(n.get("kind") or "") for n in (g.get("nodes") or []) if isinstance(n, dict)}
+    if not nodes:
+        print(f"error: graph spec has no nodes: {path}", file=sys.stderr)
+        sys.exit(2)
+    incoming: dict[str, list[str]] = {n: [] for n in nodes}
+    entry = str(g.get("entry") or "")
+    if entry in incoming:
+        incoming[entry].append("START")
+    for e in g.get("edges") or []:
+        if isinstance(e, dict) and str(e.get("to")) in incoming:
+            incoming[str(e["to"])].append(str(e.get("from")))
+    for c in g.get("conditional_edges") or []:
+        if isinstance(c, dict) and isinstance(c.get("routes"), dict):
+            for label, to in c["routes"].items():
+                if str(to) in incoming:
+                    incoming[str(to)].append(f"{c.get('from')} [{label}]")
+    state = [str(f.get("name")) for f in (g.get("state") or []) if isinstance(f, dict) and f.get("name")]
+    return {"name": str(g.get("name") or "").strip(), "nodes": nodes, "incoming": incoming, "state": state,
+            "file": path.name}
+
+
+def fit_to_graph(v: dict, graph: dict, state_from_graph: bool) -> dict:
+    """Check the gates against the existing graph; append errors/warnings to v; return the fit report."""
+    if v["graph"] and graph["name"] and v["graph"] != graph["name"]:
+        v["warnings"].append(f"spec.graph '{v['graph']}' differs from the existing graph's name '{graph['name']}'")
+    rows = []
+    for g in v["gates"]:
+        n = g["before_node"]
+        if n and n not in graph["nodes"]:
+            v["errors"].append(f"gate before '{n}': not a node in the existing graph {graph['file']} "
+                               f"(nodes: {', '.join(graph['nodes'])})")
+            rows.append({"gate": n, "in_graph": False, "kind": None, "rewire_incoming": []})
+            continue
+        for f in g["editable_fields"]:
+            if f not in graph["state"]:
+                msg = f"gate before '{n}': editable field '{f}' is not a state field of the existing graph"
+                if msg not in v["errors"]:
+                    v["errors"].append(msg)
+        rows.append({"gate": n, "in_graph": True, "kind": graph["nodes"][n], "rewire_incoming": graph["incoming"][n]})
+    gated = {g["before_node"] for g in v["gates"]}
+    ungated_tools = [n for n, k in graph["nodes"].items() if k == "tool" and n not in gated]
+    return {"graph_file": graph["file"], "graph_name": graph["name"], "nodes": len(graph["nodes"]),
+            "state_fields_from_graph": state_from_graph, "gates": rows, "ungated_tool_nodes": ungated_tools}
 
 
 # ------------------------------------------------------------------ generation
@@ -349,7 +404,24 @@ def risks(v: dict) -> list[tuple[str, str, str]]:
     return out
 
 
-def gen_markdown(v: dict, scaffold: dict, spec_name: str) -> str:
+def gen_fit_markdown(fit: dict) -> list[str]:
+    L = ["## Fit to existing graph", "",
+         f"Gates fitted to `{fit['graph_file']}` (graph `{fit['graph_name'] or '(unnamed)'}`, {fit['nodes']} nodes)"
+         + ("; state fields taken from the graph." if fit["state_fields_from_graph"] else "."), "",
+         "| Gate | In graph | Node kind | Incoming edges to rewire to approve_<node> |", "|---|---|---|---|"]
+    for r in fit["gates"]:
+        L.append(f"| {r['gate']} | {'yes' if r['in_graph'] else 'NO'} | {r['kind'] or '-'} | "
+                 f"{', '.join(r['rewire_incoming']) or '-'} |")
+    L += [""]
+    if fit["ungated_tool_nodes"]:
+        L += [f"Tool nodes with no gate: {', '.join(fit['ungated_tool_nodes'])}. Confirm each is safe to run "
+              "without approval — owner: Risk owner.", ""]
+    else:
+        L += ["Every tool node in the graph has a gate.", ""]
+    return L
+
+
+def gen_markdown(v: dict, scaffold: dict, spec_name: str, fit: dict | None = None) -> str:
     ok = not v["errors"]
     L = [f"# Human-in-the-loop plan — {v['graph'] or '(unnamed)'}", "",
          f"Verdict: **{'VALID' if ok else 'INVALID'}** — {len(v['gates'])} gate(s), {len(v['errors'])} error(s), "
@@ -370,6 +442,8 @@ def gen_markdown(v: dict, scaffold: dict, spec_name: str) -> str:
         L += ["Warnings:", ""] + [f"- {w}" for w in v["warnings"]] + [""]
     if not v["errors"] and not v["warnings"]:
         L += ["No errors or warnings.", ""]
+    if fit:
+        L += gen_fit_markdown(fit)
     L += ["## Resume flow", ""]
     if ok:
         L += ["1. `graph = build_graph()` compiles with the spec's checkpointer (`make_checkpointer()`).",
@@ -391,10 +465,17 @@ def gen_markdown(v: dict, scaffold: dict, spec_name: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Validate approval points; emit hitl.py, hitl.md, validation.json")
     ap.add_argument("--spec", required=True, help="approval-points spec JSON (layout: assets/approvals.example.json)")
+    ap.add_argument("--graph-spec", help="graph spec of the existing agent (langgraph-runner layout) to fit gates to")
     ap.add_argument("--out-dir", required=True)
     a = ap.parse_args(argv)
     spec_path = Path(a.spec)
-    v = validate(load_spec(spec_path))
+    raw = load_spec(spec_path)
+    graph = load_graph(Path(a.graph_spec)) if a.graph_spec else None
+    state_from_graph = bool(graph) and not isinstance(raw.get("state_fields"), list)
+    if state_from_graph:
+        raw = {**raw, "state_fields": graph["state"]}
+    v = validate(raw)
+    fit = fit_to_graph(v, graph, state_from_graph) if graph else None
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     scaffold = {"generated": False, "syntax_checked": False, "executed": False,
@@ -408,10 +489,11 @@ def main(argv: list[str] | None = None) -> int:
             (out / "hitl.py").write_text(src, encoding="utf-8")
         else:
             v["errors"].append(f"generated scaffold failed the syntax check: {detail}")
-    (out / "hitl.md").write_text(gen_markdown(v, scaffold, spec_path.name), encoding="utf-8")
+    (out / "hitl.md").write_text(gen_markdown(v, scaffold, spec_path.name, fit), encoding="utf-8")
     report = {"graph": v["graph"], "source": spec_path.name, "valid": not v["errors"],
               "checkpointer": v["checkpointer"], "errors": v["errors"], "warnings": v["warnings"],
               "gates": v["gates"], "scaffold": scaffold,
+              **({"graph_fit": fit} if fit else {}),
               "upstream": "langgraph-human-in-the-loop (langchain-ai/langchain-skills, vendor/pins.json)"}
     (out / "validation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"{v['graph']}: {'VALID' if report['valid'] else 'INVALID'} — {len(v['gates'])} gate(s), "

@@ -113,6 +113,46 @@
       "checks": [
         "exit:1"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Weekly steerco: build this week's Northwind status as of 2026-10-16 and show what moved since last week's report.",
+      "expected": [
+        "Reads last week's status (as of 2026-10-09): M3, M5 and M7 slipped 9 days, M6 7 days and turned amber, M4 completed, R6 closed; go-live (M7) moved from 2026-11-25 to 2026-12-04; overall RAG stays red"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16",
+        "previous": "evals/fixtures/status-previous.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "status-report.md",
+          "check": "sections:[\"Summary\",\"Milestones\",\"Since last report\",\"Critical path\",\"Top risks\",\"Overdue items\",\"Decisions needed\",\"Method\"]"
+        },
+        {
+          "file": "status-report.md",
+          "check": "contains:\"| M6 | slipped | +7 | green | amber |\""
+        },
+        {
+          "file": "status-report.md",
+          "check": "contains:\"End of the critical path (M7) moved from 2026-11-25 to 2026-12-04.\""
+        },
+        {
+          "file": "status-report.md",
+          "check": "contains:\"closed: R6.\""
+        },
+        {
+          "file": "status-report.md",
+          "check": "mermaid_parses"
+        },
+        {
+          "file": "status-report.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
     }
   ]
 }

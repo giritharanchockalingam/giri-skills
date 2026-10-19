@@ -8,6 +8,8 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      existing: {case: agent-happy-path, bring: "user feedback and failed eval cases from production"}
     inputs:
       - {name: feedback, type: csv, required: true, from: "feedback rows id,ts,rating,comment,tags,trace_id,feature (layout: assets/feedback-template.csv); rating 1-5 or up/down"}
       - {name: min_rows, type: string, required: true, from: "minimum valid feedback rows before ranking is trusted (owner-chosen whole number)"}
@@ -24,6 +26,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/feedback-improvement-loop --input <name>=<value> … --out <dir>` (see `--explain ai-platform/feedback-improvement-loop`). Report the `run.json` results; do not hand-write the deliverables the script produces (`backlog.csv`, `new-eval-cases.json`, `improvement-report.md`). Fewer valid feedback rows than `min_rows` fails the run (exit 1) on purpose; outputs are still written and marked INSUFFICIENT DATA.
+
+## Starting points
+- **Existing:** ratings and comments from people using the system, plus failed eval cases; they become a ranked, owned backlog and a regression case per failure.
+- Only for existing: the loop runs on feedback, which only a system people already use can produce.
 
 ## When to use
 - Thumbs-down or star-rated feedback (and failed eval cases) needs to become a ranked, owned backlog.

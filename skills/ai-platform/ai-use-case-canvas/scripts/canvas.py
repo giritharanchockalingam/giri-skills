@@ -2,6 +2,7 @@
 """Fill the one-page AI use-case canvas, score it and make the build/buy/partner call from answers.json.
 
     python3 -I scripts/canvas.py answers.json --out-dir runs/x [--template assets/use-case-canvas.md]
+                                 [--previous earlier/score.json]
 
 answers.json (every key optional except `name`; blanks become `[TO BE BASELINED — owner: <owner>]`):
   name, owner (default owner for unknowns), raised_by
@@ -23,8 +24,13 @@ Rules: priority = V x F x D / R only when all four scores exist. Verdict per ref
 option favored by most stated factors, citing them; a tie or fewer than two factors -> TBD; a missing or
 <= 2 data-readiness score -> "wait" (data readiness first), whatever the factors say.
 
+Re-review (--previous): the score.json of an earlier canvas for the same use case. decision.md gains a
+"Changes since last review" section (axis score deltas, priority, verdict and decision then vs now) and score.json
+a `previous` block; an axis scored then but blank now is listed as "no longer scored", never carried over.
+
 Writes canvas.md (template filled; <= 60 lines), decision.md, score.json. Exit 1 on missing/invalid JSON,
-a score outside 1-5, an unknown factor or an unknown `favors` value. Stdlib only.
+a score outside 1-5, an unknown factor or an unknown `favors` value, or a --previous file that is not a canvas
+score.json for the same use case. Stdlib only.
 """
 from __future__ import annotations
 
@@ -60,13 +66,54 @@ def load(path: str) -> dict:
     return d
 
 
+def load_previous(path: str, name: str) -> dict:
+    """An earlier score.json from this script, for the same use case."""
+    p = Path(path)
+    if not p.is_file():
+        die(f"previous file not found: {p}")
+    try:
+        prev = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        die(f"{p.name}: invalid JSON: {e}")
+    if not isinstance(prev, dict) or not isinstance(prev.get("scores"), dict) or "verdict" not in prev:
+        die(f"{p.name}: not a canvas score.json (needs `scores` and `verdict`)")
+    if str(prev.get("name", "")).strip().lower() != name.strip().lower():
+        die(f"{p.name}: earlier canvas is for {prev.get('name')!r}, not {name!r}")
+    for ax, v in prev["scores"].items():
+        if ax not in AXES or not (isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= 5):
+            die(f"{p.name}: scores.{ax} must be an AXES key with an integer 1-5, got {v!r}")
+    return prev
+
+
+def compare(prev: dict, scores: dict, priority, verdict: str, decision: str) -> dict:
+    """Then-vs-now per axis plus priority, verdict and decision. Deltas only where both sides are scored."""
+    axes = []
+    for ax in AXES:
+        was, now = prev["scores"].get(ax), scores.get(ax)
+        if was is None and now is None:
+            change = "unscored"
+        elif was is None:
+            change = "newly scored"
+        elif now is None:
+            change = "no longer scored"
+        else:
+            change = "same" if now == was else f"{now - was:+d}"
+        axes.append({"axis": ax, "was": was, "now": now, "change": change})
+    return {"axes": axes,
+            "priority": {"was": prev.get("priority"), "now": priority},
+            "verdict": {"was": prev.get("verdict"), "now": verdict, "changed": prev.get("verdict") != verdict},
+            "decision": {"was": prev.get("decision"), "now": decision, "changed": prev.get("decision") != decision}}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="answers.json -> canvas.md + decision.md + score.json")
     ap.add_argument("answers")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--template", default=str(SKILL / "assets" / "use-case-canvas.md"))
+    ap.add_argument("--previous", help="score.json from an earlier canvas of the same use case (re-review)")
     a = ap.parse_args()
     d = load(a.answers)
+    prev = load_previous(a.previous, str(d["name"])) if a.previous else None
     owner = str(d.get("owner") or "___")
     tbd = f"[TO BE BASELINED — owner: {owner}]"
 
@@ -191,11 +238,24 @@ def main() -> int:
     L += [f"| {f_} | {o} | {n} |" for o in OPTIONS for f_, n in votes[o]] or [f"| none stated | | {tbd} |"]
     L += ["", "## Factors not stated", ", ".join(f_ for f_ in FACTORS if f_ not in bb) or "none", "",
           "## Verdict", f"{verdict} — {why}", "", f"Exit / revisit trigger: {g('build_buy_exit_trigger')}"]
+    delta = compare(prev, scores, priority, verdict, decision) if prev else None
+    if delta:
+        show = lambda v: tbd if v is None else v  # noqa: E731
+        L += ["", "## Changes since last review",
+              f"Compared with the earlier canvas `{Path(a.previous).name}`.", "",
+              "| Item | Then | Now | Change |", "|---|---|---|---|"]
+        L += [f"| {x['axis'].replace('_', ' ')} | {show(x['was'])} | {show(x['now'])} | {x['change']} |" for x in delta["axes"]]
+        pw, pn = delta["priority"]["was"], delta["priority"]["now"]
+        L.append(f"| priority | {show(pw)} | {show(pn)} | "
+                 f"{'same' if pw == pn else (f'{pn - pw:+.2f}' if pw is not None and pn is not None else 'not comparable')} |")
+        for k in ("verdict", "decision"):
+            L.append(f"| {k} | {show(delta[k]['was'])} | {delta[k]['now']} | {'changed' if delta[k]['changed'] else 'same'} |")
     (out / "decision.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     (out / "score.json").write_text(json.dumps({
         "name": d["name"], "scores": scores, "evidence": evidence, "missing_axes": missing, "priority": priority,
         "verdict": verdict, "verdict_reason": why, "decision": decision, "decision_reason": dwhy,
-        "factors": {o: [f_ for f_, _ in votes[o]] for o in OPTIONS}}, indent=2) + "\n", encoding="utf-8")
+        "factors": {o: [f_ for f_, _ in votes[o]] for o in OPTIONS},
+        **({"previous": delta} if delta else {})}, indent=2) + "\n", encoding="utf-8")
     print(f"canvas: verdict={verdict}; decision={decision}; priority={priority} -> {out}")
     return 0
 

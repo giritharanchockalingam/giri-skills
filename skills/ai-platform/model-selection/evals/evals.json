@@ -74,6 +74,50 @@
       "checks": [
         "exit:1"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We run Delta-Pro in production today. Re-rank the candidates on our criteria and tell me whether to switch.",
+      "expected": [
+        "Shows the incumbent Delta-Pro fails the 2,500 ms p95 latency hard constraint, recommends switching to Atlas-L, saves 2,140.00 USD a month at the workload, and notes task accuracy is the one criterion where the incumbent is better"
+      ],
+      "inputs": {
+        "candidates": "evals/fixtures/candidates.csv",
+        "criteria": "evals/fixtures/criteria.csv",
+        "workload": "evals/fixtures/workload.csv",
+        "incumbent": "Delta-Pro (fictional)"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "ranking.json",
+          "check": "contains:\"\\\"verdict\\\": \\\"switch\\\"\""
+        },
+        {
+          "file": "ranking.json",
+          "check": "contains:\"\\\"monthly_cost_delta_usd\\\": -2140.0\""
+        },
+        {
+          "file": "decision.md",
+          "check": "sections:[\"Recommendation\",\"Incumbent\",\"Eliminated\",\"Scores\",\"Sensitivity\",\"Sources\"]"
+        },
+        {
+          "file": "decision.md",
+          "check": "contains:\"eliminated by the hard constraints (p95_latency_ms = 3000 above hard_max 2500)\""
+        },
+        {
+          "file": "decision.md",
+          "check": "contains:\"| task_accuracy | 0.88 | 0.86 | incumbent |\""
+        },
+        {
+          "file": "decision.md",
+          "check": "numbers_trace_to:\"ranking.json\""
+        },
+        {
+          "file": "ranking.json",
+          "check": "cmd:\"python3 -I scripts/select_model.py --verify {path}\""
+        }
+      ]
     }
   ]
 }

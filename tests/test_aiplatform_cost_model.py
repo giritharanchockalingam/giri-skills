@@ -154,3 +154,44 @@ def test_template_rows_are_not_data(tmp_path):
 
 def test_missing_required_flag_exits_2():
     assert run_script(SCRIPT, "--workload", str(FX / "workload.csv")).returncode == 2
+
+
+# --- brownfield: modelled vs billed (--actuals) ---
+
+def test_actuals_variance_hand_checked(tmp_path):
+    r, d, md = _run(tmp_path, "--budget", "1000", "--actuals", str(FX / "actuals.csv"))
+    assert r.returncode == 0, r.stderr
+    a = d["actuals"]
+    by = {x["feature"]: x for x in a["rows"]}
+    assert by["support-chat"]["variance"] == 147.40 and by["support-chat"]["variance_pct"] == 31.7
+    assert by["support-chat"]["actual_cost_per_request"] == round(612.40 / 131000, 6)
+    assert by["doc-summary"]["variance"] == -18.85 and by["doc-summary"]["variance_pct"] == -4.8
+    assert [x["feature"] for x in a["rows"]] == ["support-chat", "doc-summary"]  # largest |variance| first
+    assert a["unmodelled"] == [{"feature": "ticket-tagging", "actual_cost": 48.2}]
+    assert (a["modelled_total_matched"], a["actual_total_matched"], a["actual_total_all"]) == (855.0, 983.55, 1031.75)
+    assert a["billed_vs_budget_pct"] == 103.2
+    assert "## Actuals vs model" in md and "Billed but not in the model: ticket-tagging" in md
+
+
+def test_actuals_missing_feature_and_no_source(tmp_path):
+    act = tmp_path / "act.csv"
+    act.write_text("feature,actual_cost\nsupport-chat,465\n")
+    r, d, md = _run(tmp_path, "--actuals", str(act))
+    assert r.returncode == 0, r.stderr
+    a = d["actuals"]
+    assert a["not_billed"] == ["doc-summary"] and a["period"] == TBB and a["source"] == TBB
+    assert a["billed_vs_budget_pct"] is None
+    assert next(x for x in a["rows"] if x["feature"] == "support-chat")["variance"] == 0.0
+    assert "In the model but absent from the bill: doc-summary." in md
+
+
+def test_actuals_bad_input_exits_2(tmp_path):
+    act = tmp_path / "act.csv"
+    act.write_text("feature,actual_cost\nsupport-chat,lots\n")
+    r, _, _ = _run(tmp_path, "--actuals", str(act))
+    assert r.returncode == 2 and "not numeric" in r.stderr
+
+
+def test_no_actuals_no_section(tmp_path):
+    _, d, md = _run(tmp_path)
+    assert "actuals" not in d and "Actuals vs model" not in md

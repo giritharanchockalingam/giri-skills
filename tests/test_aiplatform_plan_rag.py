@@ -165,3 +165,59 @@ def test_scripts_have_no_network_or_subprocess():
     for f in (REPO_ROOT / SKILL / "scripts").glob("*.py"):
         src = f.read_text(encoding="utf-8")
         assert not re.search(r"^\s*(import|from)\s+(socket|urllib|requests|http|subprocess)\b", src, re.M), f
+
+
+# --- brownfield: change plan against the live index config (--current-config) ---
+
+def _run_change(tmp_path, current: dict, cfg=None):
+    cur = tmp_path / "live.json"
+    cur.write_text(json.dumps(current), encoding="utf-8")
+    c = tmp_path / "cfg.json"
+    c.write_text(json.dumps(BASE_CFG if cfg is None else cfg), encoding="utf-8")
+    k = tmp_path / "corpus.csv"
+    k.write_text(CORPUS, encoding="utf-8")
+    out = tmp_path / "out"
+    r = run_script(SCRIPT, "--corpus", str(k), "--config", str(c), "--current-config", str(cur), "--out-dir", str(out))
+    return r, json.loads((out / "rag-plan.json").read_text(encoding="utf-8")), out
+
+
+def test_chunking_change_requires_reindex(tmp_path):
+    r, plan, out = _run_change(tmp_path, {**BASE_CFG, "chunk_size_chars": 1500, "chunk_overlap_chars": 150})
+    assert r.returncode == 0, r.stderr
+    cv = plan["change_vs_current"]
+    assert cv["reindex_required"] is True
+    assert [k["key"] for k in cv["changed_keys"]] == ["chunk_size_chars", "chunk_overlap_chars"]
+    assert cv["reindex_embedding_tokens"] == plan["sizing"]["total_embedding_tokens"]
+    assert cv["reindex_cost"] == plan["sizing"]["one_time_cost"]
+    assert (cv["current_total_chunks"], cv["proposed_total_chunks"], cv["delta_chunks"]) == (8500, 12700, 4200)
+    assert cv["delta_per_query_context_tokens"] == 1250 - 1875
+    md = (out / "rag-plan.md").read_text(encoding="utf-8")
+    assert "## Change vs current index" in md and "full re-index required: **yes**" in md
+
+
+def test_query_only_change_keeps_vectors(tmp_path):
+    r, plan, out = _run_change(tmp_path, {**BASE_CFG, "top_k": 3})
+    assert r.returncode == 0, r.stderr
+    cv = plan["change_vs_current"]
+    assert cv["reindex_required"] is False and cv["reindex_cost"] == 0
+    assert cv["changed_keys"] == [{"key": "top_k", "current": 3, "proposed": 5, "affects": "query"}]
+    assert "existing vectors stay valid" in (out / "rag-plan.md").read_text(encoding="utf-8")
+
+
+def test_embedding_model_change_requires_reindex(tmp_path):
+    _, plan, _ = _run_change(tmp_path, {**BASE_CFG, "embedding_model": "old-model"})
+    assert plan["change_vs_current"]["reindex_required"] is True
+
+
+def test_invalid_current_config_blocks(tmp_path):
+    bad = {k: v for k, v in BASE_CFG.items() if k != "top_k"}
+    r, plan, out = _run_change(tmp_path, bad)
+    assert r.returncode == 1
+    assert any(e.startswith("current config: config.top_k") for e in plan["blocking_errors"])
+    assert "change_vs_current" not in plan and not (out / "rag_pipeline.py").exists()
+
+
+def test_without_current_config_no_change_section(tmp_path):
+    _, plan, out = _run(tmp_path)
+    assert "change_vs_current" not in plan
+    assert "Change vs current index" not in (out / "rag-plan.md").read_text(encoding="utf-8")

@@ -75,6 +75,45 @@
         {"file": "pii-report.md", "check": "contains:\"`--strict` was set: the run fails (exit 1).\""},
         {"file": "pii-inventory.csv", "check": "contains:\"phone,phone,1.000,8,allow\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Re-scan this quarter's customer extract against our policy and tell me what changed since last quarter's PII inventory.",
+      "expected": [
+        "Reads last quarter's inventory: last_login_ip is a new PII column, comment now carries email, fax_number was removed, card_number handling moved from mask to tokenize; raw values never written"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/customers-sample.csv",
+        "policy": "evals/fixtures/policy.csv",
+        "previous": "evals/fixtures/inventory-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "pii-inventory.csv",
+          "check": "csv:[column,pii_types,match_rate,rows_scanned,handling,change_vs_previous]"
+        },
+        {
+          "file": "pii-inventory.csv",
+          "check": "contains:\"comment,email,0.375,8,mask,3,values,pii-added\""
+        },
+        {
+          "file": "pii-report.md",
+          "check": "sections:[\"Summary\",\"Column inventory\",\"Handling gaps\",\"Changes since last inventory\",\"Method\"]"
+        },
+        {
+          "file": "pii-report.md",
+          "check": "contains:\"| fax_number | removed | was phone | mask |\""
+        },
+        {
+          "file": "pii-report.md",
+          "check": "contains:\"PII that was not in the last inventory: last_login_ip, comment.\""
+        },
+        {
+          "file": "pii-report.md",
+          "check": "cmd:\"python3 -I scripts/scan_pii.py --leak-check {path} --data evals/fixtures/customers-sample.csv\""
+        }
+      ]
     }
   ]
 }

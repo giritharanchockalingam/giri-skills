@@ -10,7 +10,8 @@
     {"id": "govern",       "n": 8,  "name": "Govern",               "question": "Risks, controls and security sign-off."},
     {"id": "deploy",       "n": 9,  "name": "Deploy",               "question": "Cost, capacity, guardrails and rollout."},
     {"id": "operate",      "n": 10, "name": "Operate",              "question": "Is it healthy in production?"},
-    {"id": "improve",      "n": 11, "name": "Improve",              "question": "What do we change next, and how safely?"}
+    {"id": "improve",      "n": 11, "name": "Improve",              "question": "What do we change next, and how safely?",
+     "modes": ["existing"], "modes_why": "Improving always starts from something that exists: results, incidents, feedback or code."}
   ],
   "shelves": [
     {"id": "opportunity", "name": "Business · Opportunity", "question": "Win and shape the engagement (presales)."},

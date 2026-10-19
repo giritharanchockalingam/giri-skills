@@ -181,3 +181,79 @@ def test_deterministic(tmp_path):
 def test_offline_stdlib_only():
     src = (REPO_ROOT / SCRIPT).read_text(encoding="utf-8")
     assert not re.search(r"^\s*(import|from)\s+(socket|urllib|requests|httpx|http\.client|subprocess)\b", src, re.M)
+
+
+# --- brownfield: change classification and version bump vs production (--previous) ---
+
+def _run_prev(tmp_path, spec, prev):
+    p, q = tmp_path / "spec.json", tmp_path / "prev.json"
+    p.write_text(json.dumps(spec), encoding="utf-8")
+    q.write_text(json.dumps(prev), encoding="utf-8")
+    out = tmp_path / "out"
+    r = run_script(SCRIPT, "--spec", str(p), "--previous", str(q), "--out-dir", str(out))
+    lint = json.loads((out / "prompt-lint.json").read_text(encoding="utf-8")) if (out / "prompt-lint.json").exists() else None
+    return r, lint, out
+
+
+def _v(spec, version):
+    s = copy.deepcopy(spec)
+    s["version"] = version
+    return s
+
+
+def test_enum_value_added_needs_major(tmp_path):
+    new = _v(BASE, "1.1.0")
+    new["output_schema"]["properties"]["a"]["enum"] = ["x", "y", "z"]
+    r, lint, out = _run_prev(tmp_path, new, BASE)
+    assert r.returncode == 1 and "E-VERSION-BUMP" in codes(lint)
+    cv = lint["changes_vs_previous"]
+    assert (cv["required_bump"], cv["actual_bump"]) == ("major", "minor")
+    assert not (out / "prompt.md").exists()
+    new["version"] = "2.0.0"
+    r, lint, out = _run_prev(tmp_path, new, BASE)
+    assert r.returncode == 0, r.stderr
+    assert "## Changes since v1.0.0" in (out / "prompt.md").read_text(encoding="utf-8")
+
+
+def test_levels_for_variables_and_schema(tmp_path):
+    new = _v(BASE, "2.0.0")
+    new["task"] = "Q: {{q}} {{ctx}}"
+    new["variables"].append({"name": "ctx", "description": "c", "required": True})
+    del new["output_schema"]["properties"]["n"]
+    new["output_schema"]["properties"]["a"]["enum"] = ["x"]
+    new["examples"][0]["inputs"]["ctx"] = "c"
+    new["examples"][0]["output"].pop("n")
+    _, lint, _ = _run_prev(tmp_path, new, BASE)
+    got = {(c["where"], c["change"], c["level"]) for c in lint["changes_vs_previous"]["changes"]}
+    assert ("ctx", "required variable added", "major") in got
+    assert ("$.n", "property removed", "major") in got
+    assert ("$.a", "enum value 'y' removed", "minor") in got
+    assert ("task", "text changed", "minor") in got
+
+
+def test_unchanged_same_version_passes_and_downgrade_fails(tmp_path):
+    r, lint, _ = _run_prev(tmp_path, BASE, BASE)
+    assert r.returncode == 0
+    assert lint["changes_vs_previous"] == {"previous_version": "1.0.0", "changes": [], "required_bump": "none",
+                                           "actual_bump": "none"}
+    r, lint, _ = _run_prev(tmp_path, BASE, _v(BASE, "1.0.1"))
+    assert r.returncode == 1 and "E-VERSION-DOWN" in codes(lint)
+
+
+def test_examples_only_needs_patch_and_id_mismatch(tmp_path):
+    new = _v(BASE, "1.0.0")
+    new["examples"][0]["output"]["n"] = 3
+    r, lint, _ = _run_prev(tmp_path, new, BASE)
+    assert r.returncode == 1 and lint["changes_vs_previous"]["required_bump"] == "patch"
+    other = dict(_v(BASE, "1.0.0"), id="other")
+    r, lint, _ = _run_prev(tmp_path, BASE, other)
+    assert "E-PREV-ID" in codes(lint)
+
+
+def test_fixture_v1_1_to_v1_2_is_minor(tmp_path):
+    out = tmp_path / "out"
+    r = run_script(SCRIPT, "--spec", str(FX / "prompt-spec.json"), "--previous", str(FX / "prompt-spec-v1.1.0.json"),
+                   "--out-dir", str(out))
+    assert r.returncode == 0, r.stderr
+    cv = json.loads((out / "prompt-lint.json").read_text(encoding="utf-8"))["changes_vs_previous"]
+    assert (cv["required_bump"], cv["actual_bump"], len(cv["changes"])) == ("minor", "minor", 5)

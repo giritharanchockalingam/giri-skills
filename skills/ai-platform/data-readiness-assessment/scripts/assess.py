@@ -7,7 +7,7 @@ defaulted: a dimension whose threshold is absent is reported
 
 Usage:
   python3 -I assess.py --data sample.csv --requirements requirements.csv \
-      [--as-of 2026-10-01] --out-dir OUT
+      [--as-of 2026-10-01] [--previous earlier/readiness.json] --out-dir OUT
 
 Requirement keys (all optional; each one switches its dimension from TBD to scored):
   min_rows            integer   volume:       rows >= min_rows
@@ -21,6 +21,10 @@ Requirement keys (all optional; each one switches its dimension from TBD to scor
 Verdict: any fail -> "Not ready"; else any TBD -> "Ready-with-gaps"; else "Ready".
 Outputs: OUT/readiness.json (profile + dimension results), OUT/readiness.md
   (Verdict, Dimensions, Column profile, Gaps and owners).
+Re-check (--previous): the readiness.json of an earlier assessment (e.g. before a data fix). readiness.json
+gains `previous` and readiness.md "Change since last assessment": verdict then vs now and, per dimension,
+status and observed value then vs now with fixed | regressed | unchanged | newly scored (pass|fail) | now TBD. A change
+of requirements file between the two runs is stated, because the verdicts are then not like for like.
 Exit codes: 0 Ready / Ready-with-gaps · 1 Not ready · 2 missing or invalid input.
 Nulls: empty cells and the tokens NA, N/A, NULL, None, NaN, nil (case-insensitive).
 Type inference: the narrowest of integer < float < boolean < date < datetime < string that
@@ -349,11 +353,68 @@ def render_md(res: dict) -> str:
             else:
                 lines.append(f"| {d['dimension']} | {d['detail']} | {d['owner']} | "
                              f"Remediate at source or agree a waiver, then re-run. |")
+    if res.get("previous"):
+        lines += render_previous(res["previous"])
     if res["notes"]:
         lines += ["", "## Notes", ""] + [f"- {n}" for n in res["notes"]]
     lines += ["", "_Thresholds are the owner's requirements file; this assessment invents none. "
               "Nulls = empty or NA/N/A/NULL/None/NaN/nil._", ""]
     return "\n".join(lines)
+
+
+def load_previous(path: Path) -> dict:
+    if not path.is_file():
+        raise InputError(f"previous assessment not found: {path}")
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise InputError(f"previous assessment is not valid JSON: {e}") from e
+    if not isinstance(doc, dict) or "verdict" not in doc or not isinstance(doc.get("dimensions"), list):
+        raise InputError("previous file must be a readiness.json from this script (verdict and dimensions)")
+    for d in doc["dimensions"]:
+        if not isinstance(d, dict) or "dimension" not in d or "status" not in d:
+            raise InputError("previous readiness.json: every dimension needs dimension and status")
+    return doc
+
+
+def _transition(was: str | None, now: str) -> str:
+    if was is None:
+        return "not assessed before"
+    if was == now:
+        return "unchanged"
+    if now == "TBD":
+        return "now TBD"
+    if was == "TBD":
+        return f"newly scored ({now})"
+    return "fixed" if now == "pass" else "regressed"
+
+
+def compare(res: dict, prev: dict, source: str) -> dict:
+    was = {d["dimension"]: d for d in prev["dimensions"]}
+    dims = [{"dimension": d["dimension"], "status_was": (was.get(d["dimension"]) or {}).get("status"),
+             "status_now": d["status"], "observed_was": (was.get(d["dimension"]) or {}).get("observed"),
+             "observed_now": d["observed"],
+             "change": _transition((was.get(d["dimension"]) or {}).get("status"), d["status"])}
+            for d in res["dimensions"]]
+    notes = []
+    if prev.get("requirements") is not None and prev.get("requirements") != res["requirements"]:
+        notes.append("The requirements differ between the two assessments; verdicts are not like for like.")
+    return {"source": source, "dataset_was": (prev.get("source") or {}).get("dataset"),
+            "verdict_was": prev["verdict"], "verdict_now": res["verdict"], "dimensions": dims,
+            "fixed": [d["dimension"] for d in dims if d["change"] == "fixed"],
+            "regressed": [d["dimension"] for d in dims if d["change"] == "regressed"], "notes": notes}
+
+
+def render_previous(pv: dict) -> list[str]:
+    L = ["", "## Change since last assessment", "",
+         f"Compared with `{pv['source']}` (dataset `{pv['dataset_was'] or 'not recorded'}`): "
+         f"verdict {pv['verdict_was']} → {pv['verdict_now']}.", "",
+         "| Dimension | Status then | Status now | Observed then | Observed now | Change |", "|---|---|---|---|---|---|"]
+    L += [f"| {d['dimension']} | {d['status_was'] or '—'} | {d['status_now']} | {_cell(d['observed_was'])} | "
+          f"{_cell(d['observed_now'])} | {d['change']} |" for d in pv["dimensions"]]
+    L += ["", f"Fixed: {', '.join(pv['fixed']) or 'none'}. Regressed: {', '.join(pv['regressed']) or 'none'}."]
+    L += [f"- Note: {n}" for n in pv["notes"]]
+    return L
 
 
 def assess(data: Path, requirements: Path, as_of_s: str | None) -> dict:
@@ -381,10 +442,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--data", type=Path, required=True, help="sample dataset CSV with a header row")
     ap.add_argument("--requirements", type=Path, required=True, help="owner requirements CSV (key,value)")
     ap.add_argument("--as-of", help="ISO date the freshness age is measured from")
+    ap.add_argument("--previous", type=Path, help="readiness.json from an earlier assessment, to show change")
     ap.add_argument("--out-dir", type=Path, required=True, help="directory for readiness.json and readiness.md")
     args = ap.parse_args(argv)
     try:
+        prev = load_previous(args.previous) if args.previous else None
         res = assess(args.data, args.requirements, args.as_of)
+        if prev is not None:
+            res["previous"] = compare(res, prev, args.previous.name)
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

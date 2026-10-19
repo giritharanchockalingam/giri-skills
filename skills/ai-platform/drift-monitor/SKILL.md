@@ -8,6 +8,8 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      existing: {case: agent-happy-path, bring: "a baseline window and a recent window from production"}
     inputs:
       - {name: baseline, type: csv, required: true, from: "reference window CSV with a header row (e.g. launch-week inputs, outputs or scores)"}
       - {name: current, type: csv, required: true, from: "window to test, CSV with the same columns as the baseline"}
@@ -26,6 +28,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/drift-monitor --input <name>=<value> … --out <dir>` (see `--explain ai-platform/drift-monitor`). Report the `run.json` results; do not hand-write the deliverables the script produces (`drift.csv`, `drift-report.md`, `drift.json`). Any feature in alert fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which re-derives each status from `drift.json`.
+
+## Starting points
+- **Existing:** a baseline window and a recent window from the running system; each feature's PSI, KS or chi-square result is judged against your thresholds.
+- Only for existing: drift compares live data against a baseline, so there is nothing to measure before a system runs.
 
 ## When to use
 - ADLC operate stage: a scheduled check of this week's inputs, outputs or model scores against a launch or last-known-good baseline.

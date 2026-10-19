@@ -169,3 +169,51 @@ def test_deterministic(tmp_path):
 def test_offline_stdlib_only():
     src = (REPO_ROOT / SCRIPT).read_text(encoding="utf-8")
     assert not re.search(r"^\s*(import|from)\s+(socket|urllib|requests|httpx|http\.client|subprocess)\b", src, re.M)
+
+
+# --- brownfield: the model in production today (--incumbent) ---
+
+def _run_inc(tmp_path, incumbent, workload=True):
+    out = tmp_path / "out"
+    args = ["--candidates", str(FX / "candidates.csv"), "--criteria", str(FX / "criteria.csv"),
+            "--incumbent", incumbent, "--out-dir", str(out)]
+    if workload:
+        args += ["--workload", str(FX / "workload.csv")]
+    r = run_script(SCRIPT, *args)
+    res = json.loads((out / "ranking.json").read_text()) if (out / "ranking.json").exists() else None
+    md = (out / "decision.md").read_text() if (out / "decision.md").exists() else ""
+    return r, res, md
+
+
+def test_incumbent_eliminated_switch_with_saving(tmp_path):
+    r, res, md = _run_inc(tmp_path, "Delta-Pro (fictional)")
+    assert r.returncode == 0, r.stderr
+    inc = res["incumbent"]
+    assert inc["eliminated"] and inc["rank"] is None and inc["score_gap"] is None
+    assert (inc["verdict"], inc["switch_to"]) == ("switch", "Atlas-L (fictional)")
+    assert inc["monthly_cost_delta_usd"] == -2140.0
+    assert inc["monthly_cost_change"] == {"direction": "saving", "amount_usd": 2140.0}
+    better = {c["criterion"]: c["better"] for c in inc["criteria"]}
+    assert better == {"task_accuracy": "incumbent", "groundedness": "winner", "monthly_cost_usd": "winner",
+                      "p95_latency_ms": "winner"}
+    assert "## Incumbent" in md and "switch to Atlas-L (fictional)" in md
+    assert res["ranking"][0]["model"] == "Atlas-L (fictional)"  # ranking unchanged
+
+
+def test_incumbent_survivor_gap_and_increase(tmp_path):
+    r, res, md = _run_inc(tmp_path, "Birch-70 (fictional)")
+    assert r.returncode == 0
+    inc = res["incumbent"]
+    assert inc["rank"] == 2 and inc["score_gap"] == round(0.6 - 0.49, 4)
+    assert inc["monthly_cost_change"] == {"direction": "increase", "amount_usd": 3744.0}
+
+
+def test_incumbent_is_winner_stays(tmp_path):
+    _, res, md = _run_inc(tmp_path, "Atlas-L (fictional)")
+    assert res["incumbent"]["verdict"] == "stay" and res["incumbent"]["score_gap"] == 0
+    assert "Verdict: **stay**" in md
+
+
+def test_unknown_incumbent_is_input_error(tmp_path):
+    r, res, _ = _run_inc(tmp_path, "Nope (fictional)")
+    assert r.returncode == 2 and "not a model in the candidates CSV" in r.stderr and res is None

@@ -2,6 +2,7 @@
 """Seeded synthetic demo data from a demo spec's entity field tables (assets/demo-spec.md §7).
 
     python3 -I scripts/gen_synthetic.py demo-spec.md --out-dir runs/x [--rows 200] [--seed 42]
+    python3 -I scripts/gen_synthetic.py demo-spec-v2.md --existing demo/ --out-dir runs/y   # extend a demo
 
 Spec layout: under "## 7. Synthetic data plan", one `### <entity>` heading per entity followed by a
 `| Field | Type | Example | Constraints |` table. The §7 volume table (`| Entity | Volume | ... |`)
@@ -22,6 +23,14 @@ Types and constraints:
 PII guard: a field typed ssn, credit_card, phone, phone_real, passport or iban, or a field name
 containing ssn / social_security / credit_card / card_number / passport / iban, is refused (exit 1):
 demos must not carry real-looking identifiers. Emails are only ever @example.com.
+
+Brownfield (--existing DIR): DIR holds the demo's current data-manifest.json and data/*.csv. The demo is
+extended without moving what the walkthrough relies on: existing rows keep every value of every column
+the spec still has (so planted cases stay put); new columns, new rows and new entities are generated with
+RNG streams derived from the seed and the entity/field name; rows beyond a lowered volume are trimmed;
+dropped columns are removed; a column whose type changed (manifest column_types) is regenerated; a kept
+ref value whose target row no longer exists is redrawn. The manifest gains "extended_from" with the
+per-entity changes.
 
 Writes {out}/data/<entity>.csv and {out}/data-manifest.json (demo, seed, demo_date, pii_guard,
 entities: [{entity, rows, columns, file}]). Deterministic for a given seed. Exit 1 on a missing spec,
@@ -156,12 +165,78 @@ def make_value(f: dict, i: int, rng: random.Random, generated: dict[str, list[di
     return ""
 
 
+def load_existing(d: Path) -> tuple[dict, dict[str, list[dict]]]:
+    mf = d / "data-manifest.json"
+    if not mf.is_file():
+        die(f"--existing {d}: no data-manifest.json")
+    try:
+        manifest = json.loads(mf.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        die(f"{mf}: invalid JSON: {e}")
+    rows: dict[str, list[dict]] = {}
+    for e in manifest.get("entities", []):
+        fp = d / e.get("file", "")
+        if not fp.is_file():
+            die(f"--existing {d}: {e.get('file')} listed in the manifest is missing")
+        with fp.open(newline="", encoding="utf-8") as fh:
+            rows[e["entity"]] = list(csv.DictReader(fh))
+    return manifest, rows
+
+
+def _stream(seed: int, *parts: str) -> random.Random:
+    return random.Random(f"{seed}:" + ":".join(parts))
+
+
+def extend_entity(ent: str, fields: list[dict], n: int, seed: int, old_rows: list[dict] | None,
+                  old_types: dict[str, str], generated: dict[str, list[dict]]) -> tuple[list[dict], dict]:
+    """Rows for one entity, keeping existing values where the spec still allows them."""
+    if old_rows is None:
+        rng = _stream(seed, ent)
+        rows = []
+        for i in range(1, n + 1):
+            row: dict = {}
+            for f in fields:
+                row[f["field"]] = make_value(f, i, rng, generated, ent, row)
+            rows.append(row)
+        return rows, {"entity": ent, "change": "added", "rows": n}
+    old_cols = list(old_rows[0].keys()) if old_rows else []
+    names = [f["field"] for f in fields]
+    retyped = [f["field"] for f in fields if f["field"] in old_types and old_types[f["field"]] != f["type"]]
+    keep = [c for c in names if c in old_cols and c not in retyped]
+    new_cols = [c for c in names if c not in old_cols]
+    col_rng = {f["field"]: _stream(seed, ent, f["field"]) for f in fields}
+    tail_rng = _stream(seed, ent, "append")
+    rows, repaired = [], 0
+    for i in range(1, n + 1):
+        row: dict = {}
+        old = old_rows[i - 1] if i <= len(old_rows) else None
+        for f in fields:
+            k = f["field"]
+            if old is not None and k in keep:
+                v = old[k]
+                if f["type"] == "ref":
+                    src, fld = f["constraints"].get("entity", "").lower().replace(" ", "_"), f["constraints"].get("field", "")
+                    if src in generated and v not in {r.get(fld) for r in generated[src]}:
+                        v = make_value(f, i, col_rng[k], generated, ent, row)
+                        repaired += 1
+                row[k] = v
+            else:
+                row[k] = make_value(f, i, col_rng[k] if old is not None else tail_rng, generated, ent, row)
+        rows.append(row)
+    change = {"entity": ent, "change": "extended", "rows_kept": min(n, len(old_rows)),
+              "rows_added": max(0, n - len(old_rows)), "rows_trimmed": max(0, len(old_rows) - n),
+              "columns_added": new_cols, "columns_removed": [c for c in old_cols if c not in names],
+              "columns_regenerated": retyped, "refs_redrawn": repaired}
+    return rows, change
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="demo-spec.md entity tables -> seeded synthetic CSVs + manifest")
     ap.add_argument("spec")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--rows", type=int, default=200, help="rows per entity unless the spec's volume table says otherwise")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--existing", help="demo folder with data-manifest.json + data/ to extend (planted rows kept)")
     a = ap.parse_args()
     sp = Path(a.spec)
     if not sp.is_file():
@@ -170,6 +245,9 @@ def main() -> int:
         die("--rows must be >= 1")
     entities, volumes = parse_spec(sp)
     pii_check(entities)
+    old_manifest, old_rows = load_existing(Path(a.existing)) if a.existing else (None, {})
+    old_types = {e["entity"]: e.get("column_types", {}) for e in (old_manifest or {}).get("entities", [])}
+    changes = []
     title = re.search(r"^#\s+Demo Spec\s+[—-]\s+(.+?)\s+[—-]", sp.read_text(encoding="utf-8"), re.M)
     out = Path(a.out_dir)
     data = out / "data"
@@ -179,24 +257,39 @@ def main() -> int:
     manifest = []
     for ent, fields in entities.items():
         n = volumes.get(ent, a.rows)
-        rows = []
-        for i in range(1, n + 1):
-            row: dict = {}
-            for f in fields:
-                row[f["field"]] = make_value(f, i, rng, generated, ent, row)
-            rows.append(row)
+        if old_manifest is not None:
+            rows, ch = extend_entity(ent, fields, n, a.seed, old_rows.get(ent), old_types.get(ent, {}), generated)
+            changes.append(ch)
+        else:
+            rows = []
+            for i in range(1, n + 1):
+                row: dict = {}
+                for f in fields:
+                    row[f["field"]] = make_value(f, i, rng, generated, ent, row)
+                rows.append(row)
         generated[ent] = rows
         path = data / f"{ent}.csv"
         with path.open("w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=[f["field"] for f in fields])
             w.writeheader()
             w.writerows(rows)
-        manifest.append({"entity": ent, "rows": n, "columns": [f["field"] for f in fields], "file": f"data/{ent}.csv"})
-    (out / "data-manifest.json").write_text(json.dumps({
-        "demo": title.group(1).strip() if title else sp.stem, "spec": sp.name, "seed": a.seed,
-        "demo_date": DEMO_DATE.isoformat(), "pii_guard": "passed", "email_domain": "example.com",
-        "label": "Sample data — generated for demonstration", "entities": manifest}, indent=2) + "\n", encoding="utf-8")
+        manifest.append({"entity": ent, "rows": n, "columns": [f["field"] for f in fields], "file": f"data/{ent}.csv",
+                         "column_types": {f["field"]: f["type"] for f in fields}})
+    doc = {"demo": title.group(1).strip() if title else sp.stem, "spec": sp.name, "seed": a.seed,
+           "demo_date": DEMO_DATE.isoformat(), "pii_guard": "passed", "email_domain": "example.com",
+           "label": "Sample data — generated for demonstration", "entities": manifest}
+    if old_manifest is not None:
+        gone = [e for e in old_rows if e not in entities]
+        changes += [{"entity": e, "change": "removed", "rows": len(old_rows[e])} for e in gone]
+        for e in gone:
+            stale = data / f"{e}.csv"
+            if stale.is_file() and out.resolve() == Path(a.existing).resolve():
+                stale.unlink()
+        doc["extended_from"] = {"spec": old_manifest.get("spec"), "seed": old_manifest.get("seed"), "changes": changes}
+    (out / "data-manifest.json").write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
     print(f"synthetic data: {len(manifest)} entities, {sum(m['rows'] for m in manifest)} rows, seed {a.seed} -> {data}")
+    if old_manifest is not None:
+        print("extended: " + "; ".join(f"{c['entity']} {c['change']}" for c in changes))
     return 0
 
 

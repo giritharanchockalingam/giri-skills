@@ -100,6 +100,26 @@
         {"file": "agreement-report.md", "check": "contains:\"**No agreement score: no item has ratings from 2 or more annotators\""},
         {"file": "agreement.json", "check": "contains:\"\\\"status\\\": \\\"insufficient\\\"\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We revised the guidelines after the pilot and relabelled. Did agreement improve on the Northwind intent labels? Here is the pilot's agreement result.",
+      "expected": [
+        "Reads the pilot agreement.json: alpha 0.321 -> 0.595 (improved), disputed items 12 -> 7, every label at or above its pilot agreement; gate at 0.5 passes"
+      ],
+      "inputs": {
+        "labels": "evals/fixtures/labels.csv",
+        "guidelines": "evals/fixtures/guidelines.md",
+        "min_agreement": "0.5",
+        "previous": "evals/fixtures/previous-agreement.json"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "agreement-report.md", "check": "sections:[\"Summary\",\"Change since previous round\",\"Method & limits\"]"},
+        {"file": "agreement-report.md", "check": "contains:\"alpha improved (0.321 → 0.595)\""},
+        {"file": "agreement-report.md", "check": "contains:\"| Disputed items | 12 | 7 | -5 |\""},
+        {"file": "agreement.json", "check": "contains:\"\\\"previous_round\\\"\""}
+      ]
     }
   ]
 }

@@ -12,13 +12,17 @@ metadata:
       - {name: corpus, type: csv, required: true, from: "corpus profile CSV: source, doc_count, avg_chars, update_frequency (static|yearly|quarterly|monthly|weekly|daily or updates per month), optional change_fraction (layout: assets/corpus-profile.example.csv)"}
       - {name: config, type: json, required: true, from: "RAG config JSON: chunk_size_chars, chunk_overlap_chars, embedding_price_per_1m_tokens (user-supplied, no default), top_k, reranker yes/no, vector_store, context_budget_tokens; optional embedding_model, embedding_provider, rerank_fetch_k, chars_per_token, currency, price_date (layout: assets/rag-config.example.json)"}
       - {name: review, type: flag, required: false, flag: "--review", from: "yes to add an LLM review of the plan against the upstream langchain-rag guidance"}
+      - {name: current_config, type: json, required: false, from: "the RAG config JSON the live index was built with; adds the change plan (re-index needed or not, its cost, deltas)"}
     run:
-      - {step: plan, kind: script, cmd: "python3 -I scripts/plan_rag.py --corpus {corpus} --config {config} --out-dir {out}", stdout: "{out}/plan.log"}
+      - {step: plan, kind: script, cmd: "python3 -I scripts/plan_rag.py --corpus {corpus} --config {config} [--current-config {current_config}] --out-dir {out}", stdout: "{out}/plan.log"}
       - {step: upstream-review, kind: llm, template: assets/rag-review-template.md, context: ["../../../vendor/langchain-rag/SKILL.md", "{out}/rag-plan.md", "{out}/rag-plan.json", "{out}/rag_pipeline.py"], out: "{out}/rag-review.md", skip_if_missing: [review]}
     outputs:
       - {path: "{out}/rag-plan.json", checks: [exists, json, contains:"\"ok\": true"]}
       - {path: "{out}/rag-plan.md", checks: [exists, sections:["Sizing","Cost","Retrieval budget","Warnings","Scaffold"], no_unowned_tbd, numbers_trace_to:"{out}/rag-plan.json"]}
       - {path: "{out}/rag_pipeline.py", checks: [exists, contains:"RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)", cmd:"python3 scripts/check_syntax.py {path} --require ingest --require retrieve --require make_embeddings --require make_vector_store"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "your corpus profile and the RAG settings you plan"}
+      existing: {case: agent-mode-existing, bring: "your corpus profile, live index settings and the change"}
 ---
 
 # LangChain RAG Runner
@@ -27,6 +31,10 @@ Wraps langchain-rag from langchain-ai/langchain-skills (pinned in vendor/pins.js
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langchain-rag-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langchain-rag-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`rag-plan.json`, `rag-plan.md`, `rag_pipeline.py`). A blocked plan (exit 1) is the gate working: fix the config or corpus profile and re-run.
+
+## Starting points
+- **New** — size, cost and scaffold a pipeline from a corpus profile and the settings you plan.
+- **Existing** — also pass the config the live index was built with as `current_config`: both are sized on the same corpus and the plan adds "Change vs current index" (changed keys, whether a full re-index is needed and its one-off cost, deltas in chunks, monthly cost and context per query).
 
 ## When to use
 - Before building a LangChain RAG pipeline: how many chunks, how many embedding tokens, what it costs to embed and keep fresh, whether `top_k` chunks fit the context.

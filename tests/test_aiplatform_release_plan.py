@@ -108,3 +108,67 @@ def test_missing_and_invalid_inputs_exit_2(tmp_path):
     assert r2.returncode == 2 and "never defaulted" in r2.stderr
     no_bound = _write(tmp_path, "nb.csv", "stage,metric,min,max\noffline_eval,eval_pass_rate,,\n")
     assert _run(tmp_path, gates=no_bound)[0].returncode == 2
+
+
+# ---------------------------------------------------------------- rollout already under way (current_stage)
+
+def _inflight(tmp_path, **overrides):
+    lines = []
+    for ln in (FX / "facts-in-flight.csv").read_text(encoding="utf-8").splitlines():
+        key = ln.split(",", 1)[0]
+        if key in overrides:
+            if overrides[key] is None:
+                continue
+            ln = f"{key},{overrides[key]},test,"
+        lines.append(ln)
+    return _write(tmp_path, "inflight.csv", "\n".join(l for l in lines if not l.startswith("#")) + "\n")
+
+
+def test_in_flight_promotes_when_gates_met_and_enough_observed(tmp_path):
+    r, plan, md = _run(tmp_path, facts=FX / "facts-in-flight.csv")
+    assert r.returncode == 0, r.stderr
+    cur = plan["current"]
+    assert cur["stage"] == "canary_1" and cur["decision"] == "PROMOTE" and cur["next_stage"] == "canary_2"
+    assert cur["observed_requests"] == 2350 and cur["required_requests"] == 2000 and cur["remaining_requests"] is None
+    assert cur["decision_owner"] == "Release Manager (fictional)"
+    assert "**In flight — Canary 1 (5% traffic): PROMOTE to Canary 2.** Every canary gate met; " \
+           "2350 requests observed, 2000 required." in md
+
+
+def test_in_flight_holds_until_enough_requests(tmp_path):
+    r, plan, md = _run(tmp_path, facts=_inflight(tmp_path, current_stage_observed_requests="1500"))
+    assert r.returncode == 0, r.stderr
+    assert plan["current"]["decision"] == "HOLD" and plan["current"]["remaining_requests"] == 500
+    assert "Requests still to observe at this stage: 500." in md
+    r, plan, _ = _run(tmp_path, facts=_inflight(tmp_path, current_stage_observed_requests=None))
+    assert plan["current"]["decision"] == "HOLD" and TBD in plan["current"]["reasons"][0]
+
+
+def test_in_flight_breach_rolls_back_exit_1(tmp_path):
+    r, plan, md = _run(tmp_path, facts=_inflight(tmp_path, error_rate="0.02"))
+    assert r.returncode == 1 and "ROLL BACK" in r.stderr
+    cur = plan["current"]
+    assert cur["decision"] == "ROLL BACK" and cur["reasons"] == ["gate not met now: error_rate"]
+    assert cur["decision_owner"] == "SRE Rota (fictional)" and cur["next_stage"] is None
+    assert "ROLL BACK.**" in md
+
+
+def test_in_flight_unmeasured_gate_holds_and_ga_completes(tmp_path):
+    r, plan, _ = _run(tmp_path, facts=_inflight(tmp_path, latency_p95_ms=None))
+    assert r.returncode == 0 and plan["current"]["decision"] == "HOLD"
+    assert "gate not measured: latency_p95_ms" in plan["current"]["reasons"]
+    r, plan, md = _run(tmp_path, facts=_inflight(tmp_path, current_stage="ga"))
+    assert r.returncode == 0 and plan["current"]["decision"] == "COMPLETE" and plan["current"]["required_requests"] is None
+    assert "**In flight — GA (100% traffic): COMPLETE.**" in md
+
+
+def test_in_flight_invalid_stage_or_count_exit_2(tmp_path):
+    r, _, _ = _run(tmp_path, facts=_inflight(tmp_path, current_stage="canary_9"))
+    assert r.returncode == 2 and "not a stage of this plan" in r.stderr
+    r, _, _ = _run(tmp_path, facts=_inflight(tmp_path, current_stage_observed_requests="lots"))
+    assert r.returncode == 2
+
+
+def test_no_current_stage_keeps_plan_unchanged(tmp_path):
+    _, plan, md = _run(tmp_path)
+    assert plan["current"] is None and "In flight" not in md

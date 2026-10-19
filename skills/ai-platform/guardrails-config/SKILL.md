@@ -11,18 +11,26 @@ metadata:
     inputs:
       - {name: policy, type: json, required: true, from: "guardrail policy (layout: assets/policy-template.json) - blocked_topics, pii_handling, max_input_chars, max_output_chars, allowed_tools, optional injection_markers"}
       - {name: tests, type: csv, required: false, from: "test cases case_id,direction,text,expected[,tool] (layout: assets/test-inputs-template.csv); absent = tests to be baselined"}
+      - {name: baseline, type: json, required: false, from: "the compiled guardrails.json live today; the run diffs the new rules against it (tightened/loosened) and replays the tests on both"}
     run:
-      - {step: compile-and-test, kind: script, cmd: "python3 -I scripts/build_guardrails.py --policy {policy} [--tests {tests}] --out {out}"}
+      - {step: compile-and-test, kind: script, cmd: "python3 -I scripts/build_guardrails.py --policy {policy} [--tests {tests}] [--baseline {baseline}] --out {out}"}
     outputs:
       - {path: "{out}/guardrails.json", checks: [exists, json, cmd:"python3 scripts/guard.py --rules {path} --validate"]}
       - {path: "{out}/guardrail-tests.json", checks: [exists, json, cmd:"python3 scripts/guard.py --scan-pii {path}"]}
       - {path: "{out}/guardrails.md", checks: [exists, sections:["Rule set","PII handling","Tool allowlist","Test results","Limits"], no_unowned_tbd, cmd:"python3 scripts/guard.py --scan-pii {path}"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "your guardrail policy and test cases"}
+      existing: {case: agent-mode-existing, bring: "the rule set live today plus your revised policy"}
 ---
 
 # Guardrails Config
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/guardrails-config --input <name>=<value> … --out <dir>` (see `--explain ai-platform/guardrails-config`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`guardrails.json`, `guardrail-tests.json`, `guardrails.md`). A test case whose actual decision differs from its expected one fails the run (exit 1) on purpose; fix the policy or the expectation, never the output.
+
+## Starting points
+- **New** — compile a policy written from `assets/policy-template.json` and test it with your cases.
+- **Existing** — also pass the `guardrails.json` live today as `baseline`: every rule change is marked tightened or loosened, each test case is replayed on both rule sets, and loosened rules are flagged for sign-off ("Changes vs live rules").
 
 ## When to use
 - Before deploying an LLM app or agent: a first, deterministic layer for prompt-injection markers, banned topics, PII, length and tool access.

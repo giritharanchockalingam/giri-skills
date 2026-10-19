@@ -75,6 +75,38 @@
         "exit:1",
         "exists:retrieval-metrics.json"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We switched the live retriever to hybrid search. Compare it with last release's retrieval metrics and fail if recall@5 drops more than 5 points.",
+      "expected": [
+        "Compares with the baseline: recall@5 +0.0333 and MRR +0.0833, Q006 newly found, Q005 newly missed (flagged despite the better average), Q007 new; the regression gate passes"
+      ],
+      "inputs": {
+        "eval_set": "evals/fixtures/eval-set-live.csv",
+        "baseline": "evals/fixtures/metrics-baseline.json",
+        "max_drop": "0.05",
+        "at": "5"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "retrieval-metrics.txt",
+          "check": "contains:\"newly_missed=Q005 newly_found=Q006 new_queries=Q007\""
+        },
+        {
+          "file": "retrieval-metrics.txt",
+          "check": "contains:\"REGRESSION GATE PASSED: recall@5 changed +0.0333 (max drop 0.05)\""
+        },
+        {
+          "file": "retrieval-metrics.json",
+          "check": "contains:\"\\\"dropped_queries\\\": []\""
+        },
+        {
+          "file": "retrieval-metrics.json",
+          "check": "contains:\"\\\"per_query_basis\\\": \\\"query ids in both runs\\\"\""
+        }
+      ]
     }
   ]
 }

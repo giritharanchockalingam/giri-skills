@@ -2,6 +2,7 @@
 """Rank an AI use-case portfolio from a scoring CSV (assets/use-case-scoring.csv layout).
 
     python3 -I scripts/score_portfolio.py use-cases.csv --out-dir runs/x [--org "Acme"]
+                                          [--previous last-review/portfolio.csv]
 
 Input columns (asset layout; short aliases accepted): id, use_case, business_owner,
 value_V|value, feasibility_F|feasibility, data_readiness_D|data_readiness, risk_R|risk,
@@ -17,6 +18,11 @@ Bands: Stop (V<=2, F=1 or R=5) -> Now (top quartile, R<=3, D>=3, owner + baselin
 Writes: portfolio.csv (ranked rows only, score always filled), unscored.csv (rows that
 could not be ranked, with reason), portfolio.md (ranked table, quadrant summary, unscored
 list). Exit 1 on missing columns, a score outside 1-5, or no data rows. Stdlib only.
+
+Re-review (--previous): the portfolio.csv of an earlier run (rank, id, band at least). portfolio.csv then
+gains previous_rank, previous_band and movement (new | up N | down N | same); portfolio.md gains "Changes since
+last review", which also lists ids ranked last time that are now unscored or no longer in the list. Movement is
+computed from the two files only; nothing is carried over from the earlier scores.
 """
 from __future__ import annotations
 
@@ -63,6 +69,38 @@ def axis(row: dict, ax: str) -> str:
     return ""
 
 
+PREV_COLS = ["previous_rank", "previous_band", "movement"]
+
+
+def read_previous(path: str) -> dict[str, dict]:
+    """Earlier portfolio.csv -> {id: {rank, band, use_case}}."""
+    p = Path(path)
+    if not p.is_file():
+        die(f"previous portfolio not found: {p}")
+    with p.open(encoding="utf-8-sig", newline="") as f:
+        rows = [{(k or "").strip(): (v or "").strip() for k, v in r.items()} for r in csv.DictReader(f)]
+    if not rows:
+        die(f"{p.name}: previous portfolio has no rows")
+    for col in ("rank", "id", "band"):
+        if col not in rows[0]:
+            die(f"{p.name}: previous portfolio needs columns rank,id,band (a portfolio.csv from this script)")
+    prev: dict[str, dict] = {}
+    for i, r in enumerate(rows, 2):
+        if not r["rank"].isdigit():
+            die(f"{p.name} row {i}: rank must be a whole number, got {r['rank']!r}")
+        if r["id"] in prev:
+            die(f"{p.name} row {i}: duplicate id {r['id']!r}")
+        prev[r["id"]] = {"rank": int(r["rank"]), "band": r["band"], "use_case": r.get("use_case", "")}
+    return prev
+
+
+def movement(now_rank: int, was: dict | None) -> str:
+    if was is None:
+        return "new"
+    d = was["rank"] - now_rank
+    return "same" if d == 0 else (f"up {d}" if d > 0 else f"down {-d}")
+
+
 def quadrant(v: int, f: int) -> str:
     if v >= 3 and f >= 3:
         return "Quick win (V>=3, F>=3)"
@@ -78,8 +116,10 @@ def main() -> int:
     ap.add_argument("use_cases", help="CSV in assets/use-case-scoring.csv layout")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--org", default="<Organization>")
+    ap.add_argument("--previous", help="portfolio.csv from the last review, to show movement")
     a = ap.parse_args()
     rows = read_rows(a.use_cases)
+    prev = read_previous(a.previous) if a.previous else None
 
     ranked, unscored = [], []
     for i, r in enumerate(rows, 2):
@@ -129,11 +169,16 @@ def main() -> int:
         rec["evidence"] = rec["evidence"] or TBD
         rec["business_owner"] = rec["business_owner"] or TBD
         rec["baseline_metric"] = rec["baseline_metric"] or TBD
+        if prev is not None:
+            was = prev.get(rec["id"])
+            rec["previous_rank"] = was["rank"] if was else ""
+            rec["previous_band"] = was["band"] if was else ""
+            rec["movement"] = movement(k, was)
 
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     with (out / "portfolio.csv").open("w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=OUT_COLS, extrasaction="ignore")
+        w = csv.DictWriter(fh, fieldnames=OUT_COLS + (PREV_COLS if prev is not None else []), extrasaction="ignore")
         w.writeheader()
         w.writerows(ranked)
     with (out / "unscored.csv").open("w", newline="", encoding="utf-8") as fh:
@@ -163,6 +208,20 @@ def main() -> int:
     L += ["", "## Unscored (not ranked — score before the next review)", "| ID | Use case | Owner | Missing |", "|---|---|---|---|"]
     L += [f"| {u['id']} | {u['use_case']} | {u['business_owner'] or TBD} | {u['reason']} |" for u in unscored] \
         or ["| none | | | |"]
+    if prev is not None:
+        ranked_ids = {r["id"] for r in ranked}
+        unscored_ids = {u["id"] for u in unscored}
+        band_moves = [r for r in ranked if r["previous_band"] and r["previous_band"] != r["band"]]
+        L += ["", "## Changes since last review",
+              f"Compared with `{Path(a.previous).name}` ({len(prev)} ranked then, {n} ranked now). "
+              f"{sum(1 for r in ranked if r['movement'] == 'new')} new, {len(band_moves)} changed band.", "",
+              "| ID | Use case | Rank then | Rank now | Movement | Band then | Band now |", "|---|---|---|---|---|---|---|"]
+        L += [f"| {r['id']} | {r['use_case']} | {r['previous_rank'] or '—'} | {r['rank']} | {r['movement']} | "
+              f"{r['previous_band'] or '—'} | {r['band']} |" for r in ranked]
+        for pid, was in sorted(prev.items(), key=lambda kv: kv[1]["rank"]):
+            if pid not in ranked_ids:
+                status = "now unscored (see Unscored)" if pid in unscored_ids else "no longer in the list"
+                L.append(f"| {pid} | {was['use_case']} | {was['rank']} | — | {status} | {was['band']} | — |")
     L += ["", "Scores are taken from the input file as supplied; no axis was inferred. "
           f"Evidence gaps are marked {TBD}."]
     (out / "portfolio.md").write_text("\n".join(L) + "\n", encoding="utf-8")

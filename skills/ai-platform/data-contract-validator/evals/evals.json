@@ -109,6 +109,24 @@
         {"file": "contract-report.md", "check": "contains:\"`question`: quality metric `missingValues` not evaluated (outside the supported subset)\""},
         {"file": "contract-report.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "We are onboarding the invoice feed and have no data contract yet. Draft one from this first extract and check it.",
+      "expected": [
+        "Drafts contract-draft.csv from the extract: invoice_id required and unique, currency and channel as enums, email and answer with observed null limits, every rule at warn severity with owners left to the Data owner; validation passes by construction and the report says so"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/invoices-warn.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "contract-draft.csv", "check": "contains:\"# DRAFT contract inferred by validate_contract.py from invoices-warn.csv (8 rows).\""},
+        {"file": "contract-draft.csv", "check": "contains:\"invoice_id,string,yes,yes,,,,,,warn,,\""},
+        {"file": "contract-draft.csv", "check": "contains:\"currency,enum,yes,no,,,EUR|GBP|USD,,,warn,,\""},
+        {"file": "contract-report.md", "check": "contains:\"Contract: **DRAFT** inferred from an extract\""},
+        {"file": "contract-report.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

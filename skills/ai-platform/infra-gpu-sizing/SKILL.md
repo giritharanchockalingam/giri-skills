@@ -17,12 +17,19 @@ metadata:
     outputs:
       - {path: "{out}/sizing.json", checks: [exists, json]}
       - {path: "{out}/sizing.txt", checks: [exists, contains:"gpus_required"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "your planned users, request volumes, benchmarks and prices"}
+      existing: {case: agent-mode-existing, bring: "your production volumes and the GPU fleet running today"}
 ---
 
 # Infra & GPU Sizing (inference)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/infra-gpu-sizing --input <name>=<value> … --out <dir>` (see `--explain ai-platform/infra-gpu-sizing`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
+## Starting points
+- **New** — size a fleet for a planned workload from your benchmarks and price quotes.
+- **Existing** — add `current_gpus` (and optionally `current_cost_usd_per_month`) to the inputs with volumes measured in production: the run compares today's fleet with the sized need and returns `current_fleet` (delta, over-/right-/under-provisioned, priced delta and saving).
 
 ## When to use
 - Sizing inference capacity for a self-hosted or rented LLM/SLM; deciding self-host vs rental vs API; budgeting a pilot or rollout.

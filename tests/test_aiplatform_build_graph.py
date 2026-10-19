@@ -157,3 +157,58 @@ def test_scripts_have_no_network_or_subprocess():
     for f in (REPO_ROOT / SKILL / "scripts").glob("*.py"):
         src = f.read_text(encoding="utf-8")
         assert not re.search(r"^\s*(import|from)\s+(socket|urllib|requests|http|subprocess)\b", src, re.M), f
+
+
+# --- brownfield: diff against the graph running today (--current-spec) ---
+
+def _run_vs(tmp_path, spec, current):
+    p, c = tmp_path / "spec.json", tmp_path / "live.json"
+    p.write_text(json.dumps(spec), encoding="utf-8")
+    c.write_text(json.dumps(current), encoding="utf-8")
+    out = tmp_path / "out"
+    r = run_script(SCRIPT, "--spec", str(p), "--current-spec", str(c), "--out-dir", str(out))
+    return r, json.loads((out / "validation.json").read_text(encoding="utf-8")), out
+
+
+def test_identical_spec_has_no_changes(tmp_path):
+    r, v, out = _run_vs(tmp_path, _spec(), _spec())
+    assert r.returncode == 0, r.stderr
+    assert v["change_vs_current"]["total_changes"] == 0
+    assert "No structural change." in (out / "graph.md").read_text(encoding="utf-8")
+
+
+def test_node_edge_and_state_changes(tmp_path):
+    live = _spec(state=[{"name": "msgs", "type": "list", "reducer": "add"}, {"name": "n", "type": "int"},
+                        {"name": "old", "type": "str"}])
+    new = _spec(nodes=_spec()["nodes"] + [{"name": "c", "kind": "function", "description": "new step"}],
+                edges=[{"from": "a", "to": "r"}, {"from": "b", "to": "c"}, {"from": "c", "to": "a"}])
+    r, v, out = _run_vs(tmp_path, new, live)
+    assert r.returncode == 0, r.stderr
+    d = v["change_vs_current"]
+    assert d["node_changes"] == [{"node": "c", "change": "added", "kind": "function"}]
+    assert {(e["from"], e["to"], e["change"]) for e in d["edge_changes"]} == {
+        ("b", "c", "added"), ("c", "a", "added"), ("b", "a", "removed")}
+    assert d["state_changes"] == [{"field": "old", "change": "removed", "breaks_resume": True}]
+    assert d["resume_breaking_fields"] == ["old"]
+    assert "cannot resume safely (old)" in (out / "graph.md").read_text(encoding="utf-8")
+
+
+def test_reducer_change_breaks_resume(tmp_path):
+    live = _spec(state=[{"name": "msgs", "type": "list"}, {"name": "n", "type": "int"}])
+    _, v, _ = _run_vs(tmp_path, _spec(), live)
+    assert v["change_vs_current"]["state_changes"] == [
+        {"field": "msgs", "breaks_resume": True, "change": "list/no reducer -> list/add"}]
+
+
+def test_invalid_current_spec_still_diffed_and_flagged(tmp_path):
+    r, v, out = _run_vs(tmp_path, _spec(), _spec(entry=""))
+    assert r.returncode == 0  # the new spec decides the gate
+    d = v["change_vs_current"]
+    assert d["current_valid"] is False and d["entry_change"] == {"current": "", "proposed": "a"}
+    assert "which itself fails validation" in (out / "graph.md").read_text(encoding="utf-8")
+
+
+def test_without_current_spec_no_change_section(tmp_path):
+    _, v, out = _run(tmp_path, _spec())
+    assert "change_vs_current" not in v
+    assert "Changes vs current graph" not in (out / "graph.md").read_text(encoding="utf-8")

@@ -163,3 +163,81 @@ def test_redistributing_a_no_redistribution_licence_is_denied(tmp_path):
     assert "redistribution_prohibited" in rows["vendor-skill/docx"]["flags"]
     assert rows["vendor-skill/docx-internal"]["decision"] != "deny"
     assert run_script("skills/ai-platform/ai-bom-license-check/scripts/aibom.py", "--verify", str(out / "aibom.json")).returncode == 0
+
+
+# ---------------------------------------------------------------- existing BOM: CycloneDX JSON input
+
+def _cdx(tmp_path, components=None, services=None, **top):
+    doc = {"bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1, **top,
+           "components": components or [], "services": services or []}
+    p = tmp_path / "existing.json"
+    p.write_text(json.dumps(doc), encoding="utf-8")
+    return p
+
+
+def _use(u):
+    return [{"name": "giri-skills:use", "value": u}]
+
+
+def test_existing_cyclonedx_fixture_rechecked(tmp_path):
+    out = tmp_path / "out"
+    res = run_script(SCRIPT, "--bom", str(FIX / "aibom-last-release.json"), "--policy", str(FIX / "policy.csv"),
+                     "--out-dir", str(out))
+    assert res.returncode == 0, res.stderr
+    rows = {r["component"]: r for r in csv.DictReader((out / "aibom.csv").open(encoding="utf-8"))}
+    assert len(rows) == 7
+    assert rows["nw-orchestrator"]["type"] == "library" and rows["nw-orchestrator"]["spdx_id"] == "Apache-2.0"
+    assert rows["nw-dispute-templates"]["spdx_id"] == "CC-BY-4.0 AND MIT"
+    assert rows["nw-embeddings-api"]["type"] == "service" and rows["nw-embeddings-api"]["decision"] == "review"
+    assert rows["nw-billing-llm"]["decision"] == "review"
+    md = (out / "license-report.md").read_text(encoding="utf-8")
+    assert "- BOM input: existing CycloneDX BOM `aibom-last-release.json` (7 components and services re-checked)." in md
+    assert run_script(SCRIPT, "--verify", str(out / "aibom.json")).returncode == 0
+
+
+def test_own_output_round_trips_as_input(tmp_path):
+    first = tmp_path / "r1"
+    assert run_script(SCRIPT, "--bom", str(FIX / "bom.csv"), "--policy", str(FIX / "policy.csv"),
+                      "--out-dir", str(first)).returncode == 0
+    second = tmp_path / "r2"
+    res = run_script(SCRIPT, "--bom", str(first / "aibom.json"), "--policy", str(FIX / "policy.csv"),
+                     "--out-dir", str(second))
+    assert res.returncode == 0, res.stderr
+    cols = ("component", "type", "spdx_id", "decision", "use")
+    a = [tuple(r[c] for c in cols) for r in csv.DictReader((first / "aibom.csv").open(encoding="utf-8"))]
+    b = [tuple(r[c] for c in cols) for r in csv.DictReader((second / "aibom.csv").open(encoding="utf-8"))]
+    assert sorted(a) == sorted(b)
+
+
+def test_existing_bom_policy_change_denies(tmp_path):
+    bom = _cdx(tmp_path, [{"type": "library", "name": "x", "version": "1", "licenses": [{"license": {"id": "AGPL-3.0-only"}}],
+                           "properties": _use("internal")}])
+    res = run_script(SCRIPT, "--bom", str(bom), "--policy", str(FIX / "policy.csv"), "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 1 and "x" in res.stderr
+
+
+def test_existing_bom_missing_use_or_unsupported_type_exit_2(tmp_path):
+    no_use = _cdx(tmp_path, [{"type": "library", "name": "x", "licenses": [{"license": {"id": "MIT"}}]}])
+    res = run_script(SCRIPT, "--bom", str(no_use), "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 2 and "never guessed" in res.stderr
+    container = _cdx(tmp_path, [{"type": "container", "name": "img", "properties": _use("internal")}])
+    res = run_script(SCRIPT, "--bom", str(container), "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 2 and "'container'" in res.stderr
+    not_cdx = tmp_path / "x.json"
+    not_cdx.write_text(json.dumps({"bomFormat": "SPDX"}), encoding="utf-8")
+    assert run_script(SCRIPT, "--bom", str(not_cdx), "--out-dir", str(tmp_path / "o")).returncode == 2
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    assert run_script(SCRIPT, "--bom", str(broken), "--out-dir", str(tmp_path / "o")).returncode == 2
+    empty = _cdx(tmp_path)
+    res = run_script(SCRIPT, "--bom", str(empty), "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 2 and "no components" in res.stderr
+
+
+def test_existing_bom_mixed_licence_entries_stay_unknown(tmp_path):
+    bom = _cdx(tmp_path, [{"type": "data", "name": "d", "properties": _use("internal"),
+                           "licenses": [{"expression": "MIT OR Apache-2.0"}, {"license": {"id": "CC-BY-4.0"}}]}])
+    out = tmp_path / "o"
+    assert run_script(SCRIPT, "--bom", str(bom), "--policy", str(FIX / "policy.csv"), "--out-dir", str(out)).returncode == 0
+    row = next(csv.DictReader((out / "aibom.csv").open(encoding="utf-8")))
+    assert row["spdx_id"] == "unknown" and row["decision"] == "review"

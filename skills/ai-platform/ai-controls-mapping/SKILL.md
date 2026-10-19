@@ -18,12 +18,19 @@ metadata:
       - {path: "{out}/controls.csv", checks: [exists, csv:[subcategory_id,function,category,status,evidence,owner,gap], csv_rows:owner!empty, "csv_rows:status~^(implemented|partial|planned|not_applicable|missing|error)$", cmd:"python3 -I scripts/map_controls.py --verify {path}"]}
       - {path: "{out}/coverage.json", checks: [exists, json, contains:"\"subcategories_in_catalogue\": 72", cmd:"python3 -I scripts/map_controls.py --verify {path}"]}
       - {path: "{out}/controls-report.md", checks: [exists, sections:["Summary","Coverage by function","Gaps","Evidence register","Method"], no_unowned_tbd, cmd:"python3 -I scripts/map_controls.py --verify {path}"]}
+    modes:
+      new:      {case: agent-mode-new, bring: "the evidence template, filled in with what you have today"}
+      existing: {case: agent-happy-path, bring: "your current evidence register and open AI Act obligations"}
 ---
 
 # AI Controls Mapping (NIST AI RMF 1.0)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-controls-mapping`). Report the `run.json` results; do not hand-write the deliverables the script produces (`controls.csv`, `coverage.json`, `controls-report.md`). With `min_coverage`, the skill is a gate: evidence-backed coverage (claims with no evidence cited get no credit) below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.
+
+## Starting points
+- **New** — starting a controls programme: fill `assets/evidence-template.csv` with what exists today; blank rows count as missing and the report gives the baseline coverage and the full gap list.
+- **Existing** — bring the evidence register you maintain (and `obligations.csv` from `eu-ai-act-classifier`); the skill re-scores coverage, withholds credit from uncited claims, tracks the open obligations and applies your minimum-coverage gate.
 
 ## When to use
 - ADLC govern stage: before a release review, an audit or a customer assurance questionnaire that asks for NIST AI RMF alignment.

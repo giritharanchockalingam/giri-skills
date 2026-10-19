@@ -13,3 +13,5 @@ owner_eval_lead,,,name
 owner_sre_oncall,,,name
 owner_release_manager,,,name
 owner_product_owner,,,name
+current_stage,,,only for a rollout under way: stage id of the plan (offline_eval | shadow | canary_1..canary_k | ga)
+current_stage_observed_requests,,,only for a rollout under way: requests served at the current stage so far

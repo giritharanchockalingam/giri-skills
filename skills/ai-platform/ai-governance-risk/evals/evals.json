@@ -112,6 +112,28 @@
           "check": "contains:\"[TO BE BASELINED\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Quarterly refresh of the Benefits enquiry assistant risk register. Here's the updated canvas and last quarter's register — keep our reviewed scores and owners where nothing changed.",
+      "expected": [
+        "Keeps the existing risk IDs; the canvas wins where it supports a value (privacy likelihood 4 -> 3); reviewed scores and named owners carry forward with a re-confirm label where the canvas is silent",
+        "Lists every change in register-diff.csv, including the retired category and the control id no longer in the catalog, instead of dropping them"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas.md",
+        "existing": "evals/fixtures/risk-register-2026q2.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "risk-register.csv", "check": "contains:\"R-101,bias,\""},
+        {"file": "risk-register.csv", "check": "contains:\",2,3,Low,C01; C08; C09; C21,\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-102,privacy,likelihood,4,3,updated from the canvas\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-101,bias,owner,Head of HR Analytics (fictional),Head of HR Analytics (fictional),carried forward: canvas names no owner\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-109,reputational,row,R-109,,not carried: category not in the taxonomy\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-105,security,control_id,C99,,not carried: not in the controls catalog\""},
+        {"file": "model-card.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

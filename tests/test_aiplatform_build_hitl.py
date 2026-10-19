@@ -147,3 +147,59 @@ def test_scripts_have_no_network_or_subprocess():
     for f in (REPO_ROOT / SKILL / "scripts").glob("*.py"):
         src = f.read_text(encoding="utf-8")
         assert not re.search(r"^\s*(import|from)\s+(socket|urllib|requests|http|subprocess)\b", src, re.M), f
+
+
+# --- brownfield: fit gates to the existing agent's graph (--graph-spec) ---
+
+GRAPH = {"name": "g", "state": [{"name": "amount", "type": "float"}, {"name": "note", "type": "str"}],
+         "nodes": [{"name": "plan", "kind": "llm"}, {"name": "pay", "kind": "tool"}, {"name": "log", "kind": "tool"}],
+         "edges": [{"from": "plan", "to": "pay"}, {"from": "pay", "to": "log"}],
+         "conditional_edges": [], "entry": "plan", "finish": ["log"]}
+
+
+def _run_fit(tmp_path, spec, graph=GRAPH):
+    p, g = tmp_path / "spec.json", tmp_path / "graph.json"
+    p.write_text(json.dumps(spec), encoding="utf-8")
+    g.write_text(json.dumps(graph), encoding="utf-8")
+    out = tmp_path / "out"
+    r = run_script(SCRIPT, "--spec", str(p), "--graph-spec", str(g), "--out-dir", str(out))
+    return r, json.loads((out / "validation.json").read_text(encoding="utf-8")), out
+
+
+def test_fit_lists_rewire_edges_and_ungated_tools(tmp_path):
+    r, v, out = _run_fit(tmp_path, _spec())
+    assert r.returncode == 0, r.stderr
+    fit = v["graph_fit"]
+    assert fit["state_fields_from_graph"] is True
+    assert fit["gates"] == [{"gate": "pay", "in_graph": True, "kind": "tool", "rewire_incoming": ["plan"]}]
+    assert fit["ungated_tool_nodes"] == ["log"]
+    md = (out / "hitl.md").read_text(encoding="utf-8")
+    assert "## Fit to existing graph" in md and "Tool nodes with no gate: log." in md
+
+
+def test_gate_on_unknown_node_is_an_error(tmp_path):
+    r, v, out = _run_fit(tmp_path, _spec(_gate(before_node="refund")))
+    assert r.returncode == 1
+    assert any("not a node in the existing graph" in e for e in v["errors"])
+    assert not (out / "hitl.py").exists()
+
+
+def test_editable_field_must_exist_in_graph_state(tmp_path):
+    r, v, _ = _run_fit(tmp_path, _spec(_gate(editable_fields=["iban"])))
+    assert r.returncode == 1
+    assert any("'iban' is not in state_fields" in e for e in v["errors"])
+
+
+def test_entry_node_gate_rewires_start_and_name_mismatch_warns(tmp_path):
+    r, v, _ = _run_fit(tmp_path, _spec(_gate(before_node="plan", editable_fields=[]), graph="other"))
+    assert r.returncode == 0, r.stderr
+    assert v["graph_fit"]["gates"][0]["rewire_incoming"] == ["START"]
+    assert any("differs from the existing graph's name" in w for w in v["warnings"])
+
+
+def test_graph_without_nodes_exits_2(tmp_path):
+    p, g = tmp_path / "spec.json", tmp_path / "graph.json"
+    p.write_text(json.dumps(_spec()), encoding="utf-8")
+    g.write_text(json.dumps({"name": "g", "nodes": []}), encoding="utf-8")
+    res = run_script(SCRIPT, "--spec", str(p), "--graph-spec", str(g), "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 2 and "no nodes" in res.stderr

@@ -5,7 +5,7 @@ Raw matched values are NEVER written to any output: reports carry counts, rates 
 masked examples only (e.g. j***@e***.com, ***-**-6789, **** 1111).
 
 Usage:
-  python3 -I scan_pii.py --data sample.csv [--policy policy.csv] [--strict] --out-dir OUT
+  python3 -I scan_pii.py --data sample.csv [--policy policy.csv] [--previous last-inventory.csv] [--strict] --out-dir OUT
   python3 -I scan_pii.py --leak-check REPORT --data sample.csv   # exit 1 if REPORT holds a raw match
 
 Value detectors (per non-empty cell, trimmed):
@@ -25,6 +25,9 @@ If any of its types has no policy row, handling is `[TO BE BASELINED — owner: 
 
 Outputs: OUT/pii-inventory.csv (column,pii_types,match_rate,rows_scanned,handling,matches,basis)
          OUT/pii-report.md (Summary, Column inventory, Handling gaps, Method)
+Brownfield (--previous): pass the pii-inventory.csv of the last scan of this table. Each column is then
+classed new | removed | pii-added | pii-removed | handling-changed | unchanged against it; the inventory
+gains a change_vs_previous column and the report a "Changes since last inventory" section.
 match_rate = cells matched by any value detector / non-empty cells in the column (3 dp).
 Exit codes: 0 ok · 1 --strict and a PII column lacks a policy handling (or a leak-check hit)
             · 2 missing or invalid input.
@@ -293,21 +296,87 @@ def scan(header: list[str], body: list[list[str]], policy: dict[str, str] | None
     return out
 
 
+def load_previous(path: Path) -> dict[str, dict]:
+    """A pii-inventory.csv from an earlier run: column -> {types, handling}."""
+    if not path.is_file():
+        raise InputError(f"previous inventory not found: {path}")
+    with path.open(newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        need = {"column", "pii_types", "handling"}
+        if not need <= set(reader.fieldnames or []):
+            raise InputError(f"previous inventory needs columns {sorted(need)}; header is {reader.fieldnames}")
+        prev = {}
+        for row in reader:
+            col = (row.get("column") or "").strip()
+            if not col:
+                continue
+            types = [t for t in (row.get("pii_types") or "").split(";") if t and t != "none"]
+            prev[col] = {"types": types, "handling": (row.get("handling") or "").strip()}
+    return prev
+
+
+def compare_previous(cols: list[dict], prev: dict[str, dict]) -> list[dict]:
+    """Per-column change vs the last inventory; also sets c['change'] on each current column."""
+    changes = []
+    for c in cols:
+        p = prev.get(c["column"])
+        if p is None:
+            kind, detail = "new", ("PII: " + ", ".join(c["pii_types"])) if c["pii_types"] else "no PII"
+        else:
+            added = [t for t in c["pii_types"] if t not in p["types"]]
+            gone = [t for t in p["types"] if t not in c["pii_types"]]
+            if added:
+                kind, detail = "pii-added", "now also " + ", ".join(added)
+            elif gone:
+                kind, detail = "pii-removed", "no longer " + ", ".join(gone)
+            elif p["handling"] != c["handling"]:
+                kind, detail = "handling-changed", f"{p['handling']} -> {c['handling']}"
+            else:
+                kind, detail = "unchanged", ""
+        c["change"] = kind
+        if kind != "unchanged":
+            changes.append({"column": c["column"], "change": kind, "detail": detail,
+                            "handling": c["handling"], "has_pii": bool(c["pii_types"])})
+    for col, p in prev.items():
+        if col not in {c["column"] for c in cols}:
+            changes.append({"column": col, "change": "removed",
+                            "detail": ("was " + ", ".join(p["types"])) if p["types"] else "had no PII",
+                            "handling": p["handling"] or "n/a", "has_pii": bool(p["types"])})
+    return changes
+
+
 # ------------------------------------------------------------------ outputs
 
 CSV_COLS = ["column", "pii_types", "match_rate", "rows_scanned", "handling", "matches", "basis"]
 
 
-def write_csv(path: Path, cols: list[dict]) -> None:
+def write_csv(path: Path, cols: list[dict], with_change: bool = False) -> None:
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(CSV_COLS)
+        w.writerow(CSV_COLS + (["change_vs_previous"] if with_change else []))
         for c in cols:
             w.writerow([c["column"], ";".join(c["pii_types"]) or "none", f"{c['match_rate']:.3f}",
-                        c["rows_scanned"], c["handling"], c["matches"], c["basis"]])
+                        c["rows_scanned"], c["handling"], c["matches"], c["basis"]]
+                       + ([c.get("change", "")] if with_change else []))
 
 
-def render_md(src: str, policy_name: str | None, cols: list[dict], strict: bool) -> str:
+def render_changes(changes: list[dict], prev_name: str) -> list[str]:
+    lines = ["", "## Changes since last inventory", "",
+             f"Compared with `{prev_name}`: {len(changes)} column change(s)."]
+    if changes:
+        lines += ["", "| Column | Change | Detail | Handling now |", "|---|---|---|---|"]
+        for ch in changes:
+            lines.append(f"| {ch['column']} | {ch['change']} | {ch['detail'] or '—'} | {ch['handling']} |")
+        urgent = [ch["column"] for ch in changes if ch["change"] in ("new", "pii-added") and ch["has_pii"]]
+        if urgent:
+            lines += ["", "PII that was not in the last inventory: " + ", ".join(urgent)
+                      + ". Update the record of processing and confirm downstream copies apply the handling"
+                        " — owner: Privacy officer."]
+    return lines
+
+
+def render_md(src: str, policy_name: str | None, cols: list[dict], strict: bool,
+              changes: list[dict] | None = None, prev_name: str = "") -> str:
     pii = [c for c in cols if c["pii_types"]]
     gaps = [c for c in pii if c["policy_missing"]]
     rows = cols[0]["rows_scanned"] if cols else 0
@@ -342,6 +411,8 @@ def render_md(src: str, policy_name: str | None, cols: list[dict], strict: bool)
     if allowed:
         lines += ["", "Columns the policy allows in clear: " + ", ".join(c["column"] for c in allowed)
                   + ". Confirm a lawful basis is recorded for each."]
+    if changes is not None:
+        lines += render_changes(changes, prev_name)
     lines += ["", "## Method", "",
               "- Deterministic detectors: email; phone (E.164 or NANP 10-digit); US SSN pattern (structurally valid);"
               " payment card (13–19 digits, Luhn); IPv4/IPv6; date of birth (dates in dob/birth columns)."
@@ -375,6 +446,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--data", type=Path, required=True, help="sample CSV with a header row")
     ap.add_argument("--policy", type=Path, help="policy CSV pii_type,handling (mask|tokenize|drop|allow)")
     ap.add_argument("--strict", action="store_true", help="exit 1 when a PII column has no policy handling")
+    ap.add_argument("--previous", type=Path, help="pii-inventory.csv of the last scan, to report what changed")
     ap.add_argument("--out-dir", type=Path, help="directory for pii-inventory.csv and pii-report.md")
     ap.add_argument("--leak-check", type=Path, metavar="REPORT", help="verify REPORT holds no raw matched value")
     args = ap.parse_args(argv)
@@ -385,17 +457,22 @@ def main(argv: list[str] | None = None) -> int:
             ap.error("--out-dir is required")
         header, body = load_dataset(args.data)
         policy = load_policy(args.policy)
+        prev = load_previous(args.previous) if args.previous else None
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     cols = scan(header, body, policy)
+    changes = compare_previous(cols, prev) if prev is not None else None
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    write_csv(args.out_dir / "pii-inventory.csv", cols)
+    write_csv(args.out_dir / "pii-inventory.csv", cols, with_change=prev is not None)
     (args.out_dir / "pii-report.md").write_text(
-        render_md(args.data.name, args.policy.name if args.policy else None, cols, args.strict), encoding="utf-8")
+        render_md(args.data.name, args.policy.name if args.policy else None, cols, args.strict,
+                  changes, args.previous.name if args.previous else ""), encoding="utf-8")
     pii = [c for c in cols if c["pii_types"]]
     gaps = [c for c in pii if c["policy_missing"]]
     print(f"pii columns: {len(pii)} of {len(cols)}; handling gaps: {len(gaps)}")
+    if changes is not None:
+        print(f"vs previous inventory: {len(changes)} column change(s)")
     if args.strict and gaps:
         print("strict: PII without policy handling in " + ", ".join(c["column"] for c in gaps), file=sys.stderr)
         return 1

@@ -88,6 +88,26 @@
         {"file": "vendor-report.md", "check": "contains:\"**No clear winner.** Reasons: top-scoring Fabrikam AI (fictional) has red flags: TPR-01.\""},
         {"file": "vendor-report.md", "check": "contains:\"Highest-scoring option without red flags: Build in-house (3.250).\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our Tailspin contract is up for renewal. Re-assess the options and compare with last year's assessment.",
+      "expected": [
+        "Reads last year's scores: Fabrikam rises to rank 1 (+0.250), Tailspin falls to rank 2 with new red flag TPR-02, Build in-house is new, Contoso no longer assessed"
+      ],
+      "inputs": {
+        "options": "evals/fixtures/options.csv",
+        "criteria": "evals/fixtures/criteria.csv",
+        "risk": "evals/fixtures/risk.csv",
+        "previous": "evals/fixtures/previous-scores.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "vendor-report.md", "check": "sections:[\"Recommendation\",\"Changes since last assessment\",\"Method\"]"},
+        {"file": "vendor-report.md", "check": "contains:\"| Tailspin Models (fictional) | 4.050 | 3.850 | -0.200 | 1 | 2 | TPR-02 | none |\""},
+        {"file": "vendor-report.md", "check": "contains:\"| Contoso Copilot (fictional) | 3.400 | n/a | no longer assessed | 3 | — |\""},
+        {"file": "vendor-report.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

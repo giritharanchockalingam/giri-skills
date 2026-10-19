@@ -8,8 +8,15 @@ CSV columns (header required):
 
 Usage:
   python3 -I eval_retrieval.py --csv retrieval-eval-set.csv --k 1,5,10 [--json out.json] [--min-recall 0.8 --at 5]
+  python3 -I eval_retrieval.py --csv live-results.csv --baseline last-metrics.json [--max-drop 0.05 --at 5] ...
 
-Exit code 1 when --min-recall is set and recall@<at> is below it. Stdlib only.
+Brownfield (--baseline): a metrics JSON from an earlier run of this script (e.g. the last release). The run
+adds "vs_baseline": the delta of every overall and per-type metric, queries newly missed and newly found
+at the largest k, and queries added to or dropped from the set. --max-drop fails the gate when recall@<at>
+falls by more than that amount against the baseline.
+
+Exit code 1 when --min-recall is set and recall@<at> is below it, or --max-drop is set and recall@<at>
+dropped by more than it. Stdlib only.
 """
 from __future__ import annotations
 
@@ -105,7 +112,38 @@ def evaluate(rows: list[dict], ks: list[int]) -> dict:
         result["out_of_scope"] = {"n": len(out_scope), "retrieved_nothing_rate": round(empty / len(out_scope), 4)}
     misses = [g["query_id"] for g in in_scope if hit_at_k(g["expected"], g["retrieved"], max(ks)) == 0.0]
     result["misses_at_max_k"] = misses
+    result["max_k"] = max(ks)
+    result["in_scope_query_ids"] = [g["query_id"] for g in in_scope]
     return result
+
+
+def compare_baseline(res: dict, base: dict) -> dict:
+    """Metric deltas and per-query movement against an earlier metrics JSON from this script."""
+    def deltas(now: dict, then: dict) -> dict:
+        return {k: round(now[k] - then[k], 4) for k in now
+                if k != "n" and isinstance(now.get(k), (int, float)) and isinstance(then.get(k), (int, float))
+                and now[k] == now[k] and then[k] == then[k]}
+    out = {"overall": deltas(res["overall"], base.get("overall", {})),
+           "by_type": {t: deltas(s, base.get("by_type", {}).get(t, {})) for t, s in res["by_type"].items()
+                       if t in base.get("by_type", {})}}
+    now_ids, now_miss = set(res["in_scope_query_ids"]), set(res["misses_at_max_k"])
+    base_miss = set(base.get("misses_at_max_k", []))
+    if "in_scope_query_ids" in base:
+        base_ids = set(base["in_scope_query_ids"])
+        common = now_ids & base_ids
+        out["newly_missed"] = sorted((now_miss - base_miss) & common)
+        out["newly_found"] = sorted((base_miss - now_miss) & common)
+        out["new_queries"] = sorted(now_ids - base_ids)
+        out["dropped_queries"] = sorted(base_ids - now_ids)
+        out["per_query_basis"] = "query ids in both runs"
+    else:  # older baselines carry only the miss list
+        out["newly_missed"] = sorted(now_miss - base_miss)
+        out["newly_found"] = sorted(base_miss - now_miss)
+        out["new_queries"], out["dropped_queries"] = [], []
+        out["per_query_basis"] = "baseline lacks query ids: newly_missed may include queries new to the set"
+    if base.get("max_k") not in (None, res["max_k"]):
+        out["warning"] = f"baseline max k {base['max_k']} differs from {res['max_k']}: miss lists are not comparable"
+    return out
 
 
 def print_scorecard(res: dict, ks: list[int]) -> None:
@@ -119,6 +157,14 @@ def print_scorecard(res: dict, ks: list[int]) -> None:
         print(f"out_of_scope n={o['n']} retrieved_nothing_rate={o['retrieved_nothing_rate']}")
     if res["misses_at_max_k"]:
         print(f"misses@{max(ks)}: {', '.join(res['misses_at_max_k'])}")
+    vb = res.get("vs_baseline")
+    if vb:
+        print("vs baseline: " + " ".join(f"{k}={v:+.4f}" for k, v in vb["overall"].items()))
+        print(f"vs baseline: newly_missed={','.join(vb['newly_missed']) or '-'} "
+              f"newly_found={','.join(vb['newly_found']) or '-'} new_queries={','.join(vb['new_queries']) or '-'} "
+              f"dropped_queries={','.join(vb['dropped_queries']) or '-'}")
+        if vb.get("warning"):
+            print(f"WARNING: {vb['warning']}")
 
 
 def main() -> int:
@@ -127,7 +173,9 @@ def main() -> int:
     ap.add_argument("--k", default="1,5,10", help="comma-separated k values")
     ap.add_argument("--json", type=Path, help="write full results to this file")
     ap.add_argument("--min-recall", type=float, help="gate: fail if recall@<at> below this")
-    ap.add_argument("--at", type=int, default=5, help="k used for the --min-recall gate")
+    ap.add_argument("--at", type=int, default=5, help="k used for the --min-recall / --max-drop gates")
+    ap.add_argument("--baseline", type=Path, help="metrics JSON from an earlier run to compare against")
+    ap.add_argument("--max-drop", type=float, help="with --baseline: fail if recall@<at> drops by more than this")
     args = ap.parse_args()
 
     ks = sorted({int(x) for x in args.k.split(",") if x.strip()})
@@ -135,10 +183,21 @@ def main() -> int:
     if not rows:
         sys.exit("CSV has no rows")
     res = evaluate(rows, ks)
+    if args.baseline:
+        try:
+            base = json.loads(args.baseline.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as e:
+            sys.exit(f"baseline unreadable: {e}")
+        if not isinstance(base, dict) or "overall" not in base:
+            sys.exit("baseline must be a metrics JSON written by this script (--json)")
+        res["vs_baseline"] = compare_baseline(res, base)
+    elif args.max_drop is not None:
+        sys.exit("--max-drop needs --baseline")
     print_scorecard(res, ks)
     if args.json:
         args.json.write_text(json.dumps(res, indent=2), encoding="utf-8")
         print(f"wrote {args.json}")
+    rc = 0
     if args.min_recall is not None:
         key = f"recall@{args.at}"
         got = res["overall"].get(key)
@@ -146,9 +205,20 @@ def main() -> int:
             sys.exit(f"gate k={args.at} not in --k list")
         if got != got or got < args.min_recall:
             print(f"GATE FAILED: {key}={got} < {args.min_recall}")
-            return 1
-        print(f"GATE PASSED: {key}={got} >= {args.min_recall}")
-    return 0
+            rc = 1
+        else:
+            print(f"GATE PASSED: {key}={got} >= {args.min_recall}")
+    if args.max_drop is not None:
+        key = f"recall@{args.at}"
+        delta = res["vs_baseline"]["overall"].get(key)
+        if delta is None:
+            sys.exit(f"regression gate: {key} missing in the run or the baseline")
+        if delta < -args.max_drop:
+            print(f"REGRESSION GATE FAILED: {key} changed {delta:+.4f} (max drop {args.max_drop})")
+            rc = 1
+        else:
+            print(f"REGRESSION GATE PASSED: {key} changed {delta:+.4f} (max drop {args.max_drop})")
+    return rc
 
 
 if __name__ == "__main__":

@@ -96,6 +96,28 @@
           "check": "contains:\"missing failure_modes\""
         }
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our invoice dispute agent has been live since April; v1.4 added an evaluator after the single agent kept failing the finance rubric. Re-check the design doc and contracts against the decision tree with the production evidence.",
+      "expected": [
+        "Re-derives the pattern from the re-taken answers (Generator + evaluator, Q4 = adversarial_review) and confirms the live doc declares the same pattern",
+        "Re-gates every required section and both tool contracts of the existing agent; HITL before issue_credit_note stays mandatory"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers-existing.json",
+        "design_doc": "evals/fixtures/agent-design-doc-existing.md",
+        "contracts": "evals/fixtures/tool-contracts-existing.json",
+        "name": "Invoice dispute agent"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "pattern.md", "check": "contains:\"**Decision:** Generator + evaluator because Q4 = adversarial_review\""},
+        {"file": "pattern.md", "check": "contains:\"| Single agent | Q3 = no: output must be critiqued against a rubric before release (Q4e) |\""},
+        {"file": "design-check.csv", "check": "contains:\"Pattern matches decision tree,doc,yes,\""},
+        {"file": "design-check.csv", "check": "contains:\"tool[1] issue_credit_note,contract,yes,\""},
+        {"file": "design-check.csv", "check": "csv_rows:present~^yes$"}
+      ]
     }
   ]
 }

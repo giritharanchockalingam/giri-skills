@@ -63,3 +63,69 @@ def test_bad_tools_and_lang_exit_1(tmp_path):
     dup.write_text(json.dumps([{"name": "a", "description": "x", "input_schema": {}, "output_schema": {}}] * 2), encoding="utf-8")
     assert "duplicate" in run_script(SCRIPT, str(dup), "--target", str(tmp_path / "s")).stderr
     assert run_script(SCRIPT, str(tmp_path / "nope.json"), "--target", str(tmp_path / "s")).returncode == 1
+
+
+# --- brownfield: extend a server that already runs (--from-existing) ---
+
+def _extend(tmp_path, tools="tools-v2.json", src=None, target=None):
+    target = target or tmp_path / "server"
+    rep = tmp_path / "rep.json"
+    r = run_script(SCRIPT, str(FX / tools), "--target", str(target), "--from-existing",
+                   str(src or FX / "existing-server"), "--report", str(rep))
+    return r, target, (json.loads(rep.read_text()) if rep.exists() else None)
+
+
+def _pytest(target):
+    return subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", str(target / "tests")],
+                          capture_output=True, text=True)
+
+
+def test_extend_adds_missing_tools_and_keeps_implemented_handler(tmp_path):
+    r, target, rep = _extend(tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert rep["added_tools"] == ["add_comment", "close_ticket"]
+    assert rep["contract_changed"] == [{"name": "read_ticket", "keys": ["x-contract"]}]
+    assert rep["existing_only_tools"] == []
+    server = (target / "server.py").read_text()
+    assert "SAMPLE_TICKETS" in server and "def add_comment(arguments: dict)" in server
+    deployed = json.loads((target / "tools/read_ticket.json").read_text())
+    assert deployed["x-contract"]["timeout_ms"] == 3000  # drift reported, never overwritten
+    readme = (target / "README.md").read_text()
+    assert readme.index("`close_ticket`") > readme.index("`read_ticket`") > 0
+    assert _pytest(target).returncode == 0
+    assert (FX / "existing-server/server.py").read_text().count("def add_comment") == 0  # source untouched
+
+
+def test_extend_twice_is_idempotent(tmp_path):
+    r, target, _ = _extend(tmp_path)
+    assert r.returncode == 0
+    before = (target / "server.py").read_text()
+    r, _, rep = _extend(tmp_path, src=target, target=target)  # in place
+    assert r.returncode == 0, r.stderr
+    assert rep["added_tools"] == [] and (target / "server.py").read_text() == before
+
+
+def test_extend_reports_tools_only_in_server(tmp_path):
+    r, _, rep = _extend(tmp_path, tools="tools.json")
+    assert r.returncode == 0
+    assert rep["added_tools"] == [] and rep["existing_only_tools"] == []
+    one = tmp_path / "one.json"
+    one.write_text(json.dumps([json.loads((FX / "existing-server/tools/search_tickets.json").read_text())]))
+    rep_path = tmp_path / "r2.json"
+    r = run_script(SCRIPT, str(one), "--target", str(tmp_path / "s2"), "--from-existing", str(FX / "existing-server"),
+                   "--report", str(rep_path))
+    assert r.returncode == 0, r.stderr
+    assert json.loads(rep_path.read_text())["existing_only_tools"] == ["read_ticket"]
+
+
+def test_extend_refuses_non_empty_target_and_foreign_server(tmp_path):
+    target = tmp_path / "server"
+    target.mkdir()
+    (target / "x.txt").write_text("keep")
+    r, _, _ = _extend(tmp_path, target=target)
+    assert r.returncode == 1 and "must be empty" in r.stderr
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    (foreign / "server.py").write_text("print('hi')\n")
+    r, _, _ = _extend(tmp_path, src=foreign, target=tmp_path / "t3")
+    assert r.returncode == 1 and "not a server scaffolded by this skill" in r.stderr

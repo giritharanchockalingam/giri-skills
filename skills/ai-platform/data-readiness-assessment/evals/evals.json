@@ -92,6 +92,26 @@
         {"file": "readiness.md", "check": "contains:\"| completeness | [TO BE BASELINED — owner: Data owner]\""},
         {"file": "readiness.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "The data team fixed the orders feed. Re-assess the new extract and compare with the failed assessment from before the fix.",
+      "expected": [
+        "Reads the earlier readiness.json: verdict Not ready -> Ready; volume, completeness, uniqueness, duplicates and freshness fixed; schema unchanged; nothing regressed"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/orders-sample.csv",
+        "requirements": "evals/fixtures/requirements.csv",
+        "as_of": "2026-10-01",
+        "previous": "evals/fixtures/previous-readiness.json"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "readiness.md", "check": "sections:[\"Verdict\",\"Gaps and owners\",\"Change since last assessment\"]"},
+        {"file": "readiness.md", "check": "contains:\"verdict Not ready → Ready\""},
+        {"file": "readiness.md", "check": "contains:\"| freshness | fail | pass | 103 | 3 | fixed |\""},
+        {"file": "readiness.md", "check": "contains:\"Regressed: none.\""}
+      ]
     }
   ]
 }

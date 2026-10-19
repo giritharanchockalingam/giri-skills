@@ -15,9 +15,14 @@ as a pass. The four-fifths rule applies only if the user sets disparate_impact_r
 Reference group: --reference-group, else the group with the highest selection rate (stated).
 Groups with n below --min-sample are flagged (still included in the metrics — not hidden).
 
+Periodic re-check (--previous): the fairness.json of an earlier check of the same system and attribute.
+fairness.json gains `previous` (metric and per-group selection-rate changes, breaches new and resolved) and
+the report a "Change since last check" section. Only today's predictions feed today's metrics.
+
 Usage:
   python3 -I fairness.py --predictions preds.csv [--thresholds thresholds.csv]
       [--sensitive-attr group] [--reference-group A] [--min-sample 30] [--positive-label 1]
+      [--previous last/fairness.json]
       --out <dir>            # writes <dir>/fairness.json and <dir>/fairness-report.md
   python3 -I fairness.py --predictions preds.csv --json   # JSON to stdout only
 
@@ -239,6 +244,69 @@ def compute(rows: list[dict], thresholds: dict[str, float], reference: str | Non
     }
 
 
+def load_previous(path: Path, attr: str) -> dict:
+    if not path.is_file():
+        raise InputError(f"previous fairness file not found: {path}")
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise InputError(f"previous fairness file is not valid JSON: {e}") from e
+    if not isinstance(doc, dict) or not isinstance(doc.get("metrics"), dict) or not isinstance(doc.get("groups"), dict):
+        raise InputError("previous file must be a fairness.json from this script (metrics and groups)")
+    was_attr = doc.get("sensitive_attribute")
+    if was_attr is not None and was_attr != attr:
+        raise InputError(f"previous check was on attribute {was_attr!r}, this one on {attr!r}; not comparable")
+    return doc
+
+
+def compare(res: dict, prev: dict, source: str) -> dict:
+    def delta(now, was):
+        return None if now is None or was is None else r(now - was)
+    metrics = {}
+    for m in METRICS:
+        pm = prev["metrics"].get(m) or {}
+        metrics[m] = {"was": pm.get("value"), "now": res["metrics"][m]["value"],
+                      "change": delta(res["metrics"][m]["value"], pm.get("value")),
+                      "status_was": pm.get("status", "not reported"), "status_now": res["metrics"][m]["status"]}
+    groups = {}
+    for g in sorted(set(res["groups"]) | set(prev["groups"])):
+        was = (prev["groups"].get(g) or {}).get("selection_rate")
+        now = (res["groups"].get(g) or {}).get("selection_rate")
+        groups[g] = {"selection_rate_was": was, "selection_rate_now": now, "change": delta(now, was),
+                     "presence": "new group" if g not in prev["groups"] else
+                                 "absent this window" if g not in res["groups"] else "both"}
+    was_b = list(prev.get("breaches") or [])
+    notes = []
+    if prev.get("reference_group") != res["reference_group"]:
+        notes.append(f"Reference group changed from '{prev.get('reference_group')}' to '{res['reference_group']}': "
+                     "disparate impact ratios are not like for like.")
+    return {"source": source, "verdict_was": prev.get("verdict"), "verdict_now": res["verdict"],
+            "n_total_was": prev.get("n_total"), "metrics": metrics, "groups": groups,
+            "new_breaches": [m for m in res["breaches"] if m not in was_b],
+            "resolved_breaches": [m for m in was_b if m not in res["breaches"]], "notes": notes}
+
+
+def signed(x) -> str:
+    return "n/a" if x is None else f"{x:+.{DP}f}"
+
+
+def render_previous(pv: dict) -> list[str]:
+    L = ["", "## Change since last check", "",
+         f"Compared with `{pv['source']}`: verdict {pv['verdict_was']} → {pv['verdict_now']}.", "",
+         "| Metric | Previous | Now | Change | Status then | Status now |", "|---|---|---|---|---|---|"]
+    for m, d in pv["metrics"].items():
+        L.append(f"| `{m}` | {fmt(d['was'])} | {fmt(d['now'])} | {signed(d['change'])} | {d['status_was']} | "
+                 f"{d['status_now']} |")
+    L += ["", "| Group | Selection rate then | Selection rate now | Change | Note |", "|---|---|---|---|---|"]
+    for g, d in pv["groups"].items():
+        L.append(f"| {g} | {fmt(d['selection_rate_was'])} | {fmt(d['selection_rate_now'])} | {signed(d['change'])} | "
+                 f"{'' if d['presence'] == 'both' else d['presence']} |")
+    L += ["", "New breaches: " + (", ".join(f"`{m}`" for m in pv["new_breaches"]) or "none") + ". "
+          "Resolved since last check: " + (", ".join(f"`{m}`" for m in pv["resolved_breaches"]) or "none") + "."]
+    L += [f"- Note: {n}" for n in pv["notes"]]
+    return L
+
+
 def fmt(x) -> str:
     if x is None:
         return "n/a"
@@ -284,6 +352,8 @@ def render_md(res: dict, attr: str) -> str:
                  "collect more data before acting on them): " + ", ".join(f"`{g}`" for g in res["small_groups"]) + ".")
     else:
         L.append(f"No group has n below {res['min_sample']}.")
+    if res.get("previous"):
+        L += render_previous(res["previous"])
     L += ["", "## Limits", "",
           "- Group metrics on one labelled sample; no confidence intervals. Differences on small groups may be noise.",
           "- Fairness definitions conflict: equal selection rates and equal error rates cannot generally both hold "
@@ -304,6 +374,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--reference-group", help="reference group for the disparate impact ratio")
     ap.add_argument("--min-sample", type=int, help="flag groups with n below this")
     ap.add_argument("--positive-label", default="1", help="label value treated as positive (default: 1)")
+    ap.add_argument("--previous", type=Path, help="fairness.json from an earlier check, to show change")
     ap.add_argument("--out", type=Path, help="directory for fairness.json and fairness-report.md")
     ap.add_argument("--json", action="store_true", help="print the JSON result to stdout")
     a = ap.parse_args(argv)
@@ -311,11 +382,14 @@ def main(argv: list[str] | None = None) -> int:
         if a.min_sample is not None and a.min_sample < 1:
             raise InputError("--min-sample must be >= 1")
         rows, _ = load_predictions(a.predictions, a.sensitive_attr, a.positive_label)
+        prev = load_previous(a.previous, a.sensitive_attr) if a.previous else None
         res = compute(rows, load_thresholds(a.thresholds), a.reference_group, a.min_sample)
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     res["sensitive_attribute"] = a.sensitive_attr
+    if prev is not None:
+        res["previous"] = compare(res, prev, a.previous.name)
     if a.out:
         a.out.mkdir(parents=True, exist_ok=True)
         (a.out / "fairness.json").write_text(json.dumps(res, indent=2), encoding="utf-8")

@@ -11,13 +11,17 @@ metadata:
     inputs:
       - {name: spec, type: json, required: true, from: "approval-points spec JSON: graph, checkpointer memory|postgres|sqlite, state_fields (optional), interrupts [{before_node, reason, approver_role, timeout_minutes, on_timeout reject|escalate|auto-approve, escalate_to, editable_fields, high_impact, irreversible}] (layout: assets/approvals.example.json)"}
       - {name: review, type: flag, required: false, flag: "--review", from: "yes to add an LLM review of the gates against the upstream langgraph-human-in-the-loop guidance"}
+      - {name: graph_spec, type: json, required: false, from: "graph spec JSON of the existing agent (langgraph-runner layout); gates are checked against its nodes and state, with the edges to rewire"}
     run:
-      - {step: build, kind: script, cmd: "python3 -I scripts/build_hitl.py --spec {spec} --out-dir {out}", stdout: "{out}/build.log"}
+      - {step: build, kind: script, cmd: "python3 -I scripts/build_hitl.py --spec {spec} [--graph-spec {graph_spec}] --out-dir {out}", stdout: "{out}/build.log"}
       - {step: upstream-review, kind: llm, template: assets/hitl-review-template.md, context: ["../../../vendor/langgraph-human-in-the-loop/SKILL.md", "{out}/hitl.md", "{out}/validation.json", "{out}/hitl.py"], out: "{out}/hitl-review.md", skip_if_missing: [review]}
     outputs:
       - {path: "{out}/validation.json", checks: [exists, json, contains:"\"valid\": true"]}
       - {path: "{out}/hitl.md", checks: [exists, sections:["Approval matrix","Validation","Resume flow","Risks"], no_unowned_tbd, contains:"not executed"]}
       - {path: "{out}/hitl.py", checks: [exists, contains:"Command(resume=", cmd:"python3 scripts/check_syntax.py {path} --require build_graph --require make_checkpointer --require resume --require resume_on_timeout"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "the approval points you want, written as a spec"}
+      existing: {case: agent-mode-existing, bring: "your existing agent's graph spec and the approvals to add"}
 ---
 
 # LangGraph HITL Runner
@@ -26,6 +30,10 @@ Wraps langgraph-human-in-the-loop from langchain-ai/langchain-skills (pinned in 
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langgraph-hitl-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langgraph-hitl-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`hitl.py`, `hitl.md`, `validation.json`). A failed validation (exit 1) is the gate working: fix the spec and re-run.
+
+## Starting points
+- **New** — validate an approval-points spec written from `assets/approvals.example.json` and generate the interrupt/resume scaffold.
+- **Existing** — also pass the existing agent's graph spec as `graph_spec`: every gate must name a real node and real state fields, hitl.md adds "Fit to existing graph" (incoming edges to rewire to each `approve_<node>`) and names tool nodes left without a gate.
 
 ## When to use
 - An agent will take an action a person must approve, edit or reject first (payments, outbound messages, record changes).

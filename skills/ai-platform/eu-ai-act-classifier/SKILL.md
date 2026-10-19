@@ -8,6 +8,9 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-mode-new, bring: "yes/no answers about an AI system you plan to build"}
+      existing: {case: agent-happy-path, bring: "your answers plus the obligation tracker you already keep"}
     inputs:
       - {name: system, type: csv, required: true, from: "system questionnaire key,value,source,notes (layout: assets/system-questionnaire.csv) - role, intended purpose, yes/no for every Art. 5 practice, Annex I, Annex III area, Art. 6(3) condition, Art. 50 trigger and GPAI flag; blank = open question"}
       - {name: evidence, type: csv, required: false, from: "obligation_id,status,evidence,owner (status done|in_progress|not_started|not_applicable; ids from assets/obligations-catalogue.csv); without it every obligation is open"}
@@ -24,6 +27,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/eu-ai-act-classifier --input <name>=<value> … --out <dir>` (see `--explain ai-platform/eu-ai-act-classifier`). Report the `run.json` results; do not hand-write the deliverables the script produces (`classification.json`, `obligations.csv`, `ai-act-report.md`). This skill is a gate: a prohibited practice fails the run with exit 1, and the outputs are still written so the finding is visible. The result is not legal advice.
+
+## Starting points
+- **New:** a questionnaire for a system still being designed gives its tier and every obligation, all open, with dates.
+- **Existing:** add the obligation tracker you already keep (`evidence`) and an `as_of` date; each row's status, evidence and owner carry over, and the run shows what is done, open and already in force.
 
 ## When to use
 - ADLC govern stage: before an AI system is built, bought or placed on the EU market, and again whenever its purpose changes.

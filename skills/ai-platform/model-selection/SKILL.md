@@ -12,17 +12,25 @@ metadata:
       - {name: candidates, type: csv, required: true, from: "candidate models with user-supplied facts and scores, row-level source + as_of (layout: assets/candidates-template.csv); the skill never supplies model facts"}
       - {name: criteria, type: csv, required: true, from: "criterion, weight, direction higher|lower, optional hard_min/hard_max/hard_in (layout: assets/criteria-template.csv)"}
       - {name: workload, type: csv, required: false, from: "tokens_in_per_request, tokens_out_per_request, requests_per_month as key,value (layout: assets/workload-template.csv); enables monthly_cost_usd"}
+      - {name: incumbent, type: string, required: false, from: "the model in production today, exactly as named in the candidates CSV; adds the switch-or-stay view"}
     run:
-      - {step: rank, kind: script, cmd: "python3 -I scripts/select_model.py --candidates {candidates} --criteria {criteria} [--workload {workload}] --out-dir {out}"}
+      - {step: rank, kind: script, cmd: "python3 -I scripts/select_model.py --candidates {candidates} --criteria {criteria} [--workload {workload}] [--incumbent {incumbent}] --out-dir {out}"}
     outputs:
       - {path: "{out}/ranking.json", checks: [exists, json, contains:"winner_changes", cmd:"python3 -I scripts/select_model.py --verify {path}"]}
       - {path: "{out}/decision.md", checks: [exists, sections:["Recommendation","Eliminated","Scores","Sensitivity","Sources"], no_unowned_tbd, numbers_trace_to:"{out}/ranking.json"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "candidate models with your eval results, weights and volumes"}
+      existing: {case: agent-mode-existing, bring: "the same inputs plus the model you run in production today"}
 ---
 
 # Model Selection
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/model-selection --input <name>=<value> … --out <dir>` (see `--explain ai-platform/model-selection`). Report the `run.json` results; do not hand-write the deliverables the script produces (`ranking.json`, `decision.md`). When no candidate survives the hard constraints the run exits 1 on purpose and `decision.md` says so.
+
+## Starting points
+- **New** — rank candidate models on your criteria, hard constraints and workload.
+- **Existing** — also name the model in production as `incumbent` (include it in the candidates CSV): decision.md adds "Incumbent" — whether it still passes the hard constraints, its rank, switch or stay, the score gap, the monthly-cost delta and where the winner is better or worse.
 
 ## When to use
 - Picking a model for one use case from a shortlist of API and/or self-hosted candidates.

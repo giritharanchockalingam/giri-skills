@@ -209,3 +209,47 @@ def test_bad_test_csv_exits_2(tmp_path):
 def test_missing_policy_exits_2(tmp_path):
     r = run_script(BUILD, "--policy", str(tmp_path / "nope.json"), "--out", str(tmp_path / "o"))
     assert r.returncode == 2
+
+
+# --- brownfield: diff against the rule set live today (--baseline) ---
+
+def test_baseline_diff_marks_tightened_and_loosened(tmp_path):
+    out = tmp_path / "out"
+    r = run_script(BUILD, "--policy", str(FX / "policy.json"), "--tests", str(FX / "test-inputs.csv"),
+                   "--baseline", str(FX / "live-guardrails.json"), "--out", str(out))
+    assert r.returncode == 0, r.stderr
+    b = json.loads((out / "guardrail-tests.json").read_text())["baseline"]
+    assert (len(b["rule_changes"]), b["tightened"], b["loosened"]) == (7, 6, 1)
+    loose = [c for c in b["rule_changes"] if c["effect"] == "loosened"]
+    assert loose == [{"area": "blocked topic", "item": "legal advice", "before": "block", "after": "absent",
+                      "effect": "loosened"}]
+    flips = {c["case_id"]: (c["live"], c["new"]) for c in b["decision_changes"]}
+    assert flips == {"T04": ("allow", "mask"), "T08": ("mask", "block"), "T09": ("allow", "block"),
+                     "T10": ("allow", "block"), "T12": ("allow", "block"), "T13": ("allow", "block")}
+    assert all(c["fixes_expectation"] for c in b["decision_changes"])
+    md = (out / "guardrails.md").read_text()
+    assert "## Changes vs live rules" in md and "need sign-off before deploy" in md
+    assert md.index("## Changes vs live rules") < md.index("## Limits")
+
+
+def test_baseline_identical_rules_reports_no_changes(compiled, tmp_path):
+    out = tmp_path / "again"
+    r = run_script(BUILD, "--policy", str(FX / "policy.json"), "--baseline", str(compiled / "guardrails.json"),
+                   "--out", str(out))
+    assert r.returncode == 0, r.stderr
+    b = json.loads((out / "guardrail-tests.json").read_text())["baseline"]
+    assert b["rule_changes"] == [] and b["cases_replayed"] == 0
+    assert "sign-off" not in (out / "guardrails.md").read_text()
+
+
+def test_baseline_without_flag_leaves_output_unchanged(compiled):
+    assert "baseline" not in json.loads((compiled / "guardrail-tests.json").read_text())
+    assert "Changes vs live rules" not in (compiled / "guardrails.md").read_text()
+
+
+@pytest.mark.parametrize("content", ["not json", '{"schema": "something-else"}', "[]"])
+def test_bad_baseline_exits_2(tmp_path, content):
+    bad = tmp_path / "live.json"
+    bad.write_text(content)
+    r = run_script(BUILD, "--policy", str(FX / "policy.json"), "--baseline", str(bad), "--out", str(tmp_path / "o"))
+    assert r.returncode == 2 and "error:" in r.stderr

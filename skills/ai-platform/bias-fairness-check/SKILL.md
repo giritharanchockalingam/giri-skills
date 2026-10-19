@@ -8,14 +8,18 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "labelled predictions from a model before launch, plus thresholds"}
+      existing: {case: agent-mode-existing, bring: "this period's decisions plus your last fairness check"}
     inputs:
       - {name: predictions, type: csv, required: true, from: "labelled predictions, one row per decision (layout: assets/predictions-template.csv) with the sensitive-attribute column, label, prediction, optional score"}
       - {name: thresholds, type: csv, required: false, from: "metric,threshold set by the Responsible AI lead (layout: assets/thresholds-template.csv); absent or blank = to be baselined, never a pass"}
       - {name: sensitive_attr, type: string, required: false, default: "group", from: "name of the sensitive-attribute column"}
       - {name: reference_group, type: string, required: false, from: "reference group for the disparate impact ratio (default: highest selection rate, stated in the report)"}
       - {name: min_sample, type: string, required: false, from: "minimum n per group; smaller groups are flagged (absent = to be baselined)"}
+      - {name: previous, type: json, required: false, from: "fairness.json from the last check of the same system and attribute; adds metric, selection-rate and breach changes"}
     run:
-      - {step: fairness, kind: script, cmd: "python3 -I scripts/fairness.py --predictions {predictions} [--thresholds {thresholds}] --sensitive-attr {sensitive_attr} [--reference-group {reference_group}] [--min-sample {min_sample}] --out {out}"}
+      - {step: fairness, kind: script, cmd: "python3 -I scripts/fairness.py --predictions {predictions} [--thresholds {thresholds}] --sensitive-attr {sensitive_attr} [--reference-group {reference_group}] [--min-sample {min_sample}] [--previous {previous}] --out {out}"}
     outputs:
       - {path: "{out}/fairness.json", checks: [exists, json, contains:"disparate_impact_ratio"]}
       - {path: "{out}/fairness-report.md", checks: [exists, sections:["Verdict","Metrics","Per-group","Small groups","Limits"], no_unowned_tbd, numbers_trace_to:"{out}/fairness.json"]}
@@ -25,6 +29,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/bias-fairness-check --input <name>=<value> … --out <dir>` (see `--explain ai-platform/bias-fairness-check`). Report the `run.json` results; do not hand-write the deliverables the script produces (`fairness.json`, `fairness-report.md`). A metric that breaches a supplied threshold fails the run (exit 1) on purpose; a metric with no threshold is `[TO BE BASELINED — owner: Responsible AI lead]` and the verdict is INCOMPLETE, never PASS.
+
+## Starting points
+- **New:** labelled predictions from a validation set and the thresholds your Responsible AI lead set give the pre-launch gate.
+- **Existing:** add the `fairness.json` from the last check (`previous`); the report adds each metric and group selection rate then vs now, and which breaches are new or resolved.
 
 ## When to use
 - Pre-launch or periodic fairness gate on a binary classifier or a yes/no AI decision (approve/deny, flag/not flag, shortlist/reject).

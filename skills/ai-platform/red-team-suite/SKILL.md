@@ -18,6 +18,9 @@ metadata:
       - {path: "{out}/attacks.jsonl", checks: [exists, contains:"LLM01:2025 Prompt Injection", cmd:"python3 -I scripts/redteam.py --verify-attacks {path}"]}
       - {path: "{out}/redteam-scorecard.json", checks: [exists, json, contains:"\"gate\""]}
       - {path: "{out}/redteam-report.md", checks: [exists, sections:["Gate","Results by category","Failures","Method","References"], no_unowned_tbd, numbers_trace_to:"{out}/redteam-scorecard.json"]}
+    modes:
+      new:      {case: agent-generate-only, bring: "a short profile of your app: purpose, tools, data"}
+      existing: {case: agent-happy-path, bring: "your running app's answers to the attack set and a pass mark"}
 ---
 
 # Red-Team Suite
@@ -26,6 +29,10 @@ metadata:
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/red-team-suite --input <name>=<value> … --out <dir>` (see `--explain ai-platform/red-team-suite`). Report the `run.json` results; do not hand-write the deliverables the script produces (`attacks.jsonl`, `redteam-scorecard.json`, `redteam-report.md`). A failed gate exits 1 on purpose.
 
 Two passes: (1) profile only → `attacks.jsonl` and a scorecard with status `awaiting_responses`; run the attacks against the app; (2) profile + responses (+ threshold) → graded scorecard, report and gate.
+
+## Starting points
+- **New** — from an app profile alone, generate the OWASP-mapped attack set to run before launch; nothing is graded until responses exist.
+- **Existing** — pass the running app's responses (with tool-call traces) and the risk lead's pass mark: every case is graded by its detector and the gate passes or fails on the real results.
 
 ## When to use
 - Pre-launch or pre-release security testing of a chat assistant, RAG app or tool-using agent with text I/O.

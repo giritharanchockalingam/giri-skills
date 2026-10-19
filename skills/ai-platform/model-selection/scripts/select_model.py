@@ -2,7 +2,7 @@
 """Weighted, constraint-gated model selection: candidates + criteria (+ workload) -> ranking.
 
     python3 -I scripts/select_model.py --candidates candidates.csv --criteria criteria.csv \
-        [--workload workload.csv] --out-dir runs/x
+        [--workload workload.csv] [--incumbent "<model in production>"] --out-dir runs/x
     python3 -I scripts/select_model.py --verify runs/x/ranking.json     # recompute and cross-check
 
 The skill supplies NO model facts. Every price, latency, context size and benchmark score comes
@@ -33,6 +33,11 @@ Method (references/scoring-method.md):
      a missing value scores 0 and is listed as a gap).
   3. Score = sum(normalised weight x normalised value); rank by score desc, then model name.
   4. Sensitivity: each weight x0.8 and x1.2 (others renormalised); report whether the winner changes.
+
+Brownfield (--incumbent): name the model in production today (a row of the candidates CSV). ranking.json
+gains "incumbent" — eliminated (with the reasons) or its rank and score, the verdict (switch | stay), the
+score gap and monthly-cost delta to the winner, and per criterion where the winner is better or worse —
+and decision.md gains an "Incumbent" section. The ranking itself is unchanged.
 
 Writes ranking.json and decision.md (Recommendation, Criteria, Eliminated, Scores, Sensitivity,
 Sources, Gaps). Every number in decision.md is present in ranking.json.
@@ -281,7 +286,47 @@ def sensitivity(norm: dict, weights: dict[str, float], base_winner: str | None):
             "winner_changes": bool(challengers), "challengers": challengers}
 
 
-def build(cands_path: Path, crit_path: Path, wl_path: Path | None) -> dict:
+def incumbent_view(res: dict, cands: list[dict], incumbent: str) -> dict:
+    """Compare the model in production with the recommendation."""
+    c = next((x for x in cands if x["model"] == incumbent), None)
+    if c is None:
+        raise InputError(f"--incumbent {incumbent!r} is not a model in the candidates CSV")
+    elim = next((e for e in res["eliminated"] if e["model"] == incumbent), None)
+    row = next((r for r in res["ranking"] if r["model"] == incumbent), None)
+    rec = res["recommendation"]
+    out = {"model": incumbent, "eliminated": elim is not None,
+           "elimination_reasons": elim["reasons"] if elim else [],
+           "rank": row["rank"] if row else None, "score": row["score"] if row else None,
+           "monthly_cost_usd": c["monthly_cost_usd"]}
+    if rec is None:
+        out.update({"verdict": "no-survivor", "score_gap": None, "monthly_cost_delta_usd": None,
+                    "monthly_cost_change": None, "criteria": []})
+        return out
+    win = res["ranking"][0]
+    out["verdict"] = "stay" if win["model"] == incumbent else "switch"
+    out["switch_to"] = None if out["verdict"] == "stay" else win["model"]
+    out["score_gap"] = round(win["score"] - row["score"], 4) if row else None
+    out["monthly_cost_delta_usd"] = (round(win["monthly_cost_usd"] - c["monthly_cost_usd"], 2)
+                                     if win["monthly_cost_usd"] is not None and c["monthly_cost_usd"] is not None else None)
+    d = out["monthly_cost_delta_usd"]
+    out["monthly_cost_change"] = None if d is None else {"direction": "saving" if d < 0 else "increase" if d > 0 else "none",
+                                                         "amount_usd": abs(d)}
+    rows = []
+    for crit in [k for k in res["criteria"] if k["weight"] > 0]:
+        k = crit["criterion"]
+        inc_v, win_v = value_of(c, k), win["raw"].get(k)
+        if inc_v is None or win_v is None or out["verdict"] == "stay":
+            better = None
+        elif inc_v == win_v:
+            better = "equal"
+        else:
+            better = "winner" if ((win_v > inc_v) == (crit["direction"] == "higher")) else "incumbent"
+        rows.append({"criterion": k, "incumbent": inc_v, "winner": win_v, "better": better})
+    out["criteria"] = rows
+    return out
+
+
+def build(cands_path: Path, crit_path: Path, wl_path: Path | None, incumbent: str | None = None) -> dict:
     cands = load_candidates(cands_path)
     wl = load_workload(wl_path) if wl_path else None
     cols = set(cands[0].keys())
@@ -324,7 +369,7 @@ def build(cands_path: Path, crit_path: Path, wl_path: Path | None) -> dict:
                "runner_up_score": second["score"] if second else None,
                "margin": round(sc[winner] - second["score"], 4) if second else None,
                "robust_to_weight_changes": not sens["winner_changes"]}
-    return {
+    res = {
         "inputs": {"candidates": cands_path.name, "criteria": crit_path.name,
                    "workload": wl_path.name if wl_path else None},
         "workload": {k: v for k, v in (wl or {}).items()},
@@ -341,9 +386,38 @@ def build(cands_path: Path, crit_path: Path, wl_path: Path | None) -> dict:
                      "source": c["source"] or tbd(OWNER_FACTS), "as_of": c["as_of"] or tbd(OWNER_FACTS)}
                     for c in cands],
     }
+    if incumbent:
+        res["incumbent"] = incumbent_view(res, cands, incumbent)
+    return res
 
 
 # ------------------------------------------------------------------ report
+
+def render_incumbent(inc: dict) -> list[str]:
+    L = ["", "## Incumbent", ""]
+    status = (f"eliminated by the hard constraints ({'; '.join(inc['elimination_reasons'])})" if inc["eliminated"]
+              else f"ranks {inc['rank']} with score {inc['score']}")
+    L.append(f"In production today: **{inc['model']}** — {status}.")
+    if inc["verdict"] == "stay":
+        L.append("Verdict: **stay** — the incumbent is still the top-ranked model.")
+    elif inc["verdict"] == "switch":
+        gap = f"; score gap {inc['score_gap']}" if inc["score_gap"] is not None else ""
+        cost = ""
+        ch = inc.get("monthly_cost_change")
+        if ch:
+            cost = (f"; monthly cost {ch['direction']} of ${ch['amount_usd']:,.2f} at the supplied workload"
+                    if ch["direction"] != "none" else "; same monthly cost at the supplied workload")
+        L.append(f"Verdict: **switch to {inc['switch_to']}**{gap}{cost}. Run the eval harness on the incumbent's "
+                 "production traffic before cut-over, and keep the incumbent as rollback.")
+        if inc["criteria"]:
+            L += ["", "| Criterion | Incumbent | Winner | Better |", "|---|---|---|---|"]
+            for r in inc["criteria"]:
+                L.append(f"| {r['criterion']} | {fmt(r['incumbent']) if r['incumbent'] is not None else '—'} | "
+                         f"{fmt(r['winner']) if r['winner'] is not None else '—'} | {r['better'] or '—'} |")
+    else:
+        L.append("Verdict: no candidate survives, so the incumbent cannot be compared; see Eliminated.")
+    return L
+
 
 def render(res: dict) -> str:
     L = []
@@ -373,6 +447,8 @@ def render(res: dict) -> str:
     else:
         L.append(f"None of the {res['candidates_total']} candidates survives the hard constraints. Relax a constraint "
                  f"or add candidates {tbd(OWNER_WEIGHTS)}.")
+    if res.get("incumbent"):
+        L += render_incumbent(res["incumbent"])
     L += ["", "## Criteria", "", "| Criterion | Weight (normalised) | Direction | Hard constraint |", "|---|---|---|---|"]
     for c in res["criteria"]:
         hard = []
@@ -479,6 +555,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--candidates", type=Path, help="candidates CSV (model facts, user-supplied)")
     ap.add_argument("--criteria", type=Path, help="criteria CSV (weights, directions, hard constraints)")
     ap.add_argument("--workload", type=Path, help="optional workload CSV (key,value) for monthly cost")
+    ap.add_argument("--incumbent", help="model in production today (a candidates row); adds the switch/stay view")
     ap.add_argument("--out-dir", type=Path, help="directory for ranking.json and decision.md")
     ap.add_argument("--verify", type=Path, metavar="RANKING_JSON", help="recompute and cross-check a ranking.json")
     a = ap.parse_args(argv)
@@ -497,7 +574,7 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
     try:
-        res = build(a.candidates, a.criteria, a.workload)
+        res = build(a.candidates, a.criteria, a.workload, a.incumbent)
     except InputError as e:
         print(f"input error: {e}", file=sys.stderr)
         return 2

@@ -104,6 +104,51 @@
         {"file": "cost-model.md", "check": "contains:\"[TO BE BASELINED — owner: FinOps lead]\""},
         {"file": "cost-model.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our cost model plus the September invoice by feature. Where is the model wrong and what are we not modelling?",
+      "expected": [
+        "Reads the bill: support-chat +147.40 (+31.7%) over the model on 131,000 vs 100,000 requests, doc-summary -18.85; ticket-tagging (48.20) billed but not modelled; billed spend 1,031.75 is 103.2% of the 1,000 budget; the forecast itself stays within budget (exit 0)"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "assignment": "evals/fixtures/assignment.csv",
+        "budget_usd_month": "1000",
+        "actuals": "evals/fixtures/actuals.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "cost-model.json",
+          "check": "contains:\"\\\"variance_pct\\\": 31.7\""
+        },
+        {
+          "file": "cost-model.json",
+          "check": "contains:\"\\\"unmodelled_total\\\": 48.2\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "sections:[\"Monthly total\",\"By feature\",\"What-if\",\"Budget\",\"Actuals vs model\",\"Sources\"]"
+        },
+        {
+          "file": "cost-model.md",
+          "check": "contains:\"| support-chat | 465.00 | 612.40 | +147.40 | +31.7% |\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "contains:\"Billed spend is 103.2% of the monthly budget\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "numbers_trace_to:\"cost-model.json\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
     }
   ]
 }

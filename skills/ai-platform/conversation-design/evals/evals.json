@@ -84,6 +84,25 @@
         {"file": "conversation-spec.md", "check": "contains:\"Gate: FAILED — accuracy 0.870 is below min_accuracy 0.900 (exit 1).\""},
         {"file": "routing.csv", "check": "contains:\"i was charged twice this month,fallback,0.227,dispute_charge,no,dispute_charge\""}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "We are starting a transit card assistant. Here are the intents from our workshop and messages from a rider survey — what do they miss?",
+      "expected": [
+        "Routes the 15 unlabelled messages: 11 covered, 4 to fallback (timetable, delays, fares, refunds) listed as gaps; accuracy not measured and no gate; thin and confusable intents named with owners; persona keys TBD for the Conversation designer"
+      ],
+      "inputs": {
+        "intents": "evals/fixtures/intents-draft.csv",
+        "utterances": "evals/fixtures/utterances-sample.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "conversation-spec.md", "check": "contains:\"Coverage: 11/15 (73.3%)\""},
+        {"file": "conversation-spec.md", "check": "contains:\"Accuracy: not measured (no expected_intent labels).\""},
+        {"file": "conversation-spec.md", "check": "contains:\"4 uncovered utterance(s)\""},
+        {"file": "routing.csv", "check": "contains:\"when does the 42 bus come,fallback,\""},
+        {"file": "conversation-spec.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

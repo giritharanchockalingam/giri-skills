@@ -8,14 +8,18 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "a shortlist of vendors, your criteria and their risk answers"}
+      existing: {case: agent-mode-existing, bring: "this year's scores plus the last assessment's results"}
     inputs:
       - {name: options, type: csv, required: true, from: "scores option,criterion,score,source (layout: assets/options-template.csv; score 1-5, blank = missing)"}
       - {name: criteria, type: csv, required: true, from: "criterion,weight,description (layout: assets/criteria-template.csv; weights any scale, normalised)"}
       - {name: risk, type: csv, required: false, from: "option,question_id,answer,evidence answering assets/third-party-ai-risk-questions.csv (layout: assets/risk-template.csv; unknown = gap, n/a = not applicable); without it risk is not assessed"}
       - {name: questions, type: csv, required: false, from: "your own copy of assets/third-party-ai-risk-questions.csv with policy thresholds (default: the shipped file)"}
+      - {name: previous, type: csv, required: false, from: "scores.csv from the last assessment (e.g. at renewal); the report adds score, rank and red-flag changes"}
       - {name: require_clear_winner, type: flag, required: false, flag: "--require-clear-winner", from: "true to fail the run (exit 1) when there is no clear winner"}
     run:
-      - {step: assess, kind: script, cmd: "python3 -I scripts/vendor_assess.py --options {options} --criteria {criteria} [--risk {risk}] [--questions {questions}] {require_clear_winner} --out-dir {out}"}
+      - {step: assess, kind: script, cmd: "python3 -I scripts/vendor_assess.py --options {options} --criteria {criteria} [--risk {risk}] [--questions {questions}] {require_clear_winner} [--previous {previous}] --out-dir {out}"}
     outputs:
       - {path: "{out}/scores.csv", checks: [exists, "csv:[option,weighted_score,rank,complete,red_flags]", "csv_rows:complete~^(yes|no)$", csv_rows:red_flags!empty, cmd:"python3 -I scripts/vendor_assess.py --verify {path}"]}
       - {path: "{out}/sensitivity.csv", checks: [exists, "csv:[criterion,change,weight_before,weight_after,top_option,top_changed]", "csv_rows:top_changed~^(yes|no)$", cmd:"python3 -I scripts/vendor_assess.py --verify {path}"]}
@@ -26,6 +30,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-vendor-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-vendor-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`scores.csv`, `sensitivity.csv`, `vendor-report.md`). "No clear winner" is a finding, not a failure (exit 0) unless `require_clear_winner=true`, which makes it a gate (exit 1, outputs still written).
+
+## Starting points
+- **New:** a shortlist scored on your weighted criteria, with risk answers, gives the ranking, sensitivity and red flags before procurement.
+- **Existing:** add the `scores.csv` from the last assessment (`previous`), e.g. at renewal; the report adds each option's score and rank then and now, red flags raised or cleared, and options new or no longer assessed.
 
 ## When to use
 - ADLC strategy stage: a shortlist of AI vendors, platforms or providers (and possibly an in-house build) must be compared on agreed criteria before procurement.

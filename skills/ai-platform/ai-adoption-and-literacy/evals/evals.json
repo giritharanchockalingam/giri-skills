@@ -77,6 +77,29 @@
         {"file": "adoption-plan.md", "check": "contains:\"Support analyst (AI ops) (Technology)\""},
         {"file": "adoption.json", "check": "contains:\"\\\"gate\\\": \\\"fail\\\"\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We already run a training catalogue for the billing assistant rollout. Map our people to it and tell us where it falls short.",
+      "expected": [
+        "Maps every role to the supplied catalogue (not the skill default) and states which catalogue was used",
+        "Finds the gaps in the existing catalogue: the AI ops operator and the Finance controller get no module, and no module is mandatory for overseers — both TBD for the L&D lead, not filled with invented modules"
+      ],
+      "inputs": {
+        "population": "evals/fixtures/population.csv",
+        "catalog": "evals/fixtures/catalog-existing.csv",
+        "waves": "evals/fixtures/waves.csv",
+        "targets": "evals/fixtures/targets.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "adoption-plan.md", "check": "contains:\"- Catalog: supplied catalog `catalog-existing.csv`.\""},
+        {"file": "adoption-plan.md", "check": "contains:\"- Gap: operator/overseer roles with no module: Finance controller (Finance), Support analyst (AI ops) (Technology) — [TO BE BASELINED — owner: L&D lead].\""},
+        {"file": "adoption-plan.md", "check": "contains:\"- Gap: the catalog has no module mandatory for overseers (human-oversight rule)\""},
+        {"file": "adoption-plan.md", "check": "contains:\"Total training load: 655 hours across 5 of 5 catalog modules.\""},
+        {"file": "training-load.csv", "check": "contains:\"2,Customer Operations,2026-11-16,132,132,432\""},
+        {"file": "adoption-plan.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

@@ -8,12 +8,16 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "a sample extract and the data owner's signed-off requirements"}
+      existing: {case: agent-mode-existing, bring: "a fixed extract plus your last readiness result"}
     inputs:
       - {name: data, type: csv, required: true, from: "sample dataset CSV with a header row (an extract, not the whole lake)"}
       - {name: requirements, type: csv, required: true, from: "owner-set thresholds key,value (layout: assets/readiness-requirements.csv); an absent key is reported TBD, never defaulted"}
       - {name: as_of, type: string, required: false, from: "ISO date (YYYY-MM-DD) freshness is measured from; without it freshness stays TBD"}
+      - {name: previous, type: json, required: false, from: "readiness.json from an earlier assessment (e.g. before a data fix); adds per-dimension change"}
     run:
-      - {step: assess, kind: script, cmd: "python3 -I scripts/assess.py --data {data} --requirements {requirements} [--as-of {as_of}] --out-dir {out}"}
+      - {step: assess, kind: script, cmd: "python3 -I scripts/assess.py --data {data} --requirements {requirements} [--as-of {as_of}] [--previous {previous}] --out-dir {out}"}
     outputs:
       - {path: "{out}/readiness.json", checks: [exists, json, contains:"\"verdict\"", contains:"\"column_profile\""]}
       - {path: "{out}/readiness.md", checks: [exists, sections:["Verdict","Dimensions","Column profile","Gaps and owners"], no_unowned_tbd, numbers_trace_to:"{out}/readiness.json"]}
@@ -23,6 +27,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-readiness-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-readiness-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`readiness.json`, `readiness.md`). A "Not ready" verdict exits 1 on purpose: the run is telling you the data fails an owner threshold.
+
+## Starting points
+- **New:** a sample extract and the owner's requirements give a verdict per dimension before you commit to a use case.
+- **Existing:** add the `readiness.json` from the last assessment (`previous`), e.g. before a data fix; the report adds the verdict and each dimension's status and observed value then vs now, naming what was fixed and what regressed.
 
 ## When to use
 - Gate check at the ADLC data stage: before committing to a use case, a RAG corpus, a fine-tune or a model build.

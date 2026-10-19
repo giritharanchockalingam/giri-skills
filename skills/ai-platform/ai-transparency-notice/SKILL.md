@@ -8,13 +8,17 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "the facts about your AI system and its classification"}
+      existing: {case: agent-mode-existing, bring: "current facts plus the notice users see today"}
     inputs:
       - {name: facts, type: csv, required: true, from: "system facts key,value,source,notes (layout: assets/facts-template.csv) - system_name, provider, purpose, model, data_sources, human_oversight, known_limitations, intended_users, not_intended_for, contact, yes/no flags, last_updated, Art. 50 evidence facts"}
       - {name: classification, type: json, required: false, from: "classification.json from ai-platform/eu-ai-act-classifier (tier and basis read if present); absent -> TBD for the Compliance lead"}
       - {name: max_grade, type: string, required: false, from: "reading-grade ceiling for the notice (default 8)"}
+      - {name: published_notice, type: md, required: false, from: "the notice users see today (Markdown or text); redlined sentence by sentence into notice-redline.md"}
       - {name: strict, type: flag, required: false, flag: "--strict", from: "true to fail the run (exit 1) when a fact the notice needs is missing"}
     run:
-      - {step: notice, kind: script, cmd: "python3 -I scripts/transparency_notice.py --facts {facts} [--classification {classification}] [--max-grade {max_grade}] {strict} --out-dir {out}"}
+      - {step: notice, kind: script, cmd: "python3 -I scripts/transparency_notice.py --facts {facts} [--classification {classification}] [--max-grade {max_grade}] {strict} [--published-notice {published_notice}] --out-dir {out}"}
     outputs:
       - {path: "{out}/notice.md", checks: [exists, contains:"It is an AI system, not a person.", max_lines:30, cmd:"python3 -I scripts/transparency_notice.py --verify {path}"]}
       - {path: "{out}/system-card.md", checks: [exists, sections:["Overview","Intended use","Not intended for","Data","Model","Human oversight","Limitations","Contact","Change log"], no_unowned_tbd, contains:"does not claim compliance"]}
@@ -26,6 +30,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-transparency-notice --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-transparency-notice`). Report the `run.json` results; do not hand-write the deliverables the script produces (`notice.md`, `system-card.md`, `disclosure-checklist.csv`, `transparency.json`). A notice above the reading-grade ceiling fails the run (exit 1) on purpose; every output is still written so the facts can be rewritten in plainer words.
+
+## Starting points
+- **New:** the system's facts (and the classifier output) give the user notice, the system card and the Art. 50 checklist.
+- **Existing:** add the notice users see today (`published_notice`); notice-redline.md marks each sentence unchanged, changed, added or removed, and every removed sentence is a published claim the facts no longer support.
 
 ## When to use
 - ADLC deploy stage: before users first see an AI assistant, chatbot or content generator.

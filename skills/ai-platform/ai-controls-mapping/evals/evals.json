@@ -81,6 +81,25 @@
         {"file": "coverage.json", "check": "contains:\"\\\"gate\\\": \\\"fail\\\"\""},
         {"file": "controls-report.md", "check": "contains:\"| HR-DATA | Art. 10 | open | 2027-12-02 | MAP 4.1: partial; MEASURE 2.11: planned | partial |\""}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "We're just starting an AI controls programme. I filled in the evidence template with the little we have — where do we stand against NIST AI RMF?",
+      "expected": [
+        "Maps the first-time register to all 72 subcategories; blank rows count as missing, never as implemented",
+        "Reports the starting baseline (coverage 0.028) and every gap with an owner or TBD for the AI risk lead; no gate is invented when no minimum coverage is given"
+      ],
+      "inputs": {
+        "evidence": "evals/fixtures/evidence-new-programme.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "controls-report.md", "check": "contains:\"- Overall coverage: **0.028** (1 implemented, 2 partial, 5 planned, 63 missing, 1 not applicable of 72 subcategories)\""},
+        {"file": "controls-report.md", "check": "contains:\"| ALL | 1 | 2 | 5 | 1 | 63 | 71 | 0.028 |\""},
+        {"file": "controls-report.md", "check": "contains:\"- Gate: no minimum coverage given\""},
+        {"file": "controls.csv", "check": "contains:\"GOVERN 1.3,GOVERN,GOVERN 1,missing,,[TO BE BASELINED — owner: AI risk lead],yes\""},
+        {"file": "controls-report.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

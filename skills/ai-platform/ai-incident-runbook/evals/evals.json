@@ -72,6 +72,24 @@
         "exit:1",
         {"file": "incident.json", "check": "contains:\"\\\"severity\\\": null\""}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Overnight cost spike on the billing assistant, no users affected. Classify it with our team's severity matrix, not a generic one.",
+      "expected": [
+        "Applies the team's own matrix (stated as supplied) instead of the skill default; SEV3 from rule NW-05 with the baseline row also listed; unknown detection time and system name stay TBD"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident-cost-spike.csv",
+        "matrix": "evals/fixtures/matrix-team.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "runbook.md", "check": "contains:\"**SEV3** — most severe of the rows that fired. Matrix: supplied (matrix-team.csv).\""},
+        {"file": "runbook.md", "check": "contains:\"| NW-05 | `category=cost-spike;users_affected=0` | SEV3 |\""},
+        {"file": "incident.json", "check": "contains:\"\\\"severity\\\": \\\"SEV3\\\"\""},
+        {"file": "runbook.md", "check": "no_unowned_tbd"}
+      ]
     }
   ]
 }

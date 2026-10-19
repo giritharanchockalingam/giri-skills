@@ -74,7 +74,7 @@ export const PHASES: { id: string; title: string; stages: string[] }[] = [
   { id: "business", title: "Business", stages: ["opportunity", "career"] },
 ];
 
-export interface StageTab { id: string; n: number | null; name: string; question: string; count: number }
+export interface StageTab { id: string; n: number | null; name: string; question: string; count: number; why: string | null /* set when this starting point does not apply to the stage */ }
 export interface SkillRowView { id: string; name: string; outcome: string; bring: string | null; runnable: boolean; owners: string[] }
 
 const roleSkills = (role?: string | null) => {
@@ -87,13 +87,14 @@ const serves = (s: LifeRow, mode: StartMode) => { const m = s.agent?.modes; retu
 
 export function lifecycle(mode: StartMode, role?: string | null): { id: string; title: string; stages: StageTab[] }[] {
   const only = roleSkills(role);
-  const meta = new Map([...STAGES, ...SHELVES].map((s) => [s.id, s as { id: string; n?: number; name: string; question: string }]));
+  const meta = new Map([...STAGES, ...SHELVES].map((s) => [s.id, s as { id: string; n?: number; name: string; question: string; modes?: StartMode[]; modes_why?: string }]));
   return PHASES.map((p) => ({
     id: p.id, title: p.title,
     stages: p.stages.map((id) => {
       const m = meta.get(id)!;
       const count = LIFE.filter((s) => inStage(s, id) && serves(s, mode) && (!only || only.has(s.id))).length;
-      return { id, n: m.n ?? null, name: m.name.replace(/^Business · /, ""), question: m.question, count };
+      const why = m.modes && !m.modes.includes(mode) ? m.modes_why ?? "This starting point does not apply here." : null;
+      return { id, n: m.n ?? null, name: m.name.replace(/^Business · /, ""), question: m.question, count: why ? 0 : count, why };
     }),
   }));
 }

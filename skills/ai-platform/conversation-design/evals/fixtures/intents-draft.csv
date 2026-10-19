@@ -1,0 +1,6 @@
+# Fictional fixture: first-draft intents from a design workshop for the Fabrikam Transit Card Assistant (fictional). Not a real service.
+intent,description,examples,response_type,handoff,owner
+check_card_balance,Tell the rider the stored value left on their transit card,what is my card balance|how much is left on my card|check my transit card balance|card balance please,answer,no,Fares product owner
+top_up_card,Add stored value to a transit card,top up my card|add money to my card|reload my transit card|put 20 on my card,action,no,Payments lead
+lost_card,Block a lost or stolen card and move its balance to a new card,I lost my card|my card was stolen|block my card|replace a lost card,action,no,Customer service lead
+talk_to_agent,Connect the rider to a person,talk to a person|speak to an agent|I want a human|real person please,handoff,yes,Contact centre lead

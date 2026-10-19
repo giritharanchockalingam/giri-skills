@@ -21,12 +21,19 @@ metadata:
       - {path: "{out}/training-load.csv", checks: [exists, csv:[wave,business_unit,people,hours], csv_rows:wave!empty, "csv_rows:hours~^\\d+(\\.\\d+)?$"]}
       - {path: "{out}/adoption-plan.md", checks: [exists, sections:["Summary","Who needs what","Curriculum","Rollout","Adoption KPIs","Art. 4 note","Method"], no_unowned_tbd, contains:"does not require providers or deployers to guarantee"]}
       - {path: "{out}/adoption.json", checks: [exists, json, contains:"\"training_hours\"", cmd:"python3 -I scripts/adoption_plan.py --verify {path}"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "who uses AI, by role and team, and your rollout waves"}
+      existing: {case: agent-mode-existing, bring: "who uses AI by role, plus your current training catalogue"}
 ---
 
 # AI Adoption and Literacy Plan
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-adoption-and-literacy --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-adoption-and-literacy`). Report the `run.json` results; do not hand-write the deliverables the script produces (`curriculum.csv`, `training-load.csv`, `adoption-plan.md`, `adoption.json`). `--verify` recomputes every hour and seat total from `adoption.json`.
+
+## Starting points
+- **New** — no AI training yet: bring the population by role (and waves, targets if set); the skill builds the curriculum from its own default catalogue and sizes the training load.
+- **Existing** — bring the population and the training catalogue you already run; the skill maps every role to your modules, sizes the load and names the roles and oversight duties your catalogue does not cover.
 
 ## When to use
 - ADLC strategy stage: before an AI system (or AI tools in general) reaches staff, to plan who learns what, when, and how adoption is measured.

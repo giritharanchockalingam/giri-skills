@@ -244,3 +244,49 @@ def test_audit_non_utf8_input_exit_2_no_traceback(tmp_path):
     cp.write_bytes(MH.encode() + b"A,Caf\xe9,2026-11-01,2026-11-01,5,,in_progress\n")
     res2, _ = _run(tmp_path, cp, RH, "2026-10-15")
     assert res2.returncode == 2 and "Traceback" not in res2.stderr
+
+
+# --- brownfield: what moved since the last report (--previous) ---
+
+def test_since_previous_fixture(tmp_path):
+    res, st = _run(tmp_path, FIX / "milestones.csv", FIX / "raid.csv", "2026-10-16",
+                   "--previous", str(FIX / "status-previous.json"))
+    assert res.returncode == 0, res.stderr
+    sp = st["since_previous"]
+    assert (sp["previous_as_of"], sp["overall_before"], sp["overall_now"]) == ("2026-10-09", "red", "red")
+    moves = {m["id"]: (m["change"], m["forecast_moved_days"], m["rag_before"], m["rag_now"]) for m in sp["milestone_changes"]}
+    assert moves == {"M3": ("slipped", 9, "red", "red"), "M4": ("completed", 0, "red", "complete"),
+                     "M5": ("slipped", 9, "amber", "red"), "M6": ("slipped", 7, "green", "amber"),
+                     "M7": ("slipped", 9, "amber", "red")}
+    assert sp["slipped_total_days"] == 34
+    assert (sp["raid_opened"], sp["raid_closed"]) == ([], ["R6"])
+    assert sp["end_forecast_before"] == "2026-11-25"
+    md = (tmp_path / "out" / "status-report.md").read_text(encoding="utf-8")
+    assert md.index("## Since last report") < md.index("## Critical path")
+
+
+def test_since_previous_new_item_added_milestone_and_pull_in(tmp_path):
+    ms = MH + "M1,A,2026-10-01,2026-10-05,5,,in_progress\n"
+    prev_dir = tmp_path / "prev"
+    prev_dir.mkdir()
+    _, prev = _run(prev_dir, ms, RH + "R1,risk,x,Owner,2,2,2026-11-01,open,m\n", "2026-10-02")
+    ms2 = MH + "M1,A,2026-10-01,2026-10-03,5,,in_progress\nM2,B,2026-10-20,2026-10-20,5,M1,not_started\n"
+    raid2 = RH + "R1,risk,x,Owner,2,2,2026-11-01,open,m\nR2,risk,y,Owner,2,2,2026-11-01,open,m\n"
+    res, st = _run(tmp_path, ms2, raid2, "2026-10-03", "--previous", str(prev_dir / "out" / "status.json"))
+    assert res.returncode == 0, res.stderr
+    moves = {m["id"]: m["change"] for m in st["since_previous"]["milestone_changes"]}
+    assert moves == {"M1": "pulled in", "M2": "added"}
+    assert st["since_previous"]["raid_opened"] == ["R2"]
+
+
+def test_previous_not_older_is_input_error(tmp_path):
+    res, _ = _run(tmp_path, FIX / "milestones.csv", FIX / "raid.csv", "2026-10-09",
+                  "--previous", str(FIX / "status-previous.json"))
+    assert res.returncode == 2 and "is not before" in res.stderr
+
+
+def test_previous_wrong_shape_is_input_error(tmp_path):
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"as_of": "2026-01-01"}', encoding="utf-8")
+    res, _ = _run(tmp_path, FIX / "milestones.csv", FIX / "raid.csv", "2026-10-16", "--previous", str(bad))
+    assert res.returncode == 2 and "status.json from this skill" in res.stderr

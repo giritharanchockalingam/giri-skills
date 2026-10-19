@@ -3,7 +3,8 @@
 
 Usage:
   python3 -I vendor_assess.py --options O.csv --criteria C.csv [--risk R.csv]
-                              [--questions Q.csv] [--require-clear-winner] --out-dir OUT
+                              [--questions Q.csv] [--require-clear-winner]
+                              [--previous LAST/scores.csv] --out-dir OUT
   python3 -I vendor_assess.py --verify OUT/scores.csv        # or OUT/sensitivity.csv
 
 Inputs ('#' lines are comments):
@@ -20,6 +21,9 @@ Math:
   Red flag: an answer matching the question's red_flag_rule (eq:<v>, gt:<n>, lt:<n>).
 Recommendation: the top complete option when it is not tied, has no red flags and stays first in
 every perturbation; otherwise "no clear winner" (exit 0, or exit 1 with --require-clear-winner).
+Re-assessment (--previous): the scores.csv of an earlier run (e.g. at contract renewal). The report gains
+"Changes since last assessment": per option the score and rank then and now, red flags raised and cleared,
+and options that are new or no longer assessed. Nothing from the earlier file feeds today's scores.
 Outputs: OUT/scores.csv, OUT/sensitivity.csv, OUT/vendor-report.md.
 Exit: 0 ok · 1 --require-clear-winner and no clear winner · 2 bad/missing input.
 Stdlib only; deterministic.
@@ -236,6 +240,67 @@ def analyse(options, criteria, raw, scores, risk, questions):
             "reasons": reasons, "clear": not reasons}
 
 
+def load_previous(path: Path) -> dict[str, dict]:
+    """Earlier scores.csv -> {option: {score, rank, complete, flags}}; flags None when risk was not assessed."""
+    out: dict[str, dict] = {}
+    for r in read_csv(path, "previous scores", SCORE_COLS):
+        if r["option"] in out:
+            raise InputError(f"previous scores: duplicate option {r['option']!r}")
+        if r["complete"] not in ("yes", "no"):
+            raise InputError(f"previous scores: {r['option']}: complete must be yes or no")
+        score = None
+        if r["complete"] == "yes":
+            score = num(r["weighted_score"], f"previous scores: {r['option']} weighted_score")
+        fl = r["red_flags"]
+        out[r["option"]] = {"score": score, "rank": r["rank"] if r["complete"] == "yes" else "n/a",
+                            "flags": None if fl == "not assessed" else
+                            ([] if fl in ("", "none") else [x for x in fl.split(";") if x])}
+    return out
+
+
+def changes(options: list[str], a: dict, prev: dict[str, dict]) -> list[dict]:
+    rows = []
+    for o in [*a["ranked"], *[o for o in options if o not in a["complete"]]]:
+        was = prev.get(o)
+        now_s = a["ws"][o] if o in a["complete"] else None
+        now_f = a["flags"][o]
+        if was is None:
+            rows.append({"option": o, "was": None, "now": now_s, "rank_was": "—",
+                         "rank_now": a["ranks"][o] if o in a["complete"] else "n/a",
+                         "delta": "new option", "raised": now_f or [], "cleared": []})
+            continue
+        delta = (f"{now_s - was['score']:+.3f}" if now_s is not None and was["score"] is not None
+                 else "not comparable (incomplete)")
+        if now_f is None or was["flags"] is None:
+            raised, cleared = None, None
+        else:
+            raised = [f for f in now_f if f not in was["flags"]]
+            cleared = [f for f in was["flags"] if f not in now_f]
+        rows.append({"option": o, "was": was["score"], "now": now_s, "rank_was": was["rank"],
+                     "rank_now": a["ranks"][o] if o in a["complete"] else "n/a",
+                     "delta": delta, "raised": raised, "cleared": cleared})
+    for o, was in prev.items():
+        if o not in options:
+            rows.append({"option": o, "was": was["score"], "now": None, "rank_was": was["rank"], "rank_now": "—",
+                         "delta": "no longer assessed", "raised": [], "cleared": []})
+    return rows
+
+
+def changes_md(rows: list[dict], source: str) -> list[str]:
+    def fl(x):
+        return "not comparable (risk not assessed then or now)" if x is None else (", ".join(x) or "none")
+    L = ["## Changes since last assessment", "", f"Compared with `{source}`; today's scores use only today's inputs.", "",
+         "| Option | Score then | Score now | Change | Rank then | Rank now | Red flags raised | Red flags cleared |",
+         "|---|---|---|---|---|---|---|---|"]
+    L += [f"| {cell(r['option'])} | {f3(r['was'])} | {f3(r['now'])} | {r['delta']} | {r['rank_was']} | {r['rank_now']} | "
+          f"{fl(r['raised'])} | {fl(r['cleared'])} |" for r in rows]
+    raised = [r for r in rows if r["raised"]]
+    L += ["", (f"New red flags: " + "; ".join(f"{r['option']} ({', '.join(r['raised'])})" for r in raised)
+               + f" — raise with the vendor before renewal; owner: Third-party risk manager.")
+          if raised else "New red flags: none.", ""]
+    return L
+
+
 def f3(x) -> str:
     return "n/a" if x is None else f"{x:.3f}"
 
@@ -412,6 +477,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--questions", type=Path, default=QUESTIONS)
     ap.add_argument("--require-clear-winner", action="store_true")
     ap.add_argument("--out-dir", type=Path)
+    ap.add_argument("--previous", type=Path, metavar="CSV", help="scores.csv from an earlier assessment")
     ap.add_argument("--verify", type=Path, metavar="CSV")
     args = ap.parse_args(argv)
     if args.verify:
@@ -423,6 +489,7 @@ def main(argv: list[str] | None = None) -> int:
         options, scores, sources = load_options(args.options, criteria)
         questions = load_questions(args.questions)
         risk = load_risk(args.risk, options, questions)
+        prev = load_previous(args.previous) if args.previous else None
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -430,9 +497,11 @@ def main(argv: list[str] | None = None) -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     write_scores(args.out_dir / "scores.csv", options, a)
     write_sens(args.out_dir / "sensitivity.csv", a)
-    (args.out_dir / "vendor-report.md").write_text(
-        render(options, criteria, raw, desc, scores, sources, risk, questions, a, args.require_clear_winner),
-        encoding="utf-8")
+    report = render(options, criteria, raw, desc, scores, sources, risk, questions, a, args.require_clear_winner)
+    if prev is not None:
+        head, sep, tail = report.partition("\n## Method\n")
+        report = head + "\n" + "\n".join(changes_md(changes(options, a, prev), args.previous.name)) + sep + tail
+    (args.out_dir / "vendor-report.md").write_text(report, encoding="utf-8")
     print(f"options: {len(options)}; complete: {len(a['complete'])}; "
           f"recommendation: {a['top'] if a['clear'] else 'no clear winner'}; stability {a['stability']:.1f}%")
     if args.require_clear_winner and not a["clear"]:

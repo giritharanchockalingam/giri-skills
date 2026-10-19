@@ -71,6 +71,35 @@
       "checks": [
         "exit:1"
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We run this assistant on 6 rented GPUs today. Here are the production volumes from our gateway logs — are we over-provisioned and what would right-sizing save?",
+      "expected": [
+        "Sizes the measured workload at 2 GPUs including the spare, reads the 6 GPUs running today, verdict over-provisioned by 4, saving 6132 USD per month at the user's rental rate; no price or throughput invented"
+      ],
+      "inputs": {
+        "inputs": "evals/fixtures/inputs-existing-fleet.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "sizing.json",
+          "check": "contains:\"\\\"verdict\\\": \\\"over-provisioned\\\"\""
+        },
+        {
+          "file": "sizing.json",
+          "check": "contains:\"\\\"delta_gpus\\\": 4\""
+        },
+        {
+          "file": "sizing.json",
+          "check": "contains:\"\\\"saving_vs_current_usd_per_month\\\": 6132.0\""
+        },
+        {
+          "file": "sizing.txt",
+          "check": "contains:\"CURRENT FLEET\""
+        }
+      ]
     }
   ]
 }

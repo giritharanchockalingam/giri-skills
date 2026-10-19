@@ -2,7 +2,8 @@
 """Risk register + model card from a filled use-case canvas and the controls catalog.
 
     python3 -I scripts/risk_register.py use-case-canvas.md --out-dir runs/x \
-        [--controls references/controls-catalog.md] [--template assets/model-card.md] [--name "Ticket triage"]
+        [--controls references/controls-catalog.md] [--template assets/model-card.md] [--name "Ticket triage"] \
+        [--existing last-quarter/risk-register.csv]
 
 Canvas (ai-use-case-canvas assets/use-case-canvas.md layout): the nine-box table
 `| # | Box | Content |` is parsed by box name; `key: value;` pairs inside a box are read
@@ -16,8 +17,17 @@ names that category among its top risks — anything the canvas does not support
 Rating = L x I: >= 15 High, 8-14 Medium, < 8 Low. Controls are mapped per category from the
 catalog's `| ID | Control | Addresses | ... |` table ("All" matches every category).
 
+Existing register (--existing, e.g. last quarter's risk-register.csv; this script's columns, or the
+assets/risk-register.csv layout with likelihood_1_5 / impact_1_5 / control_ids / control_owner): rows
+are matched by category. The canvas still wins wherever it supports a value; where it gives none, a
+reviewed 1-5 score and a named owner are carried forward (basis says so, to be re-confirmed), the
+previous risk_id is kept so IDs stay stable, and previously accepted control ids that are still in
+the catalog stay mapped. Every carry-forward and every change is listed in register-diff.csv;
+existing rows whose category is not in the taxonomy are listed there, never dropped silently.
+
 Writes risk-register.csv (risk_id, category, description, likelihood, impact, rating, control_id,
-control, owner, basis) and model-card.md (assets/model-card.md with the canvas facts filled; the
+control, owner, basis), register-diff.csv (risk_id, category, field, previous, current, change;
+header only when no existing register is given) and model-card.md (assets/model-card.md with the canvas facts filled; the
 tier's minimum control set listed in §7). Exit 1 when any High-rated risk has no mapped control,
 or on a missing/unparseable canvas or catalog. Stdlib only.
 """
@@ -113,6 +123,118 @@ def tier_controls(tier: str, tiers: dict) -> list[str]:
     return ids
 
 
+DIFF_COLS = ["risk_id", "category", "field", "previous", "current", "change"]
+EXISTING_ALIASES = {"likelihood": ("likelihood", "likelihood_1_5"), "impact": ("impact", "impact_1_5"),
+                    "owner": ("owner", "control_owner"), "control_id": ("control_id", "control_ids")}
+
+
+def unset(v) -> bool:
+    s = str(v if v is not None else "").strip()
+    return not s or s.upper() == "TBD" or s.startswith("[TO BE BASELINED") or s.startswith("<")
+
+
+def score(v) -> int | None:
+    s = str(v or "").strip()
+    return int(s) if s.isdigit() and 1 <= int(s) <= 5 else None
+
+
+def load_existing(path: Path) -> list[dict]:
+    if not path.is_file():
+        die(f"existing register not found: {path}")
+    lines = [ln for ln in path.read_text(encoding="utf-8-sig").splitlines() if not ln.lstrip().startswith("#")]
+    rows = list(csv.DictReader(lines))
+    if not rows or "category" not in rows[0]:
+        die(f"{path.name}: existing register needs a category column and at least one row")
+    out = []
+    for r in rows:
+        r = {(k or "").strip().lower(): (v or "").strip() for k, v in r.items() if k is not None}
+        rec = {"risk_id": r.get("risk_id", ""), "category": r.get("category", "").lower()}
+        for field, names in EXISTING_ALIASES.items():
+            rec[field] = next((r[n] for n in names if r.get(n)), "")
+        out.append(rec)
+    return out
+
+
+def rating_of(likelihood, impact) -> str:
+    if isinstance(likelihood, int) and isinstance(impact, int):
+        s = likelihood * impact
+        return "High" if s >= 15 else "Medium" if s >= 8 else "Low"
+    return "TBD"
+
+
+def merge_existing(rows: list[dict], existing: list[dict], controls: list[dict], src: str) -> list[dict]:
+    """Carry reviewed values forward from an existing register; return the diff rows."""
+    byid = {c["id"]: c for c in controls}
+    known = {cat for cat, _ in CATEGORIES}
+    prev = {}
+    diff = []
+    for e in existing:
+        if e["category"] in known and e["category"] not in prev:
+            prev[e["category"]] = e
+        else:
+            why = "category not in the taxonomy" if e["category"] not in known else "duplicate category"
+            diff.append({"risk_id": e["risk_id"], "category": e["category"], "field": "row", "previous": e["risk_id"],
+                         "current": "", "change": f"not carried: {why} — review with {TBD}"})
+    used = {e["risk_id"] for e in existing if e["risk_id"]}
+    nums = [int(m.group(1)) for i in used if (m := re.fullmatch(r"R-(\d+)", i))]
+    nxt = max(nums, default=0) + 1
+    for r in rows:
+        e = prev.get(r["category"])
+        if e is not None and e["risk_id"]:
+            r["risk_id"] = e["risk_id"]  # IDs stay stable across reviews
+        elif r["risk_id"] in used:
+            r["risk_id"] = f"R-{nxt:03d}"
+            nxt += 1
+        if e is None:
+            diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": "row", "previous": "",
+                         "current": r["risk_id"], "change": "new: category not in the existing register"})
+            continue
+        basis = [r["basis"]] if r["basis"] != "canvas gives no basis for scores" else []
+        for field in ("likelihood", "impact"):
+            old = score(e[field])
+            cur = r[field] if isinstance(r[field], int) else None
+            if cur is None and old is not None:
+                r[field] = old
+                basis.append(f"{field} {old} carried forward from {src} {e['risk_id'] or r['category']} (re-confirm)")
+                diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": field, "previous": str(old),
+                             "current": str(old), "change": "carried forward: canvas gives no basis"})
+            elif cur is not None and old is not None and cur != old:
+                diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": field, "previous": str(old),
+                             "current": str(cur), "change": "updated from the canvas"})
+            elif cur is not None and old is None:
+                diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": field,
+                             "previous": e[field] or "blank", "current": str(cur), "change": "newly scored from the canvas"})
+        if unset(r["owner"]) and not unset(e["owner"]):
+            r["owner"] = e["owner"]
+            diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": "owner", "previous": e["owner"],
+                         "current": e["owner"], "change": "carried forward: canvas names no owner"})
+        elif not unset(r["owner"]) and not unset(e["owner"]) and r["owner"] != e["owner"]:
+            diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": "owner", "previous": e["owner"],
+                         "current": r["owner"], "change": "updated from the canvas"})
+        ids = [i for i in r["control_id"].split("; ") if i]
+        old_ids = re.findall(r"C\d+", e["control_id"])
+        kept = [i for i in old_ids if i in byid and i not in ids]
+        gone = [i for i in old_ids if i not in byid]
+        if kept:
+            ids += kept
+            r["control_id"] = "; ".join(ids)
+            r["control"] = "; ".join(byid[i]["control"] for i in ids)
+            diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": "control_id",
+                         "previous": "; ".join(old_ids), "current": r["control_id"],
+                         "change": "carried forward: previously accepted controls still in the catalog"})
+        if gone:
+            diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": "control_id",
+                         "previous": "; ".join(gone), "current": "", "change": f"not carried: not in the controls catalog — review with {TBD}"})
+        old_rating = rating_of(score(e["likelihood"]), score(e["impact"]))
+        r["rating"] = rating_of(r["likelihood"] if isinstance(r["likelihood"], int) else None,
+                                r["impact"] if isinstance(r["impact"], int) else None)
+        if old_rating != r["rating"]:
+            diff.append({"risk_id": r["risk_id"], "category": r["category"], "field": "rating", "previous": old_rating,
+                         "current": r["rating"], "change": "re-rated"})
+        r["basis"] = "; ".join(basis) or "canvas gives no basis for scores"
+    return diff
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="use-case canvas + controls catalog -> risk-register.csv + model-card.md")
     ap.add_argument("canvas")
@@ -120,6 +242,7 @@ def main() -> int:
     ap.add_argument("--controls", default=str(SKILL / "references" / "controls-catalog.md"))
     ap.add_argument("--template", default=str(SKILL / "assets" / "model-card.md"))
     ap.add_argument("--name", default="")
+    ap.add_argument("--existing", default="", help="existing risk register CSV (e.g. last quarter's) to carry forward")
     a = ap.parse_args()
     cp = Path(a.canvas)
     if not cp.is_file():
@@ -172,8 +295,18 @@ def main() -> int:
                      "owner": data_owner if (cat == "privacy" and data_owner) else TBD,
                      "basis": "; ".join(basis) or "canvas gives no basis for scores"})
 
+    diff = []
+    if a.existing:
+        ep = Path(a.existing)
+        diff = merge_existing(rows, load_existing(ep), controls, f"existing register `{ep.name}`")
+        unmapped_high = [r["category"] for r in rows if r["rating"] == "High" and not r["control_id"]]
+
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    with (out / "register-diff.csv").open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=DIFF_COLS)
+        w.writeheader()
+        w.writerows(diff)
     with (out / "risk-register.csv").open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=["risk_id", "category", "description", "likelihood", "impact", "rating",
                                            "control_id", "control", "owner", "basis"])
@@ -217,7 +350,8 @@ def main() -> int:
     (out / "model-card.md").write_text(t, encoding="utf-8")
 
     n_tbd = sum(r["rating"] == "TBD" for r in rows)
-    print(f"risk register: {len(rows)} risks ({n_tbd} unscored), tier={tier or 'TBD'}, {len(req)} required controls -> {out}")
+    print(f"risk register: {len(rows)} risks ({n_tbd} unscored), tier={tier or 'TBD'}, {len(req)} required controls -> {out}"
+          + (f"; {len(diff)} change(s) against `{Path(a.existing).name}` in register-diff.csv" if a.existing else ""))
     if unmapped_high:
         print(f"error: High-rated risk(s) without a mapped control: {unmapped_high}", file=sys.stderr)
         return 1

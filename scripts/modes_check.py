@@ -11,7 +11,8 @@ Checks
   2. (--run) each declared mode's case runs with `run_skill.py --demo SKILL --mode M --provider none`:
      every check the eval case declares passes (its expected exit code included; default exit:0) and every
      output check the skill declares passes
-  3. every lifecycle stage and business shelf has at least one skill for each mode
+  3. every lifecycle stage and business shelf has at least one skill for each mode that applies to it
+     (shared/adlc-stages.json may narrow a stage's modes, with a `modes_why`)
 
 Usage: python3 scripts/modes_check.py [--run] [--skills GLOB] [--json OUT]
 Exit 0 when every check holds, 1 otherwise.
@@ -85,6 +86,8 @@ def main() -> int:
     a = ap.parse_args()
     stages = json.loads((ROOT / "shared/adlc-stages.json").read_text())
     places = [s["id"] for s in stages["stages"]] + [s["id"] for s in stages["shelves"]]
+    # a stage may declare the starting points that apply to it (e.g. improve: existing only) — with a stated reason
+    applies = {s["id"]: s.get("modes", list(MODES)) for s in stages["stages"] + stages["shelves"]}
     cover: dict[str, set[str]] = {p: set() for p in places}
     rows, failures = [], 0
     for sk in sorted(ROOT.glob(a.skills + "/SKILL.md")):
@@ -112,7 +115,7 @@ def main() -> int:
         rows.append(res)
         mark = "FAIL" if probs else "ok  "
         print(f"{mark} {key:<48} {','.join(res['modes']) or '-':<14} {'; '.join(probs)[:110]}")
-    gaps = [f"{p}: no '{m}' skill" for p in places for m in MODES if m not in cover[p]]
+    gaps = [f"{p}: no '{m}' skill" for p in places for m in applies[p] if m not in cover[p]]
     print(f"\n{len(rows)} agent skills · {len(rows) - failures} pass · {failures} fail")
     print(f"both modes declared: {sum(1 for r in rows if len(r['modes']) == 2)} · one mode: {sum(1 for r in rows if len(r['modes']) == 1)}")
     print("stage coverage: " + ("every stage and shelf has new and existing" if not gaps else "GAPS — " + "; ".join(gaps)))

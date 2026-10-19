@@ -14,18 +14,26 @@ metadata:
       - {name: as_of, type: string, required: true, from: "status date YYYY-MM-DD (never defaulted to today)"}
       - {name: thresholds, type: csv, required: false, from: "key,value RAG thresholds green_max_slip_days, amber_max_slip_days, red_exposure (default: assets/thresholds.csv values)"}
       - {name: strict, type: flag, required: false, flag: "--strict", from: "true to fail the run (exit 1) when the overall RAG is red"}
+      - {name: previous, type: json, required: false, from: "status.json of the last report; adds Since last report (forecast moves, RAG changes, completions, RAID opened/closed, end-date movement)"}
     run:
-      - {step: status, kind: script, cmd: "python3 -I scripts/raid_status.py --raid {raid} --milestones {milestones} --as-of {as_of} [--thresholds {thresholds}] {strict} --out-dir {out}"}
+      - {step: status, kind: script, cmd: "python3 -I scripts/raid_status.py --raid {raid} --milestones {milestones} --as-of {as_of} [--thresholds {thresholds}] [--previous {previous}] {strict} --out-dir {out}"}
     outputs:
       - {path: "{out}/status.csv", checks: [exists, csv:[milestone,baseline,forecast,slip_days,rag,on_critical_path], "csv_rows:rag~^(red|amber|green|complete)$", "csv_rows:slip_days~^-?\\d+$", cmd:"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}"]}
       - {path: "{out}/raid-actions.csv", checks: [exists, csv:[id,type,exposure,owner,due,overdue_days,next_action], cmd:"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}"]}
       - {path: "{out}/status-report.md", checks: [exists, sections:["Summary","Milestones","Critical path","Top risks","Overdue items","Decisions needed","Method"], no_unowned_tbd, mermaid_parses, contains:"Overall RAG rule"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "your RAID log and milestone plan for a first status report"}
+      existing: {case: agent-mode-existing, bring: "this week's RAID log and plan plus last report's status file"}
 ---
 
 # Program RAID Status
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/program-raid-status --input <name>=<value> … --out <dir>` (see `--explain ai-platform/program-raid-status`). Report the `run.json` results; do not hand-write the deliverables the script produces (`status.csv`, `raid-actions.csv`, `status-report.md`, `status.json`). `--verify` re-derives slip, RAG bounds and overdue days from the CSVs.
+
+## Starting points
+- **New** — the first status report for a program: RAG, critical path, top risks, overdue items and decisions from the RAID log and milestone plan.
+- **Existing** — also pass last report's `status.json` as `previous`: the report adds "Since last report" (overall RAG then and now, forecast moves and RAG changes per milestone, completions, RAID items opened and closed, end-date movement).
 
 ## When to use
 - ADLC build stage: weekly or steerco status for an AI delivery program (pilot, platform, agent rollout).

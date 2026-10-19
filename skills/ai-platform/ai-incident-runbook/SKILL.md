@@ -16,12 +16,19 @@ metadata:
     outputs:
       - {path: "{out}/runbook.md", checks: [exists, sections:["Severity","Immediate actions","Containment","Recovery","Communications","Postmortem"], no_unowned_tbd, numbers_trace_to:"{out}/incident.json"]}
       - {path: "{out}/incident.json", checks: [exists, json, contains:"\"fired_rules\"", contains:"\"matrix_source\""]}
+    modes:
+      new:      {case: agent-happy-path, bring: "the facts of an incident as you know them now"}
+      existing: {case: agent-mode-existing, bring: "the incident facts plus your team's own severity matrix"}
 ---
 
 # AI Incident Runbook
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-incident-runbook --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-incident-runbook`). Report the `run.json` results; do not hand-write the deliverables the script produces (`runbook.md`, `incident.json`). A severity matrix in which no row fires fails the run (exit 1) on purpose.
+
+## Starting points
+- **New** — no runbook or severity policy yet: bring the incident facts; the skill classifies with its documented default matrix (and says so) and assembles the runbook.
+- **Existing** — bring the incident facts and your team's own severity matrix; every row of your matrix is evaluated, the fired rules are listed, and a matrix with no baseline row fails the run instead of guessing.
 
 ## When to use
 - A live AI incident: hallucination, data leak, prompt injection, outage, cost spike or harmful output.

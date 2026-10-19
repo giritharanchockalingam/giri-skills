@@ -1,0 +1,32 @@
+{
+  "_note": "fictional fixture — the refund agent's existing LangGraph spec (langgraph-runner layout), not a real system",
+  "name": "refund_agent",
+  "state": [
+    {"name": "messages", "type": "messages", "reducer": "add_messages"},
+    {"name": "order", "type": "dict"},
+    {"name": "amount", "type": "float"},
+    {"name": "reason_code", "type": "str"},
+    {"name": "customer_message", "type": "str"}
+  ],
+  "nodes": [
+    {"name": "understand_request", "kind": "llm", "description": "Extract order id and refund reason", "reads": ["messages"], "writes": ["reason_code"]},
+    {"name": "lookup_order", "kind": "tool", "description": "Fetch the order", "reads": ["messages"], "writes": ["order"]},
+    {"name": "decide", "kind": "router", "description": "Refund, partial refund or decline", "reads": ["order", "reason_code"]},
+    {"name": "issue_refund", "kind": "tool", "description": "Call the payments API", "reads": ["order", "amount"], "writes": ["messages"]},
+    {"name": "update_crm", "kind": "tool", "description": "Log the case outcome in the CRM", "reads": ["order"], "writes": ["messages"]},
+    {"name": "send_customer_email", "kind": "tool", "description": "Email the customer", "reads": ["customer_message"], "writes": ["messages"]},
+    {"name": "draft_decline", "kind": "llm", "description": "Draft a decline message", "reads": ["order"], "writes": ["customer_message"]}
+  ],
+  "edges": [
+    {"from": "understand_request", "to": "lookup_order"},
+    {"from": "lookup_order", "to": "decide"},
+    {"from": "issue_refund", "to": "update_crm"},
+    {"from": "update_crm", "to": "send_customer_email"},
+    {"from": "draft_decline", "to": "send_customer_email"}
+  ],
+  "conditional_edges": [
+    {"from": "decide", "routes": {"refund": "issue_refund", "decline": "draft_decline"}}
+  ],
+  "entry": "understand_request",
+  "finish": ["send_customer_email"]
+}

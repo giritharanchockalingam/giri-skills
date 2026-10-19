@@ -8,6 +8,9 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-mode-new, bring: "the first test cases your experts wrote in a spreadsheet"}
+      existing: {case: agent-happy-path, bring: "your current eval set and its coverage targets"}
     inputs:
       - {name: dataset, type: file, required: true, from: "eval set JSONL or CSV: id, input, expected/reference, category or tags, optional grader, split, label (layout: assets/eval-dataset.example.jsonl)"}
       - {name: targets, type: csv, required: false, from: "coverage targets CSV: category, min_cases (layout: assets/coverage-targets.example.csv); without it coverage is reported, not gated"}
@@ -28,6 +31,10 @@ Wraps eval-engineering from langchain-ai/langchain-skills (pinned in vendor/pins
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/eval-engineering-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/eval-engineering-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`eval-audit.json`, `eval-audit.md`, `eval-clean.jsonl`). A FAIL (exit 1) means a category is below its target: add cases and re-run.
+
+## Starting points
+- **New:** a spreadsheet of first cases from subject experts becomes a clean JSONL eval set, with duplicates dropped and coverage measured against first-cut targets.
+- **Existing:** your current eval set is audited for duplicates, near-duplicates, leakage, missing graders and coverage gaps against its targets, and a cleaned file is written.
 
 ## When to use
 - Before trusting a score: is the eval set big enough per category, free of duplicates and leakage, and gradable?

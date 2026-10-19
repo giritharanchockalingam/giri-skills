@@ -8,24 +8,31 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-mode-new, bring: "a first extract of a new feed, no contract yet"}
+      existing: {case: agent-happy-path, bring: "your agreed data contract and the latest extract"}
     inputs:
-      - {name: contract, type: file, required: true, from: "data contract CSV (layout: assets/contract-template.csv) or ODCS v3 YAML subset (references/odcs-subset.md); from the data owner"}
+      - {name: contract, type: file, required: false, from: "data contract CSV (layout: assets/contract-template.csv) or ODCS v3 YAML subset (references/odcs-subset.md); from the data owner. Without it a DRAFT contract is inferred from the data to {out}/contract-draft.csv (warn severity, no owners) and the extract is checked against it"}
       - {name: data, type: csv, required: true, from: "dataset extract CSV with a header row (values are read; at most 3 truncated examples per violation are written)"}
       - {name: freshness_column, type: string, required: false, from: "date or datetime column whose newest value must be recent; without as_of and max_age_days freshness is TBD for the Data owner"}
       - {name: as_of, type: string, required: false, from: "as-of date YYYY-MM-DD for the freshness check (never defaults to today)"}
       - {name: max_age_days, type: string, required: false, from: "maximum age in days of the newest record (data owner's freshness SLA)"}
     run:
-      - {step: validate, kind: script, cmd: "python3 -I scripts/validate_contract.py --contract {contract} --data {data} [--freshness-column {freshness_column}] [--as-of {as_of}] [--max-age-days {max_age_days}] --out-dir {out}"}
+      - {step: validate, kind: script, cmd: "python3 -I scripts/validate_contract.py [--contract {contract}] --draft-contract {out}/contract-draft.csv --data {data} [--freshness-column {freshness_column}] [--as-of {as_of}] [--max-age-days {max_age_days}] --out-dir {out}"}
     outputs:
-      - {path: "{out}/violations.csv", checks: [exists, csv:[column,rule,severity,failing_rows,failing_rate,examples,owner], cmd:"python3 -I scripts/validate_contract.py --verify {path} --contract {contract} --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'"]}
-      - {path: "{out}/profile.csv", checks: [exists, csv:[column,inferred_type,null_rate,distinct,min,max], "csv_rows:null_rate~^[01]\\.\\d{3}$", cmd:"python3 -I scripts/validate_contract.py --verify {path} --contract {contract} --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'"]}
-      - {path: "{out}/contract-report.md", checks: [exists, sections:["Summary","Verdict","Violations","Profile","Method"], no_unowned_tbd, cmd:"python3 -I scripts/validate_contract.py --verify {path} --contract {contract} --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'"]}
+      - {path: "{out}/violations.csv", checks: [exists, csv:[column,rule,severity,failing_rows,failing_rate,examples,owner], cmd:"python3 -I scripts/validate_contract.py --verify {path} --contract '{contract}' --draft-contract {out}/contract-draft.csv --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'"]}
+      - {path: "{out}/profile.csv", checks: [exists, csv:[column,inferred_type,null_rate,distinct,min,max], "csv_rows:null_rate~^[01]\\.\\d{3}$", cmd:"python3 -I scripts/validate_contract.py --verify {path} --contract '{contract}' --draft-contract {out}/contract-draft.csv --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'"]}
+      - {path: "{out}/contract-report.md", checks: [exists, sections:["Summary","Verdict","Violations","Profile","Method"], no_unowned_tbd, cmd:"python3 -I scripts/validate_contract.py --verify {path} --contract '{contract}' --draft-contract {out}/contract-draft.csv --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'"]}
 ---
 
 # Data Contract Validator
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-contract-validator --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-contract-validator`). Report the `run.json` results; do not hand-write the deliverables the script produces (`violations.csv`, `profile.csv`, `contract-report.md`). This is a gate: any error-severity violation exits 1 with complete outputs. Each output is re-verified against the data and contract with the script's `--verify` mode.
+
+## Starting points
+- **New:** with only a first extract, the run drafts `contract-draft.csv` from it (types, required, keys, code lists, null limits, observed ranges in `notes`, all at warn severity with no owner invented) and checks the extract against the draft; the report marks the contract DRAFT until the Data owner signs it off.
+- **Existing:** your agreed contract (CSV or ODCS YAML) and the latest extract give every breach with its owner and the error-severity gate.
 
 ## When to use
 - ADLC data stage: before an extract is loaded into a vector store, a fine-tune set or an evaluation set.
@@ -36,7 +43,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 ## Inputs
 | Input | Required | Source | If missing |
 |---|---|---|---|
-| `contract` — CSV `column, type, required, unique, min, max, allowed, regex, max_null_rate, severity, owner` or ODCS v3 YAML | yes | data owner (copy `assets/contract-template.csv`) | run stops (exit 2), asks once |
+| `contract` — CSV `column, type, required, unique, min, max, allowed, regex, max_null_rate, severity, owner` or ODCS v3 YAML | no | data owner (copy `assets/contract-template.csv`) | a DRAFT contract is inferred from the extract to `contract-draft.csv` (warn severity, owners TBD) and the report says the pass is by construction |
 | `data` — extract CSV with header | yes | data engineering | run stops (exit 2), asks once |
 | `freshness_column` | no | data owner | freshness not requested |
 | `as_of` — YYYY-MM-DD | no | run owner (the load date) | freshness reads `not checked … [TO BE BASELINED — owner: Data owner]`; never today's date |

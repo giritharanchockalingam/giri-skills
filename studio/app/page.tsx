@@ -35,8 +35,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
   const role = ROLE_TEMPLATES.some((r) => r.name === sp.role) ? sp.role! : null;
   const phases = lifecycle(mode, role);
   const allStages = phases.flatMap((p) => p.stages);
-  const stage = allStages.find((s) => s.id === sp.stage) ?? allStages.find((s) => s.count > 0) ?? allStages[0];
-  const { rows, otherMode } = stageSkills(stage.id, mode, role);
+  const stage = allStages.find((s) => s.id === sp.stage) ?? allStages.find((s) => s.count > 0) ?? allStages[0];   // a stage the starting point doesn't apply to stays selectable and says why
+  const st = stageSkills(stage.id, mode, role);
+  const rows = stage.why ? [] : st.rows;
+  const otherMode = stage.why ? st.rows.length + st.otherMode : st.otherMode;
   const roleTitle = role ? ROLE_TEMPLATES.find((r) => r.name === role)?.title : null;
   const link = (patch: Record<string, string | null>) => {
     const n = new URLSearchParams(Object.entries({ stage: stage.id, start: mode, role }).filter(([, v]) => v) as [string, string][]);
@@ -95,7 +97,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             </div>
           </div>
           {rows.length === 0 ? (
-            <p className="lc-empty">No skill here for this starting point{roleTitle ? ` and role` : ""} yet.{" "}
+            <p className="lc-empty">{stage.why ?? <>No skill here for this starting point{roleTitle ? " and role" : ""} yet.</>}{" "}
               {otherMode > 0 && <Link className="link" href={link({ start: mode === "new" ? "existing" : "new" })} scroll={false}>See {otherMode} for {mode === "new" ? "improving what exists" : "starting new"}</Link>}</p>
           ) : (
             <ul className="lc-rows">

@@ -19,12 +19,18 @@ metadata:
       - {path: "{out}/dashboard.json", checks: [exists, json, contains:"\"slo_results\"", contains:"nearest-rank"]}
       - {path: "{out}/alerts.md", checks: [exists, sections:["Status","SLO breaches","Drift","By feature"], no_unowned_tbd, numbers_trace_to:"{out}/dashboard.json"]}
       - {path: "{out}/trace-schema.json", checks: [exists, json, contains:"\"required\""]}
+    modes:
+      existing: {case: agent-happy-path, bring: "trace exports from your running app and your SLO targets"}
 ---
 
 # LLM Observability (traces → SLOs → alerts)
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-observability --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-observability`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dashboard.json`, `alerts.md`, `trace-schema.json`). Any SLO breach fails the run (exit 1) on purpose; the outputs are still written.
+
+## Starting points
+- **Existing** — rolls up spans your running application already emitted against the owner's SLOs, with drift against a baseline window.
+- Only for existing: there is nothing to measure until an application produces traces; for a new app, emit spans per `assets/trace-schema.json` and set SLOs from `assets/slo-template.csv`, then run this on the first traffic.
 
 ## When to use
 - A deployed LLM/agent feature needs per-feature latency, error, token, cost and quality roll-ups against SLOs.

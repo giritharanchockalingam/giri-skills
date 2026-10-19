@@ -11,13 +11,17 @@ metadata:
     inputs:
       - {name: spec, type: json, required: true, from: "graph spec JSON: name, state [{name, type, reducer}], nodes [{name, kind llm|tool|router|function, description, reads, writes}], edges [{from, to}], conditional_edges [{from, routes {label: to}}], entry, finish (layout: assets/graph-spec.example.json)"}
       - {name: review, type: flag, required: false, flag: "--review", from: "yes to add an LLM review of the scaffold against the upstream langgraph-fundamentals guidance"}
+      - {name: current_spec, type: json, required: false, from: "graph spec JSON of the graph running today; adds the node/edge/state diff and flags changes that break resuming persisted threads"}
     run:
-      - {step: build, kind: script, cmd: "python3 -I scripts/build_graph.py --spec {spec} --out-dir {out}", stdout: "{out}/build.log"}
+      - {step: build, kind: script, cmd: "python3 -I scripts/build_graph.py --spec {spec} [--current-spec {current_spec}] --out-dir {out}", stdout: "{out}/build.log"}
       - {step: upstream-review, kind: llm, template: assets/graph-review-template.md, context: ["../../../vendor/langgraph-fundamentals/SKILL.md", "../../../vendor/langgraph-fundamentals/references/python.md", "{out}/graph.md", "{out}/validation.json", "{out}/graph.py"], out: "{out}/graph-review.md", skip_if_missing: [review]}
     outputs:
       - {path: "{out}/validation.json", checks: [exists, json, contains:"\"valid\": true"]}
       - {path: "{out}/graph.md", checks: [exists, sections:["Diagram","Validation","Nodes","How to run"], mermaid_parses, no_unowned_tbd]}
       - {path: "{out}/graph.py", checks: [exists, contains:"builder.compile(", cmd:"python3 scripts/check_syntax.py {path} --require State --require build_graph"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "a graph spec for the agent you plan"}
+      existing: {case: agent-mode-existing, bring: "the spec of the graph running today plus your new spec"}
 ---
 
 # LangGraph Runner
@@ -26,6 +30,10 @@ Wraps langgraph-fundamentals from langchain-ai/langchain-skills (pinned in vendo
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langgraph-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langgraph-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`graph.py`, `graph.md`, `validation.json`). A failed validation (exit 1) is the gate working: fix the spec and re-run.
+
+## Starting points
+- **New** — validate a graph spec written from `assets/graph-spec.example.json` and generate the StateGraph scaffold.
+- **Existing** — also pass the spec of the graph running today as `current_spec`: graph.md adds "Changes vs current graph" (nodes, edges/routes and state fields added, removed or changed) and flags state changes that break resuming threads already checkpointed.
 
 ## When to use
 - A LangGraph workflow has been sketched (nodes, state, routing) and needs checking before code is written.

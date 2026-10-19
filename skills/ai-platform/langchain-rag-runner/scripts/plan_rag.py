@@ -25,7 +25,13 @@ Method (per source; L = avg_chars, C = chunk size, O = overlap, S = C - O):
 Blocking errors (exit 1; no rag_pipeline.py): missing/invalid config keys; overlap >= chunk size;
 rerank_fetch_k < top_k; top_k x chunk tokens > context budget; invalid corpus rows.
 
-Usage: python3 -I plan_rag.py --corpus corpus.csv --config rag-config.json --out-dir OUT
+Brownfield (--current-config): pass the config the live index was built with. Both configs are sized on
+the same corpus and the plan adds "change_vs_current": every changed key (index-affecting: chunk size,
+overlap, embedding provider/model, vector store; query-time: top_k, reranker, rerank_fetch_k, context
+budget), whether a full re-index is required and its one-off embedding cost, and the deltas in chunks,
+monthly re-embedding cost and per-query context tokens. An invalid current config is a blocking error.
+
+Usage: python3 -I plan_rag.py --corpus corpus.csv --config rag-config.json [--current-config live.json] --out-dir OUT
 Writes OUT/rag-plan.json and OUT/rag-plan.md always; OUT/rag_pipeline.py only without blocking
 errors. The scaffold is generated as text and syntax-checked, never executed.
 Exit: 0 ok · 1 blocking config/corpus errors · 2 an input file missing or unreadable. Stdlib only.
@@ -238,6 +244,36 @@ def warnings_for(c: dict, sizing: dict | None) -> list[str]:
     return w
 
 
+INDEX_KEYS = (("chunk_size_chars", "chunk_size_chars"), ("chunk_overlap_chars", "chunk_overlap_chars"),
+              ("embedding_provider", "embedding_provider"), ("embedding_model", "embedding_model"),
+              ("vector_store", "store_kind"))
+QUERY_KEYS = ("top_k", "reranker", "rerank_fetch_k", "context_budget_tokens")
+
+
+def compare_current(cur: dict, new: dict, sources: list[dict]) -> dict:
+    """What changes between the live index's config and the proposed one, on the same corpus."""
+    changed = []
+    for label, key in INDEX_KEYS:
+        if cur.get(key) != new.get(key):
+            changed.append({"key": label, "current": cur.get(label), "proposed": new.get(label), "affects": "index"})
+    for key in QUERY_KEYS:
+        if cur.get(key) != new.get(key):
+            changed.append({"key": key, "current": cur.get(key), "proposed": new.get(key), "affects": "query"})
+    reindex = any(c["affects"] == "index" for c in changed)
+    cur_sz, new_sz = size_corpus(sources, cur), size_corpus(sources, new)
+    cur_rb, new_rb = retrieval_budget(cur), retrieval_budget(new)
+    return {"changed_keys": changed, "reindex_required": reindex,
+            "reindex_embedding_tokens": new_sz["total_embedding_tokens"] if reindex else 0,
+            "reindex_cost": new_sz["one_time_cost"] if reindex else 0,
+            "current_total_chunks": cur_sz["total_chunks"], "proposed_total_chunks": new_sz["total_chunks"],
+            "delta_chunks": new_sz["total_chunks"] - cur_sz["total_chunks"],
+            "current_monthly_cost": cur_sz["monthly_cost"], "proposed_monthly_cost": new_sz["monthly_cost"],
+            "delta_monthly_cost": round(new_sz["monthly_cost"] - cur_sz["monthly_cost"], 4),
+            "current_per_query_context_tokens": cur_rb["per_query_context_tokens"],
+            "proposed_per_query_context_tokens": new_rb["per_query_context_tokens"],
+            "delta_per_query_context_tokens": new_rb["per_query_context_tokens"] - cur_rb["per_query_context_tokens"]}
+
+
 # ------------------------------------------------------------------ scaffold
 
 def gen_python(c: dict, sources: list[dict], cfg_name: str) -> str:
@@ -366,6 +402,14 @@ def _n(x) -> str:
     return repr(x)
 
 
+def _cfg_cell(v) -> str:
+    if v is None or v == "":
+        return "—"
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    return str(v)
+
+
 def gen_markdown(plan: dict, corpus_name: str, cfg_name: str) -> str:
     c, sz, rb = plan["config"], plan.get("sizing"), plan.get("retrieval_budget")
     cur = c.get("currency") or "price units"
@@ -416,6 +460,27 @@ def gen_markdown(plan: dict, corpus_name: str, cfg_name: str) -> str:
               + (f"; candidates fetched: {_n(rb['rerank_fetch_k']) if rb['rerank_fetch_k'] is not None else TBD_FETCH}" if rb["reranker"] else "") + " |", ""]
     else:
         L += ["Not computed: blocking errors in the inputs.", ""]
+    cv = plan.get("change_vs_current")
+    if cv:
+        L += ["## Change vs current index", "",
+              f"Compared with the live index config `{plan['inputs']['current_config']}` on the same corpus: "
+              f"{len(cv['changed_keys'])} changed key(s); full re-index required: "
+              f"**{'yes' if cv['reindex_required'] else 'no'}**"
+              + (f" ({_n(cv['reindex_embedding_tokens'])} est. tokens, one-off {_n(cv['reindex_cost'])} {cur})."
+                 if cv["reindex_required"] else " (query-time changes only; the existing vectors stay valid)."), ""]
+        if cv["changed_keys"]:
+            L += ["| Key | Current | Proposed | Affects |", "|---|---|---|---|"]
+            for k in cv["changed_keys"]:
+                L.append(f"| {k['key']} | {_cfg_cell(k['current'])} | {_cfg_cell(k['proposed'])} | {k['affects']} |")
+            L.append("")
+        L += ["| Measure | Current | Proposed | Delta |", "|---|---|---|---|",
+              f"| Chunks | {_n(cv['current_total_chunks'])} | {_n(cv['proposed_total_chunks'])} | {_n(cv['delta_chunks'])} |",
+              f"| Monthly re-embedding ({cur}) | {_n(cv['current_monthly_cost'])} | {_n(cv['proposed_monthly_cost'])} | {_n(cv['delta_monthly_cost'])} |",
+              f"| Context per query (est. tokens) | {_n(cv['current_per_query_context_tokens'])} | "
+              f"{_n(cv['proposed_per_query_context_tokens'])} | {_n(cv['delta_per_query_context_tokens'])} |", ""]
+        if cv["reindex_required"]:
+            L += ["Re-index into a new collection and switch reads after the retrieval eval passes on it; "
+                  "vectors from different chunking or embedding models must never be mixed in one index.", ""]
     L += ["## Warnings", ""]
     L += [f"- {w}" for w in plan["warnings"]] or ["None."]
     L += ["", "## Scaffold", "", f"`rag_pipeline.py`: {plan['scaffold']['status']}."]
@@ -433,6 +498,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="RAG sizing, cost, retrieval budget and LangChain scaffold")
     ap.add_argument("--corpus", required=True, help="corpus profile CSV (layout: assets/corpus-profile.example.csv)")
     ap.add_argument("--config", required=True, help="RAG config JSON (layout: assets/rag-config.example.json)")
+    ap.add_argument("--current-config", help="config JSON the live index was built with (brownfield change plan)")
     ap.add_argument("--out-dir", required=True)
     a = ap.parse_args(argv)
     cfg_path, corpus_path = Path(a.config), Path(a.corpus)
@@ -441,6 +507,11 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     c = parse_config(cfg_raw, errors)
     sources = parse_corpus(rows, errors)
+    cur_c = None
+    if a.current_config:
+        cur_errors: list[str] = []
+        cur_c = parse_config(read_config(Path(a.current_config)), cur_errors)
+        errors += [f"current config: {e}" for e in cur_errors]
     sizing = rb = None
     if not errors:
         sizing = size_corpus(sources, c)
@@ -461,13 +532,18 @@ def main(argv: list[str] | None = None) -> int:
             (out / "rag_pipeline.py").write_text(src, encoding="utf-8")
         else:
             errors.append(f"generated scaffold failed the syntax check: {detail}")
-    plan = {"ok": not errors, "inputs": {"corpus": corpus_path.name, "config": cfg_path.name},
+    change = compare_current(cur_c, c, sources) if cur_c is not None and sizing is not None else None
+    inputs = {"corpus": corpus_path.name, "config": cfg_path.name}
+    if a.current_config:
+        inputs["current_config"] = Path(a.current_config).name
+    plan = {"ok": not errors, "inputs": inputs,
             "config": {k: v for k, v in c.items()}, "blocking_errors": errors, "warnings": warns,
             "method": {"chunks_per_doc": "1 if L <= C else 1 + ceil((L - C) / (C - O))",
                        "embedded_chars_per_doc": "L + (n - 1) * O",
                        "tokens": "ceil(doc_count * embedded_chars / chars_per_token) (estimate)",
                        "monthly_reembed_tokens": "tokens * updates_per_month * change_fraction"},
             "sizing": sizing, "retrieval_budget": rb, "scaffold": scaffold,
+            **({"change_vs_current": change} if change else {}),
             "upstream": "langchain-rag (langchain-ai/langchain-skills, vendor/pins.json)"}
     (out / "rag-plan.json").write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     (out / "rag-plan.md").write_text(gen_markdown(plan, corpus_path.name, cfg_path.name), encoding="utf-8")

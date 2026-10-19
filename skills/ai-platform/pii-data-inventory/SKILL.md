@@ -12,17 +12,25 @@ metadata:
       - {name: data, type: csv, required: true, from: "sample CSV with a header row (an extract; values are read, never echoed)"}
       - {name: policy, type: csv, required: false, from: "privacy policy pii_type,handling (layout: assets/pii-policy.csv; handling mask|tokenize|drop|allow); without it every PII column is TBD for the Privacy officer"}
       - {name: strict, type: flag, required: false, flag: "--strict", from: "true to fail the run (exit 1) when any PII column has no policy handling"}
+      - {name: previous, type: csv, required: false, from: "pii-inventory.csv from the last scan of the same table; adds per-column change (new, removed, pii-added, pii-removed, handling-changed)"}
     run:
-      - {step: scan, kind: script, cmd: "python3 -I scripts/scan_pii.py --data {data} [--policy {policy}] {strict} --out-dir {out}"}
+      - {step: scan, kind: script, cmd: "python3 -I scripts/scan_pii.py --data {data} [--policy {policy}] [--previous {previous}] {strict} --out-dir {out}"}
     outputs:
       - {path: "{out}/pii-inventory.csv", checks: [exists, csv:[column,pii_types,match_rate,rows_scanned,handling], csv_rows:handling!empty, "csv_rows:match_rate~^[01]\\.\\d{3}$", cmd:"python3 -I scripts/scan_pii.py --leak-check {path} --data {data}"]}
       - {path: "{out}/pii-report.md", checks: [exists, sections:["Summary","Column inventory","Handling gaps","Method"], no_unowned_tbd, cmd:"python3 -I scripts/scan_pii.py --leak-check {path} --data {data}"]}
+    modes:
+      new:      {case: agent-happy-path, bring: "a sample of a table never inventoried, plus your privacy policy"}
+      existing: {case: agent-mode-existing, bring: "a fresh sample, your policy and last quarter's inventory"}
 ---
 
 # PII Data Inventory
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/pii-data-inventory --input <name>=<value> … --out <dir>` (see `--explain ai-platform/pii-data-inventory`). Report the `run.json` results; do not hand-write the deliverables the script produces (`pii-inventory.csv`, `pii-report.md`). Both outputs pass a leak check: the script re-scans the source and fails if any raw matched value appears in them.
+
+## Starting points
+- **New** — first inventory of a table: scan a sample, map each PII column to your policy's handling.
+- **Existing** — also pass the last inventory as `previous`: each column is classed new, removed, pii-added, pii-removed, handling-changed or unchanged (`change_vs_previous`), and PII that was not there before is called out for the Privacy officer ("Changes since last inventory").
 
 ## When to use
 - ADLC data stage: before a sample is copied into a notebook, a vector store, a prompt or a fine-tune set.

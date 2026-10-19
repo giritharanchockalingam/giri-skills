@@ -17,9 +17,12 @@ Inputs:
   --prices      CSV model,price_in_per_1m,price_out_per_1m[,cached_in_per_1m],source,as_of
   --assignment  CSV feature,model[,eligible_models]  (eligible_models: ';'-separated swap candidates)
   --budget      monthly budget in the price currency (optional)
+  --actuals     CSV feature,actual_cost[,actual_requests],period,source — what the features really cost in
+                one billed month (brownfield). Adds "actuals": modelled vs actual cost per feature, variance
+                and variance %, actual cost per request, and spend on features the model does not cover.
 
 Usage:
-  python3 -I cost_model.py --workload w.csv --prices p.csv --assignment a.csv [--budget 1000] --out <dir>
+  python3 -I cost_model.py --workload w.csv --prices p.csv --assignment a.csv [--budget 1000] [--actuals billed.csv] --out <dir>
   python3 -I cost_model.py ... --json          # JSON to stdout
 
 Exit codes: 0 ok (within budget or no budget) · 1 total exceeds the supplied budget ·
@@ -213,6 +216,55 @@ def compute(feats, price, assign, budget: float | None, alert_levels: list[float
     return out
 
 
+def load_actuals(path: Path) -> list[dict]:
+    rows = read_csv(path, ["feature", "actual_cost"], "actuals")
+    seen, out = set(), []
+    for r in rows:
+        if r["feature"] in seen:
+            raise InputError(f"actuals line {r['_line']}: duplicate feature {r['feature']!r}")
+        seen.add(r["feature"])
+        out.append({"feature": r["feature"], "actual_cost": num(r, "actual_cost", "actuals"),
+                    "actual_requests": num(r, "actual_requests", "actuals", optional=True),
+                    "period": r.get("period", ""), "source": r.get("source", "")})
+    return out
+
+
+def compare_actuals(res: dict, actuals: list[dict]) -> dict:
+    """Modelled vs billed cost per feature (variance = actual - modelled; % of modelled)."""
+    by = {a["feature"]: a for a in actuals}
+    rows = []
+    for f, v in res["features"].items():
+        a = by.get(f)
+        row = {"feature": f, "modelled_cost": v["cost_month"], "modelled_requests": v["requests_per_month"],
+               "actual_cost": None, "actual_requests": None, "variance": None, "variance_pct": None,
+               "actual_cost_per_request": None}
+        if a:
+            row["actual_cost"] = round(a["actual_cost"], 2)
+            row["actual_requests"] = a["actual_requests"]
+            row["variance"] = round(a["actual_cost"] - v["cost_month"], 2)
+            row["variance_pct"] = round(row["variance"] / v["cost_month"] * 100, 1) if v["cost_month"] else None
+            if a["actual_requests"]:
+                row["actual_cost_per_request"] = round(a["actual_cost"] / a["actual_requests"], 6)
+        rows.append(row)
+    rows.sort(key=lambda r: -abs(r["variance"]) if r["variance"] is not None else 0)
+    unmodelled = [{"feature": a["feature"], "actual_cost": round(a["actual_cost"], 2)}
+                  for a in actuals if a["feature"] not in res["features"]]
+    matched = [r for r in rows if r["actual_cost"] is not None]
+    m_tot = round(sum(r["modelled_cost"] for r in matched), 2)
+    a_tot = round(sum(r["actual_cost"] for r in matched), 2)
+    periods = sorted({a["period"] for a in actuals if a["period"]})
+    sources = sorted({a["source"] for a in actuals if a["source"]})
+    return {"period": "; ".join(periods) or TBB, "source": "; ".join(sources) or TBB, "rows": rows,
+            "not_billed": [r["feature"] for r in rows if r["actual_cost"] is None], "unmodelled": unmodelled,
+            "unmodelled_total": round(sum(u["actual_cost"] for u in unmodelled), 2),
+            "modelled_total_matched": m_tot, "actual_total_matched": a_tot,
+            "variance_total": round(a_tot - m_tot, 2),
+            "variance_pct_total": round((a_tot - m_tot) / m_tot * 100, 1) if m_tot else None,
+            "actual_total_all": round(a_tot + sum(u["actual_cost"] for u in unmodelled), 2),
+            "billed_vs_budget_pct": (round((a_tot + sum(u["actual_cost"] for u in unmodelled))
+                                           / res["budget"]["budget_month"] * 100, 1) if res.get("budget") else None)}
+
+
 def money(x) -> str:
     return "n/a" if x is None else f"{x:,.2f}"
 
@@ -223,6 +275,40 @@ def intc(x) -> str:
 
 def pct(x) -> str:
     return f"{x:g}"
+
+
+def render_actuals_md(a: dict) -> list[str]:
+    def sp(x):
+        return "n/a" if x is None else f"{x:+g}%"
+
+    def signed(x):
+        return "n/a" if x is None else f"{x:+,.2f}"
+
+    def per_req(x):
+        return "n/a" if x is None else f"{x:.6f}"
+    L = ["", "## Actuals vs model", "",
+         f"Billed period {a['period']} (source: {a['source']}). Variance = actual − modelled, % of modelled. "
+         "A large variance means the workload averages (requests, tokens, cache share) no longer match production: "
+         "update the workload CSV from the logs and re-run.", "",
+         "| Feature | Modelled / month | Actual | Variance | Variance % | Modelled requests | Actual requests | Actual cost / request |",
+         "|---|---|---|---|---|---|---|---|"]
+    for r in a["rows"]:
+        L.append(f"| {r['feature']} | {money(r['modelled_cost'])} | {money(r['actual_cost'])} | "
+                 f"{signed(r['variance'])} | {sp(r['variance_pct'])} | "
+                 f"{intc(r['modelled_requests'])} | {'n/a' if r['actual_requests'] is None else intc(r['actual_requests'])} | "
+                 f"{per_req(r['actual_cost_per_request'])} |")
+    L += ["", f"Matched features: modelled {money(a['modelled_total_matched'])}, actual {money(a['actual_total_matched'])}, "
+          f"variance {a['variance_total']:+,.2f} ({sp(a['variance_pct_total'])})."]
+    if a["unmodelled"]:
+        L.append(f"Billed but not in the model: " + ", ".join(f"{u['feature']} {money(u['actual_cost'])}" for u in a["unmodelled"])
+                 + f" (total {money(a['unmodelled_total'])}); add these features to the workload. "
+                 f"All billed spend: {money(a['actual_total_all'])}.")
+    if a["not_billed"]:
+        L.append(f"In the model but absent from the bill: {', '.join(a['not_billed'])}.")
+    if a.get("billed_vs_budget_pct") is not None:
+        L.append(f"Billed spend is {a['billed_vs_budget_pct']:g}% of the monthly budget"
+                 + (" — over budget in the billed month." if a["billed_vs_budget_pct"] > 100 else "."))
+    return L
 
 
 def render_md(res: dict) -> str:
@@ -267,6 +353,8 @@ def render_md(res: dict) -> str:
         L += ["", "| Alert level | Amount | Reached |", "|---|---|---|"]
         for a in b["alerts"]:
             L.append(f"| {pct(a['level_pct'])}% | {money(a['amount'])} | {'yes' if a['reached'] else 'no'} |")
+    if res.get("actuals"):
+        L += render_actuals_md(res["actuals"])
     L += ["", "## Sources", "", "| Model | In / 1M | Out / 1M | Cached in / 1M | Source | As of |", "|---|---|---|---|---|---|"]
     for m, p in res["prices"].items():
         cached = "not supplied" if p["cached_in_per_1m"] is None else f"{p['cached_in_per_1m']:g}"
@@ -297,6 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--assignment", type=Path, required=True)
     ap.add_argument("--budget", help="monthly budget (same currency as the price sheet)")
     ap.add_argument("--alert-levels", default="50,80,100", help="budget alert levels in %% (default 50,80,100)")
+    ap.add_argument("--actuals", type=Path, help="billed cost per feature for one month (brownfield variance)")
     ap.add_argument("--out", type=Path, help="directory for cost-model.json and cost-model.md")
     ap.add_argument("--json", action="store_true", help="print the JSON result to stdout")
     a = ap.parse_args(argv)
@@ -311,6 +400,8 @@ def main(argv: list[str] | None = None) -> int:
                 raise InputError("--budget must be > 0")
         feats, price, assign = load(a.workload, a.prices, a.assignment)
         res = compute(feats, price, assign, budget, parse_levels(a.alert_levels))
+        if a.actuals:
+            res["actuals"] = compare_actuals(res, load_actuals(a.actuals))
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

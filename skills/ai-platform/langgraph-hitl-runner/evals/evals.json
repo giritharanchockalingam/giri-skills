@@ -55,6 +55,44 @@
         {"file": "hitl-review.md", "check": "sections:[\"Upstream conformance\",\"Gaps\",\"Decisions needed\"]"},
         {"file": "hitl-review.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Add finance and team-lead approvals to our existing refund agent. Here is its graph spec — show where the gates go and what is still ungated.",
+      "expected": [
+        "Fits both gates to real nodes of the existing graph, lists the edges to rewire (decide [refund] into issue_refund; update_crm and draft_decline into send_customer_email), and names lookup_order and update_crm as ungated tool nodes for the risk owner"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/approvals.json",
+        "graph_spec": "evals/fixtures/refund-graph.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "validation.json",
+          "check": "contains:\"\\\"ungated_tool_nodes\\\": [\""
+        },
+        {
+          "file": "hitl.md",
+          "check": "sections:[\"Approval matrix\",\"Validation\",\"Fit to existing graph\",\"Resume flow\",\"Risks\"]"
+        },
+        {
+          "file": "hitl.md",
+          "check": "contains:\"| issue_refund | yes | tool | decide [refund] |\""
+        },
+        {
+          "file": "hitl.md",
+          "check": "contains:\"Tool nodes with no gate: lookup_order, update_crm.\""
+        },
+        {
+          "file": "hitl.md",
+          "check": "no_unowned_tbd"
+        },
+        {
+          "file": "hitl.py",
+          "check": "cmd:\"python3 scripts/check_syntax.py {path} --require build_graph --require resume\""
+        }
+      ]
     }
   ]
 }

@@ -67,6 +67,23 @@
         {"file": "eval-review.md", "check": "sections:[\"Upstream alignment\",\"Dataset gaps\",\"Next actions\"]"},
         {"file": "eval-review.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Our SMEs wrote the first payroll help test cases in a spreadsheet. Turn them into an eval set and check them against our first-cut targets.",
+      "expected": [
+        "Reads the CSV seed cases; drops the exact duplicate p4; 11 clean cases written as JSONL; every category meets its target; verdict PASS"
+      ],
+      "inputs": {
+        "dataset": "evals/fixtures/seed-cases.csv",
+        "targets": "evals/fixtures/targets-seed.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "eval-audit.md", "check": "contains:\"12 rows in, 11 kept in `eval-clean.jsonl`, 1 dropped\""},
+        {"file": "eval-audit.md", "check": "contains:\"exact duplicate of p3 (line 4); row dropped\""},
+        {"file": "eval-clean.jsonl", "check": "contains:\"\\\"id\\\": \\\"s2\\\"\""}
+      ]
     }
   ]
 }

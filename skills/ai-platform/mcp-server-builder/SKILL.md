@@ -12,18 +12,26 @@ metadata:
       - {name: tools, type: json, required: true, from: "tools.json: list of {name, description, input_schema, output_schema[, x-contract]} (layout: evals/fixtures/tools.json)"}
       - {name: target, type: string, required: false, default: "{out}/server", from: "directory to scaffold into, absolute path (created if absent; existing files are never overwritten)"}
       - {name: name, type: string, required: false, from: "server name (default: target dir name)"}
+      - {name: existing_server, type: dir, required: false, from: "server folder this skill scaffolded earlier; copied to target and extended with the missing tools (handler bodies untouched; contract drift reported)"}
     run:
-      - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold_mcp.py {tools} --target {target} --lang python [--name {name}] --report {out}/scaffold-report.json"}
+      - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold_mcp.py {tools} --target {target} --lang python [--name {name}] [--from-existing {existing_server}] --report {out}/scaffold-report.json"}
     outputs:
       - {path: "{out}/scaffold-report.json", checks: [exists, json]}
       - {path: "{target}/server.py", checks: [exists, contains:"tools/list", cmd:"python3 -m pytest -q -p no:cacheprovider {target}/tests"]}
       - {path: "{target}/README.md", checks: [exists, sections:["Tools","Run","Test"]]}
+    modes:
+      new:      {case: agent-happy-path, bring: "the tool contracts you want to expose"}
+      existing: {case: agent-mode-existing, bring: "your existing MCP server folder and its updated tool contracts"}
 ---
 
 # MCP Server Builder
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/mcp-server-builder --input <name>=<value> … --out <dir>` (see `--explain ai-platform/mcp-server-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`server.py`, `tools/*.json`, `tests/test_tools.py`, `README.md`). The runner then runs the scaffold's own pytest suite as a check; implement the stubs afterwards, following the Procedure.
+
+## Starting points
+- **New** — scaffold a stdlib MCP server, contracts, tests and README from `tools.json`.
+- **Existing** — pass the server folder you already run as `existing_server`: it is copied to `target`, tools it lacks get contracts, handler stubs and README rows, implemented handlers stay untouched, and the report lists `added_tools`, `contract_changed` (deployed contract kept) and `existing_only_tools`.
 
 ## When to use
 - Building a new MCP server (Python or TypeScript), wrapping an existing API/database/SaaS as MCP tools, or reviewing a server for spec compliance and safety.

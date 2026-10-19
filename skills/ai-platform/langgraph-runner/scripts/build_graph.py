@@ -29,8 +29,13 @@ Spec (JSON):
 The scaffold is generated as text and verified with compile()/ast.parse. It is NOT
 executed and langgraph is NOT imported here.
 
+Brownfield (--current-spec): pass the spec of the graph running today. The run diffs it against the new
+spec — nodes, edges/routes and state fields added, removed or changed — and flags state changes that break
+resuming threads already persisted by a checkpointer (a field removed, or its type or reducer changed).
+The diff lands in validation.json ("change_vs_current") and graph.md ("Changes vs current graph").
+
 Usage:
-  python3 -I build_graph.py --spec graph-spec.json --out-dir OUT
+  python3 -I build_graph.py --spec graph-spec.json [--current-spec live-spec.json] --out-dir OUT
 Writes OUT/validation.json and OUT/graph.md always; OUT/graph.py only when valid.
 Exit: 0 valid · 1 validation errors · 2 spec missing or not JSON. Stdlib only.
 """
@@ -436,7 +441,70 @@ def gen_mermaid(v: dict) -> str:
     return "\n".join(out)
 
 
-def gen_markdown(v: dict, scaffold: dict, spec_name: str) -> str:
+def _edge_set(v: dict) -> set[tuple[str, str, str]]:
+    return {(src, t, lbl) for src, outs in out_edges(v["spec"]).items() for t, _kind, lbl in outs}
+
+
+def diff_specs(cur: dict, new: dict, current_name: str) -> dict:
+    """Changes from the graph running today (cur) to the new spec (new); both are validate() results."""
+    cn = {n["name"]: n for n in cur["spec"]["nodes"]}
+    nn = {n["name"]: n for n in new["spec"]["nodes"]}
+    node_changes = [{"node": k, "change": "added", "kind": nn[k]["kind"]} for k in nn if k not in cn]
+    node_changes += [{"node": k, "change": "removed", "kind": cn[k]["kind"]} for k in cn if k not in nn]
+    node_changes += [{"node": k, "change": f"kind {cn[k]['kind']} -> {nn[k]['kind']}", "kind": nn[k]["kind"]}
+                     for k in nn if k in cn and cn[k]["kind"] != nn[k]["kind"]]
+    ce, ne = _edge_set(cur), _edge_set(new)
+
+    def edge(e, change):
+        return {"from": e[0], "to": e[1], "route": e[2], "change": change}
+    edge_changes = [edge(e, "added") for e in sorted(ne - ce)] + [edge(e, "removed") for e in sorted(ce - ne)]
+    cf, nf = cur["fields"], new["fields"]
+    state_changes, breaking = [], []
+    for k in nf:
+        if k not in cf:
+            state_changes.append({"field": k, "change": "added", "breaks_resume": False})
+    for k in cf:
+        if k not in nf:
+            state_changes.append({"field": k, "change": "removed", "breaks_resume": True})
+        elif (cf[k]["type"], cf[k]["reducer"]) != (nf[k]["type"], nf[k]["reducer"]):
+            state_changes.append({"field": k, "breaks_resume": True,
+                                  "change": f"{cf[k]['type']}/{cf[k]['reducer'] or 'no reducer'} -> "
+                                            f"{nf[k]['type']}/{nf[k]['reducer'] or 'no reducer'}"})
+    breaking = [c["field"] for c in state_changes if c["breaks_resume"]]
+    entry = None if cur["spec"]["entry"] == new["spec"]["entry"] else \
+        {"current": cur["spec"]["entry"], "proposed": new["spec"]["entry"]}
+    return {"current_spec": current_name, "current_valid": not cur["errors"], "entry_change": entry,
+            "node_changes": node_changes, "edge_changes": edge_changes, "state_changes": state_changes,
+            "resume_breaking_fields": breaking,
+            "total_changes": len(node_changes) + len(edge_changes) + len(state_changes) + (1 if entry else 0)}
+
+
+def gen_change_markdown(d: dict) -> list[str]:
+    lines = ["## Changes vs current graph", "",
+             f"Compared with the graph running today (`{d['current_spec']}`"
+             f"{'' if d['current_valid'] else ', which itself fails validation'}): {d['total_changes']} change(s) — "
+             f"{len(d['node_changes'])} node, {len(d['edge_changes'])} edge, {len(d['state_changes'])} state.", ""]
+    if d["entry_change"]:
+        lines += [f"Entry moves from `{d['entry_change']['current']}` to `{d['entry_change']['proposed']}`.", ""]
+    if d["node_changes"]:
+        lines += ["| Node | Change | Kind |", "|---|---|---|"]
+        lines += [f"| {c['node']} | {c['change']} | {c['kind']} |" for c in d["node_changes"]] + [""]
+    if d["edge_changes"]:
+        lines += ["| From | To | Route | Change |", "|---|---|---|---|"]
+        lines += [f"| {c['from']} | {c['to']} | {c['route'] or '-'} | {c['change']} |" for c in d["edge_changes"]] + [""]
+    if d["state_changes"]:
+        lines += ["| State field | Change | Breaks resume of persisted threads |", "|---|---|---|"]
+        lines += [f"| {c['field']} | {c['change']} | {'yes' if c['breaks_resume'] else 'no'} |"
+                  for c in d["state_changes"]] + [""]
+    if d["resume_breaking_fields"]:
+        lines += [f"Threads checkpointed under the current graph cannot resume safely ({', '.join(d['resume_breaking_fields'])}): "
+                  "drain in-flight threads or migrate their checkpoints before deploying.", ""]
+    if not d["total_changes"]:
+        lines += ["No structural change.", ""]
+    return lines
+
+
+def gen_markdown(v: dict, scaffold: dict, spec_name: str, change: dict | None = None) -> str:
     s = v["spec"]
     ok = not v["errors"]
     lines = [f"# LangGraph scaffold — {s['name'] or '(unnamed)'}", "",
@@ -465,7 +533,10 @@ def gen_markdown(v: dict, scaffold: dict, spec_name: str) -> str:
     lines += ["", "State:", "", "| Field | Type | Reducer |", "|---|---|---|"]
     for f in v["fields"].values():
         lines.append(f"| {f['name']} | {f['type']} | {f['reducer'] or 'none (last write wins)'} |")
-    lines += ["", "## How to run", ""]
+    lines.append("")
+    if change:
+        lines += gen_change_markdown(change)
+    lines += ["## How to run", ""]
     if ok:
         lines += ["1. `graph.py` was generated and syntax-checked, not executed. Install `langgraph` in your project environment.",
                   "2. Implement each node stub (return partial state updates) and each `route_<node>` function.",
@@ -482,11 +553,16 @@ def gen_markdown(v: dict, scaffold: dict, spec_name: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Validate a LangGraph spec; emit graph.py, graph.md, validation.json")
     ap.add_argument("--spec", required=True, help="graph spec JSON (layout: assets/graph-spec.example.json)")
+    ap.add_argument("--current-spec", help="spec of the graph running today (brownfield diff)")
     ap.add_argument("--out-dir", required=True, help="directory for graph.py, graph.md, validation.json")
     a = ap.parse_args(argv)
     spec_path = Path(a.spec)
     raw = load_spec(spec_path)
     v = validate(raw)
+    change = None
+    if a.current_spec:
+        cur_path = Path(a.current_spec)
+        change = diff_specs(validate(load_spec(cur_path)), v, cur_path.name)
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     scaffold = {"generated": False, "syntax_checked": False, "executed": False,
@@ -500,11 +576,12 @@ def main(argv: list[str] | None = None) -> int:
             (out / "graph.py").write_text(src, encoding="utf-8")
         else:
             v["errors"].append(f"generated scaffold failed the syntax check: {detail}")
-    (out / "graph.md").write_text(gen_markdown(v, scaffold, spec_path.name), encoding="utf-8")
+    (out / "graph.md").write_text(gen_markdown(v, scaffold, spec_path.name, change), encoding="utf-8")
     report = {"spec": v["spec"]["name"], "source": spec_path.name, "valid": not v["errors"],
               "errors": v["errors"], "warnings": v["warnings"], "stats": v["stats"],
               "unreachable": v["unreachable"], "no_path_to_end": v["no_path_to_end"],
               "cycles": v["cycles"], "scaffold": scaffold,
+              **({"change_vs_current": change} if change else {}),
               "upstream": "langgraph-fundamentals (langchain-ai/langchain-skills, vendor/pins.json)"}
     (out / "validation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"{report['spec']}: {'VALID' if report['valid'] else 'INVALID'} — "

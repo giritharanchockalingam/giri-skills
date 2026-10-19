@@ -18,6 +18,10 @@ Cost keys (each option computed only when its keys are present):
   rental_usd_per_gpu_hour
   selfhost_capex_per_gpu, selfhost_hosting_per_gpu_month, fte_cost_per_year
   api_usd_per_1m_input_tokens, api_usd_per_1m_output_tokens
+Existing fleet (brownfield, optional): current_gpus (GPUs serving this workload today, incl. spares),
+  current_cost_usd_per_month (what that fleet costs today). With current_gpus the output adds
+  "current_fleet": the delta to the sized fleet and a verdict (over-provisioned | right-sized |
+  under-provisioned); with a rental price the delta is also priced.
 Stdlib only.
 """
 from __future__ import annotations
@@ -134,8 +138,39 @@ def size(v: dict[str, float]) -> dict:
         out["cost_monthly_usd"]["api"] = {"tokens": round(api, 2), "total": round(api, 2)}
     if not out["cost_monthly_usd"]:
         out["notes"].append("No price inputs supplied; capacity only.")
+    if "current_gpus" in v:
+        out["current_fleet"] = compare_fleet(v, out)
     out["notes"].append("Throughput and price inputs are user-supplied; results are as good as those measurements.")
     return out
+
+
+def compare_fleet(v: dict[str, float], res: dict) -> dict:
+    """Compare the fleet running today against the sized fleet (brownfield right-sizing)."""
+    cur = v["current_gpus"]
+    if cur < 0 or cur != int(cur):
+        sys.exit(f"current_gpus must be a whole number >= 0, got {cur}")
+    cur = int(cur)
+    need = res["capacity"]["gpus_total_with_spare"]
+    need = max(need, res["capacity"].get("gpus_required_for_concurrency", 0) + int(v["spare_gpus"]))
+    delta = cur - need
+    verdict = "over-provisioned" if delta > 0 else "under-provisioned" if delta < 0 else "right-sized"
+    fleet = {"current_gpus": cur, "sized_gpus_with_spare": need, "delta_gpus": delta, "verdict": verdict,
+             "sized_share_of_current": round(need / cur, 3) if cur else None}
+    if "rental_usd_per_gpu_hour" in v:
+        fleet["delta_usd_per_month_at_rental_rate"] = round(delta * v["rental_usd_per_gpu_hour"]
+                                                            * v["rental_hours_per_month"], 2)
+    if "current_cost_usd_per_month" in v:
+        fleet["current_cost_usd_per_month"] = round(v["current_cost_usd_per_month"], 2)
+        options = {k: o["total"] for k, o in res["cost_monthly_usd"].items() if isinstance(o, dict)}
+        if options:
+            best = min(options, key=options.get)
+            fleet["cheapest_option"] = best
+            fleet["saving_vs_current_usd_per_month"] = round(v["current_cost_usd_per_month"] - options[best], 2)
+    if verdict == "over-provisioned":
+        res["notes"].append(f"Existing fleet has {delta} GPU(s) more than the sized need; release them or plan growth.")
+    elif verdict == "under-provisioned":
+        res["notes"].append(f"Existing fleet is {-delta} GPU(s) short of the sized need at the target utilization.")
+    return fleet
 
 
 def print_table(res: dict) -> None:
@@ -158,6 +193,10 @@ def print_table(res: dict) -> None:
                 print(f"  {opt:<12}{parts}")
             else:
                 print(f"  {opt:<44}{lines:>10}")
+    if res.get("current_fleet"):
+        print("CURRENT FLEET")
+        for k, val in res["current_fleet"].items():
+            print(f"  {k:<40}{val!s:>16}")
     for n in res["notes"]:
         print(f"NOTE: {n}")
 

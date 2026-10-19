@@ -8,14 +8,18 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "a spreadsheet of example questions and good answers"}
+      existing: {case: agent-mode-existing, bring: "your current training set plus newly collected examples"}
     inputs:
       - {name: examples, type: file, required: true, from: "raw examples: .csv with prompt,completion[,system] or .jsonl with messages or prompt+completion (layout: assets/examples-template.csv)"}
       - {name: split, type: string, required: false, from: "train,val,test ratios summing to 1; default 0.8,0.1,0.1 (stated as default in the data card)"}
       - {name: seed, type: string, required: false, from: "integer shuffle seed; default 42 (stated as default in the data card)"}
       - {name: min_rows, type: string, required: false, from: "minimum usable examples; default 10; fewer fails the run (exit 1)"}
       - {name: max_chars, type: string, required: false, from: "reject examples longer than this many characters; default none"}
+      - {name: existing, type: dir, required: false, from: "folder with the current train.jsonl (and val.jsonl, test.jsonl); records keep their split, leakage is repaired, new examples are added around them"}
     run:
-      - {step: build, kind: script, cmd: "python3 -I scripts/build_dataset.py --examples {examples} --out-dir {out} [--split {split}] [--seed {seed}] [--min-rows {min_rows}] [--max-chars {max_chars}]"}
+      - {step: build, kind: script, cmd: "python3 -I scripts/build_dataset.py --examples {examples} --out-dir {out} [--split {split}] [--seed {seed}] [--min-rows {min_rows}] [--max-chars {max_chars}] [--existing-dir {existing}]"}
     outputs:
       - {path: "{out}/train.jsonl", checks: [exists, cmd:"python3 -I scripts/build_dataset.py --validate-jsonl {path}"]}
       - {path: "{out}/val.jsonl", checks: [cmd:"python3 -I scripts/build_dataset.py --validate-jsonl {path}"]}
@@ -28,6 +32,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/finetune-dataset-builder --input <name>=<value> … --out <dir>` (see `--explain ai-platform/finetune-dataset-builder`). Report the `run.json` results; do not hand-write the deliverables the script produces (`train.jsonl`, `val.jsonl`, `test.jsonl`, `dataset-stats.json`, `data-card.md`). Fewer usable examples than `min_rows` fails the run (exit 1) on purpose.
+
+## Starting points
+- **New:** raw examples become cleaned, de-duplicated, leak-free train/val/test files with a data card.
+- **Existing:** add the folder with your current `train/val/test.jsonl` (`existing`); its records are audited and keep their split, new examples already in it are dropped, and only genuinely new prompts are placed, so earlier eval results stay comparable.
 
 ## When to use
 - ADLC build stage: turning curated examples (support transcripts, expert answers, labelled outputs) into SFT-ready chat JSONL.

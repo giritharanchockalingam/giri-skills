@@ -8,13 +8,17 @@ metadata:
   version: 0.2.0
   author: giri-skills
   agent:
+    modes:
+      new:      {case: agent-happy-path, bring: "a rough list of AI ideas and a maturity self-assessment"}
+      existing: {case: agent-mode-existing, bring: "re-scored use cases plus last review's ranked portfolio"}
     inputs:
       - {name: use_cases, type: csv, required: true, from: "use-case scoring CSV: id, use_case, business_owner, value_V, feasibility_F, data_readiness_D, risk_R (1-5), baseline_metric, evidence (layout: assets/use-case-scoring.csv + evidence column; fixture: evals/fixtures/use-cases.csv)"}
       - {name: scorecard, type: csv, required: true, from: "maturity scorecard CSV: dimension, score_1_to_5, evidence, gap_to_next_level, owner (layout: assets/maturity-scorecard.csv)"}
       - {name: org, type: string, required: false, default: "<Organization>"}
+      - {name: previous_portfolio, type: csv, required: false, from: "portfolio.csv from the last portfolio review; adds rank and band movement, new and dropped use cases"}
       - {name: target_level, type: string, required: false, default: "3", from: "target maturity level 1-5; dimensions below it are gaps"}
     run:
-      - {step: portfolio, kind: script, cmd: "python3 -I scripts/score_portfolio.py {use_cases} --out-dir {out} --org {org}"}
+      - {step: portfolio, kind: script, cmd: "python3 -I scripts/score_portfolio.py {use_cases} --out-dir {out} --org {org} [--previous {previous_portfolio}]"}
       - {step: maturity, kind: script, cmd: "python3 -I scripts/maturity.py {scorecard} --out-dir {out} --org {org} --target {target_level}"}
     outputs:
       - {path: "{out}/portfolio.csv", checks: [exists, csv:[rank,id,use_case,score,band], csv_rows:score!empty, csv_rows:band!empty]}
@@ -28,6 +32,10 @@ metadata:
 
 ## How to run
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-strategy-coe --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-strategy-coe`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`portfolio.csv`, `portfolio.md`, `maturity.md`, `roadmap.md`); fill the operating-model and governance sections of the roadmap by hand from the references.
+
+## Starting points
+- **New:** a first list of scored AI ideas and a maturity self-assessment give a ranked portfolio, maturity gaps and a quarter roadmap.
+- **Existing:** add the `portfolio.csv` from your last review (`previous_portfolio`); the re-ranked portfolio shows each use case's rank and band movement, what is new and what dropped out or lost its scores.
 
 ## When to use
 - "Build our AI strategy", "stand up an AI CoE", "where are we on AI maturity", "prioritize our AI backlog", "12-month AI roadmap".

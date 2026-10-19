@@ -16,12 +16,18 @@ Rules (references/method.md):
 GATE: any `deny` -> exit 1 (outputs still written).
 
 Usage:
-  python3 -I aibom.py --bom bom.csv [--policy policy.csv] [--system NAME] --out-dir OUT
+  python3 -I aibom.py --bom bom.csv|aibom.json [--policy policy.csv] [--system NAME] --out-dir OUT
   python3 -I aibom.py --verify OUT/aibom.json     # re-check any output (whole out dir)
 
 Inputs:
   bom     CSV component,type,version,license,source_url,use
           type model|dataset|library|service; use internal|commercial|redistribution
+          or an existing CycloneDX JSON BOM (e.g. last release's aibom.json, or an SBOM export):
+          components of type machine-learning-model|data|library|framework and services are read;
+          licence from licenses[] (id, name or expression; several entries are ANDed); source_url
+          from the first externalReferences url; use from the property `giri-skills:use` (never
+          guessed: a component without it is an input error). Any other component type is an
+          input error rather than being dropped silently.
   policy  CSV license,decision[,notes]; decision allow|review|deny (layout: assets/license-policy.example.csv)
   system  optional name of the AI system the BOM describes (metadata.component)
 
@@ -96,23 +102,95 @@ def resolve(raw: str, index: dict) -> tuple[str, list[str], str]:
     return (f" {op} ".join(ids) if op else ids[0]), ids, op
 
 
+CDX_TO_TYPE = {"machine-learning-model": "model", "data": "dataset", "library": "library", "framework": "library"}
+USE_PROPS = ("giri-skills:use",)
+
+
+def is_cyclonedx(path: Path) -> bool:
+    if path.suffix.lower() == ".json":
+        return True
+    try:
+        return path.read_text(encoding="utf-8-sig").lstrip().startswith("{")
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
+def cdx_license_string(item: dict, where: str) -> str:
+    parts = []
+    for entry in item.get("licenses") or []:
+        if not isinstance(entry, dict):
+            raise InputError(f"{where}: licenses entries must be objects")
+        if entry.get("expression"):
+            parts.append(str(entry["expression"]).strip())
+            continue
+        lic = entry.get("license") or {}
+        val = str(lic.get("id") or lic.get("name") or "").strip()
+        if val:
+            parts.append(val)
+    if len(parts) > 1 and any(" OR " in x or " AND " in x for x in parts):
+        return " AND ".join(f"({x})" for x in parts)  # mixed -> resolves to unknown -> review, never guessed
+    return " AND ".join(parts)
+
+
+def load_bom_cyclonedx(path: Path) -> list[dict]:
+    """Rows in the CSV shape from an existing CycloneDX JSON BOM."""
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise InputError(f"bom JSON could not be read: {e}") from None
+    if not isinstance(doc, dict) or doc.get("bomFormat") != "CycloneDX":
+        raise InputError("bom JSON is not a CycloneDX BOM (bomFormat must be \"CycloneDX\")")
+    items = [(c, "component") for c in doc.get("components") or []] + [(s, "service") for s in doc.get("services") or []]
+    rows, problems = [], []
+    for n, (it, kind) in enumerate(items, start=1):
+        if not isinstance(it, dict):
+            raise InputError(f"bom JSON {kind} #{n} is not an object")
+        name = str(it.get("name") or "").strip()
+        where = f"bom JSON {kind} {name or '#' + str(n)}"
+        if kind == "service":
+            typ = "service"
+        else:
+            typ = CDX_TO_TYPE.get(str(it.get("type") or ""))
+            if typ is None:
+                problems.append(f"{where}: type {it.get('type')!r} is not machine-learning-model|data|library|framework")
+                continue
+        props = {str(p.get("name")): str(p.get("value", "")) for p in it.get("properties") or [] if isinstance(p, dict)}
+        use = next((props[k] for k in USE_PROPS if props.get(k)), "")
+        if not use:
+            problems.append(f"{where}: no `giri-skills:use` property (internal|commercial|redistribution); use is never guessed")
+            continue
+        refs = [r for r in it.get("externalReferences") or [] if isinstance(r, dict) and r.get("url")]
+        rows.append({"component": name, "type": typ, "version": str(it.get("version") or "").strip(),
+                     "license": cdx_license_string(it, where), "source_url": str(refs[0]["url"]) if refs else "",
+                     "use": use.strip()})
+    if problems:
+        raise InputError("; ".join(problems))
+    if not rows:
+        raise InputError("bom JSON has no components or services")
+    return rows
+
+
 def load_bom(path: Path) -> list[dict]:
-    rows = read_csv(path)
+    if not path.is_file():
+        raise InputError(f"input file not found: {path}")
+    cdx = is_cyclonedx(path)
+    rows = load_bom_cyclonedx(path) if cdx else read_csv(path)
+    where = "bom JSON entry" if cdx else "bom line"
     need = ("component", "type", "version", "license", "source_url", "use")
     if not rows or any(c not in rows[0] for c in need):
         raise InputError("bom CSV needs columns " + ",".join(need) + " and at least one row")
     out, seen = [], set()
-    for i, r in enumerate(rows, start=2):
+    for i, r in enumerate(rows, start=1 if cdx else 2):
         if not r["component"]:
-            raise InputError(f"bom line {i}: component is blank")
+            raise InputError(f"{where} {i}: component is blank")
         t, u = r["type"].lower(), r["use"].lower()
         if t not in TYPES:
-            raise InputError(f"bom line {i}: type {r['type']!r} not in model|dataset|library|service")
+            raise InputError(f"{where} {i}: type {r['type']!r} not in model|dataset|library|service")
         if u not in USES:
-            raise InputError(f"bom line {i}: use {r['use']!r} not in internal|commercial|redistribution")
+            raise InputError(f"{where} {i}: use {r['use']!r} not in internal|commercial|redistribution")
         key = (r["component"], r["version"])
         if key in seen:
-            raise InputError(f"bom line {i}: duplicate component {r['component']} {r['version']}")
+            raise InputError(f"{where} {i}: duplicate component {r['component']} {r['version']}")
         seen.add(key)
         out.append({**r, "type": t, "use": u})
     return out
@@ -245,7 +323,7 @@ def cell(s: str) -> str:
     return s.replace("|", "\\|")
 
 
-def render(rows: list[dict], system: str | None, policy_given: bool, gate: str) -> str:
+def render(rows: list[dict], system: str | None, policy_given: bool, gate: str, bom_source: str = "") -> str:
     deny = [r for r in rows if r["decision"] == "deny"]
     review = [r for r in rows if r["decision"] in ("review", TBD_LEGAL)]
     allow = [r for r in rows if r["decision"] == "allow"]
@@ -288,6 +366,7 @@ def render(rows: list[dict], system: str | None, policy_given: bool, gate: str) 
     if unknown:
         L += ["", f"Obligations for unrecognised licences: {TBD_LEGAL}."]
     L += ["", "## Method", "",
+          *([f"- BOM input: {bom_source}."] if bom_source else []),
           "- Licence strings normalised through `assets/license-catalog.csv` (SPDX License List 3.29.0 ids; "
           "LicenseRef- ids for AI licences SPDX does not list). Unknown strings stay `unknown` and go to review.",
           "- Decision = the policy's decision for the normalised id; ids missing from the policy go to review; "
@@ -307,7 +386,9 @@ def build(bom_path: Path, policy_path: Path | None, system: str | None) -> tuple
     policy = load_policy(policy_path, index)
     rows = [evaluate(c, catalog, index, policy) for c in bom]
     gate = "fail" if any(r["decision"] == "deny" for r in rows) else "pass"
-    return rows, to_cyclonedx(rows, catalog, system, gate), render(rows, system, policy is not None, gate)
+    source = (f"existing CycloneDX BOM `{bom_path.name}` ({len(bom)} components and services re-checked)"
+              if is_cyclonedx(bom_path) else f"component list `{bom_path.name}`")
+    return rows, to_cyclonedx(rows, catalog, system, gate), render(rows, system, policy is not None, gate, source)
 
 
 def write(rows, bom, md, out: Path) -> None:
@@ -367,7 +448,8 @@ def verify(target: Path) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--bom", type=Path, help="BOM CSV component,type,version,license,source_url,use")
+    ap.add_argument("--bom", type=Path, help="BOM CSV component,type,version,license,source_url,use, or an existing "
+                                         "CycloneDX JSON BOM")
     ap.add_argument("--policy", type=Path, help="licence policy CSV license,decision,notes")
     ap.add_argument("--system", help="name of the AI system the BOM describes")
     ap.add_argument("--out-dir", type=Path, help="directory for aibom.csv, aibom.json, license-report.md")

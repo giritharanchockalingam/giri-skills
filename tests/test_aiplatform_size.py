@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import json
 
-from conftest import run_script
+import pytest
+
+from conftest import REPO_ROOT, run_script
 
 SCRIPT = "skills/ai-platform/infra-gpu-sizing/scripts/size.py"
+SKILL = REPO_ROOT / "skills/ai-platform/infra-gpu-sizing"
 
 BASE_SETS = [
     "daily_active_users=1000",
@@ -55,3 +58,38 @@ def test_non_numeric_value_exits_1():
     r = run_script(SCRIPT, "--set", "daily_active_users=abc")
     assert r.returncode == 1
     assert "non-numeric" in (r.stdout + r.stderr)
+
+
+# --- brownfield: compare the fleet running today (current_gpus) ---
+
+def _fleet(*sets):
+    r = run_script(SCRIPT, "--inputs", str(SKILL / "evals/fixtures/inputs-existing-fleet.csv"), "--json", *sets)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+def test_existing_fleet_over_provisioned():
+    f = _fleet()["current_fleet"]
+    assert (f["current_gpus"], f["sized_gpus_with_spare"], f["delta_gpus"]) == (6, 2, 4)
+    assert f["verdict"] == "over-provisioned"
+    assert f["delta_usd_per_month_at_rental_rate"] == 6132.0  # 4 x 730 h x 2.10
+    assert (f["cheapest_option"], f["saving_vs_current_usd_per_month"]) == ("rental", 6132.0)
+
+
+@pytest.mark.parametrize("gpus,verdict", [("2", "right-sized"), ("1", "under-provisioned")])
+def test_existing_fleet_verdicts(gpus, verdict):
+    res = _fleet("--set", f"current_gpus={gpus}")
+    assert res["current_fleet"]["verdict"] == verdict
+    if verdict == "under-provisioned":
+        assert any("short of the sized need" in n for n in res["notes"])
+
+
+def test_no_current_gpus_no_fleet_block():
+    r = run_script(SCRIPT, "--inputs", str(SKILL / "evals/fixtures/inputs.csv"), "--json")
+    assert "current_fleet" not in json.loads(r.stdout)
+
+
+def test_fractional_current_gpus_rejected():
+    r = run_script(SCRIPT, "--inputs", str(SKILL / "evals/fixtures/inputs-existing-fleet.csv"),
+                   "--set", "current_gpus=2.5")
+    assert r.returncode != 0 and "whole number" in r.stderr
