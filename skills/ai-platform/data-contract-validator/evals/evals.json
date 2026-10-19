@@ -1,0 +1,114 @@
+{
+  "skill": "data-contract-validator",
+  "cases": [
+    {
+      "id": "prompt-gate-before-ingestion",
+      "prompt": "Before we load this invoice Q&A extract into the Northwind Billing Assistant's RAG index, check it against the data contract and tell me if it is safe to use.",
+      "expected": [
+        "Asks for the contract (CSV or ODCS YAML) if none is given; never invents rules or thresholds",
+        "Runs scripts/validate_contract.py; reports the verdict, every violation with its owner, and the profile",
+        "States that error-severity violations block use (exit 1) and that examples are truncated, at most 3 per violation"
+      ]
+    },
+    {
+      "id": "prompt-pii-routed",
+      "prompt": "Which columns in this extract hold personal data and need masking?",
+      "expected": [
+        "Routes personal-data discovery to pii-data-inventory; offers this skill for contract conformance afterwards"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Validate the attached invoice extract against the attached contract; the load date is 2026-09-20 and updated_at must be at most 7 days old.",
+      "expected": [
+        "PASS WITH WARNINGS: status has 2 of 8 values outside the code list (owner TBD), answer null rate 0.125 > 0.100, channel is an extra column; freshness passes (newest 2026-09-18, 2 days)"
+      ],
+      "inputs": {
+        "contract": "evals/fixtures/contract.csv",
+        "data": "evals/fixtures/invoices-warn.csv",
+        "freshness_column": "updated_at",
+        "as_of": "2026-09-20",
+        "max_age_days": "7"
+      },
+      "checks": [
+        "exit:0",
+        "exists:violations.csv",
+        {"file": "violations.csv", "check": "contains:\"status,allowed,warn,2,0.250,refunded | pending-review,[TO BE BASELINED — owner: Data owner],one of open|paid|disputed\""},
+        {"file": "violations.csv", "check": "contains:\"answer,null_rate,warn,1,0.125,,Knowledge content owner,null rate <= 0.100\""},
+        {"file": "profile.csv", "check": "contains:\"amount,number,0.000,8,18.99,1500.00\""},
+        {"file": "contract-report.md", "check": "contains:\"Verdict: **PASS WITH WARNINGS** — 0 error-severity and 3 warn-severity violations.\""},
+        {"file": "contract-report.md", "check": "contains:\"Freshness: passed: newest 2026-09-18, age 2 days.\""}
+      ]
+    },
+    {
+      "id": "agent-missing-data",
+      "prompt": "Check our invoice feed against the contract.",
+      "expected": [
+        "Asks once for the data extract"
+      ],
+      "inputs": {
+        "contract": "evals/fixtures/contract.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:data"
+      ]
+    },
+    {
+      "id": "agent-freshness-not-invented",
+      "prompt": "Also check updated_at is fresh — just use today's date and a sensible max age.",
+      "expected": [
+        "No as-of date or max age supplied: freshness is not checked and reads TBD for the Data owner; today's date is never used; exit 0"
+      ],
+      "inputs": {
+        "contract": "evals/fixtures/contract.csv",
+        "data": "evals/fixtures/invoices-warn.csv",
+        "freshness_column": "updated_at"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "contract-report.md", "check": "contains:\"Freshness: not checked: as_of and max_age_days [TO BE BASELINED — owner: Data owner].\""},
+        {"file": "contract-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-gate-errors-exit-1",
+      "prompt": "Gate this extract: fail if anything breaks an error-severity rule. Load date 2026-09-20, max age 7 days.",
+      "expected": [
+        "11 error-severity violations (duplicate and malformed ids, bad email, null rate 0.500 > 0.200, amount type/min/max, lower-case currency, date before range, unparseable datetime, short question): FAIL, exit 1, outputs complete; freshness passes at exactly 7 days"
+      ],
+      "inputs": {
+        "contract": "evals/fixtures/contract.csv",
+        "data": "evals/fixtures/invoices-fail.csv",
+        "freshness_column": "updated_at",
+        "as_of": "2026-09-20",
+        "max_age_days": "7"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "violations.csv", "check": "contains:\"invoice_id,unique,error,1,0.167,INV-000202,Billing data steward,values unique\""},
+        {"file": "violations.csv", "check": "contains:\"customer_email,null_rate,error,3,0.500,,Billing data steward,null rate <= 0.200\""},
+        {"file": "violations.csv", "check": "contains:\"amount,max,error,1,0.167,12500.00,Finance systems lead,<= 10000\""},
+        {"file": "contract-report.md", "check": "contains:\"Verdict: **FAIL** — 11 error-severity and 2 warn-severity violations.\""},
+        {"file": "contract-report.md", "check": "contains:\"Freshness: passed: newest 2026-09-13, age 7 days.\""}
+      ]
+    },
+    {
+      "id": "agent-odcs-yaml-contract",
+      "prompt": "Our contract is an ODCS YAML file; validate the extract against it.",
+      "expected": [
+        "YAML subset mapped (primaryKey, pattern, minimum/maximum, validValues, format email, nullValues percent, duplicateValues); missingValues listed as not evaluated; owners TBD; FAIL exit 1"
+      ],
+      "inputs": {
+        "contract": "evals/fixtures/contract.yaml",
+        "data": "evals/fixtures/invoices-fail.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "violations.csv", "check": "contains:\"currency,allowed,error,1,0.167,usd,[TO BE BASELINED — owner: Data owner],one of USD|EUR|GBP\""},
+        {"file": "contract-report.md", "check": "contains:\"`question`: quality metric `missingValues` not evaluated (outside the supported subset)\""},
+        {"file": "contract-report.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

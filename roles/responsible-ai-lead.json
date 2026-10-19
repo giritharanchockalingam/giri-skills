@@ -1,0 +1,13 @@
+{
+  "name": "responsible-ai-lead",
+  "title": "Responsible AI Lead",
+  "description": "Makes sure the system is lawful, fair and transparent: AI Act tier, NIST controls, fairness and user disclosure.",
+  "skills": [
+    "ai-platform/eu-ai-act-classifier",
+    "ai-platform/ai-controls-mapping",
+    "ai-platform/bias-fairness-check",
+    "ai-platform/ai-transparency-notice",
+    "ai-platform/ai-governance-risk"
+  ],
+  "playbooks": []
+}

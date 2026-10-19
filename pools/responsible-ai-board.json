@@ -1,0 +1,23 @@
+{
+  "name": "responsible-ai-board",
+  "title": "Responsible AI Board",
+  "description": "Reviews an AI system before launch: legal tier, privacy, controls, security threats and what users are told.",
+  "members": [
+    {
+      "role": "responsible-ai-lead",
+      "label": "Responsible AI lead"
+    },
+    {
+      "role": "ai-privacy-compliance-officer"
+    },
+    {
+      "role": "ai-security-engineer"
+    },
+    {
+      "role": "ai-risk-release-lead"
+    }
+  ],
+  "playbooks": [
+    "responsible-ai-review"
+  ]
+}

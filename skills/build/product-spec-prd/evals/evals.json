@@ -81,7 +81,7 @@
         "exit:0",
         {
           "file": "PRD.md",
-          "check": "contains:\"| G1 (primary) | [TO BE BASELINED — owner: ___] |\""
+          "check": "contains:\"| G1 (primary) | [TO BE BASELINED — owner: Product owner] |\""
         },
         {
           "file": "PRD.md",

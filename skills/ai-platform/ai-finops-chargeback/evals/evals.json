@@ -1,0 +1,110 @@
+{
+  "skill": "ai-finops-chargeback",
+  "cases": [
+    {
+      "id": "prompt-monthly-showback",
+      "prompt": "Finance wants to know what the Northwind Billing Assistant's AI usage cost each team last month and whether anyone is heading over budget. Here is the gateway usage export.",
+      "expected": [
+        "Asks for the dated price sheet (and budgets) if missing; never prices from memory",
+        "Runs scripts/chargeback.py; reports spend by team and feature, cost per 1k requests, anomalies and budget forecast with status",
+        "Lists unpriced usage as TBD for the FinOps lead and states that showback is not an invoice reconciliation"
+      ]
+    },
+    {
+      "id": "prompt-planned-workload-routed",
+      "prompt": "We launch a new summarisation feature next quarter; what will it cost per month on our models?",
+      "expected": [
+        "Routes pre-launch workload pricing to llm-cost-model; offers this skill once metered usage exists"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the AI showback from the attached usage, price sheet and budgets.",
+      "expected": [
+        "Total 370.39 (Sep 281.01 + Oct 89.38); billing-support Oct forecast 269.96 vs 250.00 OVER BUDGET (-19.96); collections anomaly on 2026-09-25 (2.25 vs threshold 0.2435); fict-legacy usage unpriced; exit 0 without strict"
+      ],
+      "inputs": {
+        "usage": "evals/fixtures/usage.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "budgets": "evals/fixtures/budgets.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:showback.csv",
+        {"file": "showback.csv", "check": "contains:\"total,*,*,*,*,78220,370.39,4.7352,100.00\""},
+        {"file": "showback.csv", "check": "contains:\"detail,2026-09,billing-support,dispute-summary,fict-small,9990,10.00,1.0010,3.56\""},
+        {"file": "showback.csv", "check": "contains:\"team,*,collections,*,*,24900,11.21,0.4500,3.03\""},
+        {"file": "anomalies.csv", "check": "contains:\"2026-09-25,collections,2.25,0.2295,0.0047,0.2435,2.01,14,dunning-email\""},
+        {"file": "budget.csv", "check": "contains:\"billing-support,2026-10,250.00,87.08,269.96,-19.96,OVER BUDGET,linear run-rate,10,31,600\""},
+        {"file": "finops-report.md", "check": "contains:\"**$370.39**\""}
+      ]
+    },
+    {
+      "id": "agent-missing-prices",
+      "prompt": "Work out AI spend by team from this usage export; use list prices.",
+      "expected": [
+        "Asks once for the dated price sheet; never fills list prices"
+      ],
+      "inputs": {
+        "usage": "evals/fixtures/usage.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:prices"
+      ]
+    },
+    {
+      "id": "agent-no-budgets-not-invented",
+      "prompt": "We have no budgets set yet; just assume something reasonable per team.",
+      "expected": [
+        "No budget is invented: every team-month budget and variance is TBD for the FinOps lead with status NO BUDGET; unpriced fict-legacy usage stays TBD; exit 0"
+      ],
+      "inputs": {
+        "usage": "evals/fixtures/usage.csv",
+        "prices": "evals/fixtures/prices.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "budget.csv", "check": "contains:\"collections,2026-09,[TO BE BASELINED — owner: FinOps lead],8.91,8.91,[TO BE BASELINED — owner: FinOps lead],NO BUDGET\""},
+        {"file": "finops-report.md", "check": "contains:\"| 2026-10 | billing-support | invoice-qa | fict-legacy | 600 | model not in price sheet | [TO BE BASELINED — owner: FinOps lead] |\""},
+        {"file": "finops-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-strict-over-budget-exits-1",
+      "prompt": "Gate it: fail if any team is forecast over its AI budget.",
+      "expected": [
+        "billing-support 2026-10 forecast 269.96 > 250.00: strict fails the run with exit 1; outputs still written"
+      ],
+      "inputs": {
+        "usage": "evals/fixtures/usage.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "budgets": "evals/fixtures/budgets.csv",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "finops-report.md", "check": "contains:\"`--strict` was set and a forecast is over budget: the run fails (exit 1).\""},
+        {"file": "budget.csv", "check": "contains:\"collections,2026-10,10.00,2.30,7.11,2.89,WITHIN BUDGET\""}
+      ]
+    },
+    {
+      "id": "agent-strict-within-budget-passes",
+      "prompt": "Same gate with the revised budgets.",
+      "expected": [
+        "Every forecast within budget (billing-support Oct 269.96 vs 300.00; collections Sep 8.91 vs 10.00): strict passes, exit 0"
+      ],
+      "inputs": {
+        "usage": "evals/fixtures/usage.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "budgets": "evals/fixtures/budgets-ample.csv",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "finops-report.md", "check": "contains:\"Budgets over forecast: 0.\""},
+        {"file": "budget.csv", "check": "contains:\"billing-support,2026-10,300.00,87.08,269.96,30.04,WITHIN BUDGET\""}
+      ]
+    }
+  ]
+}

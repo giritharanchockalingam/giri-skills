@@ -1,5 +1,171 @@
 [
  {
+  "name": "ai-ops-health-check",
+  "spec": {
+   "name": "ai-ops-health-check",
+   "version": "0.1.0",
+   "description": "Weekly AI operations health check: input/score drift against the launch baseline → SLOs and error budgets from the request log → spend by team with budget forecast → (AI Ops lead reviews).",
+   "adlc_stage": "operate",
+   "inputs": [
+    {
+     "name": "baseline",
+     "type": "csv",
+     "required": true,
+     "from": "reference window (launch-week inputs/outputs/scores)"
+    },
+    {
+     "name": "current",
+     "type": "csv",
+     "required": true,
+     "from": "window to test, same columns"
+    },
+    {
+     "name": "drift_thresholds",
+     "type": "csv",
+     "required": false,
+     "from": "metric,warn,alert"
+    },
+    {
+     "name": "log",
+     "type": "csv",
+     "required": true,
+     "from": "request log timestamp,latency_ms,status[,quality_pass,cost_usd]"
+    },
+    {
+     "name": "targets",
+     "type": "csv",
+     "required": false,
+     "from": "agreed SLO targets"
+    },
+    {
+     "name": "system",
+     "type": "string",
+     "required": false,
+     "from": "name of the AI feature"
+    },
+    {
+     "name": "usage",
+     "type": "csv",
+     "required": true,
+     "from": "metered usage per day by team, feature, model"
+    },
+    {
+     "name": "prices",
+     "type": "csv",
+     "required": true,
+     "from": "dated price sheet per 1M tokens"
+    },
+    {
+     "name": "budgets",
+     "type": "csv",
+     "required": false,
+     "from": "team, month, budget_usd"
+    }
+   ],
+   "config": {
+    "provider": "auto",
+    "on_fail": "stop"
+   },
+   "steps": [
+    {
+     "id": "drift",
+     "skill": "ai-platform/drift-monitor",
+     "gate": true,
+     "inputs": {
+      "baseline": "$in.baseline",
+      "current": "$in.current",
+      "thresholds": "$in.drift_thresholds"
+     }
+    },
+    {
+     "id": "slos",
+     "skill": "ai-platform/ai-slo-definition",
+     "gate": true,
+     "inputs": {
+      "log": "$in.log",
+      "targets": "$in.targets",
+      "system": "$in.system"
+     }
+    },
+    {
+     "id": "spend",
+     "skill": "ai-platform/ai-finops-chargeback",
+     "inputs": {
+      "usage": "$in.usage",
+      "prices": "$in.prices",
+      "budgets": "$in.budgets"
+     }
+    },
+    {
+     "id": "ops-review",
+     "approval": {
+      "role": "AI Ops lead",
+      "note": "Review drift alerts, SLO burn and spend anomalies; open incidents or tickets for anything red."
+     }
+    }
+   ],
+   "outputs": [
+    "$steps.drift:drift-report.md",
+    "$steps.slos:slo-spec.md",
+    "$steps.spend:finops-report.md"
+   ]
+  },
+  "demo": {
+   "baseline": {
+    "kind": "text",
+    "content": "# fictional fixture — Northwind Billing Assistant (fictional) request features; invented values for tests only\nrequest_tokens,confidence,intent,channel,account_tier\n309,0.850,plan_change,web,pro\n479,0.954,payment_issue,app,plus\n407,0.853,refund_request,app,\n651,0.797,payment_issue,app,basic\n435,0.795,billing_question,email,plus\n364,0.915,billing_question,web,basic\n367,0.745,billing_question,email,basic\n399,0.753,billing_question,web,basic\n278,0.911,billing_question,email,basic\n466,0.998,billing_question,web,plus\n533,0.870,refund_request,web,plus\n512,0.828,plan_change,web,basic\n569,0.873,billing_question,app,basic\n573,0.807,billing_question,web,basic\n599,0.820,plan_change,app,basic\n442,0.898,plan_change,app,basic\n435,0.880,refund_request,web,basic\n474,0.845,payment_issue,web,pro\n202,0.879,payment_issue,app,basic\n365,0.771,billing_question,app,basic\n405,0.630,billing_question,email,pro\n444,0.832,billing_question,app,pro\n400,0.761,refund_request,app,basic\n643,0.725,billing_question,web,pro\n365,0.777,plan_change,web,\n408,0.906,billing_question,web,pro\n459,0.814,billing_question,web,pro\n376,0.721,billing_question,web,\n538,0.754,plan_change,web,plus\n490,0.848,billing_question,web,plus\n404,0.649,refund_request,app,plus\n338,0.918,plan_change,email,basic\n496,0.741,payment_issue,web,pro\n455,0.835,billing_question,web,plus\n307,0.904,payment_issue,web,basic\n312,0.809,billing_question,web,\n462,0.810,refund_request,app,basic\n386,0.853,payment_issue,app,plus\n367,0.747,plan_change,web,basic\n311,0.712,refund_request,web,basic\n351,0.785,billing_question,web,basic\n366,0.630,billing_question,web,plus\n571,0.752,billing_question,app,pro\n555,0.628,payment_issue,web,\n438,0.803,refund_request,app,pro\n468,0.825,payment_issue,web,basic\n449,0.680,plan_change,web,pro\n328,0.700,plan_change,app,plus\n414,0.947,refund_request,app,\n443,0.957,payment_issue,email,basic\n294,0.908,plan_change,web,pro\n344,0.877,billing_question,email,\n295,0.784,payment_issue,app,plus\n384,0.776,refund_request,app,pro\n467,0.862,billing_question,web,plus\n409,0.947,billing_question,app,\n368,0.890,billing_question,email,basic\n398,0.829,payment_issue,app,plus\n484,0.898,refund_request,app,plus\n299,0.762,refund_request,web,pro\n370,0.802,payment_issue,email,pro\n292,0.925,plan_change,web,pro\n303,0.804,billing_question,app,pro\n339,0.889,billing_question,email,pro\n448,0.845,billing_question,email,plus\n407,0.910,billing_question,web,plus\n377,0.814,billing_question,web,pro\n423,0.803,billing_question,web,plus\n408,0.761,payment_issue,web,pro\n317,0.731,refund_request,email,\n307,0.709,payment_issue,app,pro\n348,0.745,plan_change,app,basic\n528,0.763,billing_question,web,basic\n484,0.999,plan_change,web,pro\n495,0.862,billing_question,email,pro\n484,0.878,payment_issue,web,pro\n315,0.936,billing_question,app,plus\n283,0.818,billing_question,web,basic\n429,0.710,plan_change,web,basic\n469,0.967,plan_change,email,basic\n510,0.910,billing_question,web,plus\n325,0.812,payment_issue,web,basic\n461,0.900,refund_request,web,basic\n552,0.900,billing_question,web,pro\n528,0.782,billing_question,app,plus\n411,0.859,refund_request,web,basic\n567,0.720,payment_issue,app,plus\n435,0.869,refund_request,web,plus\n613,0.810,billing_question,web,plus\n350,0.920,payment_issue,app,plus\n332,0.723,refund_request,email,\n309,0.733,billing_question,web,basic\n412,0.811,billing_question,web,pro\n185,0.810,payment_issue,email,pro\n527,0.870,refund_request,web,basic\n240,0.959,plan_change,app,plus\n508,0.792,payment_issue,app,plus\n349,0.827,plan_change,app,basic\n487,0.825,billing_question,web,plus\n494,0.843,billing_question,app,plus\n595,0.897,billing_question,web,basic\n459,0.830,refund_request,email,basic\n384,0.796,payment_issue,web,basic\n387,0.856,billing_question,web,pro\n410,0.925,billing_question,app,basic\n560,0.782,billing_question,web,pro\n359,0.767,billing_question,app,pro\n446,0.880,billing_question,email,pro\n579,0.737,billing_question,web,plus\n444,0.824,billing_question,web,pro\n454,0.870,plan_change,web,plus\n337,0.930,refund_request,web,pro\n500,0.703,billing_question,app,basic\n330,0.905,plan_change,web,pro\n446,0.775,payment_issue,app,plus\n453,0.836,payment_issue,web,plus\n425,0.810,billing_question,email,pro\n372,0.941,payment_issue,web,plus\n375,0.761,plan_change,web,pro\n606,0.727,plan_change,web,plus\n358,0.835,plan_change,app,basic\n364,0.878,billing_question,web,basic\n413,0.744,billing_question,web,basic\n487,0.941,plan_change,web,\n307,0.810,payment_issue,email,plus\n524,0.859,refund_request,web,pro\n481,0.863,billing_question,app,pro\n294,0.879,payment_issue,email,plus\n355,0.865,plan_change,app,pro\n431,0.791,payment_issue,web,pro\n415,0.826,billing_question,web,pro\n350,0.745,refund_request,app,plus\n478,0.790,billing_question,app,plus\n446,0.901,billing_question,email,plus\n410,0.752,billing_question,email,plus\n522,0.830,refund_request,web,plus\n433,0.877,refund_request,app,basic\n492,0.770,plan_change,email,pro\n350,0.828,plan_change,email,pro\n425,0.785,plan_change,web,basic\n448,0.745,payment_issue,app,basic\n383,0.771,billing_question,web,basic\n391,0.714,billing_question,web,plus\n557,0.740,billing_question,app,pro\n369,0.810,refund_request,web,basic\n436,0.790,billing_question,app,plus\n407,0.789,refund_request,app,basic\n442,0.739,plan_change,web,basic\n510,0.839,payment_issue,email,plus\n406,0.850,billing_question,web,plus\n464,0.840,payment_issue,app,basic\n411,0.810,billing_question,app,pro\n537,0.910,plan_change,app,pro\n492,0.912,plan_change,app,plus\n383,0.808,billing_question,web,plus\n528,0.785,refund_request,web,basic\n520,0.887,billing_question,app,basic\n279,0.908,payment_issue,web,basic\n515,0.813,refund_request,web,pro\n459,0.862,billing_question,app,plus\n316,0.730,payment_issue,web,basic\n354,0.727,billing_question,web,pro\n312,0.857,billing_question,web,basic\n379,0.790,refund_request,email,plus\n337,0.758,payment_issue,web,pro\n363,0.639,payment_issue,web,basic\n487,0.889,billing_question,web,plus\n401,0.985,payment_issue,app,pro\n308,0.792,payment_issue,web,plus\n383,0.796,refund_request,web,basic\n424,0.744,billing_question,app,plus\n475,0.830,plan_change,email,plus\n426,0.665,plan_change,app,basic\n470,0.889,billing_question,app,plus\n470,0.906,billing_question,app,pro\n450,0.695,refund_request,web,basic\n328,0.835,payment_issue,app,plus\n130,0.843,refund_request,email,plus\n452,0.847,plan_change,web,plus\n485,0.780,billing_question,app,pro\n363,0.869,refund_request,email,basic\n489,0.881,payment_issue,web,pro\n575,0.928,payment_issue,app,basic\n565,0.819,plan_change,web,pro\n441,0.767,refund_request,app,basic\n372,0.815,plan_change,app,plus\n422,0.887,billing_question,web,pro\n352,0.865,payment_issue,web,\n482,0.779,payment_issue,email,plus\n463,0.783,plan_change,app,plus\n464,0.756,payment_issue,web,pro\n457,0.928,billing_question,email,basic\n362,0.959,plan_change,web,basic\n305,0.993,refund_request,web,plus\n520,0.904,billing_question,app,plus\n441,0.745,payment_issue,email,basic\n609,0.796,billing_question,web,pro\n636,0.942,billing_question,app,basic\n539,0.825,payment_issue,web,basic\n386,0.951,billing_question,web,basic\n432,0.776,plan_change,app,pro\n264,0.942,payment_issue,web,pro\n486,0.782,payment_issue,web,pro\n376,0.731,plan_change,web,basic\n493,0.875,payment_issue,app,pro\n436,0.763,payment_issue,web,plus\n415,0.874,plan_change,web,basic\n364,0.918,payment_issue,app,pro\n406,0.963,billing_question,email,pro\n293,0.759,payment_issue,web,pro\n370,0.922,payment_issue,web,basic\n356,0.743,billing_question,web,pro\n497,0.697,billing_question,web,basic\n355,0.628,billing_question,app,basic\n481,0.890,refund_request,web,pro\n476,0.882,billing_question,web,basic\n358,0.705,plan_change,app,basic\n356,0.801,payment_issue,email,plus\n612,0.760,billing_question,web,basic\n410,0.717,plan_change,email,basic\n332,0.839,refund_request,web,basic\n360,0.850,refund_request,app,plus\n442,0.908,billing_question,web,pro\n463,0.904,payment_issue,web,\n383,0.999,payment_issue,app,pro\n260,0.933,refund_request,web,basic\n398,0.683,billing_question,web,basic\n498,0.829,billing_question,web,plus\n412,0.984,payment_issue,web,plus\n469,0.832,payment_issue,web,plus\n282,0.836,payment_issue,app,plus\n394,0.781,billing_question,web,plus\n490,0.893,billing_question,web,pro\n425,0.843,billing_question,app,pro\n380,0.934,plan_change,web,pro\n531,0.916,billing_question,app,plus\n496,0.884,payment_issue,email,pro\n410,0.866,billing_question,web,pro\n394,0.726,refund_request,email,plus\n298,0.758,payment_issue,app,\n353,0.868,billing_question,web,plus\n463,0.765,refund_request,email,basic\n311,0.958,payment_issue,web,basic\n364,0.759,billing_question,email,\n403,0.766,billing_question,web,pro\n357,0.853,refund_request,email,plus\n467,0.830,payment_issue,web,basic\n454,0.862,billing_question,app,basic\n645,0.720,billing_question,app,pro\n567,0.891,plan_change,app,plus\n312,0.957,billing_question,app,pro\n452,0.863,billing_question,web,pro\n394,0.900,billing_question,app,pro\n420,0.891,billing_question,app,basic\n585,0.810,plan_change,web,pro\n434,0.729,billing_question,email,basic\n369,0.887,refund_request,app,pro\n418,0.947,billing_question,web,pro\n475,0.729,billing_question,app,plus\n434,0.781,billing_question,app,basic\n520,0.805,payment_issue,app,plus\n384,0.743,payment_issue,web,basic\n555,0.858,billing_question,web,pro\n262,0.786,billing_question,email,plus\n435,0.846,billing_question,email,basic\n322,0.890,refund_request,email,pro\n435,0.884,plan_change,web,pro\n482,0.795,payment_issue,web,basic\n405,0.923,billing_question,web,basic\n334,0.829,billing_question,web,plus\n416,0.814,billing_question,web,plus\n327,0.828,refund_request,web,pro\n294,0.720,billing_question,web,basic\n517,0.817,refund_request,app,basic\n525,0.786,payment_issue,web,\n389,0.810,payment_issue,email,plus\n529,0.827,refund_request,app,plus\n380,0.912,payment_issue,app,plus\n305,0.892,billing_question,email,\n362,0.793,billing_question,web,plus\n351,0.757,billing_question,web,pro\n487,0.860,refund_request,web,pro\n399,0.871,billing_question,web,basic\n408,0.825,payment_issue,web,pro\n501,0.706,billing_question,web,pro\n627,0.969,billing_question,email,plus\n455,0.656,refund_request,web,plus\n534,0.726,payment_issue,web,pro\n326,0.900,billing_question,app,pro\n346,0.751,payment_issue,web,pro\n416,0.734,payment_issue,app,plus\n325,0.758,payment_issue,web,plus\n414,0.844,billing_question,web,plus\n567,0.814,billing_question,app,plus\n643,0.888,refund_request,email,basic\n489,0.722,plan_change,app,pro\n419,0.882,billing_question,web,pro\n454,0.738,payment_issue,email,plus\n484,0.806,billing_question,web,basic\n514,0.861,billing_question,email,basic\n434,0.776,billing_question,web,\n318,0.952,refund_request,web,plus\n553,0.844,payment_issue,web,pro\n454,0.929,plan_change,app,pro\n507,0.817,refund_request,app,plus\n386,0.774,billing_question,app,pro\n373,0.829,billing_question,email,plus\n415,0.830,billing_question,web,plus\n427,0.767,billing_question,web,pro\n336,0.868,payment_issue,email,pro\n328,0.866,billing_question,web,basic\n375,0.741,plan_change,web,pro\n443,0.932,billing_question,web,pro\n491,0.801,payment_issue,app,plus\n334,0.896,plan_change,web,basic\n495,0.679,payment_issue,app,basic\n492,0.860,billing_question,app,plus\n585,0.811,plan_change,app,basic\n355,0.888,billing_question,app,basic\n698,0.783,billing_question,app,pro\n443,0.838,plan_change,app,basic\n301,0.808,payment_issue,app,basic\n418,0.787,billing_question,app,pro\n530,0.754,plan_change,web,plus\n404,0.823,plan_change,email,basic\n491,0.872,payment_issue,email,basic\n385,0.910,billing_question,app,basic\n342,0.816,billing_question,web,plus\n479,0.839,payment_issue,app,basic\n459,0.732,billing_question,app,pro\n283,0.716,plan_change,web,\n514,0.942,refund_request,app,pro\n352,0.765,payment_issue,email,basic\n361,0.863,billing_question,app,plus\n370,0.902,payment_issue,email,pro\n624,0.799,billing_question,app,pro\n415,0.897,billing_question,web,plus\n397,0.854,billing_question,app,plus\n333,0.796,billing_question,web,plus\n279,0.972,payment_issue,app,plus\n224,0.935,billing_question,app,plus\n554,0.792,refund_request,web,basic\n377,0.906,payment_issue,app,basic\n447,0.924,refund_request,email,plus\n359,0.858,payment_issue,web,plus\n382,0.882,refund_request,app,basic\n524,0.820,billing_question,web,plus\n407,0.807,plan_change,app,basic\n465,0.738,billing_question,app,basic\n437,0.850,payment_issue,web,pro\n378,0.835,billing_question,app,basic\n501,0.800,refund_request,app,plus\n337,0.999,payment_issue,email,plus\n397,0.859,plan_change,web,plus\n513,0.837,billing_question,app,plus\n271,0.875,payment_issue,web,basic\n431,0.750,billing_question,app,plus\n328,0.767,billing_question,app,plus\n426,0.775,refund_request,web,plus\n427,0.882,refund_request,app,basic\n442,0.762,billing_question,web,basic\n191,0.740,plan_change,web,basic\n468,0.922,payment_issue,app,pro\n388,0.858,payment_issue,web,plus\n434,0.786,refund_request,web,pro\n413,0.747,billing_question,web,plus\n388,0.749,plan_change,app,pro\n463,0.816,billing_question,web,pro\n401,0.879,billing_question,web,plus\n478,0.635,billing_question,web,pro\n495,0.733,payment_issue,app,pro\n384,0.718,payment_issue,web,plus\n354,0.738,payment_issue,app,basic\n520,0.787,payment_issue,web,pro\n584,0.941,payment_issue,web,basic\n629,0.737,billing_question,web,basic\n543,0.865,billing_question,web,pro\n660,0.785,plan_change,app,pro\n463,0.910,billing_question,web,pro\n459,0.846,billing_question,app,\n598,0.757,billing_question,email,basic\n356,0.639,plan_change,email,plus\n436,0.814,payment_issue,app,pro\n483,0.778,billing_question,app,basic\n478,0.863,billing_question,email,basic\n486,0.713,payment_issue,app,basic\n453,0.820,refund_request,email,plus\n382,0.865,billing_question,email,basic\n325,0.770,billing_question,app,basic\n504,0.785,billing_question,web,basic\n436,0.750,billing_question,app,pro\n315,0.773,billing_question,web,pro\n350,0.933,payment_issue,app,basic\n377,0.733,billing_question,web,basic\n361,0.875,plan_change,email,basic\n302,0.878,billing_question,email,plus\n220,0.747,billing_question,email,basic\n331,0.821,billing_question,email,basic\n476,0.899,billing_question,web,basic\n509,0.918,plan_change,web,pro\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/drift-monitor/evals/fixtures/baseline.csv"
+   },
+   "current": {
+    "kind": "text",
+    "content": "# fictional fixture — Northwind Billing Assistant (fictional) request features; invented values for tests only\nrequest_tokens,confidence,intent,channel,account_tier\n467,0.809,billing_question,email,basic\n407,0.656,refund_request,web,basic\n368,0.918,plan_change,app,pro\n507,0.750,billing_question,web,basic\n489,0.734,plan_change,app,pro\n494,0.847,billing_question,web,pro\n347,0.814,billing_question,app,plus\n397,0.816,plan_change,app,plus\n256,0.929,billing_question,app,basic\n384,0.923,payment_issue,web,pro\n384,0.835,billing_question,web,basic\n620,0.735,payment_issue,web,basic\n473,0.909,billing_question,web,basic\n389,0.830,billing_question,app,pro\n409,0.795,billing_question,app,plus\n463,0.831,refund_request,web,pro\n415,0.730,refund_request,app,basic\n472,0.721,plan_change,web,pro\n457,0.834,payment_issue,app,basic\n647,0.874,billing_question,web,plus\n386,0.823,billing_question,app,pro\n441,0.891,refund_request,email,basic\n433,0.973,payment_issue,web,pro\n309,0.910,refund_request,web,basic\n574,0.938,plan_change,app,pro\n410,0.838,billing_question,web,pro\n570,0.845,billing_question,app,pro\n431,0.918,billing_question,web,pro\n507,0.824,payment_issue,web,pro\n339,0.796,refund_request,app,plus\n337,0.808,refund_request,web,basic\n477,0.811,billing_question,email,plus\n364,0.736,refund_request,web,plus\n429,0.916,plan_change,web,pro\n499,0.820,refund_request,web,basic\n478,0.680,billing_question,web,pro\n394,0.885,plan_change,app,pro\n301,0.999,plan_change,app,pro\n374,0.762,billing_question,web,plus\n414,0.837,billing_question,web,plus\n466,0.797,billing_question,web,plus\n380,0.914,plan_change,email,basic\n348,0.834,payment_issue,web,plus\n328,0.790,billing_question,web,pro\n259,0.837,payment_issue,web,plus\n510,0.908,plan_change,web,plus\n356,0.686,payment_issue,web,basic\n461,0.805,refund_request,app,pro\n293,0.840,payment_issue,web,pro\n446,0.723,payment_issue,web,pro\n327,0.881,billing_question,web,pro\n448,0.740,refund_request,web,pro\n286,0.797,payment_issue,app,pro\n425,0.909,refund_request,email,pro\n432,0.902,billing_question,app,\n358,0.778,refund_request,web,pro\n498,0.780,billing_question,app,basic\n516,0.825,refund_request,web,pro\n305,0.748,billing_question,web,pro\n511,0.868,billing_question,web,pro\n436,0.751,refund_request,app,pro\n444,0.841,refund_request,app,pro\n633,0.764,refund_request,web,plus\n409,0.923,payment_issue,web,plus\n516,0.777,plan_change,app,basic\n265,0.871,billing_question,app,plus\n290,0.713,billing_question,web,basic\n740,0.695,billing_question,web,plus\n468,0.743,billing_question,web,plus\n305,0.874,payment_issue,web,plus\n410,0.744,billing_question,web,basic\n374,0.842,refund_request,app,plus\n418,0.808,plan_change,app,pro\n399,0.822,billing_question,web,plus\n481,0.870,billing_question,web,plus\n453,0.874,plan_change,app,pro\n281,0.878,billing_question,web,plus\n615,0.787,payment_issue,web,pro\n489,0.849,billing_question,email,basic\n472,0.872,billing_question,web,basic\n272,0.744,billing_question,web,basic\n419,0.804,payment_issue,app,plus\n371,0.815,payment_issue,web,basic\n404,0.851,refund_request,web,pro\n354,0.819,billing_question,app,pro\n451,0.828,payment_issue,web,pro\n389,0.846,billing_question,app,basic\n536,0.785,billing_question,web,basic\n482,0.857,payment_issue,app,plus\n487,0.681,refund_request,email,plus\n415,0.851,refund_request,email,plus\n367,0.805,refund_request,web,basic\n432,0.763,billing_question,web,pro\n310,0.828,refund_request,web,plus\n477,0.864,billing_question,web,pro\n374,0.729,plan_change,app,plus\n364,0.853,payment_issue,web,plus\n555,0.785,payment_issue,web,\n340,0.707,refund_request,app,\n390,0.761,billing_question,email,plus\n439,0.897,plan_change,web,plus\n457,0.830,billing_question,app,pro\n372,0.816,refund_request,web,pro\n501,0.889,billing_question,web,basic\n407,0.660,plan_change,app,pro\n468,0.904,payment_issue,web,plus\n459,0.900,refund_request,app,basic\n384,0.927,payment_issue,web,basic\n383,0.935,payment_issue,app,pro\n696,0.618,billing_question,app,pro\n505,0.870,payment_issue,app,basic\n406,0.865,plan_change,web,pro\n413,0.714,billing_question,app,plus\n188,0.934,refund_request,app,pro\n390,0.807,refund_request,app,basic\n354,0.876,billing_question,app,plus\n416,0.785,refund_request,app,plus\n407,0.770,payment_issue,app,pro\n332,0.708,payment_issue,email,plus\n462,0.817,billing_question,app,basic\n400,0.857,plan_change,email,pro\n299,0.857,payment_issue,app,plus\n472,0.899,billing_question,app,plus\n259,0.835,billing_question,app,pro\n450,0.841,payment_issue,web,plus\n524,0.945,billing_question,app,plus\n349,0.842,payment_issue,email,plus\n481,0.960,billing_question,web,basic\n504,0.841,payment_issue,app,basic\n407,0.831,billing_question,app,plus\n401,0.901,payment_issue,email,basic\n486,0.802,refund_request,app,plus\n338,0.726,plan_change,email,basic\n297,0.858,plan_change,web,pro\n522,0.792,billing_question,email,pro\n153,0.701,billing_question,web,plus\n361,0.705,billing_question,app,basic\n502,0.709,plan_change,web,basic\n419,0.823,billing_question,app,basic\n435,0.999,payment_issue,app,basic\n262,0.695,refund_request,app,plus\n528,0.728,refund_request,app,\n374,0.735,billing_question,web,pro\n436,0.825,payment_issue,web,plus\n537,0.813,plan_change,web,\n387,0.714,billing_question,email,pro\n446,0.855,plan_change,web,plus\n509,0.956,plan_change,web,pro\n314,0.804,billing_question,web,basic\n488,0.837,billing_question,web,\n296,0.812,refund_request,web,basic\n446,0.677,payment_issue,email,pro\n416,0.897,refund_request,web,basic\n569,0.789,billing_question,app,basic\n422,0.949,refund_request,web,pro\n374,0.873,payment_issue,web,pro\n254,0.787,refund_request,web,basic\n315,0.964,billing_question,app,basic\n468,0.905,payment_issue,web,plus\n399,0.989,payment_issue,app,plus\n446,0.746,billing_question,app,\n383,0.932,billing_question,app,plus\n355,0.959,plan_change,web,plus\n520,0.839,payment_issue,web,plus\n275,0.957,billing_question,web,pro\n577,0.990,payment_issue,web,\n430,0.742,payment_issue,web,basic\n458,0.658,payment_issue,app,pro\n441,0.944,billing_question,web,pro\n453,0.832,billing_question,app,plus\n462,0.805,billing_question,app,plus\n495,0.999,plan_change,email,pro\n267,0.783,billing_question,web,pro\n370,0.764,billing_question,app,plus\n341,0.700,billing_question,web,basic\n242,0.880,billing_question,app,plus\n513,0.741,billing_question,app,pro\n479,0.856,billing_question,app,plus\n255,0.838,billing_question,app,basic\n528,0.711,refund_request,app,plus\n475,0.817,billing_question,web,basic\n640,0.660,billing_question,app,plus\n428,0.754,payment_issue,web,plus\n511,0.821,payment_issue,web,plus\n387,0.708,payment_issue,web,plus\n383,0.798,billing_question,web,plus\n457,0.797,billing_question,web,pro\n348,0.866,billing_question,web,plus\n488,0.914,payment_issue,web,pro\n330,0.829,plan_change,app,plus\n540,0.896,payment_issue,app,pro\n567,0.815,plan_change,email,pro\n323,0.792,billing_question,web,pro\n433,0.844,billing_question,web,basic\n335,0.960,plan_change,web,pro\n479,0.732,plan_change,web,pro\n382,0.742,plan_change,app,basic\n505,0.830,billing_question,app,basic\n342,0.698,billing_question,app,basic\n373,0.839,refund_request,email,pro\n478,0.779,billing_question,app,plus\n476,0.760,payment_issue,app,basic\n445,0.859,payment_issue,web,pro\n412,0.890,payment_issue,web,basic\n288,0.844,billing_question,web,basic\n411,0.852,billing_question,app,pro\n429,0.710,refund_request,app,\n524,0.854,refund_request,app,basic\n459,0.830,refund_request,web,pro\n323,0.909,billing_question,email,pro\n536,0.828,billing_question,web,basic\n394,0.827,payment_issue,web,basic\n411,0.836,billing_question,web,plus\n458,0.801,plan_change,email,pro\n484,0.688,refund_request,email,pro\n466,0.879,plan_change,app,plus\n527,0.878,refund_request,email,plus\n323,0.981,payment_issue,web,plus\n259,0.839,payment_issue,web,pro\n563,0.796,payment_issue,web,pro\n508,0.829,billing_question,app,basic\n493,0.756,payment_issue,web,plus\n420,0.853,refund_request,web,pro\n550,0.853,payment_issue,web,plus\n353,0.783,payment_issue,email,pro\n428,0.747,billing_question,web,plus\n404,0.769,billing_question,web,plus\n462,0.962,payment_issue,web,basic\n250,0.700,plan_change,web,pro\n335,0.918,billing_question,web,plus\n331,0.870,refund_request,web,plus\n309,0.684,payment_issue,web,plus\n245,0.842,plan_change,web,pro\n516,0.754,refund_request,web,plus\n564,0.712,refund_request,app,basic\n331,0.720,plan_change,app,pro\n416,0.849,billing_question,web,pro\n429,0.843,billing_question,app,basic\n497,0.878,billing_question,email,pro\n355,0.834,payment_issue,web,plus\n468,0.863,billing_question,web,plus\n491,0.876,plan_change,web,basic\n355,0.908,payment_issue,web,basic\n379,0.843,billing_question,app,plus\n516,0.924,billing_question,web,pro\n398,0.708,refund_request,app,pro\n289,0.888,billing_question,app,\n494,0.920,billing_question,web,basic\n576,0.796,billing_question,app,basic\n527,0.852,payment_issue,app,basic\n467,0.841,plan_change,web,pro\n372,0.801,refund_request,web,pro\n405,0.926,plan_change,web,basic\n431,0.809,billing_question,web,plus\n404,0.925,billing_question,web,\n435,0.776,refund_request,app,pro\n443,0.803,payment_issue,email,plus\n517,0.736,billing_question,web,\n571,0.809,refund_request,web,pro\n528,0.921,payment_issue,app,pro\n416,0.792,billing_question,web,basic\n386,0.800,billing_question,app,plus\n395,0.904,refund_request,web,basic\n557,0.737,refund_request,email,pro\n467,0.796,payment_issue,email,pro\n342,0.754,billing_question,app,plus\n363,0.835,billing_question,web,plus\n426,0.799,payment_issue,email,basic\n476,0.898,plan_change,web,basic\n490,0.759,billing_question,app,pro\n391,0.846,payment_issue,app,plus\n385,0.922,payment_issue,app,pro\n412,0.841,payment_issue,web,pro\n341,0.842,billing_question,web,plus\n351,0.680,payment_issue,app,plus\n420,0.828,payment_issue,app,pro\n472,0.810,refund_request,web,pro\n341,0.890,billing_question,web,pro\n484,0.816,payment_issue,web,plus\n440,0.977,plan_change,web,basic\n375,0.795,billing_question,web,plus\n390,0.814,payment_issue,web,pro\n300,0.888,plan_change,email,plus\n316,0.769,payment_issue,web,basic\n296,0.795,billing_question,web,basic\n543,0.916,payment_issue,app,basic\n441,0.914,plan_change,app,pro\n496,0.732,billing_question,web,pro\n539,0.854,refund_request,web,basic\n367,0.763,plan_change,email,pro\n513,0.839,billing_question,email,plus\n499,0.760,payment_issue,app,pro\n274,0.796,payment_issue,web,\n459,0.875,payment_issue,web,pro\n349,0.899,payment_issue,web,pro\n374,0.768,payment_issue,email,basic\n385,0.794,refund_request,app,pro\n545,0.547,payment_issue,web,plus\n430,0.900,refund_request,app,basic\n491,0.772,payment_issue,web,basic\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/drift-monitor/evals/fixtures/current.csv"
+   },
+   "drift_thresholds": {
+    "kind": "text",
+    "content": "# fictional fixture — Northwind Billing Assistant (fictional) drift thresholds agreed for tests only\nmetric,warn,alert\npsi,0.1,0.25\np_value,,0.01\nnull_rate_delta,0.02,0.05\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/drift-monitor/evals/fixtures/thresholds.csv"
+   },
+   "log": {
+    "kind": "text",
+    "content": "# fictional fixture — Northwind Billing Assistant (fictional) request log; invented values for tests only\ntimestamp,latency_ms,status,quality_pass,cost_usd\n2026-09-01T00:00:00Z,800,ok,1,0.0020\n2026-09-01T00:01:00Z,837,ok,1,0.0021\n2026-09-01T00:02:00Z,874,ok,1,0.0022\n2026-09-01T00:03:00Z,911,ok,0,0.0023\n2026-09-01T00:04:00Z,948,ok,1,0.0024\n2026-09-01T00:05:00Z,985,ok,1,0.0025\n2026-09-01T00:06:00Z,1022,ok,1,0.0026\n2026-09-01T00:07:00Z,1059,error,1,0.0027\n2026-09-01T00:08:00Z,1096,ok,1,0.0028\n2026-09-01T00:09:00Z,1133,ok,1,0.0029\n2026-09-01T00:10:00Z,1170,ok,1,0.0020\n2026-09-01T00:11:00Z,1207,ok,1,0.0021\n2026-09-01T00:12:00Z,1244,ok,1,0.0022\n2026-09-01T00:13:00Z,1281,ok,1,0.0023\n2026-09-01T00:14:00Z,1318,ok,1,0.0024\n2026-09-01T00:15:00Z,1355,ok,1,0.0025\n2026-09-01T00:16:00Z,1392,ok,1,0.0026\n2026-09-01T00:17:00Z,1429,ok,1,0.0027\n2026-09-01T00:18:00Z,1466,ok,1,0.0028\n2026-09-01T00:19:00Z,1503,ok,1,0.0029\n2026-09-01T00:20:00Z,1540,ok,1,0.0020\n2026-09-01T00:21:00Z,1577,ok,1,0.0021\n2026-09-01T00:22:00Z,1614,ok,1,0.0022\n2026-09-01T00:23:00Z,1651,ok,1,0.0023\n2026-09-01T00:24:00Z,1688,ok,1,0.0024\n2026-09-01T00:25:00Z,825,ok,1,0.0025\n2026-09-01T00:26:00Z,862,ok,1,0.0026\n2026-09-01T00:27:00Z,899,ok,1,0.0027\n2026-09-01T00:28:00Z,936,ok,0,0.0028\n2026-09-01T00:29:00Z,973,ok,1,0.0029\n2026-09-01T00:30:00Z,1010,ok,1,0.0020\n2026-09-01T00:31:00Z,1047,ok,1,0.0021\n2026-09-01T00:32:00Z,1084,ok,1,0.0022\n2026-09-01T00:33:00Z,1121,ok,1,0.0023\n2026-09-01T00:34:00Z,1158,ok,1,0.0024\n2026-09-01T00:35:00Z,1195,ok,1,0.0025\n2026-09-01T00:36:00Z,1232,ok,1,0.0026\n2026-09-01T00:37:00Z,1269,ok,1,0.0027\n2026-09-01T00:38:00Z,1306,ok,1,0.0028\n2026-09-01T00:39:00Z,1343,ok,1,0.0029\n2026-09-01T00:40:00Z,1380,ok,1,0.0020\n2026-09-01T00:41:00Z,1417,ok,1,0.0021\n2026-09-01T00:42:00Z,1454,ok,1,0.0022\n2026-09-01T00:43:00Z,1491,ok,1,0.0023\n2026-09-01T00:44:00Z,1528,ok,1,0.0024\n2026-09-01T00:45:00Z,1565,ok,1,0.0025\n2026-09-01T00:46:00Z,1602,ok,1,0.0026\n2026-09-01T00:47:00Z,1639,ok,1,0.0027\n2026-09-01T00:48:00Z,1676,ok,1,0.0028\n2026-09-01T00:49:00Z,813,ok,1,0.0029\n2026-09-01T00:50:00Z,850,ok,1,0.0020\n2026-09-01T00:51:00Z,887,ok,1,0.0021\n2026-09-01T00:52:00Z,924,ok,1,0.0022\n2026-09-01T00:53:00Z,961,ok,0,0.0023\n2026-09-01T00:54:00Z,998,ok,1,0.0024\n2026-09-01T00:55:00Z,1035,ok,1,0.0025\n2026-09-01T00:56:00Z,1072,ok,1,0.0026\n2026-09-01T00:57:00Z,1109,ok,1,0.0027\n2026-09-01T00:58:00Z,1146,ok,1,0.0028\n2026-09-01T00:59:00Z,1183,ok,1,0.0029\n2026-09-01T01:00:00Z,1220,ok,1,0.0020\n2026-09-01T01:01:00Z,1257,ok,1,0.0021\n2026-09-01T01:02:00Z,1294,ok,1,0.0022\n2026-09-01T01:03:00Z,1331,ok,1,0.0023\n2026-09-01T01:04:00Z,1368,ok,1,0.0024\n2026-09-01T01:05:00Z,1405,ok,1,0.0025\n2026-09-01T01:06:00Z,1442,ok,1,0.0026\n2026-09-01T01:07:00Z,1479,ok,1,0.0027\n2026-09-01T01:08:00Z,1516,ok,1,0.0028\n2026-09-01T01:09:00Z,1553,ok,1,0.0029\n2026-09-01T01:10:00Z,1590,ok,1,0.0020\n2026-09-01T01:11:00Z,1627,ok,1,0.0021\n2026-09-01T01:12:00Z,1664,ok,1,0.0022\n2026-09-01T01:13:00Z,801,ok,1,0.0023\n2026-09-01T01:14:00Z,838,ok,1,0.0024\n2026-09-01T01:15:00Z,875,ok,1,0.0025\n2026-09-01T01:16:00Z,912,ok,1,0.0026\n2026-09-01T01:17:00Z,949,ok,1,0.0027\n2026-09-01T01:18:00Z,986,ok,0,0.0028\n2026-09-01T01:19:00Z,1023,ok,1,0.0029\n2026-09-01T01:20:00Z,1060,ok,1,0.0020\n2026-09-01T01:21:00Z,1097,ok,1,0.0021\n2026-09-01T01:22:00Z,1134,ok,1,0.0022\n2026-09-01T01:23:00Z,1171,ok,1,0.0023\n2026-09-01T01:24:00Z,1208,ok,1,0.0024\n2026-09-01T01:25:00Z,1245,ok,1,0.0025\n2026-09-01T01:26:00Z,1282,ok,1,0.0026\n2026-09-01T01:27:00Z,1319,ok,1,0.0027\n2026-09-01T01:28:00Z,1356,ok,1,0.0028\n2026-09-01T01:29:00Z,1393,ok,1,0.0029\n2026-09-01T01:30:00Z,1430,ok,1,0.0020\n2026-09-01T01:31:00Z,1467,ok,1,0.0021\n2026-09-01T01:32:00Z,1504,ok,1,0.0022\n2026-09-01T01:33:00Z,1541,ok,1,0.0023\n2026-09-01T01:34:00Z,1578,ok,1,0.0024\n2026-09-01T01:35:00Z,1615,ok,1,0.0025\n2026-09-01T01:36:00Z,1652,ok,1,0.0026\n2026-09-01T01:37:00Z,1689,ok,1,0.0027\n2026-09-01T01:38:00Z,826,ok,1,0.0028\n2026-09-01T01:39:00Z,863,ok,1,0.0029\n2026-09-01T01:40:00Z,900,ok,1,0.0020\n2026-09-01T01:41:00Z,937,ok,1,0.0021\n2026-09-01T01:42:00Z,974,ok,1,0.0022\n2026-09-01T01:43:00Z,1011,ok,0,0.0023\n2026-09-01T01:44:00Z,1048,ok,1,0.0024\n2026-09-01T01:45:00Z,1085,ok,1,0.0025\n2026-09-01T01:46:00Z,1122,ok,1,0.0026\n2026-09-01T01:47:00Z,1159,ok,1,0.0027\n2026-09-01T01:48:00Z,1196,ok,1,0.0028\n2026-09-01T01:49:00Z,1233,ok,1,0.0029\n2026-09-01T01:50:00Z,1270,ok,1,0.0020\n2026-09-01T01:51:00Z,1307,ok,1,0.0021\n2026-09-01T01:52:00Z,1344,ok,1,0.0022\n2026-09-01T01:53:00Z,1381,ok,1,0.0023\n2026-09-01T01:54:00Z,1418,ok,1,0.0024\n2026-09-01T01:55:00Z,1455,ok,1,0.0025\n2026-09-01T01:56:00Z,1492,ok,1,0.0026\n2026-09-01T01:57:00Z,1529,ok,1,0.0027\n2026-09-01T01:58:00Z,1566,ok,1,0.0028\n2026-09-01T01:59:00Z,1603,ok,1,0.0029\n2026-09-01T02:00:00Z,1640,ok,1,0.0020\n2026-09-01T02:01:00Z,1677,ok,1,0.0021\n2026-09-01T02:02:00Z,814,ok,1,0.0022\n2026-09-01T02:03:00Z,851,ok,1,0.0023\n2026-09-01T02:04:00Z,888,ok,1,0.0024\n2026-09-01T02:05:00Z,925,ok,1,0.0025\n2026-09-01T02:06:00Z,962,ok,1,0.0026\n2026-09-01T02:07:00Z,999,ok,1,0.0027\n2026-09-01T02:08:00Z,1036,ok,0,0.0028\n2026-09-01T02:09:00Z,1073,ok,1,0.0029\n2026-09-01T02:10:00Z,1110,ok,1,0.0020\n2026-09-01T02:11:00Z,1147,ok,1,0.0021\n2026-09-01T02:12:00Z,1184,ok,1,0.0022\n2026-09-01T02:13:00Z,1221,ok,1,0.0023\n2026-09-01T02:14:00Z,1258,ok,1,0.0024\n2026-09-01T02:15:00Z,1295,ok,1,0.0025\n2026-09-01T02:16:00Z,1332,ok,1,0.0026\n2026-09-01T02:17:00Z,1369,ok,1,0.0027\n2026-09-01T02:18:00Z,1406,ok,1,0.0028\n2026-09-01T02:19:00Z,1443,ok,1,0.0029\n2026-09-01T02:20:00Z,1480,ok,1,0.0020\n2026-09-01T02:21:00Z,1517,ok,1,0.0021\n2026-09-01T02:22:00Z,1554,ok,1,0.0022\n2026-09-01T02:23:00Z,1591,ok,1,0.0023\n2026-09-01T02:24:00Z,1628,ok,1,0.0024\n2026-09-01T02:25:00Z,1665,ok,1,0.0025\n2026-09-01T02:26:00Z,802,ok,1,0.0026\n2026-09-01T02:27:00Z,839,ok,1,0.0027\n2026-09-01T02:28:00Z,876,ok,1,0.0028\n2026-09-01T02:29:00Z,913,ok,1,0.0029\n2026-09-01T02:30:00Z,950,ok,1,0.0020\n2026-09-01T02:31:00Z,987,ok,1,0.0021\n2026-09-01T02:32:00Z,1024,ok,1,0.0022\n2026-09-01T02:33:00Z,1061,ok,0,0.0023\n2026-09-01T02:34:00Z,1098,ok,1,0.0024\n2026-09-01T02:35:00Z,1135,ok,1,0.0025\n2026-09-01T02:36:00Z,1172,ok,1,0.0026\n2026-09-01T02:37:00Z,1209,ok,1,0.0027\n2026-09-01T02:38:00Z,1246,ok,1,0.0028\n2026-09-01T02:39:00Z,1283,ok,1,0.0029\n2026-09-01T02:40:00Z,1320,ok,1,0.0020\n2026-09-01T02:41:00Z,1357,ok,1,0.0021\n2026-09-01T02:42:00Z,1394,ok,1,0.0022\n2026-09-01T02:43:00Z,1431,ok,1,0.0023\n2026-09-01T02:44:00Z,1468,ok,1,0.0024\n2026-09-01T02:45:00Z,1505,ok,1,0.0025\n2026-09-01T02:46:00Z,1542,ok,1,0.0026\n2026-09-01T02:47:00Z,1579,ok,1,0.0027\n2026-09-01T02:48:00Z,1616,ok,1,0.0028\n2026-09-01T02:49:00Z,1653,ok,1,0.0029\n2026-09-01T02:50:00Z,1690,ok,1,0.0020\n2026-09-01T02:51:00Z,827,ok,1,0.0021\n2026-09-01T02:52:00Z,864,ok,1,0.0022\n2026-09-01T02:53:00Z,901,ok,1,0.0023\n2026-09-01T02:54:00Z,938,ok,1,0.0024\n2026-09-01T02:55:00Z,975,ok,1,0.0025\n2026-09-01T02:56:00Z,1012,ok,1,0.0026\n2026-09-01T02:57:00Z,1049,ok,1,0.0027\n2026-09-01T02:58:00Z,1086,ok,0,0.0028\n2026-09-01T02:59:00Z,1123,ok,1,0.0029\n2026-09-01T03:00:00Z,1160,ok,1,0.0020\n2026-09-01T03:01:00Z,1197,ok,1,0.0021\n2026-09-01T03:02:00Z,1234,ok,1,0.0022\n2026-09-01T03:03:00Z,1271,ok,1,0.0023\n2026-09-01T03:04:00Z,1308,ok,1,0.0024\n2026-09-01T03:05:00Z,1345,ok,1,0.0025\n2026-09-01T03:06:00Z,1382,ok,1,0.0026\n2026-09-01T03:07:00Z,1419,ok,1,0.0027\n2026-09-01T03:08:00Z,1456,ok,1,0.0028\n2026-09-01T03:09:00Z,1493,ok,1,0.0029\n2026-09-01T03:10:00Z,1530,ok,1,0.0020\n2026-09-01T03:11:00Z,1567,ok,1,0.0021\n2026-09-01T03:12:00Z,1604,ok,1,0.0022\n2026-09-01T03:13:00Z,1641,ok,1,0.0023\n2026-09-01T03:14:00Z,1678,ok,1,0.0024\n2026-09-01T03:15:00Z,815,ok,1,0.0025\n2026-09-01T03:16:00Z,852,ok,1,0.0026\n2026-09-01T03:17:00Z,889,ok,1,0.0027\n2026-09-01T03:18:00Z,926,ok,1,0.0028\n2026-09-01T03:19:00Z,963,ok,1,0.0029\n2026-09-01T03:20:00Z,1000,ok,1,0.0020\n2026-09-01T03:21:00Z,1037,ok,1,0.0021\n2026-09-01T03:22:00Z,1074,ok,1,0.0022\n2026-09-01T03:23:00Z,1111,ok,0,0.0023\n2026-09-01T03:24:00Z,1148,ok,1,0.0024\n2026-09-01T03:25:00Z,1185,ok,1,0.0025\n2026-09-01T03:26:00Z,1222,ok,1,0.0026\n2026-09-01T03:27:00Z,1259,error,1,0.0027\n2026-09-01T03:28:00Z,1296,ok,1,0.0028\n2026-09-01T03:29:00Z,1333,ok,1,0.0029\n2026-09-01T03:30:00Z,1370,ok,1,0.0020\n2026-09-01T03:31:00Z,1407,ok,1,0.0021\n2026-09-01T03:32:00Z,1444,ok,1,0.0022\n2026-09-01T03:33:00Z,1481,ok,1,0.0023\n2026-09-01T03:34:00Z,1518,ok,1,0.0024\n2026-09-01T03:35:00Z,1555,ok,1,0.0025\n2026-09-01T03:36:00Z,1592,ok,1,0.0026\n2026-09-01T03:37:00Z,1629,ok,1,0.0027\n2026-09-01T03:38:00Z,1666,ok,1,0.0028\n2026-09-01T03:39:00Z,803,ok,1,0.0029\n2026-09-01T03:40:00Z,840,ok,1,0.0020\n2026-09-01T03:41:00Z,877,ok,1,0.0021\n2026-09-01T03:42:00Z,914,ok,1,0.0022\n2026-09-01T03:43:00Z,951,ok,1,0.0023\n2026-09-01T03:44:00Z,988,ok,1,0.0024\n2026-09-01T03:45:00Z,1025,ok,1,0.0025\n2026-09-01T03:46:00Z,1062,ok,1,0.0026\n2026-09-01T03:47:00Z,1099,ok,1,0.0027\n2026-09-01T03:48:00Z,1136,ok,0,0.0028\n2026-09-01T03:49:00Z,1173,ok,1,0.0029\n2026-09-01T03:50:00Z,1210,ok,1,0.0020\n2026-09-01T03:51:00Z,1247,ok,1,0.0021\n2026-09-01T03:52:00Z,1284,ok,1,0.0022\n2026-09-01T03:53:00Z,1321,ok,1,0.0023\n2026-09-01T03:54:00Z,1358,ok,1,0.0024\n2026-09-01T03:55:00Z,1395,ok,1,0.0025\n2026-09-01T03:56:00Z,1432,ok,1,0.0026\n2026-09-01T03:57:00Z,1469,ok,1,0.0027\n2026-09-01T03:58:00Z,1506,ok,1,0.0028\n2026-09-01T03:59:00Z,1543,ok,1,0.0029\n2026-09-01T04:00:00Z,1580,ok,1,0.0020\n2026-09-01T04:01:00Z,1617,ok,1,0.0021\n2026-09-01T04:02:00Z,1654,ok,1,0.0022\n2026-09-01T04:03:00Z,1691,ok,1,0.0023\n2026-09-01T04:04:00Z,828,ok,1,0.0024\n2026-09-01T04:05:00Z,865,ok,1,0.0025\n2026-09-01T04:06:00Z,902,ok,1,0.0026\n2026-09-01T04:07:00Z,939,ok,1,0.0027\n2026-09-01T04:08:00Z,976,ok,1,0.0028\n2026-09-01T04:09:00Z,1013,ok,1,0.0029\n2026-09-01T04:10:00Z,1050,ok,1,0.0020\n2026-09-01T04:11:00Z,1087,ok,1,0.0021\n2026-09-01T04:12:00Z,1124,ok,1,0.0022\n2026-09-01T04:13:00Z,1161,ok,0,0.0023\n2026-09-01T04:14:00Z,1198,ok,1,0.0024\n2026-09-01T04:15:00Z,1235,ok,1,0.0025\n2026-09-01T04:16:00Z,1272,ok,1,0.0026\n2026-09-01T04:17:00Z,1309,ok,1,0.0027\n2026-09-01T04:18:00Z,1346,ok,1,0.0028\n2026-09-01T04:19:00Z,1383,ok,1,0.0029\n2026-09-01T04:20:00Z,1420,ok,1,0.0020\n2026-09-01T04:21:00Z,1457,ok,1,0.0021\n2026-09-01T04:22:00Z,1494,ok,1,0.0022\n2026-09-01T04:23:00Z,1531,ok,1,0.0023\n2026-09-01T04:24:00Z,1568,ok,1,0.0024\n2026-09-01T04:25:00Z,1605,ok,1,0.0025\n2026-09-01T04:26:00Z,1642,ok,1,0.0026\n2026-09-01T04:27:00Z,1679,ok,1,0.0027\n2026-09-01T04:28:00Z,816,ok,1,0.0028\n2026-09-01T04:29:00Z,853,ok,1,0.0029\n2026-09-01T04:30:00Z,890,ok,1,0.0020\n2026-09-01T04:31:00Z,927,ok,1,0.0021\n2026-09-01T04:32:00Z,964,ok,1,0.0022\n2026-09-01T04:33:00Z,1001,ok,1,0.0023\n2026-09-01T04:34:00Z,1038,ok,1,0.0024\n2026-09-01T04:35:00Z,1075,ok,1,0.0025\n2026-09-01T04:36:00Z,1112,ok,1,0.0026\n2026-09-01T04:37:00Z,1149,ok,1,0.0027\n2026-09-01T04:38:00Z,1186,ok,0,0.0028\n2026-09-01T04:39:00Z,1223,ok,1,0.0029\n2026-09-01T04:40:00Z,1260,ok,1,0.0020\n2026-09-01T04:41:00Z,1297,ok,1,0.0021\n2026-09-01T04:42:00Z,1334,ok,1,0.0022\n2026-09-01T04:43:00Z,1371,ok,1,0.0023\n2026-09-01T04:44:00Z,1408,ok,1,0.0024\n2026-09-01T04:45:00Z,1445,ok,1,0.0025\n2026-09-01T04:46:00Z,1482,ok,1,0.0026\n2026-09-01T04:47:00Z,1519,ok,1,0.0027\n2026-09-01T04:48:00Z,1556,ok,1,0.0028\n2026-09-01T04:49:00Z,1593,ok,1,0.0029\n2026-09-01T04:50:00Z,1630,ok,1,0.0020\n2026-09-01T04:51:00Z,1667,ok,1,0.0021\n2026-09-01T04:52:00Z,804,ok,1,0.0022\n2026-09-01T04:53:00Z,841,ok,1,0.0023\n2026-09-01T04:54:00Z,878,ok,1,0.0024\n2026-09-01T04:55:00Z,915,ok,1,0.0025\n2026-09-01T04:56:00Z,952,ok,1,0.0026\n2026-09-01T04:57:00Z,989,ok,1,0.0027\n2026-09-01T04:58:00Z,1026,ok,1,0.0028\n2026-09-01T04:59:00Z,1063,ok,1,0.0029\n2026-09-01T05:00:00Z,1100,ok,1,0.0020\n2026-09-01T05:01:00Z,1137,ok,1,0.0021\n2026-09-01T05:02:00Z,1174,ok,1,0.0022\n2026-09-01T05:03:00Z,1211,ok,0,0.0023\n2026-09-01T05:04:00Z,1248,ok,1,0.0024\n2026-09-01T05:05:00Z,1285,ok,1,0.0025\n2026-09-01T05:06:00Z,1322,ok,1,0.0026\n2026-09-01T05:07:00Z,1359,ok,1,0.0027\n2026-09-01T05:08:00Z,1396,ok,1,0.0028\n2026-09-01T05:09:00Z,1433,ok,1,0.0029\n2026-09-01T05:10:00Z,1470,ok,1,0.0020\n2026-09-01T05:11:00Z,1507,ok,1,0.0021\n2026-09-01T05:12:00Z,1544,ok,1,0.0022\n2026-09-01T05:13:00Z,1581,ok,1,0.0023\n2026-09-01T05:14:00Z,1618,ok,1,0.0024\n2026-09-01T05:15:00Z,1655,ok,1,0.0025\n2026-09-01T05:16:00Z,1692,ok,1,0.0026\n2026-09-01T05:17:00Z,829,ok,1,0.0027\n2026-09-01T05:18:00Z,866,ok,1,0.0028\n2026-09-01T05:19:00Z,903,ok,1,0.0029\n2026-09-01T05:20:00Z,940,ok,1,0.0020\n2026-09-01T05:21:00Z,977,ok,1,0.0021\n2026-09-01T05:22:00Z,1014,ok,1,0.0022\n2026-09-01T05:23:00Z,1051,ok,1,0.0023\n2026-09-01T05:24:00Z,1088,ok,1,0.0024\n2026-09-01T05:25:00Z,1125,ok,1,0.0025\n2026-09-01T05:26:00Z,1162,ok,1,0.0026\n2026-09-01T05:27:00Z,1199,ok,1,0.0027\n2026-09-01T05:28:00Z,1236,ok,0,0.0028\n2026-09-01T05:29:00Z,1273,ok,1,0.0029\n2026-09-01T05:30:00Z,1310,ok,1,0.0020\n2026-09-01T05:31:00Z,1347,ok,1,0.0021\n2026-09-01T05:32:00Z,1384,ok,1,0.0022\n2026-09-01T05:33:00Z,1421,ok,1,0.0023\n2026-09-01T05:34:00Z,1458,ok,1,0.0024\n2026-09-01T05:35:00Z,1495,ok,1,0.0025\n2026-09-01T05:36:00Z,1532,ok,1,0.0026\n2026-09-01T05:37:00Z,1569,ok,1,0.0027\n2026-09-01T05:38:00Z,1606,ok,1,0.0028\n2026-09-01T05:39:00Z,1643,ok,1,0.0029\n2026-09-01T05:40:00Z,1680,ok,1,0.0020\n2026-09-01T05:41:00Z,817,ok,1,0.0021\n2026-09-01T05:42:00Z,854,ok,1,0.0022\n2026-09-01T05:43:00Z,891,ok,1,0.0023\n2026-09-01T05:44:00Z,928,ok,1,0.0024\n2026-09-01T05:45:00Z,965,ok,1,0.0025\n2026-09-01T05:46:00Z,1002,ok,1,0.0026\n2026-09-01T05:47:00Z,1039,ok,1,0.0027\n2026-09-01T05:48:00Z,1076,ok,1,0.0028\n2026-09-01T05:49:00Z,1113,ok,1,0.0029\n2026-09-01T05:50:00Z,1150,ok,1,0.0020\n2026-09-01T05:51:00Z,1187,ok,1,0.0021\n2026-09-01T05:52:00Z,1224,ok,1,0.0022\n2026-09-01T05:53:00Z,1261,ok,0,0.0023\n2026-09-01T05:54:00Z,1298,ok,1,0.0024\n2026-09-01T05:55:00Z,1335,ok,1,0.0025\n2026-09-01T05:56:00Z,1372,ok,1,0.0026\n2026-09-01T05:57:00Z,1409,ok,1,0.0027\n2026-09-01T05:58:00Z,1446,ok,1,0.0028\n2026-09-01T05:59:00Z,1483,ok,1,0.0029\n2026-09-01T06:00:00Z,1520,ok,1,0.0020\n2026-09-01T06:01:00Z,1557,ok,1,0.0021\n2026-09-01T06:02:00Z,1594,ok,1,0.0022\n2026-09-01T06:03:00Z,1631,ok,1,0.0023\n2026-09-01T06:04:00Z,1668,ok,1,0.0024\n2026-09-01T06:05:00Z,805,ok,1,0.0025\n2026-09-01T06:06:00Z,842,ok,1,0.0026\n2026-09-01T06:07:00Z,879,ok,1,0.0027\n2026-09-01T06:08:00Z,916,ok,1,0.0028\n2026-09-01T06:09:00Z,953,ok,1,0.0029\n2026-09-01T06:10:00Z,990,ok,1,0.0020\n2026-09-01T06:11:00Z,1027,ok,1,0.0021\n2026-09-01T06:12:00Z,1064,ok,1,0.0022\n2026-09-01T06:13:00Z,1101,ok,1,0.0023\n2026-09-01T06:14:00Z,1138,ok,1,0.0024\n2026-09-01T06:15:00Z,1175,ok,1,0.0025\n2026-09-01T06:16:00Z,1212,ok,1,0.0026\n2026-09-01T06:17:00Z,1249,ok,1,0.0027\n2026-09-01T06:18:00Z,1286,ok,0,0.0028\n2026-09-01T06:19:00Z,1323,ok,1,0.0029\n2026-09-01T06:20:00Z,1360,ok,1,0.0020\n2026-09-01T06:21:00Z,1397,ok,1,0.0021\n2026-09-01T06:22:00Z,1434,ok,1,0.0022\n2026-09-01T06:23:00Z,1471,ok,1,0.0023\n2026-09-01T06:24:00Z,1508,ok,1,0.0024\n2026-09-01T06:25:00Z,1545,ok,1,0.0025\n2026-09-01T06:26:00Z,1582,ok,1,0.0026\n2026-09-01T06:27:00Z,1619,ok,1,0.0027\n2026-09-01T06:28:00Z,1656,ok,1,0.0028\n2026-09-01T06:29:00Z,1693,ok,1,0.0029\n2026-09-01T06:30:00Z,830,ok,1,0.0020\n2026-09-01T06:31:00Z,867,ok,1,0.0021\n2026-09-01T06:32:00Z,904,ok,1,0.0022\n2026-09-01T06:33:00Z,941,ok,1,0.0023\n2026-09-01T06:34:00Z,978,ok,1,0.0024\n2026-09-01T06:35:00Z,1015,ok,1,0.0025\n2026-09-01T06:36:00Z,1052,ok,1,0.0026\n2026-09-01T06:37:00Z,1089,ok,1,0.0027\n2026-09-01T06:38:00Z,1126,ok,1,0.0028\n2026-09-01T06:39:00Z,1163,ok,1,0.0029\n2026-09-01T06:40:00Z,1200,ok,1,0.0020\n2026-09-01T06:41:00Z,1237,ok,1,0.0021\n2026-09-01T06:42:00Z,1274,ok,1,0.0022\n2026-09-01T06:43:00Z,1311,ok,0,0.0023\n2026-09-01T06:44:00Z,1348,ok,1,0.0024\n2026-09-01T06:45:00Z,1385,ok,1,0.0025\n2026-09-01T06:46:00Z,1422,ok,1,0.0026\n2026-09-01T06:47:00Z,1459,error,1,0.0027\n2026-09-01T06:48:00Z,1496,ok,1,0.0028\n2026-09-01T06:49:00Z,1533,ok,1,0.0029\n2026-09-01T06:50:00Z,1570,ok,1,0.0020\n2026-09-01T06:51:00Z,1607,ok,1,0.0021\n2026-09-01T06:52:00Z,1644,ok,1,0.0022\n2026-09-01T06:53:00Z,1681,ok,1,0.0023\n2026-09-01T06:54:00Z,818,ok,1,0.0024\n2026-09-01T06:55:00Z,855,ok,1,0.0025\n2026-09-01T06:56:00Z,892,ok,1,0.0026\n2026-09-01T06:57:00Z,929,ok,1,0.0027\n2026-09-01T06:58:00Z,966,ok,1,0.0028\n2026-09-01T06:59:00Z,1003,ok,1,0.0029\n2026-09-01T07:00:00Z,1040,ok,1,0.0020\n2026-09-01T07:01:00Z,1077,ok,1,0.0021\n2026-09-01T07:02:00Z,1114,ok,1,0.0022\n2026-09-01T07:03:00Z,1151,ok,1,0.0023\n2026-09-01T07:04:00Z,1188,ok,1,0.0024\n2026-09-01T07:05:00Z,1225,ok,1,0.0025\n2026-09-01T07:06:00Z,1262,ok,1,0.0026\n2026-09-01T07:07:00Z,1299,ok,1,0.0027\n2026-09-01T07:08:00Z,1336,ok,0,0.0028\n2026-09-01T07:09:00Z,1373,ok,1,0.0029\n2026-09-01T07:10:00Z,1410,ok,1,0.0020\n2026-09-01T07:11:00Z,1447,ok,1,0.0021\n2026-09-01T07:12:00Z,1484,ok,1,0.0022\n2026-09-01T07:13:00Z,1521,ok,1,0.0023\n2026-09-01T07:14:00Z,1558,ok,1,0.0024\n2026-09-01T07:15:00Z,1595,ok,1,0.0025\n2026-09-01T07:16:00Z,1632,ok,1,0.0026\n2026-09-01T07:17:00Z,1669,ok,1,0.0027\n2026-09-01T07:18:00Z,806,ok,1,0.0028\n2026-09-01T07:19:00Z,843,ok,1,0.0029\n2026-09-01T07:20:00Z,880,ok,1,0.0020\n2026-09-01T07:21:00Z,917,ok,1,0.0021\n2026-09-01T07:22:00Z,954,ok,1,0.0022\n2026-09-01T07:23:00Z,991,ok,1,0.0023\n2026-09-01T07:24:00Z,1028,ok,1,0.0024\n2026-09-01T07:25:00Z,1065,ok,1,0.0025\n2026-09-01T07:26:00Z,1102,ok,1,0.0026\n2026-09-01T07:27:00Z,1139,ok,1,0.0027\n2026-09-01T07:28:00Z,1176,ok,1,0.0028\n2026-09-01T07:29:00Z,1213,ok,1,0.0029\n2026-09-01T07:30:00Z,1250,ok,1,0.0020\n2026-09-01T07:31:00Z,1287,ok,1,0.0021\n2026-09-01T07:32:00Z,1324,ok,1,0.0022\n2026-09-01T07:33:00Z,1361,ok,0,0.0023\n2026-09-01T07:34:00Z,1398,ok,1,0.0024\n2026-09-01T07:35:00Z,1435,ok,1,0.0025\n2026-09-01T07:36:00Z,1472,ok,1,0.0026\n2026-09-01T07:37:00Z,1509,ok,1,0.0027\n2026-09-01T07:38:00Z,1546,ok,1,0.0028\n2026-09-01T07:39:00Z,1583,ok,1,0.0029\n2026-09-01T07:40:00Z,1620,ok,1,0.0020\n2026-09-01T07:41:00Z,1657,ok,1,0.0021\n2026-09-01T07:42:00Z,1694,ok,1,0.0022\n2026-09-01T07:43:00Z,831,ok,1,0.0023\n2026-09-01T07:44:00Z,868,ok,1,0.0024\n2026-09-01T07:45:00Z,905,ok,1,0.0025\n2026-09-01T07:46:00Z,942,ok,1,0.0026\n2026-09-01T07:47:00Z,979,ok,1,0.0027\n2026-09-01T07:48:00Z,1016,ok,1,0.0028\n2026-09-01T07:49:00Z,1053,ok,1,0.0029\n2026-09-01T07:50:00Z,1090,ok,1,0.0020\n2026-09-01T07:51:00Z,1127,ok,1,0.0021\n2026-09-01T07:52:00Z,1164,ok,1,0.0022\n2026-09-01T07:53:00Z,1201,ok,1,0.0023\n2026-09-01T07:54:00Z,1238,ok,1,0.0024\n2026-09-01T07:55:00Z,1275,ok,1,0.0025\n2026-09-01T07:56:00Z,1312,ok,1,0.0026\n2026-09-01T07:57:00Z,1349,ok,1,0.0027\n2026-09-01T07:58:00Z,1386,ok,0,0.0028\n2026-09-01T07:59:00Z,1423,ok,1,0.0029\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-slo-definition/evals/fixtures/requests.csv"
+   },
+   "targets": {
+    "kind": "text",
+    "content": "# fictional fixture — Northwind Billing Assistant (fictional) SLO targets for tests only\nsli,objective,threshold,window_days\navailability,0.99,,30\nlatency,0.9,1650,30\nquality,0.95,,30\ncost,0.8,0.0028,30\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-slo-definition/evals/fixtures/targets.csv"
+   },
+   "system": {
+    "kind": "value",
+    "value": "Northwind Billing Assistant"
+   },
+   "usage": {
+    "kind": "text",
+    "content": "# fictional fixture: Northwind Billing Assistant (fictional) usage; teams, volumes and models are fictional\ndate,team,feature,model,requests,input_tokens,output_tokens,cached_input_tokens\n2026-09-01,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-01,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-01,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-02,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-02,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-02,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-03,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-03,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-03,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-04,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-04,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-04,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-05,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-05,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-05,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-06,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-06,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-06,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-07,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-07,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-07,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-08,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-08,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-08,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-09,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-09,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-09,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-10,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-10,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-10,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-11,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-11,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-11,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-12,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-12,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-12,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-13,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-13,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-13,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-14,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-14,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-14,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-15,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-15,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-15,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-16,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-16,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-16,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-17,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-17,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-17,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-18,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-18,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-18,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-19,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-19,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-19,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-20,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-20,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-20,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-21,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-21,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-21,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-22,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-22,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-22,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-23,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-23,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-23,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-24,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-24,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-24,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-25,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-25,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-25,collections,dunning-email,fict-small,5000,4000000,1000000,0\n2026-09-26,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-26,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-26,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-27,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-27,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-27,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-28,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-28,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-28,collections,dunning-email,fict-small,520,416000,104000,0\n2026-09-29,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-29,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-29,collections,dunning-email,fict-small,500,400000,100000,0\n2026-09-30,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-09-30,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-09-30,collections,dunning-email,fict-small,520,416000,104000,0\n2026-10-01,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-01,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-01,collections,dunning-email,fict-small,500,400000,100000,0\n2026-10-01,billing-support,invoice-qa,fict-legacy,200,100000,20000,0\n2026-10-02,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-02,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-02,collections,dunning-email,fict-small,520,416000,104000,0\n2026-10-02,billing-support,invoice-qa,fict-legacy,200,100000,20000,0\n2026-10-03,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-03,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-03,collections,dunning-email,fict-small,500,400000,100000,0\n2026-10-03,billing-support,invoice-qa,fict-legacy,200,100000,20000,0\n2026-10-04,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-04,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-04,collections,dunning-email,fict-small,520,416000,104000,0\n2026-10-05,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-05,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-05,collections,dunning-email,fict-small,500,400000,100000,0\n2026-10-06,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-06,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-06,collections,dunning-email,fict-small,520,416000,104000,0\n2026-10-07,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-07,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-07,collections,dunning-email,fict-small,500,400000,100000,0\n2026-10-08,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-08,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-08,collections,dunning-email,fict-small,520,416000,104000,0\n2026-10-09,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-09,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-09,collections,dunning-email,fict-small,500,400000,100000,0\n2026-10-10,billing-support,invoice-qa,fict-large,1000,2000000,300000,500000\n2026-10-10,billing-support,dispute-summary,fict-small,333,777777,111111,100000\n2026-10-10,collections,dunning-email,fict-small,520,416000,104000,0\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-finops-chargeback/evals/fixtures/usage.csv"
+   },
+   "prices": {
+    "kind": "text",
+    "content": "# fictional fixture: FICTIONAL prices (not a real vendor price sheet) for the Northwind Billing Assistant (fictional)\nmodel,input_per_1m,output_per_1m,cached_input_per_1m,effective_from,source\nfict-large,3.00,15.00,0.30,2026-08-01,fictional price sheet\nfict-large,2.50,15.00,0.25,2026-09-15,fictional price sheet (price change)\nfict-small,0.25,1.25,,2026-08-01,fictional price sheet (no cached price)\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-finops-chargeback/evals/fixtures/prices.csv"
+   },
+   "budgets": {
+    "kind": "text",
+    "content": "# fictional fixture: Northwind Billing Assistant (fictional) monthly AI budgets\nteam,month,budget_usd\nbilling-support,2026-09,300.00\nbilling-support,2026-10,250.00\ncollections,2026-10,10.00\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-finops-chargeback/evals/fixtures/budgets.csv"
+   }
+  }
+ },
+ {
   "name": "ai-use-case-to-release",
   "spec": {
    "name": "ai-use-case-to-release",
@@ -636,6 +802,239 @@
     "content": "{\n  \"client\": \"Northwind Retail\",\n  \"initiative\": \"Order Hub Integration\",\n  \"themes\": [\n    {\"theme\": \"Peak-proof order orchestration\", \"proof\": \"Northwind peak post-mortem 2025-12 p.4: 3,100 cancelled pickup orders\", \"so_what\": \"no war room next peak\"},\n    {\"theme\": \"Inventory-accurate promising\", \"proof\": \"VP Supply Chain statement 2026-09-02: 6.2% split-shipment rate\", \"so_what\": \"fewer split shipments and markdowns\"},\n    {\"theme\": \"Fixed-price waves with explicit contingency\", \"proof\": \"\", \"so_what\": \"price certainty per wave\"}\n  ]\n}\n",
     "ext": "json",
     "source": "skills/presales/proposal-writer/evals/fixtures/win-themes.json"
+   }
+  }
+ },
+ {
+  "name": "responsible-ai-review",
+  "spec": {
+   "name": "responsible-ai-review",
+   "version": "0.1.0",
+   "description": "Responsible AI review of one system: EU AI Act tier and obligations → DPIA → NIST AI RMF evidence against those obligations → threat model → user transparency notice → (Responsible AI lead approves).",
+   "adlc_stage": "govern",
+   "inputs": [
+    {
+     "name": "system",
+     "type": "csv",
+     "required": true,
+     "from": "AI Act questionnaire (layout: skills/ai-platform/eu-ai-act-classifier/assets/system-questionnaire.csv)"
+    },
+    {
+     "name": "obligation_evidence",
+     "type": "csv",
+     "required": false,
+     "from": "obligation_id,status,evidence,owner for AI Act obligations"
+    },
+    {
+     "name": "as_of",
+     "type": "string",
+     "required": true,
+     "from": "review date YYYY-MM-DD"
+    },
+    {
+     "name": "processing",
+     "type": "csv",
+     "required": true,
+     "from": "processing description (layout: skills/ai-platform/dpia/assets/processing-template.csv)"
+    },
+    {
+     "name": "pii_inventory",
+     "type": "csv",
+     "required": false,
+     "from": "pii-inventory.csv from pii-data-inventory"
+    },
+    {
+     "name": "risks",
+     "type": "csv",
+     "required": false,
+     "from": "privacy risk register"
+    },
+    {
+     "name": "controls_evidence",
+     "type": "csv",
+     "required": true,
+     "from": "NIST AI RMF evidence register subcategory_id,status,evidence,owner"
+    },
+    {
+     "name": "min_coverage",
+     "type": "string",
+     "required": false,
+     "from": "minimum NIST coverage set by the AI risk lead"
+    },
+    {
+     "name": "components",
+     "type": "csv",
+     "required": true,
+     "from": "architecture components (layout: skills/ai-platform/ai-threat-model/assets/components-template.csv)"
+    },
+    {
+     "name": "flows",
+     "type": "csv",
+     "required": true,
+     "from": "data flows between components"
+    },
+    {
+     "name": "security_controls",
+     "type": "csv",
+     "required": false,
+     "from": "control register for threats"
+    },
+    {
+     "name": "max_open_high",
+     "type": "string",
+     "required": false,
+     "from": "allowed open high threats"
+    },
+    {
+     "name": "facts",
+     "type": "csv",
+     "required": true,
+     "from": "system facts for the user notice (layout: skills/ai-platform/ai-transparency-notice/assets/facts-template.csv)"
+    }
+   ],
+   "config": {
+    "provider": "auto",
+    "on_fail": "stop"
+   },
+   "steps": [
+    {
+     "id": "classify",
+     "skill": "ai-platform/eu-ai-act-classifier",
+     "gate": true,
+     "inputs": {
+      "system": "$in.system",
+      "evidence": "$in.obligation_evidence",
+      "as_of": "$in.as_of"
+     }
+    },
+    {
+     "id": "privacy",
+     "skill": "ai-platform/dpia",
+     "gate": true,
+     "inputs": {
+      "processing": "$in.processing",
+      "pii_inventory": "$in.pii_inventory",
+      "risks": "$in.risks"
+     }
+    },
+    {
+     "id": "controls",
+     "skill": "ai-platform/ai-controls-mapping",
+     "gate": true,
+     "inputs": {
+      "evidence": "$in.controls_evidence",
+      "min_coverage": "$in.min_coverage",
+      "obligations": "$steps.classify:obligations.csv"
+     }
+    },
+    {
+     "id": "threats",
+     "skill": "ai-platform/ai-threat-model",
+     "gate": true,
+     "inputs": {
+      "components": "$in.components",
+      "flows": "$in.flows",
+      "controls": "$in.security_controls",
+      "max_open_high": "$in.max_open_high"
+     }
+    },
+    {
+     "id": "notice",
+     "skill": "ai-platform/ai-transparency-notice",
+     "inputs": {
+      "facts": "$in.facts",
+      "classification": "$steps.classify:classification.json"
+     }
+    },
+    {
+     "id": "rai-signoff",
+     "approval": {
+      "role": "Responsible AI lead",
+      "note": "Confirm the tier, the DPIA residual risks, the control gaps and the open high threats before the notice ships."
+     }
+    }
+   ],
+   "outputs": [
+    "$steps.classify:ai-act-report.md",
+    "$steps.privacy:dpia.md",
+    "$steps.controls:controls-report.md",
+    "$steps.threats:threat-report.md",
+    "$steps.notice:notice.md",
+    "$steps.notice:system-card.md"
+   ]
+  },
+  "demo": {
+   "system": {
+    "kind": "text",
+    "content": "# fictional fixture - Northwind Utilities (fictional); invented answers for tests only, not a real system\nkey,value,source,notes\nsystem_name,Northwind Billing Assistant,fixture,fictional fixture\nrole,provider,fixture,fictional fixture\nintended_purpose,Answers Northwind Utilities customers' billing and payment questions in a web chat,fixture,fictional fixture\nplaced_on_market,2026-03-01,fixture,fictional fixture\naccountable_owner,AI Compliance Lead (fictional),fixture,fictional fixture\np_subliminal_manipulation,no,fixture,fictional fixture\np_exploit_vulnerabilities,no,fixture,fictional fixture\np_social_scoring,no,fixture,fictional fixture\np_crime_risk_profiling,no,fixture,fictional fixture\np_untargeted_face_scraping,no,fixture,fictional fixture\np_emotion_recognition_work_education,no,fixture,fictional fixture\np_biometric_categorisation_sensitive,no,fixture,fictional fixture\np_realtime_rbi_law_enforcement,no,fixture,fictional fixture\np_non_consensual_intimate_content,no,fixture,fictional fixture\np_csam_generation,no,fixture,fictional fixture\nannex1_safety_component,no,fixture,fictional fixture\na3_biometrics,no,fixture,fictional fixture\na3_critical_infrastructure,no,fixture,fictional fixture\na3_education,no,fixture,fictional fixture\na3_employment,no,fixture,fictional fixture\na3_essential_services,no,fixture,fictional fixture\na3_law_enforcement,no,fixture,fictional fixture\na3_migration,no,fixture,fictional fixture\na3_justice_democracy,no,fixture,fictional fixture\nd63_narrow_procedural,no,fixture,fictional fixture\nd63_improves_prior_human,no,fixture,fictional fixture\nd63_detects_patterns,no,fixture,fictional fixture\nd63_preparatory,no,fixture,fictional fixture\nd63_profiling,no,fixture,fictional fixture\nt_interacts_with_persons,yes,fixture,fictional fixture\nt_synthetic_content,yes,fixture,fictional fixture\nt_emotion_recognition,no,fixture,fictional fixture\nt_biometric_categorisation,no,fixture,fictional fixture\nt_deepfake,no,fixture,fictional fixture\nt_public_interest_text,no,fixture,fictional fixture\nis_gpai,no,fixture,fictional fixture\ngpai_systemic_risk,no,fixture,fictional fixture\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/eu-ai-act-classifier/evals/fixtures/system-northwind.csv"
+   },
+   "obligation_evidence": {
+    "kind": "text",
+    "content": "# fictional fixture - invented evidence for tests only\nobligation_id,status,evidence,owner\nAI-LIT,done,LMS course AI-101 completion report (fictional),HR Learning Lead (fictional)\nTR-50-1,in_progress,Chat banner design ticket NW-412 (fictional),\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/eu-ai-act-classifier/evals/fixtures/evidence.csv"
+   },
+   "as_of": {
+    "kind": "value",
+    "value": "2026-10-18"
+   },
+   "processing": {
+    "kind": "text",
+    "content": "# FICTIONAL fixture: Northwind Billing Assistant is an invented system; all names are placeholders.\nkey,value,source,notes\nsystem_name,Northwind Billing Assistant,fictional fixture,\ncontroller,Northwind Traders Ltd (fictional),fictional fixture,\ndpo,Data protection officer (fictional),fictional fixture,\npurpose,Answer customer billing questions and draft payment-plan offers for agent review,fictional fixture,\ndata_subjects,Retail customers,fictional fixture,\ndata_categories,Contact details; billing history; payment card tokens; date of birth,fictional fixture,\ndata_sources,Billing system extract; chat transcripts,fictional fixture,\nrecipients,Customer service agents,fictional fixture,\nprocessors,LLM API provider under DPA (fictional),fictional fixture,\nretention,Chat transcripts 90 days; billing data per finance policy,fictional fixture,\ninternational_transfers,no,fictional fixture,\nlawful_basis,Art. 6(1)(b) contract,fictional fixture,\nnecessity_justification,Billing history is needed to answer the customer's own billing question,fictional fixture,\ndata_minimisation,Only last 12 months of invoices sent to the model,fictional fixture,\ntransparency,Privacy notice updated; chat banner discloses AI use,fictional fixture,\ndata_subject_rights,Agent reviews every payment-plan offer; customers can request a human,fictional fixture,\nevaluation_scoring,yes,fictional fixture,ranks customers for payment-plan eligibility\nautomated_decision_making,no,fictional fixture,agent decides\nsystematic_monitoring,no,fictional fixture,\nspecial_categories,no,fictional fixture,\ncriminal_data,no,fictional fixture,\nlarge_scale,yes,fictional fixture,\ncombining_datasets,yes,fictional fixture,billing + chat transcripts\nvulnerable_subjects,no,fictional fixture,\nnew_technology,yes,fictional fixture,LLM\nprevents_rights_or_service,no,fictional fixture,\npublicly_accessible_area,no,fictional fixture,\nsignoff_measures_approved_by,Product owner (fictional),fictional fixture,\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/dpia/evals/fixtures/processing.csv"
+   },
+   "pii_inventory": {
+    "kind": "text",
+    "content": "column,pii_types,match_rate,rows_scanned,handling,matches,basis\ncustomer_id,none,0.000,8,n/a,0,\nemail,email,1.000,8,mask,8,pattern\ncard_number,payment_card,1.000,8,tokenize,8,pattern\ndate_of_birth,dob,1.000,8,[TO BE BASELINED — owner: Privacy officer],8,pattern\nphone,phone,1.000,8,allow,8,pattern\ncomment,email,0.375,8,[TO BE BASELINED — owner: Privacy officer],3,pattern\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/dpia/evals/fixtures/pii-inventory.csv"
+   },
+   "risks": {
+    "kind": "text",
+    "content": "# FICTIONAL fixture for Northwind Billing Assistant.\nrisk,likelihood,severity,measure,owner,residual\nModel reveals another customer's billing data in a chat,2,3,Retrieval filtered by authenticated customer id; output PII scan,Engineering lead (fictional),low\nInaccurate payment-plan ranking disadvantages a customer,2,2,Agent reviews every offer; monthly accuracy audit,Product owner (fictional),low\nChat transcripts kept longer than needed,3,1,,,\nRe-identification from combined billing and chat data,3,3,Pseudonymise transcripts before analytics,DPO (fictional),high\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/dpia/evals/fixtures/risks.csv"
+   },
+   "controls_evidence": {
+    "kind": "text",
+    "content": "# fictional fixture - Northwind Billing Assistant (fictional) evidence register; invented for tests only\nsubcategory_id,status,evidence,owner\nGOVERN 1.1,implemented,NW-DOC-001 (fictional),AI Risk Lead (fictional)\nGOVERN 1.2,implemented,NW-DOC-002 (fictional),AI Risk Lead (fictional)\nGOVERN 1.3,implemented,NW-DOC-003 (fictional),AI Risk Lead (fictional)\nGOVERN 1.4,implemented,NW-DOC-004 (fictional),AI Risk Lead (fictional)\nGOVERN 1.5,implemented,NW-DOC-005 (fictional),AI Risk Lead (fictional)\nGOVERN 1.6,implemented,NW-DOC-006 (fictional),AI Risk Lead (fictional)\nGOVERN 2.1,implemented,NW-DOC-007 (fictional),AI Risk Lead (fictional)\nGOVERN 2.2,implemented,NW-DOC-008 (fictional),AI Risk Lead (fictional)\nGOVERN 2.3,implemented,,AI Risk Lead (fictional)\nGOVERN 4.1,implemented,NW-DOC-010 (fictional),AI Risk Lead (fictional)\nMAP 1.1,implemented,NW-DOC-011 (fictional),AI Risk Lead (fictional)\nMAP 1.3,implemented,NW-DOC-012 (fictional),AI Risk Lead (fictional)\nMAP 1.4,implemented,NW-DOC-013 (fictional),AI Risk Lead (fictional)\nMAP 1.5,implemented,NW-DOC-014 (fictional),AI Risk Lead (fictional)\nMAP 2.1,implemented,NW-DOC-015 (fictional),AI Risk Lead (fictional)\nMAP 2.2,implemented,NW-DOC-016 (fictional),AI Risk Lead (fictional)\nMAP 3.1,implemented,NW-DOC-017 (fictional),AI Risk Lead (fictional)\nMAP 3.3,implemented,NW-DOC-018 (fictional),AI Risk Lead (fictional)\nMAP 3.5,implemented,NW-DOC-019 (fictional),AI Risk Lead (fictional)\nMEASURE 1.1,implemented,NW-DOC-020 (fictional),AI Risk Lead (fictional)\nMEASURE 2.1,implemented,NW-DOC-021 (fictional),AI Risk Lead (fictional)\nMEASURE 2.3,implemented,NW-DOC-022 (fictional),AI Risk Lead (fictional)\nMEASURE 2.4,implemented,NW-DOC-023 (fictional),AI Risk Lead (fictional)\nMEASURE 2.5,implemented,NW-DOC-024 (fictional),AI Risk Lead (fictional)\nMEASURE 2.7,implemented,NW-DOC-025 (fictional),AI Risk Lead (fictional)\nMANAGE 1.1,implemented,NW-DOC-026 (fictional),AI Risk Lead (fictional)\nMANAGE 1.3,implemented,NW-DOC-027 (fictional),AI Risk Lead (fictional)\nMANAGE 2.4,implemented,NW-DOC-028 (fictional),AI Risk Lead (fictional)\nMANAGE 4.1,implemented,NW-DOC-029 (fictional),AI Risk Lead (fictional)\nGOVERN 4.2,partial,NW-DOC-030 draft (fictional),\nGOVERN 4.3,partial,NW-DOC-031 draft (fictional),AI Risk Lead (fictional)\nGOVERN 5.1,partial,NW-DOC-032 draft (fictional),AI Risk Lead (fictional)\nGOVERN 6.1,partial,NW-DOC-033 draft (fictional),AI Risk Lead (fictional)\nMAP 1.6,partial,NW-DOC-034 draft (fictional),AI Risk Lead (fictional)\nMAP 2.3,partial,NW-DOC-035 draft (fictional),AI Risk Lead (fictional)\nMAP 4.1,partial,NW-DOC-036 draft (fictional),AI Risk Lead (fictional)\nMEASURE 2.6,partial,NW-DOC-037 draft (fictional),AI Risk Lead (fictional)\nMEASURE 2.8,partial,NW-DOC-038 draft (fictional),AI Risk Lead (fictional)\nMEASURE 2.10,partial,NW-DOC-039 draft (fictional),AI Risk Lead (fictional)\nMANAGE 1.2,partial,NW-DOC-040 draft (fictional),AI Risk Lead (fictional)\nMANAGE 4.3,partial,NW-DOC-041 draft (fictional),AI Risk Lead (fictional)\nGOVERN 5.2,planned,Backlog item NW-042 (fictional),\nGOVERN 6.2,planned,Backlog item NW-043 (fictional),AI Risk Lead (fictional)\nMAP 5.1,planned,Backlog item NW-044 (fictional),\nMEASURE 2.11,planned,Backlog item NW-045 (fictional),AI Risk Lead (fictional)\nMEASURE 3.3,planned,Backlog item NW-046 (fictional),\nMANAGE 2.3,planned,Backlog item NW-047 (fictional),AI Risk Lead (fictional)\nGOVERN 1.7,not_applicable,System not scheduled for retirement; revisit at end of life (fictional),AI Risk Lead (fictional)\nMEASURE 2.2,not_applicable,No human-subject studies run (fictional),AI Risk Lead (fictional)\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-controls-mapping/evals/fixtures/evidence-northwind.csv"
+   },
+   "min_coverage": {
+    "kind": "value",
+    "value": "0.5"
+   },
+   "components": {
+    "kind": "text",
+    "content": "# fictional fixture - Northwind Utilities (fictional) Billing Assistant; no real system\nid,name,kind,trust_zone,handles_pii,write_actions,internet_facing\ncustomer,Customer browser,user,internet,yes,no,yes\nweb_app,Billing chat web app,app,dmz,yes,no,yes\norchestrator,Agent orchestrator,agent,app_core,yes,yes,no\nllm,Hosted LLM API,llm,vendor_cloud,yes,no,no\nretriever,Policy retriever,retriever,app_core,no,no,no\nvector_db,Billing policy vector store,vector_store,app_core,no,no,no\nbilling_api,Billing API refunds and lookups,tool,billing_core,yes,yes,no\nbilling_db,Billing database,data_store,billing_core,yes,no,no\npayment_gw,Payment gateway,external_api,payments_vendor,yes,no,yes\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-threat-model/evals/fixtures/components.csv"
+   },
+   "flows": {
+    "kind": "text",
+    "content": "# fictional fixture - Northwind Utilities (fictional) Billing Assistant; no real system\nfrom,to,data,crosses_trust_boundary\ncustomer,web_app,chat message,yes\nweb_app,customer,assistant reply,yes\nweb_app,orchestrator,user turn and session,yes\norchestrator,web_app,answer,yes\norchestrator,llm,prompt with account context,yes\nllm,orchestrator,completion and tool calls,yes\norchestrator,retriever,search query,no\nretriever,vector_db,embedding query,no\nvector_db,retriever,policy chunks,no\nretriever,orchestrator,retrieved context,no\norchestrator,billing_api,refund or lookup call,yes\nbilling_api,billing_db,account read and write,no\nbilling_api,payment_gw,refund instruction,yes\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-threat-model/evals/fixtures/flows.csv"
+   },
+   "security_controls": {
+    "kind": "text",
+    "content": "# fictional fixture - Northwind Utilities (fictional) control register\nthreat_id,mitigation_id,status,evidence,owner\n,M04,in_place,TLS 1.2+ and disk encryption in platform baseline (fictional),Platform owner\norchestrator:LLM06,,planned,Refund approval step in backlog (fictional),AppSec lead\nllm:LLM01,,in_place,Injection screen and delimiting tested (fictional),AppSec lead\ncustomer:S,,in_place,OIDC login with MFA (fictional),Identity lead\nbilling_api:E,,planned,,\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-threat-model/evals/fixtures/controls.csv"
+   },
+   "max_open_high": {
+    "kind": "value",
+    "value": "26"
+   },
+   "facts": {
+    "kind": "text",
+    "content": "# Fictional fixture: Northwind Billing Assistant (Northwind Utilities is a fictional company). Not a real system.\nkey,value,source,notes\nsystem_name,Northwind Billing Assistant,Product brief v3 (fictional),\nprovider,Northwind Utilities,Product brief v3 (fictional),\npurpose,answer questions about your bill and help you pay it,Product brief v3 (fictional),\nmodel,Hosted LLM (vendor and version per model card NW-MC-07; fictional),Model card NW-MC-07 (fictional),\ndata_sources,your account details and your past bills,Data inventory DI-12 (fictional),\nhuman_oversight,a billing agent checks every refund before it is paid,Ops runbook RB-4 (fictional),\nknown_limitations,can make mistakes and does not see payments made today,Eval report ER-9 (fictional),\nintended_users,Northwind Utilities residential customers,Product brief v3 (fictional),\nnot_intended_for,legal or tax advice,Billing policy BP-2 (fictional),\ncontact,help@northwind.example,Support page (fictional),\ngenerates_synthetic_content,yes,Model card NW-MC-07 (fictional),text replies only\nemotion_recognition,no,Design review DR-3 (fictional),\nbiometric_categorisation,no,Design review DR-3 (fictional),\nlast_updated,2026-09-30,Product brief v3 (fictional),\ninteracts_directly,yes,Product brief v3 (fictional),\ncontent_marking,replies carry a machine-readable ai_generated flag in the chat transcript metadata,Engineering spec ES-21 (fictional),\ndeep_fake,no,Design review DR-3 (fictional),\npublic_interest_text,no,Design review DR-3 (fictional),\nnotice_placement,shown above the chat box before the first message,UX spec UX-5 (fictional),\n",
+    "ext": "csv",
+    "source": "skills/ai-platform/ai-transparency-notice/evals/fixtures/facts.csv"
    }
   }
  }

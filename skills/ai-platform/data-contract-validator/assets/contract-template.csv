@@ -1,0 +1,4 @@
+column,type,required,unique,min,max,allowed,regex,max_null_rate,severity,owner
+record_id,string,yes,yes,,,,,,error,Data owner
+created_at,datetime,yes,no,,,,,,error,Data engineering lead
+category,enum,no,no,,,a|b|c,,0.05,warn,Data owner

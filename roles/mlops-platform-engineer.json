@@ -1,0 +1,15 @@
+{
+  "name": "mlops-platform-engineer",
+  "title": "MLOps / Platform Engineer",
+  "description": "Runs the platform AI ships on: pipelines, capacity, observability, SLOs, drift and the AI bill of materials.",
+  "skills": [
+    "ai-platform/infra-gpu-sizing",
+    "build/ci-cd-vercel-github",
+    "ai-platform/llm-observability",
+    "build/observability-setup",
+    "ai-platform/ai-slo-definition",
+    "ai-platform/drift-monitor",
+    "ai-platform/ai-bom-license-check"
+  ],
+  "playbooks": []
+}

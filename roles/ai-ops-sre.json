@@ -1,16 +1,18 @@
 {
   "name": "ai-ops-sre",
   "title": "AI Ops / SRE",
-  "description": "Keeps it healthy in production and feeds what it learns back into the next change.",
+  "description": "Keeps it healthy in production, responds to incidents and turns them into lessons and regression tests.",
   "skills": [
     "ai-platform/llm-observability",
     "build/observability-setup",
-    "ai-platform/ai-incident-runbook",
-    "ai-platform/feedback-improvement-loop",
-    "build/ci-cd-vercel-github",
-    "ai-platform/ai-postmortem",
+    "ai-platform/ai-slo-definition",
     "ai-platform/drift-monitor",
-    "ai-platform/ai-slo-definition"
+    "ai-platform/ai-incident-runbook",
+    "ai-platform/ai-postmortem",
+    "ai-platform/feedback-improvement-loop",
+    "ai-platform/ai-finops-chargeback"
   ],
-  "playbooks": []
+  "playbooks": [
+    "ai-ops-health-check"
+  ]
 }

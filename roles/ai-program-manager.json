@@ -1,0 +1,12 @@
+{
+  "name": "ai-program-manager",
+  "title": "AI Program Manager",
+  "description": "Runs the delivery: plan, RAID log, milestones, critical path and the release calendar.",
+  "skills": [
+    "ai-platform/program-raid-status",
+    "build/spec-to-plan",
+    "ai-platform/ai-release-plan",
+    "build/handoff-and-thread-close"
+  ],
+  "playbooks": []
+}

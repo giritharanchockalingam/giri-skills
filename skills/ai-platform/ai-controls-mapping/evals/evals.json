@@ -1,0 +1,85 @@
+{
+  "skill": "ai-controls-mapping",
+  "cases": [
+    {
+      "id": "prompt-nist-gap-analysis",
+      "prompt": "Our auditors want to know how our billing chatbot lines up with the NIST AI RMF. We have a spreadsheet of controls. Where are the gaps?",
+      "expected": [
+        "Asks for the evidence register in subcategory_id,status,evidence,owner form (template in assets) rather than guessing statuses",
+        "Reports coverage per GOVERN, MAP, MEASURE and MANAGE with the (implemented + 0.5 x partial) / applicable formula",
+        "Lists gaps with owners, using [TO BE BASELINED — owner: AI risk lead] where none is named; says it is a self-assessment, not an audit"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Map the Northwind Billing Assistant evidence to NIST AI RMF, gate at 50% coverage, and check our open AI Act obligations.",
+      "expected": [
+        "Overall coverage exactly 0.500 (29 implemented, 12 partial of 70 applicable) so the 0.5 gate passes at the boundary; GOVERN 0.667, MAP 0.583, MEASURE 0.357, MANAGE 0.385",
+        "TR-50-1 and TR-50-2 map to MEASURE 2.8 (partial) via the skill's own crosswalk"
+      ],
+      "inputs": {
+        "evidence": "evals/fixtures/evidence-northwind.csv",
+        "min_coverage": "0.5",
+        "obligations": "evals/fixtures/obligations-northwind.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "controls-report.md", "check": "contains:\"| GOVERN | 10 | 4 | 2 | 1 | 2 | 18 | 0.667 |\""},
+        {"file": "controls-report.md", "check": "contains:\"| MEASURE | 6 | 3 | 2 | 1 | 10 | 21 | 0.357 |\""},
+        {"file": "controls-report.md", "check": "contains:\"| ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |\""},
+        {"file": "controls-report.md", "check": "contains:\"| TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |\""},
+        {"file": "coverage.json", "check": "contains:\"\\\"gate\\\": \\\"pass\\\"\""},
+        {"file": "controls.csv", "check": "contains:\"MANAGE 4.3,MANAGE,MANAGE 4,partial,\""}
+      ]
+    },
+    {
+      "id": "agent-missing-evidence",
+      "prompt": "Give us our NIST AI RMF coverage; we're pretty mature, call it 80%.",
+      "expected": [
+        "Asks once for the evidence register; does not estimate coverage"
+      ],
+      "inputs": {
+        "min_coverage": "0.8"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:evidence"
+      ]
+    },
+    {
+      "id": "agent-missing-owners-not-invented",
+      "prompt": "Some gaps don't have owners yet — just put the product manager on them.",
+      "expected": [
+        "Does not assign the product manager: gaps without an owner carry [TO BE BASELINED — owner: AI risk lead]; 27 gaps lack an owner; GOVERN 2.3 flagged as implemented without evidence"
+      ],
+      "inputs": {
+        "evidence": "evals/fixtures/evidence-northwind.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "controls.csv", "check": "contains:\"GOVERN 3.1,GOVERN,GOVERN 3,missing,,[TO BE BASELINED — owner: AI risk lead],yes\""},
+        {"file": "controls-report.md", "check": "contains:\"without a named owner: 27\""},
+        {"file": "controls-report.md", "check": "contains:\"implemented/partial with no evidence cited: GOVERN 2.3\""},
+        {"file": "controls-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-below-min-coverage-exits-1",
+      "prompt": "Gate the release: we need at least 60% NIST AI RMF coverage.",
+      "expected": [
+        "Coverage 0.500 is below 0.600: gate FAIL, exit 1, full outputs written"
+      ],
+      "inputs": {
+        "evidence": "evals/fixtures/evidence-northwind.csv",
+        "min_coverage": "0.6",
+        "obligations": "evals/fixtures/obligations-credit.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "controls-report.md", "check": "contains:\"Gate: minimum coverage 0.600 — **FAIL (exit 1)**\""},
+        {"file": "coverage.json", "check": "contains:\"\\\"gate\\\": \\\"fail\\\"\""},
+        {"file": "controls-report.md", "check": "contains:\"| HR-DATA | Art. 10 | open | 2027-12-02 | MAP 4.1: partial; MEASURE 2.11: planned | partial |\""}
+      ]
+    }
+  ]
+}

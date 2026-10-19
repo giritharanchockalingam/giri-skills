@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=dry model=claude-sonnet-4-5 date=2026-10-18_
-_agent mode: 208 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
+_agent mode: 283 cases run with scripts/run_skill.py; verdict Works >= 0.9, Partial >= 0.5, else Broken; blank = no agent cases_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict | agent pass | agent verdict |
 |---|---|---|---|---|---|---|---|---|
@@ -33,14 +33,30 @@ _agent mode: 208 cases run with scripts/run_skill.py; verdict Works >= 0.9, Part
 | build/systematic-debugging-runner |  |  |  |  |  |  | 1.00 | Works |
 | build/test-strategy-tdd |  |  |  |  |  |  | 1.00 | Works |
 | build/webapp-testing-runner |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ab-test-analysis |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/agent-architecture |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-adoption-and-literacy |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-bom-license-check |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-controls-mapping |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-finops-chargeback |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-governance-risk |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-incident-runbook |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-postmortem |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-release-plan |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-slo-definition |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-strategy-coe |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-threat-model |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-transparency-notice |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/ai-use-case-canvas |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/ai-vendor-assessment |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/annotation-agreement |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/bias-fairness-check |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/conversation-design |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/data-contract-validator |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/data-readiness-assessment |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/dpia |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/drift-monitor |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/eu-ai-act-classifier |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/eval-engineering-runner |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/feedback-improvement-loop |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/finetune-dataset-builder |  |  |  |  |  |  | 1.00 | Works |
@@ -55,6 +71,7 @@ _agent mode: 208 cases run with scripts/run_skill.py; verdict Works >= 0.9, Part
 | ai-platform/mcp-server-builder |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/model-selection |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/pii-data-inventory |  |  |  |  |  |  | 1.00 | Works |
+| ai-platform/program-raid-status |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/prompt-spec |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/rag-pipeline-design |  |  |  |  |  |  | 1.00 | Works |
 | ai-platform/red-team-suite |  |  |  |  |  |  | 1.00 | Works |

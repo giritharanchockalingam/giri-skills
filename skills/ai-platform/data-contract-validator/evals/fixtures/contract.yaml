@@ -1,0 +1,55 @@
+# fictional fixture: ODCS v3 subset contract for the Northwind Billing Assistant (fictional) corpus
+apiVersion: v3.0.2
+kind: DataContract
+id: northwind-billing-assistant-corpus
+version: 1.0.0
+status: draft
+description:
+  purpose: |
+    Fictional fixture. Invoice question/answer pairs used for RAG ingestion
+    and evaluation of the Northwind Billing Assistant.
+schema:
+  - name: invoices
+    properties:
+      - name: invoice_id
+        logicalType: string
+        primaryKey: true
+        logicalTypeOptions:
+          pattern: 'INV-\d{6}'
+      - name: amount
+        logicalType: number
+        required: true
+        logicalTypeOptions:
+          minimum: 0
+          maximum: 10000
+      - name: currency
+        logicalType: string
+        required: true
+        quality:
+          - metric: invalidValues
+            arguments:
+              validValues: ['USD', 'EUR', 'GBP']
+            mustBe: 0
+            severity: error
+      - name: customer_email
+        logicalType: string
+        logicalTypeOptions:
+          format: email
+        quality:
+          - metric: nullValues
+            unit: percent
+            mustBeLessOrEqualTo: 20
+      - name: issued_on
+        logicalType: date
+        required: true   # inline comment is stripped before parsing
+      - name: updated_at
+        logicalType: timestamp
+      - name: question
+        logicalType: string
+        quality:
+          - metric: duplicateValues
+            mustBe: 0
+          - metric: missingValues
+            arguments:
+              missingValues: ['n/a', '-']
+            mustBe: 0

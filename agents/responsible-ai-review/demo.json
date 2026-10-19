@@ -1,0 +1,18 @@
+{
+  "note": "Fictional fixtures reused from each skill's evals (Northwind Billing Assistant).",
+  "inputs": {
+    "system": "skills/ai-platform/eu-ai-act-classifier/evals/fixtures/system-northwind.csv",
+    "obligation_evidence": "skills/ai-platform/eu-ai-act-classifier/evals/fixtures/evidence.csv",
+    "as_of": "2026-10-18",
+    "processing": "skills/ai-platform/dpia/evals/fixtures/processing.csv",
+    "pii_inventory": "skills/ai-platform/dpia/evals/fixtures/pii-inventory.csv",
+    "risks": "skills/ai-platform/dpia/evals/fixtures/risks.csv",
+    "controls_evidence": "skills/ai-platform/ai-controls-mapping/evals/fixtures/evidence-northwind.csv",
+    "min_coverage": "0.5",
+    "components": "skills/ai-platform/ai-threat-model/evals/fixtures/components.csv",
+    "flows": "skills/ai-platform/ai-threat-model/evals/fixtures/flows.csv",
+    "security_controls": "skills/ai-platform/ai-threat-model/evals/fixtures/controls.csv",
+    "max_open_high": "26",
+    "facts": "skills/ai-platform/ai-transparency-notice/evals/fixtures/facts.csv"
+  }
+}

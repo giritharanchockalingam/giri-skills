@@ -1,0 +1,11 @@
+# fictional fixture: data contract for the Northwind Billing Assistant (fictional) RAG/eval corpus
+column,type,required,unique,min,max,allowed,regex,max_null_rate,severity,owner
+invoice_id,string,yes,yes,,,,INV-\d{6},,error,Billing data steward
+customer_email,email,no,no,,,,,0.2,error,Billing data steward
+amount,number,yes,no,0,10000,,,,error,Finance systems lead
+currency,enum,yes,no,,,USD|EUR|GBP,,,error,Finance systems lead
+status,enum,yes,no,,,open|paid|disputed,,,warn,
+issued_on,date,yes,no,2026-01-01,2026-12-31,,,,error,Billing data steward
+updated_at,datetime,yes,no,,,,,,error,Billing data steward
+question,string,yes,no,10,200,,,,error,Knowledge content owner
+answer,string,no,no,,500,,,0.1,warn,Knowledge content owner

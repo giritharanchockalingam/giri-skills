@@ -1,0 +1,12 @@
+{
+  "name": "ai-finops-analyst",
+  "title": "AI FinOps Analyst",
+  "description": "Knows what AI costs and what it returns: unit economics, showback, budgets and capacity spend.",
+  "skills": [
+    "ai-platform/ai-finops-chargeback",
+    "ai-platform/llm-cost-model",
+    "ai-platform/infra-gpu-sizing",
+    "presales/value-case-builder"
+  ],
+  "playbooks": []
+}

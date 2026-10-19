@@ -1,0 +1,5 @@
+# fictional fixture - eu-ai-act-classifier output for Northwind Billing Assistant (fictional)
+obligation_id,article,obligation,applies_from,applies_to_role,owner,status,in_force,evidence,date_basis
+AI-LIT,Art. 4,Take measures to support a sufficient level of AI literacy of staff and others operating or using the system on your behalf,2025-02-02,provider,HR Learning Lead (fictional),done,yes,LMS course AI-101 completion report (fictional),"Art. 113(a): Chapters I-II apply 2 Feb 2025; Art. 4 wording replaced by Reg. 2026/1744 (support, not guarantee)"
+TR-50-1,Art. 50(1),Design the system so people are informed they are interacting with an AI system (unless obvious),2026-08-02,provider,AI Compliance Lead (fictional),in_progress,yes,Chat banner design ticket NW-412 (fictional),Art. 113: general application date 2 Aug 2026 (unchanged by Reg. 2026/1744)
+TR-50-2,Art. 50(2),"Mark synthetic audio, image, video or text output in a machine-readable, detectable format",2026-12-02,provider,AI Compliance Lead (fictional),open,no,,Art. 50(2) as amended by Reg. 2026/1744: systems placed on the market before 2 Aug 2026 have until 2 Dec 2026

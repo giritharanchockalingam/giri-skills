@@ -101,7 +101,7 @@
         "exit:0",
         {
           "file": "five-closes.md",
-          "check": "contains:\"TBD — owner: ___\""
+          "check": "contains:\"TBD — owner: Engagement lead\""
         },
         {
           "file": "five-closes.md",

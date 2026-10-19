@@ -1,15 +1,15 @@
 {
   "name": "ai-solution-architect",
   "title": "AI Solution Architect",
-  "description": "Chooses the pattern, model and components, and sizes what they cost to run.",
+  "description": "Chooses the pattern, model and components, threat-models them, and sizes what they cost to run.",
   "skills": [
     "ai-platform/agent-architecture",
     "ai-platform/model-selection",
     "ai-platform/rag-pipeline-design",
+    "ai-platform/ai-threat-model",
     "build/multi-tenant-saas-patterns",
     "ai-platform/infra-gpu-sizing",
-    "ai-platform/llm-cost-model",
-    "ai-platform/ai-threat-model"
+    "ai-platform/llm-cost-model"
   ],
   "playbooks": []
 }

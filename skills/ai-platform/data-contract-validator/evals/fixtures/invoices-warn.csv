@@ -1,0 +1,9 @@
+invoice_id,customer_email,amount,currency,status,issued_on,updated_at,question,answer,channel
+INV-000101,ana.tester@example.com,120.50,USD,open,2026-09-02,2026-09-02T10:15:00Z,Why is my invoice higher this month?,The September invoice includes a prorated seat added on 2026-09-02.,web
+INV-000102,ben.tester@example.com,89.00,EUR,paid,2026-09-03,2026-09-04T08:00:00Z,When was my last payment received?,Payment was received on 2026-09-04.,email
+INV-000103,,1500.00,GBP,disputed,2026-09-05,2026-09-06T12:30:00Z,How do I dispute a late fee on my invoice?,Open a dispute from the invoice page; a specialist replies in two days.,web
+INV-000104,cara.tester@example.com,42.10,USD,refunded,2026-09-08,2026-09-09T09:45:00Z,Can I get a copy of the paid invoice?,Download it from Billing > History.,chat
+INV-000105,dan.tester@example.com,300.00,USD,open,2026-09-10,2026-09-10T16:20:00Z,What payment methods are accepted?,,web
+INV-000106,eve.tester@example.com,75.25,EUR,paid,2026-09-12,2026-09-13T11:05:00Z,Why was I charged tax on this invoice?,Tax applies to the billing address on file.,chat
+INV-000107,fay.tester@example.com,960.00,USD,pending-review,2026-09-15,2026-09-15T14:00:00Z,How do I change my billing contact?,Update it under Account > Contacts.,email
+INV-000108,gus.tester@example.com,18.99,GBP,open,2026-09-18,2026-09-18T07:30:00Z,Is there a discount for annual billing?,Annual plans are billed once a year at the listed annual rate.,web

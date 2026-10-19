@@ -1,0 +1,5 @@
+# fictional fixture: FICTIONAL prices (not a real vendor price sheet) for the Northwind Billing Assistant (fictional)
+model,input_per_1m,output_per_1m,cached_input_per_1m,effective_from,source
+fict-large,3.00,15.00,0.30,2026-08-01,fictional price sheet
+fict-large,2.50,15.00,0.25,2026-09-15,fictional price sheet (price change)
+fict-small,0.25,1.25,,2026-08-01,fictional price sheet (no cached price)

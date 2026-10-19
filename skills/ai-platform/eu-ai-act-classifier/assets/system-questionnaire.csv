@@ -1,0 +1,39 @@
+# EU AI Act system questionnaire - fill `value` (yes/no for questions; blank = unanswered and reported as an open question). `notes` holds the question and article.
+key,value,source,notes
+system_name,,,Name of the AI system
+role,,,Your role for this system: provider | deployer | importer | distributor [Art. 3(3)-(7)]
+intended_purpose,,,Intended purpose in one sentence [Art. 3(12)]
+placed_on_market,,,"Date first placed on the market / put into service (YYYY-MM-DD) [Art. 111, Art. 50(2) transition]"
+accountable_owner,,,Named owner for the obligations (role or person)
+p_subliminal_manipulation,,,"Uses subliminal, manipulative or deceptive techniques that materially distort behaviour causing significant harm? [Art. 5(1)(a)]"
+p_exploit_vulnerabilities,,,"Exploits vulnerabilities due to age, disability or social/economic situation causing significant harm? [Art. 5(1)(b)]"
+p_social_scoring,,,Evaluates or classifies people by social behaviour or personality leading to detrimental or unjustified treatment (social scoring)? [Art. 5(1)(c)]
+p_crime_risk_profiling,,,Predicts a person's risk of committing a crime based solely on profiling or personality traits? [Art. 5(1)(d)]
+p_untargeted_face_scraping,,,Builds or expands facial recognition databases by untargeted scraping of images from the internet or CCTV? [Art. 5(1)(e)]
+p_emotion_recognition_work_education,,,Infers emotions of people in the workplace or in education (outside medical or safety reasons)? [Art. 5(1)(f)]
+p_biometric_categorisation_sensitive,,,"Categorises people by biometric data to infer race, political opinions, union membership, religion, sex life or orientation? [Art. 5(1)(g)]"
+p_realtime_rbi_law_enforcement,,,Real-time remote biometric identification in publicly accessible spaces for law enforcement (outside the Art. 5(1)(h) exceptions)? [Art. 5(1)(h)]
+p_non_consensual_intimate_content,,,Generates or manipulates realistic intimate or sexually explicit depictions of an identifiable person without consent? [Art. 5(1)(ba) (added by Reg. 2026/1744)]
+p_csam_generation,,,Generates or manipulates child sexual abuse material? [Art. 5(1)(bb) (added by Reg. 2026/1744)]
+annex1_safety_component,,,"Is it a safety component of (or itself) a product under Annex I harmonisation law that needs third-party conformity assessment? [Art. 6(1), Annex I]"
+a3_biometrics,,,"Remote biometric identification, biometric categorisation or emotion recognition (where permitted)? [Annex III point 1]"
+a3_critical_infrastructure,,,"Safety component in management/operation of critical digital infrastructure, road traffic, water, gas, heating or electricity? [Annex III point 2]"
+a3_education,,,"Education/vocational training: admission, evaluating learning outcomes, assessing education level, or proctoring? [Annex III point 3]"
+a3_employment,,,"Employment: recruitment/selection, or decisions on promotion, termination, task allocation or monitoring of workers? [Annex III point 4]"
+a3_essential_services,,,"Essential services: public benefits eligibility, creditworthiness/credit scoring, life/health insurance pricing, or emergency call triage? [Annex III point 5]"
+a3_law_enforcement,,,Law enforcement uses listed in Annex III point 6? [Annex III point 6]
+a3_migration,,,"Migration, asylum or border control uses listed in Annex III point 7? [Annex III point 7]"
+a3_justice_democracy,,,Administration of justice or influencing elections/referendums or voting behaviour? [Annex III point 8]
+d63_narrow_procedural,,,Annex III only: intended to perform a narrow procedural task? [Art. 6(3)(a)]
+d63_improves_prior_human,,,Annex III only: intended to improve the result of a previously completed human activity? [Art. 6(3)(b)]
+d63_detects_patterns,,,"Annex III only: detects decision patterns or deviations, without replacing or influencing the human assessment absent proper human review? [Art. 6(3)(c)]"
+d63_preparatory,,,Annex III only: performs a preparatory task to an assessment relevant to an Annex III use case? [Art. 6(3)(d)]
+d63_profiling,,,"Annex III only: performs profiling of natural persons? (if yes, always high-risk) [Art. 6(3) last subparagraph]"
+t_interacts_with_persons,,,Intended to interact directly with natural persons? [Art. 50(1)]
+t_synthetic_content,,,"Generates synthetic audio, image, video or text content? [Art. 50(2)]"
+t_emotion_recognition,,,Is an emotion recognition system (permitted use)? [Art. 50(3)]
+t_biometric_categorisation,,,Is a biometric categorisation system (permitted use)? [Art. 50(3)]
+t_deepfake,,,"Generates or manipulates image, audio or video that constitutes a deep fake? [Art. 50(4)]"
+t_public_interest_text,,,Generates or manipulates text published to inform the public on matters of public interest? [Art. 50(4)]
+is_gpai,,,"Are you the provider of a general-purpose AI model (not just a user of one)? [Art. 3(63), Art. 53]"
+gpai_systemic_risk,,,"Is that GPAI model classified as having systemic risk? [Art. 51, Art. 55]"

@@ -1,0 +1,14 @@
+{
+  "name": "data-scientist",
+  "title": "Data Scientist (Experimentation)",
+  "description": "Proves changes with statistics: experiments, drift, evaluation design and label quality.",
+  "skills": [
+    "ai-platform/ab-test-analysis",
+    "ai-platform/drift-monitor",
+    "ai-platform/eval-engineering-runner",
+    "ai-platform/llm-eval-harness",
+    "ai-platform/bias-fairness-check",
+    "ai-platform/annotation-agreement"
+  ],
+  "playbooks": []
+}

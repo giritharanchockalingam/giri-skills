@@ -143,14 +143,15 @@ function stemWord(w: string): string {
   return w;
 }
 
-/** The routing text of a skill: name (weighted), its description without the "Not for…" clause, and its
- *  "When to use" bullets (without the NOT-for bullet). */
+/** The routing text of a skill: name (weighted), its description without the "Not for…" clause, its
+ *  "When to use" bullets (without the NOT-for bullet) and its "Output" section. */
 export function routingText(s: SkillInfo): string {
   const desc = s.description.split(/\b(?:Not for|NOT for|Do not use|Don't use)\b/)[0];
   const when = (s.bodyMd ?? "").match(/## When to use\n([\s\S]*?)(?:\n## |$)/)?.[1] ?? "";
   const whenKeep = when.split("\n").filter((l) => !/\bNOT for\b/i.test(l)).join("\n");
+  const output = (s.bodyMd ?? "").match(/## Output\n([\s\S]*?)(?:\n## |$)/)?.[1] ?? "";
   const name = s.name.replace(/-/g, " ");
-  return `${name} ${name} ${name} ${desc} ${whenKeep}`;
+  return `${name} ${name} ${name} ${desc} ${whenKeep} ${output}`;
 }
 
 export interface RouteHit { skill: string; score: number; matched: string[] }
@@ -169,7 +170,7 @@ export class Router {
     for (const d of this.docs) for (const t of d.tf.keys()) this.df.set(t, (this.df.get(t) ?? 0) + 1);
     this.avg = this.docs.reduce((a, d) => a + d.len, 0) / Math.max(1, this.docs.length);
   }
-  /** BM25 (k1 1.2, b 0.75) of the task against the allowed skills; ties break on skill id for determinism. */
+  /** BM25 (k1 1.2, b 0.5) of the task against the allowed skills; ties break on skill id for determinism. */
   route(task: string, allowed?: Iterable<string>, k = 3): RouteHit[] {
     const allow = allowed ? new Set(allowed) : null;
     const q = [...new Set(tokens(task))];
@@ -182,7 +183,7 @@ export class Router {
         const f = d.tf.get(t); if (!f) continue;
         const n = this.df.get(t) ?? 0;
         const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
-        score += idf * (f * 2.2) / (f + 1.2 * (1 - 0.75 + 0.75 * d.len / this.avg));
+        score += idf * (f * 2.2) / (f + 1.2 * (1 - 0.5 + 0.5 * d.len / this.avg));
         matched.push(t);
       }
       if (score > 0) hits.push({ skill: d.id, score: Math.round(score * 1000) / 1000, matched });

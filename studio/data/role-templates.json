@@ -1,44 +1,95 @@
 [
  {
+  "name": "ai-change-adoption-lead",
+  "title": "AI Change & Adoption Lead",
+  "description": "Gets people to use it well: AI literacy, training, rollout waves, adoption KPIs and what users are told.",
+  "skills": [
+   "ai-platform/ai-adoption-and-literacy",
+   "ai-platform/ai-transparency-notice",
+   "ai-platform/feedback-improvement-loop"
+  ],
+  "playbooks": []
+ },
+ {
   "name": "ai-data-engineer",
   "title": "AI Data Engineer",
-  "description": "Proves the data is there and usable, finds the PII, and builds training sets.",
+  "description": "Proves the data is there and usable, enforces its contract, finds the PII, and builds training sets.",
   "skills": [
    "ai-platform/data-readiness-assessment",
+   "ai-platform/data-contract-validator",
    "ai-platform/pii-data-inventory",
    "ai-platform/finetune-dataset-builder"
   ],
   "playbooks": []
  },
  {
+  "name": "ai-finops-analyst",
+  "title": "AI FinOps Analyst",
+  "description": "Knows what AI costs and what it returns: unit economics, showback, budgets and capacity spend.",
+  "skills": [
+   "ai-platform/ai-finops-chargeback",
+   "ai-platform/llm-cost-model",
+   "ai-platform/infra-gpu-sizing",
+   "presales/value-case-builder"
+  ],
+  "playbooks": []
+ },
+ {
   "name": "ai-ops-sre",
   "title": "AI Ops / SRE",
-  "description": "Keeps it healthy in production and feeds what it learns back into the next change.",
+  "description": "Keeps it healthy in production, responds to incidents and turns them into lessons and regression tests.",
   "skills": [
    "ai-platform/llm-observability",
    "build/observability-setup",
-   "ai-platform/ai-incident-runbook",
-   "ai-platform/feedback-improvement-loop",
-   "build/ci-cd-vercel-github",
-   "ai-platform/ai-postmortem",
+   "ai-platform/ai-slo-definition",
    "ai-platform/drift-monitor",
-   "ai-platform/ai-slo-definition"
+   "ai-platform/ai-incident-runbook",
+   "ai-platform/ai-postmortem",
+   "ai-platform/feedback-improvement-loop",
+   "ai-platform/ai-finops-chargeback"
+  ],
+  "playbooks": [
+   "ai-ops-health-check"
+  ]
+ },
+ {
+  "name": "ai-privacy-compliance-officer",
+  "title": "AI Privacy & Compliance Officer",
+  "description": "Owns personal data and third-party obligations: DPIA, PII, vendor risk, licences and AI Act duties.",
+  "skills": [
+   "ai-platform/dpia",
+   "ai-platform/pii-data-inventory",
+   "ai-platform/eu-ai-act-classifier",
+   "ai-platform/ai-vendor-assessment",
+   "ai-platform/ai-bom-license-check",
+   "ai-platform/ai-controls-mapping"
   ],
   "playbooks": []
  },
  {
   "name": "ai-product-manager",
   "title": "AI Product Manager",
-  "description": "Turns a qualified use case into a buildable spec, domain model and delivery plan.",
+  "description": "Turns a qualified use case into a spec, SLOs and a plan, and decides from experiments what ships next.",
   "skills": [
    "build/product-spec-prd",
    "build/domain-modeling-runner",
    "build/spec-to-plan",
    "ai-platform/ai-use-case-canvas",
-   "ai-platform/feedback-improvement-loop",
-   "ai-platform/program-raid-status",
    "ai-platform/ai-slo-definition",
-   "ai-platform/conversation-design"
+   "ai-platform/ab-test-analysis",
+   "ai-platform/feedback-improvement-loop"
+  ],
+  "playbooks": []
+ },
+ {
+  "name": "ai-program-manager",
+  "title": "AI Program Manager",
+  "description": "Runs the delivery: plan, RAID log, milestones, critical path and the release calendar.",
+  "skills": [
+   "ai-platform/program-raid-status",
+   "build/spec-to-plan",
+   "ai-platform/ai-release-plan",
+   "build/handoff-and-thread-close"
   ],
   "playbooks": []
  },
@@ -51,8 +102,7 @@
    "ai-platform/eval-engineering-runner",
    "ai-platform/red-team-suite",
    "ai-platform/bias-fairness-check",
-   "ai-platform/annotation-agreement",
-   "ai-platform/ab-test-analysis"
+   "ai-platform/annotation-agreement"
   ],
   "playbooks": []
  },
@@ -65,8 +115,20 @@
    "build/security-review",
    "ai-platform/guardrails-config",
    "ai-platform/ai-release-plan",
-   "ai-platform/ai-transparency-notice",
-   "ai-platform/dpia",
+   "ai-platform/eu-ai-act-classifier",
+   "ai-platform/ai-controls-mapping"
+  ],
+  "playbooks": []
+ },
+ {
+  "name": "ai-security-engineer",
+  "title": "AI Security Engineer",
+  "description": "Threat-models AI systems, attacks them, hardens guardrails and keeps the supply chain clean.",
+  "skills": [
+   "ai-platform/ai-threat-model",
+   "ai-platform/red-team-suite",
+   "ai-platform/guardrails-config",
+   "build/security-review",
    "ai-platform/ai-bom-license-check"
   ],
   "playbooks": []
@@ -74,29 +136,40 @@
  {
   "name": "ai-solution-architect",
   "title": "AI Solution Architect",
-  "description": "Chooses the pattern, model and components, and sizes what they cost to run.",
+  "description": "Chooses the pattern, model and components, threat-models them, and sizes what they cost to run.",
   "skills": [
    "ai-platform/agent-architecture",
    "ai-platform/model-selection",
    "ai-platform/rag-pipeline-design",
+   "ai-platform/ai-threat-model",
    "build/multi-tenant-saas-patterns",
    "ai-platform/infra-gpu-sizing",
-   "ai-platform/llm-cost-model",
-   "ai-platform/ai-threat-model"
+   "ai-platform/llm-cost-model"
   ],
   "playbooks": []
  },
  {
   "name": "ai-strategist",
   "title": "AI Strategist",
-  "description": "Decides where AI is worth it: portfolio, operating model, use-case value and the risk it carries.",
+  "description": "Decides where AI is worth it: portfolio, operating model, vendor choices, use-case value and the risk it carries.",
   "skills": [
    "ai-platform/ai-strategy-coe",
    "ai-platform/ai-use-case-canvas",
    "presales/value-case-builder",
-   "ai-platform/ai-governance-risk",
-   "ai-platform/ai-adoption-and-literacy",
-   "ai-platform/ai-vendor-assessment"
+   "ai-platform/ai-vendor-assessment",
+   "ai-platform/ai-governance-risk"
+  ],
+  "playbooks": []
+ },
+ {
+  "name": "annotation-data-ops-lead",
+  "title": "Annotation & Data Ops Lead",
+  "description": "Runs labelling: guidelines, annotator agreement, disputed items and dataset quality.",
+  "skills": [
+   "ai-platform/annotation-agreement",
+   "ai-platform/data-contract-validator",
+   "ai-platform/finetune-dataset-builder",
+   "ai-platform/data-readiness-assessment"
   ],
   "playbooks": []
  },
@@ -140,6 +213,32 @@
   "playbooks": []
  },
  {
+  "name": "conversation-ux-designer",
+  "title": "Conversation / AI UX Designer",
+  "description": "Designs how people talk to the system: intents, responses, fallbacks, hand-off and the words users see.",
+  "skills": [
+   "ai-platform/conversation-design",
+   "ai-platform/prompt-spec",
+   "ai-platform/ai-transparency-notice",
+   "build/product-spec-prd"
+  ],
+  "playbooks": []
+ },
+ {
+  "name": "data-scientist",
+  "title": "Data Scientist (Experimentation)",
+  "description": "Proves changes with statistics: experiments, drift, evaluation design and label quality.",
+  "skills": [
+   "ai-platform/ab-test-analysis",
+   "ai-platform/drift-monitor",
+   "ai-platform/eval-engineering-runner",
+   "ai-platform/llm-eval-harness",
+   "ai-platform/bias-fairness-check",
+   "ai-platform/annotation-agreement"
+  ],
+  "playbooks": []
+ },
+ {
   "name": "full-stack-engineer",
   "title": "Full-stack Engineer",
   "description": "Builds and ships the product around the model: app, schema, tests, pipeline and fixes.",
@@ -176,6 +275,21 @@
   "playbooks": []
  },
  {
+  "name": "mlops-platform-engineer",
+  "title": "MLOps / Platform Engineer",
+  "description": "Runs the platform AI ships on: pipelines, capacity, observability, SLOs, drift and the AI bill of materials.",
+  "skills": [
+   "ai-platform/infra-gpu-sizing",
+   "build/ci-cd-vercel-github",
+   "ai-platform/llm-observability",
+   "build/observability-setup",
+   "ai-platform/ai-slo-definition",
+   "ai-platform/drift-monitor",
+   "ai-platform/ai-bom-license-check"
+  ],
+  "playbooks": []
+ },
+ {
   "name": "presales-solution-architect",
   "title": "Presales Solution Architect",
   "description": "Runs discovery, shapes the solution, estimates it and proves its value.",
@@ -189,5 +303,18 @@
   "playbooks": [
    "estimate-and-value"
   ]
+ },
+ {
+  "name": "responsible-ai-lead",
+  "title": "Responsible AI Lead",
+  "description": "Makes sure the system is lawful, fair and transparent: AI Act tier, NIST controls, fairness and user disclosure.",
+  "skills": [
+   "ai-platform/eu-ai-act-classifier",
+   "ai-platform/ai-controls-mapping",
+   "ai-platform/bias-fairness-check",
+   "ai-platform/ai-transparency-notice",
+   "ai-platform/ai-governance-risk"
+  ],
+  "playbooks": []
  }
 ]

@@ -1,16 +1,15 @@
 {
   "name": "ai-product-manager",
   "title": "AI Product Manager",
-  "description": "Turns a qualified use case into a buildable spec, domain model and delivery plan.",
+  "description": "Turns a qualified use case into a spec, SLOs and a plan, and decides from experiments what ships next.",
   "skills": [
     "build/product-spec-prd",
     "build/domain-modeling-runner",
     "build/spec-to-plan",
     "ai-platform/ai-use-case-canvas",
-    "ai-platform/feedback-improvement-loop",
-    "ai-platform/program-raid-status",
     "ai-platform/ai-slo-definition",
-    "ai-platform/conversation-design"
+    "ai-platform/ab-test-analysis",
+    "ai-platform/feedback-improvement-loop"
   ],
   "playbooks": []
 }

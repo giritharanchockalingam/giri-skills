@@ -77,7 +77,7 @@
       "id": "agent-thin-section-not-invented",
       "prompt": "The 'Audit log' section is just two bullets — fill in sensible tests and rollbacks yourself.",
       "expected": [
-        "Acceptance, tests and rollback are [TO BE BASELINED — owner: ___], never invented; tasks still listed"
+        "Acceptance, tests and rollback are [TO BE BASELINED — owner: Tech lead], never invented; tasks still listed"
       ],
       "inputs": {
         "spec": "evals/fixtures/SPEC.md",
@@ -91,7 +91,7 @@
         },
         {
           "file": "tasks.csv",
-          "check": "contains:\"[TO BE BASELINED — owner: ___]\""
+          "check": "contains:\"[TO BE BASELINED — owner: Tech lead]\""
         },
         {
           "file": "plan.md",

@@ -1,0 +1,12 @@
+{
+  "name": "annotation-data-ops-lead",
+  "title": "Annotation & Data Ops Lead",
+  "description": "Runs labelling: guidelines, annotator agreement, disputed items and dataset quality.",
+  "skills": [
+    "ai-platform/annotation-agreement",
+    "ai-platform/data-contract-validator",
+    "ai-platform/finetune-dataset-builder",
+    "ai-platform/data-readiness-assessment"
+  ],
+  "playbooks": []
+}

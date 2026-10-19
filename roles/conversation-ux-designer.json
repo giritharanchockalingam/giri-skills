@@ -1,0 +1,12 @@
+{
+  "name": "conversation-ux-designer",
+  "title": "Conversation / AI UX Designer",
+  "description": "Designs how people talk to the system: intents, responses, fallbacks, hand-off and the words users see.",
+  "skills": [
+    "ai-platform/conversation-design",
+    "ai-platform/prompt-spec",
+    "ai-platform/ai-transparency-notice",
+    "build/product-spec-prd"
+  ],
+  "playbooks": []
+}

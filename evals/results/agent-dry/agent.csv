@@ -1,4 +1,23 @@
 skill,case_id,check,pass,evidence
+ai-platform/ab-test-analysis,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ab-test-analysis,agent-happy-path,exists:ab-results.csv,1,evals/results/agent-dry/runs/ai-platform__ab-test-analysis/agent-happy-path/ab-results.csv exists
+ai-platform/ab-test-analysis,agent-happy-path,"ab-results.csv: contains:""resolved,primary,prompt_v3,5000,0.430000,0.030000,0.010695,0.049305,0.0750,0.002332,0.004664,yes""",1,"found: resolved,primary,prompt_v3,5000,0.430000,0.030000,0.010695,0.049305,0.0750,0.002332,0.004664,yes"
+ai-platform/ab-test-analysis,agent-happy-path,"ab-results.csv: contains:""escalated,guardrail,model_swap,5000,0.094000,0.014000,0.002956,0.025044,0.1750,0.013002,0.026003,yes""",1,"found: escalated,guardrail,model_swap,5000,0.094000,0.014000,0.002956,0.025044,0.1750,0.013002,0.026003,yes"
+ai-platform/ab-test-analysis,agent-happy-path,"ab-results.csv: contains:""handle_time_s,guardrail,prompt_v3,5000,118.000000,-2.000000,-3.215958,-0.784042,-0.0167,0.001268,0.002535,yes""",1,"found: handle_time_s,guardrail,prompt_v3,5000,118.000000,-2.000000,-3.215958,-0.784042,-0.0167,0.001268,0.002535,yes"
+ai-platform/ab-test-analysis,agent-happy-path,"ab-report.md: contains:""**Decision: ship `prompt_v3`.**""",1,found: **Decision: ship `prompt_v3`.**
+ai-platform/ab-test-analysis,agent-happy-path,"ab-report.md: contains:""| prompt_v3 | 0.027595 | 0.020000 | 0.5294 | 9490 |""",1,found: | prompt_v3 | 0.027595 | 0.020000 | 0.5294 | 9490 |
+ai-platform/ab-test-analysis,agent-happy-path,ab-report.md: no_unowned_tbd,1,0 unowned of 0 markers
+ai-platform/ab-test-analysis,agent-missing-results,exit:2,1,"exit code 2, expected 2"
+ai-platform/ab-test-analysis,agent-missing-results,needs_input:results,1,missing inputs named: ['results']
+ai-platform/ab-test-analysis,agent-no-config-mde-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ab-test-analysis,agent-no-config-mde-not-invented,"ab-report.md: contains:""| mde | [TO BE BASELINED — owner: Experiment owner] | not supplied |""",1,found: | mde | [TO BE BASELINED — owner: Experiment owner] | not supplied |
+ai-platform/ab-test-analysis,agent-no-config-mde-not-invented,"ab-report.md: contains:""| alpha | 0.05 | default |""",1,found: | alpha | 0.05 | default |
+ai-platform/ab-test-analysis,agent-no-config-mde-not-invented,"ab-report.md: contains:""not analysed: escalated, handle_time_s.""",1,"found: not analysed: escalated, handle_time_s."
+ai-platform/ab-test-analysis,agent-no-config-mde-not-invented,ab-report.md: no_unowned_tbd,1,0 unowned of 9 markers
+ai-platform/ab-test-analysis,agent-srm-gate-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ab-test-analysis,agent-srm-gate-exits-1,"ab-report.md: contains:""chi-square 17.4757, df 1, p 0.000029 — SRM DETECTED""",1,"found: chi-square 17.4757, df 1, p 0.000029 — SRM DETECTED"
+ai-platform/ab-test-analysis,agent-srm-gate-exits-1,"ab-report.md: contains:""Results untrustworthy: sample ratio mismatch detected.""",1,found: Results untrustworthy: sample ratio mismatch detected.
+ai-platform/ab-test-analysis,agent-srm-gate-exits-1,"ab.json: contains:""\""srm_detected\"": true""",1,"found: ""srm_detected"": true"
 ai-platform/agent-architecture,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/agent-architecture,agent-happy-path,"pattern.md: contains:""**Decision:** Single agent because""",1,found: **Decision:** Single agent because
 ai-platform/agent-architecture,agent-happy-path,"pattern.md: contains:""| Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |""",1,found: | Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |
@@ -8,6 +27,78 @@ ai-platform/agent-architecture,agent-missing-answers,needs_input:answers,1,missi
 ai-platform/agent-architecture,agent-gate-fails-without-hitl,exit:1,1,"exit code 1, expected 1"
 ai-platform/agent-architecture,agent-gate-fails-without-hitl,"design-check.csv: contains:""HITL checkpoints,section,no,required section heading missing""",1,"found: HITL checkpoints,section,no,required section heading missing"
 ai-platform/agent-architecture,agent-gate-fails-without-hitl,"design-check.csv: contains:""missing failure_modes""",1,found: missing failure_modes
+ai-platform/ai-adoption-and-literacy,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-adoption-and-literacy,agent-happy-path,"adoption-plan.md: contains:""Total training load: 812.5 hours across 8 of 8 catalog modules.""",1,found: Total training load: 812.5 hours across 8 of 8 catalog modules.
+ai-platform/ai-adoption-and-literacy,agent-happy-path,"adoption-plan.md: contains:""| Customer Operations | Billing team lead | overseer | 1 | 12 | AIL-03, AIL-06, AIL-07 | 6.5 | 78 |""",1,"found: | Customer Operations | Billing team lead | overseer | 1 | 12 | AIL-03, AIL-06, AIL-07 | 6.5 | 78 |"
+ai-platform/ai-adoption-and-literacy,agent-happy-path,"adoption-plan.md: contains:""| AIL-02 | Prompting and checking outputs for your tasks | 2 | 2 | hands-on lab | user/operator | — | 166 | 332 |""",1,found: | AIL-02 | Prompting and checking outputs for your tasks | 2 | 2 | hands-on lab | user/operator | — | 166 | 332 |
+ai-platform/ai-adoption-and-literacy,agent-happy-path,"training-load.csv: contains:""2,Customer Operations,2026-11-16,132,132,558""",1,"found: 2,Customer Operations,2026-11-16,132,132,558"
+ai-platform/ai-adoption-and-literacy,agent-happy-path,"curriculum.csv: contains:""Finance,Finance controller,AIL-06,Human oversight in practice: override and stop,2,\""mandatory for overseer (rule), regardless of proficiency\""""",1,"found: Finance,Finance controller,AIL-06,Human oversight in practice: override and stop,2,""mandatory for overseer (rule), regardless of proficiency"""
+ai-platform/ai-adoption-and-literacy,agent-missing-population,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-adoption-and-literacy,agent-missing-population,needs_input:population,1,missing inputs named: ['population']
+ai-platform/ai-adoption-and-literacy,agent-no-targets-no-waves-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-adoption-and-literacy,agent-no-targets-no-waves-not-invented,adoption-plan.md: no_unowned_tbd,1,0 unowned of 12 markers
+ai-platform/ai-adoption-and-literacy,agent-no-targets-no-waves-not-invented,"adoption-plan.md: contains:""| weekly_active_rate | Share of licensed users who used the AI system in the last 7 days | product telemetry | [TO BE BASELINED — owner: Change lead] | — |""",1,found: | weekly_active_rate | Share of licensed users who used the AI system in the last 7 days | product telemetry | [TO BE BASELINED — owner: Change lead] | — |
+ai-platform/ai-adoption-and-literacy,agent-no-targets-no-waves-not-invented,"training-load.csv: contains:""[TO BE BASELINED — owner: Change lead],Technology,[TO BE BASELINED — owner: Change lead],14,14,142""",1,"found: [TO BE BASELINED — owner: Change lead],Technology,[TO BE BASELINED — owner: Change lead],14,14,142"
+ai-platform/ai-adoption-and-literacy,agent-strict-operator-without-module-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-adoption-and-literacy,agent-strict-operator-without-module-exits-1,"adoption-plan.md: contains:""`--strict` was set: the run fails (exit 1).""",1,found: `--strict` was set: the run fails (exit 1).
+ai-platform/ai-adoption-and-literacy,agent-strict-operator-without-module-exits-1,"adoption-plan.md: contains:""Support analyst (AI ops) (Technology)""",1,found: Support analyst (AI ops) (Technology)
+ai-platform/ai-adoption-and-literacy,agent-strict-operator-without-module-exits-1,"adoption.json: contains:""\""gate\"": \""fail\""""",1,"found: ""gate"": ""fail"""
+ai-platform/ai-bom-license-check,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-bom-license-check,agent-happy-path,"license-report.md: contains:""**Release gate: PASS** — 0 blocked, 3 need review, 5 allowed, of 8 components (1 with an unrecognised licence).""",1,"found: **Release gate: PASS** — 0 blocked, 3 need review, 5 allowed, of 8 components (1 with an unrecognised licence)."
+ai-platform/ai-bom-license-check,agent-happy-path,"aibom.csv: contains:""nw-tokenizer,library,2.1.0,\""Apache License, Version 2.0\"",Apache-2.0,allow""",1,"found: nw-tokenizer,library,2.1.0,""Apache License, Version 2.0"",Apache-2.0,allow"
+ai-platform/ai-bom-license-check,agent-happy-path,"aibom.csv: contains:""nw-embeddings-api,service,v2,Vendor Terms 2026,unknown,review""",1,"found: nw-embeddings-api,service,v2,Vendor Terms 2026,unknown,review"
+ai-platform/ai-bom-license-check,agent-happy-path,"aibom.json: contains:""\""type\"": \""machine-learning-model\""""",1,"found: ""type"": ""machine-learning-model"""
+ai-platform/ai-bom-license-check,agent-happy-path,"aibom.json: contains:""\""expression\"": \""LicenseRef-Llama-3.1-Community\""""",1,"found: ""expression"": ""LicenseRef-Llama-3.1-Community"""
+ai-platform/ai-bom-license-check,agent-happy-path,"license-report.md: contains:""Display 'Built with Llama'""",1,found: Display 'Built with Llama'
+ai-platform/ai-bom-license-check,agent-missing-bom,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-bom-license-check,agent-missing-bom,needs_input:bom,1,missing inputs named: ['bom']
+ai-platform/ai-bom-license-check,agent-no-policy-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-bom-license-check,agent-no-policy-not-invented,"aibom.csv: contains:""nw-agent-runtime,library,1.4.2,MIT,MIT,[TO BE BASELINED — owner: Legal counsel]""",1,"found: nw-agent-runtime,library,1.4.2,MIT,MIT,[TO BE BASELINED — owner: Legal counsel]"
+ai-platform/ai-bom-license-check,agent-no-policy-not-invented,"license-report.md: contains:""No licence policy supplied: every decision is [TO BE BASELINED — owner: Legal counsel].""",1,found: No licence policy supplied: every decision is [TO BE BASELINED — owner: Legal counsel].
+ai-platform/ai-bom-license-check,agent-no-policy-not-invented,license-report.md: no_unowned_tbd,1,0 unowned of 20 markers
+ai-platform/ai-bom-license-check,agent-no-policy-not-invented,aibom.csv: no_unowned_tbd,1,0 unowned of 9 markers
+ai-platform/ai-bom-license-check,agent-gate-noncommercial-in-commercial-use,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-bom-license-check,agent-gate-noncommercial-in-commercial-use,"aibom.csv: contains:""nw-research-corpus,dataset,1.0,CC-BY-NC-4.0,CC-BY-NC-4.0,deny,policy: CC-BY-NC-4.0 = review; use 'commercial' conflicts with a non-commercial licence""",1,"found: nw-research-corpus,dataset,1.0,CC-BY-NC-4.0,CC-BY-NC-4.0,deny,policy: CC-BY-NC-4.0 = review; use 'commercial' conflicts with a non-commercial licence"
+ai-platform/ai-bom-license-check,agent-gate-noncommercial-in-commercial-use,"license-report.md: contains:""**Release gate: FAIL** — 2 blocked""",1,found: **Release gate: FAIL** — 2 blocked
+ai-platform/ai-bom-license-check,agent-gate-noncommercial-in-commercial-use,"aibom.json: contains:""\""value\"": \""fail\""""",1,"found: ""value"": ""fail"""
+ai-platform/ai-controls-mapping,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""| GOVERN | 10 | 4 | 2 | 1 | 2 | 18 | 0.667 |""",1,found: | GOVERN | 10 | 4 | 2 | 1 | 2 | 18 | 0.667 |
+ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""| MEASURE | 6 | 3 | 2 | 1 | 10 | 21 | 0.357 |""",1,found: | MEASURE | 6 | 3 | 2 | 1 | 10 | 21 | 0.357 |
+ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""| ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |""",1,found: | ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |
+ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""| TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |""",1,found: | TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |
+ai-platform/ai-controls-mapping,agent-happy-path,"coverage.json: contains:""\""gate\"": \""pass\""""",1,"found: ""gate"": ""pass"""
+ai-platform/ai-controls-mapping,agent-happy-path,"controls.csv: contains:""MANAGE 4.3,MANAGE,MANAGE 4,partial,""",1,"found: MANAGE 4.3,MANAGE,MANAGE 4,partial,"
+ai-platform/ai-controls-mapping,agent-missing-evidence,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-controls-mapping,agent-missing-evidence,needs_input:evidence,1,missing inputs named: ['evidence']
+ai-platform/ai-controls-mapping,agent-missing-owners-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-controls-mapping,agent-missing-owners-not-invented,"controls.csv: contains:""GOVERN 3.1,GOVERN,GOVERN 3,missing,,[TO BE BASELINED — owner: AI risk lead],yes""",1,"found: GOVERN 3.1,GOVERN,GOVERN 3,missing,,[TO BE BASELINED — owner: AI risk lead],yes"
+ai-platform/ai-controls-mapping,agent-missing-owners-not-invented,"controls-report.md: contains:""without a named owner: 27""",1,found: without a named owner: 27
+ai-platform/ai-controls-mapping,agent-missing-owners-not-invented,"controls-report.md: contains:""implemented/partial with no evidence cited: GOVERN 2.3""",1,found: implemented/partial with no evidence cited: GOVERN 2.3
+ai-platform/ai-controls-mapping,agent-missing-owners-not-invented,controls-report.md: no_unowned_tbd,1,0 unowned of 54 markers
+ai-platform/ai-controls-mapping,agent-below-min-coverage-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-controls-mapping,agent-below-min-coverage-exits-1,"controls-report.md: contains:""Gate: minimum coverage 0.600 — **FAIL (exit 1)**""",1,found: Gate: minimum coverage 0.600 — **FAIL (exit 1)**
+ai-platform/ai-controls-mapping,agent-below-min-coverage-exits-1,"coverage.json: contains:""\""gate\"": \""fail\""""",1,"found: ""gate"": ""fail"""
+ai-platform/ai-controls-mapping,agent-below-min-coverage-exits-1,"controls-report.md: contains:""| HR-DATA | Art. 10 | open | 2027-12-02 | MAP 4.1: partial; MEASURE 2.11: planned | partial |""",1,found: | HR-DATA | Art. 10 | open | 2027-12-02 | MAP 4.1: partial; MEASURE 2.11: planned | partial |
+ai-platform/ai-finops-chargeback,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-finops-chargeback,agent-happy-path,exists:showback.csv,1,evals/results/agent-dry/runs/ai-platform__ai-finops-chargeback/agent-happy-path/showback.csv exists
+ai-platform/ai-finops-chargeback,agent-happy-path,"showback.csv: contains:""total,*,*,*,*,78220,370.39,4.7352,100.00""",1,"found: total,*,*,*,*,78220,370.39,4.7352,100.00"
+ai-platform/ai-finops-chargeback,agent-happy-path,"showback.csv: contains:""detail,2026-09,billing-support,dispute-summary,fict-small,9990,10.00,1.0010,3.56""",1,"found: detail,2026-09,billing-support,dispute-summary,fict-small,9990,10.00,1.0010,3.56"
+ai-platform/ai-finops-chargeback,agent-happy-path,"showback.csv: contains:""team,*,collections,*,*,24900,11.21,0.4500,3.03""",1,"found: team,*,collections,*,*,24900,11.21,0.4500,3.03"
+ai-platform/ai-finops-chargeback,agent-happy-path,"anomalies.csv: contains:""2026-09-25,collections,2.25,0.2295,0.0047,0.2435,2.01,14,dunning-email""",1,"found: 2026-09-25,collections,2.25,0.2295,0.0047,0.2435,2.01,14,dunning-email"
+ai-platform/ai-finops-chargeback,agent-happy-path,"budget.csv: contains:""billing-support,2026-10,250.00,87.08,269.96,-19.96,OVER BUDGET,linear run-rate,10,31,600""",1,"found: billing-support,2026-10,250.00,87.08,269.96,-19.96,OVER BUDGET,linear run-rate,10,31,600"
+ai-platform/ai-finops-chargeback,agent-happy-path,"finops-report.md: contains:""**$370.39**""",1,found: **$370.39**
+ai-platform/ai-finops-chargeback,agent-missing-prices,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-finops-chargeback,agent-missing-prices,needs_input:prices,1,missing inputs named: ['prices']
+ai-platform/ai-finops-chargeback,agent-no-budgets-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-finops-chargeback,agent-no-budgets-not-invented,"budget.csv: contains:""collections,2026-09,[TO BE BASELINED — owner: FinOps lead],8.91,8.91,[TO BE BASELINED — owner: FinOps lead],NO BUDGET""",1,"found: collections,2026-09,[TO BE BASELINED — owner: FinOps lead],8.91,8.91,[TO BE BASELINED — owner: FinOps lead],NO BUDGET"
+ai-platform/ai-finops-chargeback,agent-no-budgets-not-invented,"finops-report.md: contains:""| 2026-10 | billing-support | invoice-qa | fict-legacy | 600 | model not in price sheet | [TO BE BASELINED — owner: FinOps lead] |""",1,found: | 2026-10 | billing-support | invoice-qa | fict-legacy | 600 | model not in price sheet | [TO BE BASELINED — owner: FinOps lead] |
+ai-platform/ai-finops-chargeback,agent-no-budgets-not-invented,finops-report.md: no_unowned_tbd,1,0 unowned of 11 markers
+ai-platform/ai-finops-chargeback,agent-strict-over-budget-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-finops-chargeback,agent-strict-over-budget-exits-1,"finops-report.md: contains:""`--strict` was set and a forecast is over budget: the run fails (exit 1).""",1,found: `--strict` was set and a forecast is over budget: the run fails (exit 1).
+ai-platform/ai-finops-chargeback,agent-strict-over-budget-exits-1,"budget.csv: contains:""collections,2026-10,10.00,2.30,7.11,2.89,WITHIN BUDGET""",1,"found: collections,2026-10,10.00,2.30,7.11,2.89,WITHIN BUDGET"
+ai-platform/ai-finops-chargeback,agent-strict-within-budget-passes,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-finops-chargeback,agent-strict-within-budget-passes,"finops-report.md: contains:""Budgets over forecast: 0.""",1,found: Budgets over forecast: 0.
+ai-platform/ai-finops-chargeback,agent-strict-within-budget-passes,"budget.csv: contains:""billing-support,2026-10,300.00,87.08,269.96,30.04,WITHIN BUDGET""",1,"found: billing-support,2026-10,300.00,87.08,269.96,30.04,WITHIN BUDGET"
 ai-platform/ai-governance-risk,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/ai-governance-risk,agent-happy-path,risk-register.csv: csv_rows:control!empty,1,0 of 9 rows empty in 'control'
 ai-platform/ai-governance-risk,agent-happy-path,"risk-register.csv: contains:""R-002,privacy,""",1,"found: R-002,privacy,"
@@ -35,6 +126,28 @@ ai-platform/ai-incident-runbook,agent-unknowns-escalate-not-invented,"runbook.md
 ai-platform/ai-incident-runbook,agent-unknowns-escalate-not-invented,runbook.md: no_unowned_tbd,1,0 unowned of 28 markers
 ai-platform/ai-incident-runbook,agent-matrix-without-baseline,exit:1,1,"exit code 1, expected 1"
 ai-platform/ai-incident-runbook,agent-matrix-without-baseline,"incident.json: contains:""\""severity\"": null""",1,"found: ""severity"": null"
+ai-platform/ai-postmortem,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-postmortem,agent-happy-path,"postmortem.md: contains:""| Time to detect | started_at → detected | 85.0 min (1h 25m) | measured |""",1,found: | Time to detect | started_at → detected | 85.0 min (1h 25m) | measured |
+ai-platform/ai-postmortem,agent-happy-path,"postmortem.md: contains:""| Time to acknowledge | detected → acknowledged | 15.0 min (0h 15m) | measured |""",1,found: | Time to acknowledge | detected → acknowledged | 15.0 min (0h 15m) | measured |
+ai-platform/ai-postmortem,agent-happy-path,"postmortem.md: contains:""| Time to resolve | started_at → resolved | 290.0 min (4h 50m) | measured |""",1,found: | Time to resolve | started_at → resolved | 290.0 min (4h 50m) | measured |
+ai-platform/ai-postmortem,agent-happy-path,"postmortem.md: contains:""with at least one action: 4 of 4""",1,found: with at least one action: 4 of 4
+ai-platform/ai-postmortem,agent-happy-path,"timings.json: contains:""\""time_to_mitigate\"": 128.0""",1,"found: ""time_to_mitigate"": 128.0"
+ai-platform/ai-postmortem,agent-happy-path,"eval-cases.csv: contains:""INC-NW-0412-RC01,prompt-guardrail-gap,adversarial,Can you waive my late fee this month?""",1,"found: INC-NW-0412-RC01,prompt-guardrail-gap,adversarial,Can you waive my late fee this month?"
+ai-platform/ai-postmortem,agent-happy-path,"actions.csv: contains:""Require shadow and canary stages for prompt changes,process,Release manager,2026-10-31,F4,open""",1,"found: Require shadow and canary stages for prompt changes,process,Release manager,2026-10-31,F4,open"
+ai-platform/ai-postmortem,agent-missing-timeline,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-postmortem,agent-missing-timeline,needs_input:timeline,1,missing inputs named: ['timeline']
+ai-platform/ai-postmortem,agent-open-incident-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-postmortem,agent-open-incident-not-invented,"postmortem.md: contains:""**Status:** OPEN — no `resolved` event in the timeline""",1,found: **Status:** OPEN — no `resolved` event in the timeline
+ai-platform/ai-postmortem,agent-open-incident-not-invented,"postmortem.md: contains:""| Time to resolve | started_at → resolved | — | open — not resolved |""",1,found: | Time to resolve | started_at → resolved | — | open — not resolved |
+ai-platform/ai-postmortem,agent-open-incident-not-invented,"postmortem.md: contains:""missing milestone: `acknowledged`""",1,found: missing milestone: `acknowledged`
+ai-platform/ai-postmortem,agent-open-incident-not-invented,"postmortem.md: contains:""contributing factors [TO BE BASELINED — owner: Incident commander]""",1,found: contributing factors [TO BE BASELINED — owner: Incident commander]
+ai-platform/ai-postmortem,agent-open-incident-not-invented,"timings.json: contains:""\""time_to_resolve\"": null""",1,"found: ""time_to_resolve"": null"
+ai-platform/ai-postmortem,agent-open-incident-not-invented,postmortem.md: no_unowned_tbd,1,0 unowned of 5 markers
+ai-platform/ai-postmortem,agent-strict-gaps-exit-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-postmortem,agent-strict-gaps-exit-1,"postmortem.md: contains:""FAIL — factor F4 has no action; action A3 has no owner""",1,found: FAIL — factor F4 has no action; action A3 has no owner
+ai-platform/ai-postmortem,agent-strict-gaps-exit-1,"actions.csv: contains:""detect,[TO BE BASELINED — owner: Incident commander],[TO BE BASELINED — owner: Incident commander],F3,blocked: no owner""",1,"found: detect,[TO BE BASELINED — owner: Incident commander],[TO BE BASELINED — owner: Incident commander],F3,blocked: no owner"
+ai-platform/ai-postmortem,agent-strict-gaps-exit-1,"postmortem.md: contains:""| factors | F3 evidence | Human error |""",1,found: | factors | F3 evidence | Human error |
+ai-platform/ai-postmortem,agent-strict-gaps-exit-1,"postmortem.md: contains:""**Blame phrasing flagged:** 2""",1,found: **Blame phrasing flagged:** 2
 ai-platform/ai-release-plan,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/ai-release-plan,agent-happy-path,"release-plan.md: sections:[""Readiness"",""Stages"",""Gates"",""Rollback"",""Owners""]",1,"found ['Readiness', 'Stages', 'Gates', 'Rollback', 'Owners']"
 ai-platform/ai-release-plan,agent-happy-path,"release-plan.md: contains:""| 3 | Canary 1 | 5 | yes | 20 |""",1,found: | 3 | Canary 1 | 5 | yes | 20 |
@@ -45,6 +158,27 @@ ai-platform/ai-release-plan,agent-missing-gates,needs_input:gates,1,missing inpu
 ai-platform/ai-release-plan,agent-first-stage-blocked,exit:1,1,"exit code 1, expected 1"
 ai-platform/ai-release-plan,agent-first-stage-blocked,"release-plan.md: contains:""NOT READY""",1,found: NOT READY
 ai-platform/ai-release-plan,agent-first-stage-blocked,"gates.json: contains:""\""first_stage_ready\"": false""",1,"found: ""first_stage_ready"": false"
+ai-platform/ai-slo-definition,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-slo-definition,agent-happy-path,exists:slos.csv,1,evals/results/agent-dry/runs/ai-platform__ai-slo-definition/agent-happy-path/slos.csv exists
+ai-platform/ai-slo-definition,agent-happy-path,"slos.csv: contains:""availability,0.99,,0.99375,0.625,0.000,met,agreed target""",1,"found: availability,0.99,,0.99375,0.625,0.000,met,agreed target"
+ai-platform/ai-slo-definition,agent-happy-path,"slos.csv: contains:""latency,0.9,1650,0.94549,0.545,""",1,"found: latency,0.9,1650,0.94549,0.545,"
+ai-platform/ai-slo-definition,agent-happy-path,"slos.csv: contains:""quality,0.95,,0.95833,0.833,1.000,met,agreed target""",1,"found: quality,0.95,,0.95833,0.833,1.000,met,agreed target"
+ai-platform/ai-slo-definition,agent-happy-path,"slos.csv: contains:""cost,0.8,0.0028,0.90000,0.500,0.500,met,agreed target""",1,"found: cost,0.8,0.0028,0.90000,0.500,0.500,met,agreed target"
+ai-platform/ai-slo-definition,agent-happy-path,"slo-spec.md: contains:""**All agreed SLOs met.**""",1,found: **All agreed SLOs met.**
+ai-platform/ai-slo-definition,agent-happy-path,"slo-spec.md: contains:""p50 1238 ms · p95 1653 ms""",1,found: p50 1238 ms · p95 1653 ms
+ai-platform/ai-slo-definition,agent-missing-log,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-slo-definition,agent-missing-log,needs_input:log,1,missing inputs named: ['log']
+ai-platform/ai-slo-definition,agent-no-targets-proposes-not-invents,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-slo-definition,agent-no-targets-proposes-not-invents,slos.csv: csv_rows:status~^proposed$,1,0 of 4 rows not matching '^proposed$' in 'status'
+ai-platform/ai-slo-definition,agent-no-targets-proposes-not-invents,"slos.csv: contains:""latency,0.95,1700,1.00000,0.000,0.000,proposed,[TO BE BASELINED — owner: Product owner]""",1,"found: latency,0.95,1700,1.00000,0.000,0.000,proposed,[TO BE BASELINED — owner: Product owner]"
+ai-platform/ai-slo-definition,agent-no-targets-proposes-not-invents,"slo-spec.md: contains:""**No agreed targets.**""",1,found: **No agreed targets.**
+ai-platform/ai-slo-definition,agent-no-targets-proposes-not-invents,"slo-spec.md: contains:""[TO BE BASELINED — owner: SRE lead]""",1,found: [TO BE BASELINED — owner: SRE lead]
+ai-platform/ai-slo-definition,agent-no-targets-proposes-not-invents,slo-spec.md: no_unowned_tbd,1,0 unowned of 10 markers
+ai-platform/ai-slo-definition,agent-incident-breach-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-slo-definition,agent-incident-breach-exits-1,"slos.csv: contains:""availability,0.99,,0.95208,4.792,33.333,breached,agreed target""",1,"found: availability,0.99,,0.95208,4.792,33.333,breached,agreed target"
+ai-platform/ai-slo-definition,agent-incident-breach-exits-1,"slo-spec.md: contains:""| availability | fast-burn page | 1 h / 5 m | 14.40 | 33.333 | 100.000 | yes | page |""",1,found: | availability | fast-burn page | 1 h / 5 m | 14.40 | 33.333 | 100.000 | yes | page |
+ai-platform/ai-slo-definition,agent-incident-breach-exits-1,"slo-spec.md: contains:""**BREACHED: availability.**""",1,found: **BREACHED: availability.**
+ai-platform/ai-slo-definition,agent-incident-breach-exits-1,"slos.csv: contains:""latency,0.9,1650,0.94748,0.525,0.250,met,agreed target""",1,"found: latency,0.9,1650,0.94748,0.525,0.250,met,agreed target"
 ai-platform/ai-strategy-coe,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/ai-strategy-coe,agent-happy-path,portfolio.csv: csv_rows:score!empty,1,0 of 9 rows empty in 'score'
 ai-platform/ai-strategy-coe,agent-happy-path,"portfolio.md: contains:""| 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |""",1,found: | 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |
@@ -57,6 +191,51 @@ ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,unscored.csv: csv_row
 ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"portfolio.md: contains:""| UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |""",1,"found: | UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |"
 ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"maturity.md: contains:""[TO BE BASELINED — owner: CDO]""",1,found: [TO BE BASELINED — owner: CDO]
 ai-platform/ai-strategy-coe,agent-unscored-rows-not-ranked,"maturity.md: contains:""score given without evidence""",1,found: score given without evidence
+ai-platform/ai-threat-model,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-threat-model,agent-happy-path,exists:threats.csv,1,evals/results/agent-dry/runs/ai-platform__ai-threat-model/agent-happy-path/threats.csv exists
+ai-platform/ai-threat-model,agent-happy-path,"threat-report.md: contains:""Threats: 101 (34 high, 36 medium, 31 low) across 9 components and 13 flows.""",1,"found: Threats: 101 (34 high, 36 medium, 31 low) across 9 components and 13 flows."
+ai-platform/ai-threat-model,agent-happy-path,"threat-report.md: contains:""Status: 77 open, 2 planned, 22 mitigated.""",1,"found: Status: 77 open, 2 planned, 22 mitigated."
+ai-platform/ai-threat-model,agent-happy-path,"threat-report.md: contains:""PASS: 26 open high vs limit 26""",1,found: PASS: 26 open high vs limit 26
+ai-platform/ai-threat-model,agent-happy-path,"threats.csv: contains:"",2,3,high,M20;M21;M22;M23,open,[TO BE BASELINED — owner: Security architect],""",1,"found: ,2,3,high,M20;M21;M22;M23,open,[TO BE BASELINED — owner: Security architect],"
+ai-platform/ai-threat-model,agent-happy-path,"threats.csv: contains:"",3,2,high,M01,mitigated,Identity lead,""",1,"found: ,3,2,high,M01,mitigated,Identity lead,"
+ai-platform/ai-threat-model,agent-happy-path,"threats.csv: contains:"",2,2,medium,M31;M32;M33,planned,AppSec lead,""",1,"found: ,2,2,medium,M31;M32;M33,planned,AppSec lead,"
+ai-platform/ai-threat-model,agent-happy-path,dfd.md: mermaid_parses,1,1 block(s) ok
+ai-platform/ai-threat-model,agent-happy-path,"dfd.md: contains:""linkStyle 0,1,2,3,4,5,10,12 """,1,"found: linkStyle 0,1,2,3,4,5,10,12 "
+ai-platform/ai-threat-model,agent-missing-flows,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-threat-model,agent-missing-flows,needs_input:flows,1,missing inputs named: ['flows']
+ai-platform/ai-threat-model,agent-no-controls-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-threat-model,agent-no-controls-not-invented,"threat-report.md: contains:""Status: 101 open, 0 planned, 0 mitigated.""",1,"found: Status: 101 open, 0 planned, 0 mitigated."
+ai-platform/ai-threat-model,agent-no-controls-not-invented,"threat-report.md: contains:""Gate: no gate set""",1,found: Gate: no gate set
+ai-platform/ai-threat-model,agent-no-controls-not-invented,threat-report.md: no_unowned_tbd,1,0 unowned of 135 markers
+ai-platform/ai-threat-model,agent-no-controls-not-invented,"threats.csv: contains:"",1,1,low,M02;M07,open,[TO BE BASELINED — owner: Security architect],""",1,"found: ,1,1,low,M02;M07,open,[TO BE BASELINED — owner: Security architect],"
+ai-platform/ai-threat-model,agent-gate-open-high-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-threat-model,agent-gate-open-high-exits-1,exists:dfd.md,1,evals/results/agent-dry/runs/ai-platform__ai-threat-model/agent-gate-open-high-exits-1/dfd.md exists
+ai-platform/ai-threat-model,agent-gate-open-high-exits-1,"threat-report.md: contains:""FAIL: 26 open high vs limit 25""",1,found: FAIL: 26 open high vs limit 25
+ai-platform/ai-threat-model,agent-gate-open-high-exits-1,"threat-report.md: contains:""the run exits 1.""",1,found: the run exits 1.
+ai-platform/ai-transparency-notice,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-transparency-notice,agent-happy-path,exists:notice.md,1,evals/results/agent-dry/runs/ai-platform__ai-transparency-notice/agent-happy-path/notice.md exists
+ai-platform/ai-transparency-notice,agent-happy-path,"notice.md: contains:""You are chatting with Northwind Billing Assistant. It is an AI system, not a person.""",1,"found: You are chatting with Northwind Billing Assistant. It is an AI system, not a person."
+ai-platform/ai-transparency-notice,agent-happy-path,"transparency.json: contains:""\""grade\"": 3.9""",1,"found: ""grade"": 3.9"
+ai-platform/ai-transparency-notice,agent-happy-path,"transparency.json: contains:""\""word_count\"": 94""",1,"found: ""word_count"": 94"
+ai-platform/ai-transparency-notice,agent-happy-path,"disclosure-checklist.csv: contains:""Art. 50(2),provider,yes,yes,provided""",1,"found: Art. 50(2),provider,yes,yes,provided"
+ai-platform/ai-transparency-notice,agent-happy-path,"disclosure-checklist.csv: contains:""Art. 50(5),provider and deployer,yes,partial,partial""",1,"found: Art. 50(5),provider and deployer,yes,partial,partial"
+ai-platform/ai-transparency-notice,agent-happy-path,"system-card.md: contains:""tier limited-risk (transparency obligations)""",1,found: tier limited-risk (transparency obligations)
+ai-platform/ai-transparency-notice,agent-happy-path,"system-card.md: contains:""Facts not supplied: none.""",1,found: Facts not supplied: none.
+ai-platform/ai-transparency-notice,agent-missing-facts,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-transparency-notice,agent-missing-facts,needs_input:facts,1,missing inputs named: ['facts']
+ai-platform/ai-transparency-notice,agent-partial-facts-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-transparency-notice,agent-partial-facts-not-invented,"notice.md: contains:""Questions? Contact [TO BE BASELINED — owner: Product owner].""",1,found: Questions? Contact [TO BE BASELINED — owner: Product owner].
+ai-platform/ai-transparency-notice,agent-partial-facts-not-invented,"system-card.md: contains:""EU AI Act classification: [TO BE BASELINED — owner: Compliance lead]""",1,found: EU AI Act classification: [TO BE BASELINED — owner: Compliance lead]
+ai-platform/ai-transparency-notice,agent-partial-facts-not-invented,"disclosure-checklist.csv: contains:""Art. 50(2),provider,yes,no,missing,content_marking not stated,Engineering lead""",1,"found: Art. 50(2),provider,yes,no,missing,content_marking not stated,Engineering lead"
+ai-platform/ai-transparency-notice,agent-partial-facts-not-invented,system-card.md: no_unowned_tbd,1,0 unowned of 12 markers
+ai-platform/ai-transparency-notice,agent-partial-facts-not-invented,"transparency.json: contains:""\""strict\"": false""",1,"found: ""strict"": false"
+ai-platform/ai-transparency-notice,agent-grade-gate-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-transparency-notice,agent-grade-gate-exits-1,"transparency.json: contains:""\""grade_ok\"": false""",1,"found: ""grade_ok"": false"
+ai-platform/ai-transparency-notice,agent-grade-gate-exits-1,"system-card.md: contains:""ABOVE MAX""",1,found: ABOVE MAX
+ai-platform/ai-transparency-notice,agent-grade-gate-exits-1,"disclosure-checklist.csv: contains:""Art. 50(5),provider and deployer,yes,no,missing""",1,"found: Art. 50(5),provider and deployer,yes,no,missing"
+ai-platform/ai-transparency-notice,agent-strict-missing-notice-facts-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-transparency-notice,agent-strict-missing-notice-facts-exits-1,"transparency.json: contains:""\""strict\"": true""",1,"found: ""strict"": true"
+ai-platform/ai-transparency-notice,agent-strict-missing-notice-facts-exits-1,"notice.md: contains:""It is here to answer questions about your bill.""",1,found: It is here to answer questions about your bill.
 ai-platform/ai-use-case-canvas,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/ai-use-case-canvas,agent-happy-path,"canvas.md: contains:""**Verdict:** Proceed to design""",1,found: **Verdict:** Proceed to design
 ai-platform/ai-use-case-canvas,agent-happy-path,"canvas.md: contains:""| Priority (V×F×D÷R) | 12.0 |""",1,found: | Priority (V×F×D÷R) | 12.0 |
@@ -68,6 +247,44 @@ ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,exit:0,1,"exit
 ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"canvas.md: contains:""| Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |""",1,found: | Data readiness | [TO BE BASELINED — owner: Legal Ops Lead] |
 ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"decision.md: contains:""**Decision:** wait — data readiness is unscored""",1,found: **Decision:** wait — data readiness is unscored
 ai-platform/ai-use-case-canvas,agent-no-data-readiness-means-wait,"canvas.md: contains:""**Verdict:** TBD""",1,found: **Verdict:** TBD
+ai-platform/ai-vendor-assessment,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-vendor-assessment,agent-happy-path,exists:sensitivity.csv,1,evals/results/agent-dry/runs/ai-platform__ai-vendor-assessment/agent-happy-path/sensitivity.csv exists
+ai-platform/ai-vendor-assessment,agent-happy-path,"scores.csv: contains:""Fabrikam AI (fictional),4.150,1,yes,none,none,none""",1,"found: Fabrikam AI (fictional),4.150,1,yes,none,none,none"
+ai-platform/ai-vendor-assessment,agent-happy-path,"scores.csv: contains:""Tailspin Models (fictional),3.850,2,yes,TPR-02,none,TPR-07""",1,"found: Tailspin Models (fictional),3.850,2,yes,TPR-02,none,TPR-07"
+ai-platform/ai-vendor-assessment,agent-happy-path,"scores.csv: contains:""Litware GenAI (fictional),n/a,n/a,no,none,security_compliance [TO BE BASELINED — owner: Procurement lead]""",1,"found: Litware GenAI (fictional),n/a,n/a,no,none,security_compliance [TO BE BASELINED — owner: Procurement lead]"
+ai-platform/ai-vendor-assessment,agent-happy-path,"sensitivity.csv: contains:""answer_quality,-20%,0.4000,0.3478,Fabrikam AI (fictional),4.076,Tailspin Models (fictional),0.239,no""",1,"found: answer_quality,-20%,0.4000,0.3478,Fabrikam AI (fictional),4.076,Tailspin Models (fictional),0.239,no"
+ai-platform/ai-vendor-assessment,agent-happy-path,"vendor-report.md: contains:""Rank stability under ±20% weight changes: 100.0% (8 of 8 runs""",1,found: Rank stability under ±20% weight changes: 100.0% (8 of 8 runs
+ai-platform/ai-vendor-assessment,agent-happy-path,"vendor-report.md: contains:""Recommendation: **Fabrikam AI (fictional)** (weighted score 4.150).""",1,found: Recommendation: **Fabrikam AI (fictional)** (weighted score 4.150).
+ai-platform/ai-vendor-assessment,agent-missing-criteria,exit:2,1,"exit code 2, expected 2"
+ai-platform/ai-vendor-assessment,agent-missing-criteria,needs_input:criteria,1,missing inputs named: ['criteria']
+ai-platform/ai-vendor-assessment,agent-no-risk-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/ai-vendor-assessment,agent-no-risk-not-invented,"scores.csv: contains:""4.150,1,yes,not assessed,none,[TO BE BASELINED — owner: Third-party risk manager] risk not assessed""",1,"found: 4.150,1,yes,not assessed,none,[TO BE BASELINED — owner: Third-party risk manager] risk not assessed"
+ai-platform/ai-vendor-assessment,agent-no-risk-not-invented,"vendor-report.md: contains:""Conditional on a third-party risk review [TO BE BASELINED — owner: Third-party risk manager].""",1,found: Conditional on a third-party risk review [TO BE BASELINED — owner: Third-party risk manager].
+ai-platform/ai-vendor-assessment,agent-no-risk-not-invented,vendor-report.md: no_unowned_tbd,1,0 unowned of 4 markers
+ai-platform/ai-vendor-assessment,agent-red-flag-no-clear-winner-gate,exit:1,1,"exit code 1, expected 1"
+ai-platform/ai-vendor-assessment,agent-red-flag-no-clear-winner-gate,"scores.csv: contains:""Fabrikam AI (fictional),4.150,1,yes,TPR-01,""",1,"found: Fabrikam AI (fictional),4.150,1,yes,TPR-01,"
+ai-platform/ai-vendor-assessment,agent-red-flag-no-clear-winner-gate,"vendor-report.md: contains:""**No clear winner.** Reasons: top-scoring Fabrikam AI (fictional) has red flags: TPR-01.""",1,found: **No clear winner.** Reasons: top-scoring Fabrikam AI (fictional) has red flags: TPR-01.
+ai-platform/ai-vendor-assessment,agent-red-flag-no-clear-winner-gate,"vendor-report.md: contains:""Highest-scoring option without red flags: Build in-house (3.250).""",1,found: Highest-scoring option without red flags: Build in-house (3.250).
+ai-platform/annotation-agreement,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/annotation-agreement,agent-happy-path,exists:agreement-report.md,1,evals/results/agent-dry/runs/ai-platform__annotation-agreement/agent-happy-path/agreement-report.md exists
+ai-platform/annotation-agreement,agent-happy-path,"agreement-report.md: contains:""**PASS** — alpha 0.595 ≥ minimum 0.5.""",1,found: **PASS** — alpha 0.595 ≥ minimum 0.5.
+ai-platform/annotation-agreement,agent-happy-path,"agreement-report.md: contains:""| ann_a – ann_b | 15 | 0.600 | 0.500 | moderate |""",1,found: | ann_a – ann_b | 15 | 0.600 | 0.500 | moderate |
+ai-platform/annotation-agreement,agent-happy-path,"agreement-report.md: contains:""Low-agreement labels the guidelines do not mention: `plan_change`.""",1,found: Low-agreement labels the guidelines do not mention: `plan_change`.
+ai-platform/annotation-agreement,agent-happy-path,"disputed-items.csv: contains:""NW-011,billing_dispute:1;other:1;plan_change:1,tie,0.000""",1,"found: NW-011,billing_dispute:1;other:1;plan_change:1,tie,0.000"
+ai-platform/annotation-agreement,agent-happy-path,"label-agreement.csv: contains:""refund_request,11,0.727,no""",1,"found: refund_request,11,0.727,no"
+ai-platform/annotation-agreement,agent-happy-path,agreement-report.md: no_unowned_tbd,1,0 unowned of 0 markers
+ai-platform/annotation-agreement,agent-missing-labels,exit:2,1,"exit code 2, expected 2"
+ai-platform/annotation-agreement,agent-missing-labels,needs_input:labels,1,missing inputs named: ['labels']
+ai-platform/annotation-agreement,agent-no-guidelines-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/annotation-agreement,agent-no-guidelines-not-invented,"label-agreement.csv: contains:""plan_change,6,0.500,[TO BE BASELINED — owner: Annotation lead]""",1,"found: plan_change,6,0.500,[TO BE BASELINED — owner: Annotation lead]"
+ai-platform/annotation-agreement,agent-no-guidelines-not-invented,"agreement-report.md: contains:""No minimum agreement set ([TO BE BASELINED — owner: Annotation lead]); no gate applied.""",1,found: No minimum agreement set ([TO BE BASELINED — owner: Annotation lead]); no gate applied.
+ai-platform/annotation-agreement,agent-no-guidelines-not-invented,agreement-report.md: no_unowned_tbd,1,0 unowned of 7 markers
+ai-platform/annotation-agreement,agent-below-minimum-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/annotation-agreement,agent-below-minimum-exits-1,"agreement-report.md: contains:""**FAIL** — alpha 0.595 is below the minimum 0.667""",1,found: **FAIL** — alpha 0.595 is below the minimum 0.667
+ai-platform/annotation-agreement,agent-below-minimum-exits-1,"agreement.json: contains:""\""passed\"": false""",1,"found: ""passed"": false"
+ai-platform/annotation-agreement,agent-single-annotator-no-fake-score,exit:1,1,"exit code 1, expected 1"
+ai-platform/annotation-agreement,agent-single-annotator-no-fake-score,"agreement-report.md: contains:""**No agreement score: no item has ratings from 2 or more annotators""",1,found: **No agreement score: no item has ratings from 2 or more annotators
+ai-platform/annotation-agreement,agent-single-annotator-no-fake-score,"agreement.json: contains:""\""status\"": \""insufficient\""""",1,"found: ""status"": ""insufficient"""
 ai-platform/bias-fairness-check,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/bias-fairness-check,agent-happy-path,exists:fairness.json,1,evals/results/agent-dry/runs/ai-platform__bias-fairness-check/agent-happy-path/fairness.json exists
 ai-platform/bias-fairness-check,agent-happy-path,"fairness-report.md: sections:[""Verdict"",""Metrics"",""Per-group"",""Small groups"",""Limits""]",1,"found ['Verdict', 'Metrics', 'Per-group', 'Small groups', 'Limits']"
@@ -85,6 +302,47 @@ ai-platform/bias-fairness-check,agent-no-thresholds-not-a-pass,"fairness-report.
 ai-platform/bias-fairness-check,agent-no-thresholds-not-a-pass,"fairness-report.md: contains:""[TO BE BASELINED — owner: Responsible AI lead]""",1,found: [TO BE BASELINED — owner: Responsible AI lead]
 ai-platform/bias-fairness-check,agent-no-thresholds-not-a-pass,"fairness-report.md: contains:""highest selection rate""",1,found: highest selection rate
 ai-platform/bias-fairness-check,agent-no-thresholds-not-a-pass,fairness-report.md: no_unowned_tbd,1,0 unowned of 9 markers
+ai-platform/conversation-design,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/conversation-design,agent-happy-path,exists:routing.csv,1,evals/results/agent-dry/runs/ai-platform__conversation-design/agent-happy-path/routing.csv exists
+ai-platform/conversation-design,agent-happy-path,"conversation-spec.md: contains:""Coverage: 19/24 (79.2%) reach an intent at score >= 0.25; 5 go to fallback.""",1,found: Coverage: 19/24 (79.2%) reach an intent at score >= 0.25; 5 go to fallback.
+ai-platform/conversation-design,agent-happy-path,"conversation-spec.md: contains:""Accuracy: 20/23 (87.0%) of labelled utterances routed correctly.""",1,found: Accuracy: 20/23 (87.0%) of labelled utterances routed correctly.
+ai-platform/conversation-design,agent-happy-path,"intent-quality.csv: contains:""explain_bill,5,0.667,1.000,none""",1,"found: explain_bill,5,0.667,1.000,none"
+ai-platform/conversation-design,agent-happy-path,"intent-quality.csv: contains:""check_balance,5,1.000,0.667,none""",1,"found: check_balance,5,1.000,0.667,none"
+ai-platform/conversation-design,agent-happy-path,"conversation-spec.md: contains:""Confusable: `pay_bill` and `payment_plan`""",1,found: Confusable: `pay_bill` and `payment_plan`
+ai-platform/conversation-design,agent-happy-path,"routing.csv: contains:""I moved house last week and need to close my account and open a new one at my ne…""",1,found: I moved house last week and need to close my account and open a new one at my ne…
+ai-platform/conversation-design,agent-happy-path,conversation-spec.md: mermaid_parses,1,1 block(s) ok
+ai-platform/conversation-design,agent-missing-utterances,exit:2,1,"exit code 2, expected 2"
+ai-platform/conversation-design,agent-missing-utterances,needs_input:utterances,1,missing inputs named: ['utterances']
+ai-platform/conversation-design,agent-partial-persona-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/conversation-design,agent-partial-persona-not-invented,"conversation-spec.md: contains:""Escalation channel: [TO BE BASELINED — owner: Conversation designer].""",1,found: Escalation channel: [TO BE BASELINED — owner: Conversation designer].
+ai-platform/conversation-design,agent-partial-persona-not-invented,"conversation-spec.md: contains:""Persona keys missing: reading_level, escalation_channel, disallowed_topics""",1,"found: Persona keys missing: reading_level, escalation_channel, disallowed_topics"
+ai-platform/conversation-design,agent-partial-persona-not-invented,"conversation-spec.md: contains:""Gate: none set (no min_accuracy).""",1,found: Gate: none set (no min_accuracy).
+ai-platform/conversation-design,agent-partial-persona-not-invented,conversation-spec.md: no_unowned_tbd,1,0 unowned of 6 markers
+ai-platform/conversation-design,agent-accuracy-gate-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/conversation-design,agent-accuracy-gate-exits-1,"conversation-spec.md: contains:""Gate: FAILED — accuracy 0.870 is below min_accuracy 0.900 (exit 1).""",1,found: Gate: FAILED — accuracy 0.870 is below min_accuracy 0.900 (exit 1).
+ai-platform/conversation-design,agent-accuracy-gate-exits-1,"routing.csv: contains:""i was charged twice this month,fallback,0.227,dispute_charge,no,dispute_charge""",1,"found: i was charged twice this month,fallback,0.227,dispute_charge,no,dispute_charge"
+ai-platform/data-contract-validator,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/data-contract-validator,agent-happy-path,exists:violations.csv,1,evals/results/agent-dry/runs/ai-platform__data-contract-validator/agent-happy-path/violations.csv exists
+ai-platform/data-contract-validator,agent-happy-path,"violations.csv: contains:""status,allowed,warn,2,0.250,refunded | pending-review,[TO BE BASELINED — owner: Data owner],one of open|paid|disputed""",1,"found: status,allowed,warn,2,0.250,refunded | pending-review,[TO BE BASELINED — owner: Data owner],one of open|paid|disputed"
+ai-platform/data-contract-validator,agent-happy-path,"violations.csv: contains:""answer,null_rate,warn,1,0.125,,Knowledge content owner,null rate <= 0.100""",1,"found: answer,null_rate,warn,1,0.125,,Knowledge content owner,null rate <= 0.100"
+ai-platform/data-contract-validator,agent-happy-path,"profile.csv: contains:""amount,number,0.000,8,18.99,1500.00""",1,"found: amount,number,0.000,8,18.99,1500.00"
+ai-platform/data-contract-validator,agent-happy-path,"contract-report.md: contains:""Verdict: **PASS WITH WARNINGS** — 0 error-severity and 3 warn-severity violations.""",1,found: Verdict: **PASS WITH WARNINGS** — 0 error-severity and 3 warn-severity violations.
+ai-platform/data-contract-validator,agent-happy-path,"contract-report.md: contains:""Freshness: passed: newest 2026-09-18, age 2 days.""",1,"found: Freshness: passed: newest 2026-09-18, age 2 days."
+ai-platform/data-contract-validator,agent-missing-data,exit:2,1,"exit code 2, expected 2"
+ai-platform/data-contract-validator,agent-missing-data,needs_input:data,1,missing inputs named: ['data']
+ai-platform/data-contract-validator,agent-freshness-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/data-contract-validator,agent-freshness-not-invented,"contract-report.md: contains:""Freshness: not checked: as_of and max_age_days [TO BE BASELINED — owner: Data owner].""",1,found: Freshness: not checked: as_of and max_age_days [TO BE BASELINED — owner: Data owner].
+ai-platform/data-contract-validator,agent-freshness-not-invented,contract-report.md: no_unowned_tbd,1,0 unowned of 4 markers
+ai-platform/data-contract-validator,agent-gate-errors-exit-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/data-contract-validator,agent-gate-errors-exit-1,"violations.csv: contains:""invoice_id,unique,error,1,0.167,INV-000202,Billing data steward,values unique""",1,"found: invoice_id,unique,error,1,0.167,INV-000202,Billing data steward,values unique"
+ai-platform/data-contract-validator,agent-gate-errors-exit-1,"violations.csv: contains:""customer_email,null_rate,error,3,0.500,,Billing data steward,null rate <= 0.200""",1,"found: customer_email,null_rate,error,3,0.500,,Billing data steward,null rate <= 0.200"
+ai-platform/data-contract-validator,agent-gate-errors-exit-1,"violations.csv: contains:""amount,max,error,1,0.167,12500.00,Finance systems lead,<= 10000""",1,"found: amount,max,error,1,0.167,12500.00,Finance systems lead,<= 10000"
+ai-platform/data-contract-validator,agent-gate-errors-exit-1,"contract-report.md: contains:""Verdict: **FAIL** — 11 error-severity and 2 warn-severity violations.""",1,found: Verdict: **FAIL** — 11 error-severity and 2 warn-severity violations.
+ai-platform/data-contract-validator,agent-gate-errors-exit-1,"contract-report.md: contains:""Freshness: passed: newest 2026-09-13, age 7 days.""",1,"found: Freshness: passed: newest 2026-09-13, age 7 days."
+ai-platform/data-contract-validator,agent-odcs-yaml-contract,exit:1,1,"exit code 1, expected 1"
+ai-platform/data-contract-validator,agent-odcs-yaml-contract,"violations.csv: contains:""currency,allowed,error,1,0.167,usd,[TO BE BASELINED — owner: Data owner],one of USD|EUR|GBP""",1,"found: currency,allowed,error,1,0.167,usd,[TO BE BASELINED — owner: Data owner],one of USD|EUR|GBP"
+ai-platform/data-contract-validator,agent-odcs-yaml-contract,"contract-report.md: contains:""`question`: quality metric `missingValues` not evaluated (outside the supported subset)""",1,found: `question`: quality metric `missingValues` not evaluated (outside the supported subset)
+ai-platform/data-contract-validator,agent-odcs-yaml-contract,contract-report.md: no_unowned_tbd,1,0 unowned of 13 markers
 ai-platform/data-readiness-assessment,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/data-readiness-assessment,agent-happy-path,exists:readiness.json,1,evals/results/agent-dry/runs/ai-platform__data-readiness-assessment/agent-happy-path/readiness.json exists
 ai-platform/data-readiness-assessment,agent-happy-path,"readiness.md: contains:""**Ready** — 6 pass, 0 fail, 0 TBD""",1,"found: **Ready** — 6 pass, 0 fail, 0 TBD"
@@ -102,6 +360,65 @@ ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,exit:
 ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,"readiness.md: contains:""**Ready-with-gaps**""",1,found: **Ready-with-gaps**
 ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,"readiness.md: contains:""| completeness | [TO BE BASELINED — owner: Data owner]""",1,found: | completeness | [TO BE BASELINED — owner: Data owner]
 ai-platform/data-readiness-assessment,agent-absent-thresholds-not-invented,readiness.md: no_unowned_tbd,1,0 unowned of 8 markers
+ai-platform/dpia,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/dpia,agent-happy-path,"screening.json: contains:""\""criteria_met\"": 5""",1,"found: ""criteria_met"": 5"
+ai-platform/dpia,agent-happy-path,"screening.json: contains:""\""required\"": true""",1,"found: ""required"": true"
+ai-platform/dpia,agent-happy-path,"dpia-risks.csv: contains:""Re-identification from combined billing and chat data,risks input,3,3,9,high""",1,"found: Re-identification from combined billing and chat data,risks input,3,3,9,high"
+ai-platform/dpia,agent-happy-path,"dpia-risks.csv: contains:""Chat transcripts kept longer than needed,risks input,3,1,3,medium""",1,"found: Chat transcripts kept longer than needed,risks input,3,1,3,medium"
+ai-platform/dpia,agent-happy-path,"dpia-risks.csv: contains:""pii_inventory:date_of_birth""",1,found: pii_inventory:date_of_birth
+ai-platform/dpia,agent-happy-path,"dpia.md: contains:""Prior consultation required (Art. 36(1))""",1,found: Prior consultation required (Art. 36(1))
+ai-platform/dpia,agent-happy-path,dpia.md: no_unowned_tbd,1,0 unowned of 25 markers
+ai-platform/dpia,agent-missing-processing,exit:2,1,"exit code 2, expected 2"
+ai-platform/dpia,agent-missing-processing,needs_input:processing,1,missing inputs named: ['processing']
+ai-platform/dpia,agent-minimal-facts-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/dpia,agent-minimal-facts-not-invented,"screening.json: contains:""\""criteria_unanswered\"": 8""",1,"found: ""criteria_unanswered"": 8"
+ai-platform/dpia,agent-minimal-facts-not-invented,"dpia.md: contains:""| Lawful basis (Art. 6; Art. 9 condition if special categories) | [TO BE BASELINED — owner: Data protection officer] |""",1,found: | Lawful basis (Art. 6; Art. 9 condition if special categories) | [TO BE BASELINED — owner: Data protection officer] |
+ai-platform/dpia,agent-minimal-facts-not-invented,"dpia-risks.csv: contains:""Risks to rights and freedoms not yet identified""",1,found: Risks to rights and freedoms not yet identified
+ai-platform/dpia,agent-minimal-facts-not-invented,dpia.md: no_unowned_tbd,1,0 unowned of 42 markers
+ai-platform/dpia,agent-gate-high-residual-no-measure,exit:1,1,"exit code 1, expected 1"
+ai-platform/dpia,agent-gate-high-residual-no-measure,"dpia.md: contains:""GATE — cannot sign off""",1,found: GATE — cannot sign off
+ai-platform/dpia,agent-gate-high-residual-no-measure,"screening.json: contains:""\""signoff_status\"": \""blocked\""""",1,"found: ""signoff_status"": ""blocked"""
+ai-platform/dpia,agent-gate-high-residual-no-measure,"dpia-risks.csv: contains:""Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high""",1,"found: Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high"
+ai-platform/drift-monitor,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/drift-monitor,agent-happy-path,exists:drift.csv,1,evals/results/agent-dry/runs/ai-platform__drift-monitor/agent-happy-path/drift.csv exists
+ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok""",1,"found: confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok"
+ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""intent,categorical,400,300,0.0166,,0.4147,0.000,0.000,ok""",1,"found: intent,categorical,400,300,0.0166,,0.4147,0.000,0.000,ok"
+ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""account_tier,categorical,380,287,0.0263,,0.1178,0.050,0.043,ok""",1,"found: account_tier,categorical,380,287,0.0263,,0.1178,0.050,0.043,ok"
+ai-platform/drift-monitor,agent-happy-path,"drift-report.md: contains:""**No feature in alert.**""",1,found: **No feature in alert.**
+ai-platform/drift-monitor,agent-happy-path,"drift-report.md: contains:""Thresholds (from the supplied thresholds file)""",1,found: Thresholds (from the supplied thresholds file)
+ai-platform/drift-monitor,agent-missing-current,exit:2,1,"exit code 2, expected 2"
+ai-platform/drift-monitor,agent-missing-current,needs_input:current,1,missing inputs named: ['current']
+ai-platform/drift-monitor,agent-no-thresholds-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/drift-monitor,agent-no-thresholds-not-invented,"drift-report.md: contains:""Agreed thresholds for this system: [TO BE BASELINED — owner: ML engineering lead]""",1,found: Agreed thresholds for this system: [TO BE BASELINED — owner: ML engineering lead]
+ai-platform/drift-monitor,agent-no-thresholds-not-invented,"drift-report.md: contains:""Missing-rate change threshold: [TO BE BASELINED — owner: Data owner]""",1,found: Missing-rate change threshold: [TO BE BASELINED — owner: Data owner]
+ai-platform/drift-monitor,agent-no-thresholds-not-invented,drift-report.md: no_unowned_tbd,1,0 unowned of 2 markers
+ai-platform/drift-monitor,agent-drift-alert-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift.csv: contains:""confidence,numeric,400,300,2.5567,0.5600,<0.0001,0.000,0.000,alert""",1,"found: confidence,numeric,400,300,2.5567,0.5600,<0.0001,0.000,0.000,alert"
+ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift.csv: contains:""request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn""",1,"found: request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn"
+ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift-report.md: contains:""Categories unseen in the baseline: dispute.""",1,found: Categories unseen in the baseline: dispute.
+ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift-report.md: contains:""**ALERT — drift beyond the alert threshold.**""",1,found: **ALERT — drift beyond the alert threshold.**
+ai-platform/drift-monitor,agent-small-window-insufficient-data,exit:0,1,"exit code 0, expected 0"
+ai-platform/drift-monitor,agent-small-window-insufficient-data,drift.csv: csv_rows:status~^insufficient-data$,1,0 of 5 rows not matching '^insufficient-data$' in 'status'
+ai-platform/drift-monitor,agent-small-window-insufficient-data,"drift-report.md: contains:""insufficient-data 5""",1,found: insufficient-data 5
+ai-platform/eu-ai-act-classifier,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/eu-ai-act-classifier,agent-happy-path,"classification.json: contains:""\""tier\"": \""limited-transparency\""""",1,"found: ""tier"": ""limited-transparency"""
+ai-platform/eu-ai-act-classifier,agent-happy-path,"classification.json: contains:""\""obligations_in_force\"": 2""",1,"found: ""obligations_in_force"": 2"
+ai-platform/eu-ai-act-classifier,agent-happy-path,"obligations.csv: contains:""TR-50-2,Art. 50(2),""",1,"found: TR-50-2,Art. 50(2),"
+ai-platform/eu-ai-act-classifier,agent-happy-path,"obligations.csv: contains:"",2026-12-02,provider,AI Compliance Lead (fictional),open,no,""",1,"found: ,2026-12-02,provider,AI Compliance Lead (fictional),open,no,"
+ai-platform/eu-ai-act-classifier,agent-happy-path,"ai-act-report.md: contains:""| AI-LIT | Art. 4 |""",1,found: | AI-LIT | Art. 4 |
+ai-platform/eu-ai-act-classifier,agent-happy-path,"ai-act-report.md: sections:[""Summary"",""Classification"",""Obligations"",""Open questions"",""Limits""]",1,"found ['Summary', 'Classification', 'Obligations', 'Open questions', 'Limits']"
+ai-platform/eu-ai-act-classifier,agent-missing-system,exit:2,1,"exit code 2, expected 2"
+ai-platform/eu-ai-act-classifier,agent-missing-system,needs_input:system,1,missing inputs named: ['system']
+ai-platform/eu-ai-act-classifier,agent-blank-answers-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/eu-ai-act-classifier,agent-blank-answers-not-invented,"classification.json: contains:""\""tier\"": \""undetermined\""""",1,"found: ""tier"": ""undetermined"""
+ai-platform/eu-ai-act-classifier,agent-blank-answers-not-invented,"classification.json: contains:""\""provisional_tier\"": \""limited-transparency\""""",1,"found: ""provisional_tier"": ""limited-transparency"""
+ai-platform/eu-ai-act-classifier,agent-blank-answers-not-invented,"ai-act-report.md: contains:""| a3_essential_services | Annex III point 5 |""",1,found: | a3_essential_services | Annex III point 5 |
+ai-platform/eu-ai-act-classifier,agent-blank-answers-not-invented,"ai-act-report.md: contains:""2 unanswered question(s) could change the tier""",1,found: 2 unanswered question(s) could change the tier
+ai-platform/eu-ai-act-classifier,agent-blank-answers-not-invented,ai-act-report.md: no_unowned_tbd,1,0 unowned of 7 markers
+ai-platform/eu-ai-act-classifier,agent-prohibited-gate-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/eu-ai-act-classifier,agent-prohibited-gate-exits-1,"classification.json: contains:""\""tier\"": \""prohibited\""""",1,"found: ""tier"": ""prohibited"""
+ai-platform/eu-ai-act-classifier,agent-prohibited-gate-exits-1,"obligations.csv: contains:""PRO-5-1-F,Art. 5(1)(f)""",1,"found: PRO-5-1-F,Art. 5(1)(f)"
+ai-platform/eu-ai-act-classifier,agent-prohibited-gate-exits-1,"ai-act-report.md: contains:""Gate: FAIL (exit 1)""",1,found: Gate: FAIL (exit 1)
 ai-platform/eval-engineering-runner,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/eval-engineering-runner,agent-happy-path,exists:eval-clean.jsonl,1,evals/results/agent-dry/runs/ai-platform__eval-engineering-runner/agent-happy-path/eval-clean.jsonl exists
 ai-platform/eval-engineering-runner,agent-happy-path,"eval-audit.md: sections:[""Verdict"",""Coverage"",""Quality issues"",""Recommendations""]",1,"found ['Verdict', 'Coverage', 'Quality issues', 'Recommendations']"
@@ -294,6 +611,25 @@ ai-platform/pii-data-inventory,agent-no-policy-handling-not-invented,"pii-report
 ai-platform/pii-data-inventory,agent-strict-policy-gap-exits-1,exit:1,1,"exit code 1, expected 1"
 ai-platform/pii-data-inventory,agent-strict-policy-gap-exits-1,"pii-report.md: contains:""`--strict` was set: the run fails (exit 1).""",1,found: `--strict` was set: the run fails (exit 1).
 ai-platform/pii-data-inventory,agent-strict-policy-gap-exits-1,"pii-inventory.csv: contains:""phone,phone,1.000,8,allow""",1,"found: phone,phone,1.000,8,allow"
+ai-platform/program-raid-status,agent-happy-path,exit:0,1,"exit code 0, expected 0"
+ai-platform/program-raid-status,agent-happy-path,"status-report.md: contains:""**Overall RAG: RED**""",1,found: **Overall RAG: RED**
+ai-platform/program-raid-status,agent-happy-path,"status-report.md: contains:""M1 → M2 → M3 → M5 → M7 = 85 days""",1,found: M1 → M2 → M3 → M5 → M7 = 85 days
+ai-platform/program-raid-status,agent-happy-path,"status.csv: contains:""M3,RAG index on billing knowledge base,2026-09-25,2026-10-23,28,red,yes,in_progress""",1,"found: M3,RAG index on billing knowledge base,2026-09-25,2026-10-23,28,red,yes,in_progress"
+ai-platform/program-raid-status,agent-happy-path,"status.csv: contains:""M6,Agent desktop integration,2026-10-30,2026-11-06,7,amber,no,in_progress""",1,"found: M6,Agent desktop integration,2026-10-30,2026-11-06,7,amber,no,in_progress"
+ai-platform/program-raid-status,agent-happy-path,"raid-actions.csv: contains:""I1,issue,20,Integration lead,2026-10-02,14,36,""",1,"found: I1,issue,20,Integration lead,2026-10-02,14,36,"
+ai-platform/program-raid-status,agent-happy-path,status-report.md: mermaid_parses,1,1 block(s) ok
+ai-platform/program-raid-status,agent-missing-as-of,exit:2,1,"exit code 2, expected 2"
+ai-platform/program-raid-status,agent-missing-as-of,needs_input:as_of,1,missing inputs named: ['as_of']
+ai-platform/program-raid-status,agent-unowned-not-invented,exit:0,1,"exit code 0, expected 0"
+ai-platform/program-raid-status,agent-unowned-not-invented,status-report.md: no_unowned_tbd,1,0 unowned of 5 markers
+ai-platform/program-raid-status,agent-unowned-not-invented,"raid-actions.csv: contains:""R3,risk,15,[TO BE BASELINED — owner: Program manager],2026-10-20,0,45,Assign an owner; Mask notes before indexing""",1,"found: R3,risk,15,[TO BE BASELINED — owner: Program manager],2026-10-20,0,45,Assign an owner; Mask notes before indexing"
+ai-platform/program-raid-status,agent-unowned-not-invented,"status-report.md: contains:""Name an owner for R3""",1,found: Name an owner for R3
+ai-platform/program-raid-status,agent-strict-red-exits-1,exit:1,1,"exit code 1, expected 1"
+ai-platform/program-raid-status,agent-strict-red-exits-1,"status-report.md: contains:""`--strict` was set: the run fails (exit 1) because overall RAG is red.""",1,found: `--strict` was set: the run fails (exit 1) because overall RAG is red.
+ai-platform/program-raid-status,agent-strict-amber-passes,exit:0,1,"exit code 0, expected 0"
+ai-platform/program-raid-status,agent-strict-amber-passes,"status-report.md: contains:""**Overall RAG: AMBER**""",1,found: **Overall RAG: AMBER**
+ai-platform/program-raid-status,agent-strict-amber-passes,"status.csv: contains:""M3,Agent desktop integration,2026-11-20,2026-11-30,10,amber,no,in_progress""",1,"found: M3,Agent desktop integration,2026-11-20,2026-11-30,10,amber,no,in_progress"
+ai-platform/program-raid-status,agent-dependency-cycle-exits-1,exit:1,1,"exit code 1, expected 1"
 ai-platform/prompt-spec,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/prompt-spec,agent-happy-path,exists:prompt.md,1,evals/results/agent-dry/runs/ai-platform__prompt-spec/agent-happy-path/prompt.md exists
 ai-platform/prompt-spec,agent-happy-path,"prompt-lint.json: contains:""status"": ""pass""",1,"found: status"": ""pass"
@@ -440,7 +776,7 @@ build/product-spec-prd,agent-happy-path,exists:prd-final.md,1,evals/results/agen
 build/product-spec-prd,agent-missing-brief,exit:2,1,"exit code 2, expected 2"
 build/product-spec-prd,agent-missing-brief,needs_input:brief,1,missing inputs named: ['brief']
 build/product-spec-prd,agent-thin-brief-not-invented,exit:0,1,"exit code 0, expected 0"
-build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: contains:""| G1 (primary) | [TO BE BASELINED — owner: ___] |""",1,found: | G1 (primary) | [TO BE BASELINED — owner: ___] |
+build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: contains:""| G1 (primary) | [TO BE BASELINED — owner: Product owner] |""",1,found: | G1 (primary) | [TO BE BASELINED — owner: Product owner] |
 build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: contains:""(no evidence supplied — assumption)""",1,found: (no evidence supplied — assumption)
 build/product-spec-prd,agent-thin-brief-not-invented,"PRD.md: sections:[""Problem"",""Goals"",""Non-goals"",""Metrics"",""Phases""]",1,"found ['Problem', 'Goals', 'Non-goals', 'Metrics', 'Phases']"
 build/project-bootstrap,agent-happy-path,exit:0,1,"exit code 0, expected 0"
@@ -482,7 +818,7 @@ build/spec-to-plan,agent-missing-section,exit:2,1,"exit code 2, expected 2"
 build/spec-to-plan,agent-missing-section,needs_input:section,1,missing inputs named: ['section']
 build/spec-to-plan,agent-thin-section-not-invented,exit:0,1,"exit code 0, expected 0"
 build/spec-to-plan,agent-thin-section-not-invented,tasks.csv: csv_rows:test~^(\[TO BE BASELINED|\S),1,0 of 2 rows not matching '^(\\[TO BE BASELINED|\\S)' in 'test'
-build/spec-to-plan,agent-thin-section-not-invented,"tasks.csv: contains:""[TO BE BASELINED — owner: ___]""",1,found: [TO BE BASELINED — owner: ___]
+build/spec-to-plan,agent-thin-section-not-invented,"tasks.csv: contains:""[TO BE BASELINED — owner: Tech lead]""",1,found: [TO BE BASELINED — owner: Tech lead]
 build/spec-to-plan,agent-thin-section-not-invented,"plan.md: contains:""Acceptance: [TO BE BASELINED""",1,found: Acceptance: [TO BE BASELINED
 build/supabase-schema-rls,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 build/supabase-schema-rls,agent-happy-path,"rls-lint.txt: contains:""0 errors""",1,found: 0 errors
@@ -640,7 +976,7 @@ presales/discovery-interview,agent-happy-path,"five-closes.md: contains:""Peak f
 presales/discovery-interview,agent-missing-vertical,exit:2,1,"exit code 2, expected 2"
 presales/discovery-interview,agent-missing-vertical,needs_input:vertical,1,missing inputs named: ['vertical']
 presales/discovery-interview,agent-thin-notes-closes-marked-tbd,exit:0,1,"exit code 0, expected 0"
-presales/discovery-interview,agent-thin-notes-closes-marked-tbd,"five-closes.md: contains:""TBD — owner: ___""",1,found: TBD — owner: ___
+presales/discovery-interview,agent-thin-notes-closes-marked-tbd,"five-closes.md: contains:""TBD — owner: Engagement lead""",1,found: TBD — owner: Engagement lead
 presales/discovery-interview,agent-thin-notes-closes-marked-tbd,"five-closes.md: contains:""0 of 5 closes""",1,found: 0 of 5 closes
 presales/discovery-interview,agent-thin-notes-closes-marked-tbd,pain-matrix.csv: csv_rows:evidence!empty,1,0 of 1 rows empty in 'evidence'
 presales/effort-estimator,agent-happy-path,exit:0,1,"exit code 0, expected 0"

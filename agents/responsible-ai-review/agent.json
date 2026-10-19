@@ -1,0 +1,36 @@
+{
+  "name": "responsible-ai-review",
+  "version": "0.1.0",
+  "description": "Responsible AI review of one system: EU AI Act tier and obligations → DPIA → NIST AI RMF evidence against those obligations → threat model → user transparency notice → (Responsible AI lead approves).",
+  "adlc_stage": "govern",
+  "inputs": [
+    {"name": "system", "type": "csv", "required": true, "from": "AI Act questionnaire (layout: skills/ai-platform/eu-ai-act-classifier/assets/system-questionnaire.csv)"},
+    {"name": "obligation_evidence", "type": "csv", "required": false, "from": "obligation_id,status,evidence,owner for AI Act obligations"},
+    {"name": "as_of", "type": "string", "required": true, "from": "review date YYYY-MM-DD"},
+    {"name": "processing", "type": "csv", "required": true, "from": "processing description (layout: skills/ai-platform/dpia/assets/processing-template.csv)"},
+    {"name": "pii_inventory", "type": "csv", "required": false, "from": "pii-inventory.csv from pii-data-inventory"},
+    {"name": "risks", "type": "csv", "required": false, "from": "privacy risk register"},
+    {"name": "controls_evidence", "type": "csv", "required": true, "from": "NIST AI RMF evidence register subcategory_id,status,evidence,owner"},
+    {"name": "min_coverage", "type": "string", "required": false, "from": "minimum NIST coverage set by the AI risk lead"},
+    {"name": "components", "type": "csv", "required": true, "from": "architecture components (layout: skills/ai-platform/ai-threat-model/assets/components-template.csv)"},
+    {"name": "flows", "type": "csv", "required": true, "from": "data flows between components"},
+    {"name": "security_controls", "type": "csv", "required": false, "from": "control register for threats"},
+    {"name": "max_open_high", "type": "string", "required": false, "from": "allowed open high threats"},
+    {"name": "facts", "type": "csv", "required": true, "from": "system facts for the user notice (layout: skills/ai-platform/ai-transparency-notice/assets/facts-template.csv)"}
+  ],
+  "config": {"provider": "auto", "on_fail": "stop"},
+  "steps": [
+    {"id": "classify", "skill": "ai-platform/eu-ai-act-classifier", "gate": true,
+     "inputs": {"system": "$in.system", "evidence": "$in.obligation_evidence", "as_of": "$in.as_of"}},
+    {"id": "privacy", "skill": "ai-platform/dpia", "gate": true,
+     "inputs": {"processing": "$in.processing", "pii_inventory": "$in.pii_inventory", "risks": "$in.risks"}},
+    {"id": "controls", "skill": "ai-platform/ai-controls-mapping", "gate": true,
+     "inputs": {"evidence": "$in.controls_evidence", "min_coverage": "$in.min_coverage", "obligations": "$steps.classify:obligations.csv"}},
+    {"id": "threats", "skill": "ai-platform/ai-threat-model", "gate": true,
+     "inputs": {"components": "$in.components", "flows": "$in.flows", "controls": "$in.security_controls", "max_open_high": "$in.max_open_high"}},
+    {"id": "notice", "skill": "ai-platform/ai-transparency-notice",
+     "inputs": {"facts": "$in.facts", "classification": "$steps.classify:classification.json"}},
+    {"id": "rai-signoff", "approval": {"role": "Responsible AI lead", "note": "Confirm the tier, the DPIA residual risks, the control gaps and the open high threats before the notice ships."}}
+  ],
+  "outputs": ["$steps.classify:ai-act-report.md", "$steps.privacy:dpia.md", "$steps.controls:controls-report.md", "$steps.threats:threat-report.md", "$steps.notice:notice.md", "$steps.notice:system-card.md"]
+}

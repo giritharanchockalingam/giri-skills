@@ -1,9 +1,10 @@
 {
   "name": "ai-data-engineer",
   "title": "AI Data Engineer",
-  "description": "Proves the data is there and usable, finds the PII, and builds training sets.",
+  "description": "Proves the data is there and usable, enforces its contract, finds the PII, and builds training sets.",
   "skills": [
     "ai-platform/data-readiness-assessment",
+    "ai-platform/data-contract-validator",
     "ai-platform/pii-data-inventory",
     "ai-platform/finetune-dataset-builder"
   ],

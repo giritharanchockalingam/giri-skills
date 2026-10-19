@@ -28,6 +28,70 @@
   ]
  },
  {
+  "name": "ai-platform-team",
+  "title": "AI Platform Team",
+  "description": "Runs AI in production for many products: platform, reliability, drift, cost and security.",
+  "members": [
+   {
+    "role": "mlops-platform-engineer"
+   },
+   {
+    "role": "ai-ops-sre",
+    "label": "AI Ops lead"
+   },
+   {
+    "role": "ai-finops-analyst"
+   },
+   {
+    "role": "data-scientist"
+   },
+   {
+    "role": "ai-security-engineer"
+   }
+  ],
+  "playbooks": [
+   "ai-ops-health-check"
+  ]
+ },
+ {
+  "name": "ai-product-squad",
+  "title": "AI Product Squad",
+  "description": "A complete cross-functional team that owns an AI product across all 11 ADLC stages, from strategy to continuous improvement.",
+  "members": [
+   {
+    "role": "ai-product-manager"
+   },
+   {
+    "role": "ai-strategist"
+   },
+   {
+    "role": "ai-data-engineer"
+   },
+   {
+    "role": "ai-solution-architect"
+   },
+   {
+    "role": "llm-agent-engineer"
+   },
+   {
+    "role": "ai-quality-red-team"
+   },
+   {
+    "role": "ai-risk-release-lead"
+   },
+   {
+    "role": "ai-ops-sre"
+   },
+   {
+    "role": "conversation-ux-designer"
+   }
+  ],
+  "playbooks": [
+   "ai-use-case-to-release",
+   "ai-ops-health-check"
+  ]
+ },
+ {
   "name": "presales-bid-team",
   "title": "Presales Bid Team",
   "description": "Wins the deal: account context, discovery, a priced and value-backed solution, and the proposal.",
@@ -46,6 +110,29 @@
   "playbooks": [
    "presales-pursuit",
    "estimate-and-value"
+  ]
+ },
+ {
+  "name": "responsible-ai-board",
+  "title": "Responsible AI Board",
+  "description": "Reviews an AI system before launch: legal tier, privacy, controls, security threats and what users are told.",
+  "members": [
+   {
+    "role": "responsible-ai-lead",
+    "label": "Responsible AI lead"
+   },
+   {
+    "role": "ai-privacy-compliance-officer"
+   },
+   {
+    "role": "ai-security-engineer"
+   },
+   {
+    "role": "ai-risk-release-lead"
+   }
+  ],
+  "playbooks": [
+   "responsible-ai-review"
   ]
  }
 ]

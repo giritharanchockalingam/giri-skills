@@ -1,0 +1,26 @@
+{
+  "name": "ai-platform-team",
+  "title": "AI Platform Team",
+  "description": "Runs AI in production for many products: platform, reliability, drift, cost and security.",
+  "members": [
+    {
+      "role": "mlops-platform-engineer"
+    },
+    {
+      "role": "ai-ops-sre",
+      "label": "AI Ops lead"
+    },
+    {
+      "role": "ai-finops-analyst"
+    },
+    {
+      "role": "data-scientist"
+    },
+    {
+      "role": "ai-security-engineer"
+    }
+  ],
+  "playbooks": [
+    "ai-ops-health-check"
+  ]
+}

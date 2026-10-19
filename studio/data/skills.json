@@ -1066,6 +1066,602 @@
   "bodyMd": "\n# AI-BOM Licence Check\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-bom-license-check --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-bom-license-check`). Report the `run.json` results; do not hand-write the deliverables the script produces (`aibom.csv`, `aibom.json`, `license-report.md`). **Gate:** any denied component fails the run (exit 1) on purpose; all three outputs are still written. Not legal advice.\n\n## When to use\n- ADLC govern stage: before an AI release, or when a model, dataset, library or API is added or upgraded.\n- \"Can we ship this?\" — every component's licence against the organisation's licence policy, with the use it will be put to.\n- Producing an AI bill of materials in a CycloneDX-shaped JSON for a release record.\n- NOT for: vulnerability or dependency CVE scanning (`security-review`), finding personal data (`pii-data-inventory`), choosing a model (`model-selection`), a legal opinion on a licence (route to Legal counsel).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `bom` — `component,type,version,license,source_url,use` | yes | engineering lead; model cards, dataset cards, package metadata | run stops (exit 2), asks once |\n| `policy` — `license,decision,notes` | no | Legal counsel (start from `assets/license-policy.example.csv`) | every decision is `[TO BE BASELINED — owner: Legal counsel]` |\n| `system` — AI system name | no | product owner | report title TBD (owner: Engineering lead); JSON omits `metadata` |\n\n`type`: model | dataset | library | service. `use`: internal | commercial | redistribution. Other values stop the run (exit 2). Blank version or licence → TBD (owner: Engineering lead); a blank licence counts as unknown.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. List every model, dataset, library and hosted service the AI system depends on, with the licence string exactly as published and the intended use.\n3. Run the skill. `scripts/aibom.py` normalises each licence through `assets/license-catalog.csv` (`references/method.md`); unknown strings stay `unknown` and go to review.\n4. Decisions come only from the policy. Commercial or redistribution use of a non-commercial licence is denied; Llama's conditional commercial terms turn an allow into a review.\n5. Any deny fails the gate (exit 1). Resolve each Blocked row (replace, relicense, or change use), then re-run.\n6. Send Needs review rows to Legal counsel; ship the Obligations (notices, attribution, flow-down terms) with the release.\n7. Run the self-check.\n\n## Output\n- `aibom.csv` — `component, type, version, license_raw, spdx_id, decision, reason, flags, use`.\n- `aibom.json` — CycloneDX-shaped subset (specVersion 1.6): `components` typed `machine-learning-model` / `data` / `library`, `services`, `licenses` (SPDX `id` or `expression`; `name` for unknown), `externalReferences`, decision/flags in `properties`.\n- `license-report.md` — **Summary** (gate), **Components**, **Blocked**, **Needs review**, **Obligations**, **Method**.\n\n## Self-check\n- [ ] Every `spdx_id` is from the catalog or `unknown`; no licence guessed\n- [ ] Every decision came from the policy, a documented use rule, or is TBD for Legal counsel\n- [ ] Commercial/redistribution use of a non-commercial licence is denied and the run exits 1\n- [ ] `aibom.json` passes `--verify`; it is described as a CycloneDX-shaped subset, not a validated SBOM\n- [ ] Obligations listed for every shipped component; limits and \"not legal advice\" stated\n\n## References\n- `references/sources.md` — SPDX list 3.29.0, publisher licence pages, CycloneDX 1.6 schema, with dates checked\n- `references/method.md` — normalisation, expressions, decision and use rules, gate\n- `assets/license-catalog.csv` — SPDX/LicenseRef catalog with flags, obligations and source URL per row\n- `assets/license-policy.example.csv` — example policy for Legal counsel to replace\n- `scripts/aibom.py` — checker, CycloneDX writer and `--verify` (argparse; stdlib)\n"
  },
  {
+  "id": "ai-platform/ai-controls-mapping",
+  "domain": "ai-platform",
+  "stage": "govern",
+  "name": "ai-controls-mapping",
+  "description": "Use when the user needs to show how an AI system's controls line up with the NIST AI Risk Management Framework — \"map our evidence to NIST AI RMF\", \"what's our AI RMF coverage\", \"which GOVERN/MAP/MEASURE/MANAGE subcategories are gaps\", \"do we have evidence for our AI Act obligations\", \"AI controls gap analysis\". Produces controls.csv (all 72 AI RMF 1.0 subcategories with status, evidence, owner; unknown ids flagged as errors), coverage.json (per-function counts and coverage = (implemented + 0.5 x partial) / applicable) and controls-report.md, with an optional minimum-coverage gate (exit 1) and an optional check of open EU AI Act obligations against the evidence (skill's own crosswalk). Not for classifying a system under the AI Act (eu-ai-act-classifier) or building a risk register (ai-governance-risk).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "govern",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "evidence",
+     "type": "csv",
+     "required": true,
+     "from": "evidence register subcategory_id,status,evidence,owner (ids as in NIST AI 100-1, e.g. GOVERN 1.1; status implemented|partial|planned|not_applicable; layout: assets/evidence-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "min_coverage",
+     "type": "string",
+     "required": false,
+     "from": "fraction 0-1 set by the AI risk lead; overall coverage below it fails the run (exit 1); never defaulted",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "obligations",
+     "type": "csv",
+     "required": false,
+     "from": "obligations.csv from eu-ai-act-classifier; lists open AI Act obligations and whether their mapped NIST subcategories have evidence",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "map",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "map",
+     "kind": "script",
+     "cmd": "python3 -I scripts/map_controls.py --evidence {evidence} [--min-coverage {min_coverage}] [--obligations {obligations}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/controls.csv",
+     "checks": [
+      "exists",
+      "csv:[subcategory_id,function,category,status,evidence,owner,gap]",
+      "csv_rows:owner!empty",
+      "csv_rows:status~^(implemented|partial|planned|not_applicable|missing|error)$",
+      "cmd:\"python3 -I scripts/map_controls.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/coverage.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"subcategories_in_catalogue\\\": 72\"",
+      "cmd:\"python3 -I scripts/map_controls.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/controls-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Coverage by function\",\"Gaps\",\"Evidence register\",\"Method\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/map_controls.py --verify {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "evidence": "evals/fixtures/evidence-northwind.csv",
+     "min_coverage": "0.5",
+     "obligations": "evals/fixtures/obligations-northwind.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-controls-mapping-nist-ai-rmf-10\">AI Controls Mapping (NIST AI RMF 1.0)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-controls-mapping</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>controls.csv</code>, <code>coverage.json</code>, <code>controls-report.md</code>). With <code>min_coverage</code>, the skill is a gate: coverage below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC govern stage: before a release review, an audit or a customer assurance questionnaire that asks for NIST AI RMF alignment.</li><li>&quot;Where are our gaps across GOVERN, MAP, MEASURE and MANAGE, and who owns them?&quot;</li><li>After <code>eu-ai-act-classifier</code>: pass its <code>obligations.csv</code> to see which open AI Act obligations lack supporting evidence.</li><li>NOT for: AI Act tiering (<code>eu-ai-act-classifier</code>), risk registers and likelihood/impact scoring (<code>ai-governance-risk</code>), evaluating the AI system itself (<code>llm-eval-harness</code>, <code>red-team-suite</code>), certification or audit opinions.</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>evidence</code> — <code>subcategory_id,status,evidence,owner</code></td><td>yes</td><td>AI risk lead with control owners (copy <code>assets/evidence-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td>owner blank on a row</td><td>—</td><td>control owner</td><td><code>[TO BE BASELINED — owner: AI risk lead]</code></td></tr><tr><td>subcategory absent from <code>evidence</code></td><td>—</td><td>—</td><td>counted as <code>missing</code> (a gap)</td></tr><tr><td><code>min_coverage</code> — fraction 0-1</td><td>no</td><td>AI risk lead</td><td>no gate; coverage reported only</td></tr><tr><td><code>obligations</code> — classifier <code>obligations.csv</code></td><td>no</td><td><code>eu-ai-act-classifier</code> run</td><td>AI Act section omitted</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Copy <code>assets/evidence-template.csv</code> (all 72 ids). Owners fill status, evidence (document id or link) and owner. Mark <code>not_applicable</code> only with a justification in <code>evidence</code>.</li><li>Run the agent. <code>scripts/map_controls.py</code> joins the evidence to <code>assets/nist-ai-rmf-1.0.csv</code> and computes coverage per <code>references/crosswalk-method.md</code>.</li><li>With <code>obligations</code>, it looks up each open obligation in <code>assets/aiact-nist-crosswalk.csv</code> (the skill's own mapping) and reports supported, partial or none.</li><li>Exit 1 means coverage is below <code>min_coverage</code> or there are unknown ids. Fix the evidence; do not lower the threshold to pass.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>controls.csv</code> — <code>subcategory_id, function, category, status, evidence, owner, gap, note</code>: 72 rows in catalogue order, plus <code>ERROR</code> rows for unknown ids.</li><li><code>coverage.json</code> — per-function and overall counts (implemented, partial, planned, not_applicable, missing, applicable) and coverage; gate; gaps; flags; input errors; AI Act obligation support.</li><li><code>controls-report.md</code> — <strong>Summary</strong>, <strong>Coverage by function</strong>, <strong>Gaps</strong> (with the AI Act sub-section when given), <strong>Evidence register</strong>, <strong>Method</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] All 72 subcategories present; counts per function are 19/18/22/13</li><li>[ ] Coverage recomputes from controls.csv (<code>--verify</code> passes)</li><li>[ ] Every gap has an owner or the AI risk lead TBD marker</li><li>[ ] Claims without evidence and unjustified not_applicable rows are flagged</li><li>[ ] The crosswalk is labelled the skill's own mapping wherever it is shown</li><li>[ ] Limits stated: voluntary framework, self-assessed statuses, not compliance or an audit</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/sources.md</code> — NIST AI 100-1, Playbook, crosswalk list; URLs and check date</li><li><code>references/crosswalk-method.md</code> — coverage formula, gap rules, crosswalk rules and limits</li><li><code>assets/nist-ai-rmf-1.0.csv</code> — 72 subcategories with function, category and paraphrase</li><li><code>assets/evidence-template.csv</code> — input template</li><li><code>assets/aiact-nist-crosswalk.csv</code> — AI Act obligation → subcategory mapping (skill's own)</li><li><code>scripts/map_controls.py</code> — mapper and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "crosswalk-method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "aiact-nist-crosswalk.csv",
+    "evidence-template.csv",
+    "nist-ai-rmf-1.0.csv"
+   ],
+   "scripts": [
+    "map_controls.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-nist-gap-analysis",
+    "prompt": "Our auditors want to know how our billing chatbot lines up with the NIST AI RMF. We have a spreadsheet of controls. Where are the gaps?",
+    "expected": [
+     "Asks for the evidence register in subcategory_id,status,evidence,owner form (template in assets) rather than guessing statuses",
+     "Reports coverage per GOVERN, MAP, MEASURE and MANAGE with the (implemented + 0.5 x partial) / applicable formula",
+     "Lists gaps with owners, using [TO BE BASELINED — owner: AI risk lead] where none is named; says it is a self-assessment, not an audit"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Map the Northwind Billing Assistant evidence to NIST AI RMF, gate at 50% coverage, and check our open AI Act obligations.",
+    "expected": [
+     "Overall coverage exactly 0.500 (29 implemented, 12 partial of 70 applicable) so the 0.5 gate passes at the boundary; GOVERN 0.667, MAP 0.583, MEASURE 0.357, MANAGE 0.385",
+     "TR-50-1 and TR-50-2 map to MEASURE 2.8 (partial) via the skill's own crosswalk"
+    ]
+   },
+   {
+    "id": "agent-missing-evidence",
+    "prompt": "Give us our NIST AI RMF coverage; we're pretty mature, call it 80%.",
+    "expected": [
+     "Asks once for the evidence register; does not estimate coverage"
+    ]
+   },
+   {
+    "id": "agent-missing-owners-not-invented",
+    "prompt": "Some gaps don't have owners yet — just put the product manager on them.",
+    "expected": [
+     "Does not assign the product manager: gaps without an owner carry [TO BE BASELINED — owner: AI risk lead]; 27 gaps lack an owner; GOVERN 2.3 flagged as implemented without evidence"
+    ]
+   },
+   {
+    "id": "agent-below-min-coverage-exits-1",
+    "prompt": "Gate the release: we need at least 60% NIST AI RMF coverage.",
+    "expected": [
+     "Coverage 0.500 is below 0.600: gate FAIL, exit 1, full outputs written"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Map the Northwind Billing Assistant evidence to NIST AI RMF, gate at 50% coverage, and check our open AI Act obligations.",
+    "inputs": {
+     "evidence": "evals/fixtures/evidence-northwind.csv",
+     "min_coverage": "0.5",
+     "obligations": "evals/fixtures/obligations-northwind.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"| GOVERN | 10 | 4 | 2 | 1 | 2 | 18 | 0.667 |\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"| MEASURE | 6 | 3 | 2 | 1 | 10 | 21 | 0.357 |\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"| ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"| TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |\""
+     },
+     {
+      "file": "coverage.json",
+      "check": "contains:\"\\\"gate\\\": \\\"pass\\\"\""
+     },
+     {
+      "file": "controls.csv",
+      "check": "contains:\"MANAGE 4.3,MANAGE,MANAGE 4,partial,\""
+     }
+    ],
+    "expected": [
+     "Overall coverage exactly 0.500 (29 implemented, 12 partial of 70 applicable) so the 0.5 gate passes at the boundary; GOVERN 0.667, MAP 0.583, MEASURE 0.357, MANAGE 0.385",
+     "TR-50-1 and TR-50-2 map to MEASURE 2.8 (partial) via the skill's own crosswalk"
+    ]
+   },
+   {
+    "id": "agent-missing-evidence",
+    "prompt": "Give us our NIST AI RMF coverage; we're pretty mature, call it 80%.",
+    "inputs": {
+     "min_coverage": "0.8"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:evidence"
+    ],
+    "expected": [
+     "Asks once for the evidence register; does not estimate coverage"
+    ]
+   },
+   {
+    "id": "agent-missing-owners-not-invented",
+    "prompt": "Some gaps don't have owners yet — just put the product manager on them.",
+    "inputs": {
+     "evidence": "evals/fixtures/evidence-northwind.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "controls.csv",
+      "check": "contains:\"GOVERN 3.1,GOVERN,GOVERN 3,missing,,[TO BE BASELINED — owner: AI risk lead],yes\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"without a named owner: 27\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"implemented/partial with no evidence cited: GOVERN 2.3\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Does not assign the product manager: gaps without an owner carry [TO BE BASELINED — owner: AI risk lead]; 27 gaps lack an owner; GOVERN 2.3 flagged as implemented without evidence"
+    ]
+   },
+   {
+    "id": "agent-below-min-coverage-exits-1",
+    "prompt": "Gate the release: we need at least 60% NIST AI RMF coverage.",
+    "inputs": {
+     "evidence": "evals/fixtures/evidence-northwind.csv",
+     "min_coverage": "0.6",
+     "obligations": "evals/fixtures/obligations-credit.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"Gate: minimum coverage 0.600 — **FAIL (exit 1)**\""
+     },
+     {
+      "file": "coverage.json",
+      "check": "contains:\"\\\"gate\\\": \\\"fail\\\"\""
+     },
+     {
+      "file": "controls-report.md",
+      "check": "contains:\"| HR-DATA | Art. 10 | open | 2027-12-02 | MAP 4.1: partial; MEASURE 2.11: planned | partial |\""
+     }
+    ],
+    "expected": [
+     "Coverage 0.500 is below 0.600: gate FAIL, exit 1, full outputs written"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI Controls Mapping (NIST AI RMF 1.0)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-controls-mapping`). Report the `run.json` results; do not hand-write the deliverables the script produces (`controls.csv`, `coverage.json`, `controls-report.md`). With `min_coverage`, the skill is a gate: coverage below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.\n\n## When to use\n- ADLC govern stage: before a release review, an audit or a customer assurance questionnaire that asks for NIST AI RMF alignment.\n- \"Where are our gaps across GOVERN, MAP, MEASURE and MANAGE, and who owns them?\"\n- After `eu-ai-act-classifier`: pass its `obligations.csv` to see which open AI Act obligations lack supporting evidence.\n- NOT for: AI Act tiering (`eu-ai-act-classifier`), risk registers and likelihood/impact scoring (`ai-governance-risk`), evaluating the AI system itself (`llm-eval-harness`, `red-team-suite`), certification or audit opinions.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `evidence` — `subcategory_id,status,evidence,owner` | yes | AI risk lead with control owners (copy `assets/evidence-template.csv`) | run stops (exit 2), asks once |\n| owner blank on a row | — | control owner | `[TO BE BASELINED — owner: AI risk lead]` |\n| subcategory absent from `evidence` | — | — | counted as `missing` (a gap) |\n| `min_coverage` — fraction 0-1 | no | AI risk lead | no gate; coverage reported only |\n| `obligations` — classifier `obligations.csv` | no | `eu-ai-act-classifier` run | AI Act section omitted |\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Copy `assets/evidence-template.csv` (all 72 ids). Owners fill status, evidence (document id or link) and owner. Mark `not_applicable` only with a justification in `evidence`.\n3. Run the agent. `scripts/map_controls.py` joins the evidence to `assets/nist-ai-rmf-1.0.csv` and computes coverage per `references/crosswalk-method.md`.\n4. With `obligations`, it looks up each open obligation in `assets/aiact-nist-crosswalk.csv` (the skill's own mapping) and reports supported, partial or none.\n5. Exit 1 means coverage is below `min_coverage` or there are unknown ids. Fix the evidence; do not lower the threshold to pass.\n6. Run the self-check.\n\n## Output\n- `controls.csv` — `subcategory_id, function, category, status, evidence, owner, gap, note`: 72 rows in catalogue order, plus `ERROR` rows for unknown ids.\n- `coverage.json` — per-function and overall counts (implemented, partial, planned, not_applicable, missing, applicable) and coverage; gate; gaps; flags; input errors; AI Act obligation support.\n- `controls-report.md` — **Summary**, **Coverage by function**, **Gaps** (with the AI Act sub-section when given), **Evidence register**, **Method**.\n\n## Self-check\n- [ ] All 72 subcategories present; counts per function are 19/18/22/13\n- [ ] Coverage recomputes from controls.csv (`--verify` passes)\n- [ ] Every gap has an owner or the AI risk lead TBD marker\n- [ ] Claims without evidence and unjustified not_applicable rows are flagged\n- [ ] The crosswalk is labelled the skill's own mapping wherever it is shown\n- [ ] Limits stated: voluntary framework, self-assessed statuses, not compliance or an audit\n\n## References\n- `references/sources.md` — NIST AI 100-1, Playbook, crosswalk list; URLs and check date\n- `references/crosswalk-method.md` — coverage formula, gap rules, crosswalk rules and limits\n- `assets/nist-ai-rmf-1.0.csv` — 72 subcategories with function, category and paraphrase\n- `assets/evidence-template.csv` — input template\n- `assets/aiact-nist-crosswalk.csv` — AI Act obligation → subcategory mapping (skill's own)\n- `scripts/map_controls.py` — mapper and `--verify` (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/ai-finops-chargeback",
+  "domain": "ai-platform",
+  "stage": "operate",
+  "name": "ai-finops-chargeback",
+  "description": "Use when the user asks what AI usage actually costs and who should pay for it — \"show AI spend by team\", \"build the LLM showback\", \"chargeback for our AI features\", \"cost per request by feature\", \"are teams on track against their AI budgets\", \"why did AI spend spike\". Produces showback.csv (spend, requests, cost per 1k requests, share and month-over-month change at total, month, team, feature and model levels), anomalies.csv (team-days above mean + 3 sd of the trailing 14 days), budget.csv (actual, run-rate forecast, variance, status) and finops-report.md from metered usage and a dated price sheet. Usage without a price is listed as TBD for the FinOps lead, never estimated; --strict exits 1 when a forecast is over budget. Not for forecasting a planned workload before launch (use llm-cost-model), GPU or self-hosting capacity (use infra-gpu-sizing) or reconciling provider invoices.",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "operate",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "usage",
+     "type": "csv",
+     "required": true,
+     "from": "metered usage per day: date, team, feature, model, requests, input_tokens (incl. cached), output_tokens[, cached_input_tokens] (layout: assets/usage-template.csv); from the AI gateway or provider usage export",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "prices",
+     "type": "csv",
+     "required": true,
+     "from": "dated price sheet per 1M tokens: model, input_per_1m, output_per_1m[, cached_input_per_1m], effective_from (layout: assets/prices-template.csv); from the FinOps lead; never hardcoded",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "budgets",
+     "type": "csv",
+     "required": false,
+     "from": "team, month YYYY-MM, budget_usd (layout: assets/budgets-template.csv); absent = every budget TBD for the FinOps lead",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "as_of",
+     "type": "string",
+     "required": false,
+     "from": "as-of date YYYY-MM-DD for run-rate forecasts (default: latest usage date, never today)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "strict",
+     "type": "flag",
+     "required": false,
+     "from": "true to fail the run (exit 1) when any team forecast is over budget",
+     "default": null,
+     "flag": "--strict",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "showback",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "showback",
+     "kind": "script",
+     "cmd": "python3 -I scripts/chargeback.py --usage {usage} --prices {prices} [--budgets {budgets}] [--as-of {as_of}] {strict} --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/showback.csv",
+     "checks": [
+      "exists",
+      "csv:[month,team,feature,model,requests,cost_usd,cost_per_1k_requests,share]",
+      "csv_rows:cost_usd~^(\\\\d+\\\\.\\\\d{2}|\\\\[TO BE BASELINED — owner: FinOps lead\\\\])$",
+      "cmd:\"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}\""
+     ]
+    },
+    {
+     "path": "{out}/anomalies.csv",
+     "checks": [
+      "exists",
+      "csv:[date,team,cost_usd,trailing_mean_usd,trailing_sd_usd,threshold_usd,prior_days]",
+      "cmd:\"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}\""
+     ]
+    },
+    {
+     "path": "{out}/budget.csv",
+     "checks": [
+      "exists",
+      "csv:[team,month,budget,actual,forecast,variance,status]",
+      "csv_rows:status~^(OVER BUDGET|WITHIN BUDGET|NO BUDGET|NOT STARTED)$",
+      "cmd:\"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}\""
+     ]
+    },
+    {
+     "path": "{out}/finops-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Spend by team\",\"Unit economics\",\"Anomalies\",\"Budgets\",\"Unpriced usage\",\"Method\"]",
+      "no_unowned_tbd",
+      "numbers_trace_to:[\"{out}/showback.csv\",\"{out}/anomalies.csv\",\"{out}/budget.csv\"]",
+      "cmd:\"python3 -I scripts/chargeback.py --verify {path} --usage {usage} --prices {prices} --budgets '{budgets}' --as-of '{as_of}' {strict}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "usage": "evals/fixtures/usage.csv",
+     "prices": "evals/fixtures/prices.csv",
+     "budgets": "evals/fixtures/budgets.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-finops-chargeback-showback\">AI FinOps Chargeback (showback)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-finops-chargeback --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-finops-chargeback</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>showback.csv</code>, <code>anomalies.csv</code>, <code>budget.csv</code>, <code>finops-report.md</code>). Every dollar figure in the report traces to the CSVs, and each output is re-verified against the inputs with <code>--verify</code>. With <code>strict=true</code> the run is a gate: a team forecast over budget exits 1, with complete outputs.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC operate stage: monthly showback of AI spend to the teams and features that consume it, before Finance decides on chargeback.</li><li>Unit economics: cost per 1k requests by feature and model, to target optimisation work.</li><li>Budget tracking mid-month: run-rate forecast and variance per team, with a strict gate for alerts.</li><li>Spend spike triage: which team-days broke the trailing-14-day pattern and which feature drove them.</li><li>NOT for: pricing a planned workload before launch (<code>llm-cost-model</code>), GPU or self-hosting sizing (<code>infra-gpu-sizing</code>), provider invoice reconciliation or posting journal entries (Finance owns chargeback posting).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>usage</code> — date, team, feature, model, requests, input_tokens, output_tokens[, cached_input_tokens]</td><td>yes</td><td>AI gateway / provider usage export, tagged by team and feature</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>prices</code> — model, input_per_1m, output_per_1m[, cached_input_per_1m], effective_from</td><td>yes</td><td>FinOps lead, from contract or vendor price page, dated</td><td>run stops (exit 2), asks once; never estimated</td></tr><tr><td><code>budgets</code> — team, month, budget_usd</td><td>no</td><td>FinOps lead / budget owners</td><td>every budget reads <code>[TO BE BASELINED — owner: FinOps lead]</code>, status NO BUDGET</td></tr><tr><td><code>as_of</code> — YYYY-MM-DD</td><td>no</td><td>run owner</td><td>latest usage date</td></tr><tr><td><code>strict</code> — true/false</td><td>no</td><td>FinOps lead</td><td>false: over-budget reported, run exits 0</td></tr></tbody></table>\n<p>A usage row whose model has no price row, or no price in effect on its date, gets no cost: it is listed under Unpriced usage with <code>[TO BE BASELINED — owner: FinOps lead]</code> and excluded from every total.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Export usage per day with team and feature tags; copy the layouts in <code>assets/</code>. Confirm <code>input_tokens</code> includes cached tokens.</li><li>Get the dated price sheet from the FinOps lead (one row per price change). Never fill a price from memory.</li><li>Run the agent. <code>scripts/chargeback.py</code> applies <code>references/method.md</code>.</li><li>Read Summary, then Budgets (OVER BUDGET rows first), Anomalies (send each to the team's engineering lead), Unpriced usage (FinOps lead adds price rows and re-runs).</li><li>Publish showback (team and team_feature rows). Chargeback posting is Finance's call once unpriced usage is priced and figures reconcile to the invoice.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>showback.csv</code> — <code>level, month, team, feature, model, requests, cost_usd, cost_per_1k_requests, share, mom_change_pct, input_tokens, output_tokens</code>; levels total, month, month_team, team, team_feature, model, detail.</li><li><code>anomalies.csv</code> — <code>date, team, cost_usd, trailing_mean_usd, trailing_sd_usd, threshold_usd, excess_usd, prior_days, top_feature</code>.</li><li><code>budget.csv</code> — <code>team, month, budget, actual, forecast, variance, status, basis, days_elapsed, days_in_month, unpriced_requests</code>.</li><li><code>finops-report.md</code> — <strong>Summary</strong>, <strong>Spend by team</strong>, <strong>Unit economics</strong>, <strong>Anomalies</strong>, <strong>Budgets</strong>, <strong>Unpriced usage</strong>, <strong>Method</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every price came from the supplied sheet; unpriced usage is TBD for the FinOps lead, never estimated</li><li>[ ] Totals reconcile to the cent across levels (total = months = teams)</li><li>[ ] Every $ figure in the report appears in a CSV (<code>numbers_trace_to</code> passes)</li><li>[ ] The as-of month is flagged as partial; forecasts use the stated as-of date, never today</li><li>[ ] Anomaly rule and forecast method are stated in Method; they are this skill's method, not a standard</li><li>[ ] Fixture or fictional prices are never presented as real vendor prices</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — formulas, levels, worked example (the eval fixture, hand-checked), how showback feeds chargeback</li><li><code>references/sources.md</code> — FinOps Foundation showback / chargeback definitions, checked 2026-10-18</li><li><code>assets/usage-template.csv</code>, <code>assets/prices-template.csv</code>, <code>assets/budgets-template.csv</code> — input layouts</li><li><code>scripts/chargeback.py</code> — calculator and <code>--verify</code> (argparse; stdlib; exit 0 / 1 strict over budget / 2 input)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "budgets-template.csv",
+    "prices-template.csv",
+    "usage-template.csv"
+   ],
+   "scripts": [
+    "chargeback.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-monthly-showback",
+    "prompt": "Finance wants to know what the Northwind Billing Assistant's AI usage cost each team last month and whether anyone is heading over budget. Here is the gateway usage export.",
+    "expected": [
+     "Asks for the dated price sheet (and budgets) if missing; never prices from memory",
+     "Runs scripts/chargeback.py; reports spend by team and feature, cost per 1k requests, anomalies and budget forecast with status",
+     "Lists unpriced usage as TBD for the FinOps lead and states that showback is not an invoice reconciliation"
+    ]
+   },
+   {
+    "id": "prompt-planned-workload-routed",
+    "prompt": "We launch a new summarisation feature next quarter; what will it cost per month on our models?",
+    "expected": [
+     "Routes pre-launch workload pricing to llm-cost-model; offers this skill once metered usage exists"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the AI showback from the attached usage, price sheet and budgets.",
+    "expected": [
+     "Total 370.39 (Sep 281.01 + Oct 89.38); billing-support Oct forecast 269.96 vs 250.00 OVER BUDGET (-19.96); collections anomaly on 2026-09-25 (2.25 vs threshold 0.2435); fict-legacy usage unpriced; exit 0 without strict"
+    ]
+   },
+   {
+    "id": "agent-missing-prices",
+    "prompt": "Work out AI spend by team from this usage export; use list prices.",
+    "expected": [
+     "Asks once for the dated price sheet; never fills list prices"
+    ]
+   },
+   {
+    "id": "agent-no-budgets-not-invented",
+    "prompt": "We have no budgets set yet; just assume something reasonable per team.",
+    "expected": [
+     "No budget is invented: every team-month budget and variance is TBD for the FinOps lead with status NO BUDGET; unpriced fict-legacy usage stays TBD; exit 0"
+    ]
+   },
+   {
+    "id": "agent-strict-over-budget-exits-1",
+    "prompt": "Gate it: fail if any team is forecast over its AI budget.",
+    "expected": [
+     "billing-support 2026-10 forecast 269.96 > 250.00: strict fails the run with exit 1; outputs still written"
+    ]
+   },
+   {
+    "id": "agent-strict-within-budget-passes",
+    "prompt": "Same gate with the revised budgets.",
+    "expected": [
+     "Every forecast within budget (billing-support Oct 269.96 vs 300.00; collections Sep 8.91 vs 10.00): strict passes, exit 0"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the AI showback from the attached usage, price sheet and budgets.",
+    "inputs": {
+     "usage": "evals/fixtures/usage.csv",
+     "prices": "evals/fixtures/prices.csv",
+     "budgets": "evals/fixtures/budgets.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:showback.csv",
+     {
+      "file": "showback.csv",
+      "check": "contains:\"total,*,*,*,*,78220,370.39,4.7352,100.00\""
+     },
+     {
+      "file": "showback.csv",
+      "check": "contains:\"detail,2026-09,billing-support,dispute-summary,fict-small,9990,10.00,1.0010,3.56\""
+     },
+     {
+      "file": "showback.csv",
+      "check": "contains:\"team,*,collections,*,*,24900,11.21,0.4500,3.03\""
+     },
+     {
+      "file": "anomalies.csv",
+      "check": "contains:\"2026-09-25,collections,2.25,0.2295,0.0047,0.2435,2.01,14,dunning-email\""
+     },
+     {
+      "file": "budget.csv",
+      "check": "contains:\"billing-support,2026-10,250.00,87.08,269.96,-19.96,OVER BUDGET,linear run-rate,10,31,600\""
+     },
+     {
+      "file": "finops-report.md",
+      "check": "contains:\"**$370.39**\""
+     }
+    ],
+    "expected": [
+     "Total 370.39 (Sep 281.01 + Oct 89.38); billing-support Oct forecast 269.96 vs 250.00 OVER BUDGET (-19.96); collections anomaly on 2026-09-25 (2.25 vs threshold 0.2435); fict-legacy usage unpriced; exit 0 without strict"
+    ]
+   },
+   {
+    "id": "agent-missing-prices",
+    "prompt": "Work out AI spend by team from this usage export; use list prices.",
+    "inputs": {
+     "usage": "evals/fixtures/usage.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:prices"
+    ],
+    "expected": [
+     "Asks once for the dated price sheet; never fills list prices"
+    ]
+   },
+   {
+    "id": "agent-no-budgets-not-invented",
+    "prompt": "We have no budgets set yet; just assume something reasonable per team.",
+    "inputs": {
+     "usage": "evals/fixtures/usage.csv",
+     "prices": "evals/fixtures/prices.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "budget.csv",
+      "check": "contains:\"collections,2026-09,[TO BE BASELINED — owner: FinOps lead],8.91,8.91,[TO BE BASELINED — owner: FinOps lead],NO BUDGET\""
+     },
+     {
+      "file": "finops-report.md",
+      "check": "contains:\"| 2026-10 | billing-support | invoice-qa | fict-legacy | 600 | model not in price sheet | [TO BE BASELINED — owner: FinOps lead] |\""
+     },
+     {
+      "file": "finops-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "No budget is invented: every team-month budget and variance is TBD for the FinOps lead with status NO BUDGET; unpriced fict-legacy usage stays TBD; exit 0"
+    ]
+   },
+   {
+    "id": "agent-strict-over-budget-exits-1",
+    "prompt": "Gate it: fail if any team is forecast over its AI budget.",
+    "inputs": {
+     "usage": "evals/fixtures/usage.csv",
+     "prices": "evals/fixtures/prices.csv",
+     "budgets": "evals/fixtures/budgets.csv",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "finops-report.md",
+      "check": "contains:\"`--strict` was set and a forecast is over budget: the run fails (exit 1).\""
+     },
+     {
+      "file": "budget.csv",
+      "check": "contains:\"collections,2026-10,10.00,2.30,7.11,2.89,WITHIN BUDGET\""
+     }
+    ],
+    "expected": [
+     "billing-support 2026-10 forecast 269.96 > 250.00: strict fails the run with exit 1; outputs still written"
+    ]
+   },
+   {
+    "id": "agent-strict-within-budget-passes",
+    "prompt": "Same gate with the revised budgets.",
+    "inputs": {
+     "usage": "evals/fixtures/usage.csv",
+     "prices": "evals/fixtures/prices.csv",
+     "budgets": "evals/fixtures/budgets-ample.csv",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "finops-report.md",
+      "check": "contains:\"Budgets over forecast: 0.\""
+     },
+     {
+      "file": "budget.csv",
+      "check": "contains:\"billing-support,2026-10,300.00,87.08,269.96,30.04,WITHIN BUDGET\""
+     }
+    ],
+    "expected": [
+     "Every forecast within budget (billing-support Oct 269.96 vs 300.00; collections Sep 8.91 vs 10.00): strict passes, exit 0"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI FinOps Chargeback (showback)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-finops-chargeback --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-finops-chargeback`). Report the `run.json` results; do not hand-write the deliverables the script produces (`showback.csv`, `anomalies.csv`, `budget.csv`, `finops-report.md`). Every dollar figure in the report traces to the CSVs, and each output is re-verified against the inputs with `--verify`. With `strict=true` the run is a gate: a team forecast over budget exits 1, with complete outputs.\n\n## When to use\n- ADLC operate stage: monthly showback of AI spend to the teams and features that consume it, before Finance decides on chargeback.\n- Unit economics: cost per 1k requests by feature and model, to target optimisation work.\n- Budget tracking mid-month: run-rate forecast and variance per team, with a strict gate for alerts.\n- Spend spike triage: which team-days broke the trailing-14-day pattern and which feature drove them.\n- NOT for: pricing a planned workload before launch (`llm-cost-model`), GPU or self-hosting sizing (`infra-gpu-sizing`), provider invoice reconciliation or posting journal entries (Finance owns chargeback posting).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `usage` — date, team, feature, model, requests, input_tokens, output_tokens[, cached_input_tokens] | yes | AI gateway / provider usage export, tagged by team and feature | run stops (exit 2), asks once |\n| `prices` — model, input_per_1m, output_per_1m[, cached_input_per_1m], effective_from | yes | FinOps lead, from contract or vendor price page, dated | run stops (exit 2), asks once; never estimated |\n| `budgets` — team, month, budget_usd | no | FinOps lead / budget owners | every budget reads `[TO BE BASELINED — owner: FinOps lead]`, status NO BUDGET |\n| `as_of` — YYYY-MM-DD | no | run owner | latest usage date |\n| `strict` — true/false | no | FinOps lead | false: over-budget reported, run exits 0 |\n\nA usage row whose model has no price row, or no price in effect on its date, gets no cost: it is listed under Unpriced usage with `[TO BE BASELINED — owner: FinOps lead]` and excluded from every total.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Export usage per day with team and feature tags; copy the layouts in `assets/`. Confirm `input_tokens` includes cached tokens.\n3. Get the dated price sheet from the FinOps lead (one row per price change). Never fill a price from memory.\n4. Run the agent. `scripts/chargeback.py` applies `references/method.md`.\n5. Read Summary, then Budgets (OVER BUDGET rows first), Anomalies (send each to the team's engineering lead), Unpriced usage (FinOps lead adds price rows and re-runs).\n6. Publish showback (team and team_feature rows). Chargeback posting is Finance's call once unpriced usage is priced and figures reconcile to the invoice.\n7. Run the self-check.\n\n## Output\n- `showback.csv` — `level, month, team, feature, model, requests, cost_usd, cost_per_1k_requests, share, mom_change_pct, input_tokens, output_tokens`; levels total, month, month_team, team, team_feature, model, detail.\n- `anomalies.csv` — `date, team, cost_usd, trailing_mean_usd, trailing_sd_usd, threshold_usd, excess_usd, prior_days, top_feature`.\n- `budget.csv` — `team, month, budget, actual, forecast, variance, status, basis, days_elapsed, days_in_month, unpriced_requests`.\n- `finops-report.md` — **Summary**, **Spend by team**, **Unit economics**, **Anomalies**, **Budgets**, **Unpriced usage**, **Method**.\n\n## Self-check\n- [ ] Every price came from the supplied sheet; unpriced usage is TBD for the FinOps lead, never estimated\n- [ ] Totals reconcile to the cent across levels (total = months = teams)\n- [ ] Every $ figure in the report appears in a CSV (`numbers_trace_to` passes)\n- [ ] The as-of month is flagged as partial; forecasts use the stated as-of date, never today\n- [ ] Anomaly rule and forecast method are stated in Method; they are this skill's method, not a standard\n- [ ] Fixture or fictional prices are never presented as real vendor prices\n\n## References\n- `references/method.md` — formulas, levels, worked example (the eval fixture, hand-checked), how showback feeds chargeback\n- `references/sources.md` — FinOps Foundation showback / chargeback definitions, checked 2026-10-18\n- `assets/usage-template.csv`, `assets/prices-template.csv`, `assets/budgets-template.csv` — input layouts\n- `scripts/chargeback.py` — calculator and `--verify` (argparse; stdlib; exit 0 / 1 strict over budget / 2 input)\n"
+ },
+ {
   "id": "ai-platform/ai-governance-risk",
   "domain": "ai-platform",
   "stage": "govern",
@@ -4608,6 +5204,334 @@
   "bodyMd": "\n# Conversation Design (intents, fallback, hand-off, coverage)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/conversation-design --input <name>=<value> … --out <dir>` (see `--explain ai-platform/conversation-design`). Report the `run.json` results; do not hand-write the deliverables the script produces (`routing.csv`, `intent-quality.csv`, `conversation-spec.md`). Accuracy below a supplied `min_accuracy` fails the run (exit 1) on purpose; the outputs are still written so the misses are visible.\n\n## When to use\n- ADLC requirements stage: before building an assistant, to agree the intent catalog, response types, fallback and the human hand-off path.\n- \"How much of what users actually say do our intents cover?\" — route a sample of real messages and read coverage and gaps.\n- Regression check after editing intents: run with labelled utterances and a `min_accuracy` gate.\n- NOT for: prompt wording or system prompts (`prompt-spec`), grading LLM answers (`llm-eval-harness`), single- vs multi-agent design (`agent-architecture`), production NLU benchmarking (this router is lexical).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `intents` — `intent,description,examples,response_type,handoff,owner` | yes | Conversation designer (copy `assets/intents-template.csv`) | run stops (exit 2), asks once |\n| `utterances` — `utterance[,expected_intent]` | yes | chat logs, search logs, call-centre notes, sampled and de-identified | run stops (exit 2), asks once |\n| `persona` — kv-csv `name, tone, reading_level, escalation_channel, disallowed_topics` | no | Conversation designer / brand voice guide | each missing key is `[TO BE BASELINED — owner: Conversation designer]` |\n| `min_accuracy` — 0–1 | no | product owner | no gate; accuracy reported only |\n\n`expected_intent` may be an intent name, `fallback` (out of scope on purpose) or blank (unlabelled; counts toward coverage only). An unknown label, a bad `response_type`, a `handoff` other than yes/no, a duplicate intent or an intent named `fallback` stops the run (exit 2) with the line number.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Strip personal data from the utterance sample. Outputs echo at most 80 characters of each utterance, but the run reads all of it.\n3. Run the agent. `scripts/conversation_design.py` routes each utterance by TF-IDF cosine (`references/method.md`); below 0.25 it goes to `fallback`.\n4. With labels it computes accuracy, per-intent precision/recall and confusion pairs; it flags intent pairs whose example sets reach cosine 0.40.\n5. With `min_accuracy`, accuracy below it (or no labels to measure it) exits 1.\n6. Work the Gaps list with each intent's owner: add missed phrasings, split or merge confusable intents, confirm out-of-scope messages.\n7. Run the self-check.\n\n## Output\n- `routing.csv` — `utterance` (≤ 80 chars), `predicted_intent`, `score`, `expected_intent`, `correct`, `nearest_intent`.\n- `intent-quality.csv` — `intent, examples, precision, recall, confusable_with, response_type, handoff, routed, labelled, owner`.\n- `conversation-spec.md` — **Summary**, **Persona**, **Intents**, **Fallback and hand-off** (mermaid flowchart), **Coverage** (uncovered utterances, confusion pairs), **Gaps** (each with an owner), **Method**.\n\n## Self-check\n- [ ] `routing.csv` re-derives exactly (`--verify`) and no output echoes more than 80 characters of an utterance (`--leak-check`)\n- [ ] Every gap names an owner; missing persona keys are TBD for the Conversation designer\n- [ ] The flowchart shows fallback and a path to a person\n- [ ] Threshold values (0.25 route, 0.40 confusable) are stated in the report\n- [ ] Limits stated: lexical router, sample-based, not a production NLU benchmark\n\n## References\n- `references/method.md` — tokenising, TF-IDF formula, thresholds, metrics, limits\n- `assets/intents-template.csv`, `assets/utterances-template.csv`, `assets/persona-template.csv` — input layouts\n- `scripts/conversation_design.py` — router, metrics, spec writer, `--verify` and `--leak-check` (argparse; stdlib)\n"
  },
  {
+  "id": "ai-platform/data-contract-validator",
+  "domain": "ai-platform",
+  "stage": "data",
+  "name": "data-contract-validator",
+  "description": "Use when a dataset must be checked against its data contract before an AI system uses it for training, RAG ingestion or evaluation — \"validate this extract against the contract\", \"does this data meet the contract\", \"gate the feed before ingestion\", \"check types, nulls, uniqueness and allowed values\", \"is this data fresh enough\". Produces violations.csv (every violation with rule, severity, failing rows and rate, at most 3 truncated examples and the owner), profile.csv (inferred type, null rate, distinct, min/max per column) and contract-report.md with a PASS / PASS WITH WARNINGS / FAIL verdict; any error-severity violation exits 1. Contract as CSV, or an ODCS v3 YAML subset. Not for finding personal data (use pii-data-inventory), scoring overall data readiness (use data-readiness-assessment) or building training sets (use finetune-dataset-builder).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "data",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "contract",
+     "type": "file",
+     "required": true,
+     "from": "data contract CSV (layout: assets/contract-template.csv) or ODCS v3 YAML subset (references/odcs-subset.md); from the data owner",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "data",
+     "type": "csv",
+     "required": true,
+     "from": "dataset extract CSV with a header row (values are read; at most 3 truncated examples per violation are written)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "freshness_column",
+     "type": "string",
+     "required": false,
+     "from": "date or datetime column whose newest value must be recent; without as_of and max_age_days freshness is TBD for the Data owner",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "as_of",
+     "type": "string",
+     "required": false,
+     "from": "as-of date YYYY-MM-DD for the freshness check (never defaults to today)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "max_age_days",
+     "type": "string",
+     "required": false,
+     "from": "maximum age in days of the newest record (data owner's freshness SLA)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "validate",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "validate",
+     "kind": "script",
+     "cmd": "python3 -I scripts/validate_contract.py --contract {contract} --data {data} [--freshness-column {freshness_column}] [--as-of {as_of}] [--max-age-days {max_age_days}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/violations.csv",
+     "checks": [
+      "exists",
+      "csv:[column,rule,severity,failing_rows,failing_rate,examples,owner]",
+      "cmd:\"python3 -I scripts/validate_contract.py --verify {path} --contract {contract} --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'\""
+     ]
+    },
+    {
+     "path": "{out}/profile.csv",
+     "checks": [
+      "exists",
+      "csv:[column,inferred_type,null_rate,distinct,min,max]",
+      "csv_rows:null_rate~^[01]\\\\.\\\\d{3}$",
+      "cmd:\"python3 -I scripts/validate_contract.py --verify {path} --contract {contract} --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'\""
+     ]
+    },
+    {
+     "path": "{out}/contract-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Verdict\",\"Violations\",\"Profile\",\"Method\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/validate_contract.py --verify {path} --contract {contract} --data {data} --freshness-column '{freshness_column}' --as-of '{as_of}' --max-age-days '{max_age_days}'\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "contract": "evals/fixtures/contract.csv",
+     "data": "evals/fixtures/invoices-warn.csv",
+     "freshness_column": "updated_at",
+     "as_of": "2026-09-20",
+     "max_age_days": "7"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"data-contract-validator\">Data Contract Validator</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/data-contract-validator --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/data-contract-validator</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>violations.csv</code>, <code>profile.csv</code>, <code>contract-report.md</code>). This is a gate: any error-severity violation exits 1 with complete outputs. Each output is re-verified against the data and contract with the script's <code>--verify</code> mode.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC data stage: before an extract is loaded into a vector store, a fine-tune set or an evaluation set.</li><li>A recurring feed into an AI system needs a pass/fail gate on schema, types, nulls, keys, ranges, code lists and freshness.</li><li>A data owner has a contract (CSV, or an ODCS v3 YAML file) and wants every breach listed with its owner.</li><li>NOT for: finding personal data (<code>pii-data-inventory</code>), overall readiness scoring (<code>data-readiness-assessment</code>), building or cleaning training data (<code>finetune-dataset-builder</code>), cross-table or drift checks, fixing the data (this skill reports; it never edits the source).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>contract</code> — CSV <code>column, type, required, unique, min, max, allowed, regex, max_null_rate, severity, owner</code> or ODCS v3 YAML</td><td>yes</td><td>data owner (copy <code>assets/contract-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>data</code> — extract CSV with header</td><td>yes</td><td>data engineering</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>freshness_column</code></td><td>no</td><td>data owner</td><td>freshness not requested</td></tr><tr><td><code>as_of</code> — YYYY-MM-DD</td><td>no</td><td>run owner (the load date)</td><td>freshness reads <code>not checked … [TO BE BASELINED — owner: Data owner]</code>; never today's date</td></tr><tr><td><code>max_age_days</code></td><td>no</td><td>data owner's freshness SLA</td><td>as for <code>as_of</code></td></tr></tbody></table>\n<p>Contract types: <code>string, integer, number, boolean, date, datetime, email, enum</code>. <code>min</code>/<code>max</code> are numbers, dates or (for text types) character lengths. <code>allowed</code> is pipe-separated. Blank <code>severity</code> = error; blank <code>owner</code> = <code>[TO BE BASELINED — owner: Data owner]</code>. YAML: the subset in <code>references/odcs-subset.md</code> is parsed with the repo's YAML subset parser; anything outside it is listed as not evaluated, never silently passed.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Get the contract from the data owner; if none exists, start from <code>assets/contract-template.csv</code> and have the owner sign off each row (severity and owner especially).</li><li>If the extract may hold personal data, run <code>pii-data-inventory</code> first; examples here are truncated but still real values.</li><li>Run the agent. <code>scripts/validate_contract.py</code> checks every rule in <code>references/rules.md</code> and profiles every column.</li><li>Read the Verdict. FAIL (exit 1): send each error row to its owner; fix at source and re-run — never edit the outputs.</li><li>Review warnings and <code>extra_column</code> rows with the Data owner: add the column to the contract or drop it from the feed.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>violations.csv</code> — <code>column, rule, severity, failing_rows, failing_rate, examples, owner, expectation</code>; errors first.</li><li><code>profile.csv</code> — <code>column, inferred_type, null_rate, distinct, min, max</code> (min/max for numeric and date-like columns only).</li><li><code>contract-report.md</code> — <strong>Summary</strong>, <strong>Verdict</strong>, <strong>Violations</strong>, <strong>Profile</strong>, <strong>Method</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every violation names an owner or <code>[TO BE BASELINED — owner: Data owner]</code></li><li>[ ] No more than 3 examples per violation, each ≤ 40 characters; no text values in the profile</li><li>[ ] Freshness used the supplied as-of date, or is marked TBD — never today's date</li><li>[ ] YAML terms outside the subset are listed as not evaluated</li><li>[ ] Each output passes <code>--verify</code>; an error-severity violation exits 1</li><li>[ ] Limits stated: one extract, not a statistical guarantee</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/rules.md</code> — rules, denominators, type parsing, sensitivity handling, limits</li><li><code>references/odcs-subset.md</code> — ODCS v3 YAML mapping and what is not evaluated</li><li><code>references/sources.md</code> — ODCS sources checked 2026-10-18</li><li><code>assets/contract-template.csv</code> — contract layout for the data owner</li><li><code>scripts/validate_contract.py</code> — validator and <code>--verify</code> (argparse; stdlib; exit 0 / 1 gate / 2 input)</li></ul>",
+  "files": {
+   "references": [
+    "odcs-subset.md",
+    "rules.md",
+    "sources.md"
+   ],
+   "assets": [
+    "contract-template.csv"
+   ],
+   "scripts": [
+    "validate_contract.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-gate-before-ingestion",
+    "prompt": "Before we load this invoice Q&A extract into the Northwind Billing Assistant's RAG index, check it against the data contract and tell me if it is safe to use.",
+    "expected": [
+     "Asks for the contract (CSV or ODCS YAML) if none is given; never invents rules or thresholds",
+     "Runs scripts/validate_contract.py; reports the verdict, every violation with its owner, and the profile",
+     "States that error-severity violations block use (exit 1) and that examples are truncated, at most 3 per violation"
+    ]
+   },
+   {
+    "id": "prompt-pii-routed",
+    "prompt": "Which columns in this extract hold personal data and need masking?",
+    "expected": [
+     "Routes personal-data discovery to pii-data-inventory; offers this skill for contract conformance afterwards"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Validate the attached invoice extract against the attached contract; the load date is 2026-09-20 and updated_at must be at most 7 days old.",
+    "expected": [
+     "PASS WITH WARNINGS: status has 2 of 8 values outside the code list (owner TBD), answer null rate 0.125 > 0.100, channel is an extra column; freshness passes (newest 2026-09-18, 2 days)"
+    ]
+   },
+   {
+    "id": "agent-missing-data",
+    "prompt": "Check our invoice feed against the contract.",
+    "expected": [
+     "Asks once for the data extract"
+    ]
+   },
+   {
+    "id": "agent-freshness-not-invented",
+    "prompt": "Also check updated_at is fresh — just use today's date and a sensible max age.",
+    "expected": [
+     "No as-of date or max age supplied: freshness is not checked and reads TBD for the Data owner; today's date is never used; exit 0"
+    ]
+   },
+   {
+    "id": "agent-gate-errors-exit-1",
+    "prompt": "Gate this extract: fail if anything breaks an error-severity rule. Load date 2026-09-20, max age 7 days.",
+    "expected": [
+     "11 error-severity violations (duplicate and malformed ids, bad email, null rate 0.500 > 0.200, amount type/min/max, lower-case currency, date before range, unparseable datetime, short question): FAIL, exit 1, outputs complete; freshness passes at exactly 7 days"
+    ]
+   },
+   {
+    "id": "agent-odcs-yaml-contract",
+    "prompt": "Our contract is an ODCS YAML file; validate the extract against it.",
+    "expected": [
+     "YAML subset mapped (primaryKey, pattern, minimum/maximum, validValues, format email, nullValues percent, duplicateValues); missingValues listed as not evaluated; owners TBD; FAIL exit 1"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Validate the attached invoice extract against the attached contract; the load date is 2026-09-20 and updated_at must be at most 7 days old.",
+    "inputs": {
+     "contract": "evals/fixtures/contract.csv",
+     "data": "evals/fixtures/invoices-warn.csv",
+     "freshness_column": "updated_at",
+     "as_of": "2026-09-20",
+     "max_age_days": "7"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:violations.csv",
+     {
+      "file": "violations.csv",
+      "check": "contains:\"status,allowed,warn,2,0.250,refunded | pending-review,[TO BE BASELINED — owner: Data owner],one of open|paid|disputed\""
+     },
+     {
+      "file": "violations.csv",
+      "check": "contains:\"answer,null_rate,warn,1,0.125,,Knowledge content owner,null rate <= 0.100\""
+     },
+     {
+      "file": "profile.csv",
+      "check": "contains:\"amount,number,0.000,8,18.99,1500.00\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "contains:\"Verdict: **PASS WITH WARNINGS** — 0 error-severity and 3 warn-severity violations.\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "contains:\"Freshness: passed: newest 2026-09-18, age 2 days.\""
+     }
+    ],
+    "expected": [
+     "PASS WITH WARNINGS: status has 2 of 8 values outside the code list (owner TBD), answer null rate 0.125 > 0.100, channel is an extra column; freshness passes (newest 2026-09-18, 2 days)"
+    ]
+   },
+   {
+    "id": "agent-missing-data",
+    "prompt": "Check our invoice feed against the contract.",
+    "inputs": {
+     "contract": "evals/fixtures/contract.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:data"
+    ],
+    "expected": [
+     "Asks once for the data extract"
+    ]
+   },
+   {
+    "id": "agent-freshness-not-invented",
+    "prompt": "Also check updated_at is fresh — just use today's date and a sensible max age.",
+    "inputs": {
+     "contract": "evals/fixtures/contract.csv",
+     "data": "evals/fixtures/invoices-warn.csv",
+     "freshness_column": "updated_at"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "contract-report.md",
+      "check": "contains:\"Freshness: not checked: as_of and max_age_days [TO BE BASELINED — owner: Data owner].\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "No as-of date or max age supplied: freshness is not checked and reads TBD for the Data owner; today's date is never used; exit 0"
+    ]
+   },
+   {
+    "id": "agent-gate-errors-exit-1",
+    "prompt": "Gate this extract: fail if anything breaks an error-severity rule. Load date 2026-09-20, max age 7 days.",
+    "inputs": {
+     "contract": "evals/fixtures/contract.csv",
+     "data": "evals/fixtures/invoices-fail.csv",
+     "freshness_column": "updated_at",
+     "as_of": "2026-09-20",
+     "max_age_days": "7"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "violations.csv",
+      "check": "contains:\"invoice_id,unique,error,1,0.167,INV-000202,Billing data steward,values unique\""
+     },
+     {
+      "file": "violations.csv",
+      "check": "contains:\"customer_email,null_rate,error,3,0.500,,Billing data steward,null rate <= 0.200\""
+     },
+     {
+      "file": "violations.csv",
+      "check": "contains:\"amount,max,error,1,0.167,12500.00,Finance systems lead,<= 10000\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "contains:\"Verdict: **FAIL** — 11 error-severity and 2 warn-severity violations.\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "contains:\"Freshness: passed: newest 2026-09-13, age 7 days.\""
+     }
+    ],
+    "expected": [
+     "11 error-severity violations (duplicate and malformed ids, bad email, null rate 0.500 > 0.200, amount type/min/max, lower-case currency, date before range, unparseable datetime, short question): FAIL, exit 1, outputs complete; freshness passes at exactly 7 days"
+    ]
+   },
+   {
+    "id": "agent-odcs-yaml-contract",
+    "prompt": "Our contract is an ODCS YAML file; validate the extract against it.",
+    "inputs": {
+     "contract": "evals/fixtures/contract.yaml",
+     "data": "evals/fixtures/invoices-fail.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "violations.csv",
+      "check": "contains:\"currency,allowed,error,1,0.167,usd,[TO BE BASELINED — owner: Data owner],one of USD|EUR|GBP\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "contains:\"`question`: quality metric `missingValues` not evaluated (outside the supported subset)\""
+     },
+     {
+      "file": "contract-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "YAML subset mapped (primaryKey, pattern, minimum/maximum, validValues, format email, nullValues percent, duplicateValues); missingValues listed as not evaluated; owners TBD; FAIL exit 1"
+    ]
+   }
+  ],
+  "bodyMd": "\n# Data Contract Validator\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-contract-validator --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-contract-validator`). Report the `run.json` results; do not hand-write the deliverables the script produces (`violations.csv`, `profile.csv`, `contract-report.md`). This is a gate: any error-severity violation exits 1 with complete outputs. Each output is re-verified against the data and contract with the script's `--verify` mode.\n\n## When to use\n- ADLC data stage: before an extract is loaded into a vector store, a fine-tune set or an evaluation set.\n- A recurring feed into an AI system needs a pass/fail gate on schema, types, nulls, keys, ranges, code lists and freshness.\n- A data owner has a contract (CSV, or an ODCS v3 YAML file) and wants every breach listed with its owner.\n- NOT for: finding personal data (`pii-data-inventory`), overall readiness scoring (`data-readiness-assessment`), building or cleaning training data (`finetune-dataset-builder`), cross-table or drift checks, fixing the data (this skill reports; it never edits the source).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `contract` — CSV `column, type, required, unique, min, max, allowed, regex, max_null_rate, severity, owner` or ODCS v3 YAML | yes | data owner (copy `assets/contract-template.csv`) | run stops (exit 2), asks once |\n| `data` — extract CSV with header | yes | data engineering | run stops (exit 2), asks once |\n| `freshness_column` | no | data owner | freshness not requested |\n| `as_of` — YYYY-MM-DD | no | run owner (the load date) | freshness reads `not checked … [TO BE BASELINED — owner: Data owner]`; never today's date |\n| `max_age_days` | no | data owner's freshness SLA | as for `as_of` |\n\nContract types: `string, integer, number, boolean, date, datetime, email, enum`. `min`/`max` are numbers, dates or (for text types) character lengths. `allowed` is pipe-separated. Blank `severity` = error; blank `owner` = `[TO BE BASELINED — owner: Data owner]`. YAML: the subset in `references/odcs-subset.md` is parsed with the repo's YAML subset parser; anything outside it is listed as not evaluated, never silently passed.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Get the contract from the data owner; if none exists, start from `assets/contract-template.csv` and have the owner sign off each row (severity and owner especially).\n3. If the extract may hold personal data, run `pii-data-inventory` first; examples here are truncated but still real values.\n4. Run the agent. `scripts/validate_contract.py` checks every rule in `references/rules.md` and profiles every column.\n5. Read the Verdict. FAIL (exit 1): send each error row to its owner; fix at source and re-run — never edit the outputs.\n6. Review warnings and `extra_column` rows with the Data owner: add the column to the contract or drop it from the feed.\n7. Run the self-check.\n\n## Output\n- `violations.csv` — `column, rule, severity, failing_rows, failing_rate, examples, owner, expectation`; errors first.\n- `profile.csv` — `column, inferred_type, null_rate, distinct, min, max` (min/max for numeric and date-like columns only).\n- `contract-report.md` — **Summary**, **Verdict**, **Violations**, **Profile**, **Method**.\n\n## Self-check\n- [ ] Every violation names an owner or `[TO BE BASELINED — owner: Data owner]`\n- [ ] No more than 3 examples per violation, each ≤ 40 characters; no text values in the profile\n- [ ] Freshness used the supplied as-of date, or is marked TBD — never today's date\n- [ ] YAML terms outside the subset are listed as not evaluated\n- [ ] Each output passes `--verify`; an error-severity violation exits 1\n- [ ] Limits stated: one extract, not a statistical guarantee\n\n## References\n- `references/rules.md` — rules, denominators, type parsing, sensitivity handling, limits\n- `references/odcs-subset.md` — ODCS v3 YAML mapping and what is not evaluated\n- `references/sources.md` — ODCS sources checked 2026-10-18\n- `assets/contract-template.csv` — contract layout for the data owner\n- `scripts/validate_contract.py` — validator and `--verify` (argparse; stdlib; exit 0 / 1 gate / 2 input)\n"
+ },
+ {
   "id": "ai-platform/data-readiness-assessment",
   "domain": "ai-platform",
   "stage": "data",
@@ -5463,6 +6387,276 @@
    }
   ],
   "bodyMd": "\n# Drift Monitor\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/drift-monitor --input <name>=<value> … --out <dir>` (see `--explain ai-platform/drift-monitor`). Report the `run.json` results; do not hand-write the deliverables the script produces (`drift.csv`, `drift-report.md`, `drift.json`). Any feature in alert fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which re-derives each status from `drift.json`.\n\n## When to use\n- ADLC operate stage: a scheduled check of this week's inputs, outputs or model scores against a launch or last-known-good baseline.\n- Before retraining or re-indexing: confirm which features moved and by how much.\n- After an upstream change (new channel, schema change, pipeline fix): check missing-value rates and new categories.\n- NOT for: live latency, error and cost SLOs (`llm-observability`, `ai-slo-definition`); judging answer quality (`llm-eval-harness`); group fairness (`bias-fairness-check`); text or embedding drift without a numeric or categorical feature to compare.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `baseline` — CSV with header | yes | ML engineer: reference window extract | run stops (exit 2), asks once |\n| `current` — CSV, same columns | yes | ML engineer: window under test | run stops (exit 2), asks once |\n| `features` — comma list | no | ML engineer | every column present in both windows |\n| `thresholds` — `metric,warn,alert` | no | ML engineering lead (copy `assets/thresholds-template.csv`) | defaults psi 0.1/0.25, p_value alert 0.01; report states agreed thresholds are `[TO BE BASELINED — owner: ML engineering lead]` |\n| `types` — `col=numeric\\|categorical` | no | ML engineer | auto: numeric when ≥ 95% of values parse as numbers |\n\nLines starting with `#` are comments. A feature named in `features` that is not in both windows exits 2.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm both windows describe the same system and population (same columns, same units, comparable time spans).\n3. Agree thresholds with the ML engineering lead, or run on defaults and record that they are conventions.\n4. Run the agent. `scripts/drift.py` applies the method in `references/method.md` per feature.\n5. Read Summary, then Alerts (largest PSI first in practice), then Features for the full table.\n6. On exit 1: name an owner per alerted feature, check upstream changes, then run a quality check on the current window before retraining.\n7. Run the self-check.\n\n## Output\n- `drift.csv` — `feature, type, n_baseline, n_current, psi, ks_d, p_value, null_rate_baseline, null_rate_current, status`.\n- `drift-report.md` — **Summary** (verdict, counts, thresholds used), **Features** (table), **Alerts** (reasons, unseen categories, owner), **Method & limits**.\n- `drift.json` — every metric unrounded, bins, chi-square statistic and df, thresholds, verdict.\n\n## Self-check\n- [ ] Every number came from the two input windows; no threshold presented as agreed unless a thresholds file was supplied\n- [ ] PSI cut-offs described as a convention with the source in `references/sources.md`\n- [ ] Windows under 30 non-missing values show insufficient-data, not alert\n- [ ] Any alert exits 1 and names an owner\n- [ ] Limits stated: univariate, p-values shrink with sample size, drift is not proof of lower quality\n\n## References\n- `references/method.md` — PSI binning and epsilon, KS and chi-square formulas, status rule, hand-checked worked example, limits\n- `references/sources.md` — source of the PSI rule of thumb (checked 2026-10-18)\n- `assets/thresholds-template.csv` — thresholds layout for the ML engineering lead\n- `scripts/drift.py` — calculator and `--verify` (argparse; stdlib; exit 0 / 1 alert / 2 input)\n"
+ },
+ {
+  "id": "ai-platform/eu-ai-act-classifier",
+  "domain": "ai-platform",
+  "stage": "govern",
+  "name": "eu-ai-act-classifier",
+  "description": "Use when the user needs to know where one AI system sits under the EU AI Act and what follows — \"is this high-risk under the AI Act\", \"classify our chatbot under the EU AI Act\", \"which AI Act obligations apply to us and from when\", \"are we a prohibited practice\", \"AI Act tier for this use case\". Produces classification.json (prohibited | high-risk | limited-transparency | minimal, or undetermined with the open questions), obligations.csv (obligation, article, application date, role, owner, status, in force as of a given date) and ai-act-report.md from a yes/no questionnaire, with dates per Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744; a prohibited practice fails the gate (exit 1). Not legal advice. Not for enterprise risk registers (ai-governance-risk) or NIST AI RMF control coverage (ai-controls-mapping).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "govern",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "system",
+     "type": "csv",
+     "required": true,
+     "from": "system questionnaire key,value,source,notes (layout: assets/system-questionnaire.csv) - role, intended purpose, yes/no for every Art. 5 practice, Annex I, Annex III area, Art. 6(3) condition, Art. 50 trigger and GPAI flag; blank = open question",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "evidence",
+     "type": "csv",
+     "required": false,
+     "from": "obligation_id,status,evidence,owner (status done|in_progress|not_started|not_applicable; ids from assets/obligations-catalogue.csv); without it every obligation is open",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "as_of",
+     "type": "string",
+     "required": false,
+     "from": "YYYY-MM-DD date to mark obligations already in force; never defaulted to today",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "classify",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "classify",
+     "kind": "script",
+     "cmd": "python3 -I scripts/classify.py --system {system} [--evidence {evidence}] [--as-of {as_of}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/classification.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"not_legal_advice\\\": true\"",
+      "contains:\"\\\"unanswered_keys\\\"\"",
+      "cmd:\"python3 -I scripts/classify.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/obligations.csv",
+     "checks": [
+      "exists",
+      "csv:[obligation_id,article,obligation,applies_from,applies_to_role,owner,status]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/classify.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/ai-act-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Classification\",\"Obligations\",\"Open questions\",\"Limits\"]",
+      "no_unowned_tbd",
+      "contains:\"Not legal advice\"",
+      "cmd:\"python3 -I scripts/classify.py --verify {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "system": "evals/fixtures/system-northwind.csv",
+     "evidence": "evals/fixtures/evidence.csv",
+     "as_of": "2026-10-18"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"eu-ai-act-classifier\">EU AI Act Classifier</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/eu-ai-act-classifier --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/eu-ai-act-classifier</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>classification.json</code>, <code>obligations.csv</code>, <code>ai-act-report.md</code>). This skill is a gate: a prohibited practice fails the run with exit 1, and the outputs are still written so the finding is visible. The result is not legal advice.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC govern stage: before an AI system is built, bought or placed on the EU market, and again whenever its purpose changes.</li><li>&quot;Is this high-risk?&quot;, &quot;which AI Act articles apply to us as deployer?&quot;, &quot;what is already in force today?&quot;</li><li>Track AI Act obligations: re-run with an evidence CSV and <code>as_of</code> to see what is done, open and in force.</li><li>NOT for: legal opinions (route to counsel), enterprise AI risk registers (<code>ai-governance-risk</code>), mapping evidence to NIST AI RMF (<code>ai-controls-mapping</code>), non-EU regimes.</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>system</code> — questionnaire CSV <code>key,value,source,notes</code></td><td>yes</td><td>product owner + AI compliance lead (copy <code>assets/system-questionnaire.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td>blank answers inside <code>system</code></td><td>—</td><td>same</td><td>listed under Open questions as <code>[TO BE BASELINED — owner: AI compliance lead]</code>; tier <code>undetermined</code> if any could change it</td></tr><tr><td><code>evidence</code> — <code>obligation_id,status,evidence,owner</code></td><td>no</td><td>obligation owners</td><td>every obligation <code>open</code>, owner = <code>accountable_owner</code> or TBD</td></tr><tr><td><code>as_of</code> — YYYY-MM-DD</td><td>no</td><td>the reviewer</td><td><code>in_force</code> = &quot;not assessed&quot;; the run date is never used</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Copy <code>assets/system-questionnaire.csv</code>. Have the product owner answer each key with yes or no. Leave a key blank rather than guess, and record the source of each answer.</li><li>Run the agent. <code>scripts/classify.py</code> applies <code>references/classification-method.md</code>: Art. 5 first, then Annex I and Annex III with the Art. 6(3) derogation and profiling rule, then the Art. 50 triggers.</li><li>Obligations come from <code>assets/obligations-catalogue.csv</code>, filtered by role. Their dates are verified in <code>references/sources.md</code> (Reg. 2026/1744 moved the high-risk dates to 2 Dec 2027 and 2 Aug 2028).</li><li>Prohibited means exit 1: stop the work and escalate to counsel. Undetermined means exit 0 with open questions: resolve them and re-run.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>classification.json</code> — <code>tier</code>, <code>provisional_tier</code>, <code>basis_articles</code>, <code>high_risk_routes</code>, <code>art_6_3_derogation_applied</code>, <code>gpai</code>, <code>transparency_triggers</code>, <code>unanswered_keys</code>, <code>tier_open_keys</code>, counts, <code>legal_basis</code>, <code>dates_verified_on</code>, <code>gate</code>, <code>not_legal_advice</code>.</li><li><code>obligations.csv</code> — <code>obligation_id, article, obligation, applies_from, applies_to_role, owner, status, in_force, evidence, date_basis</code>.</li><li><code>ai-act-report.md</code> — <strong>Summary</strong>, <strong>Classification</strong>, <strong>Obligations</strong>, <strong>Open questions</strong>, <strong>Limits</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every answer came from the questionnaire; blanks are open questions with an owner, never assumed &quot;no&quot;</li><li>[ ] <code>undetermined</code> whenever a blank could change the tier; <code>provisional_tier</code> shown</li><li>[ ] Every date traces to <code>references/sources.md</code>; the skill's own readings are labelled as such in <code>date_basis</code></li><li>[ ] <code>in_force</code> only when <code>as_of</code> was given</li><li>[ ] Prohibited → exit 1 and outputs written</li><li>[ ] &quot;Not legal advice&quot; stated in the report; Limits name the amendment and the check date</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/sources.md</code> — primary and secondary sources with URLs and check date; dates table; status of the law</li><li><code>references/classification-method.md</code> — decision rules, undetermined logic, obligation filtering</li><li><code>assets/system-questionnaire.csv</code> — input template (every key)</li><li><code>assets/obligations-catalogue.csv</code> — obligations, triggers, roles, dates (paraphrased)</li><li><code>scripts/classify.py</code> — classifier and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "classification-method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "obligations-catalogue.csv",
+    "system-questionnaire.csv"
+   ],
+   "scripts": [
+    "classify.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-classify-chatbot",
+    "prompt": "We're launching a customer billing chatbot in the EU built on a third-party LLM. Is it high-risk under the AI Act and what do we have to do by when?",
+    "expected": [
+     "Asks for the questionnaire answers (role, Art. 5, Annex III, Art. 50) instead of assuming them",
+     "Explains that a chatbot that does not touch an Annex III use is usually limited-transparency (Art. 50(1)), and that Art. 50(2) applies if it generates content",
+     "Uses the dates as amended by Regulation (EU) 2026/1744 (transparency 2 Aug 2026; high-risk Annex III 2 Dec 2027) and says it is not legal advice"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Classify the Northwind Billing Assistant under the EU AI Act and show what is in force as of 18 October 2026.",
+    "expected": [
+     "Tier limited-transparency on Art. 50(1) and 50(2); 3 obligations; AI-LIT done, TR-50-1 in force, TR-50-2 from 2026-12-02 because the system was placed on the market before 2 Aug 2026"
+    ]
+   },
+   {
+    "id": "agent-missing-system",
+    "prompt": "Tell me our AI Act tier; we're a provider.",
+    "expected": [
+     "Asks once for the questionnaire CSV; does not guess the tier"
+    ]
+   },
+   {
+    "id": "agent-blank-answers-not-invented",
+    "prompt": "We haven't answered the social-scoring and credit questions yet; just assume no and give us the tier.",
+    "expected": [
+     "Does not assume no: tier undetermined, provisional limited-transparency, the two tier-changing keys listed with the AI compliance lead as owner"
+    ]
+   },
+   {
+    "id": "agent-prohibited-gate-exits-1",
+    "prompt": "Classify our call-centre agent mood monitor that infers staff emotions from their voice.",
+    "expected": [
+     "Matches Art. 5(1)(f); tier prohibited; gate fails with exit 1 while the outputs are written"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Classify the Northwind Billing Assistant under the EU AI Act and show what is in force as of 18 October 2026.",
+    "inputs": {
+     "system": "evals/fixtures/system-northwind.csv",
+     "evidence": "evals/fixtures/evidence.csv",
+     "as_of": "2026-10-18"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "classification.json",
+      "check": "contains:\"\\\"tier\\\": \\\"limited-transparency\\\"\""
+     },
+     {
+      "file": "classification.json",
+      "check": "contains:\"\\\"obligations_in_force\\\": 2\""
+     },
+     {
+      "file": "obligations.csv",
+      "check": "contains:\"TR-50-2,Art. 50(2),\""
+     },
+     {
+      "file": "obligations.csv",
+      "check": "contains:\",2026-12-02,provider,AI Compliance Lead (fictional),open,no,\""
+     },
+     {
+      "file": "ai-act-report.md",
+      "check": "contains:\"| AI-LIT | Art. 4 |\""
+     },
+     {
+      "file": "ai-act-report.md",
+      "check": "sections:[\"Summary\",\"Classification\",\"Obligations\",\"Open questions\",\"Limits\"]"
+     }
+    ],
+    "expected": [
+     "Tier limited-transparency on Art. 50(1) and 50(2); 3 obligations; AI-LIT done, TR-50-1 in force, TR-50-2 from 2026-12-02 because the system was placed on the market before 2 Aug 2026"
+    ]
+   },
+   {
+    "id": "agent-missing-system",
+    "prompt": "Tell me our AI Act tier; we're a provider.",
+    "inputs": {
+     "evidence": "evals/fixtures/evidence.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:system"
+    ],
+    "expected": [
+     "Asks once for the questionnaire CSV; does not guess the tier"
+    ]
+   },
+   {
+    "id": "agent-blank-answers-not-invented",
+    "prompt": "We haven't answered the social-scoring and credit questions yet; just assume no and give us the tier.",
+    "inputs": {
+     "system": "evals/fixtures/system-undetermined.csv",
+     "as_of": "2026-10-18"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "classification.json",
+      "check": "contains:\"\\\"tier\\\": \\\"undetermined\\\"\""
+     },
+     {
+      "file": "classification.json",
+      "check": "contains:\"\\\"provisional_tier\\\": \\\"limited-transparency\\\"\""
+     },
+     {
+      "file": "ai-act-report.md",
+      "check": "contains:\"| a3_essential_services | Annex III point 5 |\""
+     },
+     {
+      "file": "ai-act-report.md",
+      "check": "contains:\"2 unanswered question(s) could change the tier\""
+     },
+     {
+      "file": "ai-act-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Does not assume no: tier undetermined, provisional limited-transparency, the two tier-changing keys listed with the AI compliance lead as owner"
+    ]
+   },
+   {
+    "id": "agent-prohibited-gate-exits-1",
+    "prompt": "Classify our call-centre agent mood monitor that infers staff emotions from their voice.",
+    "inputs": {
+     "system": "evals/fixtures/system-prohibited.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "classification.json",
+      "check": "contains:\"\\\"tier\\\": \\\"prohibited\\\"\""
+     },
+     {
+      "file": "obligations.csv",
+      "check": "contains:\"PRO-5-1-F,Art. 5(1)(f)\""
+     },
+     {
+      "file": "ai-act-report.md",
+      "check": "contains:\"Gate: FAIL (exit 1)\""
+     }
+    ],
+    "expected": [
+     "Matches Art. 5(1)(f); tier prohibited; gate fails with exit 1 while the outputs are written"
+    ]
+   }
+  ],
+  "bodyMd": "\n# EU AI Act Classifier\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/eu-ai-act-classifier --input <name>=<value> … --out <dir>` (see `--explain ai-platform/eu-ai-act-classifier`). Report the `run.json` results; do not hand-write the deliverables the script produces (`classification.json`, `obligations.csv`, `ai-act-report.md`). This skill is a gate: a prohibited practice fails the run with exit 1, and the outputs are still written so the finding is visible. The result is not legal advice.\n\n## When to use\n- ADLC govern stage: before an AI system is built, bought or placed on the EU market, and again whenever its purpose changes.\n- \"Is this high-risk?\", \"which AI Act articles apply to us as deployer?\", \"what is already in force today?\"\n- Track AI Act obligations: re-run with an evidence CSV and `as_of` to see what is done, open and in force.\n- NOT for: legal opinions (route to counsel), enterprise AI risk registers (`ai-governance-risk`), mapping evidence to NIST AI RMF (`ai-controls-mapping`), non-EU regimes.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `system` — questionnaire CSV `key,value,source,notes` | yes | product owner + AI compliance lead (copy `assets/system-questionnaire.csv`) | run stops (exit 2), asks once |\n| blank answers inside `system` | — | same | listed under Open questions as `[TO BE BASELINED — owner: AI compliance lead]`; tier `undetermined` if any could change it |\n| `evidence` — `obligation_id,status,evidence,owner` | no | obligation owners | every obligation `open`, owner = `accountable_owner` or TBD |\n| `as_of` — YYYY-MM-DD | no | the reviewer | `in_force` = \"not assessed\"; the run date is never used |\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Copy `assets/system-questionnaire.csv`. Have the product owner answer each key with yes or no. Leave a key blank rather than guess, and record the source of each answer.\n3. Run the agent. `scripts/classify.py` applies `references/classification-method.md`: Art. 5 first, then Annex I and Annex III with the Art. 6(3) derogation and profiling rule, then the Art. 50 triggers.\n4. Obligations come from `assets/obligations-catalogue.csv`, filtered by role. Their dates are verified in `references/sources.md` (Reg. 2026/1744 moved the high-risk dates to 2 Dec 2027 and 2 Aug 2028).\n5. Prohibited means exit 1: stop the work and escalate to counsel. Undetermined means exit 0 with open questions: resolve them and re-run.\n6. Run the self-check.\n\n## Output\n- `classification.json` — `tier`, `provisional_tier`, `basis_articles`, `high_risk_routes`, `art_6_3_derogation_applied`, `gpai`, `transparency_triggers`, `unanswered_keys`, `tier_open_keys`, counts, `legal_basis`, `dates_verified_on`, `gate`, `not_legal_advice`.\n- `obligations.csv` — `obligation_id, article, obligation, applies_from, applies_to_role, owner, status, in_force, evidence, date_basis`.\n- `ai-act-report.md` — **Summary**, **Classification**, **Obligations**, **Open questions**, **Limits**.\n\n## Self-check\n- [ ] Every answer came from the questionnaire; blanks are open questions with an owner, never assumed \"no\"\n- [ ] `undetermined` whenever a blank could change the tier; `provisional_tier` shown\n- [ ] Every date traces to `references/sources.md`; the skill's own readings are labelled as such in `date_basis`\n- [ ] `in_force` only when `as_of` was given\n- [ ] Prohibited → exit 1 and outputs written\n- [ ] \"Not legal advice\" stated in the report; Limits name the amendment and the check date\n\n## References\n- `references/sources.md` — primary and secondary sources with URLs and check date; dates table; status of the law\n- `references/classification-method.md` — decision rules, undetermined logic, obligation filtering\n- `assets/system-questionnaire.csv` — input template (every key)\n- `assets/obligations-catalogue.csv` — obligations, triggers, roles, dates (paraphrased)\n- `scripts/classify.py` — classifier and `--verify` (argparse; stdlib)\n"
  },
  {
   "id": "ai-platform/eval-engineering-runner",
@@ -12113,7 +13307,7 @@
      "exit:0",
      {
       "file": "PRD.md",
-      "check": "contains:\"| G1 (primary) | [TO BE BASELINED — owner: ___] |\""
+      "check": "contains:\"| G1 (primary) | [TO BE BASELINED — owner: Product owner] |\""
      },
      {
       "file": "PRD.md",
@@ -12967,7 +14161,7 @@
     "id": "agent-thin-section-not-invented",
     "prompt": "The 'Audit log' section is just two bullets — fill in sensible tests and rollbacks yourself.",
     "expected": [
-     "Acceptance, tests and rollback are [TO BE BASELINED — owner: ___], never invented; tasks still listed"
+     "Acceptance, tests and rollback are [TO BE BASELINED — owner: Tech lead], never invented; tasks still listed"
     ]
    }
   ],
@@ -13034,7 +14228,7 @@
      },
      {
       "file": "tasks.csv",
-      "check": "contains:\"[TO BE BASELINED — owner: ___]\""
+      "check": "contains:\"[TO BE BASELINED — owner: Tech lead]\""
      },
      {
       "file": "plan.md",
@@ -13042,7 +14236,7 @@
      }
     ],
     "expected": [
-     "Acceptance, tests and rollback are [TO BE BASELINED — owner: ___], never invented; tasks still listed"
+     "Acceptance, tests and rollback are [TO BE BASELINED — owner: Tech lead], never invented; tasks still listed"
     ]
    }
   ],
@@ -16489,7 +17683,7 @@
      "exit:0",
      {
       "file": "five-closes.md",
-      "check": "contains:\"TBD — owner: ___\""
+      "check": "contains:\"TBD — owner: Engagement lead\""
      },
      {
       "file": "five-closes.md",

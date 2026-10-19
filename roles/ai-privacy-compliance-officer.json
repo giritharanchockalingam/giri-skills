@@ -1,0 +1,14 @@
+{
+  "name": "ai-privacy-compliance-officer",
+  "title": "AI Privacy & Compliance Officer",
+  "description": "Owns personal data and third-party obligations: DPIA, PII, vendor risk, licences and AI Act duties.",
+  "skills": [
+    "ai-platform/dpia",
+    "ai-platform/pii-data-inventory",
+    "ai-platform/eu-ai-act-classifier",
+    "ai-platform/ai-vendor-assessment",
+    "ai-platform/ai-bom-license-check",
+    "ai-platform/ai-controls-mapping"
+  ],
+  "playbooks": []
+}

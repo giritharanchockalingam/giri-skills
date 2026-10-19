@@ -1,0 +1,2 @@
+model,input_per_1m,output_per_1m,cached_input_per_1m,effective_from,source
+model-1,,,,YYYY-MM-DD,vendor contract or price page URL (FinOps lead fills every price; none is built in)

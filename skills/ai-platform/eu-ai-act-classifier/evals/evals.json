@@ -1,0 +1,84 @@
+{
+  "skill": "eu-ai-act-classifier",
+  "cases": [
+    {
+      "id": "prompt-classify-chatbot",
+      "prompt": "We're launching a customer billing chatbot in the EU built on a third-party LLM. Is it high-risk under the AI Act and what do we have to do by when?",
+      "expected": [
+        "Asks for the questionnaire answers (role, Art. 5, Annex III, Art. 50) instead of assuming them",
+        "Explains that a chatbot that does not touch an Annex III use is usually limited-transparency (Art. 50(1)), and that Art. 50(2) applies if it generates content",
+        "Uses the dates as amended by Regulation (EU) 2026/1744 (transparency 2 Aug 2026; high-risk Annex III 2 Dec 2027) and says it is not legal advice"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Classify the Northwind Billing Assistant under the EU AI Act and show what is in force as of 18 October 2026.",
+      "expected": [
+        "Tier limited-transparency on Art. 50(1) and 50(2); 3 obligations; AI-LIT done, TR-50-1 in force, TR-50-2 from 2026-12-02 because the system was placed on the market before 2 Aug 2026"
+      ],
+      "inputs": {
+        "system": "evals/fixtures/system-northwind.csv",
+        "evidence": "evals/fixtures/evidence.csv",
+        "as_of": "2026-10-18"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "classification.json", "check": "contains:\"\\\"tier\\\": \\\"limited-transparency\\\"\""},
+        {"file": "classification.json", "check": "contains:\"\\\"obligations_in_force\\\": 2\""},
+        {"file": "obligations.csv", "check": "contains:\"TR-50-2,Art. 50(2),\""},
+        {"file": "obligations.csv", "check": "contains:\",2026-12-02,provider,AI Compliance Lead (fictional),open,no,\""},
+        {"file": "ai-act-report.md", "check": "contains:\"| AI-LIT | Art. 4 |\""},
+        {"file": "ai-act-report.md", "check": "sections:[\"Summary\",\"Classification\",\"Obligations\",\"Open questions\",\"Limits\"]"}
+      ]
+    },
+    {
+      "id": "agent-missing-system",
+      "prompt": "Tell me our AI Act tier; we're a provider.",
+      "expected": [
+        "Asks once for the questionnaire CSV; does not guess the tier"
+      ],
+      "inputs": {
+        "evidence": "evals/fixtures/evidence.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:system"
+      ]
+    },
+    {
+      "id": "agent-blank-answers-not-invented",
+      "prompt": "We haven't answered the social-scoring and credit questions yet; just assume no and give us the tier.",
+      "expected": [
+        "Does not assume no: tier undetermined, provisional limited-transparency, the two tier-changing keys listed with the AI compliance lead as owner"
+      ],
+      "inputs": {
+        "system": "evals/fixtures/system-undetermined.csv",
+        "as_of": "2026-10-18"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "classification.json", "check": "contains:\"\\\"tier\\\": \\\"undetermined\\\"\""},
+        {"file": "classification.json", "check": "contains:\"\\\"provisional_tier\\\": \\\"limited-transparency\\\"\""},
+        {"file": "ai-act-report.md", "check": "contains:\"| a3_essential_services | Annex III point 5 |\""},
+        {"file": "ai-act-report.md", "check": "contains:\"2 unanswered question(s) could change the tier\""},
+        {"file": "ai-act-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-prohibited-gate-exits-1",
+      "prompt": "Classify our call-centre agent mood monitor that infers staff emotions from their voice.",
+      "expected": [
+        "Matches Art. 5(1)(f); tier prohibited; gate fails with exit 1 while the outputs are written"
+      ],
+      "inputs": {
+        "system": "evals/fixtures/system-prohibited.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "classification.json", "check": "contains:\"\\\"tier\\\": \\\"prohibited\\\"\""},
+        {"file": "obligations.csv", "check": "contains:\"PRO-5-1-F,Art. 5(1)(f)\""},
+        {"file": "ai-act-report.md", "check": "contains:\"Gate: FAIL (exit 1)\""}
+      ]
+    }
+  ]
+}

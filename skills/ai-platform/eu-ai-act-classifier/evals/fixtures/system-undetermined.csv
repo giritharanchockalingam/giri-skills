@@ -1,0 +1,38 @@
+# fictional fixture - Northwind Utilities (fictional); invented answers for tests only, not a real system
+key,value,source,notes
+system_name,Northwind Billing Assistant,fixture,fictional fixture
+role,provider,fixture,fictional fixture
+intended_purpose,Answers Northwind Utilities customers' billing and payment questions in a web chat,fixture,fictional fixture
+accountable_owner,,fixture,fictional fixture
+p_subliminal_manipulation,no,fixture,fictional fixture
+p_exploit_vulnerabilities,no,fixture,fictional fixture
+p_social_scoring,,fixture,fictional fixture
+p_crime_risk_profiling,no,fixture,fictional fixture
+p_untargeted_face_scraping,no,fixture,fictional fixture
+p_emotion_recognition_work_education,no,fixture,fictional fixture
+p_biometric_categorisation_sensitive,no,fixture,fictional fixture
+p_realtime_rbi_law_enforcement,no,fixture,fictional fixture
+p_non_consensual_intimate_content,no,fixture,fictional fixture
+p_csam_generation,no,fixture,fictional fixture
+annex1_safety_component,no,fixture,fictional fixture
+a3_biometrics,no,fixture,fictional fixture
+a3_critical_infrastructure,no,fixture,fictional fixture
+a3_education,no,fixture,fictional fixture
+a3_employment,no,fixture,fictional fixture
+a3_essential_services,,fixture,fictional fixture
+a3_law_enforcement,no,fixture,fictional fixture
+a3_migration,no,fixture,fictional fixture
+a3_justice_democracy,no,fixture,fictional fixture
+d63_narrow_procedural,no,fixture,fictional fixture
+d63_improves_prior_human,no,fixture,fictional fixture
+d63_detects_patterns,no,fixture,fictional fixture
+d63_preparatory,no,fixture,fictional fixture
+d63_profiling,no,fixture,fictional fixture
+t_interacts_with_persons,yes,fixture,fictional fixture
+t_synthetic_content,,fixture,fictional fixture
+t_emotion_recognition,no,fixture,fictional fixture
+t_biometric_categorisation,no,fixture,fictional fixture
+t_deepfake,no,fixture,fictional fixture
+t_public_interest_text,no,fixture,fictional fixture
+is_gpai,no,fixture,fictional fixture
+gpai_systemic_risk,no,fixture,fictional fixture

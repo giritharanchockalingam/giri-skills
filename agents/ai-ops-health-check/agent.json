@@ -1,0 +1,28 @@
+{
+  "name": "ai-ops-health-check",
+  "version": "0.1.0",
+  "description": "Weekly AI operations health check: input/score drift against the launch baseline → SLOs and error budgets from the request log → spend by team with budget forecast → (AI Ops lead reviews).",
+  "adlc_stage": "operate",
+  "inputs": [
+    {"name": "baseline", "type": "csv", "required": true, "from": "reference window (launch-week inputs/outputs/scores)"},
+    {"name": "current", "type": "csv", "required": true, "from": "window to test, same columns"},
+    {"name": "drift_thresholds", "type": "csv", "required": false, "from": "metric,warn,alert"},
+    {"name": "log", "type": "csv", "required": true, "from": "request log timestamp,latency_ms,status[,quality_pass,cost_usd]"},
+    {"name": "targets", "type": "csv", "required": false, "from": "agreed SLO targets"},
+    {"name": "system", "type": "string", "required": false, "from": "name of the AI feature"},
+    {"name": "usage", "type": "csv", "required": true, "from": "metered usage per day by team, feature, model"},
+    {"name": "prices", "type": "csv", "required": true, "from": "dated price sheet per 1M tokens"},
+    {"name": "budgets", "type": "csv", "required": false, "from": "team, month, budget_usd"}
+  ],
+  "config": {"provider": "auto", "on_fail": "stop"},
+  "steps": [
+    {"id": "drift", "skill": "ai-platform/drift-monitor", "gate": true,
+     "inputs": {"baseline": "$in.baseline", "current": "$in.current", "thresholds": "$in.drift_thresholds"}},
+    {"id": "slos", "skill": "ai-platform/ai-slo-definition", "gate": true,
+     "inputs": {"log": "$in.log", "targets": "$in.targets", "system": "$in.system"}},
+    {"id": "spend", "skill": "ai-platform/ai-finops-chargeback",
+     "inputs": {"usage": "$in.usage", "prices": "$in.prices", "budgets": "$in.budgets"}},
+    {"id": "ops-review", "approval": {"role": "AI Ops lead", "note": "Review drift alerts, SLO burn and spend anomalies; open incidents or tickets for anything red."}}
+  ],
+  "outputs": ["$steps.drift:drift-report.md", "$steps.slos:slo-spec.md", "$steps.spend:finops-report.md"]
+}

@@ -1,6 +1,8 @@
 # giri-skills
 
-61 executable Agent Skills covering the full **AI development life cycle** (11 stages, from strategy to improve — see [docs/ADLC.md](docs/ADLC.md)) plus presales and career shelves. Each one is a configurable agent: declared inputs → deterministic scripts → checked deliverables, with eval cases. Runnable, reviewable and publishable in the Skills Factory portal (`studio/`). Works with Claude Code, Claude (Cowork), Cursor, Codex, Gemini CLI, Copilot and any `SKILL.md`-compatible agent.
+78 executable Agent Skills covering the full **AI development life cycle** (11 stages, from strategy to improve — see [docs/ADLC.md](docs/ADLC.md)) plus presales and career shelves. Each one is a configurable agent: declared inputs → deterministic scripts → checked deliverables, with eval cases. Runnable, reviewable and publishable in the Skills Factory portal (`studio/`). Works with Claude Code, Claude (Cowork), Cursor, Codex, Gemini CLI, Copilot and any `SKILL.md`-compatible agent.
+
+**Skills → roles → teams.** Skills define roles: 23 role templates in [`roles/`](roles) (AI Strategist, AI Product Manager, AI Program Manager, Conversation / AI UX Designer, AI Data Engineer, Annotation & Data Ops Lead, AI Solution Architect, LLM & Agent Engineer, Full-stack Engineer, AI Quality & Red Team, Data Scientist, AI Risk & Release Lead, Responsible AI Lead, AI Privacy & Compliance Officer, AI Security Engineer, MLOps / Platform Engineer, AI Ops / SRE, AI FinOps Analyst, AI Change & Adoption Lead, plus presales and career roles), each a default skill set you tailor by adding or removing skills. Roles form talent pools in [`pools/`](pools) (AI Product Squad covers all 11 ADLC stages; Responsible AI Board; AI Platform Team; AI Delivery Pod; Presales Bid Team) whose playbooks ([`agents/`](agents)) hand each step to the member who owns the skill. `python3 scripts/talent.py --coverage` validates them; every skill belongs to at least one role.
 
 ## Install
 

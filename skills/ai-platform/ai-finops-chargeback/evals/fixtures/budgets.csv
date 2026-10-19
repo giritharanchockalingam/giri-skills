@@ -1,0 +1,5 @@
+# fictional fixture: Northwind Billing Assistant (fictional) monthly AI budgets
+team,month,budget_usd
+billing-support,2026-09,300.00
+billing-support,2026-10,250.00
+collections,2026-10,10.00

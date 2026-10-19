@@ -1,0 +1,7 @@
+invoice_id,customer_email,amount,currency,status,issued_on,updated_at,question,answer,channel
+INV-000201,ana.tester@example.com,120.50,USD,open,2026-09-02,2026-09-02T10:15:00Z,Why is my invoice higher this month?,The September invoice includes a prorated seat.,web
+INV-000202,not-an-email,89.00,EUR,paid,2026-09-03,2026-09-04T08:00:00Z,When was my last payment received?,Payment was received on 2026-09-04.,email
+INV-000202,,-15.00,usd,disputed,2026-09-05,2026-09-06T12:30:00Z,Late fee?,Open a dispute from the invoice page.,web
+INV-0204,,12500.00,USD,open,2025-12-30,yesterday,Can I get a copy of the paid invoice?,Download it from Billing > History.,chat
+INV-000205,,abc,USD,open,2026-09-10,2026-09-10T16:20:00Z,What payment methods are accepted?,,web
+INV-000206,eve.tester@example.com,75.25,EUR,paid,2026-09-12,2026-09-13T11:05:00Z,Why was I charged tax on this invoice?,Tax applies to the billing address on file.,chat

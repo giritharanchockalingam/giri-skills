@@ -1,0 +1,13 @@
+{
+  "name": "ai-security-engineer",
+  "title": "AI Security Engineer",
+  "description": "Threat-models AI systems, attacks them, hardens guardrails and keeps the supply chain clean.",
+  "skills": [
+    "ai-platform/ai-threat-model",
+    "ai-platform/red-team-suite",
+    "ai-platform/guardrails-config",
+    "build/security-review",
+    "ai-platform/ai-bom-license-check"
+  ],
+  "playbooks": []
+}

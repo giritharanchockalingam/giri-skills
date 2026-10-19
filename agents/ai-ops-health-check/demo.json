@@ -1,0 +1,14 @@
+{
+  "note": "Fictional fixtures reused from each skill's evals (Northwind Billing Assistant).",
+  "inputs": {
+    "baseline": "skills/ai-platform/drift-monitor/evals/fixtures/baseline.csv",
+    "current": "skills/ai-platform/drift-monitor/evals/fixtures/current.csv",
+    "drift_thresholds": "skills/ai-platform/drift-monitor/evals/fixtures/thresholds.csv",
+    "log": "skills/ai-platform/ai-slo-definition/evals/fixtures/requests.csv",
+    "targets": "skills/ai-platform/ai-slo-definition/evals/fixtures/targets.csv",
+    "system": "Northwind Billing Assistant",
+    "usage": "skills/ai-platform/ai-finops-chargeback/evals/fixtures/usage.csv",
+    "prices": "skills/ai-platform/ai-finops-chargeback/evals/fixtures/prices.csv",
+    "budgets": "skills/ai-platform/ai-finops-chargeback/evals/fixtures/budgets.csv"
+  }
+}
