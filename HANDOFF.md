@@ -71,4 +71,23 @@ Optional model re-rank for the task router (top-3 → model pick, logged with co
 - ROI: 14 baselines set as labelled estimates (owner "Claude (estimate, to be validated)"), minutes only.
 - Proven live 2026-10-19: PR gate success (#4, #6) and failure (#5: table without RLS → 2 of 4 failed, closed unmerged); push to main ran "Keep scorecard current" and updated the scorecard (PR results stayed out); GitHub redelivery answered {duplicate} with no second run; installation event re-synced the catalog.
 - Tests: tests/orchestrator.test.ts (intake + processing, injected deps, tests/support/fake-supabase.ts; tests/support/register.mjs resolves @/ for node tests).
-- Next: slice 5 — AI assistant over the catalog, skills and scorecards.
+- Slice 5 (assistant) shipped in #7/#8 — see below.
+
+## 2026-10-19 — Port parity: assistant, mobile, levels, initiatives, actions, inbox, DORA, AI assets, invitations
+| Pillar (port.io) | Where | Notes |
+|---|---|---|
+| AI assistant | /assistant | Read-only tools over catalog, scorecards (+ levels), initiatives, automation runs, insights, delivery, AI assets, skills. Retries once with reasoning_effort "none" when a reasoning model refuses tools (#8). |
+| Mobile | every page | Audited live at 390 and 360 px (iframe in the signed-in session): 0 pages wider than the screen. Phone menu sheet; every table scrolls in its card (#9, #10). |
+| Scorecard levels | /catalog, /catalog/[id] | Bronze = every applicable check ran without error; Silver = none fails; Gold = all pass; no applicable check = no level. Blockers to the next level shown (#11). |
+| Initiatives | /initiatives | Target level, scope, owner, deadline; progress computed live from sf_scorecard_latest (0013). |
+| Self-service actions | /catalog/[id] → Run a skill | Any workspace skill with a folder input, on the repo's real files at HEAD (App token); normal run path (policy/concurrency/budget). Approval rule in Admin → Policies (model_steps default / always / none), enforced in the DB (sf_action_request/decide/mark, 0014). A skill's own gate verdict is a result, not a failed action (#13). |
+| Human in the loop | /inbox | Actions to approve (approve = run as approver; no self-approval), playbook gates, versions in review, overdue initiatives. |
+| Engineering intelligence | /insights#delivery, /catalog/[id] | Deploys/week (GitHub deployments if readable, else merges), PR lead time median/p75, revert/hotfix proxy, open PRs; DORA 2024 bands for frequency + lead time only. Snapshots (0015) on sync + Refresh. |
+| AI asset discovery | /ai-assets | Skills, MCP servers (one per endpoint), MCP configs, agents (dependency-proved frameworks; .claude/agents, CrewAI config), agent instructions — from each repo on sync, with evidence; fixtures/templates/skill metadata excluded (#15, #17). Live: 133 skills, 1 MCP endpoint, 4 instruction files across 3 repos. |
+| RBAC | /admin#members | Invite by email + role (0016): accepted on first sign-in, 14-day expiry, revocable, never downgrades. Supabase emails the invite when the service key is set. |
+
+Verified live 2026-10-19: full sync 3/3 repos; delivery giri-skills 15 merges/30 d (3.5/wk, High), median PR lead time 6 min, 0% revert proxy; assistant answers match the Catalog and refuse unknowns (AWS bill); initiative "Every app at Silver" (owner Giri, due 2026-12-01) shows 1/2 with vg-advantage-portal's blockers; action run Next.js conventions on vg-advantage-portal read 82 files @ HEAD, outputs 4/4, gate FAIL 77 high (= scorecard); Inbox lists 4 playbook runs waiting at gates.
+CI: Node 22 + ingest before studio tests (#7). SQL suite (tests/sql/run.sh, local Postgres 16) covers 0013–0016 incl. rollback proof; not in CI.
+
+Owner actions: GitHub App → Permissions → Deployments: Read-only (true deploy counts; until then merges are counted, labelled); resolve or cancel the 4 playbook runs waiting in /inbox; delete the remote branch assistant-reasoning-fix.
+Next: notifications (email/Slack on pending approvals and overdue initiatives); scorecard check catalogue beyond 4 checks (CI present, tests present, CODEOWNERS); SQL suite in CI.
