@@ -855,3 +855,22 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .auto-set { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .auto-set legend { font-size: 13px; color: var(--ink-2); padding: 0 4px; }
 .auto-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+
+/* Assistant */
+.ask { display: grid; gap: 14px; }
+.ask-starters { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.ask-msg { max-width: 860px; }
+.ask-user { justify-self: end; }
+.ask-q { margin: 0; background: var(--flame-soft); border-radius: var(--r-sm); padding: 8px 12px; white-space: pre-wrap; }
+.ask-a { overflow-x: auto; }
+.ask-a > :first-child { margin-top: 0; }
+.ask-error .ask-a { color: var(--rust); }
+.ask-evidence { margin-top: 6px; font-size: 14px; }
+.ask-evidence summary { cursor: pointer; color: var(--ink-2); }
+.ask-evidence ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.ask-meta { margin: 4px 0 0; }
+.ask-form { display: grid; gap: 8px; border-top: 1px solid var(--rule-soft); padding-top: 12px; }
+.ask-form textarea { width: 100%; resize: vertical; min-height: 56px; }
+.ask-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

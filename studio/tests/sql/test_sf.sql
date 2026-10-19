@@ -391,6 +391,20 @@ select test_assert((select verdict from sf_scorecard_latest where entity_id = :'
 select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_automations) = 0 and (select count(*) from sf_automation_runs) = 0, 'other workspace sees no automations or runs');
 
+-- ───────── Assistant (0012): each user logs their own questions; admins read the workspace's; append-only ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_assistant_log (workspace_id, user_id, question, status) values (:'ws_acme', auth.uid(), 'which repos fail rls?', 'answered') returning id as qlog \gset
+select test_expect_error($$insert into sf_assistant_log (workspace_id, user_id, question, status) values ('$$ || :'ws_acme' || $$', '00000000-0000-0000-0000-000000000001', 'spoofed', 'answered')$$, 'row-level security');
+select test_expect_error($$update sf_assistant_log set question = 'edited' where id = '$$ || :'qlog' || $$'$$, 'permission denied');
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_assistant_log (workspace_id, user_id, question, status) values (:'ws_acme', auth.uid(), 'admin question', 'answered');
+select test_assert((select count(*) from sf_assistant_log) = 2, 'an admin reads the workspace''s questions');
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_assert((select count(*) from sf_assistant_log) = 1, 'a member reads only their own questions');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_assistant_log) = 0, 'other workspace reads no questions');
+select test_expect_error($$insert into sf_assistant_log (workspace_id, user_id, question, status) values ('$$ || :'ws_acme' || $$', auth.uid(), 'x', 'answered')$$, 'row-level security');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

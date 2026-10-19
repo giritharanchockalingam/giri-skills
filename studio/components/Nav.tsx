@@ -11,6 +11,7 @@ const links: { href: string; label: string; short?: string; match: string[] }[] 
   { href: "/catalog", label: "Catalog", match: ["/catalog"] },
   { href: "/insights", label: "Insights", match: ["/insights"] },
   { href: "/automations", label: "Automations", match: ["/automations"] },
+  { href: "/assistant", label: "Assistant", match: ["/assistant"] },
   { href: "/roles", label: "Roles & teams", match: ["/roles", "/pools"] },
   { href: "/agents", label: "Playbooks", match: ["/agents", "/agent-runs/"] },
   { href: "/repo/", label: "Library", match: ["/repo", "/upstream/"] },

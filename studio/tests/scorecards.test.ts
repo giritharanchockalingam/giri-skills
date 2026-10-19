@@ -1,17 +1,30 @@
 // Scorecard verdicts are read from REAL skill output: each test runs the library skill (scripts/run_skill.py) on this
 // repository's own files, then scores what it wrote.
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CHECKS, bound, checksFor, commonDir, errorLine, MAX_FILES, type TreeFile } from "../lib/scorecards/checks.ts";
 
 const ROOT = new URL("../..", import.meta.url).pathname;
 const check = (id: string) => CHECKS.find((c) => c.id === id)!;
+/** Every temp folder a test makes is removed when the file finishes (a full studio copy is >1 GB with node_modules). */
+const temps: string[] = [];
+const temp = (prefix: string) => { const d = mkdtempSync(join(tmpdir(), prefix)); temps.push(d); return d; };
+after(() => { for (const d of temps) rmSync(d, { recursive: true, force: true }); });
+/** The files the observability check sends the skill (the same set CHECKS.observability.select picks in production). */
+function observabilitySeed(): string {
+  const seed = temp("obs-seed-");
+  for (const rel of ["package.json", ".env.example", "lib/logger.ts", "lib/logger", "app/api/health", "ops/alerts.yml", "ops/alerts.yaml", "docs/observability.md"]) {
+    const src = join(ROOT, "studio", rel);
+    if (existsSync(src)) cpSync(src, join(seed, rel), { recursive: true });
+  }
+  return seed;
+}
 function runSkill(skill: string, inputs: Record<string, string>) {
-  const out = mkdtempSync(join(tmpdir(), "sc-"));
+  const out = temp("sc-");
   const args = ["scripts/run_skill.py", skill, "--provider", "none", "--out", out, ...Object.entries(inputs).flatMap(([k, v]) => ["--input", `${k}=${v}`])];
   const r = spawnSync("python3", args, { cwd: ROOT, encoding: "utf8" });
   const outs = readdirSync(out).filter((f) => statSync(join(out, f)).isFile()).map((f) => ({ path: f, content_text: readFileSync(join(out, f), "utf8") }));
@@ -41,12 +54,12 @@ test("nextjs: real conventions lint of the studio app → verdict follows high-s
 
 test("observability: real dry-run install report → missing pieces decide, customised files are in place", () => {
   // this repository's studio app (pieces installed, two customised)
-  const here = runSkill("build/observability-setup", { seed: "studio", target: join(mkdtempSync(join(tmpdir(), "obs-")), "repo"), dry_run: "true" });
+  const here = runSkill("build/observability-setup", { seed: observabilitySeed(), target: join(temp("obs-"), "repo"), dry_run: "true" });
   const s = check("observability").score(here.outs, here.status);
   assert.equal(s.verdict, "pass", s.summary);
   assert.match(s.summary, /^logging, health checks, alerts and runbook in place \(\d+ customised from the standard\)$/);
   // an app with none of it (the skill's own new-mode fixture repo)
-  const bare = runSkill("build/observability-setup", { target: join(mkdtempSync(join(tmpdir(), "obs-")), "repo"), dry_run: "true" });
+  const bare = runSkill("build/observability-setup", { target: join(temp("obs-"), "repo"), dry_run: "true" });
   const b = check("observability").score(bare.outs, bare.status);
   assert.ok(b.verdict === "fail" && /^\d+ piece\(s\) missing: /.test(b.summary), JSON.stringify(b));
 });

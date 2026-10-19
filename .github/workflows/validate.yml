@@ -9,6 +9,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4          # studio tests use --experimental-strip-types (Node >= 22.6)
+        with: { node-version: "22", cache: npm, cache-dependency-path: studio/package-lock.json }
       - name: Repo validator
         run: python3 scripts/validate.py && python3 scripts/talent.py && python3 scripts/gen_adlc_doc.py --check
       - name: Script tests
@@ -19,8 +21,12 @@ jobs:
         run: python3 scripts/behavioral_evals.py agent --provider dry --out evals/results/ci-agent
       - name: Greenfield and brownfield — every declared starting point runs green, every stage covered
         run: python3 scripts/modes_check.py --run
+      - name: Studio runtime bundle and content pins are fresh (ingest also builds public/runtime, which the worker test loads)
+        run: |
+          cd studio && npm ci --silent && node scripts/ingest.mjs >/dev/null
+          git diff --exit-code -- api/py/bundle.json data/content-pins.json || { echo "::error::Run 'cd studio && npm run ingest' and commit api/py/bundle.json + data/content-pins.json"; exit 1; }
       - name: Studio tests (typecheck, MCP protocol, browser worker on real Pyodide, runtime)
-        run: cd studio && npm ci --silent && npm test
+        run: cd studio && npm test
       - name: Vendor pins present
         run: python3 scripts/vendor_sync.py --check
       - name: Spec validator (agentskills.io skills-ref)
@@ -28,10 +34,6 @@ jobs:
         run: |
           pip install -q skills-ref || exit 0
           for d in $(find skills -name SKILL.md -exec dirname {} \;); do skills-ref validate "$d" || true; done
-      - name: Studio runtime bundle and content pins are fresh
-        run: |
-          cd studio && npm ci --silent && node scripts/ingest.mjs >/dev/null
-          git diff --exit-code -- api/py/bundle.json data/content-pins.json || { echo "::error::Run 'cd studio && npm run ingest' and commit api/py/bundle.json + data/content-pins.json"; exit 1; }
       - name: Script syntax
         run: |
           python3 -m compileall -q skills scripts
