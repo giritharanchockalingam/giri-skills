@@ -1,3 +1,4 @@
+import { humanName, displayDescription } from "@/lib/names";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import {requireWorkspace } from "@/lib/factory/db";
@@ -9,6 +10,15 @@ import { listAgentsOverview } from "@/lib/db/agents";
 import templates from "@/data/agent-templates.json";
 
 export const metadata = { title: "Playbooks · Skills Factory" };
+/** A description that only repeats the name says nothing; then say what it runs instead. */
+function whatItDoes(name: string, description: string, steps: object[]) {
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (description && norm(description) !== norm(name)) return displayDescription(description);
+  const skills = steps.flatMap((st) => ("skill" in st && typeof st.skill === "string" ? [humanName(st.skill)] : []));
+  const approvals = steps.filter((st) => "approval" in st).length;
+  return skills.length ? `Runs ${skills.join(" → ")}${approvals ? `, with ${approvals} approval${approvals === 1 ? "" : "s"}` : ""}.` : "No steps yet.";
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function AgentsPage() {
@@ -22,22 +32,22 @@ export default async function AgentsPage() {
         lead="A playbook chains skills: pick them, they wire themselves, add approvals where a person decides. Change the configuration and you have a different playbook." />
       <div className="stack">
         <div className="card">
-          <div className="tablewrap"><table className="tbl"><thead><tr><th>Agent</th><th>Steps</th><th>Version</th><th>Last run</th><th>What it does</th></tr></thead><tbody>
+          <div className="tablewrap"><table className="tbl"><thead><tr><th>Playbook</th><th>Steps</th><th>Version</th><th>Last run</th><th>What it does</th></tr></thead><tbody>
             {agents.map((a) => {
               const vs = versions.filter((v) => v.agent_id === a.id).sort((x, y) => y.version - x.version);
               const latest = vs[0];
               const last = runs.find((r) => vs.some((v) => v.id === r.agent_version_id));
               return (
                 <tr key={a.id}>
-                  <td><Link href={`/agents/${a.slug}`} className="link"><b>{a.name}</b></Link></td>
+                  <td><Link href={`/agents/${a.slug}`} className="link"><b>{/^[a-z0-9-]+$/.test(a.name) ? humanName(a.name) : a.name}</b></Link></td>
                   <td>{latest ? latest.spec.steps.length : 0}</td>
-                  <td>{latest ? <>v{latest.version} <span className="caption">{latest.status}</span></> : "—"}</td>
-                  <td>{last ? <Link href={`/agent-runs/${last.id}`} className="link">{last.status}</Link> : <span className="none">never</span>} {last && <span className="caption"><LocalTime iso={last.created_at} /></span>}</td>
-                  <td className="caption">{a.description}</td>
+                  <td>{latest ? <span style={{ whiteSpace: "nowrap" }}>v{latest.version} <span className="pill pill-sm">{latest.status}</span></span> : "—"}</td>
+                  <td>{last ? <Link href={`/agent-runs/${last.id}`} className="link" title="Open this run">{last.status.replace(/_/g, " ")}</Link> : <span className="none">never</span>} {last && <span className="caption"><LocalTime iso={last.created_at} /></span>}</td>
+                  <td className="caption">{whatItDoes(a.name, a.description, latest?.spec.steps ?? [])}</td>
                 </tr>
               );
             })}
-            {agents.length === 0 && <tr><td colSpan={5} className="none">No agents yet. Start from a template or a blank canvas.</td></tr>}
+            {agents.length === 0 && <tr><td colSpan={5} className="none">No playbooks yet. Start from a template or a blank canvas.</td></tr>}
           </tbody></table></div>
         </div>
         {can(ctx.role, "agent.edit") && (

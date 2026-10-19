@@ -47,7 +47,7 @@ export default function EvalsPage() {
       </div>
 
       <section className="section">
-        <SectionHead title="Where the" em="work is" caption="A skill can need both fixes, so the four groups below add up to 40; the two “need” counts above do not." />
+        <SectionHead title="Where the" em="work is" caption={`Every evaluated skill is in exactly one group below; together they are the ${s.healthy + s.needsWork} evaluated skills.`} />
         <div className="card card-pad">
           <div className="vbar" role="img" aria-label={VERDICTS_FOR_LEGEND.map((v) => `${verdictInfo(v).label} ${s.counts[v]}`).join(", ")}>
             {VERDICTS_FOR_LEGEND.map((v) => s.counts[v] > 0 && (

@@ -50,6 +50,7 @@ export const sectionOf = (path: string) => SECTIONS.find((s) => s.id !== "home" 
 
 /** One name per concept. Code and URLs may use older words (agents, pools, repo); the interface never does. */
 export const GLOSSARY: { term: string; means: string; not: string[]; where: string }[] = [
+  { term: "AI development lifecycle (ADLC)", means: "The 11 stages from strategy to improvement that the library is organised by (Home shows them); every skill belongs to one stage.", not: ["SDLC (for AI work)"], where: "/" },
   { term: "Skill", means: "A packaged capability that does one job: declared inputs, scripts and/or a model step, and an output contract that is checked on every run.", not: ["agent (for a single skill)", "tool"], where: "/repo/" },
   { term: "Library", means: "Every skill this portal ships (from the giri-skills repository), whether or not your workspace has imported it.", not: ["repository catalog", "repo"], where: "/repo/" },
   { term: "Workspace skill", means: "A library skill imported into your workspace, with its own versions, evaluations and approvals.", not: [], where: "/pipeline" },

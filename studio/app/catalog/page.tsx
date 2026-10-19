@@ -135,7 +135,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <div className="cat-tile"><b>{withMig}</b><span>with database migrations</span></div>
           <div className="cat-tile"><b>{noCi}</b><span>without CI</span></div>
           <div className="cat-tile"><b>{noTests}</b><span>without tests</span></div>
-          <div className="cat-tile"><b>{scoredRepos.length ? `${passingRepos}/${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "scored repositories passing every check" : "not scored yet"}</span></div>
+          <div className="cat-tile"><b>{scoredRepos.length ? `${passingRepos}/${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "scored repositories passing every check" : "not scored yet"}
+            {scoredRepos.length > passingRepos && <> · <a className="link" href="#repos">each level below links to what fails</a>; <Link className="link" href="/initiatives">set an initiative</Link> to fix it by a date</>}</span></div>
         </div>
         <div className="card card-pad mb-4 level-strip">
           <div className="flex flex-wrap items-center gap-3">
@@ -152,7 +153,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           ))}
         </div>
         <div className="card">
-          <div className="tablewrap"><table className="mini cat-table">
+          <div className="tablewrap" id="repos"><table className="mini cat-table">
             <thead><tr><th>Repository</th><th>Built with</th><th>Level</th><th>Scorecard</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
             <tbody>{rows.map((e) => {
               const ap = e.properties.applicable ?? [];

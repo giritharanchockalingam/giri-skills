@@ -87,14 +87,16 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const startRuntime = () => {
+    setRuntimeState("loading"); setRuntimeError("");
+    loadRuntime().then(() => setRuntimeState("ready")).catch((e) => { setRuntimeState("error"); setRuntimeError(String(e?.message || e)); });
+  };
+
   // lazy: the runtime (≈10 MB from the Pyodide CDN) loads only when the panel is opened
   useEffect(() => {
     if (!open) return;
     const off = runner().onProgress(setProgress);   // stays subscribed while the panel is open
-    if (runtimeState === "idle") {
-      setRuntimeState("loading");
-      loadRuntime().then(() => setRuntimeState("ready")).catch((e) => { setRuntimeState("error"); setRuntimeError(String(e?.message || e)); });
-    }
+    if (runtimeState === "idle") startRuntime();
     return off;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -223,7 +225,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
               </>
             )}
             {runtimeState === "ready" && <div className="run-runtime-msg">{progress?.message}</div>}
-            {runtimeState === "error" && <div className="run-runtime-msg fail">Runtime failed to load: {runtimeError}. The Pyodide CDN (cdn.jsdelivr.net) must be reachable.</div>}
+            {runtimeState === "error" && <div className="run-runtime-msg fail">Runtime failed to load: {runtimeError}. Your network must reach cdn.jsdelivr.net (some company networks block it). <button type="button" className="link" onClick={startRuntime}>Try again</button></div>}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 mt-6 mb-2">
