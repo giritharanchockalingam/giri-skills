@@ -831,7 +831,7 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .cat-score { display: flex; flex-wrap: wrap; gap: 4px; text-decoration: none; }
 /* top bar: 8 sections + account; the email is in the account icon's tooltip below wide desktop widths */
 .topnav { gap: 20px; }
-@media (max-width: 1360px) { .user-chip { display: none; } }
+@media (max-width: 1760px) { .user-chip { display: none; } }   /* 9 sections: the email moves to the account icon's tooltip */
 
 /* ───────────────────────────── Insights ───────────────────────────── */
 .ins-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }

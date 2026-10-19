@@ -275,3 +275,16 @@ export function exampleInputs(spec: Pick<AgentSpec, "inputs" | "steps">, templat
   }
   return Object.keys(out).length ? out : null;
 }
+
+/** A run is an example (a demo, not work) when every input it was given is exactly the shipped sample input. */
+export function isExampleRun(inputs: Record<string, { kind: string; content?: string; value?: string }> | null | undefined, demo: Record<string, DemoValue> | null): boolean {
+  const entries = Object.entries(inputs ?? {});
+  if (!demo || entries.length === 0) return false;
+  return entries.every(([k, v]) => {
+    const d = demo[k];
+    if (!d) return false;
+    const given = v.kind === "text" ? (v.content ?? "") : (v.value ?? "");
+    const sample = d.kind === "text" ? d.content : d.value;
+    return given.replace(/\r\n/g, "\n").trim() === sample.replace(/\r\n/g, "\n").trim();
+  });
+}

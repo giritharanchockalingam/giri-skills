@@ -321,3 +321,13 @@ test("folder inputs: Next.js route groups and dynamic segments are valid paths; 
   assert.deepEqual(validateInputs(m, { t: { "app/(auth)/[slug]/page.tsx": "x", "app/@modal/default.tsx": "y" } }).problems, []);
   for (const bad of [{ "app/../x": "x" }, { "/etc/x": "x" }, { "a\nb": "x" }]) assert.equal(validateInputs(m, { t: bad }).problems.length, 1);
 });
+
+test("isExampleRun: only exact sample inputs count as an example; any real input makes it work", async () => {
+  const { isExampleRun } = await import("../lib/factory/agents.ts");
+  const demo = { system: { kind: "text" as const, content: "a,b\n1,2\n", ext: "csv" }, as_of: { kind: "value" as const, value: "2026-10-18" } };
+  assert.equal(isExampleRun({ system: { kind: "text", content: "a,b\r\n1,2" }, as_of: { kind: "value", value: "2026-10-18" } }, demo), true);
+  assert.equal(isExampleRun({ system: { kind: "text", content: "a,b\n9,9" }, as_of: { kind: "value", value: "2026-10-18" } }, demo), false);
+  assert.equal(isExampleRun({ system: { kind: "text", content: "a,b\n1,2" }, extra: { kind: "value", value: "x" } }, demo), false);
+  assert.equal(isExampleRun({}, demo), false);
+  assert.equal(isExampleRun({ as_of: { kind: "value", value: "2026-10-18" } }, null), false);
+});
