@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { loadCatalog } from "@/lib/db/catalog";
-import { ASSET_LABEL, type AiAsset, type AssetKind } from "@/lib/github/assets";
+import { ASSET_LABEL, ASSET_PLURAL, type AiAsset, type AssetKind } from "@/lib/github/assets";
 
 export const metadata = { title: "AI assets · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
       <p className="caption mb-4"><Link className="link" href="/catalog">Catalog</Link> · {scanned} of {repos.length} repositor{repos.length === 1 ? "y" : "ies"} scanned{scanned < repos.length ? " — sync the catalog to scan the rest" : ""}.</p>
 
       <div className="cat-tiles mb-4">
-        {ORDER.map((k) => <Link key={k} href={kind === k ? "/ai-assets" : `/ai-assets?kind=${k}`} className={`cat-tile${kind === k ? " cat-tile-on" : ""}`}><b>{count(k)}</b><span>{ASSET_LABEL[k]}{count(k) === 1 ? "" : "s"} in repositories</span></Link>)}
+        {ORDER.map((k) => <Link key={k} href={kind === k ? "/ai-assets" : `/ai-assets?kind=${k}`} className={`cat-tile${kind === k ? " cat-tile-on" : ""}`}><b>{count(k)}</b><span>{count(k) === 1 ? ASSET_LABEL[k] : ASSET_PLURAL[k]} in repositories</span></Link>)}
         <Link href="/agents" className="cat-tile"><b>{pb.length}</b><span>playbooks defined here</span></Link>
         <Link href="/connect" className="cat-tile"><b>{published.length}</b><span>skills published as MCP tools here</span></Link>
       </div>
@@ -52,7 +52,7 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
         if (!rows.length) return null;
         return (
           <section key={k} className="section">
-            <div className="h3">{ASSET_LABEL[k]}s <span className="caption">({rows.length})</span></div>
+            <div className="h3">{ASSET_PLURAL[k]} <span className="caption">({rows.length})</span></div>
             <p className="caption">{LEAD[k]}</p>
             <div className="card"><div className="tablewrap"><table className="mini cat-table">
               <thead><tr><th>Name</th><th>Repository</th><th>Where</th><th>Evidence</th></tr></thead>
@@ -64,7 +64,7 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
                   <td className="caption">{a.evidence.map((x) => <code key={x} style={{ marginRight: 6 }}>{x}</code>)}</td>
                 </tr>))}</tbody>
             </table></div></div>
-            {!kind && rows.length > 25 && <p className="caption"><Link className="link" href={`/ai-assets?kind=${k}`}>All {rows.length} {ASSET_LABEL[k].toLowerCase()}s</Link></p>}
+            {!kind && rows.length > 25 && <p className="caption"><Link className="link" href={`/ai-assets?kind=${k}`}>All {rows.length} {ASSET_PLURAL[k].toLowerCase()}</Link></p>}
           </section>);
       })}
       {found.length === 0 && <section className="card card-pad"><p className="none" style={{ margin: 0 }}>{scanned ? "No AI assets found in the scanned repositories." : "Not scanned yet — sync the catalog."}</p></section>}
