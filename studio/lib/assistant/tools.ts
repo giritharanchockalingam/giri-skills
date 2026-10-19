@@ -5,13 +5,19 @@
 import { z } from "zod";
 import type { ToolSpec } from "./llm";
 import type { Insights } from "@/lib/insights/compute";
+import type { EntityFacts } from "@/lib/scorecards/checks";
+import { levelOf, atLeast, LEVEL_LABEL, LEVEL_RULE, type Level } from "@/lib/scorecards/levels";
+import { progressOf } from "@/lib/scorecards/initiatives";
 
 export interface RepoFact { id: string; key: string; title: string; url: string; owner: string | null; archived: boolean; description: string | null;
-  stack: string[]; lastActivity: string | null; applicable: { skill: string; why: string }[] }
+  stack: string[]; lastActivity: string | null; applicable: { skill: string; why: string }[];
+  /** Stack ids and file counts: which checks apply, hence the repository's scorecard level. */
+  facts?: EntityFacts }
 export interface ScoreFact { entity_id: string; check_id: string; verdict: string; summary: string; created_at: string }
 export interface RunFact { automation: string; repo: string; entity_id: string | null; event: string; pr_number: number | null; head_sha: string | null; status: string;
   verdicts: Record<string, { verdict: string; summary: string }>; check_run_url: string | null; error: string | null; started_at: string }
 export interface SkillFact { id: string; name: string; stage: string | null; card: string }
+export interface InitiativeFact { id: string; title: string; description: string; target_level: Level; repos: string[]; owner: string; due_on: string; status: string }
 
 export interface AssistantData {
   repos(): Promise<RepoFact[]>;
@@ -20,6 +26,7 @@ export interface AssistantData {
   insights(days: number): Promise<Insights>;
   route(task: string, k: number): { skill: string; score: number }[];
   skill(id: string): SkillFact | null;
+  initiatives?(): Promise<InitiativeFact[]>;
 }
 
 export interface Link { title: string; href: string }
@@ -46,11 +53,14 @@ export function resolveRepo(name: string, repos: RepoFact[]): { repo: RepoFact }
   return partial.length === 1 ? { repo: partial[0] } : { candidates: (partial.length ? partial : repos).map((r) => r.key).slice(0, 20) };
 }
 
-function scorecardOf(entityId: string, scores: ScoreFact[]) {
+function scorecardOf(entityId: string, scores: ScoreFact[], facts?: EntityFacts) {
   const mine = scores.filter((s) => s.entity_id === entityId);
+  const lv = facts ? levelOf(facts, mine) : null;
   return { checks: mine.map((s) => ({ check: s.check_id, title: CHECK_TITLES[s.check_id] ?? s.check_id, verdict: s.verdict, summary: s.summary, scored_at: s.created_at })),
-    passing_all: mine.length > 0 && mine.every((s) => s.verdict === "pass"), scored: mine.length > 0 };
+    passing_all: mine.length > 0 && mine.every((s) => s.verdict === "pass"), scored: mine.length > 0,
+    ...(lv ? { level: LEVEL_LABEL[lv.level], next_level: lv.next ? { level: LEVEL_LABEL[lv.next], rule: LEVEL_RULE[lv.next], blocked_by: lv.blockers.map((b) => `${b.title}: ${b.reason}`) } : null } : {}) };
 }
+const LEVEL_NOTE = "Levels: Bronze = every applicable check has run without error; Silver = none fails; Gold = all pass. A repository no check applies to has no level.";
 
 const searchCatalog = tool({
   spec: { type: "function", function: { name: "search_catalog",
@@ -58,20 +68,22 @@ const searchCatalog = tool({
     parameters: { type: "object", properties: {
       query: { type: "string", description: "Words to match against repository name, owner, stack or description. Omit to list all." },
       failing_check: { type: "string", enum: Object.keys(CHECK_TITLES), description: "Only repositories whose latest verdict on this check is fail or error." },
+      below_level: { type: "string", enum: ["bronze", "silver", "gold"], description: "Only repositories (that a check applies to) not yet at this scorecard level." },
       include_archived: { type: "boolean", description: "Include archived repositories (default false)." } }, additionalProperties: false } } },
-  schema: z.object({ query: z.string().max(200).optional(), failing_check: z.string().max(40).optional(), include_archived: z.boolean().optional() }),
+  schema: z.object({ query: z.string().max(200).optional(), failing_check: z.string().max(40).optional(), below_level: z.enum(["bronze", "silver", "gold"]).optional(), include_archived: z.boolean().optional() }),
   async run(a, d) {
     const [repos, scores] = await Promise.all([d.repos(), d.scores()]);
     const words = norm(a.query ?? "").split(" ").filter((w) => w.length > 1);
     const hay = (r: RepoFact) => norm([r.key, r.title, r.owner ?? "", r.description ?? "", ...r.stack].join(" "));
     const hits = repos.filter((r) => (a.include_archived || !r.archived) && words.every((w) => hay(r).includes(w)))
-      .map((r) => ({ r, card: scorecardOf(r.id, scores) }))
-      .filter(({ card }) => !a.failing_check || card.checks.some((c) => c.check === a.failing_check && (c.verdict === "fail" || c.verdict === "error")));
+      .map((r) => ({ r, card: scorecardOf(r.id, scores, r.facts) }))
+      .filter(({ card }) => !a.failing_check || card.checks.some((c) => c.check === a.failing_check && (c.verdict === "fail" || c.verdict === "error")))
+      .filter(({ r }) => { if (!a.below_level || !r.facts) return true; const l = levelOf(r.facts, scores.filter((x) => x.entity_id === r.id)).level; return l !== "n/a" && !atLeast(l, a.below_level); });
     const rows = hits.slice(0, 50).map(({ r, card }) => ({ repository: r.key, link: repoHref(r.id), owner: r.owner, archived: r.archived, stack: r.stack,
       description: r.description, last_activity: r.lastActivity, applicable_skills: r.applicable.map((x) => x.skill), scorecard: card }));
-    return { content: { total_in_catalog: repos.length, matched: hits.length, repositories: rows },
+    return { content: { total_in_catalog: repos.length, matched: hits.length, repositories: rows, levels: LEVEL_NOTE },
       links: hits.slice(0, 50).map(({ r }) => ({ title: r.key, href: repoHref(r.id) })),
-      summary: `${hits.length} of ${repos.length} repositories${a.failing_check ? ` failing ${a.failing_check}` : ""}${a.query ? ` matching “${a.query}”` : ""}` };
+      summary: `${hits.length} of ${repos.length} repositories${a.failing_check ? ` failing ${a.failing_check}` : ""}${a.below_level ? ` below ${a.below_level}` : ""}${a.query ? ` matching “${a.query}”` : ""}` };
   },
 });
 
@@ -85,8 +97,8 @@ const getScorecard = tool({
     const hit = resolveRepo(a.repository, repos);
     if ("candidates" in hit) return { content: { error: `No single repository matches “${a.repository}”.`, candidates: hit.candidates }, links: [], summary: `no repository “${a.repository}”` };
     const r = hit.repo;
-    const card = scorecardOf(r.id, scores);
-    return { content: { repository: r.key, link: repoHref(r.id), github: r.url, owner: r.owner, ...card,
+    const card = scorecardOf(r.id, scores, r.facts);
+    return { content: { repository: r.key, levels: LEVEL_NOTE, link: repoHref(r.id), github: r.url, owner: r.owner, ...card,
       note: card.scored ? "Verdicts are the library skills' own reports on the repository's files at the scored commit." : "This repository has not been scored yet." },
       links: [{ title: `${r.key} scorecard`, href: repoHref(r.id) }],
       summary: `${r.key}: ${card.checks.map((c) => `${c.check} ${c.verdict}`).join(", ") || "not scored"}` };
@@ -149,7 +161,29 @@ const insightsSummary = tool({
   },
 });
 
-const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary];
+const listInitiatives = tool({
+  spec: { type: "function", function: { name: "list_initiatives",
+    description: "The workspace's initiatives: a scorecard level set as a goal for some or all repositories, with owner, deadline, status, and live progress (which repositories meet the target and what blocks the rest).",
+    parameters: { type: "object", properties: { include_closed: { type: "boolean", description: "Include closed initiatives (default false)." } }, additionalProperties: false } } },
+  schema: z.object({ include_closed: z.boolean().optional() }),
+  async run(a, d) {
+    if (!d.initiatives) return { content: { error: "initiatives are not available here" }, links: [], summary: "no initiatives source" };
+    const [inis, repos, scores] = await Promise.all([d.initiatives(), d.repos(), d.scores()]);
+    const latest = new Map<string, ScoreFact[]>();
+    for (const sc of scores) latest.set(sc.entity_id, [...(latest.get(sc.entity_id) ?? []), sc]);
+    const ents = repos.filter((r) => !r.archived && r.facts).map((r) => ({ id: r.id, key: r.key, properties: { stack: r.facts!.stackIds.map((id) => ({ id })), counts: r.facts!.counts } }));
+    const shown = inis.filter((i) => a.include_closed || i.status === "active");
+    const rows = shown.map((i) => { const p = progressOf(i, ents, latest);
+      return { title: i.title, target_level: LEVEL_LABEL[i.target_level], owner: i.owner, due_on: i.due_on, status: i.status, days_left: p.daysLeft, overdue: p.overdue,
+        progress: `${p.met} of ${p.total} repositories (${p.pct}%)`,
+        repositories: p.repos.map((r) => ({ repository: r.key, link: r.id ? repoHref(r.id) : null, meets_target: r.met, level: r.result ? LEVEL_LABEL[r.result.level] : null,
+          blocked_by: r.met ? [] : (r.result?.blockers ?? []).map((b) => `${b.title}: ${b.reason}`), note: r.note ?? null })) }; });
+    return { content: { initiatives: rows, all_initiatives_link: "/initiatives", levels: LEVEL_NOTE },
+      links: [{ title: "Initiatives", href: "/initiatives" }], summary: `${rows.length} initiative(s)` };
+  },
+});
+
+const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives];
 export const TOOL_SPECS: ToolSpec[] = TOOLS.map((t) => t.spec);
 
 /** Run one tool call from the model. Bad names or arguments come back as tool errors the model can correct. */

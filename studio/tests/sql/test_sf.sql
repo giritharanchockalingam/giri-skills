@@ -405,6 +405,25 @@ select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_assistant_log) = 0, 'other workspace reads no questions');
 select test_expect_error($$insert into sf_assistant_log (workspace_id, user_id, question, status) values ('$$ || :'ws_acme' || $$', auth.uid(), 'x', 'answered')$$, 'row-level security');
 
+-- ───────── Initiatives (0013): authors/admins set goals; members read; only admins delete ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_initiatives (workspace_id, title, target_level, owner, due_on, created_by)
+  values (:'ws_acme', 'Every repo at Silver', 'silver', 'Platform team', '2026-12-01', auth.uid()) returning id as ini \gset
+select test_expect_error($$insert into sf_initiatives (workspace_id, title, target_level, owner, due_on, created_by) values ('$$ || :'ws_acme' || $$', 'x', 'platinum', 'o', '2026-12-01', auth.uid())$$, 'check');
+select test_expect_error($$insert into sf_initiatives (workspace_id, title, target_level, owner, due_on, created_by) values ('$$ || :'ws_acme' || $$', 'x', 'gold', 'o', '2026-12-01', '00000000-0000-0000-0000-000000000001')$$, 'row-level security');
+update sf_initiatives set status = 'closed' where id = :'ini';
+select test_assert((select status from sf_initiatives where id = :'ini') = 'closed', 'an author closes an initiative');
+delete from sf_initiatives where id = :'ini';
+select test_assert((select count(*) from sf_initiatives where id = :'ini') = 1, 'an author cannot delete an initiative');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((select count(*) from sf_initiatives) = 1, 'a consumer reads initiatives');
+select test_expect_error($$insert into sf_initiatives (workspace_id, title, target_level, owner, due_on, created_by) values ('$$ || :'ws_acme' || $$', 'x', 'gold', 'o', '2026-12-01', auth.uid())$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_initiatives) = 0, 'other workspace sees no initiatives');
+select test_as('00000000-0000-0000-0000-000000000001');
+delete from sf_initiatives where id = :'ini';
+select test_assert((select count(*) from sf_initiatives where id = :'ini') = 0, 'an admin deletes an initiative');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
