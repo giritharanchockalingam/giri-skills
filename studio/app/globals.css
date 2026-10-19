@@ -960,3 +960,8 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .cat-tile-est { border-style: dashed; border-color: var(--hold); } .cat-tile-est b { color: var(--hold); }
 .audit-kv { display: inline-block; margin-right: 10px; } .audit-kv b { font-weight: 600; color: var(--ink-2); }
 .case-kv { font-size: 13px; gap: 4px 12px; }
+.read-legend summary { cursor: pointer; }
+.legend-dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 10px 0 0; font-size: 13px; }
+.legend-dl dt { font-weight: 600; }
+.legend-dl dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+@media (max-width: 480px) { .legend-dl { grid-template-columns: 1fr; } .legend-dl dd { margin-bottom: 6px; } }

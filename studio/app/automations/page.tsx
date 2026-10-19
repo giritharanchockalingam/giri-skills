@@ -40,7 +40,7 @@ export default async function AutomationsPage() {
 
   return (
     <>
-      <PageHead eyebrow="Workflow orchestrator" title="When something" em="happens" after=", act."
+      <PageHead eyebrow="Automations" title="When something" em="happens" after=", act."
         lead="Automations run your scorecard checks on every pull request or change to the default branch, and report the verdict back on GitHub. Every run is recorded here." />
 
       <section className="card card-pad mb-6">
@@ -55,7 +55,7 @@ export default async function AutomationsPage() {
       <section className="card mb-6">
         <div className="card-pad" style={{ paddingBottom: 0 }}><div className="h3" style={{ marginTop: 0 }}>Automations</div></div>
         <div className="card-pad auto-table"><div className="tablewrap"><table className="mini">
-          <thead><tr><th>Name</th><th>When</th><th>In</th><th>Run</th><th>Report</th><th>State</th>{admin && <th />}</tr></thead>
+          <thead><tr><th>Name</th><th>When</th><th>In</th><th>Run</th><th>Report</th><th>State</th>{admin && <th>Actions</th>}</tr></thead>
           <tbody>{automations.length === 0 ? <tr><td colSpan={7} className="none">No automations yet.</td></tr> : automations.map((a) => (
             <tr key={a.id}>
               <td><b>{a.name}</b></td>

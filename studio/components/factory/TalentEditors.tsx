@@ -221,7 +221,7 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
 
         <div className="card card-pad">
           <div className="h3">Team <span className="muted font-normal">({spec.members.length} roles · {seats} seats · {unique} distinct skills)</span></div>
-          <div className="tbl-scroll"><div className="tablewrap"><table className="tbl ab-wiring"><thead><tr><th>Role</th><th>Name in team</th><th>Seats</th><th>Skills</th>{editable && <th />}</tr></thead><tbody>
+          <div className="tbl-scroll"><div className="tablewrap"><table className="tbl ab-wiring"><thead><tr><th>Role</th><th>Name in team</th><th>Seats</th><th>Skills</th>{editable && <th>Remove</th>}</tr></thead><tbody>
             {spec.members.map((m, i) => (
               <tr key={i}>
                 <td><select className="select" value={m.role} disabled={!editable} onChange={(e) => setMember(i, { role: e.target.value })} aria-label="Role">

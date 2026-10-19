@@ -51,7 +51,7 @@ export default async function AdminPage() {
           <section className="section" id="members">
             <SectionHead title="Members and" em="roles" caption="Roles are enforced on the server and in the database for every action." />
             <div className="card card-pad">
-              <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Since</th>{admin && <th></th>}</tr></thead>
+              <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Since</th>{admin && <th>Actions</th>}</tr></thead>
                 <tbody>{memberRows.map((m) => <tr key={m.user_id}><td>{m.email}{m.user_id === ctx.user.id && <span className="caption"> (you)</span>}</td><td><RolePill role={m.role} /></td><td className="muted"><LocalTime iso={m.created_at} /></td>{admin && <td>{m.user_id !== ctx.user.id && <ActionForm action={removeMember} submit="Remove" submitClass="btn btn-danger btn-sm" confirm={`Remove ${m.email} from ${ws.name}?`} hidden={{ user_id: m.user_id }} />}</td>}</tr>)}</tbody></table></div>
               {admin && (
                 <div className="mt-5">
@@ -59,7 +59,7 @@ export default async function AdminPage() {
                   <p className="caption mb-3">Setting a role for an existing member changes it. Someone without an account gets an invitation: they join with that role when they first sign in with the email (it expires in 14 days).</p>
                   {invites.length > 0 && (
                     <div className="mb-4"><div className="h3" style={{ fontSize: 14 }}>Pending invitations</div>
-                      <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th></th></tr></thead>
+                      <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th>Actions</th></tr></thead>
                         <tbody>{invites.map((i) => <tr key={i.id}><td>{i.email}</td><td><RolePill role={i.role} /></td><td className="muted"><LocalTime iso={i.expires_at} /></td>
                           <td><ActionForm action={revokeInvitation} submit="Revoke" submitClass="btn btn-secondary btn-sm" hidden={{ id: i.id }} /></td></tr>)}</tbody></table></div></div>)}
                   <ActionForm action={addMember} submit="Save or invite">
@@ -113,7 +113,7 @@ export default async function AdminPage() {
             <div className="card card-pad">
               {admin ? (
                 <>
-                  <div className="tablewrap"><table className="mini"><thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+                  <div className="tablewrap"><table className="mini"><thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>{keyRows.map((k) => <tr key={k.id}><td>{k.name}</td><td className="mono-sm">{k.prefix}…</td><td className="muted"><LocalTime iso={k.created_at} /></td><td className="muted"><LocalTime iso={k.last_used_at} empty="never" /></td><td>{k.revoked_at ? <span className="fail">revoked</span> : <span className="pass">active</span>}</td><td>{!k.revoked_at && <ActionForm action={revokeApiKey} submit="Revoke" submitClass="btn btn-danger btn-sm" confirm={`Revoke key “${k.name}”? Applications using it will get 401.`} hidden={{ key_id: k.id }} />}</td></tr>)}
                       {keyRows.length === 0 && <tr><td colSpan={6} className="none">No API keys yet.</td></tr>}</tbody></table></div>
                   <div className="mt-5"><div className="h3" style={{ fontSize: 14 }}>Create a key</div>

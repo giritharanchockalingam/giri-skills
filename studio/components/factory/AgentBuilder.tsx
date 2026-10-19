@@ -209,7 +209,7 @@ function ComposeEditor({ step, files, spec, editable, onChange }: {
             <option value="">— none —</option>{spec.inputs.map((a) => <option key={a.name} value={`$in.${a.name}`}>{a.name}</option>)}
           </select></div>
       </div>
-      <div className="tablewrap"><table className="mini"><thead><tr><th>Key</th><th>Value from</th><th /></tr></thead><tbody>
+      <div className="tablewrap"><table className="mini"><thead><tr><th>Key</th><th>Value from</th><th>Remove</th></tr></thead><tbody>
         {rows.map(([k, v]) => (
           <tr key={k}>
             <td><code>{k}</code></td>
