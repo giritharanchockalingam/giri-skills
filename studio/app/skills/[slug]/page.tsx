@@ -6,6 +6,7 @@ import { VersionBar } from "@/components/factory/VersionBar";
 import { GateList } from "@/components/factory/GateList";
 import { RunPill } from "@/components/factory/Pills";
 import type { RunStatus } from "@/lib/factory/db";
+import { getLastVersionRun } from "@/lib/db/runs";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${slug} · Skills Factory` }; }
@@ -16,7 +17,7 @@ export default async function SkillOverview({ params, searchParams }: { params: 
   const d = await loadSkillPage(slug, v ?? null);
   const m = d.version.manifest;
   const vq = `?v=${d.version.version}`;
-  const { data: lastRun } = await d.ctx.supabase.from("sf_runs").select("id, status, created_at").eq("version_id", d.version.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const lastRun = await getLastVersionRun(d.ctx.supabase, d.version.id);
 
   return (
     <>

@@ -23,11 +23,12 @@ test("rls: real lint output of this repo's migrations → pass with counts", () 
   assert.deepEqual(check("rls").score(r.outs, r.status), { verdict: "pass", summary: "0 error(s), 0 warning(s) in the migrations", findings: 0 });
 });
 
-test("tenancy: real audit with the detected key → fail with the table count", () => {
+test("tenancy: real audit with the detected key → verdict follows the table count", () => {
   const r = runSkill("build/multi-tenant-saas-patterns", { migrations: "studio/supabase/migrations", tenant_column: "auto" });
   const s = check("tenancy").score(r.outs, r.status);
-  assert.equal(s.verdict, "fail");
-  assert.match(s.summary, /^\d+ of \d+ tables need tenancy fixes \(key: workspace_id\)$/);
+  const m = s.summary.match(/^(\d+) of \d+ tables need tenancy fixes \(key: workspace_id\)$/);
+  assert.ok(m, s.summary);
+  assert.equal(s.verdict, Number(m![1]) > 0 ? "fail" : "pass");
 });
 
 test("nextjs: real conventions lint of the studio app → verdict follows high-severity findings", () => {
@@ -38,10 +39,16 @@ test("nextjs: real conventions lint of the studio app → verdict follows high-s
   assert.equal(s.verdict === "fail", /^[1-9]\d* high/.test(s.summary));
 });
 
-test("observability: real dry-run install report → missing pieces listed", () => {
-  const r = runSkill("build/observability-setup", { seed: "studio", target: join(mkdtempSync(join(tmpdir(), "obs-")), "repo"), dry_run: "true" });
-  const s = check("observability").score(r.outs, r.status);
-  assert.ok(s.verdict === "fail" && /^\d+ piece\(s\) missing: /.test(s.summary), JSON.stringify(s));
+test("observability: real dry-run install report → missing pieces decide, customised files are in place", () => {
+  // this repository's studio app (pieces installed, two customised)
+  const here = runSkill("build/observability-setup", { seed: "studio", target: join(mkdtempSync(join(tmpdir(), "obs-")), "repo"), dry_run: "true" });
+  const s = check("observability").score(here.outs, here.status);
+  assert.equal(s.verdict, "pass", s.summary);
+  assert.match(s.summary, /^logging, health checks, alerts and runbook in place \(\d+ customised from the standard\)$/);
+  // an app with none of it (the skill's own new-mode fixture repo)
+  const bare = runSkill("build/observability-setup", { target: join(mkdtempSync(join(tmpdir(), "obs-")), "repo"), dry_run: "true" });
+  const b = check("observability").score(bare.outs, bare.status);
+  assert.ok(b.verdict === "fail" && /^\d+ piece\(s\) missing: /.test(b.summary), JSON.stringify(b));
 });
 
 test("outputs without a summary are an error, never a pass", () => {

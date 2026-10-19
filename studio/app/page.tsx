@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getContext, type WsCtx } from "@/lib/factory/db";
+import { listRecentAgents } from "@/lib/db/agents";
 import { createWorkspace, selectWorkspace } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead } from "@/components/PageHead";
@@ -45,7 +46,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
     for (const [k, v] of Object.entries(patch)) { if (v) n.set(k, v); else n.delete(k); }
     return `/?${n.toString()}`;
   };
-  const agentsQ = await ctx.supabase.from("sf_agents").select("slug, name, description").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }).limit(6);
+  const recentAgents = await listRecentAgents(ctx.supabase, ctx.workspace.id);
   const suggestions = ["Check the RLS policies in my Supabase migration", "Is our AI chatbot high-risk under the EU AI Act?", "Estimate effort and price for this work breakdown"];
   const runnable = repoSkills.filter((s) => (s as unknown as { agent?: unknown }).agent).length;
 
@@ -122,11 +123,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
         </div>
       </section>
 
-      {(agentsQ.data ?? []).length > 0 && (
+      {recentAgents.length > 0 && (
         <section className="section">
           <div className="h3 mb-2">Playbooks — several skills chained, with approvals</div>
           <ul className="lc-playbooks">
-            {(agentsQ.data ?? []).map((a) => (
+            {recentAgents.map((a) => (
               <li key={a.slug}><Link href={`/agents/${a.slug}/run`} className="lc-pb"><b>{a.name}</b><span className="caption">{(a.description || "").split(/[:.→]/)[0]}</span></Link></li>
             ))}
           </ul>

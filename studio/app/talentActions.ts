@@ -13,14 +13,13 @@ import { ROLE_TEMPLATES, POOL_TEMPLATES, skillMap, getRouter, workspacePlaybooks
 import type { AgentSpec } from "@/lib/factory/agents";
 import agentTemplates from "@/data/agent-templates.json";
 import type { ActionResult } from "@/app/actions";
+import { fromForm, CreateTalentForm, SaveTalentDraftForm, NewTalentDraftForm, PublishTalentVersionForm, RouteTaskArgs, RouteAnyTaskArgs } from "@/lib/validation";
 
 type Kind = "role" | "pool";
 const ok = (message: string, extra: Record<string, unknown> = {}): ActionResult => ({ ok: true, message, ...extra }) as ActionResult;
 const fail = (message: string): ActionResult => ({ ok: false, message });
-const str = (fd: FormData, k: string, max = 10000) => String(fd.get(k) ?? "").slice(0, max).trim();
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "x";
 const hashOf = (spec: unknown) => sha256(canonicalJson(spec));
-const kindOf = (fd: FormData): Kind => (str(fd, "kind", 8) === "pool" ? "pool" : "role");
 const audit = (ctx: WsCtx, action: string, type: string, id: string, details: Record<string, unknown> = {}) =>
   ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: action, p_entity_type: type, p_entity_id: id, p_details: details });
 
@@ -71,11 +70,12 @@ async function ensureRole(ctx: WsCtx, name: string): Promise<string | null> {
 }
 
 export async function createTalent(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const kind = kindOf(fd);
+  const input = CreateTalentForm.parse(fromForm(CreateTalentForm, fd));
+  const kind: Kind = input.kind;
   let slug = "";
   const res = await guarded("talent.edit", async (ctx) => {
-    const title = str(fd, "name", 160);
-    const from = str(fd, "template", 80);
+    const title = input.name;
+    const from = input.template;
     if (!title) return fail(`Give the ${kind} a name.`);
     slug = slugify(title);
     if (kind === "role") {
@@ -106,11 +106,12 @@ async function problemsFor(ctx: WsCtx, kind: Kind, spec: RoleSpec | PoolSpec): P
 }
 
 export async function saveTalentDraft(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = SaveTalentDraftForm.parse(fromForm(SaveTalentDraftForm, fd));
   return guarded("talent.edit", async (ctx) => {
-    const kind = kindOf(fd);
-    const versionId = str(fd, "version_id", 64);
+    const kind: Kind = input.kind;
+    const versionId = input.version_id;
     let spec: RoleSpec | PoolSpec;
-    try { spec = JSON.parse(String(fd.get("spec") ?? "")); } catch { return fail("Spec is not valid JSON."); }
+    try { spec = JSON.parse(input.spec); } catch { return fail("Spec is not valid JSON."); }
     const { data, error } = await ctx.supabase.from("sf_talent_versions").update({ spec, spec_hash: hashOf(spec) }).eq("id", versionId).select("id, talent_id, version").single();
     if (error) return fail(error.message.includes("immutable") ? "This version is published and frozen. Start a new draft to change it." : error.message);
     await ctx.supabase.from("sf_talent").update({ name: spec.title, description: spec.description }).eq("id", data.talent_id);
@@ -122,23 +123,25 @@ export async function saveTalentDraft(_: ActionResult | null, fd: FormData): Pro
 }
 
 export async function newTalentDraft(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = NewTalentDraftForm.parse(fromForm(NewTalentDraftForm, fd));
   return guarded("talent.edit", async (ctx) => {
-    const id = str(fd, "talent_id", 64);
+    const id = input.talent_id;
     const { data: vs, error } = await ctx.supabase.from("sf_talent_versions").select("*").eq("talent_id", id).order("version", { ascending: false });
     if (error) return fail(error.message);
     if ((vs ?? []).some((v) => v.status === "draft")) return fail("A draft already exists.");
     const latest = vs![0];
     const { error: ie } = await ctx.supabase.from("sf_talent_versions").insert({ talent_id: id, version: latest.version + 1, spec: latest.spec, spec_hash: latest.spec_hash, created_by: ctx.user.id, change_note: `from v${latest.version}` });
     if (ie) return fail(ie.message);
-    revalidatePath(kindOf(fd) === "role" ? "/roles" : "/pools", "layout");
+    revalidatePath(input.kind === "role" ? "/roles" : "/pools", "layout");
     return ok(`Draft v${latest.version + 1} created.`);
   });
 }
 
 export async function publishTalentVersion(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = PublishTalentVersionForm.parse(fromForm(PublishTalentVersionForm, fd));
   return guarded("talent.publish", async (ctx) => {
-    const kind = kindOf(fd);
-    const versionId = str(fd, "version_id", 64);
+    const kind: Kind = input.kind;
+    const versionId = input.version_id;
     const { data: v } = await ctx.supabase.from("sf_talent_versions").select("spec").eq("id", versionId).single();
     if (!v) return fail("Version not found.");
     const problems = await problemsFor(ctx, kind, v.spec as RoleSpec | PoolSpec);
@@ -156,10 +159,11 @@ export interface RouteResult { ok: boolean; message: string; hits?: { skill: str
 export async function routeTask(roleSkills: string[], task: string): Promise<RouteResult> {
   try {
     await requireWorkspace();
-    const t = task.trim().slice(0, 4000);
+    const [skills, taskText] = RouteTaskArgs.parse([roleSkills, task]);
+    const t = taskText.trim().slice(0, 4000);
     if (t.length < 8) return { ok: false, message: "Describe the task in a sentence." };
     const sm = skillMap();
-    const allowed = roleSkills.filter((s) => sm.has(s));
+    const allowed = skills.filter((s) => sm.has(s));
     const hits = getRouter().route(t, allowed, 3).map((h) => ({ ...h, name: sm.get(h.skill)!.name, stage: sm.get(h.skill)!.stage }));
     return hits.length ? { ok: true, message: `Best match: ${hits[0].name}`, hits } : { ok: false, message: "None of this role's skills matches that task. Add a skill to the role, or rephrase." };
   } catch (e) {
@@ -170,10 +174,13 @@ export async function routeTask(roleSkills: string[], task: string): Promise<Rou
 export interface AnyRouteHit { skill: string; name: string; stage: string | null; score: number; matched: string[]; youGet: string; owners: string[]; example: string | null }
 
 /** The front door: rank every skill in the library for a task, with who owns it and whether an example can run now. */
-export async function routeAnyTask(task: string): Promise<{ ok: boolean; message: string; hits?: AnyRouteHit[] }> {
+export interface AnyRouteResult { ok: boolean; message: string; hits?: AnyRouteHit[] }
+
+export async function routeAnyTask(task: string): Promise<AnyRouteResult> {
   try {
     await requireWorkspace();
-    const t = task.trim().slice(0, 4000);
+    const [taskText] = RouteAnyTaskArgs.parse([task]);
+    const t = taskText.trim().slice(0, 4000);
     if (t.length < 8) return { ok: false, message: "Describe the work in a sentence." };
     const { whatYouGet, ownersOf, exampleFor } = await import("@/lib/frontdoor");
     const sm = skillMap();

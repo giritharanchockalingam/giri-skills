@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireWorkspace, fmtDate, type SkillRow, type ReleaseStateRow } from "@/lib/factory/db";
+import { requireWorkspace, fmtDate } from "@/lib/factory/db";
+import { loadEvaluationsOverview } from "@/lib/db/skills";
 import { evalGate, approvalGate, pct } from "@/lib/factory/release";
 import { meta } from "@/lib/data";
 import { PageHead, SectionHead } from "@/components/PageHead";
@@ -10,12 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function EvaluationsPage() {
   const ctx = await requireWorkspace();
-  const [skillsQ, statesQ] = await Promise.all([
-    ctx.supabase.from("sf_skills").select("id, slug, name, status").eq("workspace_id", ctx.workspace.id),
-    ctx.supabase.from("sf_version_release_state").select("*").eq("workspace_id", ctx.workspace.id).in("status", ["draft", "in_review", "approved", "published"]),
-  ]);
-  const skills = (skillsQ.data ?? []) as Pick<SkillRow, "id" | "slug" | "name" | "status">[];
-  const states = (statesQ.data ?? []) as (ReleaseStateRow & { skill_id: string; version: number })[];
+  const { skills, states } = await loadEvaluationsOverview(ctx.supabase, ctx.workspace.id);
   const rows = states.map((s) => ({ s, skill: skills.find((k) => k.id === s.skill_id)! })).filter((r) => r.skill).sort((a, b) => a.skill.name.localeCompare(b.skill.name) || b.s.version - a.s.version);
   const evaluated = rows.filter((r) => r.s.latest_eval_run_id).length;
   const gated = rows.filter((r) => r.s.eval_gate_met).length;

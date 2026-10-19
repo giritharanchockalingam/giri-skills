@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
 import { type FileRow } from "@/lib/factory/db";
+import { listVersionFiles } from "@/lib/db/skills";
 import { VersionBar } from "@/components/factory/VersionBar";
 import { FileEditor } from "@/components/factory/FileEditor";
 
@@ -13,9 +14,7 @@ export default async function FilesPage({ params, searchParams }: { params: Prom
   const d = await loadSkillPage(slug, v ?? null);
   const editable = can(d.ctx.role, "version.edit") && d.version.status === "draft";
   const authored = d.version.source.kind === "authored";
-  const { data: files } = authored
-    ? await d.ctx.supabase.from("sf_files").select("path, content, sha256, updated_at").eq("version_id", d.version.id).order("path")
-    : { data: null };
+  const files = authored ? await listVersionFiles(d.ctx.supabase, d.version.id) : null;
   return (
     <>
       <VersionBar slug={slug} view="files" versions={d.versions} current={d.version} />

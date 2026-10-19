@@ -103,9 +103,11 @@ export const CHECKS: CheckDef[] = [
       if (!raw) return { verdict: "error", summary: "no install report in the output", findings: null };
       let j: { written?: string[]; proposed?: string[]; env_added?: string[] };
       try { j = JSON.parse(raw); } catch { return { verdict: "error", summary: "install report is not valid JSON", findings: null }; }
-      const missing = (j.written ?? []).length, merge = (j.proposed ?? []).length;
-      return { verdict: missing >= 3 ? "fail" : missing + merge > 0 ? "warn" : "pass",
-        summary: missing ? `${missing} piece(s) missing: ${(j.written ?? []).slice(0, 3).join(", ")}${missing > 3 ? "…" : ""}` : merge ? `${merge} file(s) differ from the standard` : "logging, health checks, alerts and runbook in place", findings: missing + merge };
+      // the check is about PRESENCE: a piece that exists with the team's own content is in place (reported, not failed)
+      const missing = (j.written ?? []).length, custom = (j.proposed ?? []).length;
+      return { verdict: missing >= 3 ? "fail" : missing > 0 ? "warn" : "pass",
+        summary: missing ? `${missing} piece(s) missing: ${(j.written ?? []).slice(0, 3).join(", ")}${missing > 3 ? "…" : ""}`
+          : `logging, health checks, alerts and runbook in place${custom ? ` (${custom} customised from the standard)` : ""}`, findings: missing };
     },
   },
 ];

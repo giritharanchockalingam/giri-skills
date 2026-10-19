@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { requireWorkspace } from "@/lib/factory/db";
+import { loadCatalog, type CatalogEntityRow } from "@/lib/db/catalog";
 import { PageHead } from "@/components/PageHead";
 import { githubConfig } from "@/lib/github/app";
 import { appManifest } from "@/lib/github/manifest";
@@ -10,7 +11,6 @@ import { ScoreAll } from "@/components/catalog/ScoreAll";
 import { CHECKS } from "@/lib/scorecards/checks";
 import { connectGithub, disconnectGithub } from "./actions";
 import { humanName } from "@/lib/names";
-import type { Applicable, Signal } from "@/lib/github/detect";
 
 export const metadata = { title: "Catalog · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -32,8 +32,7 @@ const ago = (iso: string | null) => {
   const d = (Date.now() - new Date(iso).getTime()) / 86_400_000;
   return d < 1 ? "today" : d < 2 ? "yesterday" : d < 60 ? `${Math.floor(d)} days ago` : `${Math.floor(d / 30)} months ago`;
 };
-type Entity = { id: string; key: string; title: string; url: string; owner: string | null; archived: boolean; last_activity_at: string | null;
-  properties: { description?: string | null; visibility?: string; stack?: Signal[]; applicable?: Applicable[]; counts?: { files: number; tests: number; migrations: number; workflows: number }; tree_truncated?: boolean } };
+type Entity = CatalogEntityRow;
 
 /** Context Lake v1: what this workspace runs (from GitHub), what each repository is, and which skills apply to it. */
 export default async function CatalogPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -43,22 +42,17 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const cfg = githubConfig();
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-  const [instQ, entQ, syncQ, scoreQ] = await Promise.all([
-    ctx.supabase.from("sf_github_installations").select("installation_id, account_login, account_type, repository_selection, suspended_at, created_at").eq("workspace_id", ctx.workspace.id),
-    ctx.supabase.from("sf_catalog_entities").select("id, key, title, url, owner, archived, last_activity_at, properties").eq("workspace_id", ctx.workspace.id).eq("kind", "repository").order("last_activity_at", { ascending: false, nullsFirst: false }),
-    ctx.supabase.from("sf_catalog_syncs").select("status, counts, error, started_at, finished_at").eq("workspace_id", ctx.workspace.id).order("started_at", { ascending: false }).limit(1),
-    ctx.supabase.from("sf_scorecard_latest").select("entity_id, check_id, verdict, summary, created_at").eq("workspace_id", ctx.workspace.id),
-  ]);
+  const catalog = await loadCatalog(ctx.supabase, ctx.workspace.id);
   const scores = new Map<string, { check_id: string; verdict: string; summary: string; created_at: string }[]>();
-  for (const r of scoreQ.data ?? []) scores.set(r.entity_id, [...(scores.get(r.entity_id) ?? []), r]);
+  for (const r of catalog.scores) scores.set(r.entity_id, [...(scores.get(r.entity_id) ?? []), r]);
   const canScore = ctx.role === "admin" || ctx.role === "author";
   const titleOf = (id: string) => CHECKS.find((c) => c.id === id)?.title ?? id;
-  const insts = instQ.data ?? [];
-  const all = (entQ.data ?? []) as Entity[];
+  const insts = catalog.installations;
+  const all: Entity[] = catalog.entities;
   const active = all.filter((e) => !e.archived);
   const stackFilter = sp.stack ?? null;
   const rows = stackFilter ? active.filter((e) => e.properties.stack?.some((s) => s.id === stackFilter)) : active;
-  const last = syncQ.data?.[0] ?? null;
+  const last = catalog.lastSync;
   const stackCounts = new Map<string, { label: string; n: number }>();
   for (const e of active) for (const s of e.properties.stack ?? []) stackCounts.set(s.id, { label: s.label, n: (stackCounts.get(s.id)?.n ?? 0) + 1 });
   const noTests = active.filter((e) => (e.properties.counts?.files ?? 0) > 5 && !(e.properties.counts?.tests)).length;

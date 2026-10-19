@@ -6,7 +6,8 @@ import { PageHead } from "@/components/PageHead";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { AgentBuilder } from "@/components/factory/AgentBuilder";
 import { newAgentDraft, publishAgentVersion } from "@/app/agentActions";
-import { agentCatalog, type AgentRow, type AgentVersionRow, type AgentRunRow } from "@/lib/factory/agentRun";
+import { agentCatalog } from "@/lib/factory/agentRun";
+import { getAgentBySlug, listAgentVersions, listRecentRunsForVersions } from "@/lib/db/agents";
 import { STAGES, SHELVES } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -15,15 +16,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function AgentPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
   const { slug } = await params; const { v } = await searchParams;
   const ctx = await requireWorkspace();
-  const { data: a } = await ctx.supabase.from("sf_agents").select("*").eq("workspace_id", ctx.workspace.id).eq("slug", slug).maybeSingle();
-  if (!a) notFound();
-  const agent = a as AgentRow;
-  const { data: vs } = await ctx.supabase.from("sf_agent_versions").select("*").eq("agent_id", agent.id).order("version", { ascending: false });
-  const versions = (vs ?? []) as AgentVersionRow[];
+  const agent = await getAgentBySlug(ctx.supabase, ctx.workspace.id, slug);
+  if (!agent) notFound();
+  const versions = await listAgentVersions(ctx.supabase, agent.id);
   const current = versions.find((x) => String(x.version) === v) ?? versions.find((x) => x.status === "draft") ?? versions[0];
   if (!current) notFound();
-  const { data: rs } = await ctx.supabase.from("sf_agent_runs").select("id, status, created_at, agent_version_id, cost_usd").in("agent_version_id", versions.map((x) => x.id)).order("created_at", { ascending: false }).limit(8);
-  const runs = (rs ?? []) as Pick<AgentRunRow, "id" | "status" | "created_at" | "agent_version_id" | "cost_usd">[];
+  const runs = await listRecentRunsForVersions(ctx.supabase, versions.map((x) => x.id));
   const editable = current.status === "draft" && can(ctx.role, "agent.edit");
   const catalog = [...agentCatalog().values()].sort((x, y) => x.id.localeCompare(y.id));
 

@@ -7,17 +7,15 @@ import { PageHead } from "@/components/PageHead";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { RoleEditor, PoolEditor } from "@/components/factory/TalentEditors";
 import { newTalentDraft, publishTalentVersion } from "@/app/talentActions";
-import { ROLE_TEMPLATES, skillCatalogLite, workspacePlaybooks, workspaceRoles, type TalentRow, type TalentVersionRow } from "@/lib/factory/talentData";
-import type { RoleSpec, PoolSpec } from "@/lib/factory/talent";
+import { ROLE_TEMPLATES, skillCatalogLite, workspacePlaybooks, workspaceRoles } from "@/lib/factory/talentData";
+import { getTalentBySlug, listTalentVersions } from "@/lib/db/talent";
 import { STAGES, SHELVES } from "@/lib/data";
 
 export async function TalentDetail({ kind, slug, v }: { kind: "role" | "pool"; slug: string; v?: string }) {
   const ctx = await requireWorkspace();
-  const { data: t } = await ctx.supabase.from("sf_talent").select("*").eq("workspace_id", ctx.workspace.id).eq("kind", kind).eq("slug", slug).maybeSingle();
-  if (!t) notFound();
-  const talent = t as TalentRow;
-  const { data: vs } = await ctx.supabase.from("sf_talent_versions").select("*").eq("talent_id", talent.id).order("version", { ascending: false });
-  const versions = (vs ?? []) as TalentVersionRow<RoleSpec & PoolSpec>[];
+  const talent = await getTalentBySlug(ctx.supabase, ctx.workspace.id, kind, slug);
+  if (!talent) notFound();
+  const versions = await listTalentVersions(ctx.supabase, talent.id);
   const current = versions.find((x) => String(x.version) === v) ?? versions.find((x) => x.status === "draft") ?? versions[0];
   if (!current) notFound();
   const editable = current.status === "draft" && can(ctx.role, "talent.edit");

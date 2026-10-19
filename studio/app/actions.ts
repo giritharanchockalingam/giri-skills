@@ -12,8 +12,14 @@ import { manifestFromRepoSkill, casesFromRepoSkill, repoSlug, type RepoSkill } f
 import { skills as repoSkills } from "@/lib/data";
 import { providerKeyPresent, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
 import { currentPin } from "@/lib/factory/pins";
+import {
+  fromForm, NoFields, EmptyForm, CreateWorkspaceForm, SelectWorkspaceForm, CreateSkillForm, UpdateSkillForm, SaveManifestForm, SaveFileForm, DeleteFileForm,
+  CreateDraftForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
+  AddMemberForm, RemoveMemberForm, CreateApiKeyForm, RevokeApiKeyForm, SavePolicyForm, SaveConnectionForm, CancelRunForm,
+} from "@/lib/validation";
 
 export interface ActionResult { ok: boolean; message: string }
+export type ApiKeyResult = ActionResult & { key?: string };
 const fail = (message: string): ActionResult => ({ ok: false, message });
 const okay = (message: string): ActionResult => ({ ok: true, message });
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e)).replace(/^[a-z_]+: /, "");
@@ -32,15 +38,14 @@ async function guarded(action: Action, fn: (ctx: WsCtx) => Promise<ActionResult>
 const audit = (ctx: WsCtx, action: string, entity_type: string, entity_id: string, details: Record<string, unknown> = {}) =>
   ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: action, p_entity_type: entity_type, p_entity_id: entity_id, p_details: details });
 
-const str = (fd: FormData, k: string, max = 10000) => String(fd.get(k) ?? "").slice(0, max).trim();
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "skill";
 
 /* ───────────── workspace ───────────── */
 
 export async function createWorkspace(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const { name } = CreateWorkspaceForm.parse(fromForm(CreateWorkspaceForm, fd));
   try {
     const ctx = await getContext();
-    const name = str(fd, "name", 120);
     if (!name) return fail("Give the workspace a name.");
     const slug = slugify(name);
     const { data, error } = await ctx.supabase.rpc("sf_create_workspace", { p_name: name, p_slug: slug });
@@ -52,13 +57,14 @@ export async function createWorkspace(_: ActionResult | null, fd: FormData): Pro
 }
 
 export async function selectWorkspace(fd: FormData): Promise<void> {
-  const id = str(fd, "workspace_id", 64);
+  const { workspace_id: id } = SelectWorkspaceForm.parse(fromForm(SelectWorkspaceForm, fd));
   (await cookies()).set(WS_COOKIE, id, { path: "/", sameSite: "lax", httpOnly: true, maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/", "layout");
   redirect("/");
 }
 
-export async function signOut(): Promise<void> {
+export async function signOut(form?: FormData): Promise<void> {
+  NoFields.parse(form);
   const ctx = await getContext().catch(() => null);
   await ctx?.supabase.auth.signOut();
   redirect("/login");
@@ -67,13 +73,14 @@ export async function signOut(): Promise<void> {
 /* ───────────── skills ───────────── */
 
 export async function createSkill(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = CreateSkillForm.parse(fromForm(CreateSkillForm, fd));
   let slug = "";
   const r = await guarded("skill.create", async (ctx) => {
-    const name = str(fd, "name", 160);
+    const name = input.name;
     if (!name) return fail("Give the skill a name.");
-    slug = slugify(str(fd, "slug", 80) || name);
+    slug = slugify(input.slug || name);
     const base = emptyManifest();
-    const manifest: Manifest = { ...base, purpose: str(fd, "purpose", 2000), intended_users: str(fd, "intended_users", 2000), usage_guidance: str(fd, "usage_guidance", 4000),
+    const manifest: Manifest = { ...base, purpose: input.purpose, intended_users: input.intended_users, usage_guidance: input.usage_guidance,
       outputs: [{ path: "{out}/output.md", checks: ["exists"], schema: null }] };
     const { data: skill, error } = await ctx.supabase.from("sf_skills").insert({
       workspace_id: ctx.workspace.id, slug, name, owner_id: ctx.user.id, purpose: manifest.purpose, intended_users: manifest.intended_users, usage_guidance: manifest.usage_guidance,
@@ -91,9 +98,10 @@ export async function createSkill(_: ActionResult | null, fd: FormData): Promise
 }
 
 export async function updateSkill(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = UpdateSkillForm.parse(fromForm(UpdateSkillForm, fd));
   return guarded("skill.edit", async (ctx) => {
-    const id = str(fd, "skill_id", 64);
-    const patch = { name: str(fd, "name", 160), purpose: str(fd, "purpose", 2000), intended_users: str(fd, "intended_users", 2000), usage_guidance: str(fd, "usage_guidance", 4000) };
+    const id = input.skill_id;
+    const patch = { name: input.name, purpose: input.purpose, intended_users: input.intended_users, usage_guidance: input.usage_guidance };
     if (!patch.name) return fail("Name is required.");
     const { data, error } = await ctx.supabase.from("sf_skills").update(patch).eq("id", id).eq("workspace_id", ctx.workspace.id).select("slug").single();
     if (error) return fail(error.message);
@@ -105,14 +113,15 @@ export async function updateSkill(_: ActionResult | null, fd: FormData): Promise
 
 /** Saves a draft version's manifest (validated + re-hashed). The database rejects this for any non-draft version. */
 export async function saveManifest(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = SaveManifestForm.parse(fromForm(SaveManifestForm, fd));
   return guarded("version.edit", async (ctx) => {
-    const versionId = str(fd, "version_id", 64);
+    const versionId = input.version_id;
     let raw: unknown;
-    try { raw = JSON.parse(str(fd, "manifest", 500_000)); } catch (e) { return fail(`Manifest is not valid JSON: ${(e as Error).message}`); }
+    try { raw = JSON.parse(input.manifest); } catch (e) { return fail(`Manifest is not valid JSON: ${(e as Error).message}`); }
     const v = validateManifest(raw);
     if (!v.ok) return fail("Manifest has problems: " + v.problems.map((p) => `${p.path}: ${p.message}`).join(" · "));
     const hash = manifestHash(v.manifest);
-    const { data: row, error } = await ctx.supabase.from("sf_skill_versions").update({ manifest: v.manifest, manifest_hash: hash, change_note: str(fd, "change_note", 500) || undefined })
+    const { data: row, error } = await ctx.supabase.from("sf_skill_versions").update({ manifest: v.manifest, manifest_hash: hash, change_note: input.change_note || undefined })
       .eq("id", versionId).select("id, skill_id, version, status, sf_skills!sf_skill_versions_skill_id_fkey(slug)").single();
     if (error) return fail(error.message.includes("immutable") ? "This version is no longer a draft and cannot be edited. Create a new draft version instead." : error.message);
     // the skill's descriptive fields mirror the draft so the catalog stays in step
@@ -125,33 +134,36 @@ export async function saveManifest(_: ActionResult | null, fd: FormData): Promis
 }
 
 export async function saveFile(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = SaveFileForm.parse(fromForm(SaveFileForm, fd));
   return guarded("version.edit", async (ctx) => {
-    const versionId = str(fd, "version_id", 64), path = str(fd, "path", 220), content = String(fd.get("content") ?? "").slice(0, 400_000);
+    const versionId = input.version_id, path = input.path, content = input.content;
     if (!/^(scripts|assets|references)\/[A-Za-z0-9._/-]{1,200}$/.test(path) || path.includes("..")) return fail("Path must be scripts/…, assets/… or references/… (letters, digits, . _ - /).");
     const { error } = await ctx.supabase.from("sf_files").upsert({ version_id: versionId, path, content, sha256: sha256(content) }, { onConflict: "version_id,path" });
     if (error) return fail(error.message.includes("immutable") ? "This version is no longer a draft; its files are frozen." : error.message);
     await audit(ctx, "version.file_save", "skill_version", versionId, { path, sha256: sha256(content) });
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout");
+    revalidatePath(`/skills/${input.slug}`, "layout");
     return okay(`Saved ${path}.`);
   });
 }
 
 export async function deleteFile(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = DeleteFileForm.parse(fromForm(DeleteFileForm, fd));
   return guarded("version.edit", async (ctx) => {
-    const versionId = str(fd, "version_id", 64), path = str(fd, "path", 220);
+    const versionId = input.version_id, path = input.path;
     const { error } = await ctx.supabase.from("sf_files").delete().eq("version_id", versionId).eq("path", path);
     if (error) return fail(error.message);
     await audit(ctx, "version.file_delete", "skill_version", versionId, { path });
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout");
+    revalidatePath(`/skills/${input.slug}`, "layout");
     return okay(`Deleted ${path}.`);
   });
 }
 
 /** New draft = copy of the chosen version (manifest, files, cases) with version+1. The source version is untouched. */
 export async function createDraft(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = CreateDraftForm.parse(fromForm(CreateDraftForm, fd));
   let slug = "", newVersion = 0;
   const r = await guarded("version.create", async (ctx) => {
-    const fromId = str(fd, "from_version_id", 64);
+    const fromId = input.from_version_id;
     const from = must(await ctx.supabase.from("sf_skill_versions").select("*, sf_skills!sf_skill_versions_skill_id_fkey(slug, workspace_id)").eq("id", fromId).single(), "version") as VersionRow & { sf_skills: { slug: string; workspace_id: string } };
     if (from.sf_skills.workspace_id !== ctx.workspace.id) return fail("Not in this workspace.");
     slug = from.sf_skills.slug;
@@ -159,7 +171,7 @@ export async function createDraft(_: ActionResult | null, fd: FormData): Promise
     newVersion = (maxRow?.version ?? from.version) + 1;
     const nv = must(await ctx.supabase.from("sf_skill_versions").insert({
       skill_id: from.skill_id, version: newVersion, manifest: from.manifest, manifest_hash: from.manifest_hash, source: from.source, created_by: ctx.user.id,
-      change_note: str(fd, "change_note", 500) || `Draft from v${from.version}`,
+      change_note: input.change_note || `Draft from v${from.version}`,
     }).select("*").single(), "new version") as VersionRow;
     const files = must(await ctx.supabase.from("sf_files").select("path, content, sha256").eq("version_id", fromId), "files") as { path: string; content: string; sha256: string }[];
     if (files.length) { const { error } = await ctx.supabase.from("sf_files").insert(files.map((f) => ({ ...f, version_id: nv.id }))); if (error) return fail(error.message); }
@@ -176,8 +188,9 @@ export async function createDraft(_: ActionResult | null, fd: FormData): Promise
 /* ───────────── lifecycle ───────────── */
 
 export async function requestReview(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = VersionForm.parse(fromForm(VersionForm, fd));
   return guarded("version.request_review", async (ctx) => {
-    const id = str(fd, "version_id", 64);
+    const id = input.version_id;
     // pin repository files at the moment review is requested: the reviewer approves exactly these files
     const { data: cur } = await ctx.supabase.from("sf_skill_versions").select("source").eq("id", id).maybeSingle();
     const src = (cur?.source ?? { kind: "authored" }) as { kind: string; repo_skill?: string };
@@ -186,47 +199,51 @@ export async function requestReview(_: ActionResult | null, fd: FormData): Promi
     const { error } = await ctx.supabase.from("sf_skill_versions").update(pin ? { status: "in_review", source: { ...src, content_sha: pin } } : { status: "in_review" }).eq("id", id).eq("status", "draft");
     if (error) return fail(error.message);
     await audit(ctx, "version.request_review", "skill_version", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline");
+    revalidatePath(`/skills/${input.slug}`, "layout"); revalidatePath("/pipeline");
     return okay("Review requested. A reviewer can now approve or reject this exact version.");
   });
 }
 
 export async function withdrawReview(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = VersionForm.parse(fromForm(VersionForm, fd));
   return guarded("version.request_review", async (ctx) => {
-    const id = str(fd, "version_id", 64);
+    const id = input.version_id;
     const { error } = await ctx.supabase.from("sf_skill_versions").update({ status: "draft" }).eq("id", id).eq("status", "in_review");
     if (error) return fail(error.message);
     await audit(ctx, "version.withdraw_review", "skill_version", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline");
+    revalidatePath(`/skills/${input.slug}`, "layout"); revalidatePath("/pipeline");
     return okay("Back to draft.");
   });
 }
 
 /** Approved → draft: the approval row keeps the reviewed hash, so an edit makes it stale and a new review is needed. */
 export async function reopenVersion(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = VersionForm.parse(fromForm(VersionForm, fd));
   return guarded("version.edit", async (ctx) => {
-    const id = str(fd, "version_id", 64);
+    const id = input.version_id;
     const { error } = await ctx.supabase.from("sf_skill_versions").update({ status: "draft" }).eq("id", id).eq("status", "approved");
     if (error) return fail(error.message);
     await audit(ctx, "version.reopen", "skill_version", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline");
+    revalidatePath(`/skills/${input.slug}`, "layout"); revalidatePath("/pipeline");
     return okay("Reopened as a draft. The approval stays valid only while the manifest is unchanged; editing it will make the approval stale.");
   });
 }
 
 export async function reviewVersion(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = ReviewVersionForm.parse(fromForm(ReviewVersionForm, fd));
   return guarded("version.review", async (ctx) => {
-    const decision = str(fd, "decision", 10);
-    const { error } = await ctx.supabase.rpc("sf_review_version", { p_version: str(fd, "version_id", 64), p_decision: decision, p_note: str(fd, "note", 2000) });
+    const decision = input.decision;
+    const { error } = await ctx.supabase.rpc("sf_review_version", { p_version: input.version_id, p_decision: decision, p_note: input.note });
     if (error) return fail(error.message);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline"); revalidatePath("/evaluations");
+    revalidatePath(`/skills/${input.slug}`, "layout"); revalidatePath("/pipeline"); revalidatePath("/evaluations");
     return okay(decision === "approve" ? "Approved. The approval is pinned to this manifest; any edit makes it stale." : "Rejected and returned to draft.");
   });
 }
 
 export async function publishVersion(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = PublishVersionForm.parse(fromForm(PublishVersionForm, fd));
   return guarded("version.publish", async (ctx) => {
-    const { error } = await ctx.supabase.rpc("sf_publish_version", { p_version: str(fd, "version_id", 64) });
+    const { error } = await ctx.supabase.rpc("sf_publish_version", { p_version: input.version_id });
     if (error) return fail(error.message);
     revalidatePath("/", "layout");
     return okay("Published. Consumers and the API now run this version; it is immutable.");
@@ -234,8 +251,9 @@ export async function publishVersion(_: ActionResult | null, fd: FormData): Prom
 }
 
 export async function retireVersion(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = RetireVersionForm.parse(fromForm(RetireVersionForm, fd));
   return guarded("version.retire", async (ctx) => {
-    const { error } = await ctx.supabase.rpc("sf_retire_version", { p_version: str(fd, "version_id", 64), p_note: str(fd, "note", 500) });
+    const { error } = await ctx.supabase.rpc("sf_retire_version", { p_version: input.version_id, p_note: input.note });
     if (error) return fail(error.message);
     revalidatePath("/", "layout");
     return okay("Retired. It can no longer be run.");
@@ -245,30 +263,32 @@ export async function retireVersion(_: ActionResult | null, fd: FormData): Promi
 /* ───────────── evaluation cases ───────────── */
 
 export async function saveEvalCase(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = SaveEvalCaseForm.parse(fromForm(SaveEvalCaseForm, fd));
   return guarded("eval.edit", async (ctx) => {
-    const versionId = str(fd, "version_id", 64), id = str(fd, "case_id", 64), name = str(fd, "name", 160);
+    const versionId = input.version_id, id = input.case_id, name = input.name;
     if (!name) return fail("Give the case a name.");
     let inputs: unknown, checks: unknown;
-    try { inputs = JSON.parse(str(fd, "inputs", 200_000) || "{}"); } catch (e) { return fail(`Inputs must be a JSON object: ${(e as Error).message}`); }
-    try { checks = JSON.parse(str(fd, "checks", 20_000) || "[]"); } catch (e) { return fail(`Checks must be a JSON array: ${(e as Error).message}`); }
+    try { inputs = JSON.parse(input.inputs || "{}"); } catch (e) { return fail(`Inputs must be a JSON object: ${(e as Error).message}`); }
+    try { checks = JSON.parse(input.checks || "[]"); } catch (e) { return fail(`Checks must be a JSON array: ${(e as Error).message}`); }
     if (typeof inputs !== "object" || inputs === null || Array.isArray(inputs)) return fail("Inputs must be a JSON object of name → value.");
     if (!Array.isArray(checks) || checks.length === 0) return fail("Add at least one check (e.g. \"exit:0\", \"exists:result.json\").");
-    const row = { version_id: versionId, name, inputs, checks, notes: str(fd, "notes", 4000), expected: {} };
+    const row = { version_id: versionId, name, inputs, checks, notes: input.notes, expected: {} };
     const { error } = id ? await ctx.supabase.from("sf_eval_cases").update(row).eq("id", id) : await ctx.supabase.from("sf_eval_cases").insert(row);
     if (error) return fail(error.message);
     await audit(ctx, id ? "eval_case.update" : "eval_case.create", "skill_version", versionId, { name });
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout");
+    revalidatePath(`/skills/${input.slug}`, "layout");
     return okay(id ? "Case updated. Existing evaluation results are now outdated for this version." : "Case added. Run the evaluation to produce evidence on the new set.");
   });
 }
 
 export async function deleteEvalCase(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = DeleteEvalCaseForm.parse(fromForm(DeleteEvalCaseForm, fd));
   return guarded("eval.edit", async (ctx) => {
-    const id = str(fd, "case_id", 64);
+    const id = input.case_id;
     const { error } = await ctx.supabase.from("sf_eval_cases").delete().eq("id", id);
     if (error) return fail(error.message);
     await audit(ctx, "eval_case.delete", "eval_case", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout");
+    revalidatePath(`/skills/${input.slug}`, "layout");
     return okay("Case deleted.");
   });
 }
@@ -276,8 +296,9 @@ export async function deleteEvalCase(_: ActionResult | null, fd: FormData): Prom
 /* ───────────── import from repo ───────────── */
 
 export async function importFromRepo(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = ImportFromRepoForm.parse(fromForm(ImportFromRepoForm, fd));
   return guarded("skill.create", async (ctx) => {
-    const ids = fd.getAll("repo_skill").map(String).filter((s) => /^[a-z-]+\/[a-z0-9-]+$/.test(s));
+    const ids = input.repo_skill.filter((s) => /^[a-z-]+\/[a-z0-9-]+$/.test(s));
     if (!ids.length) return fail("Select at least one repository skill.");
     const { data: existing } = await ctx.supabase.from("sf_skills").select("slug").eq("workspace_id", ctx.workspace.id);
     const taken = new Set((existing ?? []).map((s: { slug: string }) => s.slug));
@@ -316,8 +337,9 @@ export async function importFromRepo(_: ActionResult | null, fd: FormData): Prom
 /* ───────────── administration ───────────── */
 
 export async function addMember(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = AddMemberForm.parse(fromForm(AddMemberForm, fd));
   return guarded("admin.members", async (ctx) => {
-    const email = str(fd, "email", 200), role = str(fd, "role", 20);
+    const email = input.email, role = input.role;
     if (!isRole(role)) return fail("Pick a role.");
     const { data: uid, error } = await ctx.supabase.rpc("sf_user_id_by_email", { p_email: email });
     if (error) return fail(error.message);
@@ -331,8 +353,8 @@ export async function addMember(_: ActionResult | null, fd: FormData): Promise<A
 }
 
 export async function removeMember(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const { user_id: uid } = RemoveMemberForm.parse(fromForm(RemoveMemberForm, fd));
   return guarded("admin.members", async (ctx) => {
-    const uid = str(fd, "user_id", 64);
     if (uid === ctx.user.id) return fail("You cannot remove yourself.");
     const { error } = await ctx.supabase.from("sf_memberships").delete().eq("workspace_id", ctx.workspace.id).eq("user_id", uid);
     if (error) return fail(error.message);
@@ -342,9 +364,9 @@ export async function removeMember(_: ActionResult | null, fd: FormData): Promis
   });
 }
 
-export async function createApiKey(_: ActionResult | null, fd: FormData): Promise<ActionResult & { key?: string }> {
+export async function createApiKey(_: ActionResult | null, fd: FormData): Promise<ApiKeyResult> {
+  const { name } = CreateApiKeyForm.parse(fromForm(CreateApiKeyForm, fd));
   return guarded("admin.keys", async (ctx) => {
-    const name = str(fd, "name", 80);
     if (!name) return fail("Give the key a name (e.g. the application that will use it).");
     const k = generateApiKey();
     const { data, error } = await ctx.supabase.from("sf_api_keys").insert({ workspace_id: ctx.workspace.id, name, key_hash: k.hash, prefix: k.prefix, created_by: ctx.user.id }).select("id").single();
@@ -356,8 +378,8 @@ export async function createApiKey(_: ActionResult | null, fd: FormData): Promis
 }
 
 export async function revokeApiKey(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const { key_id: id } = RevokeApiKeyForm.parse(fromForm(RevokeApiKeyForm, fd));
   return guarded("admin.keys", async (ctx) => {
-    const id = str(fd, "key_id", 64);
     const { error } = await ctx.supabase.from("sf_api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", id).eq("workspace_id", ctx.workspace.id);
     if (error) return fail(error.message);
     await audit(ctx, "api_key.revoke", "api_key", id);
@@ -367,13 +389,14 @@ export async function revokeApiKey(_: ActionResult | null, fd: FormData): Promis
 }
 
 export async function savePolicy(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = SavePolicyForm.parse(fromForm(SavePolicyForm, fd));
   return guarded("admin.policies", async (ctx) => {
-    const tools = fd.getAll("allowed_tools").map(String).filter((t) => t === "script" || t === "llm");
-    const providers = fd.getAll("allowed_providers").map(String).filter((t) => t === "none" || t === "anthropic" || t === "openai_compat");
-    const budgetRaw = str(fd, "monthly_budget_usd", 20);
+    const tools = input.allowed_tools.filter((t) => t === "script" || t === "llm");
+    const providers = input.allowed_providers.filter((t) => t === "none" || t === "anthropic" || t === "openai_compat");
+    const budgetRaw = input.monthly_budget_usd;
     const budget = budgetRaw === "" ? null : Number(budgetRaw);
     if (budget != null && (!Number.isFinite(budget) || budget < 0)) return fail("Monthly budget must be a non-negative number or empty.");
-    const conc = Number(str(fd, "max_concurrency", 5));
+    const conc = Number(input.max_concurrency);
     if (!Number.isInteger(conc) || conc < 1 || conc > 50) return fail("Max concurrency must be an integer 1–50.");
     const row = { workspace_id: ctx.workspace.id, allowed_tools: tools, allowed_providers: providers, monthly_budget_usd: budget, max_concurrency: conc };
     const { error } = await ctx.supabase.from("sf_policies").upsert(row, { onConflict: "workspace_id" });
@@ -385,13 +408,14 @@ export async function savePolicy(_: ActionResult | null, fd: FormData): Promise<
 }
 
 export async function saveConnection(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = SaveConnectionForm.parse(fromForm(SaveConnectionForm, fd));
   return guarded("admin.connections", async (ctx) => {
-    const name = str(fd, "name", 80), kind = str(fd, "kind", 20), secretRef = str(fd, "secret_ref", 64).toUpperCase();
+    const name = input.name, kind = input.kind, secretRef = input.secret_ref.toUpperCase();
     if (!/^[a-z0-9_-]{1,40}$/.test(name)) return fail("Name: lowercase letters, digits, - and _ (this is what manifests reference in `connections`).");
     if (!["llm_provider", "http", "database", "other"].includes(kind)) return fail("Pick a kind.");
     if (secretRef && !/^[A-Z0-9_]{1,64}$/.test(secretRef)) return fail("Secret reference must be an environment variable name (A–Z, 0–9, _).");
     const present = secretRef ? Boolean(process.env[secretRef]) : false;
-    const row = { workspace_id: ctx.workspace.id, name, kind, secret_ref: secretRef, config: { base_url: str(fd, "base_url", 300) }, status: secretRef ? (present ? "configured" : "not_configured") : "unverified" };
+    const row = { workspace_id: ctx.workspace.id, name, kind, secret_ref: secretRef, config: { base_url: input.base_url }, status: secretRef ? (present ? "configured" : "not_configured") : "unverified" };
     const { error } = await ctx.supabase.from("sf_connections").upsert(row, { onConflict: "workspace_id,name" });
     if (error) return fail(error.message);
     await audit(ctx, "connection.upsert", "connection", name, { kind, secret_ref: secretRef, status: row.status });
@@ -401,9 +425,9 @@ export async function saveConnection(_: ActionResult | null, fd: FormData): Prom
 }
 
 export async function cancelRun(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const { run_id: id } = CancelRunForm.parse(fromForm(CancelRunForm, fd));
   try {
     const ctx = await requireWorkspace();
-    const id = str(fd, "run_id", 64);
     const { data, error } = await ctx.supabase.from("sf_runs").update({ status: "cancelled", finished_at: new Date().toISOString(), error: "cancelled by the user before it started" })
       .eq("id", id).eq("workspace_id", ctx.workspace.id).eq("status", "queued").select("id");
     if (error) return fail(error.message);
@@ -419,7 +443,8 @@ export type { SkillRow };
 
 /** Admin: point every DRAFT that has llm steps at the configured OpenAI-compatible provider (SF_LLM_*), and allow that
  *  provider in the workspace policy. Published/approved versions are untouched (immutable / approval-pinned). */
-export async function useCompatForDrafts(_: ActionResult | null, _fd: FormData): Promise<ActionResult> {
+export async function useCompatForDrafts(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  EmptyForm.parse(fromForm(EmptyForm, fd));
   return guarded("admin.policies", async (ctx) => {
     if (!providerKeyPresent("openai_compat")) return fail("SF_LLM_API_KEY is not set on the server. Add it in Vercel and redeploy first.");
     const model = process.env.SF_LLM_MODEL || DEFAULT_COMPAT_MODEL;

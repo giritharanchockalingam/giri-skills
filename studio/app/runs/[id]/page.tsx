@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireWorkspace, fmtDate, fmtMs, fmtUsd, type RunRow, type VersionRow } from "@/lib/factory/db";
+import { requireWorkspace, fmtDate, fmtMs, fmtUsd } from "@/lib/factory/db";
+import { getRunWithVersion } from "@/lib/db/runs";
 import { cancelRun } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { RunPill, VersionPill } from "@/components/factory/Pills";
@@ -17,9 +18,8 @@ interface Factory { contract?: { ok: boolean; problems: { path: string; message:
 export default async function RunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> }) {
   const { id } = await params; const { from } = await searchParams;
   const ctx = await requireWorkspace();
-  const { data } = await ctx.supabase.from("sf_runs").select("*, sf_skill_versions(version, status, manifest_hash, sf_skills!sf_skill_versions_skill_id_fkey(slug, name))").eq("id", id).eq("workspace_id", ctx.workspace.id).maybeSingle();
-  if (!data) notFound();
-  const run = data as RunRow & { sf_skill_versions: Pick<VersionRow, "version" | "status" | "manifest_hash"> & { sf_skills: { slug: string; name: string } } };
+  const run = await getRunWithVersion(ctx.supabase, ctx.workspace.id, id);
+  if (!run) notFound();
   const vinfo = run.sf_skill_versions;
   const rj = (run.run_json ?? {}) as { steps?: Step[]; checks?: Check[]; assumptions?: Record<string, string>; inputs?: Record<string, string>; out?: string; factory?: Factory };
   const f = rj.factory ?? {};

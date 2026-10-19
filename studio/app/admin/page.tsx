@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
-import { getContext, fmtDate, type ApiKeyRow, type ConnectionRow, type PolicyRow, type AuditRow } from "@/lib/factory/db";
+import { getContext, fmtDate } from "@/lib/factory/db";
+import { loadAdminData, EMPTY_ADMIN_DATA } from "@/lib/db/admin";
 import { can, ROLES, ROLE_HELP } from "@/lib/factory/roles";
 import { addMember, removeMember, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace, useCompatForDrafts } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
@@ -15,19 +16,12 @@ export default async function AdminPage() {
   const ctx = await getContext();
   const admin = can(ctx.role, "admin.members");
   const ws = ctx.workspace;
-  const sb = ctx.supabase;
-  const [members, keys, conns, policy, audit] = ws ? await Promise.all([
-    sb.rpc("sf_member_directory", { p_workspace: ws.id }),
-    admin ? sb.from("sf_api_keys").select("*").eq("workspace_id", ws.id).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
-    sb.from("sf_connections").select("*").eq("workspace_id", ws.id).order("name"),
-    sb.from("sf_policies").select("*").eq("workspace_id", ws.id).maybeSingle(),
-    sb.from("sf_audit_events").select("*").eq("workspace_id", ws.id).order("created_at", { ascending: false }).limit(100),
-  ]) : [{ data: [] }, { data: [] }, { data: [] }, { data: null }, { data: [] }];
-  const memberRows = (members.data ?? []) as { user_id: string; email: string; role: string; created_at: string }[];
-  const keyRows = (keys.data ?? []) as ApiKeyRow[];
-  const connRows = (conns.data ?? []) as ConnectionRow[];
-  const pol = (policy.data ?? null) as PolicyRow | null;
-  const auditRows = (audit.data ?? []) as AuditRow[];
+  const data = ws ? await loadAdminData(ctx.supabase, ws.id, admin) : EMPTY_ADMIN_DATA;
+  const memberRows = data.members;
+  const keyRows = data.keys;
+  const connRows = data.connections;
+  const pol = data.policy;
+  const auditRows = data.audit;
   const anthropicPresent = providerKeyPresent("anthropic");
   const compatPresent = providerKeyPresent("openai_compat");
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/factory/db";
+import { getCatalogEntity, listEntityResults, type ScorecardResultRow } from "@/lib/db/catalog";
 import { PageHead } from "@/components/PageHead";
 import { ScoreAll } from "@/components/catalog/ScoreAll";
 import { CHECKS } from "@/lib/scorecards/checks";
@@ -10,19 +11,16 @@ import { humanName } from "@/lib/names";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 const CLS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
-type Res = { id: string; check_id: string; skill: string; verdict: string; summary: string; findings: number | null; commit_sha: string | null; duration_ms: number | null; created_at: string;
-  details: { report?: string; log_tail?: string; files_used?: number; partial?: boolean; runtime_status?: string; outputs?: { path: string; sha256: string; bytes: number }[] } };
+type Res = ScorecardResultRow;
 
 /** One repository's scorecard: each check's verdict, the skill's own report as evidence, and the history. */
 export default async function EntityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const ctx = await requireWorkspace();
-  const { data: e } = await ctx.supabase.from("sf_catalog_entities").select("id, key, url, owner, properties").eq("workspace_id", ctx.workspace.id).eq("id", id).maybeSingle();
+  const e = await getCatalogEntity(ctx.supabase, ctx.workspace.id, id);
   if (!e) notFound();
-  const { data: rows } = await ctx.supabase.from("sf_scorecard_results").select("id, check_id, skill, verdict, summary, findings, commit_sha, duration_ms, created_at, details")
-    .eq("workspace_id", ctx.workspace.id).eq("entity_id", id).order("created_at", { ascending: false }).limit(200);
-  const all = (rows ?? []) as Res[];
+  const all = await listEntityResults(ctx.supabase, ctx.workspace.id, id);
   const latest = CHECKS.map((c) => all.find((r) => r.check_id === c.id)).filter((r): r is Res => !!r);
   const canScore = ctx.role === "admin" || ctx.role === "author";
   const when = (iso: string) => new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });

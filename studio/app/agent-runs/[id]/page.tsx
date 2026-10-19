@@ -5,7 +5,7 @@ import { can } from "@/lib/factory/roles";
 import { PageHead } from "@/components/PageHead";
 import { AgentRunDriver } from "@/components/factory/AgentRunDriver";
 import { parseRef, isSkill } from "@/lib/factory/agents";
-import type { AgentRunRow, AgentVersionRow } from "@/lib/factory/agentRun";
+import { getAgentRun, getAgentVersionWithAgent } from "@/lib/db/agents";
 import { mdToHtml } from "@/lib/markdown.mjs";
 
 /** The "## Summary" section of a Markdown deliverable (the answer, before the detail). */
@@ -25,11 +25,9 @@ const LABEL: Record<string, string> = { ok: "ok", approved: "approved", succeede
 export default async function AgentRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ go?: string }> }) {
   const { id } = await params; const { go } = await searchParams;
   const ctx = await requireWorkspace();
-  const { data: r } = await ctx.supabase.from("sf_agent_runs").select("*").eq("id", id).eq("workspace_id", ctx.workspace.id).maybeSingle();
-  if (!r) notFound();
-  const run = r as AgentRunRow;
-  const { data: v } = await ctx.supabase.from("sf_agent_versions").select("*, sf_agents!inner(slug, name)").eq("id", run.agent_version_id).single();
-  const version = v as AgentVersionRow & { sf_agents: { slug: string; name: string } };
+  const run = await getAgentRun(ctx.supabase, ctx.workspace.id, id);
+  if (!run) notFound();
+  const version = await getAgentVersionWithAgent(ctx.supabase, run.agent_version_id);
   const spec = version.spec;
   const waiting = run.steps.find((s) => s.status === "awaiting_approval");
   // no deliverables chosen → the last step that wrote files is what the agent produced

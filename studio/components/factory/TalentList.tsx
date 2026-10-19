@@ -5,16 +5,14 @@ import { can } from "@/lib/factory/roles";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { createTalent } from "@/app/talentActions";
 import { ROLE_TEMPLATES, POOL_TEMPLATES, skillMap } from "@/lib/factory/talentData";
-import type { TalentRow, TalentVersionRow } from "@/lib/factory/talentData";
+import { listTalent, listTalentVersionSummaries } from "@/lib/db/talent";
 import type { RoleSpec, PoolSpec } from "@/lib/factory/talent";
 import { STAGES } from "@/lib/data";
 
 export async function TalentList({ kind }: { kind: "role" | "pool" }) {
   const ctx = await requireWorkspace();
-  const { data: ts } = await ctx.supabase.from("sf_talent").select("*").eq("workspace_id", ctx.workspace.id).eq("kind", kind).order("updated_at", { ascending: false });
-  const rows = (ts ?? []) as TalentRow[];
-  const { data: vs } = rows.length ? await ctx.supabase.from("sf_talent_versions").select("talent_id, version, status, spec").in("talent_id", rows.map((r) => r.id)).order("version", { ascending: false }) : { data: [] };
-  const versions = (vs ?? []) as Pick<TalentVersionRow<RoleSpec & PoolSpec>, "talent_id" | "version" | "status" | "spec">[];
+  const rows = await listTalent(ctx.supabase, ctx.workspace.id, kind);
+  const versions = await listTalentVersionSummaries(ctx.supabase, rows.map((r) => r.id));
   const sm = skillMap();
   const base = kind === "role" ? "/roles" : "/pools";
   const templates = kind === "role" ? ROLE_TEMPLATES : POOL_TEMPLATES;

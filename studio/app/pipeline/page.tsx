@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireWorkspace, type SkillRow, type VersionRow, type ReleaseStateRow } from "@/lib/factory/db";
+import { requireWorkspace } from "@/lib/factory/db";
+import { loadPipeline } from "@/lib/db/skills";
 import { can } from "@/lib/factory/roles";
 import { skills as repoSkills, STAGES, SHELVES, stageOfRepoSkill } from "@/lib/data";
 import { PageHead } from "@/components/PageHead";
@@ -12,15 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string; stage?: string }> }) {
   const sp = await searchParams;
   const ctx = await requireWorkspace();
-  const sb = ctx.supabase;
-  const [skillsQ, versionsQ, statesQ] = await Promise.all([
-    sb.from("sf_skills").select("*").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }),
-    sb.from("sf_skill_versions").select("id, skill_id, version, status, source, updated_at").order("version", { ascending: false }),
-    sb.from("sf_version_release_state").select("version_id, skill_id, status, latest_eval_pass_rate, eval_current, approval_valid, approval_stale, publishable, eval_case_count").eq("workspace_id", ctx.workspace.id),
-  ]);
-  const skills = (skillsQ.data ?? []) as SkillRow[];
-  const versions = (versionsQ.data ?? []) as Pick<VersionRow, "id" | "skill_id" | "version" | "status" | "source" | "updated_at">[];
-  const states = (statesQ.data ?? []) as Pick<ReleaseStateRow, "version_id" | "status" | "latest_eval_pass_rate" | "eval_current" | "approval_valid" | "approval_stale" | "publishable" | "eval_case_count">[];
+  const { skills, versions, states } = await loadPipeline(ctx.supabase, ctx.workspace.id);
   const stateById = new Map(states.map((s) => [s.version_id, s]));
   const items: CatalogItem[] = skills.map((s) => {
     const vs = versions.filter((v) => v.skill_id === s.id);

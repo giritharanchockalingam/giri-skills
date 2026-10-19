@@ -4,7 +4,7 @@ import { can } from "@/lib/factory/roles";
 import { PageHead } from "@/components/PageHead";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { createAgent } from "@/app/agentActions";
-import type { AgentRow, AgentVersionRow, AgentRunRow } from "@/lib/factory/agentRun";
+import { listAgentsOverview } from "@/lib/db/agents";
 import templates from "@/data/agent-templates.json";
 
 export const metadata = { title: "Agents · Skills Factory" };
@@ -12,15 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AgentsPage() {
   const ctx = await requireWorkspace();
-  const sb = ctx.supabase;
-  const [aq, vq, rq] = await Promise.all([
-    sb.from("sf_agents").select("*").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }),
-    sb.from("sf_agent_versions").select("id, agent_id, version, status, spec"),
-    sb.from("sf_agent_runs").select("id, agent_version_id, status, created_at").eq("workspace_id", ctx.workspace.id).order("created_at", { ascending: false }).limit(200),
-  ]);
-  const agents = (aq.data ?? []) as AgentRow[];
-  const versions = (vq.data ?? []) as Pick<AgentVersionRow, "id" | "agent_id" | "version" | "status" | "spec">[];
-  const runs = (rq.data ?? []) as Pick<AgentRunRow, "id" | "agent_version_id" | "status" | "created_at">[];
+  const { agents, versions, runs } = await listAgentsOverview(ctx.supabase, ctx.workspace.id);
   const tpls = templates as unknown as { name: string; spec: { description: string; steps: unknown[] } }[];
 
   return (

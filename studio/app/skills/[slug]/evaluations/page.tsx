@@ -3,7 +3,8 @@ import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
 import { evalGate, pct } from "@/lib/factory/release";
 import { runtimeConfig } from "@/lib/factory/runtime";
-import { fmtDate, type EvalCaseRow, type EvalRunRow } from "@/lib/factory/db";
+import { fmtDate } from "@/lib/factory/db";
+import { loadVersionEvaluations } from "@/lib/db/skills";
 import { saveEvalCase, deleteEvalCase } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { VersionBar } from "@/components/factory/VersionBar";
@@ -17,12 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function EvaluationsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string; edit?: string }> }) {
   const { slug } = await params; const { v, edit } = await searchParams;
   const d = await loadSkillPage(slug, v ?? null);
-  const [casesQ, runsQ] = await Promise.all([
-    d.ctx.supabase.from("sf_eval_cases").select("*").eq("version_id", d.version.id).order("created_at"),
-    d.ctx.supabase.from("sf_eval_runs").select("*").eq("version_id", d.version.id).order("started_at", { ascending: false }).limit(10),
-  ]);
-  const cases = (casesQ.data ?? []) as EvalCaseRow[];
-  const runs = (runsQ.data ?? []) as EvalRunRow[];
+  const { cases, runs } = await loadVersionEvaluations(d.ctx.supabase, d.version.id);
   const canEdit = can(d.ctx.role, "eval.edit"), canRun = can(d.ctx.role, "eval.run");
   const cfg = runtimeConfig();
   const editing = edit ? cases.find((c) => c.id === edit) ?? null : null;

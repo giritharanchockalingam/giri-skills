@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { requireWorkspace } from "@/lib/factory/db";
+import { listTalentSummaries, getPublishedTalentSpec } from "@/lib/db/talent";
+import { listSkillStatuses } from "@/lib/db/skills";
 import { PageHead } from "@/components/PageHead";
 import { CopyButton } from "@/components/CopyButton";
 import { ROLE_TEMPLATES, POOL_TEMPLATES } from "@/lib/factory/talentData";
@@ -22,12 +24,12 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   const kind: Kind = (["role", "team", "stage"] as const).includes(sp.kind as never) ? (sp.kind as Kind) : "workspace";
   const [wsRoles, wsTeams, published] = await Promise.all([
-    ctx.supabase.from("sf_talent").select("slug, name, status").eq("workspace_id", ctx.workspace.id).eq("kind", "role"),
-    ctx.supabase.from("sf_talent").select("slug, name, status").eq("workspace_id", ctx.workspace.id).eq("kind", "pool"),
-    ctx.supabase.from("sf_skills").select("slug, name, status").eq("workspace_id", ctx.workspace.id),
+    listTalentSummaries(ctx.supabase, ctx.workspace.id, "role"),
+    listTalentSummaries(ctx.supabase, ctx.workspace.id, "pool"),
+    listSkillStatuses(ctx.supabase, ctx.workspace.id),
   ]);
-  const roleList = [...new Map([...ROLE_TEMPLATES.map((r) => [r.name, r.title] as const), ...(wsRoles.data ?? []).filter((r) => r.status === "published").map((r) => [r.slug, `${r.name} (yours)`] as const)]).entries()];
-  const teamList = [...new Map([...POOL_TEMPLATES.map((p) => [p.name, p.title] as const), ...(wsTeams.data ?? []).filter((r) => r.status === "published").map((r) => [r.slug, `${r.name} (yours)`] as const)]).entries()];
+  const roleList = [...new Map([...ROLE_TEMPLATES.map((r) => [r.name, r.title] as const), ...(wsRoles ?? []).filter((r) => r.status === "published").map((r) => [r.slug, `${r.name} (yours)`] as const)]).entries()];
+  const teamList = [...new Map([...POOL_TEMPLATES.map((p) => [p.name, p.title] as const), ...(wsTeams ?? []).filter((r) => r.status === "published").map((r) => [r.slug, `${r.name} (yours)`] as const)]).entries()];
   const options: Record<Kind, [string, string][]> = { workspace: [], role: roleList, team: teamList, stage: STAGES.map((s) => [s.id, `${s.n}. ${s.name}`]) };
   const slug = kind === "workspace" ? null : options[kind].some(([s]) => s === sp.slug) ? sp.slug! : options[kind][0]?.[0] ?? null;
   const path = kind === "workspace" ? "/api/mcp" : `/api/mcp/${kind}/${slug}`;
@@ -37,10 +39,9 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
   // what this server will offer: the library skills in scope, and which of them this workspace has published
   // a published, tailored role/team of this workspace wins over the template of the same name (same rule as the server)
   const mine = async (k: "role" | "pool") => {
-    const t = (k === "role" ? wsRoles.data : wsTeams.data)?.find((r) => r.slug === slug && r.status === "published");
+    const t = (k === "role" ? wsRoles : wsTeams)?.find((r) => r.slug === slug && r.status === "published");
     if (!t) return null;
-    const { data } = await ctx.supabase.from("sf_talent").select("sf_talent_versions(spec, status)").eq("workspace_id", ctx.workspace.id).eq("kind", k).eq("slug", slug!).maybeSingle();
-    return ((data as { sf_talent_versions?: { spec: { skills?: string[]; members?: { role: string }[] }; status: string }[] } | null)?.sf_talent_versions ?? []).find((v) => v.status === "published")?.spec ?? null;
+    return getPublishedTalentSpec(ctx.supabase, ctx.workspace.id, k, slug!);
   };
   const myRole = kind === "role" ? await mine("role") : null;
   const tpl = kind === "role" ? (myRole?.skills ? { skills: myRole.skills } : ROLE_TEMPLATES.find((r) => r.name === slug)) : null;
@@ -50,7 +51,7 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
     kind === "stage" ? LIB.filter((s) => (Array.isArray(s.stage) ? s.stage.includes(slug!) : s.stage === slug)).map((s) => s.id)
       : kind === "role" ? tpl?.skills ?? []
       : (team?.members ?? []).flatMap((m) => ROLE_TEMPLATES.find((r) => r.name === m.role)?.skills ?? []));
-  const pubBySlug = new Map((published.data ?? []).map((s) => [s.slug, s.status]));
+  const pubBySlug = new Map((published ?? []).map((s) => [s.slug, s.status]));
   const rows = (inScope ? [...inScope] : LIB.map((s) => s.id).filter((id) => pubBySlug.has(id.split("/")[1])))
     .map((id) => ({ id, name: humanName(id.split("/")[1]), card: LIB.find((s) => s.id === id)?.card ?? "", status: pubBySlug.get(id.split("/")[1]) ?? "not added" }))
     .sort((a, b) => Number(b.status === "published") - Number(a.status === "published") || a.name.localeCompare(b.name));
