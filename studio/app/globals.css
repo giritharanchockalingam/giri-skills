@@ -849,6 +849,7 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .ins-form .field { margin: 0; } .ins-wide { grid-column: 1 / -1; }
 
 /* ───────────────────────────── Automations ───────────────────────────── */
+.auto-table { padding-top: 8px; overflow-x: auto; }
 .auto-setup { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
 .auto-form { display: grid; gap: 12px; max-width: 760px; }
 .auto-set { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; }

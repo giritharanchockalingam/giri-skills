@@ -54,7 +54,7 @@ export default async function AutomationsPage() {
 
       <section className="card mb-6">
         <div className="card-pad" style={{ paddingBottom: 0 }}><div className="h3" style={{ marginTop: 0 }}>Automations</div></div>
-        <table className="mini">
+        <div className="card-pad auto-table"><table className="mini">
           <thead><tr><th>Name</th><th>When</th><th>In</th><th>Run</th><th>Report</th><th>State</th>{admin && <th />}</tr></thead>
           <tbody>{automations.length === 0 ? <tr><td colSpan={7} className="none">No automations yet.</td></tr> : automations.map((a) => (
             <tr key={a.id}>
@@ -68,13 +68,13 @@ export default async function AutomationsPage() {
                 <form action={toggleAutomation}><input type="hidden" name="id" value={a.id} /><input type="hidden" name="enabled" value={String(!a.enabled)} /><button className="link caption" type="submit">{a.enabled ? "turn off" : "turn on"}</button></form>
                 <form action={removeAutomation}><input type="hidden" name="id" value={a.id} /><button className="link caption" type="submit">delete</button></form></td>}
             </tr>))}</tbody>
-        </table>
+        </table></div>
         {admin && <div className="card-pad"><div className="h3" style={{ marginTop: 0 }}>New automation</div><AutomationForm repos={repos} checks={CHECKS.map((c) => ({ id: c.id, title: c.title }))} /></div>}
       </section>
 
       <section className="card">
         <div className="card-pad" style={{ paddingBottom: 0 }}><div className="h3" style={{ marginTop: 0 }}>Runs</div></div>
-        <table className="mini">
+        <div className="card-pad auto-table"><table className="mini">
           <thead><tr><th>When</th><th>Automation</th><th>Repository</th><th>Event</th><th>Verdicts</th><th>On GitHub</th></tr></thead>
           <tbody>{runs.length === 0 ? <tr><td colSpan={6} className="none">No runs yet — they appear when GitHub sends an event.</td></tr> : runs.map((r) => (
             <tr key={r.id}>
@@ -86,7 +86,7 @@ export default async function AutomationsPage() {
                 : Object.entries(r.verdicts).map(([k, v]) => <span key={k} className={`pill pill-sm ${CLS[v.verdict] ?? ""}`} title={v.summary} style={{ marginRight: 4 }}>{titleOf(k)}: {v.verdict}</span>)}</td>
               <td>{r.check_run_url ? <a className="link caption" href={r.check_run_url} target="_blank" rel="noreferrer">check</a> : <span className="caption">—</span>}</td>
             </tr>))}</tbody>
-        </table>
+        </table></div>
       </section>
     </>
   );

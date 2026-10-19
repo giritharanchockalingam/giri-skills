@@ -62,3 +62,12 @@ Optional model re-rank for the task router (top-3 → model pick, logged with co
 - Portal passes its own scorecard (live, f2fb1a8+): data access in lib/db/*, zod in every server action (lib/validation.ts), observability installed by the skill (deep health: db/auth/runtime/github; needs HEALTH_CHECK_TOKEN in production), tenancy migration 0010 (derived workspace_id + indexes, sf_health_ping).
 - Skill fixes found by dogfooding: tenancy audit --tenant-column auto; conventions lint covers JS and skips out/; runtime accepts Next.js route paths.
 - Owner actions: set HEALTH_CHECK_TOKEN in Vercel to enable /api/health/deep; set ROI baselines on /insights (none set yet, so no hours shown).
+
+## 2026-10-19 — Workflow orchestrator (Port pillar 4)
+- GitHub webhook (/api/github/webhook): HMAC-verified, de-duplicated by X-GitHub-Delivery (sf_github_deliveries), answered 202, processed in after().
+- Automations (/automations, sf_automations, 0011): on pull_request (non-draft) or push to default branch → one scorecard run at the commit → GitHub Check Run "Skills Factory: <name>" (fail/error → failure; warn → neutral). Runs in sf_automation_runs.
+- PR results are stored with context='pull_request' and stay out of the default-branch scorecard (sf_scorecard_latest).
+- Owner config: GITHUB_WEBHOOK_SECRET + SUPABASE_SERVICE_ROLE_KEY in Vercel; App webhook URL, Checks: write, Pull requests: read, events Pull request + Push.
+- ROI: 14 baselines set as labelled estimates (owner "Claude (estimate, to be validated)"), minutes only.
+- Proven live on PR #4: the "Pull request gate" automation posted its Check Run.
+- Next: slice 5 — AI assistant over the catalog, skills and scorecards.

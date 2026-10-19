@@ -6,7 +6,7 @@
  * installation. Each automation run is recorded with its verdicts, the commit, and the GitHub link. */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminSupabase } from "@/lib/supabase/server-admin";
-import { githubConfig, installationToken, getRepo, createCheckRun, completeCheckRun } from "@/lib/github/app";
+import { githubConfig, installationToken, getRepo, createCheckRun, completeCheckRun, type GithubConfig } from "@/lib/github/app";
 import { profileRepo, syncWorkspace } from "@/lib/github/sync";
 import { scoreEntity } from "@/lib/scorecards/run";
 import { log } from "@/lib/logger";
@@ -14,24 +14,40 @@ import { matchAutomations, unionChecks, checkRunOutput, type NormEvent, type Aut
 
 export const CHECK_NAME_PREFIX = "Skills Factory";
 
-export async function processEvent(e: NormEvent, deliveryId: string, origin: string, sbIn?: SupabaseClient): Promise<{ handled: string }> {
-  const sb = sbIn ?? createAdminSupabase();
-  const c = githubConfig();
+/** Everything processEvent touches outside itself — injected so every path is testable without GitHub or a runtime. */
+export interface ProcessDeps {
+  sb: SupabaseClient;
+  config: () => ReturnType<typeof githubConfig>;
+  installationToken: (cfg: GithubConfig, installationId: number) => Promise<string>;
+  getRepo: typeof getRepo;
+  profileRepo: typeof profileRepo;
+  syncWorkspace: typeof syncWorkspace;
+  scoreEntity: typeof scoreEntity;
+  createCheckRun: typeof createCheckRun;
+  completeCheckRun: typeof completeCheckRun;
+}
+export const defaultDeps = (sb?: SupabaseClient): ProcessDeps => ({
+  sb: sb ?? createAdminSupabase(), config: githubConfig, installationToken, getRepo, profileRepo, syncWorkspace, scoreEntity, createCheckRun, completeCheckRun,
+});
+
+export async function processEvent(e: NormEvent, deliveryId: string, origin: string, deps: ProcessDeps = defaultDeps()): Promise<{ handled: string }> {
+  const { sb } = deps;
+  const c = deps.config();
   if (!c.ok) return { handled: "github app not configured" };
   const { data: inst } = await sb.from("sf_github_installations").select("workspace_id, installation_id, verified_by, suspended_at").eq("installation_id", e.installationId).maybeSingle();
   if (!inst || inst.suspended_at) return { handled: "installation not linked to a workspace" };
   const ws = inst.workspace_id as string;
 
   if (e.kind === "repos_changed") {
-    const r = await syncWorkspace(sb, ws, inst.verified_by as string, c.cfg);
+    const r = await deps.syncWorkspace(sb, ws, inst.verified_by as string, c.cfg);
     return { handled: `catalog re-synced: ${r.message}` };
   }
 
-  const token = await installationToken(c.cfg, e.installationId);
+  const token = await deps.installationToken(c.cfg, e.installationId);
   // keep the Context Lake current: a push to the default branch re-profiles the repository (or adds it)
   let { data: entity } = await sb.from("sf_catalog_entities").select("id, key").eq("workspace_id", ws).eq("kind", "repository").eq("key", e.repo).maybeSingle();
   if (e.kind === "push" || !entity) {
-    const p = await profileRepo(token, await getRepo(token, e.repo));
+    const p = await deps.profileRepo(token, await deps.getRepo(token, e.repo));
     const { data: up } = await sb.from("sf_catalog_entities").upsert(
       { workspace_id: ws, kind: "repository", source: "github", installation_id: e.installationId, synced_at: new Date().toISOString(), ...p },
       { onConflict: "workspace_id,kind,key" }).select("id, key").single();
@@ -49,18 +65,25 @@ export async function processEvent(e: NormEvent, deliveryId: string, origin: str
   for (const a of autos) {
     let checkRun: { id: number; html_url: string } | null = null;
     if (a.report_to_github) {
-      try { checkRun = await createCheckRun(token, e.repo, { name: `${CHECK_NAME_PREFIX}: ${a.name}`.slice(0, 100), head_sha: e.sha, details_url: detailsUrl, external_id: a.id }); }
+      try { checkRun = await deps.createCheckRun(token, e.repo, { name: `${CHECK_NAME_PREFIX}: ${a.name}`.slice(0, 100), head_sha: e.sha, details_url: detailsUrl, external_id: a.id }); }
       catch (err) { log.warn({ action: "automation.check_run.create", repo: e.repo, err }, "could not create check run (missing checks: write?)"); }
     }
     const { data: run } = await sb.from("sf_automation_runs").insert({ workspace_id: ws, automation_id: a.id, entity_id: entity.id, repo: e.repo, event: e.kind,
       delivery_id: deliveryId, head_sha: e.sha, pr_number: pr, check_run_url: checkRun?.html_url ?? null }).select("id").single();
-    runs.push({ a, runId: run!.id as string, checkRun });
+    if (!run) {
+      log.error({ action: "automation.run.insert", repo: e.repo }, "could not record the automation run");
+      if (checkRun) await deps.completeCheckRun(token, e.repo, checkRun.id, { conclusion: "neutral", title: "Could not run the scorecard",
+        summary: "The run could not be recorded. This is a problem on the Skills Factory side, not a verdict on this code.", details_url: detailsUrl }).catch(() => undefined);
+      continue;
+    }
+    runs.push({ a, runId: run.id as string, checkRun });
   }
 
+  if (!runs.length) return { handled: "could not record any automation run" };
   // one scorecard run for all matching automations (union of their checks), attributed to the first automation's run
   let score: Awaited<ReturnType<typeof scoreEntity>> | null = null, failure: string | null = null;
   try {
-    score = await scoreEntity(sb, ws, autos[0].created_by, entity.id, { ref: e.sha, context: e.kind === "pull_request" ? "pull_request" : "default", prNumber: pr, checks: unionChecks(autos), automationRunId: runs[0].runId });
+    score = await deps.scoreEntity(sb, ws, runs[0].a.created_by, entity.id, { ref: e.sha, context: e.kind === "pull_request" ? "pull_request" : "default", prNumber: pr, checks: unionChecks(runs.map((r) => r.a)), automationRunId: runs[0].runId });
     if (!score.ok) failure = score.message;
   } catch (err) { failure = (err as Error).message; log.error({ action: "automation.score", repo: e.repo, err }, "scorecard run failed"); }
 
@@ -71,7 +94,7 @@ export async function processEvent(e: NormEvent, deliveryId: string, origin: str
     await sb.from("sf_automation_runs").update({ status: failure ? "failed" : "succeeded", error: failure, finished_at: new Date().toISOString(),
       verdicts: Object.fromEntries(mine.map((r) => [r.check, { verdict: r.verdict, summary: r.summary }])) }).eq("id", runId);
     if (checkRun) {
-      try { await completeCheckRun(token, e.repo, checkRun.id, { ...out, details_url: detailsUrl }); }
+      try { await deps.completeCheckRun(token, e.repo, checkRun.id, { ...out, details_url: detailsUrl }); }
       catch (err) { log.warn({ action: "automation.check_run.complete", repo: e.repo, err }, "could not complete check run"); }
     }
   }
