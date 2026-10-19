@@ -148,6 +148,8 @@ export interface StepRecord {
   id: string; kind: "skill" | "compose" | "approval";
   status: "ok" | "approved" | "failed" | "blocked" | "awaiting_approval" | "needs_input" | "skipped";
   skill?: string; run_id?: string; checks_passed?: number; checks_total?: number; files?: StoredFile[];
+  /** Failed checks with their evidence, so a failed step is reviewable without re-running it. */
+  failed_checks?: { check: string; path: string; evidence: string }[];
   error?: string | null; duration_ms?: number; cost_usd?: number | null; provider?: string | null; model?: string | null;
   role?: string; note?: string; approver_id?: string; approver_email?: string; approval_note?: string; at?: string;
 }

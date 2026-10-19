@@ -47,6 +47,9 @@ export default async function AgentRunPage({ params, searchParams }: { params: P
                 {rec?.duration_ms ? <span className="caption">{(rec.duration_ms / 1000).toFixed(1)} s</span> : null}
               </div>
               {rec?.error && <p className="notice notice-err" style={{ margin: "8px 0 0" }}>{rec.error}</p>}
+              {rec?.failed_checks && rec.failed_checks.length > 0 && (
+                <ul className="ab-failed">{rec.failed_checks.map((c, k) => <li key={k}><code>{c.check}</code> on <b>{c.path}</b> — {c.evidence}</li>)}</ul>
+              )}
               {rec?.status === "approved" && <p className="caption">Approved by {rec.approver_email || "reviewer"} as {rec.role}{rec.approval_note ? ` — “${rec.approval_note}”` : ""}</p>}
               {rec?.files && rec.files.length > 0 && (
                 <div className="chip-group mt-2">{rec.files.map((f) => <a key={f.path} href={`#${s.id}-${f.path}`} className="chip">{f.path}</a>)}</div>

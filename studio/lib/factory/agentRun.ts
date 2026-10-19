@@ -99,12 +99,13 @@ export async function advanceAgentRun(ctx: WsCtx, run: AgentRunRow, spec: AgentS
           runId: `${run.id}-${String(run.cursor + 1).padStart(2, "0")}`, manifest, source: { kind: "repo", repo_skill: step.skill }, slug: repo.name,
           files: [], inputs, assumptions: step.assume ?? {}, policy: await getPolicy(ctx),
         });
-        const checks = (patchRun.run_json?.checks as { pass?: boolean }[] | undefined) ?? [];
+        const checks = (patchRun.run_json?.checks as { pass?: boolean; check?: string; path?: string; evidence?: unknown }[] | undefined) ?? [];
         const exit = (patchRun.response?.exit_code ?? null) as number | null;
         Object.assign(rec, {
           status: patchRun.status === "succeeded" ? "ok" : patchRun.status === "needs_input" ? "needs_input"
             : step.gate && exit === 1 && patchRun.outputs.length ? "blocked" : "failed",
           checks_passed: checks.filter((c) => c.pass).length, checks_total: checks.length,
+          failed_checks: checks.filter((c) => !c.pass).map((c) => ({ check: String(c.check ?? ""), path: String(c.path ?? "").split("/").pop() ?? "", evidence: String(c.evidence ?? "").slice(0, 500) })),
           files: patchRun.outputs.map((o) => ({ path: o.path, bytes: o.bytes, sha256: o.sha256, content_text: o.content_text })),
           error: patchRun.status === "succeeded" ? null : patchRun.error, duration_ms: patchRun.duration_ms,
           cost_usd: patchRun.cost_usd, provider: patchRun.provider, model: patchRun.model,

@@ -7,7 +7,7 @@ export function PageHead({ eyebrow, title, em, after, lead, caption, note }: {
   return (
     <div className="page-head">
       <div className="eyebrow">{eyebrow}</div>
-      <h1 className="h1">{title} <em>{em}</em>{after ?? "."}</h1>
+      <h1 className="h1">{title}{em && <> <em>{em}</em></>}{after ?? "."}</h1>
       {lead && <p className="lead">{lead}</p>}
       {caption && <p className="caption mt-3">{caption}</p>}
       {note && <p className="page-note">{note}</p>}

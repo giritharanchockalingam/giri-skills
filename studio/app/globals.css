@@ -718,4 +718,6 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .ab-pick:hover, .ab-pick:focus-visible { background: var(--wash); }
 .ab-pick-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ab-file { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); font-size: 12.5px; max-height: 520px; overflow: auto; margin: 10px 0 0; }
+.ab-failed { margin: 8px 0 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.ab-failed li { margin: 2px 0; }
 @media (max-width: 1000px) { .agent-builder { grid-template-columns: minmax(0, 1fr); } .ab-wiring .select { min-width: 0; width: 100%; } }
