@@ -112,13 +112,15 @@ function parseAgent(rawFm) {
   const lines = rawFm.split(/\r?\n/);
   const start = lines.findIndex((l) => /^  agent:\s*$/.test(l));
   if (start < 0) return null;
-  const agent = { inputs: [], steps: [], run: [], outputs: [], demo: null };
+  const agent = { inputs: [], steps: [], run: [], outputs: [], demo: null, modeSpecs: {} };
   let section = null;
   for (let i = start + 1; i < lines.length; i++) {
     const l = lines[i];
     if (/^\S/.test(l) || /^  [\w-]+:/.test(l)) break;
-    const sec = l.match(/^    (inputs|run|outputs):\s*$/);
+    const sec = l.match(/^    (inputs|run|outputs|modes):\s*$/);
     if (sec) { section = sec[1] === "run" ? "steps" : sec[1]; continue; }
+    const mode = section === "modes" && l.match(/^      (new|existing):\s*(\{[\s\S]*\})\s*$/);
+    if (mode) { const o = parseFlow(mode[2]); agent.modeSpecs[mode[1]] = { caseId: String(o.case ?? ""), bring: String(o.bring ?? "") }; continue; }
     const item = l.match(/^      - (\{[\s\S]*\})\s*$/);
     if (item && section) {
       const o = parseFlow(item[1]);
@@ -136,6 +138,7 @@ const unquote = (v) => {
 };
 
 // ---------- skills ----------
+const CARDS = existsSync(join(ROOT, "shared", "skill-cards.json")) ? JSON.parse(readFileSync(join(ROOT, "shared", "skill-cards.json"), "utf8")).cards || {} : {};
 const skills = [];
 for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
   const ddir = join(ROOT, "skills", domain);
@@ -158,9 +161,18 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
       agent.demo = demoCase
         ? { caseId: demoCase.id, inputs: Object.fromEntries(Object.entries(demoCase.inputs).map(([k, v]) => [k, String(v)])), assume: Object.fromEntries(Object.entries(demoCase.assume || {}).map(([k, v]) => [k, String(v)])) }
         : null;
+      // starting points: "new" (greenfield) / "existing" (brownfield), each with the eval case whose fixtures it runs on
+      const caseInputs = (id) => {
+        const c = (evals.cases || []).find((x) => x.id === id && x.inputs);
+        return c ? { caseId: c.id, inputs: Object.fromEntries(Object.entries(c.inputs).map(([k, v]) => [k, String(v)])), assume: Object.fromEntries(Object.entries(c.assume || {}).map(([k, v]) => [k, String(v)])) } : null;
+      };
+      agent.modes = {};
+      for (const [m, spec] of Object.entries(agent.modeSpecs)) { const d = caseInputs(spec.caseId); if (d) agent.modes[m] = { bring: spec.bring, ...d }; }
+      delete agent.modeSpecs;
     }
     skills.push({
       id: `${domain}/${name}`,
+      card: CARDS[`${domain}/${name}`] || "",
       domain,
       stage: (typeof fm.metadata === "object" && fm.metadata.adlc_stage) || null,
       name: fm.name || name,

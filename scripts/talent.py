@@ -137,7 +137,18 @@ def validate_all(root: Path = ROOT) -> list[str]:
         problems += [f"pools/{name}.json: {x}" for x in validate_pool(spec, roles, playbooks)]
     owned = {s for r in roles.values() for s in r.get("skills") or []}
     problems += [f"skill {s} belongs to no role" for s in sorted(skills) if s not in owned]
+    problems += validate_cards(skills, root)
     return problems
+
+
+def validate_cards(skills: dict[str, str], root: Path = ROOT) -> list[str]:
+    """Every skill has a one-line outcome for the lifecycle view (shared/skill-cards.json), at most 12 words."""
+    path = root / "shared" / "skill-cards.json"
+    cards = json.loads(path.read_text(encoding="utf-8")).get("cards", {}) if path.exists() else {}
+    out = [f"skill {s} has no card in shared/skill-cards.json" for s in sorted(skills) if not str(cards.get(s, "")).strip()]
+    out += [f"skill-cards: {s} is not a skill" for s in sorted(cards) if s not in skills]
+    out += [f"skill-cards: {s} is over 12 words" for s, t in sorted(cards.items()) if len(str(t).split()) > 12]
+    return out
 
 
 def coverage(pool: dict, roles: dict[str, dict], skills: dict[str, str], stages: list[str]) -> dict[str, list[str]]:

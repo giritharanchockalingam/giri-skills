@@ -17,7 +17,10 @@ export interface AgentOutput { path: string; checks: string[] }
 /** The happy-path eval case `run_skill.py --demo` uses: input values (fixture paths relative to the skill dir) and assumptions. */
 export interface AgentDemo { caseId: string; inputs: Record<string, string>; assume: Record<string, string> }
 /** The `metadata.agent` block of SKILL.md: what run_skill.py needs, runs and checks. */
-export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: AgentOutput[]; demo: AgentDemo | null }
+/** A starting point: "new" (greenfield, from scratch) or "existing" (brownfield, improve what exists), with its example. */
+export type StartMode = "new" | "existing";
+export interface AgentMode extends AgentDemo { bring: string }
+export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: AgentOutput[]; demo: AgentDemo | null; modes?: Partial<Record<StartMode, AgentMode>> }
 
 export interface EvalCase { id: string; prompt: string; expected: string[] }
 export interface Skill {

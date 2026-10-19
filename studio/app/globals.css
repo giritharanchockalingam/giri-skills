@@ -762,3 +762,52 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .fd-role-foot { margin-top: auto; padding-top: 6px; display: flex; gap: 12px; align-items: center; }
 .run-asked { padding: 12px 14px; background: var(--wash); border-radius: var(--r-sm); margin-bottom: 12px; }
 .run-answer { margin-top: 16px; scroll-margin-top: 120px; }
+
+/* ───────────────────────────── Lifecycle view (Home) ───────────────────────────── */
+.lc { display: grid; gap: 14px; }
+.lc-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.lc-seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: var(--wash); }
+.lc-seg button { border: 0; background: transparent; border-radius: 999px; padding: 7px 16px; font: 600 14px var(--sans); color: var(--ink-2); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; }
+.lc-seg button span { font-weight: 400; font-size: 11.5px; color: var(--ink-3); }
+.lc-seg button.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(15,26,33,.12); }
+.lc-seg button:focus-visible { outline: 2px solid var(--flame); outline-offset: 2px; }
+.lc-role { display: flex; align-items: center; gap: 8px; }
+.lc-role .select { width: auto; min-height: 36px; }
+.lc-rail { display: grid; grid-template-columns: 4fr 3fr 2fr 2fr 2fr; gap: 10px; }
+.lc-phase { min-width: 0; }
+.lc-phase-title { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 0 2px 6px; border-bottom: 2px solid var(--rule); margin-bottom: 8px; }
+.lc-phase-plan .lc-phase-title { border-color: #7aa6b3; } .lc-phase-build .lc-phase-title { border-color: var(--flame); }
+.lc-phase-ship .lc-phase-title { border-color: var(--hold); } .lc-phase-run .lc-phase-title { border-color: var(--sage); }
+.lc-phase-business .lc-phase-title { border-color: var(--ink-3); }
+.lc-stages { display: grid; gap: 6px; }
+.lc-stage { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--paper); color: var(--ink); text-decoration: none; font-size: 13.5px; line-height: 1.25; }
+.lc-stage:hover { border-color: var(--ink-3); }
+.lc-stage.on { border-color: var(--deep); background: var(--deep); color: var(--deep-ink); }
+.lc-stage.on .lc-count, .lc-stage.on .lc-n { color: var(--deep-ink-2); }
+.lc-stage.empty { opacity: .55; }
+.lc-n { font: 500 11px var(--mono); color: var(--ink-3); margin-right: 6px; }
+.lc-count { font: 500 12px var(--mono); color: var(--ink-3); }
+.lc-panel { padding: 18px 20px; }
+.lc-panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--rule-soft); }
+.lc-rows { list-style: none; margin: 0; padding: 0; }
+.lc-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--rule-soft); }
+.lc-row:last-child { border-bottom: 0; }
+.lc-row-main { min-width: 0; }
+.lc-row-name { font-weight: 600; color: var(--ink); text-decoration: none; }
+.lc-row-name:hover { text-decoration: underline; }
+.lc-row-out { color: var(--ink-2); font-size: 14.5px; }
+.lc-row-bring { margin-top: 2px; }
+.lc-row-act { display: flex; gap: 6px; flex-shrink: 0; }
+.lc-empty, .lc-foot { margin: 12px 0 0; }
+.lc-playbooks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.lc-pb { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-sm); color: var(--ink); text-decoration: none; background: var(--paper); }
+.lc-pb:hover { border-color: var(--ink-3); }
+@media (max-width: 900px) {
+  .lc-rail { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(170px, 1fr); overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; }
+  .lc-phase { scroll-snap-align: start; }
+}
+@media (max-width: 600px) {
+  .lc-seg { width: 100%; } .lc-seg button { flex: 1; }
+  .lc-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .lc-panel { padding: 14px; }
+}

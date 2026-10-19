@@ -30,7 +30,10 @@ function download(name: string, content: string) {
 
 export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: string; agent: AgentSpec; defaultOpen?: boolean }) {
   const inputs = useMemo(() => [...agent.inputs].sort((a, b) => Number(b.required) - Number(a.required)), [agent.inputs]);
-  const demo = agent.demo;
+  // ?mode=new|existing picks that starting point's example; otherwise the happy-path example
+  const [mode, setMode] = useState<"new" | "existing" | null>(null);
+  const modeSpec = mode ? agent.modes?.[mode] ?? null : null;
+  const demo = modeSpec ?? agent.demo;
   const [open, setOpen] = useState(defaultOpen);
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() => {
     const d: Record<string, Draft> = {};
@@ -60,7 +63,9 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     setAskedTask((q.get("task") || "").slice(0, 300));
-    if (q.get("example") === "1" && demo) { setOpen(true); setAuto("fill"); }
+    const m = q.get("mode");
+    if (m === "new" || m === "existing") setMode(m);
+    if (q.get("example") === "1" && (demo || agent.modes?.[m as "new" | "existing"])) { setOpen(true); setAuto("fill"); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -174,6 +179,9 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
 
       {open && (
         <>
+          {modeSpec && (
+            <div className="run-asked"><span className="caption">{mode === "new" ? "Starting new" : "Improving what exists"} — you bring:</span> {modeSpec.bring}</div>
+          )}
           {askedTask && (
             <div className="run-asked"><span className="caption">You asked:</span> “{askedTask}”
               {auto !== "off" && <span className="caption"> — running this skill on its own sample inputs (fictional, labelled) so you can see exactly what it produces. Then replace the inputs with your files and run again.</span>}

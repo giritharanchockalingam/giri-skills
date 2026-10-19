@@ -4,14 +4,18 @@ import { createWorkspace, selectWorkspace } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead } from "@/components/PageHead";
 import { TaskBox } from "@/components/factory/TaskBox";
-import { roleGroups, tryHref } from "@/lib/frontdoor";
-import { skills as repoSkills, STAGES, SHELVES } from "@/lib/data";
+import { lifecycle, stageSkills, roleOptions, modeHref, PHASES } from "@/lib/frontdoor";
+import { LifecycleFilters } from "@/components/factory/LifecycleFilters";
+import { ROLE_TEMPLATES } from "@/lib/factory/talentData";
+import { Suspense } from "react";
+import { skills as repoSkills } from "@/lib/data";
 
 export const metadata = { title: "Home · Skills Factory" };
 export const dynamic = "force-dynamic";
 
 /** The front door: start from the work (a task, a role, or a whole playbook) — not from the factory's internals. */
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ stage?: string; start?: string; role?: string }> }) {
+  const sp = await searchParams;
   const c = await getContext();
   if (!c.workspace || !c.role) {
     return (
@@ -27,19 +31,26 @@ export default async function Home() {
     );
   }
   const ctx = c as WsCtx;
-  const [rolesQ, agentsQ] = await Promise.all([
-    ctx.supabase.from("sf_talent").select("slug").eq("workspace_id", ctx.workspace.id).eq("kind", "role"),
-    ctx.supabase.from("sf_agents").select("slug, name, description").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }).limit(6),
-  ]);
-  const haveRole = new Set((rolesQ.data ?? []).map((r) => r.slug));
-  const groups = roleGroups();
+  const mode = sp.start === "existing" ? "existing" : "new";
+  const role = ROLE_TEMPLATES.some((r) => r.name === sp.role) ? sp.role! : null;
+  const phases = lifecycle(mode, role);
+  const allStages = phases.flatMap((p) => p.stages);
+  const stage = allStages.find((s) => s.id === sp.stage) ?? allStages.find((s) => s.count > 0) ?? allStages[0];
+  const { rows, otherMode } = stageSkills(stage.id, mode, role);
+  const roleTitle = role ? ROLE_TEMPLATES.find((r) => r.name === role)?.title : null;
+  const link = (patch: Record<string, string | null>) => {
+    const n = new URLSearchParams(Object.entries({ stage: stage.id, start: mode, role }).filter(([, v]) => v) as [string, string][]);
+    for (const [k, v] of Object.entries(patch)) { if (v) n.set(k, v); else n.delete(k); }
+    return `/?${n.toString()}`;
+  };
+  const agentsQ = await ctx.supabase.from("sf_agents").select("slug, name, description").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }).limit(6);
   const suggestions = ["Check the RLS policies in my Supabase migration", "Is our AI chatbot high-risk under the EU AI Act?", "Estimate effort and price for this work breakdown"];
   const runnable = repoSkills.filter((s) => (s as unknown as { agent?: unknown }).agent).length;
 
   return (
     <>
       <PageHead eyebrow={`Skills Factory · ${ctx.workspace.name}`} title="What do you need" em="done" after="?"
-        lead="Describe the work in plain words. The library finds the skill that does it, tells you what you will get and who owns that work, and runs it — on an example first, then on your own files."
+        lead="Describe it, or pick a stage of the AI lifecycle below."
         caption={ctx.memberships.length > 1 ? (
           <form action={selectWorkspace} className="flex flex-wrap items-center gap-2">
             <span>Workspace</span>
@@ -51,56 +62,77 @@ export default async function Home() {
 
       <TaskBox suggestions={suggestions} />
 
-      <section className="section">
-        <div className="h2 mb-2">Or start from a role</div>
-        <p className="caption mb-4">Each role is a set of skills. Click any example to see that skill run, start to finish, on sample inputs.</p>
-        {groups.map((g) => (
-          <div key={g.title} className="fd-group">
-            <div className="eyebrow mb-2">{g.title}</div>
-            <div className="fd-roles">
-              {g.cards.map((r) => (
-                <div key={r.slug} className="card card-pad fd-role">
-                  <div className="fd-role-head">
-                    <b>{r.title}</b>
-                    <span className="caption">{r.skills} skills</span>
-                  </div>
-                  <p className="caption fd-role-desc">{r.description}</p>
-                  <ul className="fd-examples">
-                    {r.examples.map((e) => (
-                      <li key={e.skill}><Link href={tryHref(e.skill, e.prompt)} className="fd-example">“{e.prompt}”</Link></li>
-                    ))}
-                  </ul>
-                  <div className="fd-role-foot">
-                    {haveRole.has(r.slug)
-                      ? <Link href={`/roles/${r.slug}`} className="link caption">Open role →</Link>
-                      : <Link href="/roles" className="link caption">Add to your workspace →</Link>}
-                  </div>
-                </div>
-              ))}
+      <section className="section lc" aria-label="AI lifecycle">
+        <Suspense fallback={null}><LifecycleFilters roles={roleOptions()} /></Suspense>
+
+        <nav className="lc-rail" aria-label="Lifecycle stages">
+          {phases.map((p) => (
+            <div key={p.id} className={`lc-phase lc-phase-${p.id}`}>
+              <div className="lc-phase-title">{p.title}</div>
+              <div className="lc-stages">
+                {p.stages.map((s) => (
+                  <Link key={s.id} href={link({ stage: s.id })} scroll={false} aria-current={s.id === stage.id ? "page" : undefined}
+                    className={`lc-stage${s.id === stage.id ? " on" : ""}${s.count === 0 ? " empty" : ""}`}>
+                    <span className="lc-stage-name">{s.n ? <span className="lc-n">{s.n}</span> : null}{s.name}</span>
+                    <span className="lc-count">{s.count}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="lc-panel card">
+          <div className="lc-panel-head">
+            <div>
+              <div className="eyebrow">{PHASES.find((p) => p.stages.includes(stage.id))?.title}{stage.n ? ` · stage ${stage.n} of 11` : ""}</div>
+              <h2 className="h2" style={{ margin: "2px 0 4px" }}>{stage.name}</h2>
+              <p className="caption" style={{ margin: 0 }}>{stage.question}</p>
+            </div>
+            <div className="caption lc-panel-meta">
+              {rows.length} skill{rows.length === 1 ? "" : "s"} · {mode === "new" ? "starting new" : "improving what exists"}{roleTitle ? ` · ${roleTitle}` : ""}
             </div>
           </div>
-        ))}
+          {rows.length === 0 ? (
+            <p className="lc-empty">No skill here for this starting point{roleTitle ? ` and role` : ""} yet.{" "}
+              {otherMode > 0 && <Link className="link" href={link({ start: mode === "new" ? "existing" : "new" })} scroll={false}>See {otherMode} for {mode === "new" ? "improving what exists" : "starting new"}</Link>}</p>
+          ) : (
+            <ul className="lc-rows">
+              {rows.map((r) => (
+                <li key={r.id} className="lc-row">
+                  <div className="lc-row-main">
+                    <Link href={`/repo/${r.id}`} className="lc-row-name">{r.name}</Link>
+                    <div className="lc-row-out">{r.outcome}</div>
+                    {r.bring && <div className="caption lc-row-bring">You bring: {r.bring}</div>}
+                  </div>
+                  <div className="lc-row-act">
+                    {r.runnable && <Link href={modeHref(r.id, mode, true)} className="btn btn-primary btn-sm">Try example</Link>}
+                    <Link href={modeHref(r.id, mode, false)} className="btn btn-secondary btn-sm">Use mine</Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {rows.length > 0 && otherMode > 0 && (
+            <p className="caption lc-foot">{otherMode} more in this stage only apply when {mode === "new" ? "improving what exists" : "starting new"}. <Link className="link" href={link({ start: mode === "new" ? "existing" : "new" })} scroll={false}>Show them</Link></p>
+          )}
+        </div>
       </section>
 
       {(agentsQ.data ?? []).length > 0 && (
         <section className="section">
-          <div className="h2 mb-2">Or run a whole playbook</div>
-          <p className="caption mb-4">A playbook chains several skills, with approvals where a person decides.</p>
-          <div className="fd-roles">
+          <div className="h3 mb-2">Playbooks — several skills chained, with approvals</div>
+          <ul className="lc-playbooks">
             {(agentsQ.data ?? []).map((a) => (
-              <div key={a.slug} className="card card-pad fd-role">
-                <b>{a.name}</b>
-                <p className="caption fd-role-desc">{a.description}</p>
-                <div className="fd-role-foot"><Link href={`/agents/${a.slug}/run`} className="btn btn-secondary btn-sm">Run it</Link> <Link href={`/agents/${a.slug}`} className="link caption">See how it is configured</Link></div>
-              </div>
+              <li key={a.slug}><Link href={`/agents/${a.slug}/run`} className="lc-pb"><b>{a.name}</b><span className="caption">{(a.description || "").split(/[:.→]/)[0]}</span></Link></li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
       <p className="caption section">
-        The library has <Link href="/repo/" className="link">{runnable} runnable skills</Link> across {STAGES.length} stages of building AI and {SHELVES.length} business shelves.
-        Publishing, evaluations and approvals live under <Link href="/admin" className="link">Admin</Link>.
+        {runnable} runnable skills across 11 lifecycle stages. Assemble your own <Link href="/roles" className="link">roles</Link> and <Link href="/pools" className="link">teams</Link>,
+        or manage publishing and approvals in <Link href="/admin" className="link">Admin</Link>.
       </p>
     </>
   );

@@ -60,3 +60,14 @@ def test_coverage_reports_real_gaps():
 
 def test_cli_exit_codes(tmp_path, monkeypatch):
     assert talent.main([]) == 0
+
+
+def test_cards_cover_every_skill_and_flag_missing_ones(tmp_path):
+    import json as _json
+    (tmp_path / "shared").mkdir()
+    (tmp_path / "shared" / "skill-cards.json").write_text(_json.dumps({"cards": {"a/x": "One line", "a/ghost": "x", "a/long": " ".join(["w"] * 13)}}))
+    probs = talent.validate_cards({"a/x": "build", "a/y": "build", "a/long": "build"}, tmp_path)
+    assert "skill a/y has no card in shared/skill-cards.json" in probs
+    assert "skill-cards: a/ghost is not a skill" in probs
+    assert "skill-cards: a/long is over 12 words" in probs
+    assert not [p for p in probs if "a/x" in p]

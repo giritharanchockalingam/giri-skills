@@ -179,9 +179,10 @@ export async function routeAnyTask(task: string): Promise<{ ok: boolean; message
     const sm = skillMap();
     const hits = getRouter().route(t, undefined, 3).map((h) => {
       const s = sm.get(h.skill)!;
-      return { ...h, name: s.name, stage: s.stage, youGet: whatYouGet(s.description), owners: ownersOf(h.skill), example: exampleFor(h.skill)?.prompt ?? null };
+      const card = (s as unknown as { card?: string }).card;
+      return { ...h, name: s.name, stage: s.stage, youGet: card || whatYouGet(s.description), owners: ownersOf(h.skill), example: exampleFor(h.skill)?.prompt ?? null };
     });
-    return hits.length ? { ok: true, message: "", hits } : { ok: false, message: "Nothing in the library matches that yet. Try different words, or browse the roles below." };
+    return hits.length ? { ok: true, message: "", hits } : { ok: false, message: "Nothing in the library matches that yet. Try different words, or browse the lifecycle below." };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }
