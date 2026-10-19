@@ -8,7 +8,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfigured } from "@/lib/supab
 export const dynamic = "force-dynamic";
 
 function safeNext(raw: string | null): string {
-  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/overview";
+  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
 }
 
 export async function GET(request: NextRequest) {

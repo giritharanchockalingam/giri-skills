@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
     if (pathname !== "/") url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (user && pathname === "/login") return NextResponse.redirect(new URL("/overview", request.url));
+  if (user && pathname === "/login") return NextResponse.redirect(new URL("/", request.url));
   return response;
 }
 

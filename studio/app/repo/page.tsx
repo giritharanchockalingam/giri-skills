@@ -13,12 +13,12 @@ export default function RepoCatalogPage() {
   return (
     <>
       <PageHead
-        eyebrow="Skills · repository catalog"
-        title="Forty skills,"
-        em="measured"
-        lead={<>{s.total} skills across {DOMAINS.length} domains. {s.healthy} are healthy; {s.needsWork} need work.</>}
+        eyebrow="Library"
+        title={`${s.total} skills,`}
+        em="ready to run"
+        lead={<>Every skill here runs in your browser on its own example, or on your files. Open one and press Run. {s.healthy} are rated healthy by their evaluations; {s.needsWork} need work.</>}
         caption={<>{cases} eval cases · {meta.model} · {meta.runs} runs · {meta.date}</>}
-        note={<><Link href="/" className="link-flame">← Workspace skills</Link> · <Link href="/upstream/" className="link-flame">{meta.counts.upstream} vendored upstream skills →</Link></>}
+        note={<><Link href="/" className="link-flame">← Describe a task instead</Link> · <Link href="/upstream/" className="link-flame">{meta.counts.upstream} reference skills from GitHub →</Link></>}
       />
       <CatalogTable rows={rows} domains={DOMAINS} />
     </>

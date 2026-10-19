@@ -48,14 +48,14 @@ export async function createWorkspace(_: ActionResult | null, fd: FormData): Pro
     (await cookies()).set(WS_COOKIE, String(data), { path: "/", sameSite: "lax", httpOnly: true, maxAge: 60 * 60 * 24 * 365 });
   } catch (e) { return fail(errMsg(e)); }
   revalidatePath("/", "layout");
-  redirect("/overview");
+  redirect("/");
 }
 
 export async function selectWorkspace(fd: FormData): Promise<void> {
   const id = str(fd, "workspace_id", 64);
   (await cookies()).set(WS_COOKIE, id, { path: "/", sameSite: "lax", httpOnly: true, maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/", "layout");
-  redirect("/overview");
+  redirect("/");
 }
 
 export async function signOut(): Promise<void> {
@@ -86,7 +86,7 @@ export async function createSkill(_: ActionResult | null, fd: FormData): Promise
     return okay("Skill created.");
   });
   if (!r.ok) return r;
-  revalidatePath("/");
+  revalidatePath("/pipeline");
   redirect(`/skills/${slug}/authoring`);
 }
 
@@ -186,7 +186,7 @@ export async function requestReview(_: ActionResult | null, fd: FormData): Promi
     const { error } = await ctx.supabase.from("sf_skill_versions").update(pin ? { status: "in_review", source: { ...src, content_sha: pin } } : { status: "in_review" }).eq("id", id).eq("status", "draft");
     if (error) return fail(error.message);
     await audit(ctx, "version.request_review", "skill_version", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/overview");
+    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline");
     return okay("Review requested. A reviewer can now approve or reject this exact version.");
   });
 }
@@ -197,7 +197,7 @@ export async function withdrawReview(_: ActionResult | null, fd: FormData): Prom
     const { error } = await ctx.supabase.from("sf_skill_versions").update({ status: "draft" }).eq("id", id).eq("status", "in_review");
     if (error) return fail(error.message);
     await audit(ctx, "version.withdraw_review", "skill_version", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/overview");
+    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline");
     return okay("Back to draft.");
   });
 }
@@ -209,7 +209,7 @@ export async function reopenVersion(_: ActionResult | null, fd: FormData): Promi
     const { error } = await ctx.supabase.from("sf_skill_versions").update({ status: "draft" }).eq("id", id).eq("status", "approved");
     if (error) return fail(error.message);
     await audit(ctx, "version.reopen", "skill_version", id);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/overview");
+    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline");
     return okay("Reopened as a draft. The approval stays valid only while the manifest is unchanged; editing it will make the approval stale.");
   });
 }
@@ -219,7 +219,7 @@ export async function reviewVersion(_: ActionResult | null, fd: FormData): Promi
     const decision = str(fd, "decision", 10);
     const { error } = await ctx.supabase.rpc("sf_review_version", { p_version: str(fd, "version_id", 64), p_decision: decision, p_note: str(fd, "note", 2000) });
     if (error) return fail(error.message);
-    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/overview"); revalidatePath("/evaluations");
+    revalidatePath(`/skills/${str(fd, "slug", 80)}`, "layout"); revalidatePath("/pipeline"); revalidatePath("/evaluations");
     return okay(decision === "approve" ? "Approved. The approval is pinned to this manifest; any edit makes it stale." : "Rejected and returned to draft.");
   });
 }
@@ -307,7 +307,7 @@ export async function importFromRepo(_: ActionResult | null, fd: FormData): Prom
       await audit(ctx, "skill.import", "skill", skill.id, { repo_skill: s.id, slug, version_id: v.id, cases: cases.length });
       taken.add(slug); done.push(slug);
     }
-    revalidatePath("/"); revalidatePath("/overview"); revalidatePath("/evaluations");
+    revalidatePath("/pipeline"); revalidatePath("/pipeline"); revalidatePath("/evaluations");
     const msg = `${done.length} skill(s) imported as drafts${done.length ? ` (${done.join(", ")})` : ""}.`;
     return problems.length ? { ok: done.length > 0, message: `${msg} Problems: ${problems.join(" · ")}` } : okay(msg);
   });

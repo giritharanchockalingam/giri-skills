@@ -68,7 +68,7 @@ export type WsCtx = Ctx & { workspace: Workspace; role: Role };
 /** Same, but a workspace is required: without one the user is sent to Overview to create or join one. */
 export async function requireWorkspace(): Promise<WsCtx> {
   const ctx = await getContext();
-  if (!ctx.workspace || !ctx.role) redirect("/overview");
+  if (!ctx.workspace || !ctx.role) redirect("/");
   return ctx as WsCtx;
 }
 

@@ -54,6 +54,16 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
 
   const setDraft = (name: string, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [name]: { ...d[name], ...patch } }));
 
+  // Arriving from the front door: ?task= is what the person asked; ?example=1 runs the skill on its own sample inputs.
+  const [askedTask, setAskedTask] = useState("");
+  const [auto, setAuto] = useState<"off" | "fill" | "run" | "done">("off");
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setAskedTask((q.get("task") || "").slice(0, 300));
+    if (q.get("example") === "1" && demo) { setOpen(true); setAuto("fill"); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // lazy: the runtime (≈10 MB from the Pyodide CDN) loads only when the panel is opened
   useEffect(() => {
     if (!open) return;
@@ -128,12 +138,23 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     } finally { setRunning(false); }
   };
 
+  useEffect(() => {
+    if (auto === "fill" && runtimeState === "ready") { fillAllFromExample().then(() => setAuto("run")); }
+    else if (auto === "run" && !running) { setAuto("done"); run(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, runtimeState]);
+
   const rj = result?.runJson ?? null;
   const banner = !result ? null
     : result.needsInput ? { tone: "hold", text: `NEEDS INPUT — missing: ${result.needsInput.missing.map((m) => m.name).join(", ")}` }
     : rj ? (rj.ok ? { tone: "sage", text: "OK — every step ran and every check passed" } : { tone: "rust", text: `FAILED — ${rj.steps.filter((s) => !s.ok).length} step(s) not ok, ${rj.checks.filter((c) => !c.pass).length} check(s) failed` })
     : { tone: "rust", text: `FAILED — the runner exited ${result.exitCode} without writing run.json` };
   const outputFiles = result ? Object.keys(result.files).filter((p) => !p.startsWith("logs/")).sort() : [];
+  // the deliverable to show first: the skill's first declared Markdown output that was written, else its first output
+  const declared = agent.outputs.map((o) => o.path.replace("{out}/", ""));
+  const written = (rel: string) => outputFiles.find((p) => p === rel || p.endsWith("/" + rel));
+  const primary = (declared.filter((d) => d.endsWith(".md")).map(written).find(Boolean)
+    ?? declared.map(written).find(Boolean) ?? outputFiles[0]) || null;
   const logFiles = result ? Object.keys(result.files).filter((p) => p.startsWith("logs/")).sort() : [];
   const rel = (p: string) => (result && p.startsWith(result.outDir + "/") ? p.slice(result.outDir.length + 1) : p);
 
@@ -149,6 +170,11 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
 
       {open && (
         <>
+          {askedTask && (
+            <div className="run-asked"><span className="caption">You asked:</span> “{askedTask}”
+              {auto !== "off" && <span className="caption"> — running this skill on its own sample inputs (fictional, labelled) so you can see exactly what it produces. Then replace the inputs with your files and run again.</span>}
+            </div>
+          )}
           <div className={`run-runtime run-runtime-${runtimeState}`} role="status" aria-live="polite">
             {runtimeState === "loading" && (
               <>
@@ -261,9 +287,22 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                   <tbody>{result.needsInput.missing.map((m) => <tr key={m.name}><td><code>{m.name}</code></td><td className="muted">{m.type}</td><td className="ink-2">{m.question}</td></tr>)}</tbody></table>
               )}
 
+              {primary && (
+                <div className="run-answer">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div className="h3" style={{ margin: 0 }}>Result <span className="caption font-normal">· {primary.split("/").pop()}</span></div>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => download(primary.split("/").pop() || primary, result.files[primary] ?? "")}>Download</button>
+                  </div>
+                  {primary.endsWith(".md")
+                    ? <div className="prose run-prose" dangerouslySetInnerHTML={{ __html: mdToHtml(result.files[primary] ?? "") }} />
+                    : <pre className="run-raw">{result.files[primary] ?? "(empty)"}</pre>}
+                </div>
+              )}
+
               {rj && (
-                <>
-                  <div className="h3 mt-6 mb-2" style={{ fontSize: 14 }}>Steps <span className="muted font-normal">({rj.steps.length})</span></div>
+                <details className="disclosure mt-5">
+                  <summary><b>How it was checked</b> <span className="caption">— {rj.checks.filter((c) => c.pass).length} of {rj.checks.length} checks passed · {rj.steps.length} step{rj.steps.length === 1 ? "" : "s"}</span></summary>
+                  <div className="h3 mt-4 mb-2" style={{ fontSize: 14 }}>Steps <span className="muted font-normal">({rj.steps.length})</span></div>
                   <div className="run-tablewrap"><table className="mini run-steps">
                     <thead><tr><th>Step</th><th>Kind</th><th>Status</th><th>Exit</th><th>Duration</th><th>Detail</th></tr></thead>
                     <tbody>{rj.steps.map((s) => (
@@ -290,7 +329,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                       </tr>
                     ))}</tbody>
                   </table></div>
-                </>
+                </details>
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-3 mt-6 mb-2">

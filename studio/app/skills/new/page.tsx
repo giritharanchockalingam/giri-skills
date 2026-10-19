@@ -14,7 +14,7 @@ export default async function NewSkillPage() {
   return (
     <>
       <PageHead eyebrow="Skills · new" title="Describe the" em="capability" after="." lead="Start with what the skill does and who it is for. The contract (inputs, outputs, steps, limits) comes next in Authoring; nothing runs or publishes until it is defined and tested."
-        note={<Link href="/" className="link-flame">← Or import a repository skill instead</Link>} />
+        note={<Link href="/pipeline?import=1" className="link-flame">← Or import a repository skill instead</Link>} />
       <div className="card card-pad" style={{ maxWidth: 720 }}>
         <ActionForm action={createSkill} submit="Create skill">
           <div className="form-grid form-grid-2">

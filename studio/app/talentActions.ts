@@ -166,3 +166,23 @@ export async function routeTask(roleSkills: string[], task: string): Promise<Rou
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }
 }
+
+export interface AnyRouteHit { skill: string; name: string; stage: string | null; score: number; matched: string[]; youGet: string; owners: string[]; example: string | null }
+
+/** The front door: rank every skill in the library for a task, with who owns it and whether an example can run now. */
+export async function routeAnyTask(task: string): Promise<{ ok: boolean; message: string; hits?: AnyRouteHit[] }> {
+  try {
+    await requireWorkspace();
+    const t = task.trim().slice(0, 4000);
+    if (t.length < 8) return { ok: false, message: "Describe the work in a sentence." };
+    const { whatYouGet, ownersOf, exampleFor } = await import("@/lib/frontdoor");
+    const sm = skillMap();
+    const hits = getRouter().route(t, undefined, 3).map((h) => {
+      const s = sm.get(h.skill)!;
+      return { ...h, name: s.name, stage: s.stage, youGet: whatYouGet(s.description), owners: ownersOf(h.skill), example: exampleFor(h.skill)?.prompt ?? null };
+    });
+    return hits.length ? { ok: true, message: "", hits } : { ok: false, message: "Nothing in the library matches that yet. Try different words, or browse the roles below." };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}

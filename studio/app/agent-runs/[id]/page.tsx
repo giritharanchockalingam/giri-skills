@@ -6,6 +6,15 @@ import { PageHead } from "@/components/PageHead";
 import { AgentRunDriver } from "@/components/factory/AgentRunDriver";
 import { parseRef, isSkill } from "@/lib/factory/agents";
 import type { AgentRunRow, AgentVersionRow } from "@/lib/factory/agentRun";
+import { mdToHtml } from "@/lib/markdown.mjs";
+
+/** The "## Summary" section of a Markdown deliverable (the answer, before the detail). */
+function summaryOf(md: string | null | undefined): string | null {
+  if (!md) return null;
+  const m = md.match(/^## Summary\s*\n([\s\S]*?)(?=\n## |$)/m);
+  const body = (m ? m[1] : "").trim();
+  return body ? body.split("\n").slice(0, 14).join("\n") : null;
+}
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agent run · Skills Factory" };
@@ -33,6 +42,25 @@ export default async function AgentRunPage({ params, searchParams }: { params: P
       <PageHead eyebrow={`Agent run · ${version.sf_agents.slug} v${version.version}`} title={version.sf_agents.name} em=""
         lead={<><span className={`pill ${TONE[run.status]}`}>{LABEL[run.status]}</span> {run.error && <span className="caption"> {run.error}</span>}</>}
         caption={<>Started {fmtDate(run.created_at)} · {run.steps.filter((s) => s.status === "ok" || s.status === "approved").length}/{spec.steps.length} steps{run.cost_usd != null ? ` · model cost ≈$${Number(run.cost_usd).toFixed(4)}` : ""} · <Link href={`/agents/${version.sf_agents.slug}?v=${version.version}`} className="link">configuration</Link></>} />
+      {run.status !== "running" && (() => {
+        const lead = deliverables.find((d) => d.f.path.endsWith(".md") && summaryOf(d.f.content_text));
+        const blocked = run.steps.find((x) => x.status === "blocked" || x.status === "failed");
+        const blockedMd = blocked?.files?.find((f) => f.path.endsWith(".md") && summaryOf(f.content_text));
+        const show = blockedMd ? { step: blocked!.id, f: blockedMd } : lead;
+        const headline = run.status === "succeeded" ? "Done — every step ran and passed its checks."
+          : run.status === "awaiting_approval" ? `Waiting for a person: ${waiting?.role ?? "an approver"} must approve before it continues.`
+          : run.status === "blocked" ? `Stopped by a gate at “${blocked?.id}” — this is a verdict, not a malfunction.`
+          : run.status === "failed" ? `Failed at “${blocked?.id}”.` : null;
+        return headline ? (
+          <div className="card card-pad run-answer mb-5">
+            <div className="h3" style={{ marginTop: 0 }}>{headline}</div>
+            {show && <>
+              <p className="caption">From <b>{show.step}</b> · {show.f.path}</p>
+              <div className="prose run-prose" dangerouslySetInnerHTML={{ __html: mdToHtml(summaryOf(show.f.content_text) ?? "") }} />
+            </>}
+          </div>
+        ) : null;
+      })()}
       <AgentRunDriver runId={run.id} status={run.status} autoStart={go === "1"} canApprove={can(ctx.role, "agent.approve")} approvalRole={waiting?.role ?? null} />
 
       <ol className="ab-trace mt-5">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
 import { getContext, fmtDate, type ApiKeyRow, type ConnectionRow, type PolicyRow, type AuditRow } from "@/lib/factory/db";
 import { can, ROLES, ROLE_HELP } from "@/lib/factory/roles";
@@ -35,9 +36,20 @@ export default async function AdminPage() {
       <PageHead eyebrow={`Administration${ws ? ` · ${ws.name}` : ""}`} title="Access, connections," em="limits" after="."
         lead={ws ? (admin ? "Members and roles, API keys for applications, provider connections, spending and concurrency limits, and the audit log." : `You are ${ctx.role} here. Only administrators can change members, keys, connections and policies; you can see the audit log and your account.`) : "You are not in a workspace yet."} />
 
+      <section className="card card-pad mb-6">
+        <div className="h3">Behind the scenes</div>
+        <p className="caption">For people who publish and govern skills. Nothing here is needed to use a skill.</p>
+        <div className="chip-group mt-3">
+          <Link href="/pipeline" className="chip">Release pipeline — versions, evidence, approvals</Link>
+          <Link href="/evaluations" className="chip">Evaluations</Link>
+          <Link href="/activity" className="chip">Activity — every run</Link>
+          <Link href="/upstream/" className="chip">Reference skills from GitHub</Link>
+        </div>
+      </section>
+
       <section id="account" className="card card-pad mb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><div className="h3">Your account</div><p className="caption">{ctx.user.email} · {ws ? <>{ctx.role} in {ws.name}</> : "no workspace"}{ctx.memberships.length > 1 && <> · member of {ctx.memberships.length} workspaces (switch on Overview)</>}</p></div>
+          <div><div className="h3">Your account</div><p className="caption">{ctx.user.email} · {ws ? <>{ctx.role} in {ws.name}</> : "no workspace"}{ctx.memberships.length > 1 && <> · member of {ctx.memberships.length} workspaces (switch on Home)</>}</p></div>
           <form action={signOut}><button type="submit" className="btn btn-secondary">Sign out</button></form>
         </div>
         {!ws && <div className="mt-4" style={{ maxWidth: 480 }}><ActionForm action={createWorkspace} submit="Create workspace"><div className="field"><label htmlFor="ws-name">Workspace name</label><input id="ws-name" name="name" className="input" required maxLength={120} /></div></ActionForm></div>}

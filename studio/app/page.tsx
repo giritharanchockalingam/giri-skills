@@ -1,62 +1,107 @@
 import Link from "next/link";
-import { requireWorkspace, type SkillRow, type VersionRow, type ReleaseStateRow } from "@/lib/factory/db";
-import { can } from "@/lib/factory/roles";
-import { skills as repoSkills, STAGES, SHELVES, stageOfRepoSkill } from "@/lib/data";
+import { getContext, type WsCtx } from "@/lib/factory/db";
+import { createWorkspace, selectWorkspace } from "@/app/actions";
+import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead } from "@/components/PageHead";
-import { SkillsCatalog, type CatalogItem } from "@/components/factory/SkillsCatalog";
-import { ImportDrawer } from "@/components/factory/ImportDrawer";
+import { TaskBox } from "@/components/factory/TaskBox";
+import { roleGroups, tryHref } from "@/lib/frontdoor";
+import { skills as repoSkills, STAGES, SHELVES } from "@/lib/data";
 
-export const metadata = { title: "Skills · Skills Factory" };
+export const metadata = { title: "Home · Skills Factory" };
 export const dynamic = "force-dynamic";
 
-export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string; stage?: string }> }) {
-  const sp = await searchParams;
-  const ctx = await requireWorkspace();
-  const sb = ctx.supabase;
-  const [skillsQ, versionsQ, statesQ] = await Promise.all([
-    sb.from("sf_skills").select("*").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }),
-    sb.from("sf_skill_versions").select("id, skill_id, version, status, source, updated_at").order("version", { ascending: false }),
-    sb.from("sf_version_release_state").select("version_id, skill_id, status, latest_eval_pass_rate, eval_current, approval_valid, approval_stale, publishable, eval_case_count").eq("workspace_id", ctx.workspace.id),
+/** The front door: start from the work (a task, a role, or a whole playbook) — not from the factory's internals. */
+export default async function Home() {
+  const c = await getContext();
+  if (!c.workspace || !c.role) {
+    return (
+      <>
+        <PageHead eyebrow="Welcome" title="Create your" em="workspace" after="." lead="A workspace holds your roles, playbooks, runs and the people who may use them. Whoever creates it becomes its administrator." />
+        <div className="card card-pad" style={{ maxWidth: 560 }}>
+          <ActionForm action={createWorkspace} submit="Create workspace">
+            <div className="field"><label htmlFor="ws-name">Workspace name</label><input id="ws-name" name="name" className="input" required maxLength={120} placeholder="e.g. Finance Operations" /></div>
+          </ActionForm>
+          <p className="caption mt-4">Added to someone else&apos;s workspace? Their administrator adds you by your sign-in email ({c.user.email}).</p>
+        </div>
+      </>
+    );
+  }
+  const ctx = c as WsCtx;
+  const [rolesQ, agentsQ] = await Promise.all([
+    ctx.supabase.from("sf_talent").select("slug").eq("workspace_id", ctx.workspace.id).eq("kind", "role"),
+    ctx.supabase.from("sf_agents").select("slug, name, description").eq("workspace_id", ctx.workspace.id).order("updated_at", { ascending: false }).limit(6),
   ]);
-  const skills = (skillsQ.data ?? []) as SkillRow[];
-  const versions = (versionsQ.data ?? []) as Pick<VersionRow, "id" | "skill_id" | "version" | "status" | "source" | "updated_at">[];
-  const states = (statesQ.data ?? []) as Pick<ReleaseStateRow, "version_id" | "status" | "latest_eval_pass_rate" | "eval_current" | "approval_valid" | "approval_stale" | "publishable" | "eval_case_count">[];
-  const stateById = new Map(states.map((s) => [s.version_id, s]));
-  const items: CatalogItem[] = skills.map((s) => {
-    const vs = versions.filter((v) => v.skill_id === s.id);
-    const working = vs.find((v) => ["draft", "in_review", "approved"].includes(v.status)) ?? null;
-    const published = vs.find((v) => v.status === "published") ?? null;
-    const st = working ? stateById.get(working.id) ?? null : published ? stateById.get(published.id) ?? null : null;
-    return {
-      id: s.id, slug: s.slug, name: s.name, purpose: s.purpose, status: s.status, updated_at: s.updated_at,
-      source: (vs[0]?.source.kind ?? "authored") as "repo" | "authored",
-      publishedVersion: published?.version ?? null, workingVersion: working?.version ?? null, workingStatus: (working?.status ?? null) as CatalogItem["workingStatus"],
-      evalPassRate: st?.latest_eval_pass_rate == null ? null : Number(st.latest_eval_pass_rate), evalCurrent: st?.eval_current ?? null, cases: st?.eval_case_count ?? 0,
-      approval: st?.approval_valid ? "valid" : st?.approval_stale ? "stale" : "none",
-      stage: vs[0]?.source.kind === "repo" ? stageOfRepoSkill(vs[0].source.repo_skill) : null,
-    };
-  });
-  const imported = new Set(versions.filter((v) => v.source.kind === "repo").map((v) => v.source.repo_skill));
-  const importable = repoSkills.filter((s) => s.agent).map((s) => ({ id: s.id, name: s.name, domain: s.domain, description: s.description, imported: imported.has(s.id) }));
-  const published = items.filter((i) => i.status === "published").length;
-  const drafts = items.filter((i) => i.workingVersion != null).length;
+  const haveRole = new Set((rolesQ.data ?? []).map((r) => r.slug));
+  const groups = roleGroups();
+  const suggestions = ["Check the RLS policies in my Supabase migration", "Is our AI chatbot high-risk under the EU AI Act?", "Estimate effort and price for this work breakdown"];
+  const runnable = repoSkills.filter((s) => (s as unknown as { agent?: unknown }).agent).length;
 
   return (
     <>
-      <PageHead eyebrow={`Skills · ${ctx.workspace.name}`} title="Skills you can" em="trust" after="."
-        lead={items.length ? `${items.length} skill${items.length === 1 ? "" : "s"}: ${published} published, ${drafts} with a draft in progress.` : "No skills in this workspace yet."}
-        caption="A skill is a versioned, tested capability with a declared input/output contract. Published versions are immutable and callable through the API."
-        note={<><Link href="/repo/" className="link-flame">Repository catalog ({repoSkills.length} skills, eval scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Upstream library →</Link></>} />
-      <div className="hero-actions mb-6">
-        {can(ctx.role, "skill.create") ? (
-          <>
-            <Link href="/skills/new" className="btn btn-primary">New skill</Link>
-            <ImportDrawer importable={importable} initialOpen={sp.import === "1"} />
-          </>
-        ) : <span className="caption">Your role ({ctx.role}) can run published skills. Authors create and import skills.</span>}
-      </div>
-      <SkillsCatalog items={items} canCreate={can(ctx.role, "skill.create")} initialStage={sp.stage ?? "all"}
-        stageOpts={[...STAGES.map((x) => ({ key: x.id, label: `${x.n} ${x.name}` })), ...SHELVES.map((x) => ({ key: x.id, label: x.name })), { key: "unassigned", label: "Unassigned" }]} />
+      <PageHead eyebrow={`Skills Factory · ${ctx.workspace.name}`} title="What do you need" em="done" after="?"
+        lead="Describe the work in plain words. The library finds the skill that does it, tells you what you will get and who owns that work, and runs it — on an example first, then on your own files."
+        caption={ctx.memberships.length > 1 ? (
+          <form action={selectWorkspace} className="flex flex-wrap items-center gap-2">
+            <span>Workspace</span>
+            <select name="workspace_id" className="select" style={{ width: "auto", minHeight: 36 }} defaultValue={ctx.workspace.id} aria-label="Workspace">
+              {ctx.memberships.map((m) => <option key={m.workspace_id} value={m.workspace_id}>{m.workspace.name} ({m.role})</option>)}
+            </select>
+            <button type="submit" className="btn btn-secondary btn-sm">Switch</button>
+          </form>) : undefined} />
+
+      <TaskBox suggestions={suggestions} />
+
+      <section className="section">
+        <div className="h2 mb-2">Or start from a role</div>
+        <p className="caption mb-4">Each role is a set of skills. Click any example to see that skill run, start to finish, on sample inputs.</p>
+        {groups.map((g) => (
+          <div key={g.title} className="fd-group">
+            <div className="eyebrow mb-2">{g.title}</div>
+            <div className="fd-roles">
+              {g.cards.map((r) => (
+                <div key={r.slug} className="card card-pad fd-role">
+                  <div className="fd-role-head">
+                    <b>{r.title}</b>
+                    <span className="caption">{r.skills} skills</span>
+                  </div>
+                  <p className="caption fd-role-desc">{r.description}</p>
+                  <ul className="fd-examples">
+                    {r.examples.map((e) => (
+                      <li key={e.skill}><Link href={tryHref(e.skill, e.prompt)} className="fd-example">“{e.prompt}”</Link></li>
+                    ))}
+                  </ul>
+                  <div className="fd-role-foot">
+                    {haveRole.has(r.slug)
+                      ? <Link href={`/roles/${r.slug}`} className="link caption">Open role →</Link>
+                      : <Link href="/roles" className="link caption">Add to your workspace →</Link>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {(agentsQ.data ?? []).length > 0 && (
+        <section className="section">
+          <div className="h2 mb-2">Or run a whole playbook</div>
+          <p className="caption mb-4">A playbook chains several skills, with approvals where a person decides.</p>
+          <div className="fd-roles">
+            {(agentsQ.data ?? []).map((a) => (
+              <div key={a.slug} className="card card-pad fd-role">
+                <b>{a.name}</b>
+                <p className="caption fd-role-desc">{a.description}</p>
+                <div className="fd-role-foot"><Link href={`/agents/${a.slug}/run`} className="btn btn-secondary btn-sm">Run it</Link> <Link href={`/agents/${a.slug}`} className="link caption">See how it is configured</Link></div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <p className="caption section">
+        The library has <Link href="/repo/" className="link">{runnable} runnable skills</Link> across {STAGES.length} stages of building AI and {SHELVES.length} business shelves.
+        Publishing, evaluations and approvals live under <Link href="/admin" className="link">Admin</Link>.
+      </p>
     </>
   );
 }

@@ -16,7 +16,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       </div>
       {sp.auth_error && <div className="notice notice-err" role="alert" style={{ marginBottom: 16 }}>Sign-in link failed: {sp.auth_error}. Request a new link and open it once, in this browser.</div>}
       {configured ? (
-        <LoginForm next={sp.next && sp.next.startsWith("/") ? sp.next : "/overview"} />
+        <LoginForm next={sp.next && sp.next.startsWith("/") ? sp.next : "/"} />
       ) : (
         <div className="card card-pad">
           <div className="h3">Setup required</div>

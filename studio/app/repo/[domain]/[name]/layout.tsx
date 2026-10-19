@@ -20,7 +20,7 @@ export default async function RepoSkillLayout({ children, params }: { children: 
   return (
     <>
       <DetailHead
-        crumbs={<><Link href="/" className="link">Skills</Link> <span aria-hidden="true">›</span> <Link href="/repo/" className="link">Repository</Link> <span aria-hidden="true">›</span> {d.domain}</>}
+        crumbs={<><Link href="/repo/" className="link">Library</Link> <span aria-hidden="true">›</span> {d.domain}</>}
         title={skill.name.replace(/-/g, " ")}
         pills={<><VerdictBadge v={sc?.verdict} small /><AgentBadge v={sc?.agentVerdict} small /></>}
         description={skill.description}

@@ -6,15 +6,13 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseConfigured } from "@/lib/supabase/env";
 
-const links = [
-  { href: "/overview", label: "Overview", match: ["/overview"] },
-  { href: "/", label: "Skills", match: ["/", "/skills/", "/repo/", "/upstream/"] },
-  { href: "/agents", label: "Agents", match: ["/agents", "/agent-runs/"] },
+const links: { href: string; label: string; short?: string; match: string[] }[] = [
+  { href: "/", label: "Home", match: ["/"] },
   { href: "/roles", label: "Roles", match: ["/roles"] },
-  { href: "/pools", label: "Talent pools", short: "Pools", match: ["/pools"] },
-  { href: "/evaluations", label: "Evaluations", match: ["/evaluations", "/evals/", "/findings/"] },
-  { href: "/activity", label: "Activity", match: ["/activity", "/runs/"] },
-  { href: "/admin", label: "Administration", short: "Admin", match: ["/admin"] },
+  { href: "/pools", label: "Teams", match: ["/pools"] },
+  { href: "/agents", label: "Playbooks", match: ["/agents", "/agent-runs/"] },
+  { href: "/repo/", label: "Library", match: ["/repo", "/upstream/"] },
+  { href: "/admin", label: "Admin", match: ["/admin", "/pipeline", "/skills/", "/evaluations", "/evals/", "/findings/", "/activity", "/runs/"] },
 ];
 
 export function Nav() {
@@ -32,7 +30,7 @@ export function Nav() {
   return (
     <header className="topbar">
       <div className="wrap">
-        <Link href="/overview" className="brand" aria-label="Skills Factory home">
+        <Link href="/" className="brand" aria-label="Skills Factory home">
           <span className="brand-mark" aria-hidden="true">G</span>
           <span className="brand-name">Skills Factory</span>
           <span className="brand-sub">· giri-skills</span>

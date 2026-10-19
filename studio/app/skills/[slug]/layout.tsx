@@ -22,7 +22,7 @@ export default async function SkillLayout({ children, params }: { children: Reac
   return (
     <>
       <DetailHead
-        crumbs={<><Link href="/" className="link">Skills</Link> <span aria-hidden="true">›</span> {d.skill.slug}</>}
+        crumbs={<><Link href="/pipeline" className="link">Pipeline</Link> <span aria-hidden="true">›</span> {d.skill.slug}</>}
         title={d.skill.name}
         pills={<><SkillPill status={d.skill.status} small /><VersionPill status={d.version.status} small /></>}
         description={d.skill.purpose || "No purpose written yet — add one under Instructions."}
