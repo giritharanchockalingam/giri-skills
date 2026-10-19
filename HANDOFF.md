@@ -41,3 +41,8 @@ Content pin per repo skill (files + runner + vendor context); versions past draf
 
 ## Next thread starts with
 Optional model re-rank for the task router (top-3 → model pick, logged with cost). Pool run trace labelled by member. Run the ADLC template live (expect BLOCKED at release). Run evaluations for the remaining 40 in the portal; approve + publish one skill per ADLC stage.
+
+## 2026-10-19 — front door, verified live
+- Home = "What do you need done?" → skill match with plain "You get" line → "Try it on an example" auto-runs and scrolls to the Result.
+- Playbook run page: one-click "Run it on the example"; own inputs on request, labelled by description. Example inputs come from templates, then each step's own skill example (data/skill-demos.json), so tailored playbooks run too.
+- Known gaps: some playbook names are slugs (data); clean RLS example shows "0 findings" (true but underwhelming); no real users yet.
