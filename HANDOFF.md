@@ -69,4 +69,5 @@ Optional model re-rank for the task router (top-3 → model pick, logged with co
 - PR results are stored with context='pull_request' and stay out of the default-branch scorecard (sf_scorecard_latest).
 - Owner config: GITHUB_WEBHOOK_SECRET + SUPABASE_SERVICE_ROLE_KEY in Vercel; App webhook URL, Checks: write, Pull requests: read, events Pull request + Push.
 - ROI: 14 baselines set as labelled estimates (owner "Claude (estimate, to be validated)"), minutes only.
+- Proven live on PR #4: the "Pull request gate" automation posted its Check Run.
 - Next: slice 5 — AI assistant over the catalog, skills and scorecards.
