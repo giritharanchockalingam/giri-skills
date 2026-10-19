@@ -91,3 +91,12 @@ CI: Node 22 + ingest before studio tests (#7). SQL suite (tests/sql/run.sh, loca
 
 Owner actions: GitHub App → Permissions → Deployments: Read-only (true deploy counts; until then merges are counted, labelled); resolve or cancel the 4 playbook runs waiting in /inbox; delete the remote branch assistant-reasoning-fix.
 Next: notifications (email/Slack on pending approvals and overdue initiatives); scorecard check catalogue beyond 4 checks (CI present, tests present, CODEOWNERS); SQL suite in CI.
+
+## 2026-10-19 (evening) — walkthrough polish; catalog beyond repositories
+- Polish (#20): word-based library search ("red team" ↔ red-team); failures say which step failed and why; assistant remembers reasoning_effort per model (calls were sent twice) and keeps the thread across navigation (sessionStorage); timestamps in the viewer's zone (LocalTime); app/loading.tsx.
+- Data model (#21, migration 0017): entity kinds repository | service | database; sf_catalog_relations (built_from, uses_database) with evidence + same-workspace trigger; syncs per provider. /integrations (GitHub, Vercel, Supabase); Catalog tabs; service/database pages; repo pages show Related; assistant search_services_and_databases.
+- Vercel → services: framework, production URL, last production deploy, production deploys paged to the end of 90 days (#23), built_from via the Git link, uses_database via the Supabase ref in a plain *SUPABASE_URL setting (only the ref is kept). Linked repositories' delivery uses these deploys (authoritative: zero is zero).
+- Supabase → databases: status, region, Postgres version.
+- Tokens: VERCEL_TOKEN, VERCEL_TEAM_ID (sensitive), VERCEL_TEAM_SLUG (plain), SUPABASE_ACCESS_TOKEN — server env only; 401/403 name the exact fix (#22).
+- Live 2026-10-19: Vercel sync wrote giri-skills-studio → built_from giri-skills, last deploy = the commit just shipped. Supabase 403 projects_read and a single-project Vercel token: owner recreating both tokens (team scope; Projects: Read).
+Next: re-sync with the new tokens and verify relations (service → database); notifications; more scorecard checks; SQL suite in CI.
