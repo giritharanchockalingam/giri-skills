@@ -104,7 +104,8 @@ export function AgentBuilder({ initial, versionId, catalog, stages, editable }: 
           <div className="h3">{problems.length ? <span className="fail">{problems.length} problem{problems.length === 1 ? "" : "s"}</span> : <span className="pass">Runnable</span>}</div>
           {problems.length > 0 && <ul className="ab-problems">{problems.slice(0, 12).map((p) => <li key={p}>{p}</li>)}</ul>}
           {editable && (
-            <ActionForm action={saveAgentDraft} submit={dirty ? "Save draft" : "Saved"} disabled={!dirty} hidden={{ version_id: versionId, spec: JSON.stringify(spec) }} />
+            dirty ? <ActionForm action={saveAgentDraft} submit="Save draft" hidden={{ version_id: versionId, spec: JSON.stringify(spec) }} />
+              : <p className="caption mt-2" role="status"><span className="pill pill-sm pill-sage">Saved</span> No unsaved changes.</p>
           )}
         </div>
         <div className="card card-pad">
@@ -184,7 +185,7 @@ function SkillWiring({ step, skill, spec, files, editable, onChange }: {
       })}
       <tr><td colSpan={2}>
         <label className="check-row"><input type="checkbox" checked={!!step.gate} disabled={!editable} onChange={(e) => onChange({ ...step, gate: e.target.checked || undefined }, [])} />
-          Gate — if this skill says &quot;no&quot; (exit 1), the agent stops as <b>blocked</b>, not failed</label>
+          <span>Gate — if this skill says &quot;no&quot; (exit 1), the playbook stops as <b>blocked</b>, not failed.</span></label>
       </td></tr>
     </tbody></table></div>
   );

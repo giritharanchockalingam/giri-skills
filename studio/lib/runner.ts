@@ -69,6 +69,10 @@ class Runner {
   load(): Promise<{ python: string; files: number }> {
     if (this.ready) return this.ready;
     this.ready = new Promise((resolve, reject) => {
+      // a terminal state is guaranteed: a stalled download (blocked CDN, dropped connection) fails after 90 s
+      const stall = setTimeout(() => reject(new Error("the Python runtime did not finish loading within 90 seconds")), 90_000);
+      const done = resolve; resolve = (v) => { clearTimeout(stall); done(v); };
+      const fail = reject; reject = (e) => { clearTimeout(stall); fail(e); };
       const w = new Worker("/run-worker.js");
       this.worker = w;
       w.onerror = (e) => { reject(new Error(e.message || "worker failed to start")); };

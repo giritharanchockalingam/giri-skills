@@ -16,9 +16,9 @@ export default function RepoCatalogPage() {
     <>
       <PageHead
         eyebrow="Library"
-        title={`${s.total} skills,`}
-        em="ready to run"
-        lead={<>Every skill here runs in your browser on its own example, or on your files. Open one and press Run. {s.healthy} are rated healthy by their evaluations; {s.needsWork} need work.</>}
+        title={`${s.total} skills:`}
+        em={`${s.healthy} healthy, ${s.needsWork} need work${s.total - s.healthy - s.needsWork ? `, ${s.total - s.healthy - s.needsWork} not evaluated yet` : ""}`}
+        lead={<>Every skill here runs in your browser on its own example, or on your files. Open one and press Run. “Healthy” and “need work” come from each skill&apos;s evaluation (description and instructions verdicts below).</>}
         caption={<>{cases} evaluation cases · {meta.runs} evaluation runs with {modelLabel(meta.model)} on {meta.date}</>}
         note={<><Link href="/" className="link-flame">← Describe a task instead</Link> · <Link href="/upstream/" className="link-flame">{meta.counts.upstream} reference skills from GitHub →</Link></>}
       />

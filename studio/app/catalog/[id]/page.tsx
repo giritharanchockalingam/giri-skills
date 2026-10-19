@@ -50,7 +50,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
       </div>
       {rels.length > 0 && <section className="card card-pad mb-4"><div className="h3" style={{ marginTop: 0 }}>Related</div><RelatedList rels={rels} /></section>}
       <section className="card card-pad mb-4 level-panel">
-        <div className="flex flex-wrap items-center gap-3"><LevelBadge level={lv.level} large /><span className="caption">{lv.level === "n/a" ? "No scorecard check applies to this repository yet." : `${lv.applicable.length} check(s) apply.`}</span></div>
+        <div className="flex flex-wrap items-center gap-3"><LevelBadge level={lv.level} large /><span className="caption">{lv.level === "n/a" ? <>No scorecard check applies: today&apos;s checks cover Supabase migrations and Next.js apps, and this repository has neither. Nothing to fix; it gets a level once it adds either. <Link className="link" href="/glossary">What levels mean</Link></> : `${lv.applicable.length} check${lv.applicable.length === 1 ? "" : "s"} apply.`}</span></div>
         {lv.next && (<>
           <p style={{ margin: "10px 0 4px" }}>To reach <b>{LEVEL_LABEL[lv.next]}</b> ({LEVEL_RULE[lv.next]}):</p>
           <ul className="level-blockers">{lv.blockers.map((b) => <li key={b.check_id}><b>{b.title}</b> — {b.reason}</li>)}</ul>

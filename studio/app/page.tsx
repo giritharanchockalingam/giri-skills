@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
+import { loadActivity } from "@/lib/insights/load";
+import { computeInsights } from "@/lib/insights/compute";
+import { inboxCount } from "@/lib/db/actions";
 import { skillCounts } from "@/lib/counts";
 import { SkillCountsLine } from "@/components/SkillCountsLine";
 import { ReadyQueue } from "@/components/factory/Funnel";
@@ -50,6 +53,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
     for (const [k, v] of Object.entries(patch)) { if (v) n.set(k, v); else n.delete(k); }
     return `/?${n.toString()}`;
   };
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const [week, waiting] = await Promise.all([
+    loadActivity(ctx.supabase, ctx.workspace.id, weekAgo).then(({ acts, baselines, scores }) => computeInsights(acts, baselines, scores, 7)),
+    inboxCount(ctx.supabase, ctx.workspace.id),
+  ]);
   const [recentAgents, counts, funnel] = await Promise.all([listRecentAgents(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id),
     ctx.role === "consumer" ? Promise.resolve([]) : loadFunnel(ctx.supabase, ctx.workspace.id)]);
   const suggestions = ["Check the RLS policies in my Supabase migration", "Is our AI chatbot high-risk under the EU AI Act?", "Estimate effort and price for this work breakdown"];
@@ -68,6 +76,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             <button type="submit" className="btn btn-secondary btn-sm">Switch</button>
           </form>) : undefined} />
 
+      <div className="cat-tiles home-stats mb-6" aria-label="This week">
+        <Link href="/insights?days=7" className="cat-tile"><b>{week.total}</b><span>runs this week (server + browser)</span></Link>
+        <Link href="/insights?days=7" className="cat-tile"><b>{week.total && week.successRate != null ? `${Math.round(week.successRate * 100)}%` : "—"}</b><span>{week.total ? `succeeded (${week.ok} of ${week.total})` : "succeeded: no runs yet"}</span></Link>
+        <Link href="/connect" className="cat-tile"><b>{counts.published}</b><span>published skill{counts.published === 1 ? "" : "s"} live as MCP/API tools</span></Link>
+        <Link href="/pipeline?gate=ready" className="cat-tile"><b>{funnel.filter((f) => f.gate === "ready").length}</b><span>ready to publish</span></Link>
+        <Link href="/inbox" className={`cat-tile${waiting ? " cat-tile-est" : ""}`}><b>{waiting}</b><span>waiting on a person (Inbox)</span></Link>
+      </div>
       <TaskBox suggestions={suggestions} />
       <ReadyQueue items={funnel} />
       <SkillCountsLine c={counts} />
@@ -82,9 +97,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
               <div className="lc-stages">
                 {p.stages.map((s) => (
                   <Link key={s.id} href={link({ stage: s.id })} scroll={false} aria-current={s.id === stage.id ? "page" : undefined}
-                    className={`lc-stage${s.id === stage.id ? " on" : ""}${s.count === 0 ? " empty" : ""}`}>
+                    className={`lc-stage${s.id === stage.id ? " on" : ""}${s.count === 0 ? " empty" : ""}`} aria-label={`${s.n ? `Stage ${s.n}: ` : ""}${s.name}, ${s.count} skill${s.count === 1 ? "" : "s"}`}>
                     <span className="lc-stage-name">{s.n ? <span className="lc-n">{s.n}</span> : null}{s.name}</span>
-                    <span className="lc-count">{s.count}</span>
+                    <span className="lc-count" title={`${s.count} skill${s.count === 1 ? "" : "s"}`}>{s.count}</span>
                   </Link>
                 ))}
               </div>
@@ -95,7 +110,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
         <div className="lc-panel card">
           <div className="lc-panel-head">
             <div>
-              <div className="eyebrow">{PHASES.find((p) => p.stages.includes(stage.id))?.title}{stage.n ? ` · stage ${stage.n} of 11` : ""}</div>
+              <div className="eyebrow">{PHASES.find((p) => p.stages.includes(stage.id))?.title}</div>
               <h2 className="h2" style={{ margin: "2px 0 4px" }}>{stage.name}</h2>
               <p className="caption" style={{ margin: 0 }}>{stage.question}</p>
             </div>

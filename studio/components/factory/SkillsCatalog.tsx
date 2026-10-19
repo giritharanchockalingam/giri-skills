@@ -47,7 +47,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
       <div className="card toolbar">
         <input className="input" type="search" placeholder="Search name or purpose" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search skills" style={{ maxWidth: 320 }} />
         <label className="select-inline"><span className="chip-label">Stage</span>
-          <select className="select" value={stage} onChange={(e) => setStage(e.target.value)} aria-label="ADLC stage" style={{ width: "auto", minHeight: 36 }}>
+          <select className="select" value={stage} onChange={(e) => setStage(e.target.value)} aria-label="AI development lifecycle stage" style={{ width: "auto", minHeight: 36 }}>
             <option value="all">All stages</option>
             {stageOpts.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>

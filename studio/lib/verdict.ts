@@ -72,7 +72,7 @@ export const summarize = (verdicts: (Verdict | null | undefined)[]): VerdictSumm
 
 /** The one-sentence conclusion every eval view opens with. */
 export const conclusionSentence = (s: VerdictSummary, a?: AgentSummary) =>
-  `${s.needsWork} of ${s.total} skills need work — ${s.needsDesc} need a better description, ${s.needsBody} need stronger instructions.` +
+  `${s.healthy + s.needsWork} of ${s.total} skills evaluated: ${s.healthy} healthy, ${s.needsWork} need work (${s.needsDesc} the description, ${s.needsBody} the instructions; some need both).` +
   (a ? ` ${agentClause(a)}` : "");
 
 /* ───────────── Agent run verdicts (deterministic: scripts ran, outputs passed their checks) ───────────── */

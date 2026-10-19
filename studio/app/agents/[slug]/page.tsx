@@ -29,7 +29,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
 
   return (
     <>
-      <PageHead eyebrow="Playbook" title={agent.name} em="" lead={agent.description}
+      <PageHead eyebrow="Playbook" title={/^[a-z0-9-]+$/.test(agent.name) ? humanName(agent.name) : agent.name} em="" lead={agent.description}
         caption={<span className="chip-group">{versions.map((x) => <Link key={x.id} href={`/agents/${slug}?v=${x.version}`} className="chip" aria-pressed={x.id === current.id}>v{x.version} · {x.status}</Link>)}</span>} />
       <div className="action-row mb-6" style={{ marginTop: 0 }}>
         <Link href={`/agents/${slug}/run?v=${current.version}`} className="btn btn-primary">Run v{current.version}</Link>
