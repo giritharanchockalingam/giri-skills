@@ -13,7 +13,7 @@ export default async function NewSkillPage() {
   if (!can(ctx.role, "skill.create")) return <PageHead eyebrow="Skills" title="Authors" em="only" after="." lead={`Your role (${ctx.role}) cannot create skills. Ask an administrator for the author role.`} />;
   return (
     <>
-      <PageHead eyebrow="Skills · new" title="Describe the" em="capability" after="." lead="Start with what the skill does and who it is for. The contract (inputs, outputs, steps, limits) comes next in Authoring; nothing runs or publishes until it is defined and tested."
+      <PageHead eyebrow="Skills · new" title="Describe the" em="capability" after="." lead="Start with what the skill does and who it is for. The contract (inputs, outputs, steps, limits) comes next in Instructions; nothing runs or publishes until it is defined and tested."
         note={<Link href="/pipeline?import=1" className="link-flame">← Or import a repository skill instead</Link>} />
       <div className="card card-pad" style={{ maxWidth: 720 }}>
         <ActionForm action={createSkill} submit="Create skill">

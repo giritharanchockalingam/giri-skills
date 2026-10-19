@@ -1,3 +1,4 @@
+import { displayDescription } from "@/lib/names";
 import Link from "next/link";
 import { fmt } from "@/lib/data";
 import { verdictInfo } from "@/lib/verdict";
@@ -23,7 +24,7 @@ export default async function RepoSkillLayout({ children, params }: { children: 
         crumbs={<><Link href="/repo/" className="link">Library</Link> <span aria-hidden="true">›</span> {d.domain}</>}
         title={skill.name.replace(/-/g, " ")}
         pills={<><VerdictBadge v={sc?.verdict} small /><AgentBadge v={sc?.agentVerdict} small /></>}
-        description={skill.description}
+        description={displayDescription(skill.description)}
         meta={<>{skill.name}{skill.metadata.version && <> · v{skill.metadata.version}</>}{skill.metadata.author && <> · {skill.metadata.author}</>}{skill.license && <> · {skill.license}</>} · <span title={verdictInfo(sc?.verdict).explanation}>{verdictInfo(sc?.verdict).label}</span></>}
         stats={[
           { label: "Trigger", value: <Trig n={sc?.triggerAcc} />, title: COL_TIPS.trigger },

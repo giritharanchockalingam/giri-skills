@@ -37,3 +37,9 @@ export function whatYouGet(description: string): string {
   return t.length > 200 ? t.slice(0, 197).replace(/\s+\S*$/, "") + "…" : t;
 }
 
+
+/** Skill descriptions name the marker some skills write for unsourced numbers ("[TO BE BASELINED — owner: ___]");
+ *  shown raw it reads as unfinished work, so descriptions say it in words. The skill files are unchanged. */
+export const displayDescription = (s: string) =>
+  s.replace(/\[?\s*TO BE BASELINED\s*[—-]\s*owner:\s*_+\s*\]?/gi, "a “to be baselined” flag naming the owner")
+   .replace(/\[\s*TBD\s*\]/g, "a “to be decided” flag");

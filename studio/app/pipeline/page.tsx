@@ -39,7 +39,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       <PageHead eyebrow={`Admin · release pipeline · ${ctx.workspace.name}`} title="Release" em="pipeline" after="."
         lead={items.length ? `${items.length} skill${items.length === 1 ? "" : "s"}: ${published} published, ${drafts} with a draft in progress.` : "No skills in this workspace yet."}
         caption="For people who publish skills: versions, evaluation evidence, approvals. To use a skill, start from Home or the Library — nothing here needs to be published for that."
-        note={<><Link href="/repo/" className="link-flame">Repository catalog ({repoSkills.length} skills, eval scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Upstream library →</Link></>} />
+        note={<><Link href="/repo/" className="link-flame">Library ({repoSkills.length} skills, evaluation scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Reference skibrary →</Link></>} />
       <div className="hero-actions mb-6">
         {can(ctx.role, "skill.create") ? (
           <>

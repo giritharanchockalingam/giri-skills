@@ -2,7 +2,7 @@ import { upstream, upstreamSummary, UPSTREAM_CATEGORIES } from "@/lib/data";
 import { UpstreamTable } from "@/components/UpstreamTable";
 import { PageHead } from "@/components/PageHead";
 
-export const metadata = { title: "Upstream · giri-skills" };
+export const metadata = { title: "Reference skills · Skills Factory" };
 
 export default function UpstreamPage() {
   const s = upstreamSummary();

@@ -33,14 +33,8 @@ export default async function AdminPage() {
         lead={ws ? (admin ? "Members and roles, API keys for applications, provider connections, spending and concurrency limits, and the audit log." : `You are ${ctx.role} here. Only administrators can change members, keys, connections and policies; you can see the audit log and your account.`) : "You are not in a workspace yet."} />
 
       <section className="card card-pad mb-6">
-        <div className="h3">Behind the scenes</div>
-        <p className="caption">For people who publish and govern skills. Nothing here is needed to use a skill.</p>
-        <div className="chip-group mt-3">
-          <Link href="/pipeline" className="chip">Release pipeline — versions, evidence, approvals</Link>
-          <Link href="/evaluations" className="chip">Evaluations</Link>
-          <Link href="/activity" className="chip">Activity — every run</Link>
-          <Link href="/upstream/" className="chip">Reference skills from GitHub</Link>
-        </div>
+        <div className="h3">Moved</div>
+        <p className="caption" style={{ margin: 0 }}>The publish pipeline, evaluations, runs and reference skills now live under <Link className="link" href="/pipeline">Skills</Link>. Words used across the portal: <Link className="link" href="/glossary">Glossary</Link>.</p>
       </section>
 
       <section id="account" className="card card-pad mb-6">

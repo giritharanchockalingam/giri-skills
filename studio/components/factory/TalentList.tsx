@@ -22,7 +22,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
     <div className="stack">
       <div className="card">
         <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr>
-          <th>{kind === "role" ? "Role" : "Pool"}</th><th>{kind === "role" ? "Skills" : "Team"}</th><th>{kind === "role" ? "Stages" : "Playbooks"}</th><th>Version</th><th>Based on</th>
+          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Team"}</th><th>{kind === "role" ? "Stages" : "Playbooks"}</th><th>Version</th><th>Based on</th>
         </tr></thead><tbody>
           {rows.map((r) => {
             const v = versions.find((x) => x.talent_id === r.id);
@@ -44,7 +44,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
 
       {can(ctx.role, "talent.edit") && (
         <div className="card card-pad" style={{ maxWidth: 720 }}>
-          <div className="h3">New {kind === "role" ? "role" : "talent pool"}</div>
+          <div className="h3">New {kind === "role" ? "role" : "team"}</div>
           {kind === "pool" && <p className="caption">Starting from a template also adds its roles (and their playbooks) to this workspace if they are not here yet.</p>}
           <ActionForm action={createTalent} submit={`Create ${kind}`} hidden={{ kind }}>
             <div className="ab-grid">

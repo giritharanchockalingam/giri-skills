@@ -26,7 +26,7 @@ export async function TalentDetail({ kind, slug, v }: { kind: "role" | "pool"; s
 
   return (
     <>
-      <PageHead eyebrow={`${kind === "role" ? "Roles" : "Talent pools"} · ${talent.slug}`} title={talent.name} em="" lead={talent.description}
+      <PageHead eyebrow={kind === "role" ? "Role" : "Team"} title={talent.name} em="" lead={talent.description}
         caption={<span className="chip-group">{versions.map((x) => <Link key={x.id} href={`${base}/${slug}?v=${x.version}`} className="chip" aria-pressed={x.id === current.id}>v{x.version} · {x.status}</Link>)}</span>} />
       <div className="action-row mb-6" style={{ marginTop: 0 }}>
         {current.status === "draft" && can(ctx.role, "talent.publish") && <ActionForm action={publishTalentVersion} submit="Publish" submitClass="btn btn-secondary" confirm={`Publish v${current.version}? It becomes frozen.`} hidden={{ kind, version_id: current.id }} />}

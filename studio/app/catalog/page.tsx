@@ -14,7 +14,7 @@ import { CHECKS } from "@/lib/scorecards/checks";
 import { connectGithub, disconnectGithub } from "./actions";
 import { humanName } from "@/lib/names";
 import { listEntities, allRelations, type EntityRow } from "@/lib/db/entities";
-import { KindTabs, ServicesTable, DatabasesTable } from "@/components/catalog/EntityViews";
+import { ServicesTable, DatabasesTable } from "@/components/catalog/EntityViews";
 
 export const metadata = { title: "Catalog · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -55,7 +55,6 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     return (
       <>
         <PageHead eyebrow="Context Lake" title="What you" em="run" after="." lead={sp.type === "service" ? "Services from Vercel: what each is built from, where it runs in production, how often it ships, and the database it uses." : "Databases from Supabase, and the services that use each."} />
-        <KindTabs active={sp.type} counts={kindCounts} />
         {rows.length ? (sp.type === "service" ? <ServicesTable rows={rows} all={all} rels={rels} /> : <DatabasesTable rows={rows} all={all} rels={rels} />)
           : <section className="card card-pad"><p className="none" style={{ margin: 0 }}>None yet — connect and sync {sp.type === "service" ? "Vercel" : "Supabase"} on <Link className="link" href="/integrations">Integrations</Link>.</p></section>}
       </>
@@ -86,7 +85,6 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
       <PageHead eyebrow="Context Lake" title="What you" em="run" after="."
         lead="Your repositories, read from GitHub: what each one is built with, who owns it, and which skills apply — with the files that prove it." />
 
-      <KindTabs active="repository" counts={kindCounts} />
       {sp.connected && <p className="notice notice-ok mb-4" role="status">Connected <b>{sp.connected}</b> — {sp.synced ?? 0} repositories synced.</p>}
       {sp.error && <p className="notice notice-err mb-4" role="alert">{ERRORS[sp.error] ?? "GitHub returned an error."}{sp.detail ? ` (${sp.detail})` : ""}</p>}
       {sp.disconnected && <p className="notice notice-info mb-4" role="status">Disconnected. Its repositories were removed from the catalog; uninstall the App on GitHub to revoke access there too.</p>}
@@ -143,7 +141,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <div className="flex flex-wrap items-center gap-3">
             {(["gold", "silver", "bronze", "none", "n/a"] as LevelOrNone[]).map((l) => <span key={l} className="level-count"><LevelBadge level={l} /> <b>{levelCount(l)}</b></span>)}
           </div>
-          <div className="caption">Levels: Bronze — every check that applies has run · Silver — none fails · Gold — all pass. <Link className="link" href="/initiatives">Initiatives</Link> set a level as a goal with an owner and a deadline. <Link className="link" href="/ai-assets">AI assets</Link> lists the agents, MCP servers and skills in these repositories.</div>
+          <div className="caption">Levels: Bronze — every check that applies has run · Silver — none fails · Gold — all pass. <Link className="link" href="/initiatives">Initiatives</Link> set a level as a goal with an owner and a deadline. <Link className="link" href="/ai-assets">AI assets</Link> lists the agents, MCP servers and skills found in these repositories.</div>
         </div>
         {canScore && <div className="mb-4 flex flex-wrap items-center gap-3"><ScoreAll entities={active.map((e) => ({ id: e.id, key: e.key }))} label={scoredRepos.length ? "Re-run scorecards" : "Run scorecards"} />
           <span className="caption">Runs {CHECKS.length} checks where they apply ({CHECKS.map((c) => c.title.split(" (")[0]).join(", ")}) on each repository&apos;s current default branch. Read-only.</span></div>}
