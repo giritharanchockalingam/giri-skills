@@ -12,11 +12,13 @@
 | min / max | value (or text length) outside the bound | failing values | non-null values |
 | allowed | value not in the pipe-separated list (exact, case-sensitive) | failing values | non-null values |
 | regex | value does not full-match the regex | failing values | non-null values |
-| freshness | newest date in the freshness column older than as-of − max_age_days | all rows | all rows |
+| freshness | newest date in the freshness column older than as-of − max_age_days, or any record dated after the as-of date (failing rows = future-dated rows) | all rows | all rows |
 
-Type parsing: integer `^[+-]?\d+$`; number decimal or exponent, finite; boolean true/false/yes/no/y/n/t/f/1/0; date `YYYY-MM-DD` (real calendar date); datetime ISO 8601 `YYYY-MM-DD[T ]HH:MM[:SS[.f]]` with optional `Z` or offset (compared in UTC); email `local@domain.tld`. Values that fail the type rule are excluded from min/max (they are already reported).
+Type parsing: integer `^[+-]?\d+$`; number decimal or exponent, finite; boolean true/false/yes/no/y/n/t/f/1/0; date `YYYY-MM-DD` (real calendar date); datetime ISO 8601 `YYYY-MM-DD[T ]HH:MM[:SS[.f]]` with optional `Z` or offset (compared in UTC; a date-only `max` on a datetime column covers the whole day, a date-only `min` starts at 00:00); email `local@domain.tld`. Values that fail the type rule are excluded from min/max (they are already reported).
 
 Freshness is evaluated only when `freshness_column`, `as_of` and `max_age_days` are all supplied. A column with no as-of date or maximum age reads `not checked … [TO BE BASELINED — owner: Data owner]`; the script never uses today's date.
+
+Input files must be UTF-8 (a BOM is accepted); any other encoding or a binary file stops the run (exit 2) — bytes are never silently replaced. Output CSV cells that start with = + - @ tab or CR are prefixed with `'` (OWASP CSV-injection guard); plain numbers such as -3.5 are left as they are.
 
 Sensitive data: violations carry at most 3 distinct example values, each cut to 40 characters; profile min/max are shown only for numeric and date-like columns. Run `pii-data-inventory` first if the extract may hold personal data, and treat `violations.csv` as no more public than the data.
 

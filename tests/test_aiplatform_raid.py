@@ -153,3 +153,94 @@ def test_deterministic_and_verify(tmp_path):
         w.writerows(rows)
     bad = run_script(SCRIPT, "--verify", str(p), "--as-of", "2026-10-16")
     assert bad.returncode == 1 and "M3" in bad.stderr
+
+
+# ---------------------------------------------------------------- audit 2026-10-19 regressions
+
+AUDIT_MS = (MH.rstrip("\n") + ",owner\n"
+            "A,Use-case sign-off,2026-08-01,2026-08-01,10,,done,PO\n"
+            "B,Data pipeline,2026-09-01,2026-09-20,30,A,in_progress,Data lead\n"
+            "C,Model eval harness,2026-09-15,2026-09-18,15,A,in_progress,\n"
+            "D,Security review,2026-10-01,2026-10-01,5,A,blocked,CISO\n"
+            "E,Pilot launch,2026-11-02,2026-11-09,10,B|C|D,not_started,PM\n"
+            'F,"=HYPERLINK(""http://x"",""Training"")",2026-10-30,2026-10-30,40,A,in_progress,HR\n')
+AUDIT_RAID = (RH.rstrip("\n") + ",raised\n"
+              "R1,risk,Vendor API rate limits,Platform lead,4,5,2026-10-10,open,Negotiate quota,2026-09-01\n"
+              "R2,risk,Low adoption,,2,3,2026-11-30,open,,2026-09-10\n"
+              'I1,issue,GPU quota exhausted,Infra lead,,4,2026-10-12,open,"=HYPERLINK(""http://evil"",""Click"")",2026-10-01\n'
+              "D1,dependency,Legal approval of DPA,Legal,,,2026-10-05,open,Chase legal,2026-09-01\n"
+              "A1,assumption,Users have SSO,IT,,,,open,Check with IT,\n"
+              "R3,risk,Old risk,Owner,5,5,2026-09-01,closed,,\n")
+
+
+def test_audit_zero_open_raid_items_is_valid(tmp_path):
+    ms = MH.rstrip("\n") + ",owner\nA,x,2026-11-01,2026-11-01,5,,in_progress,PM\n"
+    raid = RH + "R9,risk,old,Owner,2,2,2026-09-01,closed,done\n"
+    res, st = _run(tmp_path, ms, raid, "2026-10-15")
+    assert res.returncode == 0 and st["overall_rag"] == "green" and st["raid_actions"] == []
+    acts = tmp_path / "out" / "raid-actions.csv"
+    assert acts.read_text(encoding="utf-8").count("\n") == 1  # header only
+    v = run_script(SCRIPT, "--verify", str(acts), "--as-of", "2026-10-15")
+    assert v.returncode == 0, v.stderr
+    # status.csv with no rows is still invalid
+    (tmp_path / "s").mkdir()
+    (tmp_path / "s" / "status.csv").write_text("id,milestone,baseline,forecast,slip_days,rag,on_critical_path,status\n",
+                                               encoding="utf-8")
+    assert run_script(SCRIPT, "--verify", str(tmp_path / "s" / "status.csv")).returncode == 1
+
+
+def test_audit_zero_open_raid_items_run_skill_exits_0(tmp_path):
+    (tmp_path / "m.csv").write_text(MH.rstrip("\n") + ",owner\nA,x,2026-11-01,2026-11-01,5,,in_progress,PM\n",
+                                    encoding="utf-8")
+    (tmp_path / "r.csv").write_text(RH + "R9,risk,old,Owner,2,2,2026-09-01,closed,done\n", encoding="utf-8")
+    r = run_script("scripts/run_skill.py", "ai-platform/program-raid-status", "--input", f"raid={tmp_path / 'r.csv'}",
+                   "--input", f"milestones={tmp_path / 'm.csv'}", "--input", "as_of=2026-10-15", "--provider", "none",
+                   "--out", str(tmp_path / "run"))
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_audit_raid_verify_flags_blank_next_action(tmp_path):
+    p = tmp_path / "raid-actions.csv"
+    p.write_text("id,type,exposure,owner,due,overdue_days,age_days,next_action\nR1,risk,4,O,2026-10-20,0,,\n",
+                 encoding="utf-8")
+    v = run_script(SCRIPT, "--verify", str(p), "--as-of", "2026-10-15")
+    assert v.returncode == 1 and "next_action" in v.stderr
+
+
+def test_audit_csv_injection_escaped(tmp_path):
+    res, st = _run(tmp_path, AUDIT_MS, AUDIT_RAID, "2026-10-15")
+    assert res.returncode == 0
+    status = {r["id"]: r for r in csv.DictReader((tmp_path / "out/status.csv").open(encoding="utf-8"))}
+    assert status["F"]["milestone"] == "'=HYPERLINK(\"http://x\",\"Training\")"
+    assert status["B"]["slip_days"] == "19"
+    acts = list(csv.DictReader((tmp_path / "out/raid-actions.csv").open(encoding="utf-8")))
+    for r in acts:
+        for v in r.values():
+            assert not v.startswith(("=", "+", "-", "@", "\t", "\r"))
+    for f in ("status.csv", "raid-actions.csv"):
+        assert run_script(SCRIPT, "--verify", str(tmp_path / "out" / f), "--as-of", "2026-10-15").returncode == 0
+    # a formula as the whole next_action is escaped
+    raid = RH + 'X1,risk,r,O,2,2,2026-12-01,open,"=1+1"\n'
+    res2, st2 = _run(tmp_path, AUDIT_MS, raid, "2026-10-15")
+    row = list(csv.DictReader((tmp_path / "out/raid-actions.csv").open(encoding="utf-8")))[0]
+    assert row["next_action"] == "'=1+1"
+
+
+def test_audit_critical_path_tie_marks_all_zero_float(tmp_path):
+    res, st = _run(tmp_path, AUDIT_MS, AUDIT_RAID, "2026-10-15")
+    assert st["critical_path"] == ["A", "B", "E"] and st["critical_path_days"] == 50
+    assert st["critical_path_ties"] == ["F"]
+    cp = {m["id"]: m["on_critical_path"] for m in st["milestones"]}
+    assert cp == {"A": "yes", "B": "yes", "C": "no", "D": "no", "E": "yes", "F": "yes"}
+    assert "Tie: F also has zero float" in (tmp_path / "out/status-report.md").read_text(encoding="utf-8")
+
+
+def test_audit_non_utf8_input_exit_2_no_traceback(tmp_path):
+    bad = tmp_path / "bin.csv"
+    bad.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe\xfd")
+    res, _ = _run(tmp_path, AUDIT_MS, bad, "2026-10-15")
+    assert res.returncode == 2 and "Traceback" not in res.stderr and "UTF-8" in res.stderr
+    cp = tmp_path / "cp.csv"
+    cp.write_bytes(MH.encode() + b"A,Caf\xe9,2026-11-01,2026-11-01,5,,in_progress\n")
+    res2, _ = _run(tmp_path, cp, RH, "2026-10-15")
+    assert res2.returncode == 2 and "Traceback" not in res2.stderr

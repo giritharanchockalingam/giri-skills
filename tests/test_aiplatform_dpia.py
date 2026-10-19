@@ -151,3 +151,83 @@ def test_verify_ok_and_detects_tamper(tmp_path):
     bad = run_script(SCRIPT, "--verify", str(p))
     assert bad.returncode == 1 and "score" in bad.stderr
     assert run_script(SCRIPT, "--verify", str(tmp_path / "missing")).returncode == 2
+
+
+# ---------------------------------------------------------------- audit 2026-10-19 regressions
+
+AUDIT_PROCESSING = {
+    "system_name": "HR attrition predictor", "controller": "Acme GmbH", "data_subjects": "Employees",
+    "evaluation_scoring": "yes", "automated_decision_making": "no", "systematic_monitoring": "no",
+    "special_categories": "no", "criminal_data": "no", "highly_personal_data": "", "large_scale": "no",
+    "combining_datasets": "yes", "vulnerable_subjects": "yes", "new_technology": "",
+    "prevents_rights_or_service": "no", "international_transfers": "yes"}
+AUDIT_RISKS = ('risk,likelihood,severity,measure,owner,residual\n'
+               'Discriminatory predictions against protected groups,3,3,,HR lead,low\n'
+               '"=HYPERLINK(""http://evil"",""Re-identification"")",2,3,Pseudonymise,"=1+1",\n'
+               'Excessive retention,2,2,Delete after 12 months,DPO,\n'
+               'Covert monitoring perception,3,3,,Works council,\n')
+
+
+def test_audit_stated_low_residual_without_measure_is_gated_and_flags_art36(tmp_path):
+    res, scr, rows, out = _run(tmp_path, AUDIT_PROCESSING, risks=AUDIT_RISKS)
+    assert res.returncode == 1
+    disc = "Discriminatory predictions against protected groups"
+    assert disc in scr["gate_blockers"] and disc in scr["residual_overrides"]
+    assert scr["prior_consultation_required"] is True
+    by = {r["risk"]: r for r in rows}
+    assert by[disc]["residual"] == "high" and by[disc]["measure"] == TBD
+    md = (out / "dpia.md").read_text(encoding="utf-8")
+    assert "stated residual 'low' is not credible" in md and "Stated residual not accepted" in md
+    assert run_script(SCRIPT, "--verify", str(out)).returncode == 0
+
+
+def test_audit_medium_inherent_low_stated_no_measure_overridden(tmp_path):
+    res, scr, rows, _ = _run(tmp_path, ALL_NO, risks="risk,likelihood,severity,measure,owner,residual\nM,2,2,,o,low\n")
+    assert res.returncode == 0 and rows[0]["residual"] == "medium" and scr["residual_overrides"] == ["M"]
+
+
+def test_audit_verify_rejects_residual_below_inherent_without_measure(tmp_path):
+    res, _, _, out = _run(tmp_path, ALL_NO, risks="risk,likelihood,severity,measure,owner,residual\nM,2,2,,o,\n")
+    p = out / "dpia-risks.csv"
+    p.write_text(p.read_text(encoding="utf-8").replace(",o,medium", ",o,low"), encoding="utf-8")
+    bad = run_script(SCRIPT, "--verify", str(p))
+    assert bad.returncode == 1 and "below inherent" in bad.stderr
+
+
+def test_audit_csv_injection_escaped_and_verify_agrees(tmp_path):
+    res, scr, rows, out = _run(tmp_path, AUDIT_PROCESSING, risks=AUDIT_RISKS)
+    reid = [r for r in rows if "HYPERLINK" in r["risk"]][0]
+    assert reid["risk"].startswith("'=HYPERLINK") and reid["owner"] == "'=1+1"
+    assert all(r["score"].isdigit() for r in rows)  # numbers untouched
+    for r in rows:
+        for v in r.values():
+            assert not v.startswith(("=", "+", "-", "@", "\t", "\r"))
+    assert run_script(SCRIPT, "--verify", str(out / "dpia-risks.csv")).returncode == 0
+
+
+def test_audit_gate_blocker_with_formula_name_verifies(tmp_path):
+    res, scr, rows, out = _run(tmp_path, ALL_NO, risks="risk,likelihood,severity,measure,owner,residual\n=X,3,3,,o,\n")
+    assert res.returncode == 1 and scr["gate_blockers"] == ["=X"] and rows[0]["risk"] == "'=X"
+    assert run_script(SCRIPT, "--verify", str(out)).returncode == 0
+
+
+def test_audit_one_criterion_result_is_qualified(tmp_path):
+    facts = dict(AUDIT_PROCESSING, highly_personal_data="no", combining_datasets="no", vulnerable_subjects="no",
+                 new_technology="no")
+    res, scr, _, out = _run(tmp_path, facts)
+    assert res.returncode == 0 and scr["required"] is False and scr["criteria_met"] == 1
+    md = (out / "dpia.md").read_text(encoding="utf-8")
+    assert "Result: **DPIA not required**" not in md
+    assert "not required on the WP248 two-criteria rule" in md
+    assert "single criterion can suffice" in md and "Art. 35(4)" in md
+
+
+def test_audit_non_utf8_input_exit_2_no_traceback(tmp_path):
+    for name, data in (("bin.csv", b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe\xfd"), ("cp.csv", b"key,value\nsystem_name,Caf\xe9\n")):
+        p = tmp_path / name
+        p.write_bytes(data)
+        res = run_script(SCRIPT, "--processing", str(p), "--out-dir", str(tmp_path / "o"))
+        assert res.returncode == 2 and "Traceback" not in res.stderr and "UTF-8" in res.stderr
+    bom = tmp_path / "bom.csv"
+    bom.write_bytes("﻿key,value\nlarge_scale,yes\n".encode("utf-8"))
+    assert run_script(SCRIPT, "--processing", str(bom), "--out-dir", str(tmp_path / "o2")).returncode == 0

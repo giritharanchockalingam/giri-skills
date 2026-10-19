@@ -47,7 +47,7 @@ Screening keys take `yes|no`; blank means not answered. Any other value stops th
 3. Fill `processing-template.csv` with the controller; leave unknowns blank (they become TBDs, never guesses).
 4. Run the skill. `scripts/dpia.py` screens against WP248 C1–C9 and Art. 35(3) (`references/risk-method.md`); a DPIA is required at two or more criteria, or precautionarily when unanswered criteria could reach two.
 5. It scores each risk `likelihood × severity` (1–2 low, 3–4 medium, 6–9 high) and adds a risk for every PII column whose handling is blank or TBD.
-6. Residual risk: stated by the owner; with no measure it equals the inherent level. Any high residual flags Art. 36 prior consultation; a high residual without a measure is the gate (exit 1).
+6. Residual risk: stated by the owner; with no measure it equals the inherent level (a stated residual below the inherent level with no measure is not credible: it is overridden to the inherent level and reported). Any high residual flags Art. 36 prior consultation; a high residual without a measure is the gate (exit 1).
 7. Hand `dpia.md` to the DPO for advice (Art. 35(2)) and record it in the Sign-off rows; re-run after changes.
 8. Run the self-check.
 

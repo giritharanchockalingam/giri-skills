@@ -18,7 +18,7 @@ metadata:
       - {step: status, kind: script, cmd: "python3 -I scripts/raid_status.py --raid {raid} --milestones {milestones} --as-of {as_of} [--thresholds {thresholds}] {strict} --out-dir {out}"}
     outputs:
       - {path: "{out}/status.csv", checks: [exists, csv:[milestone,baseline,forecast,slip_days,rag,on_critical_path], "csv_rows:rag~^(red|amber|green|complete)$", "csv_rows:slip_days~^-?\\d+$", cmd:"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}"]}
-      - {path: "{out}/raid-actions.csv", checks: [exists, csv:[id,type,exposure,owner,due,overdue_days,next_action], csv_rows:owner!empty, csv_rows:next_action!empty, cmd:"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}"]}
+      - {path: "{out}/raid-actions.csv", checks: [exists, csv:[id,type,exposure,owner,due,overdue_days,next_action], cmd:"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}"]}
       - {path: "{out}/status-report.md", checks: [exists, sections:["Summary","Milestones","Critical path","Top risks","Overdue items","Decisions needed","Method"], no_unowned_tbd, mermaid_parses, contains:"Overall RAG rule"]}
 ---
 

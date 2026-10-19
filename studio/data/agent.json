@@ -478,6 +478,13 @@
  {
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "agent-happy-path",
+  "check": "controls-report.md: contains:\"Evidence-backed coverage (gate basis): **0.486**\"",
+  "pass": true,
+  "evidence": "found: Evidence-backed coverage (gate basis): **0.486**"
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
   "check": "controls.csv: contains:\"MANAGE 4.3,MANAGE,MANAGE 4,partial,\"",
   "pass": true,
   "evidence": "found: MANAGE 4.3,MANAGE,MANAGE 4,partial,"
@@ -7515,7 +7522,7 @@
   "caseId": "agent-happy-path",
   "check": "value-case.md: numbers_trace_to:value-model.json",
   "pass": true,
-  "evidence": "all 78 numbers trace"
+  "evidence": "all 75 numbers trace"
  },
  {
   "skill": "presales/value-case-builder",

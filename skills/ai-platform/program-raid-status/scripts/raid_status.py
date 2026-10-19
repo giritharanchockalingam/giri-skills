@@ -59,19 +59,40 @@ class CycleError(Exception):
     """Dependency cycle -> exit 1."""
 
 
+_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+_NUMBER = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
+
+
+def csv_safe(v) -> str:
+    """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
+    s = "" if v is None else str(v)
+    if s.startswith(_FORMULA_LEAD) and not _NUMBER.fullmatch(s):
+        return "'" + s
+    return s
+
+
 def read_csv(path: Path, label: str, cols: tuple[str, ...]) -> list[dict]:
     if not path.is_file():
         raise InputError(f"{label} file not found: {path}")
-    lines = [ln for ln in path.read_text(encoding="utf-8-sig").splitlines()
-             if ln.strip() and not ln.lstrip().startswith("#")]
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{label} file {path.name} is not a UTF-8 text CSV ({e.reason} at byte {e.start}); "
+                         "save it as CSV UTF-8") from None
+    if "\x00" in text:
+        raise InputError(f"{label} file {path.name} is not a text CSV (contains NUL bytes)")
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     if not lines:
         raise InputError(f"{label} CSV is empty")
-    header = [h.strip() for h in next(csv.reader(io.StringIO(lines[0])))]
-    missing = [c for c in cols if c not in header]
-    if missing:
-        raise InputError(f"{label} CSV needs columns {','.join(cols)} (missing {','.join(missing)})")
-    return [{(k or "").strip(): (v or "").strip() for k, v in r.items()}
-            for r in csv.DictReader(io.StringIO("\n".join(lines)))]
+    try:
+        header = [h.strip() for h in next(csv.reader(io.StringIO(lines[0])))]
+        missing = [c for c in cols if c not in header]
+        if missing:
+            raise InputError(f"{label} CSV needs columns {','.join(cols)} (missing {','.join(missing)})")
+        return [{(k or "").strip(): (v or "").strip() for k, v in r.items() if k is not None}
+                for r in csv.DictReader(io.StringIO("\n".join(lines)))]
+    except csv.Error as e:
+        raise InputError(f"{label} file {path.name}: malformed CSV ({e})") from None
 
 
 def date(v: str, label: str, allow_blank: bool = False):
@@ -167,7 +188,8 @@ def load_raid(path: Path) -> list[dict]:
     return out
 
 
-def critical_path(ms: list[dict]) -> tuple[list[str], int]:
+def critical_path(ms: list[dict]) -> tuple[list[str], int, list[str]]:
+    """Displayed chain (ties -> lowest id), its length, and every zero-float milestone (CPM)."""
     by_id = {m["id"]: m for m in ms}
     indeg = {m["id"]: len(m["depends_on"]) for m in ms}
     children: dict[str, list[str]] = {m["id"]: [] for m in ms}
@@ -199,7 +221,13 @@ def critical_path(ms: list[dict]) -> tuple[list[str], int]:
     path = [end]
     while pred[path[-1]]:
         path.append(pred[path[-1]])
-    return list(reversed(path)), ef[end]
+    finish = ef[end]
+    lf: dict[str, int] = {}
+    for n in reversed(order):  # backward pass: latest finish without moving the end date
+        kids = children[n]
+        lf[n] = min((lf[c] - by_id[c]["duration_days"] for c in kids), default=finish)
+    zero_float = sorted(n for n in order if lf[n] == ef[n])
+    return list(reversed(path)), finish, zero_float
 
 
 def rag_for(m: dict, as_of: dt.date, t: dict) -> tuple[int, str, bool]:
@@ -240,8 +268,9 @@ def bucket(days: int) -> str:
 
 
 def build(ms, raid, as_of: dt.date, t: dict) -> dict:
-    cp, cp_len = critical_path(ms)
-    cp_set = set(cp)
+    cp, cp_len, zero_float = critical_path(ms)
+    cp_set = set(cp) | set(zero_float)
+    cp_ties = [m for m in zero_float if m not in cp]
     status_rows = []
     for m in sorted(ms, key=lambda m: m["id"]):
         slip, rag, late = rag_for(m, as_of, t)
@@ -289,7 +318,8 @@ def build(ms, raid, as_of: dt.date, t: dict) -> dict:
         ageing[bucket(a["overdue_days"])] = ageing.get(bucket(a["overdue_days"]), 0) + 1
     return {"as_of": as_of.isoformat(), "thresholds": t, "overall_rag": overall,
             "overall_reasons": reasons_red if overall == "red" else reasons_amber,
-            "critical_path": cp, "critical_path_days": cp_len, "milestones": status_rows,
+            "critical_path": cp, "critical_path_days": cp_len, "critical_path_ties": cp_ties,
+            "milestones": status_rows,
             "raid_actions": actions, "top_risks": [a["id"] for a in top_risks],
             "overdue": [a["id"] for a in overdue], "overdue_ageing": dict(sorted(ageing.items())),
             "decisions": decisions,
@@ -348,6 +378,9 @@ def render(st: dict, strict: bool) -> str:
           "", "## Critical path", "",
           f"Longest chain through `depends_on` by duration_days: {' → '.join(st['critical_path'])} = "
           f"{st['critical_path_days']} days. A slip on any of these moves the end date.", ""]
+    if st.get("critical_path_ties"):
+        L += [f"Tie: {', '.join(st['critical_path_ties'])} also has zero float (a parallel chain of equal length), so it is "
+              "marked on the critical path too; a slip there also moves the end date.", ""]
     L += mermaid(st)
     acts = {a["id"]: a for a in st["raid_actions"]}
     L += ["", "## Top risks", "", "| ID | Risk | Exposure (L×I) | Owner | Due | Mitigation |", "|---|---|---|---|---|---|"]
@@ -372,12 +405,13 @@ def render(st: dict, strict: bool) -> str:
           "- slip_days = forecast_date − baseline_date (calendar days); RAG thresholds from the thresholds input or "
           f"the defaults in `references/method.md` (green ≤ {DEFAULTS['green_max_slip_days']}, amber ≤ "
           f"{DEFAULTS['amber_max_slip_days']}, red exposure ≥ {DEFAULTS['red_exposure']}).",
-          "- Critical path = longest path through depends_on weighted by duration_days; ties go to the lowest id.",
+          "- Critical path = longest path through depends_on weighted by duration_days; the chart shows one chain (ties go "
+          "to the lowest id) and every zero-float milestone is marked on_critical_path.",
           "- Exposure = likelihood × impact (1–5 each); an issue with blank likelihood counts 5 (it has occurred).",
           f"- Overdue days = as-of date ({st['as_of']}) − due date for open items; age = as-of − raised.",
           f"- Missing owners are {TBD}.",
           "- Limits: the status is only as current as the RAID log and forecasts supplied; duration_days are planned, "
-          "not resource-levelled; no schedule float is computed."]
+          "not resource-levelled; float is computed only to mark zero-float milestones."]
     return "\n".join(L) + "\n"
 
 
@@ -386,16 +420,22 @@ def write_csv(path: Path, cols: list[str], rows: list[dict]) -> None:
     w = csv.DictWriter(buf, fieldnames=cols, extrasaction="ignore", lineterminator="\n")
     w.writeheader()
     for r in rows:
-        w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in cols})
+        w.writerow({k: csv_safe("" if r.get(k) is None else r.get(k)) for k in cols})
     path.write_text(buf.getvalue(), encoding="utf-8")
 
 
 def verify(path: Path, as_of: dt.date | None) -> int:
     errs = []
-    rows = list(csv.DictReader(path.open(encoding="utf-8")))
-    if not rows:
-        errs.append("no rows")
-    if path.name == "status.csv" or "slip_days" in (rows[0] if rows else {}):
+    with path.open(encoding="utf-8") as fh:
+        rdr = csv.DictReader(fh)
+        rows = list(rdr)
+        header = rdr.fieldnames or []
+    is_status = path.name == "status.csv" or "slip_days" in header
+    if not rows and is_status:
+        errs.append("no rows")  # a program always has milestones; zero open RAID items is valid
+    if not header:
+        errs.append("no header row")
+    if is_status:
         sj = path.parent / "status.json"
         t = json.loads(sj.read_text(encoding="utf-8"))["thresholds"] if sj.exists() else DEFAULTS
         for r in rows:
@@ -416,6 +456,8 @@ def verify(path: Path, as_of: dt.date | None) -> int:
                 errs.append(f"{r['id']}: exposure {r['exposure']} outside 1-25")
             if not r["owner"]:
                 errs.append(f"{r['id']}: blank owner")
+            if not r.get("next_action"):
+                errs.append(f"{r['id']}: blank next_action")
             if as_of and r["due"][:1].isdigit():
                 expect = max(0, (as_of - dt.date.fromisoformat(r["due"])).days)
                 if str(expect) != r["overdue_days"]:

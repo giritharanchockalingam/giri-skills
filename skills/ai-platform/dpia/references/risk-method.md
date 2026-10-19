@@ -23,7 +23,7 @@ One criterion alone can still warrant a DPIA (WP248); the controller may decide 
 ## Risk scoring (skill convention, not from the GDPR)
 - `score = likelihood × severity`, each 1 (low) – 3 (high).
 - Level: 1–2 low · 3–4 medium · 6–9 high.
-- Residual: the value the risk owner states. Blank residual with no measure → residual = inherent level (nothing reduces it). Blank residual with a measure → TBD (owner: Data protection officer).
+- Residual: the value the risk owner states. Blank residual with no measure → residual = inherent level (nothing reduces it). A stated residual below the inherent level with no measure is not credible → residual = inherent level, listed under `residual_overrides` in screening.json and in dpia.md. Text cells in dpia-risks.csv that start with = + - @ tab or CR get a leading `'` (CSV-injection guard). Blank residual with a measure → TBD (owner: Data protection officer).
 - PII inventory columns whose handling is blank or TBD become unscored risks owned by the Data protection officer.
 
 ## Gate and consultation

@@ -113,7 +113,9 @@ def test_gpai_legacy_model_date_and_missing_pom_tbd(tmp_path):
 
 
 def test_deployer_role_filters_obligations(tmp_path):
-    res, _, obl, _ = _run(tmp_path, _system(tmp_path, role="deployer", a3_essential_services="yes", t_deepfake="yes"))
+    # fria_scope=yes added (audit 2026-10-19): Art. 27(1) FRIA only for in-scope deployers.
+    res, _, obl, _ = _run(tmp_path, _system(tmp_path, role="deployer", a3_essential_services="yes", t_deepfake="yes",
+                                            fria_scope="yes"))
     assert {"HR-DEP", "HR-FRIA", "TR-50-4-D", "AI-LIT"} <= set(obl) and "HR-RMS" not in obl
 
 
@@ -152,3 +154,69 @@ def test_deterministic_and_verify(tmp_path):
     rep.write_text(rep.read_text().replace("| TR-50-2 |", "| XX |"), encoding="utf-8")
     bad = run_script(SCRIPT, "--verify", str(rep))
     assert bad.returncode == 1 and "TR-50-2" in bad.stdout
+
+
+# ---------------------------------------------------------------- audit 2026-10-19 regressions
+
+def _cv(tmp_path, role="provider", profiling="no", name="cv.csv", **over) -> Path:
+    """The auditor's CV-screener questionnaire (formula in accountable_owner)."""
+    p = _system(tmp_path, system_name="CV screener", role=role, intended_purpose="Rank job applicants",
+                placed_on_market="2026-03-01", accountable_owner='=HYPERLINK("http://evil","HR")',
+                a3_employment="yes", d63_preparatory="yes", d63_profiling=profiling,
+                t_interacts_with_persons="yes", t_synthetic_content="yes", **over)
+    return p.rename(tmp_path / name)
+
+
+def test_audit_owner_formula_escaped_in_obligations_csv(tmp_path):
+    res, cls, obl, o = _run(tmp_path, _cv(tmp_path), "--as-of", "2026-10-18")
+    assert res.returncode == 0 and obl
+    assert all(r["owner"] == "'=HYPERLINK(\"http://evil\",\"HR\")" for r in obl.values())
+    assert run_script(SCRIPT, "--verify", str(o)).returncode == 0
+
+
+def test_audit_evidence_text_escaped(tmp_path):
+    ev = tmp_path / "ev.csv"
+    ev.write_text('obligation_id,status,evidence,owner\nAI-LIT,done,"+cmd|calc","@SUM(A1)"\n', encoding="utf-8")
+    res, _, obl, _ = _run(tmp_path, _system(tmp_path), "--evidence", str(ev))
+    assert obl["AI-LIT"]["evidence"] == "'+cmd|calc" and obl["AI-LIT"]["owner"] == "'@SUM(A1)"
+
+
+def test_audit_bom_questionnaire_classified_like_plain(tmp_path):
+    plain = _cv(tmp_path)
+    bom = tmp_path / "cv-bom.csv"
+    bom.write_bytes(b"\xef\xbb\xbf" + plain.read_bytes())
+    r1, c1, o1, _ = _run(tmp_path, plain, out="a")
+    r2, c2, o2, _ = _run(tmp_path, bom, out="b")
+    assert r2.returncode == 0, r2.stderr
+    assert c1["tier"] == c2["tier"] and set(o1) == set(o2)
+
+
+def test_audit_non_utf8_input_exit_2_no_traceback(tmp_path):
+    p = tmp_path / "bin.csv"
+    p.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe\xfd")
+    res, *_ = _run(tmp_path, p)
+    assert res.returncode == 2 and "Traceback" not in res.stderr and "UTF-8" in res.stderr
+    ev = tmp_path / "ev.csv"
+    ev.write_bytes(b"obligation_id,status,evidence,owner\nAI-LIT,done,caf\xe9,x\n")
+    res2, *_ = _run(tmp_path, _system(tmp_path), "--evidence", str(ev), out="o2")
+    assert res2.returncode == 2 and "Traceback" not in res2.stderr
+
+
+def test_audit_ai_literacy_wording_as_amended():
+    cat = (SKILL / "assets/obligations-catalogue.csv").read_text(encoding="utf-8")
+    row = [ln for ln in cat.splitlines() if ln.startswith("AI-LIT,")][0]
+    assert "take measures to support the development of ai literacy" in row.lower()
+    assert "sufficient level" not in row
+
+
+def test_audit_fria_only_in_art27_scope(tmp_path):
+    res, cls, obl, o = _run(tmp_path, _cv(tmp_path, role="deployer", profiling="yes", fria_scope=None), "--as-of", "2026-10-18")
+    assert cls["tier"] == "high-risk" and "HR-DEP" in obl and "HR-FRIA" not in obl
+    assert cls["fria_pending"] is True and "fria_scope" in [u["key"] for u in cls["unanswered_keys"]]
+    assert "HR-FRIA (Art. 27" in (o / "ai-act-report.md").read_text(encoding="utf-8")
+    _, _, obl_no, _ = _run(tmp_path, _cv(tmp_path, role="deployer", profiling="yes", fria_scope="no", name="n.csv"), out="no")
+    assert "HR-FRIA" not in obl_no
+    _, _, obl_yes, _ = _run(tmp_path, _cv(tmp_path, role="deployer", profiling="yes", fria_scope="yes", name="y.csv"), out="yes")
+    assert "HR-FRIA" in obl_yes
+    _, cls_p, _, _ = _run(tmp_path, _cv(tmp_path, profiling="yes", fria_scope=None, name="p.csv"), out="prov")
+    assert "fria_scope" not in [u["key"] for u in cls_p["unanswered_keys"]]  # Art. 27 binds deployers only

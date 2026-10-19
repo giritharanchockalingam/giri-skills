@@ -67,6 +67,7 @@ ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:"
 ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""| ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |""",1,found: | ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |
 ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""| TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |""",1,found: | TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |
 ai-platform/ai-controls-mapping,agent-happy-path,"coverage.json: contains:""\""gate\"": \""pass\""""",1,"found: ""gate"": ""pass"""
+ai-platform/ai-controls-mapping,agent-happy-path,"controls-report.md: contains:""Evidence-backed coverage (gate basis): **0.486**""",1,found: Evidence-backed coverage (gate basis): **0.486**
 ai-platform/ai-controls-mapping,agent-happy-path,"controls.csv: contains:""MANAGE 4.3,MANAGE,MANAGE 4,partial,""",1,"found: MANAGE 4.3,MANAGE,MANAGE 4,partial,"
 ai-platform/ai-controls-mapping,agent-missing-evidence,exit:2,1,"exit code 2, expected 2"
 ai-platform/ai-controls-mapping,agent-missing-evidence,needs_input:evidence,1,missing inputs named: ['evidence']
@@ -1072,7 +1073,7 @@ presales/sow-drafter,agent-missing-acceptance-not-invented,"SOW.md: contains:""[
 presales/value-case-builder,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 presales/value-case-builder,agent-happy-path,exists:value-model.json,1,evals/results/agent-dry/runs/presales__value-case-builder/agent-happy-path/value-model.json exists
 presales/value-case-builder,agent-happy-path,"value-case.md: sections:[""Bottom line"",""Cash flows"",""Sensitivity"",""Sources""]",1,"found ['Bottom line', 'Cash flows', 'Sensitivity', 'Sources']"
-presales/value-case-builder,agent-happy-path,value-case.md: numbers_trace_to:value-model.json,1,all 78 numbers trace
+presales/value-case-builder,agent-happy-path,value-case.md: numbers_trace_to:value-model.json,1,all 75 numbers trace
 presales/value-case-builder,agent-happy-path,"value-case.md: contains:""month 25""",1,found: month 25
 presales/value-case-builder,agent-missing-costs,exit:2,1,"exit code 2, expected 2"
 presales/value-case-builder,agent-missing-costs,needs_input:costs,1,missing inputs named: ['costs']

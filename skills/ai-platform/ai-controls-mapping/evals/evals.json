@@ -12,14 +12,14 @@
     },
     {
       "id": "agent-happy-path",
-      "prompt": "Map the Northwind Billing Assistant evidence to NIST AI RMF, gate at 50% coverage, and check our open AI Act obligations.",
+      "prompt": "Map the Northwind Billing Assistant evidence to NIST AI RMF, gate at 48.6% coverage, and check our open AI Act obligations.",
       "expected": [
-        "Overall coverage exactly 0.500 (29 implemented, 12 partial of 70 applicable) so the 0.5 gate passes at the boundary; GOVERN 0.667, MAP 0.583, MEASURE 0.357, MANAGE 0.385",
+        "Overall coverage exactly 0.500 (29 implemented, 12 partial of 70 applicable); GOVERN 0.667, MAP 0.583, MEASURE 0.357, MANAGE 0.385. The gate uses evidence-backed coverage 0.486 (GOVERN 2.3 is implemented with no evidence cited, so it gets no credit), so a 0.486 gate passes at the boundary",
         "TR-50-1 and TR-50-2 map to MEASURE 2.8 (partial) via the skill's own crosswalk"
       ],
       "inputs": {
         "evidence": "evals/fixtures/evidence-northwind.csv",
-        "min_coverage": "0.5",
+        "min_coverage": "0.486",
         "obligations": "evals/fixtures/obligations-northwind.csv"
       },
       "checks": [
@@ -29,6 +29,7 @@
         {"file": "controls-report.md", "check": "contains:\"| ALL | 29 | 12 | 6 | 2 | 23 | 70 | 0.500 |\""},
         {"file": "controls-report.md", "check": "contains:\"| TR-50-2 | Art. 50(2) | open | 2026-12-02 | MEASURE 2.8: partial | partial |\""},
         {"file": "coverage.json", "check": "contains:\"\\\"gate\\\": \\\"pass\\\"\""},
+        {"file": "controls-report.md", "check": "contains:\"Evidence-backed coverage (gate basis): **0.486**\""},
         {"file": "controls.csv", "check": "contains:\"MANAGE 4.3,MANAGE,MANAGE 4,partial,\""}
       ]
     },

@@ -8,7 +8,7 @@
     "pii_inventory": "skills/ai-platform/dpia/evals/fixtures/pii-inventory.csv",
     "risks": "skills/ai-platform/dpia/evals/fixtures/risks.csv",
     "controls_evidence": "skills/ai-platform/ai-controls-mapping/evals/fixtures/evidence-northwind.csv",
-    "min_coverage": "0.5",
+    "min_coverage": "0.45",
     "components": "skills/ai-platform/ai-threat-model/evals/fixtures/components.csv",
     "flows": "skills/ai-platform/ai-threat-model/evals/fixtures/flows.csv",
     "security_controls": "skills/ai-platform/ai-threat-model/evals/fixtures/controls.csv",

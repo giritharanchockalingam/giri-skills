@@ -39,6 +39,12 @@ Prices per 1M tokens: fict-large 3.00 in / 15.00 out / 0.30 cached from 2026-08-
 - Total **370.39** = 281.01 + 89.38 = 359.18 + 11.21 (reconciles to the cent).
 - Anomaly 2026-09-25 collections: trailing 14 days mean 0.2295, sample sd 0.0047, threshold 0.2435; spend 2.25, excess 2.01.
 
+## Input hygiene
+- Inputs must be UTF-8 CSV (a BOM is accepted); any other encoding or a binary file stops the run (exit 2) — bytes are never silently replaced.
+- A row with more fields than the header (a ragged row) stops the run (exit 2) with its line number, so no value is dropped silently.
+- Exact-duplicate usage rows are summed as supplied but listed in the Summary and on stderr (possible double count from a re-export); the FinOps lead confirms.
+- Text cells written to the CSV outputs (team, feature, model, reasons) that start with = + - @ tab or CR get a leading `'` (OWASP CSV-injection guard); numbers such as -19.96 are left as they are.
+
 ## Using the output
 - Showback: publish `showback.csv` (team and team_feature levels) to each team monthly.
 - Chargeback: Finance posts the `month_team` amounts only once unpriced usage is priced and the figures are reconciled to the provider invoice; this skill does not reconcile invoices.

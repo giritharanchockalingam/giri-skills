@@ -125,3 +125,10 @@ def test_adlc_spine_composes_real_results_and_blocks_on_the_release_gate(tmp_pat
     assert facts["redteam_pass_rate"] == str(red) and facts["eval_pass_rate"] == str(ev)
     assert facts["system_name"] == "Northwind Billing Assistant"
     assert "NOT READY" in (steps["release"] / "release-plan.md").read_text()
+
+
+@pytest.mark.parametrize("name,expected", [("estimate-and-value", 0), ("responsible-ai-review", 4), ("ai-ops-health-check", 4)])
+def test_new_playbook_demos_run_to_their_expected_stop(tmp_path: Path, name: str, expected: int):
+    """Demos must stay runnable when a skill's rules tighten (e.g. evidence-backed NIST coverage)."""
+    r = agent("--demo", name, "--provider", "dry", "--out", str(tmp_path / name))
+    assert r.returncode == expected, r.stdout + r.stderr

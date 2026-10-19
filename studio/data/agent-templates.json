@@ -1006,7 +1006,7 @@
    },
    "min_coverage": {
     "kind": "value",
-    "value": "0.5"
+    "value": "0.45"
    },
    "components": {
     "kind": "text",

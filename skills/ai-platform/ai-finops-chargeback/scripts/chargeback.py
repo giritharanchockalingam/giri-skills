@@ -61,6 +61,18 @@ class InputError(Exception):
     """A required input is missing or malformed (exit 2)."""
 
 
+_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+_NUMBER = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
+
+
+def csv_safe(v) -> str:
+    """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
+    s = "" if v is None else str(v)
+    if s.startswith(_FORMULA_LEAD) and not _NUMBER.fullmatch(s):
+        return "'" + s
+    return s
+
+
 # ------------------------------------------------------------------ input
 
 def read_rows(path, what: str, required: tuple, optional: tuple = ()) -> list[dict]:
@@ -69,7 +81,14 @@ def read_rows(path, what: str, required: tuple, optional: tuple = ()) -> list[di
     p = Path(path)
     if not p.is_file():
         raise InputError(f"{what} file not found: {p}")
-    lines = p.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+    try:
+        text = p.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{what} file {p.name} is not UTF-8 text ({e.reason} at byte {e.start}); "
+                         "re-save it as CSV UTF-8") from None
+    if "\x00" in text:
+        raise InputError(f"{what} file {p.name} is not a text CSV (contains NUL bytes)")
+    lines = text.splitlines()
     while lines and lines[0].lstrip().startswith("#"):
         lines.pop(0)
     reader = csv.DictReader(io.StringIO("\n".join(lines)))
@@ -79,7 +98,11 @@ def read_rows(path, what: str, required: tuple, optional: tuple = ()) -> list[di
         raise InputError(f"{what} is missing column(s): {', '.join(missing)}")
     rows = []
     for i, r in enumerate(reader, start=2):
-        r = {(k or "").strip(): (v or "").strip() if isinstance(v, str) else "" for k, v in r.items()}
+        extra = [x for x in (r.get(None) or []) if (x or "").strip()]
+        if extra:
+            raise InputError(f"{what} line {i}: {len(extra)} field(s) beyond the {len(header)}-column header "
+                             f"(ragged row: {', '.join(repr(x) for x in extra[:3])}); fix the row so no value is dropped")
+        r = {(k or "").strip(): (v or "").strip() if isinstance(v, str) else "" for k, v in r.items() if k is not None}
         if not any(r.get(c) for c in required + optional):
             continue
         r["_line"] = i
@@ -128,8 +151,18 @@ def load_usage(path) -> list[dict]:
                              "input_tokens must include cached tokens")
         out.append({"date": to_date(r["date"], f"{where} date"), "team": r["team"], "feature": r["feature"],
                     "model": r["model"], "requests": to_int(r["requests"], f"{where} requests"),
-                    "input": inp, "cached": cached, "output": to_int(r["output_tokens"], f"{where} output_tokens")})
+                    "input": inp, "cached": cached, "output": to_int(r["output_tokens"], f"{where} output_tokens"),
+                    "line": r["_line"]})
     return out
+
+
+def duplicate_rows(usage) -> list[list[int]]:
+    """Groups of line numbers whose usage rows are identical (summed, but possibly a double-counted re-export)."""
+    seen: dict = {}
+    for u in usage:
+        k = (u["date"], u["team"], u["feature"], u["model"], u["requests"], u["input"], u["cached"], u["output"])
+        seen.setdefault(k, []).append(u["line"])
+    return sorted(v for v in seen.values() if len(v) > 1)
 
 
 def load_prices(path) -> dict[str, list[dict]]:
@@ -371,7 +404,7 @@ def csv_text(fields, rows) -> str:
     w = csv.DictWriter(buf, fieldnames=fields, lineterminator="\n", extrasaction="ignore")
     w.writeheader()
     for r in rows:
-        w.writerow(r)
+        w.writerow({k: csv_safe(v) for k, v in r.items()})
     return buf.getvalue()
 
 
@@ -379,7 +412,7 @@ def usd(s: str) -> str:
     return f"${s}" if s and (s[0].isdigit() or s[0] == "-") else s  # negatives as $-1.23 so figures trace to the CSVs
 
 
-def render_md(usage_name, prices_name, budgets_name, usage, sb, anoms, bud, as_of, notes, strict) -> str:
+def render_md(usage_name, prices_name, budgets_name, usage, sb, anoms, bud, as_of, notes, strict, dups=()) -> str:
     by = {lvl: [r for r in sb if r["level"] == lvl] for lvl in LEVELS}
     total = by["total"][0] if by["total"] else None
     unpriced = [r for r in by["detail"] if r["_cost"] is None]
@@ -398,6 +431,11 @@ def render_md(usage_name, prices_name, budgets_name, usage, sb, anoms, bud, as_o
              f"- Unpriced usage groups: {len(unpriced)}" + (f" — cost {TBD}; excluded from every total."
                                                             if unpriced else "."),
              ]
+    if dups:
+        lines.append(f"- Exact-duplicate usage rows: {len(dups)} group(s) (usage lines "
+                     + "; ".join(", ".join(str(n) for n in g) for g in dups)
+                     + ") — summed as supplied; confirm they are separate usage, not a re-exported row "
+                     f"(double count). Owner: {TBD}.")
     if strict and over:
         lines.append("- `--strict` was set and a forecast is over budget: the run fails (exit 1).")
     lines += ["", "## Spend by team", "",
@@ -491,6 +529,7 @@ def produce(args):
     if as_of < last:
         raise InputError(f"--as-of {as_of.isoformat()} is before the latest usage date {last.isoformat()}")
     notes = cost_rows(usage, prices)
+    dups = duplicate_rows(usage)
     sb, _ = showback(usage)
     anoms = anomalies(usage)
     bud = budgets_table(usage, budgets, as_of)
@@ -500,8 +539,12 @@ def produce(args):
         "budget.csv": csv_text(BUDGET_FIELDS, bud),
         "finops-report.md": render_md(Path(args.usage).name, Path(args.prices).name,
                                       Path(args.budgets).name if args.budgets else None,
-                                      usage, sb, anoms, bud, as_of, notes, args.strict),
+                                      usage, sb, anoms, bud, as_of, notes, args.strict, dups),
     }
+    if dups and not args.verify:
+        print(f"warning: {len(dups)} group(s) of exact-duplicate usage rows (lines "
+              + "; ".join(", ".join(str(n) for n in g) for g in dups) + ") were summed; check for a double count",
+              file=sys.stderr)
     return files, bud
 
 

@@ -36,6 +36,7 @@ import argparse
 import csv
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -93,11 +94,32 @@ class InputError(Exception):
     """Missing or invalid input -> exit 2."""
 
 
+_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+_NUMBER = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
+
+
+def csv_safe(v) -> str:
+    """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
+    s = "" if v is None else str(v)
+    if s.startswith(_FORMULA_LEAD) and not _NUMBER.fullmatch(s):
+        return "'" + s
+    return s
+
+
 def read_csv(path: Path) -> list[dict]:
     if not path.is_file():
         raise InputError(f"input file not found: {path}")
-    lines = [ln for ln in path.read_text(encoding="utf-8-sig").splitlines() if not ln.lstrip().startswith("#")]
-    rows = list(csv.DictReader(io.StringIO("\n".join(lines))))
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{path} is not a UTF-8 text CSV ({e.reason} at byte {e.start}); save it as CSV UTF-8")
+    if "\x00" in text:
+        raise InputError(f"{path} is not a text CSV (contains NUL bytes)")
+    lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith("#")]
+    try:
+        rows = list(csv.DictReader(io.StringIO("\n".join(lines))))
+    except csv.Error as e:
+        raise InputError(f"{path}: malformed CSV ({e})")
     return [{(k or "").strip(): (v or "").strip() for k, v in r.items() if k is not None} for r in rows]
 
 
@@ -174,7 +196,12 @@ def score_risk(r: dict) -> dict:
     score = l * s if l and s else None
     level = level_of(score) if score is not None else "unscored"
     residual, basis = r["residual"], "stated"
-    if not residual:
+    overridden = False
+    if residual and not r["measure"] and score is not None and LEVELS.index(residual) < LEVELS.index(level):
+        # A residual below the inherent level with no measure is not credible: nothing reduces the risk.
+        basis = (f"no measure: stated residual '{residual}' is not credible; residual = inherent level ({level})")
+        residual, overridden = level, True
+    elif not residual:
         if not r["measure"] and score is not None:
             residual, basis = level, "no measure: residual = inherent level"
         else:
@@ -184,7 +211,7 @@ def score_risk(r: dict) -> dict:
         "likelihood": str(l) if l else TBD, "severity": str(s) if s else TBD,
         "score": str(score) if score is not None else TBD, "level": level,
         "measure": r["measure"] or TBD, "owner": r["owner"] or TBD, "residual": residual,
-        "residual_basis": basis, "has_measure": bool(r["measure"]),
+        "residual_basis": basis, "has_measure": bool(r["measure"]), "residual_overridden": overridden,
     }
 
 
@@ -225,7 +252,10 @@ def screen(facts: dict, inventory: list[dict]) -> dict:
         required, basis = True, (f"{n_met} of 9 WP248 criteria met and {n_unknown} not answered; unanswered criteria "
                                  f"could reach two, so a DPIA is carried out (WP248: where unclear, carry out a DPIA)")
     else:
-        required, basis = False, f"{n_met} of 9 WP248 criteria met and {n_unknown} not answered; no Art. 35(3) case"
+        required, basis = False, (f"{n_met} of 9 WP248 criteria met and {n_unknown} not answered; no Art. 35(3) case. "
+                                  "Not required on the WP248 two-criteria rule only: WP248 notes that a single "
+                                  "criterion can suffice in some cases, and the supervisory authority's Art. 35(4) "
+                                  f"list must be checked: {TBD}")
     return {"criteria": crit, "criteria_met": n_met, "criteria_unanswered": n_unknown,
             "art35_3_cases": art, "required": required, "basis": basis}
 
@@ -243,11 +273,12 @@ def build(facts: dict, inventory: list[dict], risks_in: list[dict]) -> dict:
                                  "likelihood": None, "severity": None, "measure": "", "owner": "", "residual": ""}))
     gate = [r["risk"] for r in risks if r["residual"] == "high" and not r["has_measure"]]
     consult = [r["risk"] for r in risks if r["residual"] == "high"]
+    overrides = [r["risk"] for r in risks if r["residual_overridden"]]
     incomplete = sum(1 for r in risks if TBD in (r["score"], r["residual"], r["measure"], r["owner"]))
     status = "blocked" if gate else "incomplete" if incomplete else "ready"
     return {"facts": facts, "inventory": inventory, "screening": screen(facts, inventory), "risks": risks,
             "gate_blockers": gate, "prior_consultation_required": bool(consult), "consultation_risks": consult,
-            "incomplete_risks": incomplete, "signoff_status": status}
+            "residual_overrides": overrides, "incomplete_risks": incomplete, "signoff_status": status}
 
 
 def f(facts: dict, key: str) -> str:
@@ -260,7 +291,7 @@ def render(d: dict) -> str:
     L = [f"# DPIA — {name}", "",
          "Data Protection Impact Assessment under GDPR Art. 35. Not legal advice: the controller, advised by the "
          "Data protection officer, makes the determination.", "",
-         f"**Bottom line:** DPIA {'required' if scr['required'] else 'not required on current facts'} — "
+         f"**Bottom line:** DPIA {'required' if scr['required'] else 'not required on the WP248 two-criteria rule (current facts)'} — "
          f"{scr['basis']}. Sign-off status: **{d['signoff_status']}**. Prior consultation (Art. 36): "
          f"**{'required' if d['prior_consultation_required'] else 'not indicated'}**.", "",
          "## Screening", "",
@@ -271,7 +302,7 @@ def render(d: dict) -> str:
         L.append(f"| {c['id']} | {c['name']} | {met} | {cell(c['basis'])} |")
     L += ["", f"Criteria met: {scr['criteria_met']} of 9 · not answered: {scr['criteria_unanswered']}.", ""]
     L += [f"- {a}" for a in scr["art35_3_cases"]] or ["- No Art. 35(3) case applies on the facts supplied."]
-    L += ["", f"Result: **DPIA {'required' if scr['required'] else 'not required'}** — {scr['basis']}.", "",
+    L += ["", f"Result: **DPIA {'required' if scr['required'] else 'not required on the WP248 two-criteria rule'}** — {scr['basis']}.", "",
           "## Description of processing", "", "Art. 35(7)(a): systematic description of the processing and its purposes.", "",
           "| Item | Value |", "|---|---|"]
     L += [f"| {label} | {f(facts, k)} |" for k, label in DESCRIPTION_KEYS]
@@ -318,6 +349,11 @@ def render(d: dict) -> str:
     for i, r in enumerate(d["risks"], start=1):
         L.append(f"| R{i} | {cell(r['risk'])} | {r['residual']} | {r['residual_basis']} |")
     L.append("")
+    if d["residual_overrides"]:
+        L.append(f"**Stated residual not accepted:** {len(d['residual_overrides'])} risk(s) state a residual below the "
+                 "inherent level but have no measure; the residual is set to the inherent level: "
+                 + "; ".join(cell(x) for x in d["residual_overrides"]) + ".")
+        L.append("")
     if d["gate_blockers"]:
         L.append(f"**GATE — cannot sign off:** {len(d['gate_blockers'])} high residual risk(s) have no measure: "
                  + "; ".join(d["gate_blockers"]) + ".")
@@ -343,11 +379,12 @@ def write_outputs(d: dict, out: Path) -> None:
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(RISK_COLS)
     for r in d["risks"]:
-        w.writerow([r[c] for c in RISK_COLS])
+        w.writerow([csv_safe(r[c]) for c in RISK_COLS])
     (out / "dpia-risks.csv").write_text(buf.getvalue(), encoding="utf-8")
     scr = dict(d["screening"])
     scr.update({"prior_consultation_required": d["prior_consultation_required"],
                 "signoff_status": d["signoff_status"], "gate_blockers": d["gate_blockers"],
+                "residual_overrides": d["residual_overrides"],
                 "risks_total": len(d["risks"])})
     (out / "screening.json").write_text(json.dumps(scr, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
                                         encoding="utf-8")
@@ -383,6 +420,9 @@ def verify(target: Path) -> list[str]:
         for c in RISK_COLS:
             if not r.get(c):
                 probs.append(f"line {i}: blank {c}")
+        if r["measure"] == TBD and r["level"] in LEVELS and r["residual"] in LEVELS \
+                and LEVELS.index(r["residual"]) < LEVELS.index(r["level"]):
+            probs.append(f"line {i}: residual {r['residual']} below inherent {r['level']} with no measure")
     met = sum(1 for c in scr["criteria"] if c["met"] is True)
     if len(scr["criteria"]) != 9 or met != scr["criteria_met"]:
         probs.append("screening criteria count mismatch")
@@ -391,7 +431,7 @@ def verify(target: Path) -> list[str]:
     if scr["required"] != expect_req:
         probs.append(f"required={scr['required']} inconsistent with criteria/Art. 35(3)")
     gate = [r["risk"] for r in rows if r["residual"] == "high" and r["measure"] == TBD]
-    if sorted(gate) != sorted(scr["gate_blockers"]):
+    if sorted(gate) != sorted(csv_safe(x) for x in scr["gate_blockers"]):
         probs.append("gate_blockers do not match dpia-risks.csv")
     consult = any(r["residual"] == "high" for r in rows)
     if consult != scr["prior_consultation_required"]:

@@ -175,3 +175,56 @@ def test_no_network_imports():
     src = (REPO_ROOT / SCRIPT).read_text(encoding="utf-8")
     for bad in ("import socket", "import urllib", "import requests", "import subprocess", "urlopen("):
         assert bad not in src
+
+
+# ---------------------------------------------------------------- audit 2026-10-19 regressions
+
+def test_audit_csv_injection_escaped_numbers_untouched(tmp_path):
+    usage = (UHEAD + "2026-10-05,legal,\"=HYPERLINK(\"\"http://evil\"\",\"\"x\"\")\",gpt-x,10,1000,100,0\n"
+                     "2026-10-06,\"=cmd|'/c calc'!A1\",chat,gpt-x,10,1000,100,0\n"
+                     "2026-10-06,ops,chat,@model,10,1000,100,0\n")
+    prices = PHEAD + "gpt-x,2.00,8.00,0.50,2026-08-01\n"
+    res, out = _run(tmp_path, usage, prices, "team,month,budget_usd\nlegal,2026-10,0.001\n")
+    assert res.returncode == 0, res.stderr
+    for f in ("showback.csv", "budget.csv"):
+        for r in _rows(out / f):
+            for v in r.values():
+                assert not (v.startswith(("=", "+", "@", "\t", "\r")) or (v.startswith("-") and not v[1:2].isdigit())), (f, v)
+    teams = {r["team"] for r in _level(out, "team")}
+    assert "'=cmd|'/c calc'!A1" in teams
+    assert any(r["feature"].startswith("'=HYPERLINK") for r in _level(out, "team_feature"))
+    assert any(r["model"] == "'@model" for r in _level(out, "detail"))
+    legal = [b for b in _rows(out / "budget.csv") if b["team"] == "legal"][0]
+    assert legal["variance"].startswith("-") and Decimal(legal["variance"]) < 0  # numeric value not escaped
+    for f in ("showback.csv", "budget.csv"):
+        v = run_script(SCRIPT, "--verify", str(out / f), "--usage", str(tmp_path / "u.csv"), "--prices",
+                       str(tmp_path / "p.csv"), "--budgets", str(tmp_path / "b.csv"))
+        assert v.returncode == 0, v.stdout
+
+
+def test_audit_ragged_usage_row_rejected(tmp_path):
+    usage = ("date,team,feature,model,requests,input_tokens,output_tokens\n"
+             "2026-10-01,a,f,gpt-x,10,1000,0\n2026-10-01,a,f,gpt-x,10,1000,0,extra\n")
+    res, out = _run(tmp_path, usage, PHEAD + "gpt-x,2.00,8.00,0.50,2026-08-01\n")
+    assert res.returncode == 2 and "line 3" in res.stderr and "ragged" in res.stderr
+    ok, _ = _run(tmp_path, "date,team,feature,model,requests,input_tokens,output_tokens\n2026-10-01,a,f,gpt-x,10,1000,0,\n",
+                 PHEAD + "gpt-x,2.00,8.00,0.50,2026-08-01\n")
+    assert ok.returncode == 0  # an empty trailing field drops nothing
+
+
+def test_audit_exact_duplicate_usage_rows_reported(tmp_path):
+    usage = ("date,team,feature,model,requests,input_tokens,output_tokens\n"
+             "2026-10-01,a,f,gpt-x,10,1000,0\n2026-10-01,a,f,gpt-x,10,1000,0\n2026-10-02,a,f,gpt-x,10,1000,0\n")
+    res, out = _run(tmp_path, usage, PHEAD + "gpt-x,2.00,8.00,0.50,2026-08-01\n")
+    assert res.returncode == 0 and "duplicate" in res.stderr and "2, 3" in res.stderr
+    md = (out / "finops-report.md").read_text(encoding="utf-8")
+    assert "Exact-duplicate usage rows: 1 group(s) (usage lines 2, 3)" in md
+    assert _level(out, "total")[0]["requests"] == "30"  # still summed as supplied
+
+
+def test_audit_non_utf8_input_exit_2(tmp_path):
+    (tmp_path / "bin.csv").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe\xfd")
+    (tmp_path / "p.csv").write_text(PHEAD + "gpt-x,2.00,8.00,0.50,2026-08-01\n", encoding="utf-8")
+    res = run_script(SCRIPT, "--usage", str(tmp_path / "bin.csv"), "--prices", str(tmp_path / "p.csv"),
+                     "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 2 and "Traceback" not in res.stderr and "UTF-8" in res.stderr

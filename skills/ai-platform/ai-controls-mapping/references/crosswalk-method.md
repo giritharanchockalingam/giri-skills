@@ -6,7 +6,8 @@
 | Statuses | `implemented`, `partial`, `planned`, `not_applicable` (from the input). A subcategory absent from the input is `missing`. |
 | Applicable | total − not_applicable |
 | Coverage | (implemented + 0.5 × partial) ÷ applicable, rounded to 3 decimals. `n/a` when nothing is applicable. |
-| Gate | Overall coverage < `min_coverage` → exit 1, with full outputs. |
+| Gate | Overall evidence-backed coverage (`coverage_evidenced`: as coverage, but implemented/partial claims with no evidence cited get no credit) < `min_coverage` → exit 1, with full outputs. |
+| CSV safety | Text cells in controls.csv that start with = + - @ tab or CR get a leading `'` (CSV-injection guard). |
 | Gap | partial, planned or missing. A blank owner becomes `[TO BE BASELINED — owner: AI risk lead]`. |
 | Flags | implemented or partial with no evidence cited; not_applicable with no justification. Flagged, not downgraded. |
 | Input errors | Ids not in the 72-id catalogue are listed as `ERROR` rows in controls.csv, excluded from coverage, and fail the run (exit 1). A duplicate id or a bad status is invalid input (exit 2). |

@@ -10,7 +10,7 @@ metadata:
   agent:
     inputs:
       - {name: evidence, type: csv, required: true, from: "evidence register subcategory_id,status,evidence,owner (ids as in NIST AI 100-1, e.g. GOVERN 1.1; status implemented|partial|planned|not_applicable; layout: assets/evidence-template.csv)"}
-      - {name: min_coverage, type: string, required: false, from: "fraction 0-1 set by the AI risk lead; overall coverage below it fails the run (exit 1); never defaulted"}
+      - {name: min_coverage, type: string, required: false, from: "fraction 0-1 set by the AI risk lead; overall evidence-backed coverage (uncited implemented/partial claims get no credit) below it fails the run (exit 1); never defaulted"}
       - {name: obligations, type: csv, required: false, from: "obligations.csv from eu-ai-act-classifier; lists open AI Act obligations and whether their mapped NIST subcategories have evidence"}
     run:
       - {step: map, kind: script, cmd: "python3 -I scripts/map_controls.py --evidence {evidence} [--min-coverage {min_coverage}] [--obligations {obligations}] --out-dir {out}"}
@@ -23,7 +23,7 @@ metadata:
 # AI Controls Mapping (NIST AI RMF 1.0)
 
 ## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-controls-mapping`). Report the `run.json` results; do not hand-write the deliverables the script produces (`controls.csv`, `coverage.json`, `controls-report.md`). With `min_coverage`, the skill is a gate: coverage below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-controls-mapping`). Report the `run.json` results; do not hand-write the deliverables the script produces (`controls.csv`, `coverage.json`, `controls-report.md`). With `min_coverage`, the skill is a gate: evidence-backed coverage (claims with no evidence cited get no credit) below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.
 
 ## When to use
 - ADLC govern stage: before a release review, an audit or a customer assurance questionnaire that asks for NIST AI RMF alignment.

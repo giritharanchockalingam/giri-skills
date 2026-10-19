@@ -35,5 +35,6 @@ t_emotion_recognition,,,Is an emotion recognition system (permitted use)? [Art. 
 t_biometric_categorisation,,,Is a biometric categorisation system (permitted use)? [Art. 50(3)]
 t_deepfake,,,"Generates or manipulates image, audio or video that constitutes a deep fake? [Art. 50(4)]"
 t_public_interest_text,,,Generates or manipulates text published to inform the public on matters of public interest? [Art. 50(4)]
+fria_scope,,,"Deployers only: are you a body governed by public law or a private entity providing public services, or is the system used for Annex III point 5(b) creditworthiness/credit scoring or 5(c) life/health insurance pricing? [Art. 27(1)]"
 is_gpai,,,"Are you the provider of a general-purpose AI model (not just a user of one)? [Art. 3(63), Art. 53]"
 gpai_systemic_risk,,,"Is that GPAI model classified as having systemic risk? [Art. 51, Art. 55]"

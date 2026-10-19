@@ -49,14 +49,36 @@ class InputError(Exception):
     """Missing or invalid input -> exit 2."""
 
 
+_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+_NUMBER = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
+
+
+def csv_safe(v) -> str:
+    """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
+    s = "" if v is None else str(v)
+    if s.startswith(_FORMULA_LEAD) and not _NUMBER.fullmatch(s):
+        return "'" + s
+    return s
+
+
 def read_csv(path: Path, what: str) -> list[dict]:
     if not path.is_file():
         raise InputError(f"{what} file not found: {path}")
-    lines = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{what} file {path.name} is not a UTF-8 text CSV ({e.reason} at byte {e.start}); "
+                         "save it as CSV UTF-8") from None
+    if "\x00" in text:
+        raise InputError(f"{what} file {path.name} is not a text CSV (contains NUL bytes)")
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     if not lines:
         raise InputError(f"{what} CSV is empty (needs a header row)")
-    return [{(k or "").strip(): (v or "").strip() for k, v in r.items() if k is not None}
-            for r in csv.DictReader(io.StringIO("\n".join(lines)))], lines[0]
+    try:
+        return [{(k or "").strip(): (v or "").strip() for k, v in r.items() if k is not None}
+                for r in csv.DictReader(io.StringIO("\n".join(lines)))], lines[0]
+    except csv.Error as e:
+        raise InputError(f"{what} file {path.name}: malformed CSV ({e})") from None
 
 
 def norm_id(s: str) -> str:
@@ -111,6 +133,19 @@ def coverage(counts: dict):
     if applicable == 0:
         return None
     return round((counts["implemented"] + 0.5 * counts["partial"]) / applicable, 3)
+
+
+def uncited(r: dict) -> bool:
+    return r["status"] in ("implemented", "partial") and not r["evidence"]
+
+
+def coverage_evidenced(sel: list[dict]):
+    """Gate basis: implemented/partial claims with no evidence cited get no credit."""
+    counts = {k: sum(1 for r in sel if r["status"] == k and not (k in ("implemented", "partial") and not r["evidence"]))
+              for k in ("implemented", "partial")}
+    counts["planned"] = sum(1 for r in sel if r["status"] == "planned")
+    counts["missing"] = sum(1 for r in sel if r["status"] == "missing" or uncited(r))
+    return coverage(counts)
 
 
 def crosswalk_for(oid: str, xw: list[dict]):
@@ -177,8 +212,10 @@ def build(cat: list[dict], ev: dict, errors: list[dict], min_cov, obligations_pa
         counts["total"] = len(sel)
         counts["applicable"] = counts["total"] - counts["not_applicable"]
         counts["coverage"] = coverage(counts)
+        counts["uncited_claims"] = sum(1 for r in sel if uncited(r))
+        counts["coverage_evidenced"] = coverage_evidenced(sel)
         per_fn[fn] = counts
-    overall = per_fn["ALL"]["coverage"]
+    overall = per_fn["ALL"]["coverage_evidenced"]
     gate = None
     if min_cov is not None:
         gate = "pass" if overall is not None and overall >= min_cov else "fail"
@@ -187,6 +224,7 @@ def build(cat: list[dict], ev: dict, errors: list[dict], min_cov, obligations_pa
         "framework": "NIST AI RMF 1.0 (NIST AI 100-1)",
         "subcategories_in_catalogue": len(cat),
         "formula": "coverage = (implemented + 0.5 * partial) / (total - not_applicable); unlisted = missing",
+        "gate_basis": "coverage_evidenced: as coverage, but implemented/partial claims with no evidence cited get no credit",
         "functions": {fn: per_fn[fn] for fn in FUNCTIONS},
         "overall": per_fn["ALL"],
         "min_coverage": min_cov,
@@ -218,9 +256,12 @@ def render(res: dict, rows: list[dict], cat: list[dict]) -> str:
          "## Summary", "",
          f"- Overall coverage: **{f3(ov['coverage'])}** ({ov['implemented']} implemented, {ov['partial']} partial, {ov['planned']} planned, "
          f"{ov['missing']} missing, {ov['not_applicable']} not applicable of {ov['total']} subcategories)"]
+    L.append(f"- Evidence-backed coverage (gate basis): **{f3(ov['coverage_evidenced'])}** — {ov['uncited_claims']} "
+             "implemented/partial claim(s) with no evidence cited get no credit")
     if res["min_coverage"] is not None:
         verdict = "PASS" if res["gate"] == "pass" else "FAIL (exit 1)"
-        L.append(f"- Gate: minimum coverage {res['min_coverage']:.3f} — **{verdict}**")
+        L.append(f"- Gate: minimum coverage {res['min_coverage']:.3f} — **{verdict}** (evidence-backed coverage "
+                 f"{f3(ov['coverage_evidenced'])})")
     else:
         L.append("- Gate: no minimum coverage given")
     L += [f"- Gaps (partial, planned or missing): {res['gaps']}; without a named owner: {res['gaps_without_owner']}",
@@ -265,7 +306,8 @@ def render(res: dict, rows: list[dict], cat: list[dict]) -> str:
           f"- Catalogue: {res['framework']}, {res['subcategories_in_catalogue']} subcategories (GOVERN 19, MAP 18, MEASURE 22, MANAGE 13), "
           "paraphrased in assets/nist-ai-rmf-1.0.csv; verified against NIST AI 100-1 on 2026-10-18 (references/sources.md).",
           f"- Formula: {res['formula']}. Coverage is rounded to 3 decimals; the gate compares the rounded overall value.",
-          "- Statuses are taken as supplied. The skill does not inspect the evidence; claims without evidence are flagged, not downgraded.",
+          "- Statuses are taken as supplied. The skill does not inspect the evidence; claims without evidence are flagged and "
+          "get no credit in the evidence-backed coverage the gate uses.",
           "- Gaps with no owner are assigned to the AI risk lead as a placeholder owner.",
           "- Limits: NIST AI RMF is voluntary; coverage is not compliance with any law. The AI RMF 1.0 is being revised (NIST, 2026); "
           "re-check the catalogue when a new version is published."]
@@ -277,7 +319,7 @@ def write_outputs(out: Path, res: dict, rows: list[dict], cat: list[dict]) -> No
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=CTRL_COLS, lineterminator="\n")
     w.writeheader()
-    w.writerows(rows)
+    w.writerows([{k: csv_safe(v) for k, v in r.items()} for r in rows])
     (out / "controls.csv").write_text(buf.getvalue(), encoding="utf-8")
     (out / "coverage.json").write_text(json.dumps(res, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     (out / "controls-report.md").write_text(render(res, rows, cat), encoding="utf-8")
@@ -301,7 +343,8 @@ def verify(path: Path) -> list[str]:
         counts = {k: sum(1 for r in sel if r["status"] == k) for k in ("implemented", "partial", "planned", "not_applicable", "missing")}
         cov = coverage(counts)
         j = res["functions"][fn]
-        if any(j[k] != v for k, v in counts.items()) or j["coverage"] != cov:
+        if any(j[k] != v for k, v in counts.items()) or j["coverage"] != cov \
+                or j.get("coverage_evidenced") != coverage_evidenced(sel):
             errs.append(f"{fn}: coverage.json does not match controls.csv")
         if f"| {fn} | {counts['implemented']} | {counts['partial']} |" not in rep:
             errs.append(f"{fn}: report row does not match controls.csv")
@@ -309,7 +352,7 @@ def verify(path: Path) -> list[str]:
         if r["gap"] == "yes" and not r["owner"]:
             errs.append(f"{r['subcategory_id']}: gap without owner")
     if res.get("min_coverage") is not None:
-        ov = res["overall"]["coverage"]
+        ov = res["overall"].get("coverage_evidenced")
         exp = "pass" if ov is not None and ov >= res["min_coverage"] else "fail"
         if res.get("gate") != exp:
             errs.append(f"gate {res.get('gate')} inconsistent with coverage {ov} vs {res['min_coverage']}")
@@ -350,9 +393,10 @@ def main(argv: list[str] | None = None) -> int:
         print("unknown subcategory id(s): " + ", ".join(e["subcategory_id"] for e in res["input_errors"]), file=sys.stderr)
         rc = 1
     if res["gate"] == "fail":
-        print(f"coverage {f3(res['overall']['coverage'])} below minimum {res['min_coverage']:.3f}", file=sys.stderr)
+        print(f"evidence-backed coverage {f3(res['overall']['coverage_evidenced'])} below minimum "
+              f"{res['min_coverage']:.3f}", file=sys.stderr)
         rc = 1
-    print(f"coverage {f3(res['overall']['coverage'])} · gaps {res['gaps']} · gate {res['gate']}")
+    print(f"coverage {f3(res['overall']['coverage'])} (evidence-backed {f3(res['overall']['coverage_evidenced'])}) · gaps {res['gaps']} · gate {res['gate']}")
     return rc
 
 

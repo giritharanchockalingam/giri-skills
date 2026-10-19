@@ -69,6 +69,28 @@ class InputError(Exception):
     """A required input is missing or malformed (exit 2)."""
 
 
+_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_safe(v) -> str:
+    """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
+    s = "" if v is None else str(v)
+    if s.startswith(_FORMULA_LEAD) and not NUM_RE.match(s):
+        return "'" + s
+    return s
+
+
+def read_text_strict(path: Path, what: str) -> str:
+    try:
+        text = Path(path).read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{what} file {Path(path).name} is not UTF-8 text ({e.reason} at byte {e.start}); "
+                         "re-save it as CSV UTF-8 — bytes are never silently replaced") from None
+    if "\x00" in text:
+        raise InputError(f"{what} file {Path(path).name} is not a text file (contains NUL bytes)")
+    return text
+
+
 # ------------------------------------------------------------------ parsing helpers
 
 def is_null(v: str) -> bool:
@@ -121,7 +143,8 @@ def parse_bound(typ: str, raw: str, what: str, col: str):
     if typ == "boolean":
         raise InputError(f"contract column '{col}': {what} is not meaningful for boolean")
     if typ == "datetime" and DATE_RE.match(s):
-        s = s + "T00:00:00"
+        # A date-only bound on a datetime column covers the whole day: min = start, max = end of that day.
+        s = s + ("T23:59:59.999999" if what == "max" else "T00:00:00")
     p = parse_value(typ if typ != "integer" else "number", s)
     if p is None:
         raise InputError(f"contract column '{col}': {what} {s!r} does not parse as {typ}")
@@ -132,6 +155,8 @@ def fmt_bound(v) -> str:
     if isinstance(v, float):
         return f"{v:g}"
     if isinstance(v, datetime):
+        if (v.hour, v.minute, v.second, v.microsecond) == (23, 59, 59, 999999):
+            return f"{v.date().isoformat()} (whole day, to 23:59:59.999999)"
         return v.isoformat()
     return str(v)
 
@@ -148,11 +173,14 @@ def yes_no(raw: str, what: str, col: str) -> bool:
 def read_csv_text(path: Path, what: str) -> list[list[str]]:
     if not path or not Path(path).is_file():
         raise InputError(f"{what} file not found: {path}")
-    text = Path(path).read_text(encoding="utf-8-sig", errors="replace")
+    text = read_text_strict(path, what)
     lines = text.splitlines()
     while lines and lines[0].lstrip().startswith("#"):  # leading comment lines (e.g. "fictional fixture")
         lines.pop(0)
-    rows = list(csv.reader(io.StringIO("\n".join(lines))))
+    try:
+        rows = list(csv.reader(io.StringIO("\n".join(lines))))
+    except csv.Error as e:
+        raise InputError(f"{what} file {Path(path).name}: malformed CSV ({e})") from None
     if not rows or not any(c.strip() for c in rows[0]):
         raise InputError(f"{what} has no header row: {path}")
     return rows
@@ -283,7 +311,7 @@ def load_contract_yaml(path: Path) -> tuple[list[dict], list[str]]:
         import skillmeta  # noqa: PLC0415 — repo YAML subset parser
     finally:
         sys.path.pop(0)
-    doc = skillmeta.parse_yaml_subset(_strip_yaml(Path(path).read_text(encoding="utf-8-sig")))
+    doc = skillmeta.parse_yaml_subset(_strip_yaml(read_text_strict(path, "contract")))
     schema = doc.get("schema") if isinstance(doc, dict) else None
     if not isinstance(schema, list) or not schema:
         raise InputError("YAML contract has no `schema:` list (ODCS v3 layout expected)")
@@ -520,7 +548,16 @@ def check(contract, notes, header, body, ragged, fresh) -> tuple[list[dict], lis
                 else:
                     newest = max(ds)
                     age = (fresh["as_of"] - newest).days
-                    if age > fresh["max_age_days"]:
+                    future = [d for d in ds if d > fresh["as_of"]]
+                    if future:
+                        # Records dated after the as-of date are not "fresh": the timestamps are wrong or the
+                        # as-of date is; either way the age cannot be trusted.
+                        add(rule, col, "freshness", len(future), n,
+                            f"{len(future)} row(s) dated after as-of; newest {newest.isoformat()}; age {age} days",
+                            exp + "; no record dated after the as-of date")
+                        fresh_info = {"status": f"failed: {len(future)} future-dated record(s), newest "
+                                                f"{newest.isoformat()} is after the as-of date (age {age} days)"}
+                    elif age > fresh["max_age_days"]:
                         add(rule, col, "freshness", n, n, f"newest {newest.isoformat()}; age {age} days", exp)
                         fresh_info = {"status": f"failed: newest {newest.isoformat()}, age {age} days"}
                     else:
@@ -569,7 +606,7 @@ def csv_text(fields: list[str], rows: list[dict]) -> str:
     w = csv.DictWriter(buf, fieldnames=fields, lineterminator="\n", extrasaction="ignore")
     w.writeheader()
     for r in rows:
-        w.writerow(r)
+        w.writerow({k: csv_safe(v) for k, v in r.items()})
     return buf.getvalue()
 
 
@@ -636,7 +673,11 @@ def render_md(contract_name, data_name, contract, notes, header, body, viol, pro
               "- `extra_column` (in the data, not in the contract) is a warning owned by the Data owner until the "
               "contract declares it.",
               "- Freshness compares the newest date in the freshness column with the supplied as-of date; it is "
-              "checked only when the column, as-of date and maximum age are all supplied — never against today.",
+              "checked only when the column, as-of date and maximum age are all supplied — never against today. "
+              "Records dated after the as-of date fail freshness.",
+              "- A date-only `max` on a datetime column includes the whole day; datetimes with an offset are "
+              "compared in UTC.",
+              "- CSV outputs prefix text cells that start with = + - @ tab or CR with `'` (CSV-injection guard).",
               "- Examples: at most 3 distinct failing values per violation, each truncated to 40 characters. Text "
               "columns' values are withheld from the profile.",
               "- Verdict: any error-severity violation fails the run (exit 1). The check covers the supplied extract "

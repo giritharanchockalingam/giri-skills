@@ -151,3 +151,72 @@ def test_no_network_imports():
     src = (REPO_ROOT / SCRIPT).read_text(encoding="utf-8")
     for bad in ("import socket", "import urllib", "import requests", "import subprocess", "urlopen("):
         assert bad not in src
+
+
+# ---------------------------------------------------------------- audit 2026-10-19 regressions
+
+AUDIT_CONTRACT = HEAD + ("order_id,integer,yes,yes,1,,,,,error,Orders steward\n"
+                         "sku,string,yes,no,,,,[A-Z]{3}-\\d{4},,error,Catalog lead\n"
+                         "qty,integer,yes,no,1,100,,,,error,\n"
+                         "price,number,yes,no,0,5000,,,,warn,Finance\n"
+                         "country,enum,no,no,,,US|CA|MX,,0.25,warn,Orders steward\n"
+                         "placed_at,datetime,yes,no,2026-01-01,2026-12-31,,,,error,Orders steward\n"
+                         "note,string,no,no,,20,,,,warn,Orders steward\n")
+AUDIT_DATA = ("order_id,sku,qty,price,country,placed_at,note\n"
+              '1,"=HYPERLINK(""http://evil"",""x"")",5,10,US,2026-10-01T10:00:00Z,ok\n'
+              "2,+cmd|calc,5,10,US,2026-10-01T10:00:00Z,ok\n"
+              "3,ABC-0001,5,10,US,2026-12-31T23:30:00-05:00,ok\n"
+              "4,ABC-0002,5,10,US,2026-12-31T12:00:00Z,ok\n")
+
+
+def test_audit_examples_escaped_and_verify_matches(tmp_path):
+    res, v, out = _run(tmp_path, AUDIT_CONTRACT, AUDIT_DATA)
+    ex = v[("sku", "regex")]["examples"]
+    assert ex == "'=HYPERLINK(\"http://evil\",\"x\") | +cmd|calc"
+    vr = run_script(SCRIPT, "--verify", str(out / "violations.csv"), "--contract", str(tmp_path / "contract.csv"),
+                    "--data", str(tmp_path / "data.csv"))
+    assert vr.returncode == 0, vr.stdout
+
+
+def test_audit_negative_numbers_not_escaped(tmp_path):
+    contract = HEAD + "t,number,yes,no,0,,,,,error,o\n"
+    res, v, out = _run(tmp_path, contract, "t\n-3.5\n2\n")
+    assert v[("t", "min")]["examples"] == "-3.5"
+    prof = list(csv.DictReader((out / "profile.csv").open(encoding="utf-8")))
+    assert prof[0]["min"] == "-3.5"
+
+
+def test_audit_date_only_max_on_datetime_includes_whole_day(tmp_path):
+    res, v, _ = _run(tmp_path, AUDIT_CONTRACT, AUDIT_DATA)
+    mx = v[("placed_at", "max")]
+    # Only 23:30-05:00 (= 2027-01-01T04:30Z) exceeds; 2026-12-31T12:00Z is inside the last allowed day.
+    assert mx["failing_rows"] == "1" and mx["examples"] == "2026-12-31T23:30:00-05:00"
+    assert "2026-12-31 (whole day" in mx["expectation"]
+    ok, v2, _ = _run(tmp_path, HEAD + "ts,datetime,yes,no,2026-01-01,2026-12-31,,,,error,o\n",
+                     "ts\n2026-12-31T23:59:59Z\n2026-01-01T00:00:00Z\n")
+    assert ok.returncode == 0 and not v2
+    lo, v3, _ = _run(tmp_path, HEAD + "ts,datetime,yes,no,2026-01-02,,,,,error,o\n", "ts\n2026-01-01T23:59:59Z\n")
+    assert v3[("ts", "min")]["failing_rows"] == "1"
+
+
+def test_audit_future_dated_records_fail_freshness(tmp_path):
+    res, v, out = _run(tmp_path, AUDIT_CONTRACT, AUDIT_DATA, "--freshness-column", "placed_at",
+                       "--as-of", "2026-10-01", "--max-age-days", "7")
+    f = v[("placed_at", "freshness")]
+    assert res.returncode == 1 and f["failing_rows"] == "2" and "dated after as-of" in f["examples"]
+    assert "future-dated" in (out / "contract-report.md").read_text(encoding="utf-8")
+    ok, v2, _ = _run(tmp_path, HEAD + "d,date,yes,no,,,,,,error,o\n", "d\n2026-10-01\n", "--freshness-column", "d",
+                     "--as-of", "2026-10-01", "--max-age-days", "0")
+    assert ok.returncode == 0 and ("d", "freshness") not in v2  # same-day record is fresh, not future
+
+
+def test_audit_non_utf8_data_exit_2_never_replaced(tmp_path):
+    (tmp_path / "contract.csv").write_text(AUDIT_CONTRACT, encoding="utf-8")
+    for name, data in (("cp1252.csv", b"order_id,sku,qty,price,country,placed_at,note\n1,ABC-0001,5,10,US,"
+                                       b"2026-10-01T10:00:00Z,caf\xe9\n"),
+                       ("bin.csv", b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe\xfd")):
+        (tmp_path / name).write_bytes(data)
+        res = run_script(SCRIPT, "--contract", str(tmp_path / "contract.csv"), "--data", str(tmp_path / name),
+                         "--out-dir", str(tmp_path / "o"))
+        assert res.returncode == 2 and "Traceback" not in res.stderr and "UTF-8" in res.stderr
+        assert not (tmp_path / "o" / "violations.csv").exists()

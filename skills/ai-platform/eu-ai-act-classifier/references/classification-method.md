@@ -24,6 +24,9 @@ Every unanswered key is listed under Open questions with `[TO BE BASELINED — o
 
 ## Obligations
 - Rows come from `assets/obligations-catalogue.csv` (`trigger`, `applies_to_role`, `date_rule`).
+- HR-FRIA (Art. 27) is listed only when the deployer answers `fria_scope` yes (Art. 27(1): bodies governed by public law, private entities providing public services, Annex III 5(b)/(c) uses); when it is blank for an Annex III deployer the report says so and the key is an open question.
+- AI-LIT paraphrases Art. 4 as amended by Reg. 2026/1744 ("take measures to support the development of AI literacy").
+- User text written to obligations.csv (owner, evidence) that starts with = + - @ tab or CR gets a leading `'` (CSV-injection guard).
 - They are filtered by role. If the role is blank, every role's rows are listed.
 - High-risk dates come from the route: Annex III 2027-12-02, Annex I 2028-08-02. When both routes apply, the earlier date is used.
 - The `pom_before` rule uses `placed_on_market`. If that is blank, the date reads "X or Y [TO BE BASELINED …]".

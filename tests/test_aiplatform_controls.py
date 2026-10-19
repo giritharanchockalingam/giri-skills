@@ -59,10 +59,13 @@ def test_all_not_applicable_function_is_na(tmp_path):
 
 def test_fixture_values_and_boundary_gate(tmp_path):
     ev = FIX / "evidence-northwind.csv"
-    res, cov, _, _ = _run(tmp_path, ev, "--min-coverage", "0.5")
+    # Gate basis is evidence-backed coverage (audit 2026-10-19): GOVERN 2.3 is implemented with no evidence,
+    # so (28 + 0.5 x 12) / 70 = 0.486; the as-claimed coverage stays 0.500.
+    res, cov, _, _ = _run(tmp_path, ev, "--min-coverage", "0.486")
     assert res.returncode == 0 and cov["overall"]["coverage"] == 0.5 and cov["gate"] == "pass"
+    assert cov["overall"]["coverage_evidenced"] == 0.486 and cov["overall"]["uncited_claims"] == 1
     assert [cov["functions"][f]["coverage"] for f in ("GOVERN", "MAP", "MEASURE", "MANAGE")] == [0.667, 0.583, 0.357, 0.385]
-    res2, cov2, _, o2 = _run(tmp_path, ev, "--min-coverage", "0.501", out="o2")
+    res2, cov2, _, o2 = _run(tmp_path, ev, "--min-coverage", "0.487", out="o2")
     assert res2.returncode == 1 and cov2["gate"] == "fail" and (o2 / "controls-report.md").exists()
 
 
@@ -128,3 +131,41 @@ def test_deterministic_and_verify_detects_tamper(tmp_path):
     p.write_text(p.read_text().replace("MAP 1.2,MAP,MAP 1,missing", "MAP 1.2,MAP,MAP 1,implemented"), encoding="utf-8")
     bad = run_script(SCRIPT, "--verify", str(p))
     assert bad.returncode == 1 and "MAP" in bad.stdout
+
+
+# ---------------------------------------------------------------- audit 2026-10-19 regressions
+
+def test_audit_uncited_claims_get_no_gate_credit(tmp_path):
+    # MANAGE: 2 implemented (1 uncited), 1 partial uncited -> claimed (2 + 0.5)/13 = 0.192; evidenced 1/13 = 0.077
+    ev = _ev(tmp_path, ["MANAGE 1.1,implemented,doc-1,A", "MANAGE 3.1,implemented,,A", "MANAGE 1.3,partial,,A"])
+    res, cov, _, o = _run(tmp_path, ev, "--min-coverage", "0.02")
+    m = cov["functions"]["MANAGE"]
+    assert m["coverage"] == round(2.5 / 13, 3) and m["coverage_evidenced"] == round(1 / 13, 3) and m["uncited_claims"] == 2
+    assert cov["overall"]["coverage"] == round(2.5 / 72, 3) and cov["overall"]["coverage_evidenced"] == round(1 / 72, 3)
+    assert res.returncode == 1 and cov["gate"] == "fail"  # 0.035 claimed would pass; 0.014 evidenced fails
+    assert "Evidence-backed coverage (gate basis): **0.014**" in (o / "controls-report.md").read_text(encoding="utf-8")
+    assert run_script(SCRIPT, "--verify", str(o)).returncode == 0
+    res2, cov2, _, _ = _run(tmp_path, _ev(tmp_path, ["MANAGE 1.1,implemented,doc-1,A"], "e2.csv"), "--min-coverage", "0.0139", out="o2")
+    assert res2.returncode == 0 and cov2["gate"] == "pass"
+
+
+def test_audit_csv_injection_escaped(tmp_path):
+    ev = _ev(tmp_path, ['GOVERN 1.1,implemented,doc-GOVERN 1.1,"=HYPERLINK(""http://e"",""x"")"',
+                        'GOVERN 1.2,partial,+cmd|calc,-owner', "GOVERN 7.1,implemented,doc,@x"])
+    res, cov, rows, o = _run(tmp_path, ev)
+    by = {r["subcategory_id"]: r for r in rows}
+    assert by["GOVERN 1.1"]["owner"] == "'=HYPERLINK(\"http://e\",\"x\")"
+    assert by["GOVERN 1.2"]["evidence"] == "'+cmd|calc" and by["GOVERN 1.2"]["owner"] == "'-owner"
+    assert by["GOVERN 7.1"]["owner"] == "'@x"
+    assert run_script(SCRIPT, "--verify", str(o)).returncode == 0
+
+
+def test_audit_non_utf8_and_bom(tmp_path):
+    p = tmp_path / "bin.csv"
+    p.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\xff\xfe\xfd")
+    res, *_ = _run(tmp_path, p)
+    assert res.returncode == 2 and "Traceback" not in res.stderr and "UTF-8" in res.stderr
+    bom = tmp_path / "bom.csv"
+    bom.write_bytes("﻿subcategory_id,status,evidence,owner\nGOVERN 1.1,implemented,doc,A\n".encode("utf-8"))
+    res2, cov2, _, _ = _run(tmp_path, bom, out="o2")
+    assert res2.returncode == 0 and cov2["functions"]["GOVERN"]["implemented"] == 1

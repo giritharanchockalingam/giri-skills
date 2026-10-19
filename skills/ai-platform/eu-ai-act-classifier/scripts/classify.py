@@ -80,11 +80,12 @@ QUESTIONS = [
     ("t_biometric_categorisation", "transparency", "Art. 50(3)", "Is a biometric categorisation system (permitted use)?"),
     ("t_deepfake", "transparency", "Art. 50(4)", "Generates or manipulates image, audio or video that constitutes a deep fake?"),
     ("t_public_interest_text", "transparency", "Art. 50(4)", "Generates or manipulates text published to inform the public on matters of public interest?"),
+    ("fria_scope", "deployer-scope", "Art. 27(1)", "Deployers only: are you a body governed by public law or a private entity providing public services, or is the system used for Annex III point 5(b) creditworthiness/credit scoring or 5(c) life/health insurance pricing?"),
     ("is_gpai", "gpai", "Art. 3(63), Art. 53", "Are you the provider of a general-purpose AI model (not just a user of one)?"),
     ("gpai_systemic_risk", "gpai", "Art. 51, Art. 55", "Is that GPAI model classified as having systemic risk?"),
 ]
 QMAP = {q[0]: q for q in QUESTIONS}
-YES_NO_GROUPS = ("prohibited", "high-risk", "derogation", "transparency", "gpai")
+YES_NO_GROUPS = ("prohibited", "high-risk", "derogation", "transparency", "gpai", "deployer-scope")
 P_KEYS = [q[0] for q in QUESTIONS if q[1] == "prohibited"]
 A3_KEYS = [q[0] for q in QUESTIONS if q[0].startswith("a3_")]
 D_COND = ["d63_narrow_procedural", "d63_improves_prior_human", "d63_detects_patterns", "d63_preparatory"]
@@ -96,14 +97,35 @@ class InputError(Exception):
     """Missing or invalid input -> exit 2."""
 
 
+_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+_NUMBER = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
+
+
+def csv_safe(v) -> str:
+    """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
+    s = "" if v is None else str(v)
+    if s.startswith(_FORMULA_LEAD) and not _NUMBER.fullmatch(s):
+        return "'" + s
+    return s
+
+
 def read_csv(path: Path) -> list[dict]:
     if not path.is_file():
         raise InputError(f"input file not found: {path}")
-    lines = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{path.name} is not a UTF-8 text CSV ({e.reason} at byte {e.start}); save it as CSV UTF-8") from None
+    if "\x00" in text:
+        raise InputError(f"{path.name} is not a text CSV (contains NUL bytes)")
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     if not lines:
         raise InputError(f"{path.name} is empty")
-    return [{(k or "").strip(): (v or "").strip() for k, v in r.items() if k is not None}
-            for r in csv.DictReader(io.StringIO("\n".join(lines)))]
+    try:
+        return [{(k or "").strip(): (v or "").strip() for k, v in r.items() if k is not None}
+                for r in csv.DictReader(io.StringIO("\n".join(lines)))]
+    except csv.Error as e:
+        raise InputError(f"{path.name}: malformed CSV ({e})") from None
 
 
 def parse_date(s: str, what: str) -> dt.date:
@@ -234,6 +256,8 @@ def triggered(trigger: str, a: dict, c: dict) -> bool:
         return bool(c["high_risk_routes"])
     if trigger == "high-risk-annex3":
         return "annex3" in c["high_risk_routes"]
+    if trigger == "high-risk-annex3-fria":  # Art. 27(1): only in-scope deployers
+        return "annex3" in c["high_risk_routes"] and a.get("fria_scope") is True
     if trigger == "derogation":
         return c["derogation_applied"]
     if trigger in T_KEYS or trigger == "is_gpai":
@@ -283,6 +307,8 @@ def build(a: dict, evidence: dict, as_of: dt.date | None) -> tuple[dict, list[di
     obligations.sort(key=lambda o: (o["applies_from"], o["obligation_id"]))
     unanswered = []
     for k, (_, group, art, q) in QMAP.items():
+        if k == "fria_scope" and role not in (None, "deployer"):
+            continue  # Art. 27 binds deployers only
         if a[k] is None:
             unanswered.append({"key": k, "article": art, "question": q, "could_change_tier": k in c["tier_open_keys"],
                                "answer": TBD})
@@ -300,6 +326,8 @@ def build(a: dict, evidence: dict, as_of: dt.date | None) -> tuple[dict, list[di
         "prohibited_hits": c["prohibited_hits"],
         "gpai": {"is_gpai_model_provider": a["is_gpai"], "systemic_risk": a["gpai_systemic_risk"]},
         "transparency_triggers": [k for k in T_KEYS if a[k] is True],
+        "fria_pending": ("annex3" in c["high_risk_routes"] and role in (None, "deployer")
+                         and a.get("fria_scope") is None),
         "unanswered_keys": unanswered,
         "tier_open_keys": c["tier_open_keys"],
         "as_of": as_of.isoformat() if as_of else None,
@@ -362,6 +390,9 @@ def render(res: dict, obl: list[dict]) -> str:
                      f"{o['applies_to_role']} | {md_cell(o['owner'])} | {o['status']} | {o['in_force']} |")
     else:
         L.append("No obligations in the catalogue are triggered for this role and these answers.")
+    if res.get("fria_pending"):
+        L += ["", "HR-FRIA (Art. 27 fundamental rights impact assessment) is not listed: it applies only to deployers in "
+              f"the Art. 27(1) scope, and `fria_scope` is unanswered: {TBD}."]
     if tier == "undetermined":
         L += ["", "Only obligations already triggered by the answers given are listed. Resolving the open questions may add "
               "obligations (for example the Chapter III high-risk set)."]
@@ -393,7 +424,7 @@ def write_outputs(out: Path, res: dict, obl: list[dict]) -> None:
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=OBL_COLS, lineterminator="\n")
     w.writeheader()
-    w.writerows(obl)
+    w.writerows([{k: csv_safe(v) for k, v in o.items()} for o in obl])
     (out / "obligations.csv").write_text(buf.getvalue(), encoding="utf-8")
     (out / "ai-act-report.md").write_text(render(res, obl), encoding="utf-8")
 
