@@ -94,7 +94,9 @@ code, pre, kbd, .mono { font-family: var(--mono); }
 * { min-width: 0; }
 
 .wrap { max-width: var(--max); margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter); }
-main.wrap { max-width: var(--content); padding-top: 48px; padding-bottom: 96px; }
+main.wrap { max-width: var(--content); padding-top: 48px; padding-bottom: 96px; overflow-wrap: break-word; }
+/* Long tokens (paths, a|b|c option lists, ids) break instead of pushing the page wider than a phone. */
+.caption, .hint { overflow-wrap: anywhere; }
 
 /* ───────────────────────────── Type scale ─────────────────────────────
    page title  serif 40–48  (.h1)
