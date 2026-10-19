@@ -9,6 +9,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4          # studio tests use --experimental-strip-types (Node >= 22.6)
+        with: { node-version: "22", cache: npm, cache-dependency-path: studio/package-lock.json }
       - name: Repo validator
         run: python3 scripts/validate.py && python3 scripts/talent.py && python3 scripts/gen_adlc_doc.py --check
       - name: Script tests
