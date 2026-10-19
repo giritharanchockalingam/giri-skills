@@ -9,4 +9,4 @@
 
 Policy rows must name a catalog id (SPDX or LicenseRef, or an alias); an unrecognised policy licence stops the run (exit 2) so the policy cannot silently miss.
 
-Flags: `commercial_use_restricted` (yes/no/conditional), `copyleft`, `attribution_required`, `use_based_restrictions`. They summarise the licence for triage; Legal counsel reads the licence itself.
+Flags: `commercial_use_restricted` (yes/no/conditional), `copyleft`, `attribution_required`, `use_based_restrictions`, `redistribution_prohibited` (a `redistribution` use of such a licence is denied). They summarise the licence for triage; Legal counsel reads the licence itself.

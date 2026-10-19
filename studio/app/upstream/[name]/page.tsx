@@ -55,7 +55,9 @@ export default async function UpstreamSkillPage({ params }: { params: Promise<{ 
       <div className="two-col mt-7">
         <div className="card card-pad min-w-0">
           <div className="eyebrow mb-4">SKILL.md</div>
-          <div className="prose" dangerouslySetInnerHTML={{ __html: u.bodyHtml }} />
+          {sourceAvailable || !u.bodyHtml
+            ? <p className="ink-2">Not shown here: this skill is Anthropic source-available and may not be redistributed. Read it at the source (link on the right) under your Anthropic agreement.</p>
+            : <div className="prose" dangerouslySetInnerHTML={{ __html: u.bodyHtml }} />}
         </div>
         <aside className="sidebar">
           <div className="card card-pad">

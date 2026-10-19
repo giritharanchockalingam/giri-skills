@@ -144,3 +144,22 @@ def test_catalog_ids_and_sources():
         assert r["source_url"].startswith("https://")
         assert r["commercial_use_restricted"] in ("yes", "no", "conditional")
         assert all(r[f] in ("yes", "no") for f in ("copyleft", "attribution_required", "use_based_restrictions"))
+
+
+def test_redistributing_a_no_redistribution_licence_is_denied(tmp_path):
+    """Found on the real portal BOM: Anthropic source-available skills shown to any signed-up user."""
+    bom = tmp_path / "bom.csv"
+    bom.write_text("component,type,version,license,source_url,use\n"
+                   "vendor-skill/docx,library,dbd4588,Anthropic source-available,https://github.com/anthropics/skills,redistribution\n"
+                   "vendor-skill/docx-internal,library,dbd4588,Anthropic source-available,https://github.com/anthropics/skills,internal\n",
+                   encoding="utf-8")
+    out = tmp_path / "out"
+    res = run_script("skills/ai-platform/ai-bom-license-check/scripts/aibom.py", "--bom", str(bom), "--out-dir", str(out),
+                     "--policy", str(REPO_ROOT / "skills/ai-platform/ai-bom-license-check/assets/license-policy.example.csv"))
+    assert res.returncode == 1, res.stdout + res.stderr
+    rows = {r["component"]: r for r in csv.DictReader((out / "aibom.csv").open(encoding="utf-8"))}
+    assert rows["vendor-skill/docx"]["spdx_id"] == "LicenseRef-Anthropic-Source-Available"
+    assert rows["vendor-skill/docx"]["decision"] == "deny"
+    assert "redistribution_prohibited" in rows["vendor-skill/docx"]["flags"]
+    assert rows["vendor-skill/docx-internal"]["decision"] != "deny"
+    assert run_script("skills/ai-platform/ai-bom-license-check/scripts/aibom.py", "--verify", str(out / "aibom.json")).returncode == 0

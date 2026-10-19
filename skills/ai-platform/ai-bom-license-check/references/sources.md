@@ -14,3 +14,6 @@
 | CycloneDX 1.6 | JSON reference https://cyclonedx.org/docs/1.6/json/ ; schema https://raw.githubusercontent.com/CycloneDX/specification/1.6/schema/bom-1.6.schema.json | Field names used: `bomFormat`, `specVersion`, `version`, `metadata.component`, `components[].type` (enum incl. `machine-learning-model`, `data`, `library`), `bom-ref`, `name`, `version`, `licenses[]` as `{license:{id|name, acknowledgement}}` or `{expression, acknowledgement}`, `externalReferences[]` (`type: website`), `properties[]` (`name`,`value`), top-level `services[]` |
 
 Not from a source (skill convention): the alias lists; the yes/no/conditional flag summaries (short paraphrases, not licence text); the OR/AND decision rule; treating Llama's MAU clause as `conditional` commercial restriction. Generic "OpenRAIL-M" and other licence-family names without a named text stay unknown.
+
+## Anthropic source-available skill licence (added 2026-10-19)
+- LICENSE.txt shipped with anthropics/skills `skills/docx` (identical in pdf, pptx, xlsx), read from the vendored copy pinned at commit dbd4588f9e1033efb41dad4bef2f7947c8993d44: use is governed by the Anthropic agreement; additional restrictions bar extracting or retaining copies outside the Services, reproducing, derivative works, and distribution to third parties. Source: https://github.com/anthropics/skills/blob/main/skills/docx/LICENSE.txt

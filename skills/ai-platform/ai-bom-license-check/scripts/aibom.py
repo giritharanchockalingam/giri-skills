@@ -8,6 +8,7 @@ organisation's policy CSV; without one every decision is `[TO BE BASELINED — o
 
 Rules (references/method.md):
   * a commercial or redistribution use of a licence flagged commercial_use_restricted=yes -> deny
+  * a redistribution use of a licence flagged redistribution_prohibited=yes -> deny
   * commercial_use_restricted=conditional (e.g. Llama MAU threshold) + commercial/redistribution use:
     an `allow` becomes `review`
   * simple SPDX expressions: `A OR B` (best decision of the parts), `A AND B` (strictest); a mix,
@@ -45,7 +46,7 @@ TBD_ENG = "[TO BE BASELINED — owner: Engineering lead]"
 TYPES = {"model": "machine-learning-model", "dataset": "data", "library": "library", "service": None}
 USES = ("internal", "commercial", "redistribution")
 DECISIONS = ("allow", "review", "deny")
-FLAG_NAMES = ("commercial_use_restricted", "copyleft", "attribution_required", "use_based_restrictions")
+FLAG_NAMES = ("commercial_use_restricted", "copyleft", "attribution_required", "use_based_restrictions", "redistribution_prohibited")
 # CycloneDX 1.6 component.type enum (bom-1.6.schema.json)
 CDX_TYPES = {"application", "framework", "library", "container", "platform", "operating-system", "device",
              "device-driver", "firmware", "file", "machine-learning-model", "data", "cryptographic-asset"}
@@ -185,6 +186,9 @@ def evaluate(c: dict, catalog: dict, index: dict, policy: dict | None) -> dict:
     if commercial and flags["commercial_use_restricted"] == "yes":
         decision = "deny"
         reasons.append(f"use '{c['use']}' conflicts with a non-commercial licence")
+    elif c["use"] == "redistribution" and flags["redistribution_prohibited"] == "yes":
+        decision = "deny"
+        reasons.append("use 'redistribution' conflicts with a licence that prohibits redistribution")
     elif commercial and flags["commercial_use_restricted"] == "conditional":
         reasons.append("conditional commercial terms: confirm eligibility with Legal counsel")
         if decision == "allow":
@@ -347,6 +351,8 @@ def verify(target: Path) -> list[str]:
         if r["use"] in ("commercial", "redistribution") and "commercial_use_restricted" in r["flags"].split(";") \
                 and r["decision"] != "deny":
             probs.append(f"line {i}: commercial use of a non-commercial licence not denied")
+        if r["use"] == "redistribution" and "redistribution_prohibited" in r["flags"].split(";") and r["decision"] != "deny":
+            probs.append(f"line {i}: redistribution of a no-redistribution licence not denied")
     gate = "fail" if any(r["decision"] == "deny" for r in rows) else "pass"
     props = {p["name"]: p["value"] for p in bom.get("properties", [])}
     if props.get("giri-skills:gate") != gate:

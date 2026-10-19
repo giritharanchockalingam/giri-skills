@@ -388,19 +388,21 @@ if (existsSync(top50Path) && existsSync(pinsPath)) {
     const sha = pin.sha || "";
     const path = pin.path || t.path;
     const repo = pin.repo || t.repo;
+    const sourceAvailable = /Anthropic source-available/i.test(license);
     upstream.push({
       rank: t.rank,
       name: t.name,
       repo, path, sha, shortSha: sha.slice(0, 7),
       category: t.category,
       license,
-      licenseKind: /Anthropic source-available/i.test(license) ? "source-available" : "oss",
+      licenseKind: sourceAvailable ? "source-available" : "oss",
       origin: VENDOR_ORGS.includes(repo.split("/")[0]) ? "vendor" : "community",
       evidence: t.evidence || "",
       why: t.why || "",
       fetched: pin.fetched || null,
       description: fmScalar(raw || "", "description") || fm.description || "",
-      bodyHtml: mdToHtml(body),
+      // Source-available text is not redistributable: it is never put in the portal bundle (link to the source instead).
+      bodyHtml: sourceAvailable ? "" : mdToHtml(body),
       // the vendored upstream files; UPSTREAM.md is our provenance note, not theirs
       fileCount: listFiles(vdir).filter((f) => f !== "UPSTREAM.md").length,
       url: `https://github.com/${repo}/tree/${sha}/${path}`,
