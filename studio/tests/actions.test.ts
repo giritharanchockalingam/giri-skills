@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fieldsFor, foldersOf, filesUnder, checkRequest, usesModel } from "../lib/actions/plan.ts";
+import { fieldsFor, foldersOf, filesUnder, checkRequest, usesModel, gateVerdict } from "../lib/actions/plan.ts";
 
 const f = (path: string, size = 100) => ({ path, sha: path, size });
 const TREE = [f("README.md"), f("supabase/migrations/0001_a.sql"), f("supabase/migrations/0002_b.sql"), f("app/page.tsx"), f("app/api/x/route.ts"), f("node_modules/react/index.js"), f(".next/cache/x")];
@@ -42,4 +42,12 @@ test("actions: request checks — folder must exist, required present, no unknow
   assert.deepEqual(checkRequest(fields, { migrations: { folder: "db" }, notes: { text: " " }, extra: { text: "y" } }, folders),
     ["extra: not an input of this skill", "migrations: no folder “db” in the repository", "notes: required"]);
   assert.deepEqual(checkRequest(fields, { migrations: { text: "x" }, notes: { folder: "app" } } as never, folders), ["migrations: expects a folder", "notes: required", "notes: expects text"]);
+});
+
+test("actions: a skill's own gate verdict is a result, not a failed action", async () => {
+  const ok = { steps: [{ ok: false, error: "gate: FAIL — 77 high-severity finding(s)" }], checks: [{ pass: true }] };
+  assert.equal(gateVerdict("failed", ok), "FAIL — 77 high-severity finding(s)");
+  assert.equal(gateVerdict("failed", { ...ok, checks: [{ pass: false }] }), null, "missing/invalid outputs = a real failure");
+  assert.equal(gateVerdict("failed", { steps: [{ ok: false, error: "Traceback: boom" }], checks: [{ pass: true }] }), null);
+  assert.equal(gateVerdict("succeeded", ok), null);
 });
