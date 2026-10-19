@@ -33,3 +33,21 @@ export async function disconnectGithub(formData: FormData) {
   revalidatePath("/catalog");
   redirect("/catalog?disconnected=1");
 }
+
+/** Score one repository (the UI calls this per repository so each request stays within the time limit). */
+export async function scoreRepository(entityId: string) {
+  const ctx = await requireWorkspace();
+  if (!["admin", "author"].includes(ctx.role)) return { ok: false, entity: entityId, message: "Authors and administrators can run scorecards.", results: [] };
+  if (!/^[0-9a-f-]{36}$/.test(entityId)) return { ok: false, entity: entityId, message: "bad id", results: [] };
+  const { scoreEntity } = await import("@/lib/scorecards/run");
+  try {
+    const r = await scoreEntity(ctx.supabase, ctx.workspace.id, ctx.user.id, entityId);
+    if (r.results.length) await ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: "scorecard.run", p_entity_type: "catalog_entity", p_entity_id: entityId,
+      p_details: { repo: r.entity, verdicts: Object.fromEntries(r.results.map((x) => [x.check, x.verdict])) } });
+    return r;
+  } catch (e) {
+    return { ok: false, entity: entityId, message: (e as Error).message.slice(0, 300), results: [] };
+  } finally {
+    revalidatePath("/catalog");
+  }
+}

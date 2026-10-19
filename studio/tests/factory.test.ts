@@ -315,3 +315,9 @@ test("folder inputs: map or files form accepted, unsafe or oversized rejected, f
   const ref = describeInputs(ok.inputs, sha256)[0];
   assert.equal(ref.kind, "files"); assert.equal(ref.value, "2 file(s)"); assert.match(ref.sha256!, /^[0-9a-f]{64}$/);
 });
+
+test("folder inputs: Next.js route groups and dynamic segments are valid paths; traversal still refused", () => {
+  const m = { inputs: [{ name: "t", type: "dir", required: true }] } as never;
+  assert.deepEqual(validateInputs(m, { t: { "app/(auth)/[slug]/page.tsx": "x", "app/@modal/default.tsx": "y" } }).problems, []);
+  for (const bad of [{ "app/../x": "x" }, { "/etc/x": "x" }, { "a\nb": "x" }]) assert.equal(validateInputs(m, { t: bad }).problems.length, 1);
+});

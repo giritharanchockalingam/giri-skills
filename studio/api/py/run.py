@@ -444,7 +444,7 @@ def execute(req: dict) -> dict:
                     rel = str((f or {}).get("path", "")) if isinstance(f, dict) else ""
                     parts = rel.replace("\\", "/").split("/")
                     if (not rel or rel.startswith("/") or any(p in ("", ".", "..") for p in parts)
-                            or not all(re.fullmatch(r"[A-Za-z0-9._ -]{1,120}", p) for p in parts) or len(parts) > 8):
+                            or not all(re.fullmatch(r"[A-Za-z0-9._ ()\[\]@+,=~-]{1,120}", p) for p in parts) or len(parts) > 12):
                         raise ValueError(f"input {name}: bad file path: {rel[:80]}")
                     dest = folder.joinpath(*parts)
                     dest.parent.mkdir(parents=True, exist_ok=True)

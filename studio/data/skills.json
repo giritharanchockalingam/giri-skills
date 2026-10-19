@@ -15457,6 +15457,15 @@
      "default": null,
      "flag": null,
      "copy": false
+    },
+    {
+     "name": "tenant_column",
+     "type": "string",
+     "required": false,
+     "from": "the tenancy key column (default tenant_id); auto = the one the schema uses (tenant_id, workspace_id, organization_id, org_id, account_id, team_id)",
+     "default": null,
+     "flag": null,
+     "copy": false
     }
    ],
    "steps": [
@@ -15478,7 +15487,7 @@
     {
      "step": "audit",
      "kind": "script",
-     "cmd": "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] --rbac {rbac} --out {out}/audit.csv --report {out}/audit.md"
+     "cmd": "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] [--tenant-column {tenant_column}] --rbac {rbac} --out {out}/audit.csv --report {out}/audit.md"
     }
    ],
    "outputs": [

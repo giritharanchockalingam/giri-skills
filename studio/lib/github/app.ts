@@ -126,16 +126,36 @@ export interface GhRepo {
 export const listInstallationRepos = (token: string, fetchImpl?: Fetch) =>
   paginate<{ repositories: GhRepo[] }, GhRepo>("/installation/repositories?per_page=100", `Bearer ${token}`, (p) => p.repositories, 10, fetchImpl);
 
-/** Every path in the default branch (GitHub caps very large trees: `truncated` says so). */
-export async function repoPaths(token: string, repo: GhRepo, fetchImpl?: Fetch): Promise<{ paths: string[]; truncated: boolean }> {
+export interface TreeFile { path: string; sha: string; size: number }
+
+/** Every file in the default branch with its blob sha and size (GitHub caps very large trees: `truncated` says so). */
+export async function repoTree(token: string, repo: GhRepo, fetchImpl?: Fetch): Promise<{ files: TreeFile[]; truncated: boolean }> {
   try {
-    const r = await gh<{ tree: { path: string; type: string }[]; truncated: boolean }>(
+    const r = await gh<{ tree: { path: string; type: string; sha: string; size?: number }[]; truncated: boolean }>(
       `/repos/${repo.full_name}/git/trees/${encodeURIComponent(repo.default_branch)}?recursive=1`, `Bearer ${token}`, { fetchImpl });
-    return { paths: r.data.tree.filter((t) => t.type === "blob").map((t) => t.path), truncated: r.data.truncated };
+    return { files: r.data.tree.filter((t) => t.type === "blob").map((t) => ({ path: t.path, sha: t.sha, size: t.size ?? 0 })), truncated: r.data.truncated };
   } catch (e) {
-    if (e instanceof GithubError && (e.status === 409 || e.status === 404)) return { paths: [], truncated: false };   // empty repository
+    if (e instanceof GithubError && (e.status === 409 || e.status === 404)) return { files: [], truncated: false };   // empty repository
     throw e;
   }
+}
+
+/** Every path in the default branch. */
+export async function repoPaths(token: string, repo: GhRepo, fetchImpl?: Fetch): Promise<{ paths: string[]; truncated: boolean }> {
+  const t = await repoTree(token, repo, fetchImpl);
+  return { paths: t.files.map((f) => f.path), truncated: t.truncated };
+}
+
+/** A blob's text (by sha, from the tree), or null for binary content. */
+export async function blobText(token: string, fullName: string, sha: string, fetchImpl?: Fetch): Promise<string | null> {
+  const r = await gh<string>(`/repos/${fullName}/git/blobs/${sha}`, `Bearer ${token}`, { fetchImpl, accept: "application/vnd.github.raw+json" });
+  return r.data.includes("\u0000") ? null : r.data;
+}
+
+/** The commit the default branch points at (scorecards record what they scored). */
+export async function headSha(token: string, repo: GhRepo, fetchImpl?: Fetch): Promise<string | null> {
+  try { return (await gh<{ sha: string }>(`/repos/${repo.full_name}/commits/${encodeURIComponent(repo.default_branch)}`, `Bearer ${token}`, { fetchImpl })).data.sha; }
+  catch (e) { if (e instanceof GithubError && (e.status === 409 || e.status === 404 || e.status === 422)) return null; throw e; }
 }
 
 /** Raw text of one file (≤ 1 MB), or null when absent. */

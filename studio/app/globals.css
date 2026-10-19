@@ -828,3 +828,4 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .cat-table td { vertical-align: top; } .cat-why { margin: 6px 0 0 16px; padding: 0; font-size: 13.5px; } .cat-why li { margin-bottom: 6px; }
 @media (max-width: 760px) { .cat-table thead { display: none; } .cat-table tr { display: block; padding: 10px 12px; border-bottom: 1px solid var(--rule-soft); } .cat-table td { display: block; border: 0; padding: 2px 0; } }
 .ink-rust { color: var(--rust); }
+.cat-score { display: flex; flex-wrap: wrap; gap: 4px; text-decoration: none; }

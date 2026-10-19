@@ -48,7 +48,8 @@ export interface InputFile { path: string; content: string }
 export type RunInput = { kind: "text"; content: string; ext?: string } | { kind: "value"; value: string } | { kind: "fixture"; path: string } | { kind: "files"; files: InputFile[] };
 export const MAX_FOLDER_FILES = 200;
 export const MAX_FOLDER_BYTES = 2 * 1024 * 1024;
-const SAFE_REL = /^(?!\/)(?:[A-Za-z0-9._ -]{1,120}\/){0,7}[A-Za-z0-9._ -]{1,120}$/;
+// path segments as real repos use them, incl. Next.js route groups and dynamic segments: app/(auth)/[slug]/page.tsx
+const SAFE_REL = /^(?!\/)(?:[A-Za-z0-9._ ()[\]@+,=~-]{1,120}\/){0,11}[A-Za-z0-9._ ()[\]@+,=~-]{1,120}$/;
 
 /** A folder given as {kind:"files", files:[{path,content}]} or as a plain {"rel/path": "content"} map. */
 function normaliseFolder(v: unknown): { input: RunInput } | { problem: string } {

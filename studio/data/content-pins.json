@@ -46,7 +46,7 @@
  "build/code-review-runner": "0960efe12d5bd3c784df9ba14737fae12eae784d5b559445080fca3f32958b28",
  "build/domain-modeling-runner": "505d3fb7df21ddf579aa3df0d7280bd59c970929db57b6f894bcb582dbf0fb12",
  "build/handoff-and-thread-close": "d03db065806291503947d92b8fa4171391644a84a38e1946e66b879f56ef8910",
- "build/multi-tenant-saas-patterns": "d2cb1086774b4ced4ddf1627bca601b50ba6775f19eac3f2ee0804f3106f245d",
+ "build/multi-tenant-saas-patterns": "cd60794ca5f46d169da6a8c16aa1a456e493fb3ab4b745a3448e85373ad613fd",
  "build/nextjs-enterprise-conventions": "0afdb76e5a0d091d8984f66f401621b1028216be917c7c634da3d45de149e83e",
  "build/observability-setup": "f8df786bec27d2f4932fe57c97ebbc45a00ad6465c0b0504187a71a5267f53ef",
  "build/product-spec-prd": "f7b169b9e894d16cbbbf26bf06abcd6447a234e1e910624508973ed631aa9795",

@@ -12,9 +12,10 @@ metadata:
       - {name: migrations, type: dir, required: true, from: "supabase/migrations directory (or one .sql file) to audit for tenant_id / RLS / tenant-leading index"}
       - {name: rbac, type: csv, required: false, default: assets/rbac-matrix.csv, from: "RBAC matrix in the assets/rbac-matrix.csv layout (default: the starter matrix)"}
       - {name: exempt, type: string, required: false, from: "comma-separated global tables exempt from tenant_id (default: tenants,plans,feature_flags,profiles)"}
+      - {name: tenant_column, type: string, required: false, from: "the tenancy key column (default tenant_id); auto = the one the schema uses (tenant_id, workspace_id, organization_id, org_id, account_id, team_id)"}
     run:
       - {step: policies, kind: script, cmd: "python3 -I scripts/rbac_to_sql.py {rbac} --out {out}/policies.sql"}
-      - {step: audit, kind: script, cmd: "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] --rbac {rbac} --out {out}/audit.csv --report {out}/audit.md"}
+      - {step: audit, kind: script, cmd: "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] [--tenant-column {tenant_column}] --rbac {rbac} --out {out}/audit.csv --report {out}/audit.md"}
     outputs:
       - {path: "{out}/policies.sql", checks: [exists, contains:"create policy", contains:"-- rollback:"]}
       - {path: "{out}/audit.csv", checks: [exists, csv:[table,file,has_tenant_id,rls_enabled,tenant_index,policies,exempt,status,findings], csv_rows:status~^(ok|finding)$]}

@@ -49,6 +49,19 @@ export async function runtimeHealth(): Promise<{ ok: boolean; detail: Record<str
   }
 }
 
+/** POST one run request to the Python runtime. The single network path every run takes (skills, evals, API,
+ *  scorecards). Never throws: transport and protocol failures come back as {ok:false, error}. */
+export async function callRuntime(url: string, body: Record<string, unknown>, timeoutMs = 59_000): Promise<{ ok: true; r: RuntimeResponse } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(url, { method: "POST", headers: runtimeHeaders(), body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json || typeof json !== "object" || !("status" in json)) return { ok: false, error: `runtime HTTP ${res.status}${json?.error ? `: ${json.error}` : ""}` };
+    return { ok: true, r: json as RuntimeResponse };
+  } catch (e) {
+    return { ok: false, error: `runtime call failed: ${(e as Error).name === "TimeoutError" ? `the runtime did not answer within ${Math.round(timeoutMs / 1000)} s` : (e as Error).message}` };
+  }
+}
+
 export interface ExecuteOptions {
   runId: string;
   manifest: Manifest;
@@ -113,18 +126,9 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
     timeout_s: o.manifest.limits.timeout_s, max_retries: o.manifest.limits.max_retries, checks: o.checks ?? null,
   };
 
-  let r: RuntimeResponse;
-  try {
-    const res = await fetch(cfg.url, { method: "POST", headers: runtimeHeaders(), body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(59_000) });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json || typeof json !== "object" || !("status" in json)) {
-      return base("failed", `runtime HTTP ${res.status}${json?.error ? `: ${json.error}` : ""}`);
-    }
-    r = json as RuntimeResponse;
-  } catch (e) {
-    const msg = (e as Error).name === "TimeoutError" ? "the runtime did not answer within 59 s" : (e as Error).message;
-    return base("failed", `runtime call failed: ${msg}`);
-  }
+  const called = await callRuntime(cfg.url, body);
+  if (!called.ok) return base("failed", called.error);
+  const r = called.r;
 
   // output contract: a run that "succeeded" but did not produce every declared output (or produced invalid JSON) is a failure
   let status: RunStatus = r.status;

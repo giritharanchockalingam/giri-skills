@@ -330,6 +330,27 @@ select test_as('00000000-0000-0000-0000-000000000001');
 select test_expect_error($$insert into sf_github_installations (workspace_id, installation_id, account_login, verified_by)
   values ('$$ || :'ws_acme' || $$', 9001, 'again', auth.uid())$$, 'duplicate');                                     -- one workspace per installation
 
+-- ───────── Scorecards (0008): append-only evidence, workspace-scoped, latest view respects RLS ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+select id as ent from sf_catalog_entities where key = 'acme-org/billing' \gset
+insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, summary, findings, run_by)
+  values (:'ws_acme', :'ent', 'rls', 'build/supabase-schema-rls', 'fail', '2 error(s)', 2, auth.uid());
+insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, summary, findings, run_by)
+  values (:'ws_acme', :'ent', 'rls', 'build/supabase-schema-rls', 'pass', '0 error(s)', 0, auth.uid());
+select test_assert((select verdict from sf_scorecard_latest where entity_id = :'ent' and check_id = 'rls') = 'pass', 'latest view: newest result wins');
+select test_assert((select count(*) from sf_scorecard_results where entity_id = :'ent') = 2, 'history kept');
+select test_expect_error($$update sf_scorecard_results set verdict = 'pass'$$, 'permission denied');   -- evidence cannot be edited
+select test_expect_error($$delete from sf_scorecard_results$$, 'permission denied');                    -- … or deleted
+select test_expect_error($$insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, run_by)
+  values ('$$ || :'ws_acme' || $$', '$$ || :'ent' || $$', 'rls', 'x', 'pass', auth.uid())$$, 'check');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_expect_error($$insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, run_by)
+  values ('$$ || :'ws_acme' || $$', '$$ || :'ent' || $$', 'rls', 'build/supabase-schema-rls', 'pass', auth.uid())$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_scorecard_latest) = 0, 'other workspace: latest view shows nothing');
+select test_expect_error($$insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, run_by)
+  values ('$$ || :'ws_acme' || $$', '$$ || :'ent' || $$', 'rls', 'build/supabase-schema-rls', 'pass', auth.uid())$$, 'row-level security');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

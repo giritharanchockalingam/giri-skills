@@ -6,12 +6,16 @@ import { githubConfig } from "@/lib/github/app";
 import { appManifest } from "@/lib/github/manifest";
 import { CreateGithubApp } from "@/components/catalog/CreateGithubApp";
 import { SyncButton } from "@/components/catalog/SyncButton";
+import { ScoreAll } from "@/components/catalog/ScoreAll";
+import { CHECKS } from "@/lib/scorecards/checks";
 import { connectGithub, disconnectGithub } from "./actions";
 import { humanName } from "@/lib/names";
 import type { Applicable, Signal } from "@/lib/github/detect";
 
 export const metadata = { title: "Catalog · Skills Factory" };
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+const VERDICT_CLASS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
 
 const ERRORS: Record<string, string> = {
   "not-configured": "The GitHub App is not set up for this deployment yet.",
@@ -39,11 +43,16 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const cfg = githubConfig();
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-  const [instQ, entQ, syncQ] = await Promise.all([
+  const [instQ, entQ, syncQ, scoreQ] = await Promise.all([
     ctx.supabase.from("sf_github_installations").select("installation_id, account_login, account_type, repository_selection, suspended_at, created_at").eq("workspace_id", ctx.workspace.id),
     ctx.supabase.from("sf_catalog_entities").select("id, key, title, url, owner, archived, last_activity_at, properties").eq("workspace_id", ctx.workspace.id).eq("kind", "repository").order("last_activity_at", { ascending: false, nullsFirst: false }),
     ctx.supabase.from("sf_catalog_syncs").select("status, counts, error, started_at, finished_at").eq("workspace_id", ctx.workspace.id).order("started_at", { ascending: false }).limit(1),
+    ctx.supabase.from("sf_scorecard_latest").select("entity_id, check_id, verdict, summary, created_at").eq("workspace_id", ctx.workspace.id),
   ]);
+  const scores = new Map<string, { check_id: string; verdict: string; summary: string; created_at: string }[]>();
+  for (const r of scoreQ.data ?? []) scores.set(r.entity_id, [...(scores.get(r.entity_id) ?? []), r]);
+  const canScore = ctx.role === "admin" || ctx.role === "author";
+  const titleOf = (id: string) => CHECKS.find((c) => c.id === id)?.title ?? id;
   const insts = instQ.data ?? [];
   const all = (entQ.data ?? []) as Entity[];
   const active = all.filter((e) => !e.archived);
@@ -55,6 +64,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const noTests = active.filter((e) => (e.properties.counts?.files ?? 0) > 5 && !(e.properties.counts?.tests)).length;
   const noCi = active.filter((e) => (e.properties.counts?.files ?? 0) > 5 && !(e.properties.counts?.workflows)).length;
   const withMig = active.filter((e) => (e.properties.counts?.migrations ?? 0) > 0).length;
+  const scoredRepos = active.filter((e) => scores.has(e.id));
+  const passingRepos = scoredRepos.filter((e) => (scores.get(e.id) ?? []).every((r) => r.verdict === "pass" || r.verdict === "skipped")).length;
 
   return (
     <>
@@ -111,7 +122,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <div className="cat-tile"><b>{withMig}</b><span>with database migrations</span></div>
           <div className="cat-tile"><b>{noCi}</b><span>without CI</span></div>
           <div className="cat-tile"><b>{noTests}</b><span>without tests</span></div>
+          <div className="cat-tile"><b>{scoredRepos.length ? `${passingRepos}/${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "scored repositories passing every check" : "not scored yet"}</span></div>
         </div>
+        {canScore && <div className="mb-4 flex flex-wrap items-center gap-3"><ScoreAll entities={active.map((e) => ({ id: e.id, key: e.key }))} label={scoredRepos.length ? "Re-run scorecards" : "Run scorecards"} />
+          <span className="caption">Runs {CHECKS.length} checks where they apply ({CHECKS.map((c) => c.title.split(" (")[0]).join(", ")}) on each repository&apos;s current default branch. Read-only.</span></div>}
         <div className="flex flex-wrap gap-2 mb-4" aria-label="Filter by stack">
           <Link href="/catalog" className={`chip${!stackFilter ? " chip-on" : ""}`}>All · {active.length}</Link>
           {[...stackCounts.entries()].sort((a, b) => b[1].n - a[1].n).map(([id, s]) => (
@@ -120,7 +134,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         </div>
         <div className="card">
           <table className="mini cat-table">
-            <thead><tr><th>Repository</th><th>Built with</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
+            <thead><tr><th>Repository</th><th>Built with</th><th>Scorecard</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
             <tbody>{rows.map((e) => {
               const ap = e.properties.applicable ?? [];
               return (
@@ -129,6 +143,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                     {e.properties.description && <div className="caption">{e.properties.description}</div>}</td>
                   <td>{(e.properties.stack ?? []).filter((s) => s.id !== "tests").map((s) => <span key={s.id} className="chip chip-sm" title={s.evidence.join("\n")}>{s.label}</span>)}
                     {e.properties.tree_truncated && <div className="caption">very large repository: partial file list</div>}</td>
+                  <td>{(scores.get(e.id) ?? []).length === 0 ? <span className="caption">not scored</span> : (
+                    <Link href={`/catalog/${e.id}`} className="cat-score">{(scores.get(e.id) ?? []).sort((a, b) => a.check_id.localeCompare(b.check_id)).map((r) => (
+                      <span key={r.check_id} className={`pill pill-sm ${VERDICT_CLASS[r.verdict] ?? ""}`} title={`${titleOf(r.check_id)}: ${r.summary}`}>{titleOf(r.check_id).split(" (")[0]}: {r.verdict}</span>
+                    ))}</Link>)}</td>
                   <td>{e.owner ? <code>{e.owner}</code> : <span className="caption">no CODEOWNERS</span>}</td>
                   <td className="caption">{ago(e.last_activity_at)}</td>
                   <td>{ap.length === 0 ? <span className="caption">—</span> : (
@@ -142,7 +160,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
             })}</tbody>
           </table>
         </div>
-        <p className="caption mt-3">Next: run the applicable skills on every repository automatically and score each one (scorecards).</p>
+
       </>)}
       {cfg.ok && insts.length > 0 && active.length === 0 && <p className="none">No repositories yet. Choose <b>Sync now</b>, or add repositories to the installation on GitHub.</p>}
     </>

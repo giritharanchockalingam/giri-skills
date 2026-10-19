@@ -347,3 +347,16 @@ def test_files_input_is_bounded_and_confined(rt, files, why):
     res = rt.execute({"run_id": "t-files-bad", "skill": {"kind": "repo", "repo_skill": "build/supabase-schema-rls"},
                       "inputs": {"migrations": {"kind": "files", "files": files}}, "provider": "none"})
     assert res["status"] == "failed" and why in res["error"], res["error"]
+
+
+def test_files_input_accepts_real_nextjs_paths(rt):
+    """Route groups and dynamic segments are ordinary folder names in a Next.js repo."""
+    res = rt.execute({"run_id": "t-next-paths", "skill": {"kind": "repo", "repo_skill": "build/nextjs-enterprise-conventions"},
+                      "inputs": {"target": {"kind": "files", "files": [
+                          {"path": "app/(auth)/login/page.tsx", "content": "export default function P() { return null }\n"},
+                          {"path": "app/blog/[slug]/page.tsx", "content": "export default function P() { return null }\n"},
+                          {"path": "app/@modal/default.tsx", "content": "export default function D() { return null }\n"}]}},
+                      "provider": "none"})
+    assert "bad file path" not in (res["error"] or ""), res["error"]
+    report = next(o for o in res["outputs"] if o["path"] == "report.md")["content_text"]
+    assert "in 3 file(s)" in report, report
