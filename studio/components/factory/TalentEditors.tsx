@@ -101,8 +101,9 @@ export function RoleEditor({ initial, template, versionId, catalog, stages, play
             {spec.skills.length === 0 && <p className="none">No skills yet. Add the skills this role brings.</p>}
           </div>
           {diff.removed.length > 0 && (
-            <p className="caption mt-3">Removed from the template: {diff.removed.map((s, i) => (
-              <span key={s}>{i ? ", " : ""}{cat.get(s)?.name ?? s}{editable && <> <button type="button" className="btn-link" onClick={() => set({ skills: [...spec.skills, s] })}>restore</button></>}</span>))}</p>
+            <p className="caption mt-3">In the template but not in this role (removed here, or added to the template since): {diff.removed.map((s, i) => (
+              <span key={s}>{i ? ", " : ""}{cat.get(s)?.name ?? s}{editable && <> <button type="button" className="btn-link" onClick={() => set({ skills: [...spec.skills, s] })}>add</button></>}</span>))}
+              {editable && diff.removed.length > 1 && <> · <button type="button" className="btn-link" onClick={() => set({ skills: [...spec.skills, ...diff.removed] })}>add all</button></>}</p>
           )}
         </div>
 
