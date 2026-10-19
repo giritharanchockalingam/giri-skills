@@ -54,7 +54,7 @@
  "build/safe-fix": "fffd192cbe20ac99500d6cd707663b672c50d0a7d8ac9d29a854801d2242075b",
  "build/security-review": "7da3631035c1da5cc74ecd30c5b5af9c4c8bf4fcd1b3da110fdc0e13d3a0c201",
  "build/spec-to-plan": "4387bf8c63cc1ba91104701f27ab71b49e215f6b84d62568cd8add7cb4164a07",
- "build/supabase-schema-rls": "6d3d1c015cf9e4abf5852ebf6a5b86601f2561aba3305e13302212b65c86b980",
+ "build/supabase-schema-rls": "4e6006ee787d5ec86853682519744e9582080a61c41fe8d72cf2c3463a75a23b",
  "build/systematic-debugging-runner": "4db245eb0935d8285acf81cfc9f4a3153ea36e729b44a64a8e60ce4c085af9b7",
  "build/test-strategy-tdd": "11b5466c8df303ac2d83850651cc521aec31192bc33557b62ab5f5b3d6e83d5a",
  "build/webapp-testing-runner": "57d8bb79fa564435cd89efca0870fcf2d89c19cbf47f366421f35529d376db0c",

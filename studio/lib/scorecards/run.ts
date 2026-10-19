@@ -18,11 +18,15 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Prom
 }
 
 export interface CheckResult { check: string; title: string; verdict: Scored["verdict"]; summary: string }
-export interface EntityScore { ok: boolean; entity: string; message: string; results: CheckResult[] }
+export interface EntityScore { ok: boolean; entity: string; message: string; results: CheckResult[]; sha?: string | null }
 
 type EntityRow = { id: string; key: string; installation_id: number | null; properties: { default_branch?: string; stack?: { id: string }[]; counts?: { migrations: number; files: number } } };
 
-export async function scoreEntity(sb: SupabaseClient, workspaceId: string, userId: string, entityId: string): Promise<EntityScore> {
+/** Where a scorecard run came from: the default branch (the repository's scorecard) or a pull request's head commit
+ *  (evidence on the PR — never replaces the scorecard). `checks` narrows to an automation's chosen checks. */
+export interface ScoreOptions { ref?: string; context?: "default" | "pull_request"; prNumber?: number | null; checks?: string[]; automationRunId?: string | null }
+
+export async function scoreEntity(sb: SupabaseClient, workspaceId: string, userId: string, entityId: string, opts: ScoreOptions = {}): Promise<EntityScore> {
   const c = githubConfig();
   if (!c.ok) return { ok: false, entity: entityId, message: "GitHub App not configured.", results: [] };
   const rt = runtimeConfig();
@@ -30,23 +34,25 @@ export async function scoreEntity(sb: SupabaseClient, workspaceId: string, userI
   const { data: e } = await sb.from("sf_catalog_entities").select("id, key, installation_id, properties").eq("workspace_id", workspaceId).eq("id", entityId).maybeSingle<EntityRow>();
   if (!e) return { ok: false, entity: entityId, message: "Not in this workspace's catalog.", results: [] };
   if (!e.installation_id) return { ok: false, entity: e.key, message: "No GitHub installation for this repository any more.", results: [] };
-  const checks = checksFor({ stackIds: (e.properties.stack ?? []).map((s) => s.id), counts: e.properties.counts ?? { migrations: 0, files: 0 } });
+  const checks = checksFor({ stackIds: (e.properties.stack ?? []).map((s) => s.id), counts: e.properties.counts ?? { migrations: 0, files: 0 } })
+    .filter((c) => !opts.checks?.length || opts.checks.includes(c.id));
   if (!checks.length) return { ok: true, entity: e.key, message: "No scorecard checks apply to this repository yet.", results: [] };
 
   const token = await installationToken(c.cfg, e.installation_id);
-  const repo = { full_name: e.key, default_branch: e.properties.default_branch ?? "main" } as GhRepo;
-  const [tree, sha] = await Promise.all([repoTree(token, repo), headSha(token, repo)]);
+  // a commit sha works wherever a branch name does in the trees API, so the same code scores a PR head
+  const repo = { full_name: e.key, default_branch: opts.ref ?? e.properties.default_branch ?? "main" } as GhRepo;
+  const [tree, sha] = await Promise.all([repoTree(token, repo), opts.ref && /^[0-9a-f]{40}$/.test(opts.ref) ? Promise.resolve(opts.ref) : headSha(token, repo)]);
   const blobCache = new Map<string, Promise<string | null>>();
   const text = (f: TreeFile) => { if (!blobCache.has(f.sha)) blobCache.set(f.sha, blobText(token, e.key, f.sha)); return blobCache.get(f.sha)!; };
 
   const results: CheckResult[] = [];
-  for (const chk of checks) results.push(await runCheck(sb, workspaceId, userId, e, chk, tree.files, tree.truncated, sha, text, rt.url));
+  for (const chk of checks) results.push(await runCheck(sb, workspaceId, userId, e, chk, tree.files, tree.truncated, sha, text, rt.url, opts));
   const bad = results.filter((r) => r.verdict === "fail" || r.verdict === "error").length;
-  return { ok: true, entity: e.key, message: `${results.length} check(s): ${results.length - bad} without failures`, results };
+  return { ok: true, entity: e.key, message: `${results.length} check(s): ${results.length - bad} without failures`, results, sha };
 }
 
 async function runCheck(sb: SupabaseClient, workspaceId: string, userId: string, e: EntityRow, chk: CheckDef, tree: TreeFile[], truncated: boolean,
-  sha: string | null, text: (f: TreeFile) => Promise<string | null>, url: string): Promise<CheckResult> {
+  sha: string | null, text: (f: TreeFile) => Promise<string | null>, url: string, opts: ScoreOptions): Promise<CheckResult> {
   const t0 = Date.now();
   const inputs: Record<string, unknown> = {};
   let partial = truncated, used = 0;
@@ -91,6 +97,7 @@ async function runCheck(sb: SupabaseClient, workspaceId: string, userId: string,
   await sb.from("sf_scorecard_results").insert({
     workspace_id: workspaceId, entity_id: e.id, check_id: chk.id, skill: chk.skill, verdict: scored.verdict, summary: scored.summary.slice(0, 500),
     findings: scored.findings, commit_sha: sha, details, duration_ms: Date.now() - t0, run_by: userId,
+    context: opts.context ?? "default", pr_number: opts.prNumber ?? null, automation_run_id: opts.automationRunId ?? null,
   });
   return { check: chk.id, title: chk.title, verdict: scored.verdict, summary: scored.summary };
 }

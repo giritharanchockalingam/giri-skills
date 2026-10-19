@@ -847,3 +847,10 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .ins-bars tr:hover .ins-bar { background: var(--flame); } .ins-n { font: 500 12.5px var(--mono); color: var(--ink-2); text-align: right; width: 40px; padding-left: 8px !important; }
 .ins-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; align-items: end; }
 .ins-form .field { margin: 0; } .ins-wide { grid-column: 1 / -1; }
+
+/* ───────────────────────────── Automations ───────────────────────────── */
+.auto-setup { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.auto-form { display: grid; gap: 12px; max-width: 760px; }
+.auto-set { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.auto-set legend { font-size: 13px; color: var(--ink-2); padding: 0 4px; }
+.auto-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }

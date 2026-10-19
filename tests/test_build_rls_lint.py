@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from conftest import run_script
+from conftest import REPO_ROOT, run_script
 
 SCRIPT = "skills/build/supabase-schema-rls/scripts/rls_lint.py"
 
@@ -71,3 +71,16 @@ def test_single_sql_file_is_accepted(tmp_path):
     bad = tmp_path / "notes.txt"
     bad.write_text("x", encoding="utf-8")
     assert run_script("skills/build/supabase-schema-rls/scripts/rls_lint.py", str(bad)).returncode == 2
+
+
+def test_deny_all_needs_an_explicit_acknowledgement_with_reason(tmp_path):
+    """RLS on, no policies = nobody but the service role can touch it. Allowed only when a migration says so, with why."""
+    import subprocess, sys
+    script = REPO_ROOT / "skills/build/supabase-schema-rls/scripts/rls_lint.py"
+    body = "-- rollback:\n--   drop table if exists public.deliveries;\ncreate table public.deliveries (id text primary key);\nalter table public.deliveries enable row level security;\n"
+    for ack, expect_error in [("", True), ("-- rls-lint: deny-all public.deliveries\n", True),
+                              ("-- rls-lint: deny-all public.deliveries server-only webhook log; no client access\n", False)]:
+        f = tmp_path / "0001_x.sql"
+        f.write_text(ack + body)
+        r = subprocess.run([sys.executable, "-I", str(script), str(f)], capture_output=True, text=True)
+        assert ("RLS002" in r.stdout) is expect_error, (ack, r.stdout)

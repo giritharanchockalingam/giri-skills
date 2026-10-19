@@ -3,7 +3,8 @@
 
 Checks (all static, stdlib only; run with: python3 -I rls_lint.py supabase/migrations):
   RLS001  table created without `enable row level security` anywhere in the migration set
-  RLS002  table has RLS enabled but zero policies
+  RLS002  table has RLS enabled but zero policies — unless a migration acknowledges it as intentional with
+          `-- rls-lint: deny-all <schema.>table <reason>` (server-only tables; the reason is required)
   RLS003  policy on a tenant-scoped table (has tenant_id column) whose predicate lacks `tenant_id`
   RLS004  insert/update policy without `with check`
   RLS005  policy granted `to public` (or no `to` clause → defaults to public)
@@ -90,6 +91,9 @@ class Table:
     policies: list = field(default_factory=list)
 
 
+DENY_ALL_ACK_RE = re.compile(r"--[ \t]*rls-lint:[ \t]*deny-all[ \t]+(?:(?P<schema>\w+)\.)?(?P<table>\w+)[ \t]+[^\s][^\n]{2,}", re.I)   # reason on the same line
+
+
 def strip_comments(sql: str) -> str:
     # keep newlines so line numbers hold
     return COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), sql)
@@ -111,12 +115,15 @@ def lint_migrations(mig_dir: Path, findings: list[Finding], applied_through: str
 
     tables: dict[str, Table] = {}
     all_sql: list[tuple[Path, str]] = []
+    deny_all_ok: set[str] = set()   # tables a migration explicitly acknowledges as deny-all (server-only), with a reason
 
     for f in files:
         raw = f.read_text(encoding="utf-8", errors="replace")
         applied = bool(applied_through) and f.name <= applied_through
         if not ROLLBACK_RE.search(raw) and not applied:
             findings.append(Finding("RLS007", "error", str(f), 1, "missing `-- rollback:` block"))
+        for m in DENY_ALL_ACK_RE.finditer(raw):
+            deny_all_ok.add(f"{(m.group('schema') or 'public').lower()}.{m.group('table').lower()}")
         sql = strip_comments(raw)
         all_sql.append((f, sql))
         events = [(m.start(), "create", m) for m in CREATE_TABLE_RE.finditer(sql)]
@@ -206,8 +213,8 @@ def lint_migrations(mig_dir: Path, findings: list[Finding], applied_through: str
             continue
         if not t.rls_enabled:
             findings.append(Finding("RLS001", "error", t.file, t.line, f"table {key} created without `enable row level security`"))
-        elif not t.policies:
-            findings.append(Finding("RLS002", "error", t.file, t.line, f"table {key} has RLS enabled but no policies (deny-all; confirm intentional with a comment)"))
+        elif not t.policies and key not in deny_all_ok:
+            findings.append(Finding("RLS002", "error", t.file, t.line, f"table {key} has RLS enabled but no policies (deny-all; if intentional add `-- rls-lint: deny-all {key} <reason>`)"))
 
 
 def lint_client_dirs(paths: list[str], root: Path, findings: list[Finding]) -> None:

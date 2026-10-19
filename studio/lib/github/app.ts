@@ -168,3 +168,21 @@ export async function fileText(token: string, fullName: string, path: string, fe
     throw e;
   }
 }
+
+// ───────────── Check Runs (automations report back on the commit / pull request) ─────────────
+export async function createCheckRun(token: string, fullName: string, b: { name: string; head_sha: string; details_url?: string; external_id?: string }, fetchImpl?: Fetch): Promise<{ id: number; html_url: string }> {
+  return (await gh<{ id: number; html_url: string }>(`/repos/${fullName}/check-runs`, `Bearer ${token}`, { method: "POST", body: { ...b, status: "in_progress", started_at: new Date().toISOString() }, fetchImpl })).data;
+}
+export async function completeCheckRun(token: string, fullName: string, id: number, b: { conclusion: "success" | "failure" | "neutral"; title: string; summary: string; details_url?: string }, fetchImpl?: Fetch): Promise<void> {
+  await gh(`/repos/${fullName}/check-runs/${id}`, `Bearer ${token}`, { method: "PATCH", fetchImpl,
+    body: { status: "completed", conclusion: b.conclusion, completed_at: new Date().toISOString(), details_url: b.details_url, output: { title: b.title, summary: b.summary } } });
+}
+
+/** What the App itself is allowed to do (for the setup panel): permissions, subscribed events, webhook active. */
+export async function appInfo(cfg: GithubConfig, fetchImpl?: Fetch): Promise<{ permissions: Record<string, string>; events: string[] }> {
+  const a = (await gh<{ permissions: Record<string, string>; events: string[] }>("/app", `Bearer ${appJwt(cfg.appId, cfg.privateKey)}`, { fetchImpl })).data;
+  return { permissions: a.permissions ?? {}, events: a.events ?? [] };
+}
+
+export const getRepo = async (token: string, fullName: string, fetchImpl?: Fetch) =>
+  (await gh<GhRepo>(`/repos/${fullName}`, `Bearer ${token}`, { fetchImpl })).data;

@@ -378,6 +378,19 @@ select test_assert(:'derived' = :'ws_acme', 'a spoofed workspace_id is overwritt
 select test_as_anon();
 select test_assert(sf_health_ping() = 1, 'health ping answers over the anon role');
 
+-- ───────── Automations (0011): admin-managed rules; runs and deliveries are server-only; PR results stay off the scorecard ─────────
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_automations (workspace_id, name, trigger, created_by) values (:'ws_acme', 'PR gate', 'github.pull_request', auth.uid()) returning id as auto \gset
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$insert into sf_automations (workspace_id, name, trigger, created_by) values ('$$ || :'ws_acme' || $$', 'x', 'github.push', auth.uid())$$, 'row-level security');
+select test_expect_error($$insert into sf_automation_runs (workspace_id, automation_id, repo, event) values ('$$ || :'ws_acme' || $$', '$$ || :'auto' || $$', 'acme-org/billing', 'pull_request')$$, 'permission denied');
+select test_expect_error($$insert into sf_github_deliveries (delivery_id, workspace_id, event, installation_id) values ('d1', '$$ || :'ws_acme' || $$', 'push', 9001)$$, 'permission denied');
+insert into sf_scorecard_results (workspace_id, entity_id, check_id, skill, verdict, summary, run_by, context, pr_number)
+  values (:'ws_acme', :'ent', 'rls', 'build/supabase-schema-rls', 'fail', 'PR introduces a table without RLS', auth.uid(), 'pull_request', 7);
+select test_assert((select verdict from sf_scorecard_latest where entity_id = :'ent' and check_id = 'rls') = 'pass', 'a pull-request result does not replace the default-branch scorecard');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_automations) = 0 and (select count(*) from sf_automation_runs) = 0, 'other workspace sees no automations or runs');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
