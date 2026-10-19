@@ -29,6 +29,13 @@ export function supabaseRefs(envs: VercelEnv[]): { ref: string; key: string }[] 
   return [...out.entries()].map(([ref, key]) => ({ ref, key }));
 }
 
+/** The address people use: a custom domain first, then <name>.vercel.app, then the shortest other alias (never the
+ *  per-branch "-git-" aliases). */
+export function productionAlias(name: string, aliases: string[]): string | null {
+  const ok = aliases.filter((a) => !a.includes("-git-"));
+  return ok.find((a) => !a.endsWith(".vercel.app")) ?? ok.find((a) => a === `${name}.vercel.app`) ?? [...ok].sort((a, b) => a.length - b.length)[0] ?? null;
+}
+
 export function mapVercel(team: { slug: string | null }, projects: VercelProject[], deploys: Map<string, VercelDeployment[]>, envs: Map<string, VercelEnv[]>, now = Date.now()):
   { entities: EntityRow[]; relations: RelationSpec[] } {
   const entities: EntityRow[] = [], relations: RelationSpec[] = [];
@@ -38,7 +45,7 @@ export function mapVercel(team: { slug: string | null }, projects: VercelProject
     const failed = prod.filter((d) => (d.readyState ?? d.state) === "ERROR");
     const last = [...prod].sort((a, b) => b.created - a.created)[0];
     const in30 = (d: VercelDeployment) => d.created >= now - 30 * 86_400_000;
-    const alias = p.targets?.production?.alias?.find((a) => !a.includes("-git-")) ?? null;
+    const alias = productionAlias(p.name, p.targets?.production?.alias ?? []);
     const repo = p.link?.type === "github" && p.link.org && p.link.repo ? `${p.link.org}/${p.link.repo}` : null;
     entities.push({
       kind: "service", source: "vercel", key: p.name, external_id: p.id, title: p.name, url: team.slug ? `https://vercel.com/${team.slug}/${p.name}` : "https://vercel.com/dashboard",

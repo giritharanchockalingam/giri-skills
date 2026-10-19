@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mapVercel, mapSupabase, supabaseRefs } from "../lib/integrations/map.ts";
+import { mapVercel, mapSupabase, supabaseRefs, productionAlias } from "../lib/integrations/map.ts";
 
 // Shapes taken from this workspace's real Vercel and Supabase APIs (Oct 2026); ids shortened where irrelevant.
 const NOW = Date.parse("2026-10-19T20:00:00Z");
@@ -105,4 +105,11 @@ test("vercel fetch: production deployments are paged to the end of the window, n
     return j({ envs: [], slug: "acme" }); }) as unknown as typeof fetch;
   const r = await readVercel({ token: "t", teamId: "team_1" }, f);
   assert.equal(r.deploys.get("p1")?.length, 137);
+});
+
+test("vercel: production address — custom domain, then <name>.vercel.app, then the shortest alias (found live)", () => {
+  assert.equal(productionAlias("giri-skills-studio", ["giri-skills-studio-giritharan-chockalingams-projects.vercel.app", "giri-skills-studio.vercel.app", "giri-skills-studio-git-main-x.vercel.app"]), "giri-skills-studio.vercel.app");
+  assert.equal(productionAlias("vg-hospital-portal", ["vg-hospital-portal-x.vercel.app", "vg-advantage.vercel.app"]), "vg-advantage.vercel.app");
+  assert.equal(productionAlias("shop", ["shop.vercel.app", "shop.example.com"]), "shop.example.com");
+  assert.equal(productionAlias("x", []), null);
 });
