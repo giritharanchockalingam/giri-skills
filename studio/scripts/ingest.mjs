@@ -501,6 +501,11 @@ w("stages.json", JSON.parse(readFileSync(join(ROOT, "shared", "adlc-stages.json"
   }
   w("agent-templates.json", tpl);
 }
+// Role and pool templates (roles/*.json, pools/*.json; validated in CI by scripts/talent.py)
+for (const [dir, file] of [["roles", "role-templates.json"], ["pools", "pool-templates.json"]]) {
+  const d = join(ROOT, dir);
+  w(file, existsSync(d) ? readdirSync(d).filter((f) => f.endsWith(".json")).sort().map((f) => JSON.parse(readFileSync(join(d, f), "utf8"))) : []);
+}
 w("scorecard.json", scorecard);
 w("trigger.json", trigger);
 w("quality.json", quality);

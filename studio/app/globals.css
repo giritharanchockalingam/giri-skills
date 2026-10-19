@@ -721,3 +721,22 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .ab-failed { margin: 8px 0 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
 .ab-failed li { margin: 2px 0; }
 @media (max-width: 1000px) { .agent-builder { grid-template-columns: minmax(0, 1fr); } .ab-wiring .select { min-width: 0; width: 100%; } }
+
+/* roles & talent pools */
+.tl-stages { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.tl-stage-name { margin-bottom: 4px; }
+.tl-skill { display: inline-flex; align-items: center; gap: 6px; }
+.tl-added { border-color: var(--sage); }
+.tl-x { border: 0; background: none; cursor: pointer; color: var(--ink-3); font-size: 15px; line-height: 1; padding: 0 2px; }
+.tl-x:hover, .tl-x:focus-visible { color: var(--rust); }
+.tl-check { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tl-hits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tl-hit { padding: 10px 12px; border: 1px solid var(--rule); border-radius: 10px; }
+.tl-best { border-color: var(--sage); }
+.tl-why { margin-top: 4px; }
+.tl-cov td, .tl-cov th { text-align: center; white-space: nowrap; }
+.tl-cov td:first-child, .tl-cov th:first-child { text-align: left; }
+.tl-gap td:first-child { color: var(--rust); }
+.tl-handoff { margin: 6px 0 4px 18px; font-size: 13px; }
+.btn-link { border: 0; background: none; padding: 0; color: var(--flame); cursor: pointer; text-decoration: underline; font: inherit; }
+.tbl-scroll { overflow-x: auto; max-width: 100%; }

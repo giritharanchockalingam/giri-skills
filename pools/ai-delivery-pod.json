@@ -1,0 +1,28 @@
+{
+  "name": "ai-delivery-pod",
+  "title": "AI Delivery Pod",
+  "description": "Takes one AI use case from idea to a release decision: value, data, design, build, evaluation, risk and rollout.",
+  "members": [
+    {
+      "role": "ai-strategist"
+    },
+    {
+      "role": "ai-data-engineer"
+    },
+    {
+      "role": "ai-solution-architect"
+    },
+    {
+      "role": "llm-agent-engineer"
+    },
+    {
+      "role": "ai-quality-red-team"
+    },
+    {
+      "role": "ai-risk-release-lead"
+    }
+  ],
+  "playbooks": [
+    "ai-use-case-to-release"
+  ]
+}

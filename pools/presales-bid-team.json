@@ -1,0 +1,21 @@
+{
+  "name": "presales-bid-team",
+  "title": "Presales Bid Team",
+  "description": "Wins the deal: account context, discovery, a priced and value-backed solution, and the proposal.",
+  "members": [
+    {
+      "role": "client-partner",
+      "label": "Account owner"
+    },
+    {
+      "role": "presales-solution-architect"
+    },
+    {
+      "role": "bid-proposal-lead"
+    }
+  ],
+  "playbooks": [
+    "presales-pursuit",
+    "estimate-and-value"
+  ]
+}

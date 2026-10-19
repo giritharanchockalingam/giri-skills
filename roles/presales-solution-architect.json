@@ -1,0 +1,15 @@
+{
+  "name": "presales-solution-architect",
+  "title": "Presales Solution Architect",
+  "description": "Runs discovery, shapes the solution, estimates it and proves its value.",
+  "skills": [
+    "presales/discovery-interview",
+    "presales/solution-architecture-doc",
+    "presales/integration-migration-assessor",
+    "presales/effort-estimator",
+    "presales/value-case-builder"
+  ],
+  "playbooks": [
+    "estimate-and-value"
+  ]
+}

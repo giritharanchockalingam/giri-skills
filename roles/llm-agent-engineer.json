@@ -1,0 +1,16 @@
+{
+  "name": "llm-agent-engineer",
+  "title": "LLM & Agent Engineer",
+  "description": "Builds the prompts, graphs, retrieval, tools and guardrails that make the system work.",
+  "skills": [
+    "ai-platform/prompt-spec",
+    "ai-platform/langgraph-runner",
+    "ai-platform/langgraph-hitl-runner",
+    "ai-platform/langchain-rag-runner",
+    "ai-platform/mcp-server-builder",
+    "ai-platform/slm-demo-builder",
+    "ai-platform/finetune-dataset-builder",
+    "ai-platform/guardrails-config"
+  ],
+  "playbooks": []
+}

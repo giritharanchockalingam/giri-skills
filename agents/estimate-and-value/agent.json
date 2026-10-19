@@ -1,0 +1,19 @@
+{
+  "name": "estimate-and-value",
+  "version": "0.1.0",
+  "description": "Price it and prove it: Monte Carlo effort estimate from the WBS, then a 5-year value case for the same client.",
+  "adlc_stage": "opportunity",
+  "inputs": [
+    {"name": "client", "type": "string", "required": true, "from": "client name"},
+    {"name": "wbs", "type": "csv", "required": true, "from": "work breakdown with 3-point estimates (layout: skills/presales/effort-estimator/assets/wbs-template.csv)"},
+    {"name": "rates", "type": "csv", "required": false, "from": "rate card; without it the estimate is effort-only"},
+    {"name": "benefits", "type": "csv", "required": true, "from": "benefit lines for the value case"},
+    {"name": "costs", "type": "csv", "required": true, "from": "cost lines for the value case"}
+  ],
+  "config": {"provider": "auto", "on_fail": "stop"},
+  "steps": [
+    {"id": "estimate", "skill": "presales/effort-estimator", "inputs": {"wbs": "$in.wbs", "rates": "$in.rates", "client": "$in.client"}},
+    {"id": "value", "skill": "presales/value-case-builder", "inputs": {"benefits": "$in.benefits", "costs": "$in.costs", "client": "$in.client"}}
+  ],
+  "outputs": ["$steps.estimate:estimate.md", "$steps.value:value-case.md"]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "ai-risk-release-lead",
+  "title": "AI Risk & Release Lead",
+  "description": "Owns the risk register, the security sign-off and the go/no-go release decision.",
+  "skills": [
+    "ai-platform/ai-governance-risk",
+    "build/security-review",
+    "ai-platform/guardrails-config",
+    "ai-platform/ai-release-plan"
+  ],
+  "playbooks": []
+}

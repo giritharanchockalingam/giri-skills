@@ -1,0 +1,12 @@
+{
+  "name": "ai-strategist",
+  "title": "AI Strategist",
+  "description": "Decides where AI is worth it: portfolio, operating model, use-case value and the risk it carries.",
+  "skills": [
+    "ai-platform/ai-strategy-coe",
+    "ai-platform/ai-use-case-canvas",
+    "presales/value-case-builder",
+    "ai-platform/ai-governance-risk"
+  ],
+  "playbooks": []
+}

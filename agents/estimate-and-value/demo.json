@@ -1,0 +1,10 @@
+{
+  "note": "Fictional fixtures reused from each skill's evals (labelled fictional in the files).",
+  "inputs": {
+    "client": "Northwind",
+    "wbs": "skills/presales/effort-estimator/evals/fixtures/wbs.csv",
+    "rates": "skills/presales/effort-estimator/evals/fixtures/rates.csv",
+    "benefits": "skills/presales/value-case-builder/evals/fixtures/benefits.csv",
+    "costs": "skills/presales/value-case-builder/evals/fixtures/costs.csv"
+  }
+}

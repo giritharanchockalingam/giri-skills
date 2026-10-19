@@ -1,0 +1,12 @@
+{
+  "name": "client-partner",
+  "title": "Client Partner",
+  "description": "Owns the account: research, positioning, account plan and the executive story.",
+  "skills": [
+    "presales/client-research-brief",
+    "presales/competitive-positioning",
+    "presales/account-plan",
+    "presales/exec-deck-redline"
+  ],
+  "playbooks": []
+}

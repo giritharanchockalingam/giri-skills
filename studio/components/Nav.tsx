@@ -10,6 +10,8 @@ const links = [
   { href: "/overview", label: "Overview", match: ["/overview"] },
   { href: "/", label: "Skills", match: ["/", "/skills/", "/repo/", "/upstream/"] },
   { href: "/agents", label: "Agents", match: ["/agents", "/agent-runs/"] },
+  { href: "/roles", label: "Roles", match: ["/roles"] },
+  { href: "/pools", label: "Talent pools", short: "Pools", match: ["/pools"] },
   { href: "/evaluations", label: "Evaluations", match: ["/evaluations", "/evals/", "/findings/"] },
   { href: "/activity", label: "Activity", match: ["/activity", "/runs/"] },
   { href: "/admin", label: "Administration", short: "Admin", match: ["/admin"] },

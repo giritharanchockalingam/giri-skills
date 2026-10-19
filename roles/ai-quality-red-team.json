@@ -1,0 +1,12 @@
+{
+  "name": "ai-quality-red-team",
+  "title": "AI Quality & Red Team",
+  "description": "Measures whether it is good, safe and fair enough, and attacks it before users do.",
+  "skills": [
+    "ai-platform/llm-eval-harness",
+    "ai-platform/eval-engineering-runner",
+    "ai-platform/red-team-suite",
+    "ai-platform/bias-fairness-check"
+  ],
+  "playbooks": []
+}

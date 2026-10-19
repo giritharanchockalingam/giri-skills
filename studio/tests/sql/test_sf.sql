@@ -262,6 +262,35 @@ select test_assert((select count(*) from sf_agent_runs where id = :'ar') = 1, 'c
 select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_agents) = 0 and (select count(*) from sf_agent_runs) = 0, 'other workspace sees no acme agents or runs');
 
+-- ───────── 12. roles and talent pools: same draft/publish/frozen rules as agents ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_talent (workspace_id, kind, slug, name, owner_id) values (:'ws_acme', 'role', 'architect', 'Architect', '00000000-0000-0000-0000-000000000002') returning id as tr \gset
+insert into sf_talent (workspace_id, kind, slug, name, owner_id) values (:'ws_acme', 'pool', 'architect', 'Architect pod', '00000000-0000-0000-0000-000000000002') returning id as tp \gset
+select test_expect_error($$insert into sf_talent (workspace_id, kind, slug, name, owner_id) values ('$$ || :'ws_acme' || $$', 'role', 'architect', 'Dup', '00000000-0000-0000-0000-000000000002')$$, 'duplicate');
+insert into sf_talent_versions (talent_id, version, spec, spec_hash, created_by)
+  values (:'tr', 1, '{"name":"architect","skills":["a/b"]}', repeat('a', 64), '00000000-0000-0000-0000-000000000002') returning id as trv \gset
+update sf_talent_versions set spec = '{"name":"architect","skills":["a/b","c/d"]}', spec_hash = repeat('b', 64) where id = :'trv';
+select test_expect_error($$update sf_talent_versions set status = 'published' where id = '$$ || :'trv' || $$'$$, 'only through sf_publish_talent_version');
+select test_expect_error($$select sf_publish_talent_version('$$ || :'trv' || $$')$$, 'reviewers or admins only');
+select test_as('00000000-0000-0000-0000-000000000003');
+select sf_publish_talent_version(:'trv');
+select test_assert((select status from sf_talent where id = :'tr') = 'published', 'role published');
+select test_assert((select count(*) from sf_audit_events where action = 'role.publish' and entity_id = :'trv') = 1, 'role publish audited');
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$update sf_talent_versions set spec = '{}', spec_hash = repeat('c', 64) where id = '$$ || :'trv' || $$'$$, 'immutable');
+insert into sf_talent_versions (talent_id, version, spec, spec_hash, created_by)
+  values (:'tr', 2, '{"name":"architect","skills":["c/d"]}', repeat('d', 64), '00000000-0000-0000-0000-000000000002') returning id as trv2 \gset
+select test_as('00000000-0000-0000-0000-000000000001');
+select sf_publish_talent_version(:'trv2');
+select test_assert((select status from sf_talent_versions where id = :'trv') = 'superseded', 'previous role version superseded');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((select count(*) from sf_talent where workspace_id = :'ws_acme') = 2, 'consumer reads roles and pools');
+select test_expect_error($$insert into sf_talent (workspace_id, kind, slug, name, owner_id) values ('$$ || :'ws_acme' || $$', 'role', 'c', 'C', '00000000-0000-0000-0000-000000000004')$$, 'row-level security');
+update sf_talent set name = 'hijack' where id = :'tr';
+select test_assert((select name from sf_talent where id = :'tr') = 'Architect', 'consumer cannot rename a role');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_talent) = 0 and (select count(*) from sf_talent_versions) = 0, 'other workspace sees no acme roles or pools');
+
 -- the shared project's own tables were never touched
 select test_assert((select count(*) from pg_policies where tablename = 'profiles') = 0, 'profiles untouched');
 select 'ALL SQL TESTS PASSED' as result;

@@ -1,0 +1,13 @@
+{
+  "name": "bid-proposal-lead",
+  "title": "Bid & Proposal Lead",
+  "description": "Answers every requirement, writes the proposal and SOW, and gets the team ready for orals.",
+  "skills": [
+    "presales/rfp-compliance-matrix",
+    "presales/proposal-writer",
+    "presales/sow-drafter",
+    "presales/orals-prep",
+    "presales/exec-deck-redline"
+  ],
+  "playbooks": []
+}

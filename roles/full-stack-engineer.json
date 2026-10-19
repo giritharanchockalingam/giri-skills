@@ -1,0 +1,20 @@
+{
+  "name": "full-stack-engineer",
+  "title": "Full-stack Engineer",
+  "description": "Builds and ships the product around the model: app, schema, tests, pipeline and fixes.",
+  "skills": [
+    "build/project-bootstrap",
+    "build/nextjs-enterprise-conventions",
+    "build/supabase-schema-rls",
+    "build/multi-tenant-saas-patterns",
+    "build/test-strategy-tdd",
+    "build/webapp-testing-runner",
+    "build/code-review-runner",
+    "build/ci-cd-vercel-github",
+    "build/systematic-debugging-runner",
+    "build/safe-fix",
+    "build/handoff-and-thread-close",
+    "build/security-review"
+  ],
+  "playbooks": []
+}

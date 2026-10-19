@@ -1,0 +1,11 @@
+{
+  "name": "ai-data-engineer",
+  "title": "AI Data Engineer",
+  "description": "Proves the data is there and usable, finds the PII, and builds training sets.",
+  "skills": [
+    "ai-platform/data-readiness-assessment",
+    "ai-platform/pii-data-inventory",
+    "ai-platform/finetune-dataset-builder"
+  ],
+  "playbooks": []
+}

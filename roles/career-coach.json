@@ -1,0 +1,14 @@
+{
+  "name": "career-coach",
+  "title": "Career Coach",
+  "description": "Personal career workflows: fit scoring, tailoring, outreach, interviews and offers.",
+  "skills": [
+    "career/jd-fit-scorer",
+    "career/resume-tailor",
+    "career/application-tracker",
+    "career/outreach-and-followup",
+    "career/interview-prep",
+    "career/offer-evaluator"
+  ],
+  "playbooks": []
+}

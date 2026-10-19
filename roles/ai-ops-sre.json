@@ -1,0 +1,13 @@
+{
+  "name": "ai-ops-sre",
+  "title": "AI Ops / SRE",
+  "description": "Keeps it healthy in production and feeds what it learns back into the next change.",
+  "skills": [
+    "ai-platform/llm-observability",
+    "build/observability-setup",
+    "ai-platform/ai-incident-runbook",
+    "ai-platform/feedback-improvement-loop",
+    "build/ci-cd-vercel-github"
+  ],
+  "playbooks": []
+}
