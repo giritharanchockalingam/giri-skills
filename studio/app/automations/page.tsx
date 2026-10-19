@@ -65,8 +65,8 @@ export default async function AutomationsPage() {
               <td className="caption">{a.report_to_github ? "check on GitHub" : "here only"}</td>
               <td><span className={`pill pill-sm ${a.enabled ? "pill-sage" : ""}`}>{a.enabled ? "on" : "off"}</span></td>
               {admin && <td className="flex gap-2">
-                <form action={toggleAutomation}><input type="hidden" name="id" value={a.id} /><input type="hidden" name="enabled" value={String(!a.enabled)} /><button className="link caption" type="submit">{a.enabled ? "turn off" : "turn on"}</button></form>
-                <form action={removeAutomation}><input type="hidden" name="id" value={a.id} /><button className="link caption" type="submit">delete</button></form></td>}
+                <form action={toggleAutomation}><input type="hidden" name="id" value={a.id} /><input type="hidden" name="enabled" value={String(!a.enabled)} /><button className="link caption" type="submit">{a.enabled ? "Turn off" : "Turn on"}</button></form>
+                <form action={removeAutomation}><input type="hidden" name="id" value={a.id} /><button className="link caption" type="submit">Delete</button></form></td>}
             </tr>))}</tbody>
         </table></div></div>
         {admin && <div className="card-pad"><div className="h3" style={{ marginTop: 0 }}>New automation</div><AutomationForm repos={repos} checks={CHECKS.map((c) => ({ id: c.id, title: c.title }))} /></div>}

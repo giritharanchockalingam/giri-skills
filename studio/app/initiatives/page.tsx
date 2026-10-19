@@ -67,8 +67,8 @@ export default async function InitiativesPage() {
                 </li>))}</ul>
               {canWrite && (
                 <div className="flex flex-wrap gap-3 mt-2">
-                  <form action={changeInitiativeStatus}><input type="hidden" name="id" value={ini.id} /><input type="hidden" name="status" value={closed ? "active" : "closed"} /><button className="link caption" type="submit">{closed ? "reopen" : "close"}</button></form>
-                  {ctx.role === "admin" && <form action={removeInitiative}><input type="hidden" name="id" value={ini.id} /><button className="link caption" type="submit">delete</button></form>}
+                  <form action={changeInitiativeStatus}><input type="hidden" name="id" value={ini.id} /><input type="hidden" name="status" value={closed ? "active" : "closed"} /><button className="link caption" type="submit">{closed ? "Reopen" : "Close"}</button></form>
+                  {ctx.role === "admin" && <form action={removeInitiative}><input type="hidden" name="id" value={ini.id} /><button className="link caption" type="submit">Delete</button></form>}
                 </div>)}
             </section>
           );

@@ -1,5 +1,6 @@
 "use client";
 import { matches } from "@/lib/search";
+import { useSortable } from "@/components/useSortable";
 import { displayDescription } from "@/lib/names";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -26,6 +27,10 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
         matches(needle, r.name, r.description))
       .sort((a, b) => verdictSeverity(a.verdict) - verdictSeverity(b.verdict) || (a.lift ?? 0) - (b.lift ?? 0) || a.name.localeCompare(b.name));
   }, [rows, dom, ver, q]);
+  const { sorted, th } = useSortable(filtered, {
+    name: (r) => r.name, domain: (r) => r.domain, verdict: (r) => verdictSeverity(r.verdict), runs: (r) => r.agentVerdict ?? null,
+    lift: (r) => r.lift ?? null, trigger: (r) => r.triggerAcc ?? null,
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -33,24 +38,24 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
         <input className="input" type="search" placeholder="Search name or description" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search skills" />
         <DomainFilter id="cat-domain" domains={domains} value={dom} onChange={setDom} />
         <VerdictFilterControl id="cat-verdict" value={ver} onChange={setVer} />
-        <span className="toolbar-count">{filtered.length} of {rows.length} skills · worst first</span>
+        <span className="toolbar-count">{filtered.length} of {rows.length} skills · worst first unless you sort a column</span>
       </div>
 
       <div className="card">
         <div className="tablewrap"><table className="tbl only-desktop">
           <thead>
             <tr>
-              <th>Skill</th>
-              <th>Domain</th>
-              <th>Verdict</th>
-              <th title={AGENT_COL_TIP}>Runs</th>
-              <th className="num" title={COL_TIPS.lift}>Lift</th>
-              <th className="num" title={COL_TIPS.trigger}>Trigger</th>
+              {th("name", "Skill")}
+              {th("domain", "Domain")}
+              {th("verdict", "Verdict")}
+              {th("runs", "Runs end to end", { title: AGENT_COL_TIP })}
+              {th("lift", "Lift", { className: "num", title: COL_TIPS.lift })}
+              {th("trigger", "Trigger", { className: "num", title: COL_TIPS.trigger })}
               <th style={{ width: "40%" }}>Description</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
+            {sorted.map((r) => (
               <tr key={r.id} className="clickable" onClick={() => router.push(skillHref(r.id))} tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(skillHref(r.id)); } }}>
                 <td><Link href={skillHref(r.id)} className="cell-name" onClick={(e) => e.stopPropagation()}>{r.name}</Link></td>
@@ -67,7 +72,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
         </table></div>
 
         <div className="row-list only-mobile">
-          {filtered.map((r) => (
+          {sorted.map((r) => (
             <Link key={r.id} href={skillHref(r.id)} className="row-card">
               <div className="row-card-top">
                 <span className="row-card-name">{r.name}</span>
@@ -77,7 +82,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
                 <span>{r.domain}</span>
                 <span>Lift <b><Lift n={r.lift} /></b></span>
                 <span>Trigger <b><Trig n={r.triggerAcc} /></b></span>
-                <span>Runs <AgentBadge v={r.agentVerdict} small /></span>
+                <span>Runs end to end <AgentBadge v={r.agentVerdict} small /></span>
               </div>
               <div className="row-card-desc">{displayDescription(r.description)}</div>
             </Link>
