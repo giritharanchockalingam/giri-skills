@@ -88,13 +88,20 @@ test("llm: a reasoning model that refuses tools with reasoning on is retried onc
     const b = JSON.parse(String(init.body)); bodies.push(b);
     return b.reasoning_effort === "none" ? new Response(JSON.stringify(ok)) : new Response(JSON.stringify(refuse), { status: 400 });
   }) as unknown as typeof fetch;
-  const r = await openAiChat(cfg, fetchImpl)([{ role: "user", content: "hi" }], TOOL_SPECS);
+  const r = await openAiChat(cfg, fetchImpl, 45_000, {})([{ role: "user", content: "hi" }], TOOL_SPECS);
   assert.equal(r.message.content, "done");
   assert.equal(bodies.length, 2);
   assert.equal(bodies[0].reasoning_effort, undefined);
   assert.equal(bodies[1].reasoning_effort, "none");
+  // remembered: the next call goes right the first time (one request, not two)
+  await openAiChat(cfg, fetchImpl, 45_000, {})([{ role: "user", content: "again" }], TOOL_SPECS);
+  assert.equal(bodies.length, 3);
+  assert.equal(bodies[2].reasoning_effort, "none");
+  // a deployment can preset it
+  await openAiChat({ ...cfg, model: "other" }, fetchImpl, 45_000, { SF_LLM_REASONING_EFFORT: "none" })([{ role: "user", content: "x" }], TOOL_SPECS);
+  assert.equal(bodies.length, 4);
   // a model that keeps refusing is not retried forever: the second 400 surfaces
-  const always = openAiChat(cfg, (async () => new Response(JSON.stringify(refuse), { status: 400 })) as unknown as typeof fetch);
+  const always = openAiChat({ ...cfg, model: "never-works" }, (async () => new Response(JSON.stringify(refuse), { status: 400 })) as unknown as typeof fetch, 45_000, {});
   await assert.rejects(always([], TOOL_SPECS), (e: unknown) => e instanceof LlmError && e.status === 400);
 });
 

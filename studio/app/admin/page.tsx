@@ -1,6 +1,7 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
-import { getContext, fmtDate } from "@/lib/factory/db";
+import {getContext } from "@/lib/factory/db";
 import { loadAdminData, EMPTY_ADMIN_DATA } from "@/lib/db/admin";
 import { can, ROLES, ROLE_HELP } from "@/lib/factory/roles";
 import { addMember, removeMember, revokeInvitation, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace, useCompatForDrafts } from "@/app/actions";
@@ -56,7 +57,7 @@ export default async function AdminPage() {
             <SectionHead title="Members and" em="roles" caption="Roles are enforced on the server and in the database for every action." />
             <div className="card card-pad">
               <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Since</th>{admin && <th></th>}</tr></thead>
-                <tbody>{memberRows.map((m) => <tr key={m.user_id}><td>{m.email}{m.user_id === ctx.user.id && <span className="caption"> (you)</span>}</td><td><RolePill role={m.role} /></td><td className="muted">{fmtDate(m.created_at)}</td>{admin && <td>{m.user_id !== ctx.user.id && <ActionForm action={removeMember} submit="Remove" submitClass="btn btn-danger btn-sm" confirm={`Remove ${m.email} from ${ws.name}?`} hidden={{ user_id: m.user_id }} />}</td>}</tr>)}</tbody></table></div>
+                <tbody>{memberRows.map((m) => <tr key={m.user_id}><td>{m.email}{m.user_id === ctx.user.id && <span className="caption"> (you)</span>}</td><td><RolePill role={m.role} /></td><td className="muted"><LocalTime iso={m.created_at} /></td>{admin && <td>{m.user_id !== ctx.user.id && <ActionForm action={removeMember} submit="Remove" submitClass="btn btn-danger btn-sm" confirm={`Remove ${m.email} from ${ws.name}?`} hidden={{ user_id: m.user_id }} />}</td>}</tr>)}</tbody></table></div>
               {admin && (
                 <div className="mt-5">
                   <div className="h3" style={{ fontSize: 14 }}>Add or change a member</div>
@@ -64,7 +65,7 @@ export default async function AdminPage() {
                   {invites.length > 0 && (
                     <div className="mb-4"><div className="h3" style={{ fontSize: 14 }}>Pending invitations</div>
                       <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th></th></tr></thead>
-                        <tbody>{invites.map((i) => <tr key={i.id}><td>{i.email}</td><td><RolePill role={i.role} /></td><td className="muted">{fmtDate(i.expires_at)}</td>
+                        <tbody>{invites.map((i) => <tr key={i.id}><td>{i.email}</td><td><RolePill role={i.role} /></td><td className="muted"><LocalTime iso={i.expires_at} /></td>
                           <td><ActionForm action={revokeInvitation} submit="Revoke" submitClass="btn btn-secondary btn-sm" hidden={{ id: i.id }} /></td></tr>)}</tbody></table></div></div>)}
                   <ActionForm action={addMember} submit="Save or invite">
                     <div className="form-grid form-grid-2">
@@ -118,7 +119,7 @@ export default async function AdminPage() {
               {admin ? (
                 <>
                   <div className="tablewrap"><table className="mini"><thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
-                    <tbody>{keyRows.map((k) => <tr key={k.id}><td>{k.name}</td><td className="mono-sm">{k.prefix}…</td><td className="muted">{fmtDate(k.created_at)}</td><td className="muted">{k.last_used_at ? fmtDate(k.last_used_at) : "never"}</td><td>{k.revoked_at ? <span className="fail">revoked</span> : <span className="pass">active</span>}</td><td>{!k.revoked_at && <ActionForm action={revokeApiKey} submit="Revoke" submitClass="btn btn-danger btn-sm" confirm={`Revoke key “${k.name}”? Applications using it will get 401.`} hidden={{ key_id: k.id }} />}</td></tr>)}
+                    <tbody>{keyRows.map((k) => <tr key={k.id}><td>{k.name}</td><td className="mono-sm">{k.prefix}…</td><td className="muted"><LocalTime iso={k.created_at} /></td><td className="muted"><LocalTime iso={k.last_used_at} empty="never" /></td><td>{k.revoked_at ? <span className="fail">revoked</span> : <span className="pass">active</span>}</td><td>{!k.revoked_at && <ActionForm action={revokeApiKey} submit="Revoke" submitClass="btn btn-danger btn-sm" confirm={`Revoke key “${k.name}”? Applications using it will get 401.`} hidden={{ key_id: k.id }} />}</td></tr>)}
                       {keyRows.length === 0 && <tr><td colSpan={6} className="none">No API keys yet.</td></tr>}</tbody></table></div>
                   <div className="mt-5"><div className="h3" style={{ fontSize: 14 }}>Create a key</div>
                     <ActionForm action={createApiKey} submit="Create key" revealKey>
@@ -155,7 +156,7 @@ export default async function AdminPage() {
             <div className="card">
               {auditRows.length === 0 ? <div className="empty"><div className="none">No events yet.</div></div> : (
                 <div className="tablewrap"><table className="tbl"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th className="col-wide">Details</th></tr></thead>
-                  <tbody>{auditRows.map((a) => <tr key={a.id}><td className="muted" style={{ whiteSpace: "nowrap" }}>{fmtDate(a.created_at)}</td><td className="mono-sm">{a.actor_kind}{a.actor_id ? ` ${a.actor_id === ctx.user.id ? "(you)" : a.actor_id.slice(0, 8)}` : ""}</td><td><code>{a.action}</code></td><td className="mono-sm">{a.entity_type}{a.entity_id ? ` ${a.entity_id.slice(0, 8)}` : ""}</td><td className="col-wide mono-sm" style={{ maxWidth: 420 }}>{JSON.stringify(a.details).slice(0, 160)}</td></tr>)}</tbody></table></div>
+                  <tbody>{auditRows.map((a) => <tr key={a.id}><td className="muted" style={{ whiteSpace: "nowrap" }}><LocalTime iso={a.created_at} /></td><td className="mono-sm">{a.actor_kind}{a.actor_id ? ` ${a.actor_id === ctx.user.id ? "(you)" : a.actor_id.slice(0, 8)}` : ""}</td><td><code>{a.action}</code></td><td className="mono-sm">{a.entity_type}{a.entity_id ? ` ${a.entity_id.slice(0, 8)}` : ""}</td><td className="col-wide mono-sm" style={{ maxWidth: 420 }}>{JSON.stringify(a.details).slice(0, 160)}</td></tr>)}</tbody></table></div>
               )}
             </div>
           </section>

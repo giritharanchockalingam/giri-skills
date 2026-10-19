@@ -1,6 +1,7 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireWorkspace, fmtDate, fmtMs, fmtUsd } from "@/lib/factory/db";
+import {requireWorkspace, fmtMs, fmtUsd } from "@/lib/factory/db";
 import { getRunWithVersion } from "@/lib/db/runs";
 import { cancelRun } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
@@ -38,7 +39,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
           {from === "test" ? <Link href={`/skills/${vinfo.sf_skills.slug}/test?v=${vinfo.version}`} className="link">← Back to Test</Link> : <Link href="/activity" className="link">Activity</Link>} <span aria-hidden="true">›</span> run {id.slice(0, 8)}
         </nav>
         <h1 className="h1" style={{ margin: "8px 0 10px" }}>{vinfo.sf_skills.name} <span className="muted" style={{ fontSize: "0.6em" }}>v{vinfo.version}</span></h1>
-        <div className="flex flex-wrap items-center gap-3"><RunPill status={run.status} /><VersionPill status={vinfo.status} small /><span className="caption">{run.source} · {fmtDate(run.created_at)} · manifest {vinfo.manifest_hash.slice(0, 12)}…</span></div>
+        <div className="flex flex-wrap items-center gap-3"><RunPill status={run.status} /><VersionPill status={vinfo.status} small /><span className="caption">{run.source} · <LocalTime iso={run.created_at} /> · manifest {vinfo.manifest_hash.slice(0, 12)}…</span></div>
       </div>
       <div className={`run-banner run-banner-${tone}`} role="status">{headline}</div>
       {run.status === "queued" && <div className="mt-3"><ActionForm action={cancelRun} submit="Cancel run" submitClass="btn btn-danger" hidden={{ run_id: id }} /></div>}
@@ -75,8 +76,8 @@ export default async function RunPage({ params, searchParams }: { params: Promis
               <dt>Usage</dt><dd>{usage?.calls ? `${usage.input_tokens?.toLocaleString()} in · ${usage.output_tokens?.toLocaleString()} out · ${usage.calls} call${usage.calls === 1 ? "" : "s"}${usage.retries ? ` · ${usage.retries} retr${usage.retries === 1 ? "y" : "ies"}` : ""}` : <span className="muted">no model calls</span>}{usage?.source && <div className="caption">{usage.source}</div>}</dd>
               <dt>Cost</dt><dd>{run.cost_usd != null ? <>{fmtUsd(run.cost_usd, run.cost_is_estimate)} <span className="caption">({run.cost_is_estimate ? "estimate: provider tokens × price table" : "measured"})</span></> : <span className="muted">— (no billable calls)</span>}</dd>
               <dt>Duration</dt><dd>{fmtMs(run.duration_ms)}</dd>
-              <dt>Started</dt><dd>{fmtDate(run.started_at)}</dd>
-              <dt>Finished</dt><dd>{fmtDate(run.finished_at)}</dd>
+              <dt>Started</dt><dd><LocalTime iso={run.started_at} /></dd>
+              <dt>Finished</dt><dd><LocalTime iso={run.finished_at} /></dd>
               <dt>Exit code</dt><dd>{f.exit_code ?? "—"}</dd>
               <dt>Runtime</dt><dd className="mono-sm">{f.runtime ? `${f.runtime.runtime_version} · python ${f.runtime.python} · ${f.runtime.runner_version}` : "—"}</dd>
               <dt>Invoked by</dt><dd>{run.api_key_id ? `API key ${run.api_key_id.slice(0, 8)}…` : run.invoked_by === ctx.user.id ? "you" : run.invoked_by?.slice(0, 8) ?? "—"}</dd>

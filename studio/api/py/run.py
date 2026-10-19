@@ -61,6 +61,24 @@ KEEP_ENV = ("PATH", "LANG", "LC_ALL", "TMPDIR", "PYTHONHASHSEED", "AWS_LAMBDA_FU
 _bundle_cache: dict | None = None
 
 
+
+def failure_summary(bad_steps, bad_checks) -> str:
+    """Say what failed in plain words: the step and its own last error line, then the output checks that failed."""
+    parts = []
+    for st in bad_steps[:3]:
+        err = str(st.get("error") or "").strip()
+        name = st.get("step") or "a step"
+        if err.lower().startswith("gate:"):
+            parts.append(f"the skill's gate in step '{name}' said {err[5:].strip()}")
+        else:
+            parts.append(f"step '{name}' failed" + (f": {err}" if err else f" (exit {st.get('exit')})"))
+    if len(bad_steps) > 3:
+        parts.append(f"{len(bad_steps) - 3} more step(s) failed")
+    if bad_checks:
+        first = bad_checks[0]
+        parts.append(f"{len(bad_checks)} output check(s) failed, e.g. {first.get('check', '?')} on {str(first.get('path', '?')).split('/')[-1]}")
+    return "; ".join(parts) or "the run did not complete"
+
 def load_bundle() -> dict:
     global _bundle_cache
     if _bundle_cache is None:
@@ -552,7 +570,7 @@ def execute(req: dict) -> dict:
             if not ok:
                 bad_steps = [s for s in result["run_json"].get("steps", []) if not s.get("ok")]
                 bad_checks = [c for c in result["run_json"].get("checks", []) if not c.get("pass")]
-                result["error"] = f"{len(bad_steps)} step(s) not ok, {len(bad_checks)} check(s) failed"
+                result["error"] = failure_summary(bad_steps, bad_checks)
         else:
             result["status"] = "failed"
             result["error"] = f"runner exited {code} without writing run.json"

@@ -1,8 +1,8 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
 import { evalGate, approvalGate, nextAction } from "@/lib/factory/release";
-import { fmtDate } from "@/lib/factory/db";
 import { listVersionApprovals } from "@/lib/db/skills";
 import { requestReview, withdrawReview, reviewVersion, publishVersion, retireVersion, createDraft, reopenVersion } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
@@ -77,7 +77,7 @@ export default async function ReleasePage({ params, searchParams }: { params: Pr
 
           {st === "published" && (
             <div className="card card-pad">
-              <div className="h3 mb-1">Published {fmtDate(d.version.published_at)}</div>
+              <div className="h3 mb-1">Published <LocalTime iso={d.version.published_at} /></div>
               <p className="sub mb-3">This version is immutable. Improve it by creating a new draft (a copy of its manifest, files and cases); the published version keeps serving until the new one is published.</p>
               <div className="flex flex-wrap gap-3">
                 {can(d.ctx.role, "version.create") && <ActionForm action={createDraft} submit="Create improved draft" hidden={{ from_version_id: d.version.id }} />}
@@ -92,7 +92,7 @@ export default async function ReleasePage({ params, searchParams }: { params: Pr
             <div className="h3 mb-2">Approval history</div>
             <div className="list">{approvals.map((a) => (
               <div key={a.id} className="list-row" style={{ display: "block" }}>
-                <span className={a.decision === "approve" ? "pass" : "fail"}>{a.decision === "approve" ? "Approved" : "Rejected"}</span> <span className="caption">{fmtDate(a.created_at)}</span>
+                <span className={a.decision === "approve" ? "pass" : "fail"}>{a.decision === "approve" ? "Approved" : "Rejected"}</span> <span className="caption"><LocalTime iso={a.created_at} /></span>
                 <div className="caption">manifest {a.manifest_hash.slice(0, 12)}… {a.manifest_hash === d.version.manifest_hash ? "(current)" : "(stale — manifest changed since)"}</div>
                 {a.note && <div className="caption" style={{ overflowWrap: "anywhere" }}>“{a.note}”</div>}
               </div>

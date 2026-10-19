@@ -1,5 +1,6 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
-import { requireWorkspace, fmtDate } from "@/lib/factory/db";
+import {requireWorkspace } from "@/lib/factory/db";
 import { can } from "@/lib/factory/roles";
 import { PageHead } from "@/components/PageHead";
 import { ActionForm } from "@/components/factory/ActionForm";
@@ -31,7 +32,7 @@ export default async function AgentsPage() {
                   <td><Link href={`/agents/${a.slug}`} className="link"><b>{a.name}</b></Link></td>
                   <td>{latest ? latest.spec.steps.length : 0}</td>
                   <td>{latest ? <>v{latest.version} <span className="caption">{latest.status}</span></> : "—"}</td>
-                  <td>{last ? <Link href={`/agent-runs/${last.id}`} className="link">{last.status}</Link> : <span className="none">never</span>} {last && <span className="caption">{fmtDate(last.created_at)}</span>}</td>
+                  <td>{last ? <Link href={`/agent-runs/${last.id}`} className="link">{last.status}</Link> : <span className="none">never</span>} {last && <span className="caption"><LocalTime iso={last.created_at} /></span>}</td>
                   <td className="caption">{a.description}</td>
                 </tr>
               );

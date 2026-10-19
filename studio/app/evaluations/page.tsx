@@ -1,5 +1,6 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
-import { requireWorkspace, fmtDate } from "@/lib/factory/db";
+import {requireWorkspace } from "@/lib/factory/db";
 import { loadEvaluationsOverview } from "@/lib/db/skills";
 import { evalGate, approvalGate, pct } from "@/lib/factory/release";
 import { meta } from "@/lib/data";
@@ -31,7 +32,7 @@ export default async function EvaluationsPage() {
                   <td><Link href={`/skills/${skill.slug}/evaluations?v=${s.version}`} className="cell-name">{skill.name}</Link></td>
                   <td><span className="muted">v{s.version}</span> <VersionPill status={s.status} small /></td>
                   <td className="num">{s.eval_case_count}</td>
-                  <td className="ink-2">{s.latest_eval_run_id ? <>{pct(s.latest_eval_pass_rate)} <span className="caption">· {fmtDate(s.latest_eval_at)}{s.eval_current ? "" : " · outdated"}</span></> : <span className="muted">not run</span>}</td>
+                  <td className="ink-2">{s.latest_eval_run_id ? <>{pct(s.latest_eval_pass_rate)} <span className="caption">· <LocalTime iso={s.latest_eval_at} />{s.eval_current ? "" : " · outdated"}</span></> : <span className="muted">not run</span>}</td>
                   <td><span className={eg.met ? "pass" : "fail"}>{eg.met ? "met" : "not met"}</span> <span className="caption">{eg.tone === "none" ? "(no gate)" : `(≥ ${pct(s.min_eval_pass_rate)})`}</span></td>
                   <td><span className={ag.met ? "pass" : "fail"}>{ag.met ? (s.require_approval ? "valid" : "not required") : s.approval_stale ? "stale" : s.status === "in_review" ? "pending" : "none"}</span></td>
                   <td>{s.status === "published" ? <span className="muted">published</span> : s.publishable ? <span className="pass">yes</span> : <span className="muted">no</span>}</td>

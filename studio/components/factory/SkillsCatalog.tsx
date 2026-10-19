@@ -1,4 +1,5 @@
 "use client";
+import { matches } from "@/lib/search";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,7 +29,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
   const [stage, setStage] = useState<string>(initialStage);
   const filtered = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return items.filter((i) => (stage === "all" || (i.stage ?? "unassigned") === stage) && (status === "all" || i.status === status) && (source === "all" || i.source === source) && (!n || i.name.toLowerCase().includes(n) || i.slug.includes(n) || i.purpose.toLowerCase().includes(n)));
+    return items.filter((i) => (stage === "all" || (i.stage ?? "unassigned") === stage) && (status === "all" || i.status === status) && (source === "all" || i.source === source) && matches(n, i.name, i.slug, i.purpose));
   }, [items, q, status, source, stage]);
   const go = (slug: string) => router.push(`/skills/${slug}`);
 

@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -33,7 +34,6 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
   const canScore = ctx.role === "admin" || ctx.role === "author";
   const lv = levelOf(factsOf(e.properties), latest);
   const [actions, policy, delivery] = await Promise.all([listActions(ctx.supabase, ctx.workspace.id, { entityId: id, limit: 10 }), getPolicy(ctx), loadDelivery(ctx.supabase, ctx.workspace.id, id)]);
-  const when = (iso: string) => new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
   return (
     <>
       <PageHead eyebrow="Catalog · scorecard" title="" em={e.key.split("/")[1]} lead={`${e.key} — each check runs a library skill on the repository's real files at the commit shown; the verdict is the skill's own.`} />
@@ -61,7 +61,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
         <ActionPanel entityId={e.id} repo={e.key} approvalRule={policy?.action_approval ?? "model_steps"} />
         {actions.length > 0 && (
           <div className="tablewrap mt-4"><table className="mini"><thead><tr><th>When</th><th>Skill</th><th>Status</th><th>By</th><th>Result</th></tr></thead>
-            <tbody>{actions.map((a) => <tr key={a.id}><td className="caption">{when(a.created_at)}</td><td>{a.skill}</td>
+            <tbody>{actions.map((a) => <tr key={a.id}><td className="caption"><LocalTime iso={a.created_at} /></td><td>{a.skill}</td>
               <td><span className={`pill pill-sm ${ACTION_CLS[a.status] ?? ""}`}>{a.status.replace("_", " ")}</span></td>
               <td className="caption">{a.requested_by_email ?? "—"}{a.decided_by_email ? ` · decided by ${a.decided_by_email}` : ""}</td>
               <td>{a.run_id ? <><Link className="link" href={`/runs/${a.run_id}`}>run</Link>{a.error && <div className={`caption${a.status === "failed" ? " ink-rust" : ""}`}>{a.error}</div>}</> : a.error ? <span className="caption ink-rust">{a.error}</span> : <span className="caption">—</span>}</td></tr>)}</tbody></table></div>)}
@@ -71,7 +71,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
         <section key={r.id} className="card card-pad mb-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="h3" style={{ margin: 0 }}>{CHECKS.find((c) => c.id === r.check_id)?.title ?? r.check_id} <span className={`pill pill-sm ${CLS[r.verdict] ?? ""}`}>{r.verdict}</span></div>
-            <span className="caption">{when(r.created_at)}{r.commit_sha ? <> · commit <a className="link" href={`${e.url}/commit/${r.commit_sha}`} target="_blank" rel="noreferrer"><code>{r.commit_sha.slice(0, 7)}</code></a></> : null} · {r.details.files_used ?? 0} files · {Math.round((r.duration_ms ?? 0) / 100) / 10}s</span>
+            <span className="caption"><LocalTime iso={r.created_at} />{r.commit_sha ? <> · commit <a className="link" href={`${e.url}/commit/${r.commit_sha}`} target="_blank" rel="noreferrer"><code>{r.commit_sha.slice(0, 7)}</code></a></> : null} · {r.details.files_used ?? 0} files · {Math.round((r.duration_ms ?? 0) / 100) / 10}s</span>
           </div>
           <p style={{ margin: "6px 0" }}>{r.summary}</p>
           <p className="caption" style={{ margin: 0 }}>By the <Link className="link" href={`/repo/${r.skill}`}>{humanName(r.skill.split("/")[1])}</Link> skill.{r.details.partial ? " Partial scan: the repository is larger than the scan limit." : ""}</p>
@@ -87,7 +87,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
         <section className="section">
           <div className="h3">History</div>
           <div className="tablewrap"><table className="mini"><thead><tr><th>When</th><th>Check</th><th>Verdict</th><th>Summary</th><th>Commit</th></tr></thead>
-            <tbody>{all.map((r) => <tr key={r.id}><td className="caption">{when(r.created_at)}</td><td>{CHECKS.find((c) => c.id === r.check_id)?.title.split(" (")[0] ?? r.check_id}</td>
+            <tbody>{all.map((r) => <tr key={r.id}><td className="caption"><LocalTime iso={r.created_at} /></td><td>{CHECKS.find((c) => c.id === r.check_id)?.title.split(" (")[0] ?? r.check_id}</td>
               <td><span className={`pill pill-sm ${CLS[r.verdict] ?? ""}`}>{r.verdict}</span></td><td className="ink-2">{r.summary}</td><td><code>{r.commit_sha?.slice(0, 7) ?? "—"}</code></td></tr>)}</tbody></table></div>
         </section>)}
     </>

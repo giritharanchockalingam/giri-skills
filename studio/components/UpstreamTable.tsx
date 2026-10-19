@@ -1,4 +1,5 @@
 "use client";
+import { matches } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +20,7 @@ export function UpstreamTable({ rows, categories }: { rows: UpstreamSkill[]; cat
       .filter((r) =>
         (cat === "all" || r.category === cat) &&
         (lic === "all" || r.licenseKind === lic) &&
-        (!needle || r.name.toLowerCase().includes(needle) || r.description.toLowerCase().includes(needle) || r.repo.toLowerCase().includes(needle)))
+        matches(needle, r.name, r.description, r.repo))
       .sort((a, b) => a.rank - b.rank);
   }, [rows, cat, lic, q]);
 
