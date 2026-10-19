@@ -33,14 +33,6 @@ async function init(pyodideBase) {
   const bundle = await res.json();
   const paths = Object.keys(bundle);
   const FS = pyodide.FS;
-  const mkdirp = (dir) => {
-    const parts = dir.split("/").filter(Boolean);
-    let cur = "";
-    for (const p of parts) {
-      cur += "/" + p;
-      try { FS.mkdir(cur); } catch { /* exists */ }
-    }
-  };
   let n = 0;
   for (const rel of paths) {
     const full = "/repo/" + rel;
@@ -110,6 +102,16 @@ function listDir(path) {
   };
   walk(path);
   return out;
+}
+
+/** mkdir -p in Pyodide's virtual FS (used when loading the bundle and when writing folder inputs). */
+function mkdirp(dir) {
+  const FS = pyodide.FS;
+  let cur = "";
+  for (const p of dir.split("/").filter(Boolean)) {
+    cur += "/" + p;
+    try { FS.mkdir(cur); } catch { /* exists */ }
+  }
 }
 
 const extFor = (type) => ({ csv: "csv", json: "json", md: "md", txt: "txt", sql: "sql" }[type] || "txt");
