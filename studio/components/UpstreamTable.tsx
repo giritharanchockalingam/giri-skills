@@ -30,7 +30,7 @@ export function UpstreamTable({ rows, categories }: { rows: UpstreamSkill[]; cat
   return (
     <div className="flex flex-col gap-5">
       <div className="card toolbar">
-        <input className="input" type="search" placeholder="Search name, description or repo" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search upstream skills" />
+        <input className="input" type="search" placeholder="Search name, description or repo" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search reference skills" />
         <ChoiceFilter id="up-category" label="Category" allLabel="All categories" value={cat} onChange={setCat}
           options={categories.map((c) => ({ key: c, label: categoryLabel(c) }))} />
         <ChoiceFilter id="up-license" label="License" allLabel="All" value={lic} onChange={setLic}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Suspense } from "react";
 import { Nav } from "@/components/Nav";
+import { SectionTabs } from "@/components/SectionTabs";
 
 export const metadata: Metadata = {
   title: "Skills Factory · giri-skills",
@@ -20,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Nav />
+        <Suspense fallback={null}><SectionTabs /></Suspense>
         <main className="wrap">{children}</main>
       </body>
     </html>

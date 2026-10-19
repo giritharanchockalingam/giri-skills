@@ -8,7 +8,7 @@ import { createAgent } from "@/app/agentActions";
 import { listAgentsOverview } from "@/lib/db/agents";
 import templates from "@/data/agent-templates.json";
 
-export const metadata = { title: "Agents · Skills Factory" };
+export const metadata = { title: "Playbooks · Skills Factory" };
 export const dynamic = "force-dynamic";
 
 export default async function AgentsPage() {
@@ -18,8 +18,8 @@ export default async function AgentsPage() {
 
   return (
     <>
-      <PageHead eyebrow={`Agents · ${ctx.workspace.name}`} title="Agents, configured" em="not coded" after="."
-        lead="An agent is a configuration of skills: pick skills, they wire themselves, add approvals where a person decides. Change the configuration and you have a different agent." />
+      <PageHead eyebrow={`Playbooks · ${ctx.workspace.name}`} title="Playbooks, configured" em="not coded" after="."
+        lead="A playbook chains skills: pick them, they wire themselves, add approvals where a person decides. Change the configuration and you have a different playbook." />
       <div className="stack">
         <div className="card">
           <div className="tablewrap"><table className="tbl"><thead><tr><th>Agent</th><th>Steps</th><th>Version</th><th>Last run</th><th>What it does</th></tr></thead><tbody>

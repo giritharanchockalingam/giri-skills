@@ -16,3 +16,9 @@ test("shortOutcome: first clause, no verb, bounded", () => {
   const long = shortOutcome("Produces one two three four five six seven eight nine ten eleven twelve thirteen fourteen");
   assert.ok(long.split(/\s+/).length <= 12 && long.endsWith("…"));
 });
+
+import { displayDescription } from "../lib/names.ts";
+test("descriptions: placeholder markers read as words", () => {
+  assert.equal(displayDescription("Marks gaps [TO BE BASELINED — owner: ___] and [TBD]."), "Marks gaps a “to be baselined” flag naming the owner and a “to be decided” flag.");
+  assert.equal(displayDescription("no markers"), "no markers");
+});

@@ -12,7 +12,7 @@ import { getAgentBySlug, listAgentVersions, listRecentRunsForVersions } from "@/
 import { STAGES, SHELVES } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${slug} · Agents` }; }
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${slug.replace(/-/g, " ")} · Playbooks` }; }
 
 export default async function AgentPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
   const { slug } = await params; const { v } = await searchParams;
@@ -28,7 +28,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
 
   return (
     <>
-      <PageHead eyebrow={`Agents · ${agent.slug}`} title={agent.name} em="" lead={agent.description}
+      <PageHead eyebrow="Playbook" title={agent.name} em="" lead={agent.description}
         caption={<span className="chip-group">{versions.map((x) => <Link key={x.id} href={`/agents/${slug}?v=${x.version}`} className="chip" aria-pressed={x.id === current.id}>v{x.version} · {x.status}</Link>)}</span>} />
       <div className="action-row mb-6" style={{ marginTop: 0 }}>
         <Link href={`/agents/${slug}/run?v=${current.version}`} className="btn btn-primary">Run v{current.version}</Link>

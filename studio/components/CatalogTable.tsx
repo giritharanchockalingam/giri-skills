@@ -1,5 +1,6 @@
 "use client";
 import { matches } from "@/lib/search";
+import { displayDescription } from "@/lib/names";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -58,7 +59,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
                 <td><AgentBadge v={r.agentVerdict} /></td>
                 <td className="num"><Lift n={r.lift} /></td>
                 <td className="num"><Trig n={r.triggerAcc} /></td>
-                <td className="desc" title={r.description}><span>{r.description}</span></td>
+                <td className="desc" title={displayDescription(r.description)}><span>{displayDescription(r.description)}</span></td>
               </tr>
             ))}
             {filtered.length === 0 && <tr><td colSpan={7} className="none">No skills match.</td></tr>}
@@ -78,7 +79,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
                 <span>Trigger <b><Trig n={r.triggerAcc} /></b></span>
                 <span>Runs <AgentBadge v={r.agentVerdict} small /></span>
               </div>
-              <div className="row-card-desc">{r.description}</div>
+              <div className="row-card-desc">{displayDescription(r.description)}</div>
             </Link>
           ))}
           {filtered.length === 0 && <div className="row-card none">No skills match.</div>}

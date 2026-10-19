@@ -21,7 +21,7 @@ export default async function RunAgentPage({ params, searchParams }: { params: P
   const demo = exampleInputs(version.spec, templates as unknown as { demo: Record<string, DemoValue> }[], skillDemos as unknown as Record<string, Record<string, DemoValue>>);
   return (
     <>
-      <PageHead eyebrow={`Agents · ${slug} · v${version.version}`} title="Run" em={a.name} after="." lead="Supply the inputs. Steps run on the server one after another; each is checked; approvals pause the run for a reviewer." />
+      <PageHead eyebrow={`Playbook · v${version.version}`} title="Run" em={a.name} after="." lead="Supply the inputs. Steps run on the server one after another; each is checked; approvals pause the run for a reviewer." />
       <AgentRunForm versionId={version.id} inputs={version.spec.inputs} demo={demo} />
     </>
   );

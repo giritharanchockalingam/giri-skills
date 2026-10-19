@@ -18,7 +18,7 @@ function summaryOf(md: string | null | undefined): string | null {
 }
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Agent run · Skills Factory" };
+export const metadata = { title: "Playbook run · Skills Factory" };
 
 const TONE: Record<string, string> = { ok: "pill-sage", approved: "pill-sage", succeeded: "pill-sage", running: "pill-deep", awaiting_approval: "pill-hold", blocked: "pill-hold", failed: "pill-rust", needs_input: "pill-rust", skipped: "pill-none", cancelled: "pill-none" };
 const LABEL: Record<string, string> = { ok: "ok", approved: "approved", succeeded: "done", running: "running", awaiting_approval: "awaiting approval", blocked: "blocked", failed: "failed", needs_input: "needs input", skipped: "skipped", cancelled: "cancelled" };
@@ -38,7 +38,7 @@ export default async function AgentRunPage({ params, searchParams }: { params: P
 
   return (
     <>
-      <PageHead eyebrow={`Agent run · ${version.sf_agents.slug} v${version.version}`} title={version.sf_agents.name} em=""
+      <PageHead eyebrow={`Playbook run · v${version.version}`} title={version.sf_agents.name} em=""
         lead={<><span className={`pill ${TONE[run.status]}`}>{LABEL[run.status]}</span> {run.error && <span className="caption"> {run.error}</span>}</>}
         caption={<>Started <LocalTime iso={run.created_at} /> · {run.steps.filter((s) => s.status === "ok" || s.status === "approved").length}/{spec.steps.length} steps{run.cost_usd != null ? ` · model cost ≈$${Number(run.cost_usd).toFixed(4)}` : ""} · <Link href={`/agents/${version.sf_agents.slug}?v=${version.version}`} className="link">configuration</Link></>} />
       {run.status !== "running" && (() => {

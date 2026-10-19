@@ -109,7 +109,7 @@ export function RoleEditor({ initial, template, versionId, catalog, stages, play
 
         <div className="card card-pad">
           <div className="h3">Playbooks</div>
-          <p className="caption">Agents this role runs end to end. A playbook fits only when the role has every skill it uses.</p>
+          <p className="caption">Playbooks this role runs end to end. A playbook fits only when the role has every skill it uses.</p>
           <ul className="ab-inputs">
             {playbooks.map((p) => {
               const missing = [...new Set(p.skills.filter((s) => !owned.has(s)))];
@@ -215,7 +215,7 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
     <div className="agent-builder">
       <div className="stack">
         <div className="card card-pad stack-sm">
-          <div className="field"><label htmlFor="p-title">Pool name</label><input id="p-title" className="input" value={spec.title} disabled={!editable} onChange={(e) => set({ title: e.target.value })} /></div>
+          <div className="field"><label htmlFor="p-title">Team name</label><input id="p-title" className="input" value={spec.title} disabled={!editable} onChange={(e) => set({ title: e.target.value })} /></div>
           <div className="field"><label htmlFor="p-desc">What this team delivers</label><textarea id="p-desc" className="textarea" rows={2} value={spec.description} disabled={!editable} onChange={(e) => set({ description: e.target.value })} /></div>
         </div>
 
@@ -263,7 +263,7 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
 
         <div className="card card-pad">
           <div className="h3">Playbooks</div>
-          <p className="caption">Agents this team runs. Each step goes to the member who has its skill and is most specialised in that stage (ties: team order).</p>
+          <p className="caption">Playbooks this team runs. Each step goes to the member who has its skill and is most specialised in that stage (ties: team order).</p>
           <ul className="ab-inputs">
             {playbooks.map((p) => {
               const on = spec.playbooks.includes(p.name);

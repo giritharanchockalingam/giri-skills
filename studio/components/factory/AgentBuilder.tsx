@@ -52,7 +52,7 @@ export function AgentBuilder({ initial, versionId, catalog, stages, editable }: 
     <div className="agent-builder">
       <div className="ab-main stack">
         <div className="card card-pad stack-sm">
-          <div className="field"><label htmlFor="ab-desc">What this agent does</label>
+          <div className="field"><label htmlFor="ab-desc">What this playbook does</label>
             <textarea id="ab-desc" className="textarea" style={{ minHeight: 64 }} value={spec.description} disabled={!editable}
               onChange={(e) => update((s) => { s.description = e.target.value; return s; })} /></div>
           <label className="check-row"><input type="checkbox" checked={spec.config?.provider === "none"} disabled={!editable}
@@ -109,7 +109,7 @@ export function AgentBuilder({ initial, versionId, catalog, stages, editable }: 
         </div>
         <div className="card card-pad">
           <div className="h3">Agent inputs <span className="muted font-normal">({spec.inputs.length})</span></div>
-          <p className="caption">Asked for when the agent runs. Created by wiring; edit the wording or make one optional.</p>
+          <p className="caption">Asked for when the playbook runs. Created by wiring; edit the wording or make one optional.</p>
           <ul className="ab-inputs">
             {spec.inputs.map((inp, k) => (
               <li key={inp.name}>

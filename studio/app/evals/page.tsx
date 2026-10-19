@@ -70,7 +70,7 @@ export default function EvalsPage() {
       </section>
 
       <section className="section" id="scorecard" style={{ scrollMarginTop: 76 }}>
-        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts, the items the judge failed, and the agent run checks." />
+        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts, the items the judge failed, and the end-to-end agent-case checks." />
         <ScorecardTable rows={scorecard} domains={DOMAINS} drill={drill} />
       </section>
     </>
