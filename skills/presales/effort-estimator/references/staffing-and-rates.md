@@ -52,7 +52,7 @@ The skill never invents rates. The rate card is supplied as CSV with this layout
 | `currency` | ISO code |
 | `valid_until` | Date; the estimate notes rate validity |
 
-If `cost_rate` is absent, margin cannot be computed and the memo says so. If a WBS role has no rate-card match, the script lists it and excludes it from cost; fix the mapping rather than guessing.
+Rates match on role AND location. A role priced at several locations needs the optional WBS `location` column (one task row per role and location); duplicate (role, location) rows and ambiguous matches stop the script (exit 2). Costs are never summed across currencies: a mixed-currency card needs `--currency <ISO>` and a sourced `--fx CUR=rate` per other currency, else exit 2 with FX `[TO BE BASELINED — owner: Finance lead]`. Expired or unreadable `valid_until` dates are flagged in the output. If `cost_rate` is absent, margin cannot be computed and the memo says so. If a WBS role has no rate-card match, the script lists it and excludes it from cost; fix the mapping rather than guessing.
 
 ## 5. Margin sanity
 | Check | Rule |

@@ -5,7 +5,7 @@
 |---|---|---|
 | Effort quoted | <P80> person-days (P50 <n>, P90 <n>) | `scripts/estimate.py`, <n> iterations |
 | Confidence level used | P80 / P90 / P50+NTE | <commercial model and reason> |
-| Duration | <n> weeks | Critical path; allocations per staffing table |
+| Duration | <n> weeks from a stated staffing plan, else [TO BE BASELINED — owner: Estimation lead] | Critical path + staffing plan; `estimate.md` § Duration (the model computes effort only) |
 | Team shape | <n> FTE peak; onshore/offshore <x/y> by phase | Staffing table |
 | Price | <amount currency> or "pending rate card" | Rate card <name>, valid until <date> |
 | Contingency | P80 − P50 = <n> person-days (<x>%) | Shown as a line |

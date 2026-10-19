@@ -12,13 +12,18 @@ Rules: no number is invented. A blank unit_value / units_per_year excludes the b
 headline and lists it as [TO BE BASELINED — owner: Finance lead]; a blank source is reported the same way.
 Without --discount-rate the NPV is a marker; without --p80-cost-uplift the P80 cost is a marker.
 Totals in the JSON equal the sum of the yearly rows (reconciliation is asserted before writing).
-Exit 1 on missing columns, non-numeric cells or an unreadable file. Stdlib only, offline.
+A blank ramp_pct_y1..y3 is not assumed to be 100%: the benefit is excluded from the headline and its
+ramp is marked TBD. Rows that are entirely blank (e.g. ",,,," from Excel) are skipped; duplicate ids,
+a blank id on a data row, non-integer start_year and non-finite numbers are input errors.
+Exit 2 on missing columns, non-numeric cells, duplicate ids or an unreadable / non-UTF-8 file
+(repo convention). Stdlib only, offline.
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -31,31 +36,55 @@ SENS_PCT = 20
 
 def die(msg: str) -> None:
     print(f"error: {msg}", file=sys.stderr)
-    sys.exit(1)
+    sys.exit(2)
 
 
 def read_csv(path: Path, cols: list[str]) -> list[dict]:
     if not path.is_file():
         die(f"file not found: {path}")
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        rows = list(csv.DictReader(f))
-    if not rows:
-        die(f"{path.name}: no data rows")
-    missing = [c for c in cols if c not in rows[0]]
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as f:
+            rdr = csv.DictReader(f)
+            header = rdr.fieldnames or []
+            raw = [(rdr.line_num, r) for r in rdr]
+    except UnicodeDecodeError:
+        die(f"{path.name}: not a UTF-8 CSV file (save it as 'CSV UTF-8')")
+    except csv.Error as e:
+        die(f"{path.name}: unreadable CSV ({e})")
+    missing = [c for c in cols if c not in header]
     if missing:
         die(f"{path.name}: missing columns {missing}")
-    return [{k: (v or "").strip() for k, v in r.items() if k} for r in rows]
+    id_col = cols[0]
+    rows, seen = [], {}
+    for line, r in raw:
+        row = {k: (v or "").strip() for k, v in r.items() if k}
+        if not any(row.values()):
+            continue  # all-blank row (",,,," from spreadsheet exports)
+        rid = row.get(id_col, "")
+        if not rid:
+            die(f"{path.name} line {line}: blank {id_col} on a data row")
+        if rid in seen:
+            die(f"{path.name}: duplicate {id_col} '{rid}' (lines {seen[rid]} and {line}); "
+                "each line must be counted once")
+        seen[rid] = line
+        rows.append(row)
+    if not rows:
+        die(f"{path.name}: no data rows")
+    return rows
 
 
 def num(row: dict, col: str, where: str, default=None):
-    """Float or None for blank; exit 1 on non-numeric."""
+    """Float or None for blank; exit 2 on non-numeric or non-finite."""
     raw = row.get(col, "")
     if raw == "":
         return default
     try:
-        return float(raw.replace(",", "").replace("$", "").replace("%", ""))
+        v = float(raw.replace(",", "").replace("$", "").replace("%", ""))
     except ValueError:
         die(f"{where}: non-numeric {col}={raw!r}")
+    if not math.isfinite(v):
+        die(f"{where}: {col}={raw!r} is not a finite number")
+    return v
 
 
 def r2(x: float) -> float:
@@ -75,21 +104,26 @@ def model(benefits, costs, years, rate, uplift):
     for b in benefits:
         where = f"benefit {b['benefit_id'] or '?'}"
         uv, upy = num(b, "unit_value", where), num(b, "units_per_year", where)
-        ramps = [num(b, f"ramp_pct_y{i}", where, 100.0) for i in (1, 2, 3)]
+        ramps = [num(b, f"ramp_pct_y{i}", where) for i in (1, 2, 3)]
+        ramp_missing = None in ramps[:min(years, 3)]
         yearly = []
-        if uv is not None and upy is not None:
+        if uv is not None and upy is not None and not ramp_missing:
             for y in range(1, years + 1):
                 ramp = ramps[min(y, 3) - 1]
                 yearly.append(r2(uv * upy * ramp / 100.0))
         out_b.append({"benefit_id": b["benefit_id"], "name": b["name"], "driver": b["driver"],
                       "unit_value": uv, "units_per_year": upy, "ramp_pct": ramps,
+                      "ramp_tbd": ramp_missing,
                       "source": b["source"] or TBD, "in_headline": bool(yearly),
                       "yearly": [0.0] + yearly if yearly else None,
                       "total": r2(sum(yearly)) if yearly else None})
     for c in costs:
         where = f"cost {c['cost_id'] or '?'}"
         one, run = num(c, "one_time", where), num(c, "run_rate_per_year", where)
-        start = int(num(c, "start_year", where, 0.0))
+        start_f = num(c, "start_year", where, 0.0)
+        if not float(start_f).is_integer():
+            die(f"{where}: start_year must be a whole year, got {c.get('start_year')!r}")
+        start = int(start_f)
         if start < 0 or start > years:
             die(f"{where}: start_year {start} outside 0..{years}")
         yearly = None
@@ -142,9 +176,14 @@ def model(benefits, costs, years, rate, uplift):
                      "break_even_unit_value": be_unit,
                      "holds_at_zero": bool(f is not None and f <= 0)})
 
-    # reconciliation: totals are sums of the yearly rows
-    assert r2(sum(ben_y)) == r2(sum(b["total"] for b in headline)) or not headline
-    assert abs(r2(sum(net_y)) - r2(sum(ben_y) - sum(cost_y))) < 0.01
+    # reconciliation: totals are sums of the yearly rows (explicit checks, not asserts: they must
+    # also hold under python -O and must never surface as a traceback)
+    if not all(math.isfinite(v) for v in ben_y + cost_y + net_y + cum_y + [total_net]):
+        die("values too large to model (a total overflowed); check the units of the input figures")
+    if headline and abs(r2(sum(ben_y)) - r2(sum(b["total"] for b in headline))) >= 0.01:
+        die("internal reconciliation failed: yearly benefits do not sum to benefit totals")
+    if abs(r2(sum(net_y)) - r2(sum(ben_y) - sum(cost_y))) >= 0.01:
+        die("internal reconciliation failed: net does not equal benefits minus costs")
 
     excluded = [b for b in out_b if not b["in_headline"]] + [c for c in out_c if not c["in_headline"]]
     unsourced = [x for x in out_b + out_c if x["source"] == TBD]
@@ -188,7 +227,12 @@ def render(m: dict, client: str) -> str:
     L += ["", "## Benefits", "| ID | Benefit | Driver | Unit value | Units / yr | Ramp Y1/Y2/Y3 | Total | Source |",
           "|---|---|---|---|---|---|---|---|"]
     for b in m["benefits"]:
-        ramp = "/".join(f"{r:g}%" for r in b["ramp_pct"])
+        if all(r is None for r in b["ramp_pct"]):
+            ramp = TBD
+        else:
+            ramp = "/".join(f"{r:g}%" if r is not None else "—" for r in b["ramp_pct"])
+            if b["ramp_tbd"]:
+                ramp += f" (blank ramp {TBD})"
         L.append(f"| {b['benefit_id']} | {b['name']} | {b['driver']} | {fmt(b['unit_value'])} | "
                  f"{fmt(b['units_per_year'])} | {ramp} | {fmt(b['total'])} | {b['source']} |")
     L += ["", "## Costs", "| ID | Cost | One-time | Run-rate / yr | Start year | Total | Source |",
@@ -262,4 +306,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
