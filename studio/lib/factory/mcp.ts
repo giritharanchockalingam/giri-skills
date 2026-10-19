@@ -40,6 +40,9 @@ const ok = (id: JsonRpcRequest["id"], result: unknown): JsonRpcResponse => ({ js
 const fail = (id: JsonRpcRequest["id"], code: number, message: string, data?: unknown): JsonRpcResponse =>
   ({ jsonrpc: "2.0", id: id ?? null, error: { code, message, ...(data !== undefined ? { data } : {}) } });
 
+/** A secondary find_skill hit must score at least this share of the best hit. */
+export const RELEVANCE_FLOOR = 0.5;
+
 const TEXT_TYPES = new Set(["csv", "json", "md", "txt", "file", "sql"]);
 const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 const RESERVED = new Set(["find_skill", "get_run"]);
@@ -170,7 +173,10 @@ async function findSkill(args: Json, be: McpBackend) {
   const task = typeof args.task === "string" ? args.task.trim() : "";
   if (task.length < 4) return { content: [{ type: "text", text: "Describe the task in a sentence." }], isError: true };
   const here = new Map(inScope(await be.catalog(), be.scope).filter((s) => s.repo_skill).map((s) => [s.repo_skill as string, s.slug]));
-  const hits = be.route(task, 5).map((h) => {
+  // only real matches: drop hits far weaker than the best one (BM25 always returns k results, relevant or not)
+  const ranked = be.route(task, 5);
+  const top = ranked[0]?.score ?? 0;
+  const hits = ranked.filter((h, i) => i === 0 || h.score >= top * RELEVANCE_FLOOR).map((h) => {
     const lib = be.library(h.skill);
     return { skill: h.skill, produces: lib?.card ?? "", stage: lib?.stage ?? null, tool: here.get(h.skill) ?? null,
       starting_points: Object.fromEntries(Object.entries(lib?.modes ?? {}).map(([k, v]) => [k, v?.bring])) };

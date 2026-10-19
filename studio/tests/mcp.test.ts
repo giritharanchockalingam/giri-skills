@@ -15,7 +15,7 @@ function backend(skills: Set<string> | null = null, calls: unknown[] = []): McpB
     scope: { kind: skills ? "role" : "workspace", slug: skills ? "dev" : null, title: skills ? "role Developer" : "workspace", skills },
     catalog: async () => CATALOG,
     library: (id) => ({ id, card: `card of ${id}`, stage: "build", modes: { existing: { bring: "your migrations folder" } } }),
-    route: () => [{ skill: "build/supabase-schema-rls", score: 3 }, { skill: "build/security-review", score: 1 }],
+    route: () => [{ skill: "build/supabase-schema-rls", score: 3 }, { skill: "build/security-review", score: 2 }],
     run: async (slug, args) => { calls.push({ slug, args }); return slug === "effort-estimator"
       ? { http: 400, body: { error: { code: "missing_inputs", message: "Required input(s) missing: wbs.", details: { missing: ["wbs"] } } } }
       : { http: 200, body: { run_id: "r1", status: "failed", checks: [{ pass: true }, { pass: false }], outputs: [{ path: "rls-lint.txt", content_text: "ERROR RLS001 table public.notes" }] } }; },
@@ -76,6 +76,12 @@ test("find_skill routes a task and says which tool runs it here", async () => {
   const r = await handle(rpc("tools/call", { name: "find_skill", arguments: { task: "check my RLS policies" } }), backend()) as { result: { content: { text: string }[]; structuredContent: { hits: { skill: string; tool: string | null }[] } } };
   assert.deepEqual(r.result.structuredContent.hits.map((h) => h.tool), ["supabase-schema-rls", null]);
   assert.match(r.result.content[0].text, /not published on this server/);
+});
+
+test("find_skill drops weak secondary matches", async () => {
+  const be = { ...backend(), route: () => [{ skill: "build/supabase-schema-rls", score: 10 }, { skill: "build/security-review", score: 6 }, { skill: "x/filler", score: 2 }] };
+  const r = await handle(rpc("tools/call", { name: "find_skill", arguments: { task: "check my RLS" } }), be) as { result: { structuredContent: { hits: { skill: string }[] } } };
+  assert.deepEqual(r.result.structuredContent.hits.map((h) => h.skill), ["build/supabase-schema-rls", "build/security-review"]);
 });
 
 test("helpers: schema, scope and rendering", () => {
