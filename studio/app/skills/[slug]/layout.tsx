@@ -1,3 +1,4 @@
+import { humanName } from "@/lib/names";
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { evalGate, approvalGate, nextAction, pct } from "@/lib/factory/release";
@@ -7,6 +8,7 @@ import { SkillSubNav } from "@/components/factory/SkillSubNav";
 import { DetailHead } from "@/components/DetailHead";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${humanName(slug)} · Publish pipeline · Skills Factory` }; }
 
 /** Factory skill: one-screen header (name · status · purpose · owner/version · stat strip · next action) + the tab bar.
  *  Layouts cannot read ?v=, so the header describes the latest version; each tab shows the version it was given. */
