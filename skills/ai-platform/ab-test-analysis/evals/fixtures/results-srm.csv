@@ -1,0 +1,4 @@
+# fictional fixture — Northwind Billing Assistant experiment with a broken 50/50 split; invented numbers
+variant,users,conversions
+control,10000,4000
+prompt_v3,10600,4400

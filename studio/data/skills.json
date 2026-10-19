@@ -1,5 +1,269 @@
 [
  {
+  "id": "ai-platform/ab-test-analysis",
+  "domain": "ai-platform",
+  "stage": "improve",
+  "name": "ab-test-analysis",
+  "description": "Use when the user has results from an online experiment comparing AI variants (prompt, model, retrieval or agent change) and asks whether to ship — \"analyse this A/B test\", \"did prompt v3 win\", \"is the lift significant\", \"check the split for sample ratio mismatch\", \"how many users do we need for this MDE\". Produces ab-results.csv, ab-report.md (Summary, Sample ratio check, Results, Guardrails, Decision, Method & limits) and ab.json from aggregated or unit-level results - SRM chi-square, two-proportion z-test or Welch's t-test, CIs, relative lift, Holm adjustment across treatments, achieved power and sample size for the declared MDE, and a ship / don't ship / inconclusive decision with guardrails. Missing MDE or guardrails are TBD for the Experiment owner, never assumed. Exit 1 when SRM is detected. Not for offline eval sets (llm-eval-harness), designing the rollout (ai-release-plan) or live monitoring (llm-observability).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "improve",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "results",
+     "type": "csv",
+     "required": true,
+     "from": "experiment results, aggregated variant,users,conversions[,metric_sum,metric_sumsq][,metric] or unit-level variant,unit_id,converted[,value][,guardrail columns] (layouts: assets/results-*-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "config",
+     "type": "csv",
+     "required": false,
+     "from": "kv-csv key,value (layout: assets/ab-config.csv) - control, alpha, power, expected_split, mde, metric_type, primary_metric, direction, guardrails, srm_alpha; absent keys use labelled defaults, absent MDE is TBD for the Experiment owner",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "analyse",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "analyse",
+     "kind": "script",
+     "cmd": "python3 -I scripts/ab_test.py --results {results} [--config {config}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/ab-results.csv",
+     "checks": [
+      "exists",
+      "csv:[metric,role,variant,n,rate_or_mean,diff,ci_low,ci_high,rel_lift,p_value,p_adj,significant]",
+      "csv_rows:significant~^(yes|no|control)$",
+      "csv_rows:p_value~^(n/a|[01]\\\\.\\\\d{6})$",
+      "cmd:\"python3 -I scripts/ab_test.py --verify {path} --results {results}\""
+     ]
+    },
+    {
+     "path": "{out}/ab-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Sample ratio check\",\"Results\",\"Guardrails\",\"Decision\",\"Method & limits\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/ab_test.py --verify {path} --results {results}\""
+     ]
+    },
+    {
+     "path": "{out}/ab.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"srm_detected\\\"\"",
+      "cmd:\"python3 -I scripts/ab_test.py --verify {path} --results {results}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "results": "evals/fixtures/results-agg.csv",
+     "config": "evals/fixtures/config.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ab-test-analysis-ai-variants\">A/B Test Analysis (AI variants)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ab-test-analysis --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ab-test-analysis</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>ab-results.csv</code>, <code>ab-report.md</code>, <code>ab.json</code>). A sample ratio mismatch fails the run (exit 1) on purpose: every output is still written, and the decision reads &quot;untrustworthy&quot;. Each output passes <code>--verify</code>, which re-derives it from the results and the config recorded in <code>ab.json</code>.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC improve stage: a prompt, model, retrieval or agent change ran as an online experiment and the team needs ship / don't ship / inconclusive with the statistics behind it.</li><li>Trust check before reading lifts: is the traffic split what the config promised (SRM)?</li><li>Planning a re-run: achieved power for the declared MDE and the n per arm it needs.</li><li>NOT for: offline eval sets or LLM-as-judge scoring (<code>llm-eval-harness</code>), staged rollout gates (<code>ai-release-plan</code>), production drift and alerting (<code>llm-observability</code>), sequential or Bayesian designs (this is fixed-horizon frequentist).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>results</code> — aggregated or unit-level CSV</td><td>yes</td><td>experimentation platform export or warehouse query</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>config</code> — kv-csv (<code>assets/ab-config.csv</code>)</td><td>no</td><td>Experiment owner (pre-registration)</td><td>defaults used and labelled: control = variant named <code>control</code> else first variant, alpha 0.05, power 0.8, equal split, srm_alpha 0.001, direction higher_better; MDE and guardrails <code>[TO BE BASELINED — owner: Experiment owner]</code></td></tr></tbody></table>\n<p>Aggregated: one row per variant (and per <code>metric</code> when several). Binary metrics use <code>conversions/users</code>; continuous metrics use <code>metric_sum</code> and <code>metric_sumsq</code> (sum of squares). Unit-level: one row per randomised unit; <code>converted</code> is 0/1, <code>value</code> is continuous, guardrail columns are named in <code>guardrails</code>. Guardrails take a direction, e.g. <code>escalated:lower_better;csat:higher_better</code>. <code>mde</code> is absolute (<code>0.02</code>) or relative to control (<code>5%</code>).</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Confirm the config was fixed before the experiment ran (alpha, MDE, primary metric, guardrails). Post-hoc changes invalidate the p-values; record them in the report notes.</li><li>Run the agent. <code>scripts/ab_test.py</code> checks SRM, then tests each declared metric per treatment against control, applies Holm across treatments, computes power, and applies the decision rule.</li><li>If SRM is detected (exit 1), stop: send the split table to the platform owner and do not quote any lift.</li><li>Read the Guardrails section: a guardrail with no declared direction blocks a ship on any significant move.</li><li>Inconclusive with low achieved power → quote the n per arm needed for the MDE; do not call it &quot;no effect&quot;.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>ab-results.csv</code> — <code>metric, role, variant, n, rate_or_mean, diff, ci_low, ci_high, rel_lift, p_value, p_adj, significant</code> (control rows read <code>n/a</code> / <code>control</code>).</li><li><code>ab-report.md</code> — <strong>Summary</strong> (decision first, settings with their basis), <strong>Sample ratio check</strong>, <strong>Results</strong> (primary metric and power), <strong>Guardrails</strong>, <strong>Decision</strong> (per treatment and overall, with the rule), <strong>Method &amp; limits</strong>.</li><li><code>ab.json</code> — config as given, effective settings and provenance, every statistic, decisions.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] SRM checked first; an SRM run is reported as untrustworthy, not as a result</li><li>[ ] Every default is labelled; MDE and guardrails come from the Experiment owner or read TBD with that owner</li><li>[ ] Holm-adjusted p-values drive significance when there is more than one treatment</li><li>[ ] Guardrail breaches block a ship; undeclared guardrail directions are flagged</li><li>[ ] Inconclusive results state power / required n instead of &quot;no difference&quot;</li><li>[ ] Limits stated: fixed-horizon, independent units, statistical not product sign-off</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — formulas, decision rule, worked numbers used in the tests</li><li><code>references/sources.md</code> — SRM (Fabijan et al., Kohavi et al.), Welch, Holm, incomplete beta; verified URLs and dates</li><li><code>assets/ab-config.csv</code>, <code>assets/results-aggregated-template.csv</code>, <code>assets/results-unit-template.csv</code> — input layouts</li><li><code>scripts/ab_test.py</code> — analysis and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "ab-config.csv",
+    "results-aggregated-template.csv",
+    "results-unit-template.csv"
+   ],
+   "scripts": [
+    "ab_test.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-should-we-ship",
+    "prompt": "We ran prompt v3 against v2 on the Northwind Billing Assistant for two weeks. Resolution went from 40% to 43%. Can we ship it?",
+    "expected": [
+     "Asks for (or runs on) the per-variant counts and the pre-registered config; runs scripts/ab_test.py",
+     "Checks sample ratio mismatch before quoting any lift",
+     "Reports the z-test p-value, CI and relative lift, checks guardrails, and states ship / don't ship / inconclusive with the rule",
+     "Marks a missing MDE or guardrail list TBD for the Experiment owner instead of assuming one"
+    ]
+   },
+   {
+    "id": "prompt-inconclusive-power",
+    "prompt": "The model swap showed +0.5% and p = 0.84. Does that prove the cheaper model is just as good?",
+    "expected": [
+     "Says no: not significant is not equivalence; quotes the smallest detectable effect and achieved power",
+     "Gives the n per arm needed for the declared MDE, or asks the Experiment owner for an MDE"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Analyse the Northwind Billing Assistant experiment (control, prompt_v3, model_swap) with the attached config.",
+    "expected": [
+     "No SRM; prompt_v3 ships (resolved +3.0 pts, Holm p 0.004664, guardrails not worse); model_swap inconclusive with escalations significantly worse"
+    ]
+   },
+   {
+    "id": "agent-missing-results",
+    "prompt": "Tell me if our prompt experiment won.",
+    "expected": [
+     "Asks once for the results CSV"
+    ]
+   },
+   {
+    "id": "agent-no-config-mde-not-invented",
+    "prompt": "No config — just tell me if it's significant and assume a 1% MDE.",
+    "expected": [
+     "Defaults labelled as defaults; MDE, power verdict and guardrails are TBD for the Experiment owner; undeclared metrics are listed, not analysed"
+    ]
+   },
+   {
+    "id": "agent-srm-gate-exits-1",
+    "prompt": "Analyse this 50/50 test: control 10,000 users, prompt_v3 10,600 users.",
+    "expected": [
+     "SRM detected (chi-square 17.4757, p 0.000029 < 0.001); decision untrustworthy; outputs written; exit 1"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Analyse the Northwind Billing Assistant experiment (control, prompt_v3, model_swap) with the attached config.",
+    "inputs": {
+     "results": "evals/fixtures/results-agg.csv",
+     "config": "evals/fixtures/config.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:ab-results.csv",
+     {
+      "file": "ab-results.csv",
+      "check": "contains:\"resolved,primary,prompt_v3,5000,0.430000,0.030000,0.010695,0.049305,0.0750,0.002332,0.004664,yes\""
+     },
+     {
+      "file": "ab-results.csv",
+      "check": "contains:\"escalated,guardrail,model_swap,5000,0.094000,0.014000,0.002956,0.025044,0.1750,0.013002,0.026003,yes\""
+     },
+     {
+      "file": "ab-results.csv",
+      "check": "contains:\"handle_time_s,guardrail,prompt_v3,5000,118.000000,-2.000000,-3.215958,-0.784042,-0.0167,0.001268,0.002535,yes\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"**Decision: ship `prompt_v3`.**\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"| prompt_v3 | 0.027595 | 0.020000 | 0.5294 | 9490 |\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "No SRM; prompt_v3 ships (resolved +3.0 pts, Holm p 0.004664, guardrails not worse); model_swap inconclusive with escalations significantly worse"
+    ]
+   },
+   {
+    "id": "agent-missing-results",
+    "prompt": "Tell me if our prompt experiment won.",
+    "inputs": {
+     "config": "evals/fixtures/config.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:results"
+    ],
+    "expected": [
+     "Asks once for the results CSV"
+    ]
+   },
+   {
+    "id": "agent-no-config-mde-not-invented",
+    "prompt": "No config — just tell me if it's significant and assume a 1% MDE.",
+    "inputs": {
+     "results": "evals/fixtures/results-agg.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"| mde | [TO BE BASELINED — owner: Experiment owner] | not supplied |\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"| alpha | 0.05 | default |\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"not analysed: escalated, handle_time_s.\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Defaults labelled as defaults; MDE, power verdict and guardrails are TBD for the Experiment owner; undeclared metrics are listed, not analysed"
+    ]
+   },
+   {
+    "id": "agent-srm-gate-exits-1",
+    "prompt": "Analyse this 50/50 test: control 10,000 users, prompt_v3 10,600 users.",
+    "inputs": {
+     "results": "evals/fixtures/results-srm.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"chi-square 17.4757, df 1, p 0.000029 — SRM DETECTED\""
+     },
+     {
+      "file": "ab-report.md",
+      "check": "contains:\"Results untrustworthy: sample ratio mismatch detected.\""
+     },
+     {
+      "file": "ab.json",
+      "check": "contains:\"\\\"srm_detected\\\": true\""
+     }
+    ],
+    "expected": [
+     "SRM detected (chi-square 17.4757, p 0.000029 < 0.001); decision untrustworthy; outputs written; exit 1"
+    ]
+   }
+  ],
+  "bodyMd": "\n# A/B Test Analysis (AI variants)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ab-test-analysis --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ab-test-analysis`). Report the `run.json` results; do not hand-write the deliverables the script produces (`ab-results.csv`, `ab-report.md`, `ab.json`). A sample ratio mismatch fails the run (exit 1) on purpose: every output is still written, and the decision reads \"untrustworthy\". Each output passes `--verify`, which re-derives it from the results and the config recorded in `ab.json`.\n\n## When to use\n- ADLC improve stage: a prompt, model, retrieval or agent change ran as an online experiment and the team needs ship / don't ship / inconclusive with the statistics behind it.\n- Trust check before reading lifts: is the traffic split what the config promised (SRM)?\n- Planning a re-run: achieved power for the declared MDE and the n per arm it needs.\n- NOT for: offline eval sets or LLM-as-judge scoring (`llm-eval-harness`), staged rollout gates (`ai-release-plan`), production drift and alerting (`llm-observability`), sequential or Bayesian designs (this is fixed-horizon frequentist).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `results` — aggregated or unit-level CSV | yes | experimentation platform export or warehouse query | run stops (exit 2), asks once |\n| `config` — kv-csv (`assets/ab-config.csv`) | no | Experiment owner (pre-registration) | defaults used and labelled: control = variant named `control` else first variant, alpha 0.05, power 0.8, equal split, srm_alpha 0.001, direction higher_better; MDE and guardrails `[TO BE BASELINED — owner: Experiment owner]` |\n\nAggregated: one row per variant (and per `metric` when several). Binary metrics use `conversions/users`; continuous metrics use `metric_sum` and `metric_sumsq` (sum of squares). Unit-level: one row per randomised unit; `converted` is 0/1, `value` is continuous, guardrail columns are named in `guardrails`. Guardrails take a direction, e.g. `escalated:lower_better;csat:higher_better`. `mde` is absolute (`0.02`) or relative to control (`5%`).\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the config was fixed before the experiment ran (alpha, MDE, primary metric, guardrails). Post-hoc changes invalidate the p-values; record them in the report notes.\n3. Run the agent. `scripts/ab_test.py` checks SRM, then tests each declared metric per treatment against control, applies Holm across treatments, computes power, and applies the decision rule.\n4. If SRM is detected (exit 1), stop: send the split table to the platform owner and do not quote any lift.\n5. Read the Guardrails section: a guardrail with no declared direction blocks a ship on any significant move.\n6. Inconclusive with low achieved power → quote the n per arm needed for the MDE; do not call it \"no effect\".\n7. Run the self-check.\n\n## Output\n- `ab-results.csv` — `metric, role, variant, n, rate_or_mean, diff, ci_low, ci_high, rel_lift, p_value, p_adj, significant` (control rows read `n/a` / `control`).\n- `ab-report.md` — **Summary** (decision first, settings with their basis), **Sample ratio check**, **Results** (primary metric and power), **Guardrails**, **Decision** (per treatment and overall, with the rule), **Method & limits**.\n- `ab.json` — config as given, effective settings and provenance, every statistic, decisions.\n\n## Self-check\n- [ ] SRM checked first; an SRM run is reported as untrustworthy, not as a result\n- [ ] Every default is labelled; MDE and guardrails come from the Experiment owner or read TBD with that owner\n- [ ] Holm-adjusted p-values drive significance when there is more than one treatment\n- [ ] Guardrail breaches block a ship; undeclared guardrail directions are flagged\n- [ ] Inconclusive results state power / required n instead of \"no difference\"\n- [ ] Limits stated: fixed-horizon, independent units, statistical not product sign-off\n\n## References\n- `references/method.md` — formulas, decision rule, worked numbers used in the tests\n- `references/sources.md` — SRM (Fabijan et al., Kohavi et al.), Welch, Holm, incomplete beta; verified URLs and dates\n- `assets/ab-config.csv`, `assets/results-aggregated-template.csv`, `assets/results-unit-template.csv` — input layouts\n- `scripts/ab_test.py` — analysis and `--verify` (argparse; stdlib)\n"
+ },
+ {
   "id": "ai-platform/agent-architecture",
   "domain": "ai-platform",
   "stage": "architecture",
@@ -3213,6 +3477,310 @@
    }
   ],
   "bodyMd": "\n# AI Vendor Assessment (weighted scoring + third-party AI risk)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-vendor-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-vendor-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`scores.csv`, `sensitivity.csv`, `vendor-report.md`). \"No clear winner\" is a finding, not a failure (exit 0) unless `require_clear_winner=true`, which makes it a gate (exit 1, outputs still written).\n\n## When to use\n- ADLC strategy stage: a shortlist of AI vendors, platforms or providers (and possibly an in-house build) must be compared on agreed criteria before procurement.\n- \"Does the winner survive if we weight cost higher?\" — the ±20% sensitivity answers it per criterion.\n- Third-party AI risk screen before contract: red flags on data use, retention, residency, assurance, change notice, incident SLA, indemnity and exit.\n- NOT for: choosing a model from eval scores, prices and latency (`model-selection`), forecasting token spend (`llm-cost-model`), legal contract review or drafting, or verifying vendor certificates (inspect the reports themselves).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `options` — option, criterion, score 1–5, source | yes | evaluation team; one row per option × criterion | run stops (exit 2), asks once |\n| `criteria` — criterion, weight, description | yes | decision owner (sponsor) | run stops (exit 2), asks once |\n| `risk` — option, question_id, answer, evidence | no | Third-party risk manager from vendor responses | risk \"not assessed\" `[TO BE BASELINED — owner: Third-party risk manager]`; recommendation is conditional |\n| `questions` — questionnaire with thresholds | no | Third-party risk manager (copy the shipped file) | shipped defaults (30-day retention, 30-day change notice, 72-hour incident notice) |\n| `require_clear_winner` — true/false | no | decision owner | false: \"no clear winner\" exits 0 |\n\nA blank score is missing: the option is marked incomplete, excluded from ranking and recommendation, and the gap is `[TO BE BASELINED — owner: Procurement lead]`. A score outside 1–5, an unknown criterion or a duplicate row stops the run (exit 2).\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Agree criteria and weights with the decision owner before scoring; record a source for every score.\n3. Send vendors `assets/third-party-ai-risk-questions.csv`; record answers (and `n/a` for a build option) in the risk CSV.\n4. Run the agent. `scripts/vendor_assess.py` normalises weights, scores complete options, runs ±20% sensitivity per criterion and applies the red-flag rules (`references/method.md`).\n5. If there is no clear winner, take the stated reasons to the decision owner (re-score, renegotiate terms, or re-weight) and re-run.\n6. Run the self-check.\n\n## Output\n- `scores.csv` — `option, weighted_score, rank, complete, red_flags, missing_criteria, risk_unanswered` (ranked complete options first, then incomplete ones).\n- `sensitivity.csv` — `criterion, change, weight_before, weight_after, top_option, top_score, runner_up, margin, top_changed` (two rows per criterion).\n- `vendor-report.md` — **Summary**, **Scores** (with score matrix), **Sensitivity**, **Third-party risk**, **Recommendation**, **Method**.\n\n## Self-check\n- [ ] Every score has a source; no score was imputed\n- [ ] Weights normalisation is stated\n- [ ] The recommendation is a complete option with no red flags that stays first under every ±20% change — or \"no clear winner\" with reasons\n- [ ] Unanswered risk questions and incomplete options name an owner\n- [ ] Limits stated: decision aid, not a legal or contract review; vendor claims not verified\n\n## References\n- `references/method.md` — scoring, ranking, sensitivity, red-flag and recommendation rules\n- `references/sources.md` — standards named in the questionnaire, with URLs and dates checked\n- `assets/third-party-ai-risk-questions.csv` — 11 questions with answer types and red-flag rules\n- `assets/options-template.csv`, `assets/criteria-template.csv`, `assets/risk-template.csv` — input layouts\n- `scripts/vendor_assess.py` — scorer and `--verify` mode (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/annotation-agreement",
+  "domain": "ai-platform",
+  "stage": "data",
+  "name": "annotation-agreement",
+  "description": "Use when the user needs to know how consistently humans labelled data for AI evaluation or training — \"measure inter-annotator agreement\", \"what's our Cohen's / Fleiss' kappa\", \"Krippendorff's alpha for these labels\", \"which items do annotators disagree on\", \"which labels do our guidelines need to clarify\". Produces agreement.json, disputed-items.csv, label-agreement.csv and agreement-report.md from item_id,annotator,label rows - percent agreement, pairwise Cohen's kappa, Fleiss' kappa, nominal Krippendorff's alpha (handles missing ratings), per-label agreement, confusion pairs and low-agreement labels the guidelines do not define. Exit 1 when alpha is below the supplied minimum or no item has 2+ ratings (no score is faked). Not for scoring model outputs (llm-eval-harness), data quality (data-readiness-assessment) or building training sets (finetune-dataset-builder).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "data",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "labels",
+     "type": "csv",
+     "required": true,
+     "from": "one row per rating item_id,annotator,label (layout: assets/labels-template.csv); blank label = not rated",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "guidelines",
+     "type": "md",
+     "required": false,
+     "from": "annotation guidelines in Markdown (layout: assets/guidelines-template.md); without it guideline coverage is TBD for the Annotation lead",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "min_agreement",
+     "type": "string",
+     "required": false,
+     "from": "minimum Krippendorff's alpha agreed with the eval or data owner (e.g. 0.667 or 0.800); absent = no gate",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "agreement",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "agreement",
+     "kind": "script",
+     "cmd": "python3 -I scripts/agreement.py --labels {labels} [--guidelines {guidelines}] [--min-agreement {min_agreement}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/agreement.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"krippendorff_alpha\\\"\"",
+      "cmd:\"python3 -I scripts/agreement.py --verify {path} --labels {labels}\""
+     ]
+    },
+    {
+     "path": "{out}/disputed-items.csv",
+     "checks": [
+      "exists",
+      "csv:[item_id,labels,majority,agreement]",
+      "contains:\"item_id,labels,majority,agreement\"",
+      "cmd:\"python3 -I scripts/agreement.py --verify {path} --labels {labels}\""
+     ]
+    },
+    {
+     "path": "{out}/label-agreement.csv",
+     "checks": [
+      "exists",
+      "csv:[label,n,agreement,defined_in_guidelines]",
+      "csv_rows:defined_in_guidelines!empty",
+      "csv_rows:agreement~^(n/a|[01]\\\\.\\\\d{3})$",
+      "cmd:\"python3 -I scripts/agreement.py --verify {path} --labels {labels}\""
+     ]
+    },
+    {
+     "path": "{out}/agreement-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Agreement\",\"Disputed items\",\"Guideline gaps\",\"Method & limits\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/agreement.py --verify {path} --labels {labels}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "labels": "evals/fixtures/labels.csv",
+     "guidelines": "evals/fixtures/guidelines.md",
+     "min_agreement": "0.5"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"annotation-agreement-inter-annotator-reliability\">Annotation Agreement (inter-annotator reliability)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/annotation-agreement --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/annotation-agreement</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>agreement.json</code>, <code>disputed-items.csv</code>, <code>label-agreement.csv</code>, <code>agreement-report.md</code>). Alpha below <code>min_agreement</code> fails the run (exit 1) with every output written. If no item has two or more ratings the run exits 1 and reports no score. Each output passes <code>--verify</code>, which re-derives it from the labels and the settings recorded in <code>agreement.json</code>.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC data stage: before human labels become an eval golden set, an LLM-as-judge calibration set or fine-tuning data.</li><li>Pilot labelling round: find disputed items and the label boundaries the guidelines must sharpen before labelling at scale.</li><li>Gate: labels may be used only when alpha meets the minimum the data owner set.</li><li>NOT for: scoring model outputs against labels (<code>llm-eval-harness</code>), data quality or PII scans (<code>data-readiness-assessment</code>, <code>pii-data-inventory</code>), building the training file (<code>finetune-dataset-builder</code>), ordinal or interval scales (nominal labels only).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>labels</code> — <code>item_id, annotator, label</code></td><td>yes</td><td>labelling tool export (one row per rating)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>guidelines</code> — Markdown</td><td>no</td><td>Annotation lead</td><td><code>defined_in_guidelines</code> and the gap list read <code>[TO BE BASELINED — owner: Annotation lead]</code></td></tr><tr><td><code>min_agreement</code> — alpha threshold</td><td>no</td><td>eval / data owner</td><td>no gate; the report says none was set</td></tr></tbody></table>\n<p>A blank <code>label</code> means &quot;not rated&quot; and is skipped. Two ratings of the same item by the same annotator stop the run (exit 2).</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Confirm ratings were independent (annotators did not see each other's labels); agreement on shared work is inflated.</li><li>Run the agent. <code>scripts/agreement.py</code> builds the coincidence matrix and computes alpha, Fleiss' kappa (equal ratings per item only), pairwise Cohen's kappa, per-label agreement and confusion pairs.</li><li>Read Disputed items worst-first; send them to an adjudicator.</li><li>Read Guideline gaps: define each low-agreement label the guidelines do not mention, and write a boundary rule for the top confusion pairs.</li><li>Re-label a fresh sample after the guideline change and re-run; compare alpha.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>agreement.json</code> — every statistic, per-item agreement, pairs, confusion pairs, gate result, settings for <code>--verify</code>.</li><li><code>disputed-items.csv</code> — <code>item_id, labels, majority, agreement</code> (labels as <code>label:count</code>; <code>majority</code> is the plurality label or <code>tie</code>), lowest agreement first.</li><li><code>label-agreement.csv</code> — <code>label, n, agreement, defined_in_guidelines</code>.</li><li><code>agreement-report.md</code> — <strong>Summary</strong> (gate verdict first), <strong>Agreement</strong>, <strong>Disputed items</strong>, <strong>Guideline gaps</strong>, <strong>Method &amp; limits</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Alpha is reported with its band labelled as a convention (Krippendorff 0.667 / 0.800); kappas with Landis &amp; Koch bands, also a convention</li><li>[ ] Fleiss' kappa is n/a (with the reason) when items have different numbers of ratings — alpha is the headline</li><li>[ ] Items with one rating are excluded and counted, not scored</li><li>[ ] Guideline gaps come from the supplied guidelines; without them the gap list is TBD for the Annotation lead</li><li>[ ] Limits stated: nominal only, no confidence intervals, agreement is not correctness</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — formulas, the worked examples the tests reproduce, per-label agreement definition</li><li><code>references/sources.md</code> — Cohen 1960, Fleiss 1971, Krippendorff 2011, Landis &amp; Koch 1977; verified URLs and dates</li><li><code>assets/labels-template.csv</code>, <code>assets/guidelines-template.md</code> — input layouts</li><li><code>scripts/agreement.py</code> — statistics and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "guidelines-template.md",
+    "labels-template.csv"
+   ],
+   "scripts": [
+    "agreement.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-are-labels-reliable",
+    "prompt": "Three annotators labelled 500 Northwind Billing Assistant messages with intents for our eval set. Are the labels reliable enough to use?",
+    "expected": [
+     "Runs scripts/agreement.py on item_id,annotator,label rows; reports Krippendorff's alpha first, with kappas",
+     "Labels interpretation bands as conventions (Landis & Koch; Krippendorff 0.667/0.800)",
+     "Asks the data owner for the minimum alpha rather than choosing one; lists disputed items and guideline gaps"
+    ]
+   },
+   {
+    "id": "prompt-one-annotator",
+    "prompt": "Each item was labelled by one person. What's our inter-annotator agreement?",
+    "expected": [
+     "Says agreement cannot be computed without 2+ independent ratings per item; recommends double-labelling a sample; reports no score"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Measure agreement on the Northwind intent labels against our guidelines; we need alpha of at least 0.5.",
+    "expected": [
+     "alpha 0.595 passes 0.5; Fleiss n/a (2 and 3 ratings per item); 7 disputed items; plan_change is a low-agreement label not in the guidelines"
+    ]
+   },
+   {
+    "id": "agent-missing-labels",
+    "prompt": "Check our annotators' agreement.",
+    "expected": [
+     "Asks once for the labels CSV"
+    ]
+   },
+   {
+    "id": "agent-no-guidelines-not-invented",
+    "prompt": "We don't have written guidelines; just tell me which labels are defined well.",
+    "expected": [
+     "Guideline coverage is TBD for the Annotation lead; no gate applied; no definition status invented"
+    ]
+   },
+   {
+    "id": "agent-below-minimum-exits-1",
+    "prompt": "Gate the Northwind labels: fail unless alpha is at least 0.667.",
+    "expected": [
+     "alpha 0.595 < 0.667 → FAIL, exit 1, outputs still written"
+    ]
+   },
+   {
+    "id": "agent-single-annotator-no-fake-score",
+    "prompt": "Agreement for labels where each item had one annotator.",
+    "expected": [
+     "Exit 1 with a clear error; no alpha or kappa reported"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Measure agreement on the Northwind intent labels against our guidelines; we need alpha of at least 0.5.",
+    "inputs": {
+     "labels": "evals/fixtures/labels.csv",
+     "guidelines": "evals/fixtures/guidelines.md",
+     "min_agreement": "0.5"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:agreement-report.md",
+     {
+      "file": "agreement-report.md",
+      "check": "contains:\"**PASS** — alpha 0.595 ≥ minimum 0.5.\""
+     },
+     {
+      "file": "agreement-report.md",
+      "check": "contains:\"| ann_a – ann_b | 15 | 0.600 | 0.500 | moderate |\""
+     },
+     {
+      "file": "agreement-report.md",
+      "check": "contains:\"Low-agreement labels the guidelines do not mention: `plan_change`.\""
+     },
+     {
+      "file": "disputed-items.csv",
+      "check": "contains:\"NW-011,billing_dispute:1;other:1;plan_change:1,tie,0.000\""
+     },
+     {
+      "file": "label-agreement.csv",
+      "check": "contains:\"refund_request,11,0.727,no\""
+     },
+     {
+      "file": "agreement-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "alpha 0.595 passes 0.5; Fleiss n/a (2 and 3 ratings per item); 7 disputed items; plan_change is a low-agreement label not in the guidelines"
+    ]
+   },
+   {
+    "id": "agent-missing-labels",
+    "prompt": "Check our annotators' agreement.",
+    "inputs": {
+     "guidelines": "evals/fixtures/guidelines.md"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:labels"
+    ],
+    "expected": [
+     "Asks once for the labels CSV"
+    ]
+   },
+   {
+    "id": "agent-no-guidelines-not-invented",
+    "prompt": "We don't have written guidelines; just tell me which labels are defined well.",
+    "inputs": {
+     "labels": "evals/fixtures/labels.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "label-agreement.csv",
+      "check": "contains:\"plan_change,6,0.500,[TO BE BASELINED — owner: Annotation lead]\""
+     },
+     {
+      "file": "agreement-report.md",
+      "check": "contains:\"No minimum agreement set ([TO BE BASELINED — owner: Annotation lead]); no gate applied.\""
+     },
+     {
+      "file": "agreement-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Guideline coverage is TBD for the Annotation lead; no gate applied; no definition status invented"
+    ]
+   },
+   {
+    "id": "agent-below-minimum-exits-1",
+    "prompt": "Gate the Northwind labels: fail unless alpha is at least 0.667.",
+    "inputs": {
+     "labels": "evals/fixtures/labels.csv",
+     "guidelines": "evals/fixtures/guidelines.md",
+     "min_agreement": "0.667"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "agreement-report.md",
+      "check": "contains:\"**FAIL** — alpha 0.595 is below the minimum 0.667\""
+     },
+     {
+      "file": "agreement.json",
+      "check": "contains:\"\\\"passed\\\": false\""
+     }
+    ],
+    "expected": [
+     "alpha 0.595 < 0.667 → FAIL, exit 1, outputs still written"
+    ]
+   },
+   {
+    "id": "agent-single-annotator-no-fake-score",
+    "prompt": "Agreement for labels where each item had one annotator.",
+    "inputs": {
+     "labels": "evals/fixtures/labels-single.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "agreement-report.md",
+      "check": "contains:\"**No agreement score: no item has ratings from 2 or more annotators\""
+     },
+     {
+      "file": "agreement.json",
+      "check": "contains:\"\\\"status\\\": \\\"insufficient\\\"\""
+     }
+    ],
+    "expected": [
+     "Exit 1 with a clear error; no alpha or kappa reported"
+    ]
+   }
+  ],
+  "bodyMd": "\n# Annotation Agreement (inter-annotator reliability)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/annotation-agreement --input <name>=<value> … --out <dir>` (see `--explain ai-platform/annotation-agreement`). Report the `run.json` results; do not hand-write the deliverables the script produces (`agreement.json`, `disputed-items.csv`, `label-agreement.csv`, `agreement-report.md`). Alpha below `min_agreement` fails the run (exit 1) with every output written. If no item has two or more ratings the run exits 1 and reports no score. Each output passes `--verify`, which re-derives it from the labels and the settings recorded in `agreement.json`.\n\n## When to use\n- ADLC data stage: before human labels become an eval golden set, an LLM-as-judge calibration set or fine-tuning data.\n- Pilot labelling round: find disputed items and the label boundaries the guidelines must sharpen before labelling at scale.\n- Gate: labels may be used only when alpha meets the minimum the data owner set.\n- NOT for: scoring model outputs against labels (`llm-eval-harness`), data quality or PII scans (`data-readiness-assessment`, `pii-data-inventory`), building the training file (`finetune-dataset-builder`), ordinal or interval scales (nominal labels only).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `labels` — `item_id, annotator, label` | yes | labelling tool export (one row per rating) | run stops (exit 2), asks once |\n| `guidelines` — Markdown | no | Annotation lead | `defined_in_guidelines` and the gap list read `[TO BE BASELINED — owner: Annotation lead]` |\n| `min_agreement` — alpha threshold | no | eval / data owner | no gate; the report says none was set |\n\nA blank `label` means \"not rated\" and is skipped. Two ratings of the same item by the same annotator stop the run (exit 2).\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm ratings were independent (annotators did not see each other's labels); agreement on shared work is inflated.\n3. Run the agent. `scripts/agreement.py` builds the coincidence matrix and computes alpha, Fleiss' kappa (equal ratings per item only), pairwise Cohen's kappa, per-label agreement and confusion pairs.\n4. Read Disputed items worst-first; send them to an adjudicator.\n5. Read Guideline gaps: define each low-agreement label the guidelines do not mention, and write a boundary rule for the top confusion pairs.\n6. Re-label a fresh sample after the guideline change and re-run; compare alpha.\n7. Run the self-check.\n\n## Output\n- `agreement.json` — every statistic, per-item agreement, pairs, confusion pairs, gate result, settings for `--verify`.\n- `disputed-items.csv` — `item_id, labels, majority, agreement` (labels as `label:count`; `majority` is the plurality label or `tie`), lowest agreement first.\n- `label-agreement.csv` — `label, n, agreement, defined_in_guidelines`.\n- `agreement-report.md` — **Summary** (gate verdict first), **Agreement**, **Disputed items**, **Guideline gaps**, **Method & limits**.\n\n## Self-check\n- [ ] Alpha is reported with its band labelled as a convention (Krippendorff 0.667 / 0.800); kappas with Landis & Koch bands, also a convention\n- [ ] Fleiss' kappa is n/a (with the reason) when items have different numbers of ratings — alpha is the headline\n- [ ] Items with one rating are excluded and counted, not scored\n- [ ] Guideline gaps come from the supplied guidelines; without them the gap list is TBD for the Annotation lead\n- [ ] Limits stated: nominal only, no confidence intervals, agreement is not correctness\n\n## References\n- `references/method.md` — formulas, the worked examples the tests reproduce, per-label agreement definition\n- `references/sources.md` — Cohen 1960, Fleiss 1971, Krippendorff 2011, Landis & Koch 1977; verified URLs and dates\n- `assets/labels-template.csv`, `assets/guidelines-template.md` — input layouts\n- `scripts/agreement.py` — statistics and `--verify` (argparse; stdlib)\n"
  },
  {
   "id": "ai-platform/bias-fairness-check",

@@ -1,0 +1,12 @@
+key,value,source,notes
+experiment_name,,,short name of the experiment
+control,,,variant name of the control (default: a variant named control, else the first variant in the results)
+primary_metric,,,aggregated results with a metric column: the decision metric (default: first metric in the file)
+metric_type,,,binary | continuous (default: inferred from the data)
+direction,,,higher_better | lower_better for the primary metric (default: higher_better)
+alpha,,,significance level (default 0.05)
+power,,,target power (default 0.8)
+expected_split,,,e.g. 50/50 or control=50;variant_b=50 (default: equal split)
+mde,,,minimum detectable effect: absolute (0.02) or relative to control (5%); no default — TBD for the Experiment owner
+guardrails,,,metric:direction list e.g. escalated:lower_better;csat:higher_better
+srm_alpha,,,sample-ratio-mismatch threshold (default 0.001)

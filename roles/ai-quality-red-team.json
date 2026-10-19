@@ -6,7 +6,9 @@
     "ai-platform/llm-eval-harness",
     "ai-platform/eval-engineering-runner",
     "ai-platform/red-team-suite",
-    "ai-platform/bias-fairness-check"
+    "ai-platform/bias-fairness-check",
+    "ai-platform/annotation-agreement",
+    "ai-platform/ab-test-analysis"
   ],
   "playbooks": []
 }

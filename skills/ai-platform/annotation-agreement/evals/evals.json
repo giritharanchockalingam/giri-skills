@@ -1,0 +1,105 @@
+{
+  "skill": "annotation-agreement",
+  "cases": [
+    {
+      "id": "prompt-are-labels-reliable",
+      "prompt": "Three annotators labelled 500 Northwind Billing Assistant messages with intents for our eval set. Are the labels reliable enough to use?",
+      "expected": [
+        "Runs scripts/agreement.py on item_id,annotator,label rows; reports Krippendorff's alpha first, with kappas",
+        "Labels interpretation bands as conventions (Landis & Koch; Krippendorff 0.667/0.800)",
+        "Asks the data owner for the minimum alpha rather than choosing one; lists disputed items and guideline gaps"
+      ]
+    },
+    {
+      "id": "prompt-one-annotator",
+      "prompt": "Each item was labelled by one person. What's our inter-annotator agreement?",
+      "expected": [
+        "Says agreement cannot be computed without 2+ independent ratings per item; recommends double-labelling a sample; reports no score"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Measure agreement on the Northwind intent labels against our guidelines; we need alpha of at least 0.5.",
+      "expected": [
+        "alpha 0.595 passes 0.5; Fleiss n/a (2 and 3 ratings per item); 7 disputed items; plan_change is a low-agreement label not in the guidelines"
+      ],
+      "inputs": {
+        "labels": "evals/fixtures/labels.csv",
+        "guidelines": "evals/fixtures/guidelines.md",
+        "min_agreement": "0.5"
+      },
+      "checks": [
+        "exit:0",
+        "exists:agreement-report.md",
+        {"file": "agreement-report.md", "check": "contains:\"**PASS** — alpha 0.595 ≥ minimum 0.5.\""},
+        {"file": "agreement-report.md", "check": "contains:\"| ann_a – ann_b | 15 | 0.600 | 0.500 | moderate |\""},
+        {"file": "agreement-report.md", "check": "contains:\"Low-agreement labels the guidelines do not mention: `plan_change`.\""},
+        {"file": "disputed-items.csv", "check": "contains:\"NW-011,billing_dispute:1;other:1;plan_change:1,tie,0.000\""},
+        {"file": "label-agreement.csv", "check": "contains:\"refund_request,11,0.727,no\""},
+        {"file": "agreement-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-missing-labels",
+      "prompt": "Check our annotators' agreement.",
+      "expected": [
+        "Asks once for the labels CSV"
+      ],
+      "inputs": {
+        "guidelines": "evals/fixtures/guidelines.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:labels"
+      ]
+    },
+    {
+      "id": "agent-no-guidelines-not-invented",
+      "prompt": "We don't have written guidelines; just tell me which labels are defined well.",
+      "expected": [
+        "Guideline coverage is TBD for the Annotation lead; no gate applied; no definition status invented"
+      ],
+      "inputs": {
+        "labels": "evals/fixtures/labels.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "label-agreement.csv", "check": "contains:\"plan_change,6,0.500,[TO BE BASELINED — owner: Annotation lead]\""},
+        {"file": "agreement-report.md", "check": "contains:\"No minimum agreement set ([TO BE BASELINED — owner: Annotation lead]); no gate applied.\""},
+        {"file": "agreement-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-below-minimum-exits-1",
+      "prompt": "Gate the Northwind labels: fail unless alpha is at least 0.667.",
+      "expected": [
+        "alpha 0.595 < 0.667 → FAIL, exit 1, outputs still written"
+      ],
+      "inputs": {
+        "labels": "evals/fixtures/labels.csv",
+        "guidelines": "evals/fixtures/guidelines.md",
+        "min_agreement": "0.667"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "agreement-report.md", "check": "contains:\"**FAIL** — alpha 0.595 is below the minimum 0.667\""},
+        {"file": "agreement.json", "check": "contains:\"\\\"passed\\\": false\""}
+      ]
+    },
+    {
+      "id": "agent-single-annotator-no-fake-score",
+      "prompt": "Agreement for labels where each item had one annotator.",
+      "expected": [
+        "Exit 1 with a clear error; no alpha or kappa reported"
+      ],
+      "inputs": {
+        "labels": "evals/fixtures/labels-single.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "agreement-report.md", "check": "contains:\"**No agreement score: no item has ratings from 2 or more annotators\""},
+        {"file": "agreement.json", "check": "contains:\"\\\"status\\\": \\\"insufficient\\\"\""}
+      ]
+    }
+  ]
+}

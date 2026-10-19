@@ -1,4 +1,5 @@
 {
+ "ai-platform/ab-test-analysis": "dbd33bed66d6f69ad517053e1e9ee6998d2f8ec685ff1ec4587f312cd67e75f2",
  "ai-platform/agent-architecture": "7ccea1b36232748e21c01dbbf6431d85ec72b42e0f33a4f787f4b55cec13180c",
  "ai-platform/ai-adoption-and-literacy": "77cff7f9daad060b02bf90ed0ac666a0e2fe94a01eaaa2d55b7bf4a2c90d56bb",
  "ai-platform/ai-governance-risk": "b417fbac1e749c91bbce2ec528e0a27800ebdc80dd3a6b4a2fa170982db19537",
@@ -11,6 +12,7 @@
  "ai-platform/ai-transparency-notice": "948a8fb24f19f85cc2d61a360cf361bbc331ad237996eff1b68b25cdd88f8ec8",
  "ai-platform/ai-use-case-canvas": "2b3b8c8ed8baff3c7a46958474b2c3272636bf3cf2033b6f5650d1aa99bdad97",
  "ai-platform/ai-vendor-assessment": "f03db2f837b9b3e4168fec4fe33839840a393e8cc38ee0f3d687650752b51d17",
+ "ai-platform/annotation-agreement": "8dba43841723dd79f03e675777168ae899fa860913d76f7493f323005ad54403",
  "ai-platform/bias-fairness-check": "d2bd1934a2fcbe3d5f42305a2e81c1730977adb9aad2ad0e768a56d1c2c0cb60",
  "ai-platform/conversation-design": "428542ce08e3860eb53b48171c09f66572d43a7787d1f40ad2b64835f24a47af",
  "ai-platform/data-readiness-assessment": "8f5313bd79fc42434792be737655e22533c2cae5dedc812d99ae141a809ff5af",

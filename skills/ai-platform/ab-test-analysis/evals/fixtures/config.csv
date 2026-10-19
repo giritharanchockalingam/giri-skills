@@ -1,0 +1,11 @@
+# fictional fixture — Northwind Billing Assistant experiment config; invented for tests only
+key,value,source,notes
+experiment_name,Northwind Billing Assistant — prompt v3 and model swap,fixture,fictional fixture
+control,control,fixture,fictional fixture
+primary_metric,resolved,fixture,share of billing conversations resolved without a human
+alpha,0.05,fixture,fictional fixture
+power,0.8,fixture,fictional fixture
+expected_split,1/1/1,fixture,equal thirds in variant order
+mde,0.02,fixture,absolute (2 percentage points)
+direction,higher_better,fixture,fictional fixture
+guardrails,escalated:lower_better;handle_time_s:lower_better,fixture,fictional fixture

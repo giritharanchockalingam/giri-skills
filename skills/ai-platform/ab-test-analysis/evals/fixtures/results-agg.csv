@@ -1,0 +1,11 @@
+# fictional fixture — Northwind Billing Assistant experiment; invented numbers for tests only
+metric,variant,users,conversions,metric_sum,metric_sumsq
+resolved,control,5000,2000,,
+resolved,prompt_v3,5000,2150,,
+resolved,model_swap,5000,2010,,
+escalated,control,5000,400,,
+escalated,prompt_v3,5000,390,,
+escalated,model_swap,5000,470,,
+handle_time_s,control,5000,,600000,76499100
+handle_time_s,prompt_v3,5000,,590000,74738976
+handle_time_s,model_swap,5000,,605000,77704100

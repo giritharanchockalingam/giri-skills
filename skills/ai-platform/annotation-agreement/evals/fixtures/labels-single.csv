@@ -1,0 +1,10 @@
+# fictional fixture — Northwind Billing Assistant labels, one annotator per item; invented for tests only
+item_id,annotator,label
+NW-001,ann_a,billing_dispute
+NW-002,ann_b,refund_request
+NW-003,ann_a,payment_failed
+NW-004,ann_b,plan_change
+NW-005,ann_a,refund_request
+NW-006,ann_b,billing_dispute
+NW-007,ann_a,other
+NW-008,ann_b,plan_change
