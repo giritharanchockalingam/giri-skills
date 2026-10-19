@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { loadFunnel } from "@/lib/db/skills";
+import { FunnelStrip } from "@/components/factory/Funnel";
+import { GATE_ORDER, GATE_LABEL, GATE_HELP, type Gate } from "@/lib/factory/funnel";
 import { requireWorkspace } from "@/lib/factory/db";
 import { loadPipeline } from "@/lib/db/skills";
 import { can } from "@/lib/factory/roles";
@@ -10,10 +13,13 @@ import { ImportDrawer } from "@/components/factory/ImportDrawer";
 export const metadata = { title: "Skills · Skills Factory" };
 export const dynamic = "force-dynamic";
 
-export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string; stage?: string }> }) {
+export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string; stage?: string; gate?: string }> }) {
   const sp = await searchParams;
   const ctx = await requireWorkspace();
   const { skills, versions, states } = await loadPipeline(ctx.supabase, ctx.workspace.id);
+  const funnel = await loadFunnel(ctx.supabase, ctx.workspace.id);
+  const gate = (GATE_ORDER as string[]).includes(sp.gate ?? "") ? (sp.gate as Gate) : null;
+  const inGate = gate ? new Set(funnel.filter((f) => f.gate === gate).map((f) => f.slug)) : null;
   const stateById = new Map(states.map((s) => [s.version_id, s]));
   const items: CatalogItem[] = skills.map((s) => {
     const vs = versions.filter((v) => v.skill_id === s.id);
@@ -36,10 +42,10 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHead eyebrow={`Admin · release pipeline · ${ctx.workspace.name}`} title="Release" em="pipeline" after="."
+      <PageHead eyebrow={`Skills · publish pipeline · ${ctx.workspace.name}`} title="Publish" em="pipeline" after="."
         lead={items.length ? `${items.length} skill${items.length === 1 ? "" : "s"}: ${published} published, ${drafts} with a draft in progress.` : "No skills in this workspace yet."}
         caption="For people who publish skills: versions, evaluation evidence, approvals. To use a skill, start from Home or the Library — nothing here needs to be published for that."
-        note={<><Link href="/repo/" className="link-flame">Library ({repoSkills.length} skills, evaluation scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Reference skibrary →</Link></>} />
+        note={<><Link href="/repo/" className="link-flame">Library ({repoSkills.length} skills, evaluation scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Reference skills →</Link></>} />
       <div className="hero-actions mb-6">
         {can(ctx.role, "skill.create") ? (
           <>
@@ -48,7 +54,9 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
           </>
         ) : <span className="caption">Your role ({ctx.role}) can run published skills. Authors create and import skills.</span>}
       </div>
-      <SkillsCatalog items={items} canCreate={can(ctx.role, "skill.create")} initialStage={sp.stage ?? "all"}
+      <FunnelStrip items={funnel} active={gate} />
+      {gate && <p className="caption mb-4">Showing <b>{GATE_LABEL[gate]}</b>: {GATE_HELP[gate]} <Link className="link" href="/pipeline">Show all</Link></p>}
+      <SkillsCatalog items={inGate ? items.filter((i) => inGate.has(i.slug)) : items} canCreate={can(ctx.role, "skill.create")} initialStage={sp.stage ?? "all"}
         stageOpts={[...STAGES.map((x) => ({ key: x.id, label: `${x.n} ${x.name}` })), ...SHELVES.map((x) => ({ key: x.id, label: x.name })), { key: "unassigned", label: "Unassigned" }]} />
     </>
   );
