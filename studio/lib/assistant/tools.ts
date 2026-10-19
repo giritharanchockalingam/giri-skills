@@ -12,7 +12,9 @@ import { progressOf } from "@/lib/scorecards/initiatives";
 export interface RepoFact { id: string; key: string; title: string; url: string; owner: string | null; archived: boolean; description: string | null;
   stack: string[]; lastActivity: string | null; applicable: { skill: string; why: string }[];
   /** Stack ids and file counts: which checks apply, hence the repository's scorecard level. */
-  facts?: EntityFacts }
+  facts?: EntityFacts;
+  /** Agents, MCP servers, skills, MCP configs and agent instructions found in the repository (with evidence). */
+  aiAssets?: { kind: string; name: string; path: string; detail: string; evidence: string[] }[] }
 export interface ScoreFact { entity_id: string; check_id: string; verdict: string; summary: string; created_at: string }
 export interface RunFact { automation: string; repo: string; entity_id: string | null; event: string; pr_number: number | null; head_sha: string | null; status: string;
   verdicts: Record<string, { verdict: string; summary: string }>; check_run_url: string | null; error: string | null; started_at: string }
@@ -202,7 +204,24 @@ const deliveryMetrics = tool({
   },
 });
 
-const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives, deliveryMetrics];
+const listAiAssets = tool({
+  spec: { type: "function", function: { name: "list_ai_assets",
+    description: "AI assets found in the catalog's repositories: agents (frameworks proved by a dependency, definition files), MCP servers, skills (SKILL.md folders), MCP client configs and agent-instruction files — each with its repository, path and evidence.",
+    parameters: { type: "object", properties: {
+      kind: { type: "string", enum: ["agent", "mcp_server", "skill", "mcp_config", "agent_instructions"], description: "Only this kind." },
+      repository: { type: "string", description: "Only this repository (owner/name or name)." } }, additionalProperties: false } } },
+  schema: z.object({ kind: z.enum(["agent", "mcp_server", "skill", "mcp_config", "agent_instructions"]).optional(), repository: z.string().max(200).optional() }),
+  async run(a, d) {
+    let repos = (await d.repos()).filter((r) => !r.archived);
+    if (a.repository) { const hit = resolveRepo(a.repository, repos); repos = "repo" in hit ? [hit.repo] : []; }
+    const all = repos.flatMap((r) => (r.aiAssets ?? []).filter((x) => !a.kind || x.kind === a.kind).map((x) => ({ ...x, repository: r.key, link: repoHref(r.id) })));
+    const counts = Object.fromEntries(["agent", "mcp_server", "skill", "mcp_config", "agent_instructions"].map((k) => [k, all.filter((x) => x.kind === k).length]));
+    return { content: { scanned_repositories: repos.filter((r) => Array.isArray(r.aiAssets)).length, counts, assets: all.slice(0, 80), truncated: all.length > 80, page: "/ai-assets" },
+      links: [{ title: "AI assets", href: a.kind ? `/ai-assets?kind=${a.kind}` : "/ai-assets" }], summary: `${all.length} AI asset(s)` };
+  },
+});
+
+const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives, deliveryMetrics, listAiAssets];
 export const TOOL_SPECS: ToolSpec[] = TOOLS.map((t) => t.spec);
 
 /** Run one tool call from the model. Bad names or arguments come back as tool errors the model can correct. */

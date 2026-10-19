@@ -126,7 +126,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <div className="flex flex-wrap items-center gap-3">
             {(["gold", "silver", "bronze", "none", "n/a"] as LevelOrNone[]).map((l) => <span key={l} className="level-count"><LevelBadge level={l} /> <b>{levelCount(l)}</b></span>)}
           </div>
-          <div className="caption">Levels: Bronze — every check that applies has run · Silver — none fails · Gold — all pass. <Link className="link" href="/initiatives">Initiatives</Link> set a level as a goal with an owner and a deadline.</div>
+          <div className="caption">Levels: Bronze — every check that applies has run · Silver — none fails · Gold — all pass. <Link className="link" href="/initiatives">Initiatives</Link> set a level as a goal with an owner and a deadline. <Link className="link" href="/ai-assets">AI assets</Link> lists the agents, MCP servers and skills in these repositories.</div>
         </div>
         {canScore && <div className="mb-4 flex flex-wrap items-center gap-3"><ScoreAll entities={active.map((e) => ({ id: e.id, key: e.key }))} label={scoredRepos.length ? "Re-run scorecards" : "Run scorecards"} />
           <span className="caption">Runs {CHECKS.length} checks where they apply ({CHECKS.map((c) => c.title.split(" (")[0]).join(", ")}) on each repository&apos;s current default branch. Read-only.</span></div>}

@@ -1,12 +1,13 @@
 /* Data access for the catalog (GitHub installations, repositories, syncs, scorecards). Queries run as the signed-in user. */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Applicable, Signal } from "@/lib/github/detect";
+import type { AiAsset } from "@/lib/github/assets";
 
 export interface InstallationRow { installation_id: number; account_login: string; account_type: string; repository_selection: string; suspended_at: string | null; created_at: string }
 export interface SyncRow { status: string; counts: unknown; error: string | null; started_at: string; finished_at: string | null }
 export interface LatestScoreRow { entity_id: string; check_id: string; verdict: string; summary: string; created_at: string }
 export interface CatalogEntityRow { id: string; key: string; title: string; url: string; owner: string | null; archived: boolean; last_activity_at: string | null;
-  properties: { description?: string | null; visibility?: string; stack?: Signal[]; applicable?: Applicable[]; counts?: { files: number; tests: number; migrations: number; workflows: number }; tree_truncated?: boolean } }
+  properties: { description?: string | null; visibility?: string; stack?: Signal[]; applicable?: Applicable[]; counts?: { files: number; tests: number; migrations: number; workflows: number }; tree_truncated?: boolean; ai_assets?: AiAsset[] } }
 export type CatalogEntityDetail = Pick<CatalogEntityRow, "id" | "key" | "url" | "owner" | "properties">;
 export interface ScorecardResultRow { id: string; check_id: string; skill: string; verdict: string; summary: string; findings: number | null; commit_sha: string | null; duration_ms: number | null; created_at: string;
   details: { report?: string; log_tail?: string; files_used?: number; partial?: boolean; runtime_status?: string; outputs?: { path: string; sha256: string; bytes: number }[] } }
