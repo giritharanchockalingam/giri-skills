@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 const CLS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
 type Res = { id: string; check_id: string; skill: string; verdict: string; summary: string; findings: number | null; commit_sha: string | null; duration_ms: number | null; created_at: string;
-  details: { report?: string; files_used?: number; partial?: boolean; runtime_status?: string; outputs?: { path: string; sha256: string; bytes: number }[] } };
+  details: { report?: string; log_tail?: string; files_used?: number; partial?: boolean; runtime_status?: string; outputs?: { path: string; sha256: string; bytes: number }[] } };
 
 /** One repository's scorecard: each check's verdict, the skill's own report as evidence, and the history. */
 export default async function EntityPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +43,8 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
           </div>
           <p style={{ margin: "6px 0" }}>{r.summary}</p>
           <p className="caption" style={{ margin: 0 }}>By the <Link className="link" href={`/repo/${r.skill}`}>{humanName(r.skill.split("/")[1])}</Link> skill.{r.details.partial ? " Partial scan: the repository is larger than the scan limit." : ""}</p>
+          {r.verdict === "error" && r.details.log_tail && (
+            <details className="mt-3"><summary className="caption">What the skill printed</summary><pre className="run-raw">{r.details.log_tail}</pre></details>)}
           {r.details.report && (
             <details className="mt-3"><summary className="caption">The skill&apos;s report</summary>
               {/\.md$|^#/m.test(r.details.report) ? <div className="prose run-prose" dangerouslySetInnerHTML={{ __html: mdToHtml(r.details.report) }} /> : <pre className="run-raw">{r.details.report}</pre>}

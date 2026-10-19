@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { githubConfig, installationToken, repoTree, blobText, headSha, type GhRepo } from "@/lib/github/app";
 import { callRuntime, runtimeConfig } from "@/lib/factory/runtime";
-import { checksFor, bound, type CheckDef, type Scored, type TreeFile } from "./checks";
+import { checksFor, bound, errorLine, stripPaths, type CheckDef, type Scored, type TreeFile } from "./checks";
 
 const FETCH_CONCURRENCY = 8;
 const REPORT_EXCERPT = 60_000;
@@ -74,10 +74,16 @@ async function runCheck(sb: SupabaseClient, workspaceId: string, userId: string,
       const r = called.r;
       const outs = r.outputs.map((o) => ({ path: o.path, content_text: o.content_text }));
       scored = r.status === "needs_input" ? { verdict: "error", summary: `the skill needs input: ${(r.needs_input?.missing ?? []).map((m) => m.name).join(", ")}`, findings: null } : chk.score(outs, r.status);
+      if (scored.verdict === "error") {
+        // say WHY, in the skill's own words (its last error line), so an error is never mistaken for a finding
+        const why = errorLine(r.logs) ?? r.error;
+        if (why) scored = { ...scored, summary: `the skill could not run: ${why}` };
+      }
       details = {
         files_used: used, partial, runtime_status: r.status, exit_code: r.exit_code, error: r.error,
-        report: (outs.find((o) => o.path === chk.primary)?.content_text ?? "").replace(/\/tmp\/sf\/[^\s/]+\/(inputs|out)\/?/g, "").slice(0, REPORT_EXCERPT),
+        report: stripPaths(outs.find((o) => o.path === chk.primary)?.content_text ?? "").slice(0, REPORT_EXCERPT),
         outputs: r.outputs.map((o) => ({ path: o.path, bytes: o.bytes, sha256: o.sha256 })), runtime: r.runtime,
+        ...(scored.verdict === "error" ? { log_tail: stripPaths(r.logs).slice(-4000) } : {}),
       };
     }
   }

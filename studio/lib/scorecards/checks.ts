@@ -123,3 +123,11 @@ export function bound(files: TreeFile[]): { files: TreeFile[]; partial: boolean 
 }
 
 export const checksFor = (e: EntityFacts) => CHECKS.filter((c) => c.applies(e));
+
+export const stripPaths = (t: string) => t.replace(/\/tmp\/sf\/[^\s/]+\/(inputs|out)\/?/g, "");
+/** The last "error: …" / "gate: …" line a skill printed (its own explanation), without runtime paths. */
+export function errorLine(logs: string | null | undefined): string | null {
+  const lines = stripPaths(logs ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const hit = [...lines].reverse().find((l) => /^(error|fatal)[:\s]|traceback|exception/i.test(l));
+  return hit ? hit.replace(/^error:\s*/i, "").slice(0, 240) : null;
+}

@@ -6,7 +6,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CHECKS, bound, checksFor, commonDir, MAX_FILES, type TreeFile } from "../lib/scorecards/checks.ts";
+import { CHECKS, bound, checksFor, commonDir, errorLine, MAX_FILES, type TreeFile } from "../lib/scorecards/checks.ts";
 
 const ROOT = new URL("../..", import.meta.url).pathname;
 const check = (id: string) => CHECKS.find((c) => c.id === id)!;
@@ -69,4 +69,10 @@ test("bound: caps files and bytes, and says so", () => {
   assert.equal(b.files.length, MAX_FILES); assert.equal(b.partial, true);
   assert.deepEqual(bound([{ path: "a", sha: "s", size: 10 }]), { files: [{ path: "a", sha: "s", size: 10 }], partial: false });
   assert.equal(commonDir(["a/b/c.sql", "a/b/d/e.sql"]), "a/b");
+});
+
+test("errorLine: the skill's own last error, without runtime paths", () => {
+  assert.equal(errorLine("lint: start\nerror: no .ts/.tsx files under /tmp/sf/abc/inputs/target\n"), "no .ts/.tsx files under target");
+  assert.equal(errorLine("all good"), null);
+  assert.equal(errorLine(null), null);
 });

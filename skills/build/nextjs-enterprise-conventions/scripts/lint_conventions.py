@@ -3,7 +3,7 @@
 
     python3 -I scripts/lint_conventions.py --target <repo> --findings findings.csv --report report.md
 
-Scans .ts/.tsx (skipping node_modules, .next, dist, build, coverage, tests/**) for:
+Scans .ts/.tsx/.js/.jsx/.mjs (skipping node_modules, .next, dist, build, coverage, tests/**) for:
   NX1 supabase-in-component   high    `.from('…')`, `.rpc(`, `createClient(` inside components/ or app/**/page.tsx
   NX2 console-log             medium  `console.log(`
   NX3 action-without-zod      high    "use server" file: exported async function whose body has no `.parse(`/`.safeParse(`
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 SKIP_DIRS = {"node_modules", ".next", "dist", "build", "coverage", ".git", "tests", "test", "__tests__"}
-EXTS = {".ts", ".tsx"}
+EXTS = {".ts", ".tsx", ".js", ".jsx", ".mjs"}   # the conventions apply to JavaScript Next.js apps too
 RULES = {
     "NX1": ("supabase-in-component", "high", "No Supabase call outside lib/db or server/services (stack-conventions: Data access)"),
     "NX2": ("console-log", "medium", "Structured logging via lib/logger only; no console.log in committed code"),
@@ -61,7 +61,7 @@ def source_files(root: Path):
 
 def is_component_surface(rel: str) -> bool:
     return rel.startswith("components/") or "/components/" in rel or \
-        (rel.startswith("app/") and rel.rsplit("/", 1)[-1] in ("page.tsx", "page.ts", "layout.tsx"))
+        (rel.startswith("app/") and rel.rsplit("/", 1)[-1] in ("page.tsx", "page.ts", "page.jsx", "page.js", "layout.tsx", "layout.jsx", "layout.js"))
 
 
 def line_no(text: str, pos: int) -> int:
@@ -187,7 +187,7 @@ def main() -> int:
         n_files += 1
         findings += lint_file(p.read_text(encoding="utf-8", errors="replace"), rel)
     if n_files == 0:
-        die(f"no .ts/.tsx files under {target}")
+        die(f"no .ts/.tsx/.js/.jsx/.mjs source files under {target}")
     findings.sort(key=lambda f: (f["file"], f["line"], f["rule"]))
     resolved = apply_baseline(findings, load_baseline(Path(a.baseline))) if a.baseline else None
     if resolved is None:

@@ -64,3 +64,19 @@ def test_quiet_and_bad_input(tmp_path):
     empty = tmp_path / "empty"
     empty.mkdir()
     assert run_script(SCRIPT, "--target", str(empty), "--findings", str(tmp_path / "f.csv"), "--report", str(tmp_path / "r.md")).returncode == 1
+
+
+def test_javascript_nextjs_app_is_linted(tmp_path):
+    """A JavaScript Next.js app (no .ts files) is linted, not refused — the conventions apply to JS too."""
+    root = tmp_path / "js-app"
+    (root / "app" / "(shop)" / "cart").mkdir(parents=True)
+    (root / "components").mkdir()
+    (root / "app" / "(shop)" / "cart" / "page.jsx").write_text(
+        "// fictional example\nexport default async function Page() {\n  const { data } = await supabase.from('carts').select('*');\n  return null;\n}\n")
+    (root / "components" / "Total.js").write_text("// fictional example\nexport function Total() { console.log('x'); return null }\n")
+    res, rows, report = run(tmp_path, root)
+    assert res.returncode == 1, res.stderr
+    got = {(r["rule"], r["file"]) for r in rows}
+    assert ("NX1", "app/(shop)/cart/page.jsx") in got          # data access in a page component
+    assert ("NX2", "components/Total.js") in got               # console.log
+    assert "in 2 file(s)" in report.read_text(encoding="utf-8")
