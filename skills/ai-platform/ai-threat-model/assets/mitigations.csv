@@ -1,0 +1,30 @@
+id,mitigation,maps_to,applies_to
+M01,Authenticate every caller and service (OIDC for users; mTLS or signed workload identity for services),S,process;external_entity
+M02,Sign or integrity-check messages and stored records; restrict write access to the owning service,T,process;data_store;data_flow
+M03,Write tamper-evident audit logs of who did what with request ids,R,process;external_entity
+M04,Encrypt in transit (TLS 1.2+) and at rest; least-privilege read access,I,process;data_store;data_flow
+M05,Rate-limit and set quotas and timeouts; autoscale with a ceiling,D,process;data_store;data_flow
+M06,Run with least privilege; authorise every action server-side on the end user's identity,E,process
+M07,Validate input schemas at every trust boundary,T;E,process;data_flow
+M08,Back up data stores and test restore,D,data_store
+M20,Keep system instructions separate from untrusted content; mark and delimit retrieved and tool text as data,LLM01,component
+M21,Screen inputs and retrieved content for injection patterns before they reach the model,LLM01,component
+M22,Require human approval for high-impact actions proposed by the model,LLM01;LLM06,component
+M23,Red-team prompt injection (direct and indirect) before each release,LLM01,component
+M24,Minimise personal data in prompts and context; mask or tokenise before the model call,LLM02,component
+M25,Filter outputs for personal and secret data before they leave the system,LLM02,component
+M26,Inventory models and components (AI-BOM / SBOM); pin versions; use vetted sources,LLM03,component
+M27,Verify provenance and integrity (hashes or signatures) of models and datasets,LLM03;LLM04,component
+M28,Validate and approve data before it enters fine-tuning or the index; keep ingestion lineage,LLM04;LLM08,component
+M29,Treat model output as untrusted: validate against a schema and encode for its sink (HTML; SQL; shell),LLM05,component
+M30,Use parameterised calls for any query or command built from model output,LLM05,component
+M31,Give tools the narrowest scope and no open-ended functions; separate read and write tools,LLM06,component
+M32,Execute tool calls under the end user's permissions; never a shared admin credential,LLM06,component
+M33,Set per-action limits (amount; count; rate) enforced outside the model,LLM06,component
+M34,Keep secrets and authorisation logic out of prompts; enforce them in code,LLM07,component
+M35,Test that the system prompt cannot be extracted (canary checks),LLM07,component
+M36,Enforce access control on retrieval by tenant and user permission; partition indexes,LLM08,component
+M37,Ground answers in cited sources and show citations to users,LLM09,component
+M38,Evaluate factuality on a regression set and route low-confidence answers to a human,LLM09,component
+M39,Cap tokens per request and per user; set budget alerts and hard limits,LLM10,component
+M40,Detect and throttle extraction-like query patterns,LLM10,component

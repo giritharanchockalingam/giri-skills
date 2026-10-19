@@ -1,0 +1,12 @@
+question_id,topic,question,answer_type,red_flag_rule,rationale
+TPR-01,Training on customer data,"Does the vendor use our prompts, outputs or uploaded data to train or improve its models by default?",yes_no,eq:yes,Our data could surface to other customers or be retained in model weights
+TPR-02,Data retention,"How many days does the vendor retain prompts and outputs (including abuse-monitoring logs)?",number,gt:30,Long retention widens breach and discovery exposure; 30 days is this template's default policy - edit to yours
+TPR-03,Data residency,Can processing and storage be pinned to the region our policy requires?,yes_no,eq:no,Residency obligations (contract or law) cannot be met
+TPR-04,Sub-processors,Is a current sub-processor list published with advance notice of changes?,yes_no,eq:no,Unknown parties may process our data
+TPR-05,SOC 2,Is a current SOC 2 Type 2 report covering the AI service available under NDA?,yes_no,eq:no,No independent assurance of operating controls
+TPR-06,ISO/IEC 27001,Is the service in scope of a current ISO/IEC 27001 certificate?,yes_no,eq:no,No certified information security management system for the service
+TPR-07,ISO/IEC 42001,"Is the vendor certified to ISO/IEC 42001 (AI management system), or is certification in progress?",yes_no_progress,eq:no,No AI management system assurance and no plan to obtain it
+TPR-08,Model change notification,How many days of notice does the vendor give before changing or retiring the model version we use?,number,lt:30,Silent model changes break evaluated behaviour; 30 days is this template's default policy - edit to yours
+TPR-09,Incident notification SLA,Within how many hours will the vendor notify us of a security incident affecting our data?,number,gt:72,Late notice can breach our own notification duties; 72 hours is this template's default policy - edit to yours
+TPR-10,IP indemnity,Does the vendor indemnify us against third-party IP claims arising from model outputs?,yes_no,eq:no,IP claim cost falls on us
+TPR-11,Exit and portability,"At exit, can we export our data, prompts, configurations and fine-tunes in a standard format and receive certified deletion?",yes_no,eq:no,Lock-in and residual data after exit

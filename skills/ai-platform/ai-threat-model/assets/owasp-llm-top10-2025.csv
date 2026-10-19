@@ -1,0 +1,11 @@
+id,name,paraphrase,applies_to,trigger,mitigation_ids
+LLM01,Prompt Injection,"Crafted direct or indirect input (user text, retrieved documents, tool output) changes the model's behaviour against the designer's intent.",llm;agent,reachable from an untrusted source,M20;M21;M22;M23
+LLM02,Sensitive Information Disclosure,"The model or the system around it reveals personal, confidential or proprietary data in its output.",llm;agent;app;retriever;vector_store,handles_pii=yes,M24;M25
+LLM03,Supply Chain,"Third-party models, adapters, libraries, tools or datasets introduce vulnerabilities or tampered components.",llm;agent;tool,always for these kinds,M26;M27
+LLM04,Data and Model Poisoning,"Training, fine-tuning or embedding data is manipulated to plant bias, backdoors or wrong behaviour.",llm;vector_store,always for these kinds,M28;M27
+LLM05,Improper Output Handling,"Downstream components act on model output without validation, enabling injection (XSS, SQL, command) or unsafe actions.",app;agent;tool;data_store,receives a flow from an llm or agent,M29;M30
+LLM06,Excessive Agency,"The system grants the model more functions, permissions or autonomy than the task needs, so manipulated output causes damaging actions.",llm;agent;tool;app,write_actions=yes,M31;M32;M33
+LLM07,System Prompt Leakage,"Instructions or secrets placed in the system prompt are exposed, and the system wrongly relies on them for security.",llm;agent,always for these kinds,M34;M35
+LLM08,Vector and Embedding Weaknesses,"Weaknesses in how embeddings are generated, stored or retrieved allow data leakage across tenants, poisoning or inversion.",vector_store;retriever,always for these kinds,M36;M28
+LLM09,Misinformation,"The model produces false or misleading content that users or downstream steps rely on.",llm,always for this kind,M37;M38
+LLM10,Unbounded Consumption,"Uncontrolled inference requests exhaust resources or budget, degrade service or enable model extraction.",llm;agent,always for these kinds,M39;M40

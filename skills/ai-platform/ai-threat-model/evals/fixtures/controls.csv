@@ -1,0 +1,7 @@
+# fictional fixture - Northwind Utilities (fictional) control register
+threat_id,mitigation_id,status,evidence,owner
+,M04,in_place,TLS 1.2+ and disk encryption in platform baseline (fictional),Platform owner
+orchestrator:LLM06,,planned,Refund approval step in backlog (fictional),AppSec lead
+llm:LLM01,,in_place,Injection screen and delimiting tested (fictional),AppSec lead
+customer:S,,in_place,OIDC login with MFA (fictional),Identity lead
+billing_api:E,,planned,,

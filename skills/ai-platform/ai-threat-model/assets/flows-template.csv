@@ -1,0 +1,4 @@
+from,to,data,crosses_trust_boundary
+customer,web_app,chat message,yes
+web_app,llm,prompt,yes
+llm,web_app,completion,yes

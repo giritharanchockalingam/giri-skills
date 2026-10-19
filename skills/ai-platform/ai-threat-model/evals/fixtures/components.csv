@@ -1,0 +1,11 @@
+# fictional fixture - Northwind Utilities (fictional) Billing Assistant; no real system
+id,name,kind,trust_zone,handles_pii,write_actions,internet_facing
+customer,Customer browser,user,internet,yes,no,yes
+web_app,Billing chat web app,app,dmz,yes,no,yes
+orchestrator,Agent orchestrator,agent,app_core,yes,yes,no
+llm,Hosted LLM API,llm,vendor_cloud,yes,no,no
+retriever,Policy retriever,retriever,app_core,no,no,no
+vector_db,Billing policy vector store,vector_store,app_core,no,no,no
+billing_api,Billing API refunds and lookups,tool,billing_core,yes,yes,no
+billing_db,Billing database,data_store,billing_core,yes,no,no
+payment_gw,Payment gateway,external_api,payments_vendor,yes,no,yes

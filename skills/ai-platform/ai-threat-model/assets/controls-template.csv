@@ -1,0 +1,3 @@
+threat_id,mitigation_id,status,evidence,owner
+llm:LLM01,,planned,Injection screen in sprint backlog,AppSec lead
+,M04,in_place,TLS and disk encryption verified in platform baseline,Platform owner

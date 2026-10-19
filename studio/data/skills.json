@@ -2098,6 +2098,302 @@
   "bodyMd": "\n# AI Strategy & CoE Design\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-strategy-coe --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-strategy-coe`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`portfolio.csv`, `portfolio.md`, `maturity.md`, `roadmap.md`); fill the operating-model and governance sections of the roadmap by hand from the references.\n\n## When to use\n- \"Build our AI strategy\", \"stand up an AI CoE\", \"where are we on AI maturity\", \"prioritize our AI backlog\", \"12-month AI roadmap\".\n- Executive audience: CIO, CDO, CTO, board.\n- NOT for: qualifying one idea (`ai-use-case-canvas`), risk/compliance only (`ai-governance-risk`), agent design (`agent-architecture`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Organization context (industry, size, regulatory posture) | yes | user |\n| Current-state evidence (data platforms, cloud, existing AI/ML, team) | yes | user / documents |\n| Candidate use-case list (even rough) | no | user; skill elicits if missing |\n| Executive sponsor and budget envelope | no | user; mark `[TO BE BASELINED — owner: ___]` if absent |\n| Strategic priorities for the next 12 months | yes | user / annual plan |\n\nIf organization context or current-state evidence is missing, ask once. Do not infer maturity from industry averages.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.\n2. **Assess maturity.** Score each of the five dimensions 1–5 using `references/maturity-model.md`. Record evidence per score in `assets/maturity-scorecard.csv`. A score without evidence is `[TO BE BASELINED]`.\n3. **Pick the operating model.** Apply the decision table in `references/operating-models.md`. State the chosen model, the two rejected ones, and why. Maturity level and organizational breadth drive this, not preference.\n4. **Score the portfolio.** Score every candidate use case on value, feasibility, risk, data readiness (1–5 each) with `references/use-case-scoring.md`; fill `assets/use-case-scoring.csv`. Compute priority = value × feasibility × data readiness ÷ risk. Classify: Now / Next / Later / Stop.\n5. **Define governance.** Minimum: intake gate, risk tiering, model inventory, review cadence. Point deeper controls to `ai-governance-risk`.\n6. **Build the roadmap.** Use `assets/roadmap.md` with `references/roadmap-skeleton.md`. Q1 is foundations and 1–2 lighthouse use cases; never schedule scale before measurement exists.\n7. **Write the executive summary** (≤5 bullets): maturity headline, model choice, top-3 use cases, investment envelope or `[TO BE BASELINED]`, first 90-day commitments.\n8. Run the self-check.\n\n## Output\n- `ai-strategy-<org>.md`: exec summary, maturity table, operating model, portfolio table, governance, roadmap, risks, next steps (owner + date).\n- `maturity-scorecard.csv` and `use-case-scoring.csv` filled.\n- Saved to the working directory unless the user names a path.\n\n## Self-check\n- [ ] Every maturity score has an evidence line or a `[TO BE BASELINED — owner: ___]` marker\n- [ ] Operating model choice cites the decision criteria it satisfied\n- [ ] Portfolio table has every candidate scored on all four axes; no \"high/med/low\" without the numeric score\n- [ ] Roadmap quarters each have an exit criterion and an owner\n- [ ] No vendor named as a recommendation without a stated selection criterion\n- [ ] No invented benchmark figures; industry comparisons carry a source or are omitted\n- [ ] First line is the answer\n\n## References\n- `references/maturity-model.md` — 5-level model with criteria per dimension\n- `references/operating-models.md` — central / hub-and-spoke / federated, when to choose\n- `references/use-case-scoring.md` — rubric and formula\n- `references/roadmap-skeleton.md` — 12-month quarter plan with exit criteria\n- `scripts/score_portfolio.py` — scoring CSV → ranked `portfolio.csv` + `unscored.csv` + `portfolio.md`\n- `scripts/maturity.py` — scorecard CSV → `maturity.md` + `roadmap.md` skeleton (one item per gap)\n"
  },
  {
+  "id": "ai-platform/ai-threat-model",
+  "domain": "ai-platform",
+  "stage": "architecture",
+  "name": "ai-threat-model",
+  "description": "Use when an LLM app, RAG system or agent needs a security threat model before build or release — \"threat model our agent\", \"STRIDE this architecture\", \"map our chatbot to the OWASP LLM Top 10\", \"what are the open high threats\", \"security architecture review for the AI assistant\". Produces threats.csv (stable threat ids, STRIDE-per-element plus OWASP Top 10 for LLM Applications 2025 items per component, likelihood × impact severity, mitigation ids, residual status and owner), dfd.md (mermaid data-flow diagram with trust zones and boundary-crossing flows) and threat-report.md (Summary, Data flow, Threats by severity, Open high threats, Method & limits) from a components CSV, a flows CSV and an optional controls register; an optional max_open_high gate fails the run. Open threats with no owner name the Security architect. Not for adversarial testing of a running app (red-team-suite), runtime guardrail rules (guardrails-config) or regulatory risk tiering (ai-governance-risk).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "architecture",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "components",
+     "type": "csv",
+     "required": true,
+     "from": "DFD elements id,name,kind,trust_zone,handles_pii,write_actions,internet_facing (layout: assets/components-template.csv; kind user|app|llm|retriever|vector_store|tool|data_store|external_api|agent)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "flows",
+     "type": "csv",
+     "required": true,
+     "from": "data flows from,to,data,crosses_trust_boundary (layout: assets/flows-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "controls",
+     "type": "csv",
+     "required": false,
+     "from": "control register threat_id,mitigation_id,status,evidence,owner (layout: assets/controls-template.csv; status in_place|planned); without it every threat is open and owned by the Security architect",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "max_open_high",
+     "type": "string",
+     "required": false,
+     "from": "integer gate: the run fails (exit 1) when open high threats exceed it; absent = no gate",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "threat-model",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "threat-model",
+     "kind": "script",
+     "cmd": "python3 -I scripts/threat_model.py --components {components} --flows {flows} [--controls {controls}] [--max-open-high {max_open_high}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/threats.csv",
+     "checks": [
+      "exists",
+      "csv:[threat_id,element,category,threat,severity,mitigation,status,owner]",
+      "csv_rows:severity~^(high|medium|low)$",
+      "csv_rows:status~^(open|planned|mitigated)$",
+      "csv_rows:owner!empty",
+      "cmd:\"python3 -I scripts/threat_model.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/dfd.md",
+     "checks": [
+      "exists",
+      "mermaid_parses",
+      "contains:\"subgraph\"",
+      "contains:\"Trust zone:\""
+     ]
+    },
+    {
+     "path": "{out}/threat-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Data flow\",\"Threats by severity\",\"Open high threats\",\"Method & limits\"]",
+      "no_unowned_tbd",
+      "contains:\"OWASP LLM Top 10 (2025)\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "components": "evals/fixtures/components.csv",
+     "flows": "evals/fixtures/flows.csv",
+     "controls": "evals/fixtures/controls.csv",
+     "max_open_high": "26"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-threat-model-stride-owasp-llm-top-10-2025\">AI Threat Model (STRIDE + OWASP LLM Top 10 2025)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-threat-model --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-threat-model</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>threats.csv</code>, <code>dfd.md</code>, <code>threat-report.md</code>). With <code>max_open_high</code> set, the run is a gate: more open high threats than the limit fails the run (exit 1) and all outputs are still written.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC architecture stage: the component and data-flow design of an LLM app, RAG pipeline or agent is drafted and needs a security review before build.</li><li>Before a release review: re-run with the current control register to show residual (open) threats and gate on open highs.</li><li>After a design change (new tool, new data store, new vendor model): re-run; threat ids are stable, so the control register carries over.</li><li>NOT for: attacking a running app (<code>red-team-suite</code>), writing runtime input/output filters (<code>guardrails-config</code>), EU AI Act or NIST risk tiering (<code>ai-governance-risk</code>), or a penetration test or security sign-off.</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>components</code> — id, name, kind, trust_zone, handles_pii, write_actions, internet_facing</td><td>yes</td><td>solution architect (copy <code>assets/components-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>flows</code> — from, to, data, crosses_trust_boundary</td><td>yes</td><td>solution architect (copy <code>assets/flows-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>controls</code> — threat_id or mitigation_id, status, evidence, owner</td><td>no</td><td>security architect / control owners (copy <code>assets/controls-template.csv</code>)</td><td>every threat is <code>open</code>; owner <code>[TO BE BASELINED — owner: Security architect]</code></td></tr><tr><td><code>max_open_high</code> — integer</td><td>no</td><td>CISO / release owner</td><td>no gate; report says &quot;no gate set&quot;</td></tr></tbody></table>\n<p>Component ids are letters, digits and <code>_</code>. A flow whose ends sit in different trust zones is treated as crossing a boundary even if marked <code>no</code> (listed in <code>dfd.md</code>).</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Build the components and flows CSVs from the architecture diagram; one row per component and per directed flow.</li><li>Run the agent. <code>scripts/threat_model.py</code> applies STRIDE per element and the OWASP LLM 2025 rules in <code>references/method.md</code>, scores likelihood × impact, and attaches mitigation ids from <code>assets/mitigations.csv</code>.</li><li>First run without controls: hand <code>threats.csv</code> to control owners; they record <code>in_place</code> / <code>planned</code> rows by <code>threat_id</code> or <code>mitigation_id</code> with evidence and owner.</li><li>Re-run with the controls file and, for a release gate, <code>max_open_high</code>.</li><li>Review the open high threats with the Security architect; add threats the rules cannot see (business-logic abuse, attack chains) by hand to the risk register.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>threats.csv</code> — <code>threat_id, element, element_type, category, threat, likelihood, impact, severity, mitigation, status, owner, evidence</code>; sorted by severity then id. <code>threat_id</code> = <code>&lt;component&gt;:&lt;category&gt;</code> or <code>&lt;from&gt;&gt;&lt;to&gt;:&lt;category&gt;</code>.</li><li><code>dfd.md</code> — mermaid flowchart: one subgraph per trust zone, boundary-crossing flows labelled and dashed red.</li><li><code>threat-report.md</code> — <strong>Summary</strong>, <strong>Data flow</strong>, <strong>Threats by severity</strong>, <strong>Open high threats</strong>, <strong>Method &amp; limits</strong> (with the mitigation catalogue used).</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every component and flow from the architecture is in the inputs (unlisted elements are not analysed)</li><li>[ ] Every threat has a severity from the documented rule and at least one mitigation id</li><li>[ ] Status comes only from the control register; no control is assumed</li><li>[ ] Every owner is a named role or <code>[TO BE BASELINED — owner: Security architect]</code></li><li>[ ] Limits stated: rule-based enumeration, not a penetration test or sign-off</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — element mapping, OWASP rules, likelihood/impact/severity, status rules, limits</li><li><code>references/sources.md</code> — OWASP 2025 list and STRIDE-per-element sources with dates checked</li><li><code>assets/owasp-llm-top10-2025.csv</code> — LLM01–LLM10 ids, names, paraphrase, applicability, mitigation ids</li><li><code>assets/mitigations.csv</code> — mitigation catalogue (id, mitigation, maps_to, applies_to)</li><li><code>scripts/threat_model.py</code> — generator and <code>--verify</code> mode (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "components-template.csv",
+    "controls-template.csv",
+    "flows-template.csv",
+    "mitigations.csv",
+    "owasp-llm-top10-2025.csv"
+   ],
+   "scripts": [
+    "threat_model.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-threat-model-agent",
+    "prompt": "Here is the architecture of our billing assistant agent (web app, orchestrator, hosted LLM, vector store, refund API). Threat model it against STRIDE and the OWASP LLM Top 10.",
+    "expected": [
+     "Asks for (or builds with the user) the components and flows CSVs; runs scripts/threat_model.py",
+     "Reports threats by severity with stable ids, OWASP 2025 ids (LLM01-LLM10) and mitigation ids",
+     "Open threats without an owner name the Security architect; states it is not a penetration test"
+    ]
+   },
+   {
+    "id": "prompt-routes-red-team",
+    "prompt": "Our chatbot is live; can you try to jailbreak it and see if it leaks the system prompt?",
+    "expected": [
+     "Routes live adversarial testing to red-team-suite; offers this skill for the design-level threat model"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Threat model the attached Northwind Billing Assistant design with our control register; allow at most 26 open high threats.",
+    "expected": [
+     "101 threats (34 high, 36 medium, 31 low); 22 mitigated, 2 planned; 26 open high passes a limit of 26"
+    ]
+   },
+   {
+    "id": "agent-missing-flows",
+    "prompt": "Threat model our agent; here are the components.",
+    "expected": [
+     "Asks once for the flows CSV; does not guess flows"
+    ]
+   },
+   {
+    "id": "agent-no-controls-not-invented",
+    "prompt": "We have no control register yet; just assume the usual controls are in place.",
+    "expected": [
+     "No control is assumed: every threat is open and owned by the Security architect TBD marker"
+    ]
+   },
+   {
+    "id": "agent-gate-open-high-exits-1",
+    "prompt": "Gate the release: fail if more than 25 high threats remain open.",
+    "expected": [
+     "26 open high > 25: run exits 1; all outputs still written"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Threat model the attached Northwind Billing Assistant design with our control register; allow at most 26 open high threats.",
+    "inputs": {
+     "components": "evals/fixtures/components.csv",
+     "flows": "evals/fixtures/flows.csv",
+     "controls": "evals/fixtures/controls.csv",
+     "max_open_high": "26"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:threats.csv",
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"Threats: 101 (34 high, 36 medium, 31 low) across 9 components and 13 flows.\""
+     },
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"Status: 77 open, 2 planned, 22 mitigated.\""
+     },
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"PASS: 26 open high vs limit 26\""
+     },
+     {
+      "file": "threats.csv",
+      "check": "contains:\",2,3,high,M20;M21;M22;M23,open,[TO BE BASELINED — owner: Security architect],\""
+     },
+     {
+      "file": "threats.csv",
+      "check": "contains:\",3,2,high,M01,mitigated,Identity lead,\""
+     },
+     {
+      "file": "threats.csv",
+      "check": "contains:\",2,2,medium,M31;M32;M33,planned,AppSec lead,\""
+     },
+     {
+      "file": "dfd.md",
+      "check": "mermaid_parses"
+     },
+     {
+      "file": "dfd.md",
+      "check": "contains:\"linkStyle 0,1,2,3,4,5,10,12 \""
+     }
+    ],
+    "expected": [
+     "101 threats (34 high, 36 medium, 31 low); 22 mitigated, 2 planned; 26 open high passes a limit of 26"
+    ]
+   },
+   {
+    "id": "agent-missing-flows",
+    "prompt": "Threat model our agent; here are the components.",
+    "inputs": {
+     "components": "evals/fixtures/components.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:flows"
+    ],
+    "expected": [
+     "Asks once for the flows CSV; does not guess flows"
+    ]
+   },
+   {
+    "id": "agent-no-controls-not-invented",
+    "prompt": "We have no control register yet; just assume the usual controls are in place.",
+    "inputs": {
+     "components": "evals/fixtures/components.csv",
+     "flows": "evals/fixtures/flows.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"Status: 101 open, 0 planned, 0 mitigated.\""
+     },
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"Gate: no gate set\""
+     },
+     {
+      "file": "threat-report.md",
+      "check": "no_unowned_tbd"
+     },
+     {
+      "file": "threats.csv",
+      "check": "contains:\",1,1,low,M02;M07,open,[TO BE BASELINED — owner: Security architect],\""
+     }
+    ],
+    "expected": [
+     "No control is assumed: every threat is open and owned by the Security architect TBD marker"
+    ]
+   },
+   {
+    "id": "agent-gate-open-high-exits-1",
+    "prompt": "Gate the release: fail if more than 25 high threats remain open.",
+    "inputs": {
+     "components": "evals/fixtures/components.csv",
+     "flows": "evals/fixtures/flows.csv",
+     "controls": "evals/fixtures/controls.csv",
+     "max_open_high": "25"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     "exists:dfd.md",
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"FAIL: 26 open high vs limit 25\""
+     },
+     {
+      "file": "threat-report.md",
+      "check": "contains:\"the run exits 1.\""
+     }
+    ],
+    "expected": [
+     "26 open high > 25: run exits 1; all outputs still written"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI Threat Model (STRIDE + OWASP LLM Top 10 2025)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-threat-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-threat-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`threats.csv`, `dfd.md`, `threat-report.md`). With `max_open_high` set, the run is a gate: more open high threats than the limit fails the run (exit 1) and all outputs are still written.\n\n## When to use\n- ADLC architecture stage: the component and data-flow design of an LLM app, RAG pipeline or agent is drafted and needs a security review before build.\n- Before a release review: re-run with the current control register to show residual (open) threats and gate on open highs.\n- After a design change (new tool, new data store, new vendor model): re-run; threat ids are stable, so the control register carries over.\n- NOT for: attacking a running app (`red-team-suite`), writing runtime input/output filters (`guardrails-config`), EU AI Act or NIST risk tiering (`ai-governance-risk`), or a penetration test or security sign-off.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `components` — id, name, kind, trust_zone, handles_pii, write_actions, internet_facing | yes | solution architect (copy `assets/components-template.csv`) | run stops (exit 2), asks once |\n| `flows` — from, to, data, crosses_trust_boundary | yes | solution architect (copy `assets/flows-template.csv`) | run stops (exit 2), asks once |\n| `controls` — threat_id or mitigation_id, status, evidence, owner | no | security architect / control owners (copy `assets/controls-template.csv`) | every threat is `open`; owner `[TO BE BASELINED — owner: Security architect]` |\n| `max_open_high` — integer | no | CISO / release owner | no gate; report says \"no gate set\" |\n\nComponent ids are letters, digits and `_`. A flow whose ends sit in different trust zones is treated as crossing a boundary even if marked `no` (listed in `dfd.md`).\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Build the components and flows CSVs from the architecture diagram; one row per component and per directed flow.\n3. Run the agent. `scripts/threat_model.py` applies STRIDE per element and the OWASP LLM 2025 rules in `references/method.md`, scores likelihood × impact, and attaches mitigation ids from `assets/mitigations.csv`.\n4. First run without controls: hand `threats.csv` to control owners; they record `in_place` / `planned` rows by `threat_id` or `mitigation_id` with evidence and owner.\n5. Re-run with the controls file and, for a release gate, `max_open_high`.\n6. Review the open high threats with the Security architect; add threats the rules cannot see (business-logic abuse, attack chains) by hand to the risk register.\n7. Run the self-check.\n\n## Output\n- `threats.csv` — `threat_id, element, element_type, category, threat, likelihood, impact, severity, mitigation, status, owner, evidence`; sorted by severity then id. `threat_id` = `<component>:<category>` or `<from>><to>:<category>`.\n- `dfd.md` — mermaid flowchart: one subgraph per trust zone, boundary-crossing flows labelled and dashed red.\n- `threat-report.md` — **Summary**, **Data flow**, **Threats by severity**, **Open high threats**, **Method & limits** (with the mitigation catalogue used).\n\n## Self-check\n- [ ] Every component and flow from the architecture is in the inputs (unlisted elements are not analysed)\n- [ ] Every threat has a severity from the documented rule and at least one mitigation id\n- [ ] Status comes only from the control register; no control is assumed\n- [ ] Every owner is a named role or `[TO BE BASELINED — owner: Security architect]`\n- [ ] Limits stated: rule-based enumeration, not a penetration test or sign-off\n\n## References\n- `references/method.md` — element mapping, OWASP rules, likelihood/impact/severity, status rules, limits\n- `references/sources.md` — OWASP 2025 list and STRIDE-per-element sources with dates checked\n- `assets/owasp-llm-top10-2025.csv` — LLM01–LLM10 ids, names, paraphrase, applicability, mitigation ids\n- `assets/mitigations.csv` — mitigation catalogue (id, mitigation, maps_to, applies_to)\n- `scripts/threat_model.py` — generator and `--verify` mode (argparse; stdlib)\n"
+ },
+ {
   "id": "ai-platform/ai-transparency-notice",
   "domain": "ai-platform",
   "stage": "deploy",
@@ -2625,6 +2921,298 @@
    }
   ],
   "bodyMd": "\n# AI Use-Case Canvas\n\n## How to run\nThis skill is executable. Collect the inputs below (one `answers.json`; blanks are allowed and become owned `[TO BE BASELINED]` markers), then run `python3 scripts/run_skill.py ai-platform/ai-use-case-canvas --input answers=<file> --out <dir>` (see `--explain ai-platform/ai-use-case-canvas`). Report the `run.json` results; do not hand-write the deliverables the script produces (`canvas.md`, `decision.md`, `score.json`).\n\n## When to use\n- First-pass qualification of one idea in under an hour; intake form for a CoE; pre-read for a sponsor conversation.\n- NOT for: ranking many ideas (`ai-strategy-coe`), designing the solution, legal/compliance sign-off.\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| The idea in one or two sentences, and who raised it | yes | user |\n| The user of the output and the decision or task it affects | yes | user |\n| Current process: steps, volume, time, error or cost signal (even rough) | yes | user; unknowns marked `[TO BE BASELINED — owner: ___]` |\n| Data involved: where it lives, owner, access, sensitivity | yes | user |\n| Constraints: budget envelope, timeline, vendor policy | no | user |\n\nIf the user/decision or the data description is missing, ask once; otherwise fill the canvas with explicit unknowns rather than stalling.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.\n2. **Fill the canvas** from `assets/use-case-canvas.md` following `references/canvas-definition.md`: every box has content or a labeled unknown with an owner.\n3. **Score** value, feasibility, data readiness, risk (1–5 each) using the rubric in `ai-strategy-coe/references/use-case-scoring.md`; compute priority = V × F × D ÷ R. Record the evidence per score.\n4. **Decide build / buy / partner** with `references/build-buy-factors.md`; state the two strongest factors behind the decision.\n5. **Set the verdict**: Proceed to design / Proceed after data readiness work / Park / Stop, plus the one 30-day step and its owner.\n6. Hand off: Proceed → `agent-architecture` or `rag-pipeline-design`; risk tier medium/high → `ai-governance-risk` before build.\n7. Run the self-check.\n\n## Output\n- `use-case-canvas-<name>.md`: one page; verdict first; canvas table; scores; build/buy; next step.\n\n## Self-check\n- [ ] Verdict and next step are the first two lines\n- [ ] Baseline metric named, with value or `[TO BE BASELINED — owner: ___]`\n- [ ] Data box names owner, access path, and sensitivity\n- [ ] Scores have one evidence line each\n- [ ] Build/buy decision cites factors, not preference\n- [ ] Fits on one page (≤ 60 lines)\n- [ ] No vendor named without a selection criterion\n\n## References\n- `references/canvas-definition.md` — boxes, prompts, and quality tests\n- `references/build-buy-factors.md` — decision factors and patterns\n- `scripts/canvas.py` — answers.json → `canvas.md` (filled, scored, verdict), `decision.md` (build/buy/partner citing factors), `score.json`\n"
+ },
+ {
+  "id": "ai-platform/ai-vendor-assessment",
+  "domain": "ai-platform",
+  "stage": "strategy",
+  "name": "ai-vendor-assessment",
+  "description": "Use when the user must choose between AI vendors, model providers or AI platforms (optionally against building in-house) — \"compare these AI vendors\", \"build vs buy for our assistant\", \"score the platform shortlist\", \"does the ranking hold if we change the weights\", \"third-party AI risk review\". Produces scores.csv (weighted score, rank, completeness, red flags), sensitivity.csv (each criterion weight ±20%, whether the top option changes) and vendor-report.md (Summary, Scores, Sensitivity, Third-party risk, Recommendation, Method) from an options score CSV, a criteria weights CSV and optional answers to a shipped third-party AI risk questionnaire (training on customer data, retention, residency, sub-processors, SOC 2, ISO/IEC 27001, ISO/IEC 42001, model change notice, incident SLA, IP indemnity, exit). Not for picking a model on eval and token-cost facts (model-selection), API cost forecasting (llm-cost-model) or contract drafting.",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "strategy",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "options",
+     "type": "csv",
+     "required": true,
+     "from": "scores option,criterion,score,source (layout: assets/options-template.csv; score 1-5, blank = missing)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "criteria",
+     "type": "csv",
+     "required": true,
+     "from": "criterion,weight,description (layout: assets/criteria-template.csv; weights any scale, normalised)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "risk",
+     "type": "csv",
+     "required": false,
+     "from": "option,question_id,answer,evidence answering assets/third-party-ai-risk-questions.csv (layout: assets/risk-template.csv; unknown = gap, n/a = not applicable); without it risk is not assessed",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "questions",
+     "type": "csv",
+     "required": false,
+     "from": "your own copy of assets/third-party-ai-risk-questions.csv with policy thresholds (default: the shipped file)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "require_clear_winner",
+     "type": "flag",
+     "required": false,
+     "from": "true to fail the run (exit 1) when there is no clear winner",
+     "default": null,
+     "flag": "--require-clear-winner",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "assess",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "assess",
+     "kind": "script",
+     "cmd": "python3 -I scripts/vendor_assess.py --options {options} --criteria {criteria} [--risk {risk}] [--questions {questions}] {require_clear_winner} --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/scores.csv",
+     "checks": [
+      "exists",
+      "csv:[option,weighted_score,rank,complete,red_flags]",
+      "csv_rows:complete~^(yes|no)$",
+      "csv_rows:red_flags!empty",
+      "cmd:\"python3 -I scripts/vendor_assess.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/sensitivity.csv",
+     "checks": [
+      "exists",
+      "csv:[criterion,change,weight_before,weight_after,top_option,top_changed]",
+      "csv_rows:top_changed~^(yes|no)$",
+      "cmd:\"python3 -I scripts/vendor_assess.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/vendor-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Scores\",\"Sensitivity\",\"Third-party risk\",\"Recommendation\",\"Method\"]",
+      "no_unowned_tbd",
+      "contains:\"normalised to 1.000\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "options": "evals/fixtures/options.csv",
+     "criteria": "evals/fixtures/criteria.csv",
+     "risk": "evals/fixtures/risk.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-vendor-assessment-weighted-scoring-third-party-ai-risk\">AI Vendor Assessment (weighted scoring + third-party AI risk)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-vendor-assessment --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-vendor-assessment</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>scores.csv</code>, <code>sensitivity.csv</code>, <code>vendor-report.md</code>). &quot;No clear winner&quot; is a finding, not a failure (exit 0) unless <code>require_clear_winner=true</code>, which makes it a gate (exit 1, outputs still written).</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC strategy stage: a shortlist of AI vendors, platforms or providers (and possibly an in-house build) must be compared on agreed criteria before procurement.</li><li>&quot;Does the winner survive if we weight cost higher?&quot; — the ±20% sensitivity answers it per criterion.</li><li>Third-party AI risk screen before contract: red flags on data use, retention, residency, assurance, change notice, incident SLA, indemnity and exit.</li><li>NOT for: choosing a model from eval scores, prices and latency (<code>model-selection</code>), forecasting token spend (<code>llm-cost-model</code>), legal contract review or drafting, or verifying vendor certificates (inspect the reports themselves).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>options</code> — option, criterion, score 1–5, source</td><td>yes</td><td>evaluation team; one row per option × criterion</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>criteria</code> — criterion, weight, description</td><td>yes</td><td>decision owner (sponsor)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>risk</code> — option, question_id, answer, evidence</td><td>no</td><td>Third-party risk manager from vendor responses</td><td>risk &quot;not assessed&quot; <code>[TO BE BASELINED — owner: Third-party risk manager]</code>; recommendation is conditional</td></tr><tr><td><code>questions</code> — questionnaire with thresholds</td><td>no</td><td>Third-party risk manager (copy the shipped file)</td><td>shipped defaults (30-day retention, 30-day change notice, 72-hour incident notice)</td></tr><tr><td><code>require_clear_winner</code> — true/false</td><td>no</td><td>decision owner</td><td>false: &quot;no clear winner&quot; exits 0</td></tr></tbody></table>\n<p>A blank score is missing: the option is marked incomplete, excluded from ranking and recommendation, and the gap is <code>[TO BE BASELINED — owner: Procurement lead]</code>. A score outside 1–5, an unknown criterion or a duplicate row stops the run (exit 2).</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Agree criteria and weights with the decision owner before scoring; record a source for every score.</li><li>Send vendors <code>assets/third-party-ai-risk-questions.csv</code>; record answers (and <code>n/a</code> for a build option) in the risk CSV.</li><li>Run the agent. <code>scripts/vendor_assess.py</code> normalises weights, scores complete options, runs ±20% sensitivity per criterion and applies the red-flag rules (<code>references/method.md</code>).</li><li>If there is no clear winner, take the stated reasons to the decision owner (re-score, renegotiate terms, or re-weight) and re-run.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>scores.csv</code> — <code>option, weighted_score, rank, complete, red_flags, missing_criteria, risk_unanswered</code> (ranked complete options first, then incomplete ones).</li><li><code>sensitivity.csv</code> — <code>criterion, change, weight_before, weight_after, top_option, top_score, runner_up, margin, top_changed</code> (two rows per criterion).</li><li><code>vendor-report.md</code> — <strong>Summary</strong>, <strong>Scores</strong> (with score matrix), <strong>Sensitivity</strong>, <strong>Third-party risk</strong>, <strong>Recommendation</strong>, <strong>Method</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every score has a source; no score was imputed</li><li>[ ] Weights normalisation is stated</li><li>[ ] The recommendation is a complete option with no red flags that stays first under every ±20% change — or &quot;no clear winner&quot; with reasons</li><li>[ ] Unanswered risk questions and incomplete options name an owner</li><li>[ ] Limits stated: decision aid, not a legal or contract review; vendor claims not verified</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — scoring, ranking, sensitivity, red-flag and recommendation rules</li><li><code>references/sources.md</code> — standards named in the questionnaire, with URLs and dates checked</li><li><code>assets/third-party-ai-risk-questions.csv</code> — 11 questions with answer types and red-flag rules</li><li><code>assets/options-template.csv</code>, <code>assets/criteria-template.csv</code>, <code>assets/risk-template.csv</code> — input layouts</li><li><code>scripts/vendor_assess.py</code> — scorer and <code>--verify</code> mode (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "criteria-template.csv",
+    "options-template.csv",
+    "risk-template.csv",
+    "third-party-ai-risk-questions.csv"
+   ],
+   "scripts": [
+    "vendor_assess.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-compare-vendors",
+    "prompt": "We have three AI platform vendors and an in-house build option for our billing assistant. Score them on our criteria, tell us if the winner holds if we change the weights, and flag any contract risks.",
+    "expected": [
+     "Asks for the scores CSV with sources and the criteria weights; runs scripts/vendor_assess.py",
+     "Reports weighted scores, ±20% sensitivity and rank stability, and red flags from the risk questionnaire",
+     "Never imputes a missing score; states it is a decision aid, not a contract review"
+    ]
+   },
+   {
+    "id": "prompt-routes-model-selection",
+    "prompt": "Which LLM should we use for summarisation given these eval scores, token prices and latency numbers?",
+    "expected": [
+     "Routes model choice on eval, price and latency facts to model-selection; offers this skill for vendor and contract risk comparison"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Compare the attached (fictional) vendors and build option on our weights and the risk questionnaire answers.",
+    "expected": [
+     "Fabrikam 4.150 rank 1, Tailspin 3.850 with red flag TPR-02, Build 3.250, Litware incomplete; stability 100.0%; recommend Fabrikam"
+    ]
+   },
+   {
+    "id": "agent-missing-criteria",
+    "prompt": "Rank these vendors; use whatever weights make sense.",
+    "expected": [
+     "Asks once for the criteria weights; never invents weights"
+    ]
+   },
+   {
+    "id": "agent-no-risk-not-invented",
+    "prompt": "We have no vendor risk answers yet; assume the big vendors are compliant.",
+    "expected": [
+     "Risk is not assessed (owner: Third-party risk manager); no answer is assumed; recommendation is conditional"
+    ]
+   },
+   {
+    "id": "agent-red-flag-no-clear-winner-gate",
+    "prompt": "Gate the decision: fail unless there is a clear winner. Fabrikam now says it trains on customer data by default.",
+    "expected": [
+     "Top option Fabrikam has red flag TPR-01: no clear winner; with --require-clear-winner the run exits 1"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Compare the attached (fictional) vendors and build option on our weights and the risk questionnaire answers.",
+    "inputs": {
+     "options": "evals/fixtures/options.csv",
+     "criteria": "evals/fixtures/criteria.csv",
+     "risk": "evals/fixtures/risk.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:sensitivity.csv",
+     {
+      "file": "scores.csv",
+      "check": "contains:\"Fabrikam AI (fictional),4.150,1,yes,none,none,none\""
+     },
+     {
+      "file": "scores.csv",
+      "check": "contains:\"Tailspin Models (fictional),3.850,2,yes,TPR-02,none,TPR-07\""
+     },
+     {
+      "file": "scores.csv",
+      "check": "contains:\"Litware GenAI (fictional),n/a,n/a,no,none,security_compliance [TO BE BASELINED — owner: Procurement lead]\""
+     },
+     {
+      "file": "sensitivity.csv",
+      "check": "contains:\"answer_quality,-20%,0.4000,0.3478,Fabrikam AI (fictional),4.076,Tailspin Models (fictional),0.239,no\""
+     },
+     {
+      "file": "vendor-report.md",
+      "check": "contains:\"Rank stability under ±20% weight changes: 100.0% (8 of 8 runs\""
+     },
+     {
+      "file": "vendor-report.md",
+      "check": "contains:\"Recommendation: **Fabrikam AI (fictional)** (weighted score 4.150).\""
+     }
+    ],
+    "expected": [
+     "Fabrikam 4.150 rank 1, Tailspin 3.850 with red flag TPR-02, Build 3.250, Litware incomplete; stability 100.0%; recommend Fabrikam"
+    ]
+   },
+   {
+    "id": "agent-missing-criteria",
+    "prompt": "Rank these vendors; use whatever weights make sense.",
+    "inputs": {
+     "options": "evals/fixtures/options.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:criteria"
+    ],
+    "expected": [
+     "Asks once for the criteria weights; never invents weights"
+    ]
+   },
+   {
+    "id": "agent-no-risk-not-invented",
+    "prompt": "We have no vendor risk answers yet; assume the big vendors are compliant.",
+    "inputs": {
+     "options": "evals/fixtures/options.csv",
+     "criteria": "evals/fixtures/criteria.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "scores.csv",
+      "check": "contains:\"4.150,1,yes,not assessed,none,[TO BE BASELINED — owner: Third-party risk manager] risk not assessed\""
+     },
+     {
+      "file": "vendor-report.md",
+      "check": "contains:\"Conditional on a third-party risk review [TO BE BASELINED — owner: Third-party risk manager].\""
+     },
+     {
+      "file": "vendor-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Risk is not assessed (owner: Third-party risk manager); no answer is assumed; recommendation is conditional"
+    ]
+   },
+   {
+    "id": "agent-red-flag-no-clear-winner-gate",
+    "prompt": "Gate the decision: fail unless there is a clear winner. Fabrikam now says it trains on customer data by default.",
+    "inputs": {
+     "options": "evals/fixtures/options.csv",
+     "criteria": "evals/fixtures/criteria.csv",
+     "risk": "evals/fixtures/risk-redflag.csv",
+     "require_clear_winner": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "scores.csv",
+      "check": "contains:\"Fabrikam AI (fictional),4.150,1,yes,TPR-01,\""
+     },
+     {
+      "file": "vendor-report.md",
+      "check": "contains:\"**No clear winner.** Reasons: top-scoring Fabrikam AI (fictional) has red flags: TPR-01.\""
+     },
+     {
+      "file": "vendor-report.md",
+      "check": "contains:\"Highest-scoring option without red flags: Build in-house (3.250).\""
+     }
+    ],
+    "expected": [
+     "Top option Fabrikam has red flag TPR-01: no clear winner; with --require-clear-winner the run exits 1"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI Vendor Assessment (weighted scoring + third-party AI risk)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-vendor-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-vendor-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`scores.csv`, `sensitivity.csv`, `vendor-report.md`). \"No clear winner\" is a finding, not a failure (exit 0) unless `require_clear_winner=true`, which makes it a gate (exit 1, outputs still written).\n\n## When to use\n- ADLC strategy stage: a shortlist of AI vendors, platforms or providers (and possibly an in-house build) must be compared on agreed criteria before procurement.\n- \"Does the winner survive if we weight cost higher?\" — the ±20% sensitivity answers it per criterion.\n- Third-party AI risk screen before contract: red flags on data use, retention, residency, assurance, change notice, incident SLA, indemnity and exit.\n- NOT for: choosing a model from eval scores, prices and latency (`model-selection`), forecasting token spend (`llm-cost-model`), legal contract review or drafting, or verifying vendor certificates (inspect the reports themselves).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `options` — option, criterion, score 1–5, source | yes | evaluation team; one row per option × criterion | run stops (exit 2), asks once |\n| `criteria` — criterion, weight, description | yes | decision owner (sponsor) | run stops (exit 2), asks once |\n| `risk` — option, question_id, answer, evidence | no | Third-party risk manager from vendor responses | risk \"not assessed\" `[TO BE BASELINED — owner: Third-party risk manager]`; recommendation is conditional |\n| `questions` — questionnaire with thresholds | no | Third-party risk manager (copy the shipped file) | shipped defaults (30-day retention, 30-day change notice, 72-hour incident notice) |\n| `require_clear_winner` — true/false | no | decision owner | false: \"no clear winner\" exits 0 |\n\nA blank score is missing: the option is marked incomplete, excluded from ranking and recommendation, and the gap is `[TO BE BASELINED — owner: Procurement lead]`. A score outside 1–5, an unknown criterion or a duplicate row stops the run (exit 2).\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Agree criteria and weights with the decision owner before scoring; record a source for every score.\n3. Send vendors `assets/third-party-ai-risk-questions.csv`; record answers (and `n/a` for a build option) in the risk CSV.\n4. Run the agent. `scripts/vendor_assess.py` normalises weights, scores complete options, runs ±20% sensitivity per criterion and applies the red-flag rules (`references/method.md`).\n5. If there is no clear winner, take the stated reasons to the decision owner (re-score, renegotiate terms, or re-weight) and re-run.\n6. Run the self-check.\n\n## Output\n- `scores.csv` — `option, weighted_score, rank, complete, red_flags, missing_criteria, risk_unanswered` (ranked complete options first, then incomplete ones).\n- `sensitivity.csv` — `criterion, change, weight_before, weight_after, top_option, top_score, runner_up, margin, top_changed` (two rows per criterion).\n- `vendor-report.md` — **Summary**, **Scores** (with score matrix), **Sensitivity**, **Third-party risk**, **Recommendation**, **Method**.\n\n## Self-check\n- [ ] Every score has a source; no score was imputed\n- [ ] Weights normalisation is stated\n- [ ] The recommendation is a complete option with no red flags that stays first under every ±20% change — or \"no clear winner\" with reasons\n- [ ] Unanswered risk questions and incomplete options name an owner\n- [ ] Limits stated: decision aid, not a legal or contract review; vendor claims not verified\n\n## References\n- `references/method.md` — scoring, ranking, sensitivity, red-flag and recommendation rules\n- `references/sources.md` — standards named in the questionnaire, with URLs and dates checked\n- `assets/third-party-ai-risk-questions.csv` — 11 questions with answer types and red-flag rules\n- `assets/options-template.csv`, `assets/criteria-template.csv`, `assets/risk-template.csv` — input layouts\n- `scripts/vendor_assess.py` — scorer and `--verify` mode (argparse; stdlib)\n"
  },
  {
   "id": "ai-platform/bias-fairness-check",

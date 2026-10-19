@@ -1,0 +1,4 @@
+id,name,kind,trust_zone,handles_pii,write_actions,internet_facing
+customer,End user (browser),user,internet,yes,no,yes
+web_app,Chat web app,app,dmz,yes,no,yes
+llm,Hosted LLM API,llm,vendor_cloud,yes,no,no

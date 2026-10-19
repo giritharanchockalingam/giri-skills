@@ -8,7 +8,8 @@
     "ai-platform/rag-pipeline-design",
     "build/multi-tenant-saas-patterns",
     "ai-platform/infra-gpu-sizing",
-    "ai-platform/llm-cost-model"
+    "ai-platform/llm-cost-model",
+    "ai-platform/ai-threat-model"
   ],
   "playbooks": []
 }

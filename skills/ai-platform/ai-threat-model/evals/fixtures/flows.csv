@@ -1,0 +1,15 @@
+# fictional fixture - Northwind Utilities (fictional) Billing Assistant; no real system
+from,to,data,crosses_trust_boundary
+customer,web_app,chat message,yes
+web_app,customer,assistant reply,yes
+web_app,orchestrator,user turn and session,yes
+orchestrator,web_app,answer,yes
+orchestrator,llm,prompt with account context,yes
+llm,orchestrator,completion and tool calls,yes
+orchestrator,retriever,search query,no
+retriever,vector_db,embedding query,no
+vector_db,retriever,policy chunks,no
+retriever,orchestrator,retrieved context,no
+orchestrator,billing_api,refund or lookup call,yes
+billing_api,billing_db,account read and write,no
+billing_api,payment_gw,refund instruction,yes

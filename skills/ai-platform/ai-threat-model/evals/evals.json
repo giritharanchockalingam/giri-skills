@@ -1,0 +1,97 @@
+{
+  "skill": "ai-threat-model",
+  "cases": [
+    {
+      "id": "prompt-threat-model-agent",
+      "prompt": "Here is the architecture of our billing assistant agent (web app, orchestrator, hosted LLM, vector store, refund API). Threat model it against STRIDE and the OWASP LLM Top 10.",
+      "expected": [
+        "Asks for (or builds with the user) the components and flows CSVs; runs scripts/threat_model.py",
+        "Reports threats by severity with stable ids, OWASP 2025 ids (LLM01-LLM10) and mitigation ids",
+        "Open threats without an owner name the Security architect; states it is not a penetration test"
+      ]
+    },
+    {
+      "id": "prompt-routes-red-team",
+      "prompt": "Our chatbot is live; can you try to jailbreak it and see if it leaks the system prompt?",
+      "expected": [
+        "Routes live adversarial testing to red-team-suite; offers this skill for the design-level threat model"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Threat model the attached Northwind Billing Assistant design with our control register; allow at most 26 open high threats.",
+      "expected": [
+        "101 threats (34 high, 36 medium, 31 low); 22 mitigated, 2 planned; 26 open high passes a limit of 26"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components.csv",
+        "flows": "evals/fixtures/flows.csv",
+        "controls": "evals/fixtures/controls.csv",
+        "max_open_high": "26"
+      },
+      "checks": [
+        "exit:0",
+        "exists:threats.csv",
+        {"file": "threat-report.md", "check": "contains:\"Threats: 101 (34 high, 36 medium, 31 low) across 9 components and 13 flows.\""},
+        {"file": "threat-report.md", "check": "contains:\"Status: 77 open, 2 planned, 22 mitigated.\""},
+        {"file": "threat-report.md", "check": "contains:\"PASS: 26 open high vs limit 26\""},
+        {"file": "threats.csv", "check": "contains:\",2,3,high,M20;M21;M22;M23,open,[TO BE BASELINED — owner: Security architect],\""},
+        {"file": "threats.csv", "check": "contains:\",3,2,high,M01,mitigated,Identity lead,\""},
+        {"file": "threats.csv", "check": "contains:\",2,2,medium,M31;M32;M33,planned,AppSec lead,\""},
+        {"file": "dfd.md", "check": "mermaid_parses"},
+        {"file": "dfd.md", "check": "contains:\"linkStyle 0,1,2,3,4,5,10,12 \""}
+      ]
+    },
+    {
+      "id": "agent-missing-flows",
+      "prompt": "Threat model our agent; here are the components.",
+      "expected": [
+        "Asks once for the flows CSV; does not guess flows"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:flows"
+      ]
+    },
+    {
+      "id": "agent-no-controls-not-invented",
+      "prompt": "We have no control register yet; just assume the usual controls are in place.",
+      "expected": [
+        "No control is assumed: every threat is open and owned by the Security architect TBD marker"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components.csv",
+        "flows": "evals/fixtures/flows.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "threat-report.md", "check": "contains:\"Status: 101 open, 0 planned, 0 mitigated.\""},
+        {"file": "threat-report.md", "check": "contains:\"Gate: no gate set\""},
+        {"file": "threat-report.md", "check": "no_unowned_tbd"},
+        {"file": "threats.csv", "check": "contains:\",1,1,low,M02;M07,open,[TO BE BASELINED — owner: Security architect],\""}
+      ]
+    },
+    {
+      "id": "agent-gate-open-high-exits-1",
+      "prompt": "Gate the release: fail if more than 25 high threats remain open.",
+      "expected": [
+        "26 open high > 25: run exits 1; all outputs still written"
+      ],
+      "inputs": {
+        "components": "evals/fixtures/components.csv",
+        "flows": "evals/fixtures/flows.csv",
+        "controls": "evals/fixtures/controls.csv",
+        "max_open_high": "25"
+      },
+      "checks": [
+        "exit:1",
+        "exists:dfd.md",
+        {"file": "threat-report.md", "check": "contains:\"FAIL: 26 open high vs limit 25\""},
+        {"file": "threat-report.md", "check": "contains:\"the run exits 1.\""}
+      ]
+    }
+  ]
+}

@@ -77,7 +77,8 @@
    "ai-platform/rag-pipeline-design",
    "build/multi-tenant-saas-patterns",
    "ai-platform/infra-gpu-sizing",
-   "ai-platform/llm-cost-model"
+   "ai-platform/llm-cost-model",
+   "ai-platform/ai-threat-model"
   ],
   "playbooks": []
  },
@@ -90,7 +91,8 @@
    "ai-platform/ai-use-case-canvas",
    "presales/value-case-builder",
    "ai-platform/ai-governance-risk",
-   "ai-platform/ai-adoption-and-literacy"
+   "ai-platform/ai-adoption-and-literacy",
+   "ai-platform/ai-vendor-assessment"
   ],
   "playbooks": []
  },
