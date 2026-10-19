@@ -23,7 +23,10 @@ export default async function AgentRunPage({ params, searchParams }: { params: P
   const version = v as AgentVersionRow & { sf_agents: { slug: string; name: string } };
   const spec = version.spec;
   const waiting = run.steps.find((s) => s.status === "awaiting_approval");
-  const deliverables = (spec.outputs ?? []).map((ref) => { const p = parseRef(ref); if (p?.kind !== "step") return null; const rec = run.steps.find((s) => s.id === p.step); const f = rec?.files?.find((x) => x.path === p.file); return f ? { step: p.step, f } : null; }).filter(Boolean) as { step: string; f: { path: string; bytes: number; content_text: string | null } }[];
+  // no deliverables chosen → the last step that wrote files is what the agent produced
+  const lastWithFiles = [...run.steps].reverse().find((s) => s.files?.length);
+  const outRefs = spec.outputs?.length ? spec.outputs : (lastWithFiles?.files ?? []).map((f) => `$steps.${lastWithFiles!.id}:${f.path}`);
+  const deliverables = outRefs.map((ref) => { const p = parseRef(ref); if (p?.kind !== "step") return null; const rec = run.steps.find((s) => s.id === p.step); const f = rec?.files?.find((x) => x.path === p.file); return f ? { step: p.step, f } : null; }).filter(Boolean) as { step: string; f: { path: string; bytes: number; content_text: string | null } }[];
 
   return (
     <>
