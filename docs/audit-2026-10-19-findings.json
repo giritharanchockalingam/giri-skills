@@ -1,0 +1,290 @@
+[
+ {
+  "skill": "presales/effort-estimator",
+  "severity": "critical",
+  "category": "wrong-number",
+  "summary": "Rate card keyed by role only: a role with onshore and offshore rows (or two currencies) silently keeps the LAST row, and costs in different currencies are summed under the first non-blank currency label.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/effort-estimator/scripts/estimate.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/wbs.csv --rates /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/rates-dup.csv --seed 7 --iterations 2000",
+  "expected": "Duplicate role rows rejected or blended by an explicit allocation; mixed currencies rejected",
+  "actual": "Developer priced at INR 2300/4000 (last row) and summed with USD rows; totals labelled 'Cost (INR) 660,267' / margin 42% — meaningless figure"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "severity": "high",
+  "category": "wrong-number",
+  "summary": "Rate card read with utf-8 (not utf-8-sig): an Excel UTF-8-BOM rate card matches no role, so cost and price silently become 0 with margin n/a (exit 0).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/effort-estimator/scripts/estimate.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/wbs.csv --rates /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/rates-bom.csv --seed 7",
+  "expected": "BOM stripped; same cost as rates.csv (Cost @P80 174,640 USD)",
+  "actual": "Cost () 0 / Price () 0; all four roles listed as 'no rate-card match'"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "severity": "high",
+  "category": "wrong-number",
+  "summary": "Negative three-point values are accepted (only O<=M<=P is checked), producing negative person-day P50/P80 totals with exit 0.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/effort-estimator/scripts/estimate.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/wbs-neg.csv --seed 7 --iterations 2000",
+  "expected": "exit 2: effort must be >= 0",
+  "actual": "P50 = -20 person-days, contingency -23%, exit 0"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "severity": "medium",
+  "category": "wrong-number",
+  "summary": "Duplicate task_id rows are both modelled but their Monte Carlo samples are pooled under one key, so the variance-contributor table shows two identical, wrong rows.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/effort-estimator/scripts/estimate.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/wbs-neg.csv --seed 7 --iterations 2000",
+  "expected": "Duplicate task_id rejected",
+  "actual": "'1.1 Task A' and '1.1 Task B' both show P10 -44 / P90 23 (pooled samples)"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "severity": "medium",
+  "category": "invented-content",
+  "summary": "Description promises P50/P80/P90 'effort and duration' but the script computes no duration (predecessors parsed, never used); the duration in the memo can only come from the LLM step without a traced source.",
+  "repro": "cd /home/claude/giri-skills && python3 scripts/run_skill.py presales/effort-estimator --input wbs=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/wbs.csv --input rates=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/rates.csv --input client=Contoso --provider none --out /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/out",
+  "expected": "Duration computed (critical path) or marked TBD",
+  "actual": "estimate.md/json contain no duration; memo template asks for one"
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "severity": "low",
+  "category": "other",
+  "summary": "Rate-card valid_until is read but never checked: an expired rate (2025-01-31) is used without a warning.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/effort-estimator/scripts/estimate.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/wbs.csv --rates /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/rates-dup.csv --seed 7",
+  "expected": "Warning or exclusion for expired rates",
+  "actual": "QA Engineer priced from a rate that expired 2025-01-31, no warning"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "severity": "high",
+  "category": "crash",
+  "summary": "A blank data row (all commas, common in Excel exports) crashes rendering with a TypeError traceback.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/value-case-builder/scripts/value_model.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/blankrow.csv /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/costs.csv",
+  "expected": "Blank row skipped",
+  "actual": "TypeError: sequence item 0: expected str instance, NoneType found"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "severity": "medium",
+  "category": "invented-content",
+  "summary": "Blank ramp_pct_y1..y3 silently default to 100% and are printed as '100%/100%/100%' (also for the unbaselined benefit), rather than being marked TBD.",
+  "repro": "cd /home/claude/giri-skills && python3 scripts/run_skill.py presales/value-case-builder --input benefits=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/benefits.csv --input costs=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/costs.csv --input discount_rate=0.1 --provider none --out /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/out",
+  "expected": "Blank ramp marked [TO BE BASELINED — owner: Finance lead] or stated as an explicit assumption",
+  "actual": "V-3 counted at full value from year 1 (2,550,000 over 5 years); V-4 shows 100%/100%/100%"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "severity": "medium",
+  "category": "wrong-number",
+  "summary": "Duplicate benefit_id rows are both counted in the headline (double-counting) without a warning.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/value-case-builder/scripts/value_model.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/dup2.csv /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/costs.csv",
+  "expected": "Duplicate id rejected",
+  "actual": "'Benefits in headline 2 of 2' for two identical V-1 rows"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "severity": "medium",
+  "category": "crash",
+  "summary": "Non-UTF-8/non-CSV file and overflow values crash with tracebacks (UnicodeDecodeError; 1e400 one_time -> AssertionError) instead of a clear error.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/value-case-builder/scripts/value_model.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/bin.csv /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/costs.csv ; python3 skills/presales/value-case-builder/scripts/value_model.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/benefits.csv /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/c5.csv",
+  "expected": "Clear error message, non-zero exit",
+  "actual": "Python tracebacks"
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "severity": "low",
+  "category": "other",
+  "summary": "start_year '1.9' silently truncated to 1; script uses exit 1 (not 2) for missing/invalid input, unlike the repo convention.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/presales/value-case-builder/scripts/value_model.py /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/benefits.csv /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/value/c4.csv",
+  "expected": "Non-integer start_year rejected (exit 2)",
+  "actual": "Cost placed in year 1, exit 0"
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "severity": "high",
+  "category": "other",
+  "summary": "Gate bypass: a risk scored 9 (high) with NO measure, but a stated residual of 'low', passes without gate or Art. 36 flag; residual lower than inherent with no measure is not challenged.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/dpia/scripts/dpia.py --processing /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/processing.csv --risks /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/risks.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/o1",
+  "expected": "Residual cannot be below inherent level without a measure (or flagged / gated)",
+  "actual": "'Discriminatory predictions' 3x3=9, measure TBD, residual low: not in gate_blockers or consultation_risks"
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "severity": "high",
+  "category": "csv-injection",
+  "summary": "Risk text and owner from the risks input are written unescaped into dpia-risks.csv (formula strings start with = ).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/dpia/scripts/dpia.py --processing /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/processing.csv --risks /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/risks.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/o1",
+  "expected": "Cells starting with = + - @ prefixed/escaped",
+  "actual": "'=HYPERLINK(\"http://evil\",...)' and '=1+1' written verbatim"
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "severity": "medium",
+  "category": "regulatory-claim",
+  "summary": "With one WP248 criterion met it states 'DPIA not required' without WP248's caveat that a single criterion may suffice, and without checking the supervisory authority's Art. 35(4) list.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/dpia/scripts/dpia.py --processing /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/processing-one.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/o2",
+  "expected": "Result qualified: 'not required on the WP248 two-criteria rule; check the national Art. 35(4) list; one criterion can suffice'",
+  "actual": "'Result: DPIA not required'"
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "severity": "medium",
+  "category": "crash",
+  "summary": "A non-UTF-8 / non-CSV input file crashes with a UnicodeDecodeError traceback (exit 1) instead of a clear input error (exit 2).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/dpia/scripts/dpia.py --processing /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/bin.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dpia/o3",
+  "expected": "error: ... exit 2",
+  "actual": "Traceback ... UnicodeDecodeError"
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "severity": "medium",
+  "category": "crash",
+  "summary": "A non-UTF-8 / non-CSV input file crashes with a UnicodeDecodeError traceback (exit 1) instead of a clear input error (exit 2).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/eu-ai-act-classifier/scripts/classify.py --system /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/bin.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/o4",
+  "expected": "error: ... exit 2",
+  "actual": "Traceback ... UnicodeDecodeError"
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "severity": "medium",
+  "category": "crash",
+  "summary": "A non-UTF-8 / non-CSV input file crashes with a UnicodeDecodeError traceback (exit 1) instead of a clear input error (exit 2).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/ai-controls-mapping/scripts/map_controls.py --evidence /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/effort/bin.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/controls/o2",
+  "expected": "error: ... exit 2",
+  "actual": "Traceback ... UnicodeDecodeError"
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "severity": "medium",
+  "category": "crash",
+  "summary": "A non-UTF-8 / non-CSV input file crashes with a UnicodeDecodeError traceback (exit 1) instead of a clear input error (exit 2).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/program-raid-status/scripts/raid_status.py --raid /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/bin.csv --milestones /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/milestones.csv --as-of 2026-10-15 --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/o1",
+  "expected": "error: ... exit 2",
+  "actual": "Traceback ... UnicodeDecodeError"
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "severity": "high",
+  "category": "csv-injection",
+  "summary": "accountable_owner (and evidence owner/text) written unescaped into obligations.csv.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/eu-ai-act-classifier/scripts/classify.py --system /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/cv.csv --as-of 2026-10-18 --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/o1",
+  "expected": "Formula-leading cells escaped",
+  "actual": "owner column '=HYPERLINK(\"http://evil\",\"HR\")' in every row"
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "severity": "low",
+  "category": "other",
+  "summary": "Questionnaire read as utf-8 (no BOM handling): an Excel UTF-8-BOM file fails with 'needs columns key,value' although both columns are present. Same in ai-controls-mapping.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/eu-ai-act-classifier/scripts/classify.py --system /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/cv-bom.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/o3",
+  "expected": "BOM stripped, classified as for cv.csv",
+  "actual": "exit 2 'system CSV needs columns key,value'"
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "severity": "low",
+  "category": "regulatory-claim",
+  "summary": "AI-LIT paraphrase keeps the original Art. 4 wording ('sufficient level of AI literacy of staff and others...'); the amended Art. 4 reads 'take measures to support the development of AI literacy'. HR-FRIA is listed for every Annex III deployer, though Art. 27(1) only covers public bodies, private public-service providers and Annex III 5(b)/(c).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/eu-ai-act-classifier/scripts/classify.py --system /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/cv-prof.csv --as-of 2026-10-18 --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/euai/o2",
+  "expected": "Paraphrase matches amended text; FRIA only when the Art. 27(1) scope is answered yes",
+  "actual": "Mixed old/new wording; HR-FRIA listed for a private-sector employment deployer"
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "severity": "high",
+  "category": "csv-injection",
+  "summary": "evidence/owner from the evidence register written unescaped into controls.csv.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/ai-controls-mapping/scripts/map_controls.py --evidence /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/controls/evidence.csv --min-coverage 0.3 --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/controls/o1",
+  "expected": "Formula-leading cells escaped",
+  "actual": "GOVERN 1.1 owner '=HYPERLINK(\"http://e\",\"x\")'"
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "severity": "low",
+  "category": "other",
+  "summary": "'implemented' with no evidence cited counts fully toward coverage and the min-coverage gate (it is only noted under 'Claims to check').",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/ai-controls-mapping/scripts/map_controls.py --evidence /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/controls/evidence.csv --min-coverage 0.3 --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/controls/o1",
+  "expected": "Uncited claims excluded from or discounted in the gate",
+  "actual": "Counted as implemented"
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "severity": "high",
+  "category": "csv-injection",
+  "summary": "Failing data values are copied as examples into violations.csv unescaped (=HYPERLINK, +cmd|...).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/data-contract-validator/scripts/validate_contract.py --contract /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/contract.csv --data /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/inj.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/o1",
+  "expected": "Formula-leading example values escaped",
+  "actual": "examples '=HYPERLINK(\"http://evil\",\"x\") | +cmd|calc'"
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "severity": "medium",
+  "category": "wrong-number",
+  "summary": "For datetime columns a date-only max (2026-12-31) becomes 2026-12-31T00:00:00, so every record on the last allowed day fails 'max'.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/data-contract-validator/scripts/validate_contract.py --contract /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/contract.csv --data /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/inj.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/o1",
+  "expected": "2026-12-31T12:00:00Z within max 2026-12-31 (inclusive day)",
+  "actual": "placed_at max error, 2 rows, expectation '<= 2026-12-31T00:00:00'"
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "severity": "medium",
+  "category": "wrong-number",
+  "summary": "Freshness passes when the newest record is in the future (age -92 days); future-dated records are not flagged.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/data-contract-validator/scripts/validate_contract.py --contract /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/contract.csv --data /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/inj.csv --freshness-column placed_at --as-of 2026-10-01 --max-age-days 7 --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/o4",
+  "expected": "Negative age reported as a violation/warning",
+  "actual": "'Freshness: passed: newest 2027-01-01, age -92 days'"
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "severity": "low",
+  "category": "other",
+  "summary": "Non-UTF-8 data is decoded with errors='replace': cp1252 text is silently changed to U+FFFD and passes; a binary file is treated as a CSV and reported as 'missing columns' over 9 garbage rows.",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/data-contract-validator/scripts/validate_contract.py --contract /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/contract.csv --data /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/cp1252.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/dcv/o2",
+  "expected": "Encoding error reported (exit 2)",
+  "actual": "verdict PASS; bytes replaced silently"
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "severity": "high",
+  "category": "other",
+  "summary": "A healthy program with no OPEN RAID items (all closed or empty log) fails the run: raid-actions.csv has 0 rows, so --verify ('no rows') and csv_rows checks fail and run_skill exits 1.",
+  "repro": "cd /home/claude/giri-skills && python3 scripts/run_skill.py ai-platform/program-raid-status --input raid=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/raid-allclosed.csv --input milestones=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/ms-green.csv --input as_of=2026-10-15 --provider none --out /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/out-closed",
+  "expected": "exit 0, empty actions table accepted",
+  "actual": "FAILED — 12/15 checks; 'verify: no rows'"
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "severity": "high",
+  "category": "csv-injection",
+  "summary": "Milestone names and RAID mitigations (via next_action) written unescaped into status.csv and raid-actions.csv.",
+  "repro": "cd /home/claude/giri-skills && python3 scripts/run_skill.py ai-platform/program-raid-status --input raid=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/raid.csv --input milestones=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/milestones.csv --input as_of=2026-10-15 --provider none --out /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/out",
+  "expected": "Formula-leading cells escaped",
+  "actual": "F milestone '=HYPERLINK(...)'; I1 next_action '...; =HYPERLINK(...)' (cell begins with 'Overdue', so the risk is mainly status.csv)"
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "severity": "low",
+  "category": "other",
+  "summary": "Critical path tie (A->B->E = A->F = 50 days) is resolved to one chain silently; the parallel 50-day path (F) is shown as not critical.",
+  "repro": "cd /home/claude/giri-skills && python3 scripts/run_skill.py ai-platform/program-raid-status --input raid=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/raid.csv --input milestones=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/milestones.csv --input as_of=2026-10-15 --provider none --out /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/raid/out",
+  "expected": "All zero-float milestones marked critical, or tie noted",
+  "actual": "F on_critical_path=no"
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "severity": "high",
+  "category": "csv-injection",
+  "summary": "team/feature/model values written unescaped into showback.csv and budget.csv.",
+  "repro": "cd /home/claude/giri-skills && python3 scripts/run_skill.py ai-platform/ai-finops-chargeback --input usage=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/usage.csv --input prices=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/prices.csv --input budgets=/tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/budgets.csv --provider none --out /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/out",
+  "expected": "Formula-leading cells escaped",
+  "actual": "team \"=cmd|'/c calc'!A1\" in showback.csv rows 10,13,16,28 and budget.csv"
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "severity": "low",
+  "category": "other",
+  "summary": "A usage row with extra trailing fields is accepted silently (extra value dropped), and exact-duplicate usage rows are summed with no warning (possible double-count from re-exported data).",
+  "repro": "cd /home/claude/giri-skills && python3 skills/ai-platform/ai-finops-chargeback/scripts/chargeback.py --usage /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/extra.csv --prices /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/prices.csv --out-dir /tmp/claude-0/-home-claude/048f21b7-0a7d-5365-b359-57a990058db7/scratchpad/audit/finops/o10",
+  "expected": "Ragged row reported",
+  "actual": "exit 0, both rows summed"
+ }
+]

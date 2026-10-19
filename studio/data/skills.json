@@ -6218,7 +6218,7 @@
     "id": "agent-happy-path",
     "prompt": "Compare last week's Northwind Billing Assistant features to the baseline using our agreed thresholds.",
     "expected": [
-     "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3850; exit 0"
+     "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3704 (exact); exit 0"
     ]
    },
    {
@@ -6265,7 +6265,7 @@
      "exists:drift.csv",
      {
       "file": "drift.csv",
-      "check": "contains:\"confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok\""
+      "check": "contains:\"confidence,numeric,400,300,0.0791,0.0692,0.3704,0.000,0.000,ok\""
      },
      {
       "file": "drift.csv",
@@ -6285,7 +6285,7 @@
      }
     ],
     "expected": [
-     "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3850; exit 0"
+     "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3704 (exact); exit 0"
     ]
    },
    {
@@ -6347,7 +6347,7 @@
      },
      {
       "file": "drift.csv",
-      "check": "contains:\"request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn\""
+      "check": "contains:\"request_tokens,numeric,400,300,0.1074,0.0675,0.4002,0.000,0.000,warn\""
      },
      {
       "file": "drift-report.md",

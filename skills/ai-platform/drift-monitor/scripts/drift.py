@@ -2,7 +2,7 @@
 """Data / prediction drift between a baseline window and a current window (stdlib only).
 
 For every feature (column) shared by the two CSV windows:
-  numeric      PSI over baseline decile bins + two-sample Kolmogorov-Smirnov D and asymptotic p-value
+  numeric      PSI over baseline decile bins + two-sample Kolmogorov-Smirnov D and p-value (exact; Stephens-corrected asymptotic above 1e6 n*m)
   categorical  PSI over categories (a category unseen in the baseline gets its own bin) +
                chi-square test of homogeneity (2 x K table) and its p-value
   both         missing-value rate in each window
@@ -210,8 +210,40 @@ def kolmogorov_sf(lam: float) -> float:
     return min(1.0, max(0.0, 2.0 * s))
 
 
+EXACT_KS_MAX_CELLS = 1_000_000  # n*m above this -> Stephens-corrected asymptotic tail (cost grows with n*m)
+
+
+def ks_pvalue_exact(d: float, n: int, m: int) -> float:
+    """Exact two-sided P(D >= d) for the two-sample KS statistic (no ties): 1 - P(the merged-sample random walk
+    stays strictly inside the band |i/n - j/m| < d). Every interleaving is equally likely, so the walk steps to
+    (i+1, j) with probability (n-i)/(n+m-i-j). Dynamic programme over the n x m lattice."""
+    lim = round(d * n * m) - 0.5  # inside: |i*m - j*n| < d*n*m  (integers; d is a multiple of 1/lcm(n, m))
+    row = [0.0] * (m + 1)  # row[j] = P(reach (i, j) while inside)
+    row[0] = 1.0
+    for j in range(1, m + 1):  # i = 0 edge
+        row[j] = row[j - 1] * (m - j + 1) / (n + m - j + 1) if abs(-j * n) < lim else 0.0
+    for i in range(1, n + 1):
+        new = [0.0] * (m + 1)
+        for j in range(0, m + 1):
+            if abs(i * m - j * n) >= lim:
+                continue
+            p = row[j] * (n - i + 1) / (n + m - i - j + 1)  # from (i-1, j) by an x-step
+            if j:
+                p += new[j - 1] * (m - j + 1) / (n + m - i - j + 1)  # from (i, j-1) by a y-step
+            new[j] = p
+        row = new
+    return min(1.0, max(0.0, 1.0 - row[m]))
+
+
 def ks_pvalue(d: float, n: int, m: int) -> float:
-    return kolmogorov_sf(math.sqrt(n * m / (n + m)) * d)
+    """Exact when n*m <= EXACT_KS_MAX_CELLS; otherwise the asymptotic Kolmogorov tail with Stephens' small-sample
+    correction, Q_KS((sqrt(en) + 0.12 + 0.11/sqrt(en)) * d), en = n m / (n + m)."""
+    if d <= 0:
+        return 1.0
+    if n * m <= EXACT_KS_MAX_CELLS:
+        return ks_pvalue_exact(d, n, m)
+    en = math.sqrt(n * m / (n + m))
+    return kolmogorov_sf((en + 0.12 + 0.11 / en) * d)
 
 
 def gammainc_upper(a: float, x: float) -> float:
@@ -410,7 +442,7 @@ def write_md(doc: dict) -> str:
     L += ["", "## Method & limits", "",
           f"- Numeric (>= {int(NUMERIC_SHARE * 100)}% of non-missing values parse as numbers, unless overridden): "
           "PSI over 10 bins cut at the baseline's nearest-rank deciles (tied edges merge bins); "
-          "two-sample Kolmogorov-Smirnov D with the asymptotic p-value Q_KS(sqrt(nm/(n+m))·D).",
+          "two-sample Kolmogorov-Smirnov D with its exact p-value (lattice-path count; ties make it approximate); above 1,000,000 n·m cells the Stephens-corrected asymptotic Q_KS((√en + 0.12 + 0.11/√en)·D).",
           "- Categorical: PSI over categories, a category unseen in the baseline gets its own bin; "
           "chi-square test of homogeneity on the 2 x K count table, p-value from the regularised upper incomplete gamma.",
           f"- PSI = sum((cur - base) · ln(cur / base)); an empty bin uses proportion {EPS:g} so the log stays finite.",

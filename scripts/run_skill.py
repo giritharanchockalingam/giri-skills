@@ -355,6 +355,9 @@ def build_args():
     ap.add_argument("--list", action="store_true", help="list agent skills and their inputs")
     ap.add_argument("--explain", metavar="SKILL", help="print the input contract in plain words")
     ap.add_argument("--demo", metavar="SKILL", help="run the skill on its own happy-path eval fixtures")
+    ap.add_argument("--reproduce", metavar="RUN_DIR",
+                    help="audit a finished run: re-run its script steps on the recorded inputs and require every "
+                         "declared output to be byte-identical (exit 0 identical, 1 differs, 3 not reproducible)")
     argv = sys.argv[1:]
     if "--demo" in argv:
         i = argv.index("--demo")
@@ -362,8 +365,55 @@ def build_args():
     return ap.parse_args(argv)
 
 
+def cmd_reproduce(run_dir_arg: str) -> int:
+    """Integrity audit: the delivered files are exactly what the skill's code computes from the recorded inputs.
+    (Correctness of the code itself is proven by its unit tests and tests/test_differential.py.)"""
+    import subprocess  # CLI-only audit (never used in the in-process runtime)
+    import tempfile
+    run_dir = Path(run_dir_arg).expanduser().resolve()
+    rj = run_dir / "run.json"
+    if not rj.is_file():
+        print(f"error: {rj} not found", file=sys.stderr)
+        return 3
+    run = json.loads(rj.read_text(encoding="utf-8"))
+    skill_dir = resolve_skill_dir(run["skill"])
+    agent = skillmeta.agent_block(skillmeta.load_skill(skill_dir)) or {}
+    if any(st.get("kind", "script") == "llm" for st in agent.get("run") or []):
+        print(f"{run['skill']}: not reproducible — it has a model step (model text is not deterministic)")
+        return 3
+    types = {i["name"]: i.get("type", "string") for i in agent.get("inputs") or []}
+    argv = [sys.executable, str(Path(__file__).resolve()), run["skill"], "--provider", "none"]
+    for k, v in sorted((run.get("inputs") or {}).items()):
+        if types.get(k) == "flag":
+            if v:
+                argv += ["--input", f"{k}=true"]
+        elif v not in (None, ""):
+            argv += ["--input", f"{k}={v}"]
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run(argv + ["--out", tmp], capture_output=True, text=True, cwd=str(ROOT))
+        diffs, same = [], 0
+        for o in agent.get("outputs") or []:
+            rel = str(o.get("path", "")).replace("{out}/", "")
+            a, b = run_dir / rel, Path(tmp) / rel
+            if not a.is_file() and not b.is_file():
+                continue
+            # the run's own output folder path may appear in a file (e.g. a log line); it is not content
+            norm = lambda f, d: f.read_bytes().replace(str(d).encode(), b"<OUT>")  # noqa: E731
+            if not a.is_file() or not b.is_file() or norm(a, run_dir) != norm(b, Path(tmp)):
+                diffs.append(rel)
+            else:
+                same += 1
+    if diffs:
+        print(f"{run['skill']}: NOT REPRODUCED — differs from a fresh run on the recorded inputs: {', '.join(diffs)}")
+        return 1
+    print(f"{run['skill']}: reproduced — {same} output file(s) byte-identical to a fresh run on the recorded inputs")
+    return 0
+
+
 def main() -> int:
     args = build_args()
+    if args.reproduce:
+        return cmd_reproduce(args.reproduce)
     if args.list:
         return cmd_list()
     if args.explain:

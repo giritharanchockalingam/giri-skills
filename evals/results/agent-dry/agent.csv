@@ -381,7 +381,7 @@ ai-platform/dpia,agent-gate-high-residual-no-measure,"screening.json: contains:"
 ai-platform/dpia,agent-gate-high-residual-no-measure,"dpia-risks.csv: contains:""Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high""",1,"found: Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high"
 ai-platform/drift-monitor,agent-happy-path,exit:0,1,"exit code 0, expected 0"
 ai-platform/drift-monitor,agent-happy-path,exists:drift.csv,1,evals/results/agent-dry/runs/ai-platform__drift-monitor/agent-happy-path/drift.csv exists
-ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok""",1,"found: confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok"
+ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""confidence,numeric,400,300,0.0791,0.0692,0.3704,0.000,0.000,ok""",1,"found: confidence,numeric,400,300,0.0791,0.0692,0.3704,0.000,0.000,ok"
 ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""intent,categorical,400,300,0.0166,,0.4147,0.000,0.000,ok""",1,"found: intent,categorical,400,300,0.0166,,0.4147,0.000,0.000,ok"
 ai-platform/drift-monitor,agent-happy-path,"drift.csv: contains:""account_tier,categorical,380,287,0.0263,,0.1178,0.050,0.043,ok""",1,"found: account_tier,categorical,380,287,0.0263,,0.1178,0.050,0.043,ok"
 ai-platform/drift-monitor,agent-happy-path,"drift-report.md: contains:""**No feature in alert.**""",1,found: **No feature in alert.**
@@ -394,7 +394,7 @@ ai-platform/drift-monitor,agent-no-thresholds-not-invented,"drift-report.md: con
 ai-platform/drift-monitor,agent-no-thresholds-not-invented,drift-report.md: no_unowned_tbd,1,0 unowned of 2 markers
 ai-platform/drift-monitor,agent-drift-alert-exits-1,exit:1,1,"exit code 1, expected 1"
 ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift.csv: contains:""confidence,numeric,400,300,2.5567,0.5600,<0.0001,0.000,0.000,alert""",1,"found: confidence,numeric,400,300,2.5567,0.5600,<0.0001,0.000,0.000,alert"
-ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift.csv: contains:""request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn""",1,"found: request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn"
+ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift.csv: contains:""request_tokens,numeric,400,300,0.1074,0.0675,0.4002,0.000,0.000,warn""",1,"found: request_tokens,numeric,400,300,0.1074,0.0675,0.4002,0.000,0.000,warn"
 ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift-report.md: contains:""Categories unseen in the baseline: dispute.""",1,found: Categories unseen in the baseline: dispute.
 ai-platform/drift-monitor,agent-drift-alert-exits-1,"drift-report.md: contains:""**ALERT — drift beyond the alert threshold.**""",1,found: **ALERT — drift beyond the alert threshold.**
 ai-platform/drift-monitor,agent-small-window-insufficient-data,exit:0,1,"exit code 0, expected 0"

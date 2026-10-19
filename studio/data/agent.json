@@ -2676,9 +2676,9 @@
  {
   "skill": "ai-platform/drift-monitor",
   "caseId": "agent-happy-path",
-  "check": "drift.csv: contains:\"confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok\"",
+  "check": "drift.csv: contains:\"confidence,numeric,400,300,0.0791,0.0692,0.3704,0.000,0.000,ok\"",
   "pass": true,
-  "evidence": "found: confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok"
+  "evidence": "found: confidence,numeric,400,300,0.0791,0.0692,0.3704,0.000,0.000,ok"
  },
  {
   "skill": "ai-platform/drift-monitor",
@@ -2767,9 +2767,9 @@
  {
   "skill": "ai-platform/drift-monitor",
   "caseId": "agent-drift-alert-exits-1",
-  "check": "drift.csv: contains:\"request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn\"",
+  "check": "drift.csv: contains:\"request_tokens,numeric,400,300,0.1074,0.0675,0.4002,0.000,0.000,warn\"",
   "pass": true,
-  "evidence": "found: request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn"
+  "evidence": "found: request_tokens,numeric,400,300,0.1074,0.0675,0.4002,0.000,0.000,warn"
  },
  {
   "skill": "ai-platform/drift-monitor",

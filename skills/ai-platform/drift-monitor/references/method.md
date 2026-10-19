@@ -14,7 +14,7 @@
 
 ## Two-sample Kolmogorov–Smirnov (numeric)
 - `D = max_x |F_base(x) − F_cur(x)|` over the pooled sorted values (ties handled by stepping both ECDFs together).
-- p-value is the asymptotic Kolmogorov tail `Q_KS(λ) = 2 Σ_{k≥1} (−1)^{k−1} e^{−2k²λ²}` with `λ = √(nm/(n+m)) · D`; for `λ < 1` the equivalent series `1 − √(2π)/λ Σ e^{−(2k−1)²π²/(8λ²)}` is used (it converges fast there).
+- p-value is **exact** (probability that the merged-sample lattice walk leaves the band |i/n − j/m| < D, dynamic programme over n × m) when n·m ≤ 1,000,000; above that, the asymptotic Kolmogorov tail with Stephens' correction `λ = (√en + 0.12 + 0.11/√en) · D`, en = nm/(n+m). Changed 2026-10-19 after a differential test against SciPy's exact p-value showed the uncorrected asymptotic tail off by up to 32% relative near p = 0.01. The asymptotic tail is `Q_KS(λ) = 2 Σ_{k≥1} (−1)^{k−1} e^{−2k²λ²}` (uncorrected form `λ = √(nm/(n+m)) · D`); for `λ < 1` the equivalent series `1 − √(2π)/λ Σ e^{−(2k−1)²π²/(8λ²)}` is used (it converges fast there).
 - Checked: `Q_KS(1.3581) ≈ 0.0500`, `Q_KS(1.6276) ≈ 0.0100` (the classic 5% and 1% critical values). Small samples make the asymptotic p-value approximate.
 
 ## Chi-square test of homogeneity (categorical)

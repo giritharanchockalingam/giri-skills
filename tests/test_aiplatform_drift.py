@@ -58,9 +58,21 @@ def test_ks_statistic_and_pvalue_hand_checked(tmp_path):
     res, rows = _run(tmp_path, base, cur)
     r = rows["x"]
     assert r["type"] == "numeric" and r["ks_d"] == "0.2500"
-    lam = math.sqrt(40 * 40 / 80) * 0.25
+    # exact two-sample p-value (scipy.stats.ks_2samp(range(1,41), range(11,51), method="exact") = 0.16497269950224194);
+    # the uncorrected asymptotic tail would give 0.1641 — the skill now reports the exact value
+    assert abs(_json(tmp_path)["features"][0]["p_value"] - 0.16497269950224194) < 1e-9
+
+
+def test_large_samples_use_stephens_corrected_tail(tmp_path):
+    base = [[i / 10] for i in range(1200)]
+    cur = [[i / 10 + 8] for i in range(1200)]   # n*m = 1.44e6 > exact limit
+    res, rows = _run(tmp_path, base, cur)
+    d = 80 / 1200   # the shift of 8.0 covers 80 of 1200 evenly spaced values
+    assert rows["x"]["ks_d"] == "0.0667"
+    en = math.sqrt(1200 * 1200 / 2400)
+    lam = (en + 0.12 + 0.11 / en) * d
     q = 2 * sum((-1) ** (k - 1) * math.exp(-2 * k * k * lam * lam) for k in range(1, 100))
-    assert abs(_json(tmp_path)["features"][0]["p_value"] - q) < 1e-9  # ~0.1641
+    assert abs(_json(tmp_path)["features"][0]["p_value"] - q) < 1e-9
 
 
 def _calc(spec: str) -> float:
