@@ -1,3 +1,4 @@
+import { humanName } from "@/lib/names";
 import { displayDescription } from "@/lib/names";
 import Link from "next/link";
 import { fmt } from "@/lib/data";
@@ -10,6 +11,8 @@ import { TabBar } from "@/components/TabBar";
 
 export function generateStaticParams() { return repoSkillParams(); }
 export const dynamicParams = false;
+
+export async function generateMetadata({ params }: { params: Promise<{ domain: string; name: string }> }) { const { name } = await params; return { title: `${humanName(name)} · Library · Skills Factory` }; }
 
 /** Repository skill: one-screen header (name, verdicts, description, scorecard strip, Test skill) + the tab bar.
  *  Each tab is a sub-route; only the active tab's content renders. */

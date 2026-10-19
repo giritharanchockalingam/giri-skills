@@ -1,3 +1,4 @@
+import { humanName } from "@/lib/names";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
@@ -9,7 +10,7 @@ import type { RunStatus } from "@/lib/factory/db";
 import { getLastVersionRun } from "@/lib/db/runs";
 
 export const dynamic = "force-dynamic";
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${slug} · Skills Factory` }; }
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${humanName(slug)} · Publish pipeline · Skills Factory` }; }
 
 /** Overview: one screen of facts — source, runs, contract (inputs · outputs) and evidence. The purpose text is in the header. */
 export default async function SkillOverview({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {

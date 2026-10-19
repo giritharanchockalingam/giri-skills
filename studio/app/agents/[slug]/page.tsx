@@ -1,3 +1,4 @@
+import { humanName } from "@/lib/names";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,7 +13,7 @@ import { getAgentBySlug, listAgentVersions, listRecentRunsForVersions } from "@/
 import { STAGES, SHELVES } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${slug.replace(/-/g, " ")} · Playbooks` }; }
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${humanName(slug)} · Playbooks · Skills Factory` }; }
 
 export default async function AgentPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
   const { slug } = await params; const { v } = await searchParams;

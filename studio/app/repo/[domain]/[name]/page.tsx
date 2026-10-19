@@ -1,3 +1,4 @@
+import { humanName } from "@/lib/names";
 import Link from "next/link";
 import { verdictInfo, agentVerdictInfo } from "@/lib/verdict";
 import { loadRepoSkill, repoSkillParams, type RepoParams } from "@/lib/repoSkill";
@@ -8,7 +9,7 @@ export const dynamicParams = false;
 
 export async function generateMetadata({ params }: { params: RepoParams }) {
   const { domain, name } = await params;
-  return { title: `${name} · ${domain} · giri-skills` };
+  return { title: `${humanName(name)} · Library · Skills Factory` };
 }
 
 /** Overview: what/when, the contract (inputs · outputs) and the evidence. Nothing else — the rest is behind the tabs. */

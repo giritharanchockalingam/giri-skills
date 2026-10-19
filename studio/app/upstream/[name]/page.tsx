@@ -1,3 +1,4 @@
+import { humanName } from "@/lib/names";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { upstream, upstreamFor, categoryLabel, licenseLabel } from "@/lib/data";
@@ -18,7 +19,7 @@ export const dynamicParams = false;
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  return { title: `${name} · upstream · giri-skills` };
+  return { title: `${humanName(name)} · Reference skills · Skills Factory` };
 }
 
 export default async function UpstreamSkillPage({ params }: { params: Promise<{ name: string }> }) {
