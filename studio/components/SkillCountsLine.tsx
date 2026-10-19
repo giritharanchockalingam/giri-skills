@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { countsSentence, type SkillCounts } from "@/lib/counts";
+import { countsSentence, type SkillCounts } from "@/lib/countsText";
 
 /** The one sentence that states skill counts (see lib/counts.ts and the Glossary). */
 export function SkillCountsLine({ c }: { c: SkillCounts }) {
