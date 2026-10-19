@@ -12,7 +12,7 @@ jobs:
       - name: Repo validator
         run: python3 scripts/validate.py && python3 scripts/talent.py && python3 scripts/gen_adlc_doc.py --check
       - name: Script tests
-        run: pip install -q pytest pandas openpyxl python-docx pypdf && python3 -m pytest -q tests/
+        run: pip install -q pytest pandas openpyxl python-docx pypdf numpy scipy statsmodels krippendorff && python3 -m pytest -q tests/
       - name: Behavioral evals (dry)
         run: python3 scripts/behavioral_evals.py all --provider dry --skills 'skills/presales/*' --out evals/results/ci-dry
       - name: Agent evals (dry) — run every wired skill against its fixtures
