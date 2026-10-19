@@ -47,7 +47,7 @@ export function mapVercel(team: { slug: string | null }, projects: VercelProject
         framework: p.framework ?? null, production_url: alias ? `https://${alias}` : null, repo, production_branch: p.link?.productionBranch ?? null,
         last_deploy: last ? { state: last.readyState ?? last.state ?? null, at: iso(last.created), sha: last.meta?.githubCommitSha ?? null } : null,
         // production deployment times (90 days, newest first) — the true deploy-frequency source for linked repositories
-        prod_deploys: ready.map((d) => iso(d.created)).filter(Boolean).slice(0, 300),
+        prod_deploys: ready.map((d) => iso(d.created)).filter(Boolean).slice(0, 1000),
         deploys_30d: ready.filter(in30).length, failed_30d: failed.filter(in30).length,
       },
     });

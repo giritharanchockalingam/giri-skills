@@ -53,8 +53,18 @@ export async function readVercel(cfg: { token: string; teamId: string | null; sl
   const deploys = new Map<string, VercelDeployment[]>(), envs = new Map<string, VercelEnv[]>();
   const problems: string[] = [];
   await pool(projects, 8, async (p) => {
-    try { deploys.set(p.id, (await getJson<{ deployments: VercelDeployment[] }>(`${V}/v6/deployments?${q({ projectId: p.id, target: "production", since, limit: "100" })}`, cfg.token, f)).deployments); }
-    catch (e) { problems.push(`${p.name} deployments: ${(e as Error).message}`); }
+    try {
+      // every production deployment in the window: follow the `until` cursor (a 100-item page is not the total)
+      const all: VercelDeployment[] = [];
+      let until: string | null = null, n = 0;
+      do {
+        const r: { deployments: VercelDeployment[]; pagination?: { next: number | null } } = await getJson(`${V}/v6/deployments?${q({ projectId: p.id, target: "production", since, limit: "100", ...(until ? { until } : {}) })}`, cfg.token, f);
+        all.push(...r.deployments);
+        until = r.pagination?.next && r.deployments.length ? String(r.pagination.next) : null;
+      } while (until && ++n < 10);
+      if (until) problems.push(`${p.name}: more than 1,000 production deployments in 90 days — the oldest were not read`);
+      deploys.set(p.id, all);
+    } catch (e) { problems.push(`${p.name} deployments: ${(e as Error).message}`); }
     try { envs.set(p.id, (await getJson<{ envs: VercelEnv[] }>(`${V}/v10/projects/${p.id}/env?${q({})}`, cfg.token, f)).envs); }
     catch (e) { problems.push(`${p.name} settings: ${(e as Error).message}`); }
   });
