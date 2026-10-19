@@ -1,6 +1,23 @@
 -- 0002_sf_functions.sql — release-state view, lifecycle RPCs, API-key RPCs, audit helper (idempotent).
 -- Every RPC that changes lifecycle state runs as SECURITY DEFINER and sets the transaction-local flag
 -- sf.rpc = '1' so the sf_versions_guard trigger lets the transition through. Role checks are inside.
+-- rollback: (manual, in this order — drops everything this migration created; data in these tables is lost)
+--   drop view if exists public.sf_version_release_state;
+--   drop function if exists public.sf_api_run_get(text, uuid);
+--   drop function if exists public.sf_api_run_update(text, uuid, jsonb);
+--   drop function if exists public.sf_record_run(text, text, jsonb, text);
+--   drop function if exists public.sf_api_skill(text, text);
+--   drop function if exists public.sf_api_skills(text);
+--   drop function if exists public.sf_resolve_api_key(text);
+--   drop function if exists public.sf_run_insert(uuid, text, jsonb, text);
+--   drop function if exists public.sf_retire_version(uuid, text);
+--   drop function if exists public.sf_publish_version(uuid);
+--   drop function if exists public.sf_review_version(uuid, text, text);
+--   drop function if exists public.sf_eval_set_hash(uuid);
+--   drop function if exists public.sf_member_directory(uuid);
+--   drop function if exists public.sf_user_id_by_email(text);
+--   drop function if exists public.sf_create_workspace(text, text);
+--   drop function if exists public.sf_audit(uuid, text, text, text, jsonb);
 
 -- ───────────────────────────── audit ─────────────────────────────
 create or replace function public.sf_audit(p_workspace uuid, p_action text, p_entity_type text, p_entity_id text, p_details jsonb default '{}'::jsonb)

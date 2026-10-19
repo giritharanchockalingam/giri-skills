@@ -1,6 +1,11 @@
 -- 0004_sf_talent.sql — roles (a set of skills + playbooks) and talent pools (a team of roles), versioned like agents:
 -- drafts editable by authors/admins, publish by reviewers/admins through an RPC, published specs frozen.
 -- Idempotent and non-destructive (create if not exists / guarded policies), sf_ prefix only.
+-- rollback: (manual, in this order — drops everything this migration created; data in these tables is lost)
+--   drop table if exists public.sf_talent_versions cascade;
+--   drop table if exists public.sf_talent cascade;
+--   drop function if exists public.sf_publish_talent_version(uuid);
+--   drop function if exists public.sf_talent_versions_guard();
 
 create table if not exists public.sf_talent (
   id            uuid primary key default gen_random_uuid(),

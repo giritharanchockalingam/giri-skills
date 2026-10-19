@@ -1,6 +1,27 @@
 -- 0001_sf_schema.sql — Skills Factory core schema (all objects prefixed sf_; idempotent).
 -- Shared Supabase project: nothing here touches public.profiles or any non-sf_ object.
 -- Apply with the Supabase SQL editor or `supabase db push`; re-running is safe.
+-- rollback: (manual, in this order — drops everything this migration created; data in these tables is lost)
+--   drop table if exists public.sf_audit_events cascade;
+--   drop table if exists public.sf_connections cascade;
+--   drop table if exists public.sf_runs cascade;
+--   drop table if exists public.sf_api_keys cascade;
+--   drop table if exists public.sf_approvals cascade;
+--   drop table if exists public.sf_eval_runs cascade;
+--   drop table if exists public.sf_eval_cases cascade;
+--   drop table if exists public.sf_files cascade;
+--   drop table if exists public.sf_skill_versions cascade;
+--   drop table if exists public.sf_skills cascade;
+--   drop table if exists public.sf_policies cascade;
+--   drop table if exists public.sf_memberships cascade;
+--   drop table if exists public.sf_workspaces cascade;
+--   drop function if exists public.sf_reject_change();
+--   drop function if exists public.sf_files_guard();
+--   drop function if exists public.sf_versions_guard();
+--   drop function if exists public.sf_has_role(uuid, text[]);
+--   drop function if exists public.sf_is_member(uuid);
+--   drop function if exists public.sf_role(uuid);
+--   drop function if exists public.sf_set_updated_at();
 
 create extension if not exists pgcrypto;
 
