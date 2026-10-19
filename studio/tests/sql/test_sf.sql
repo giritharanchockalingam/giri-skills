@@ -489,6 +489,23 @@ select test_as('00000000-0000-0000-0000-000000000002');
 select sf_accept_invitations();
 select test_assert(sf_role(:'ws_acme') = 'author', 'an invitation never downgrades an existing member');
 
+-- ───────── Blueprints (0017): services + databases + relations, same-workspace only ─────────
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_catalog_entities (workspace_id, kind, source, key, external_id, title, url) values (:'ws_acme', 'service', 'vercel', 'billing-web', 'prj_1', 'billing-web', 'https://vercel.com/acme/billing-web') returning id as svc \gset
+insert into sf_catalog_entities (workspace_id, kind, source, key, external_id, title, url) values (:'ws_acme', 'database', 'supabase', 'abcdefghijklmnopqrst', 'abcdefghijklmnopqrst', 'Billing DB', 'https://supabase.com/dashboard/project/abcdefghijklmnopqrst') returning id as db \gset
+insert into sf_catalog_relations (workspace_id, from_id, to_id, type, evidence, source) values (:'ws_acme', :'svc', :'ent', 'built_from', 'Vercel Git link acme-org/billing', 'vercel');
+insert into sf_catalog_relations (workspace_id, from_id, to_id, type, evidence, source) values (:'ws_acme', :'svc', :'db', 'uses_database', 'env NEXT_PUBLIC_SUPABASE_URL', 'vercel');
+select test_expect_error($$insert into sf_catalog_entities (workspace_id, kind, source, key, external_id, title, url) values ('$$ || :'ws_acme' || $$', 'cluster', 'vercel', 'x', '1', 'x', 'https://x')$$, 'check');
+select test_expect_error($$insert into sf_catalog_relations (workspace_id, from_id, to_id, type, source) values ('$$ || :'ws_acme' || $$', '$$ || :'svc' || $$', '$$ || :'svc' || $$', 'built_from', 'vercel')$$, 'check');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((select count(*) from sf_catalog_relations) = 2, 'a consumer reads relations');
+select test_expect_error($$insert into sf_catalog_relations (workspace_id, from_id, to_id, type, source) values ('$$ || :'ws_acme' || $$', '$$ || :'db' || $$', '$$ || :'svc' || $$', 'uses_database', 'vercel')$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_catalog_relations) = 0, 'other workspace sees no relations');
+reset role;
+select id as other_ws from sf_workspaces where slug = 'other' \gset
+select test_expect_error($$insert into sf_catalog_relations (workspace_id, from_id, to_id, type, source) values ('$$ || :'other_ws' || $$', '$$ || :'svc' || $$', '$$ || :'db' || $$', 'uses_database', 'vercel')$$, 'workspace');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

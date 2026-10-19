@@ -29,6 +29,8 @@ export interface AssistantData {
   route(task: string, k: number): { skill: string; score: number }[];
   skill(id: string): SkillFact | null;
   initiatives?(): Promise<InitiativeFact[]>;
+  entities?(): Promise<{ id: string; kind: string; source: string; key: string; title: string; url: string; properties: Record<string, unknown> }[]>;
+  relations?(): Promise<{ from: string; to: string; type: string; evidence: string }[]>;
   delivery?(): Promise<{ entity_id: string; key: string; computed_at: string; notes: string[]; d30: unknown; d90: unknown }[]>;
 }
 
@@ -221,7 +223,30 @@ const listAiAssets = tool({
   },
 });
 
-const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives, deliveryMetrics, listAiAssets];
+const searchEntities = tool({
+  spec: { type: "function", function: { name: "search_services_and_databases",
+    description: "Services (Vercel projects) and databases (Supabase projects) in the catalog, with their relations: the repository a service is built from, the database it uses, the services using a database; plus production URL, last production deploy, deploys in 30 days, database status/region/version.",
+    parameters: { type: "object", properties: {
+      kind: { type: "string", enum: ["service", "database"], description: "Only services or only databases." },
+      query: { type: "string", description: "Words to match against name, repository or URL." } }, additionalProperties: false } } },
+  schema: z.object({ kind: z.enum(["service", "database"]).optional(), query: z.string().max(200).optional() }),
+  async run(a, d) {
+    if (!d.entities || !d.relations) return { content: { error: "services and databases are not available here" }, links: [], summary: "no entity source" };
+    const [ents, rels, repos] = await Promise.all([d.entities(), d.relations(), d.repos()]);
+    const name = new Map<string, string>([...ents.map((e) => [e.id, e.kind === "database" ? `${e.title} (${e.key})` : e.title] as [string, string]), ...repos.map((r) => [r.id, r.key] as [string, string])]);
+    const words = norm(a.query ?? "").split(" ").filter((w) => w.length > 1);
+    const hits = ents.filter((e) => (!a.kind || e.kind === a.kind) && words.every((w) => norm([e.title, e.key, e.url, String(e.properties.repo ?? ""), String(e.properties.production_url ?? "")].join(" ")).includes(w)));
+    const rows = hits.slice(0, 60).map((e) => {
+      const { prod_deploys: _drop, ...props } = e.properties as Record<string, unknown>; void _drop;
+      return { kind: e.kind, name: e.title, key: e.key, link: `/catalog/${e.id}`, source: e.source, properties: props,
+        relations: rels.filter((r) => r.from === e.id || r.to === e.id).map((r) => ({ type: r.type, direction: r.from === e.id ? "out" : "in", other: name.get(r.from === e.id ? r.to : r.from) ?? "(unknown)", other_link: `/catalog/${r.from === e.id ? r.to : r.from}`, evidence: r.evidence })) };
+    });
+    return { content: { total: ents.length, matched: hits.length, entities: rows, note: "built_from: service → repository (Vercel Git link). uses_database: service → database (the Supabase project its SUPABASE_URL setting names)." },
+      links: hits.slice(0, 10).map((e) => ({ title: e.title, href: `/catalog/${e.id}` })), summary: `${hits.length} ${a.kind ?? "service/database"} entit${hits.length === 1 ? "y" : "ies"}` };
+  },
+});
+
+const TOOLS = [searchCatalog, getScorecard, findSkill, listRuns, insightsSummary, listInitiatives, deliveryMetrics, listAiAssets, searchEntities];
 export const TOOL_SPECS: ToolSpec[] = TOOLS.map((t) => t.spec);
 
 /** Run one tool call from the model. Bad names or arguments come back as tool errors the model can correct. */

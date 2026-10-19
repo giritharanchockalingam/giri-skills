@@ -14,6 +14,8 @@ import { ActionPanel } from "@/components/catalog/ActionPanel";
 import { listActions } from "@/lib/db/actions";
 import { getPolicy } from "@/lib/factory/db";
 import { loadDelivery } from "@/lib/db/delivery";
+import { getEntity, relationsOf } from "@/lib/db/entities";
+import { EntityDetail, RelatedList } from "@/components/catalog/EntityDetail";
 import { DeliveryTable } from "@/components/insights/DeliveryTable";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,9 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const ctx = await requireWorkspace();
+  const [any, rels] = await Promise.all([getEntity(ctx.supabase, ctx.workspace.id, id), relationsOf(ctx.supabase, ctx.workspace.id, id)]);
+  if (!any) notFound();
+  if (any.kind !== "repository") return <EntityDetail e={any} rels={rels} />;
   const e = await getCatalogEntity(ctx.supabase, ctx.workspace.id, id);
   if (!e) notFound();
   const all = await listEntityResults(ctx.supabase, ctx.workspace.id, id);
@@ -42,6 +47,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
         <Link className="link" href="/catalog">Back to catalog</Link>
         {canScore && <ScoreAll entities={[{ id: e.id, key: e.key }]} label="Re-run this scorecard" />}
       </div>
+      {rels.length > 0 && <section className="card card-pad mb-4"><div className="h3" style={{ marginTop: 0 }}>Related</div><RelatedList rels={rels} /></section>}
       <section className="card card-pad mb-4 level-panel">
         <div className="flex flex-wrap items-center gap-3"><LevelBadge level={lv.level} large /><span className="caption">{lv.level === "n/a" ? "No scorecard check applies to this repository yet." : `${lv.applicable.length} check(s) apply.`}</span></div>
         {lv.next && (<>

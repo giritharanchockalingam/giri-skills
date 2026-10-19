@@ -930,3 +930,4 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .skel-line.short { width: min(380px, 70%); } .skel-card { height: 220px; margin-top: 24px; }
 @keyframes pl-pulse { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .page-loading-bar, .skel { animation: none; } }
+.kv > div { display: contents; }

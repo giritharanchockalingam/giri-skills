@@ -36,13 +36,16 @@ export function frequencyBand(perWeek: number): Band { return perWeek >= 7 ? "el
 /** DORA 2024: < 1 day · 1 day–1 week · 1 week–1 month · longer. */
 export function leadTimeBand(hours: number): Band { return hours < 24 ? "elite" : hours < 24 * 7 ? "high" : hours < 24 * 30 ? "medium" : "low"; }
 
-export function computeDelivery(prs: PrFact[], deploys: DeployFact[] | null, windowDays: number, now = Date.now()): Delivery {
+/** `authoritative`: the deploy list is the complete record (e.g. Vercel production deployments), so zero means zero —
+ *  never fall back to counting merges. */
+export function computeDelivery(prs: PrFact[], deploys: DeployFact[] | null, windowDays: number, now = Date.now(), authoritative = false): Delivery {
   const since = now - windowDays * DAY;
   const merged = prs.filter((p) => p.merged_at && Date.parse(p.merged_at) >= since && Date.parse(p.merged_at) <= now);
   const weeks = windowDays / 7;
   const prodDeploys = deploys?.filter((d) => /^prod/i.test(d.environment) && Date.parse(d.created_at) >= since) ?? null;
-  const count = prodDeploys && prodDeploys.length > 0 ? prodDeploys.length : merged.length;
-  const source = prodDeploys && prodDeploys.length > 0 ? "deployments" as const : "merges" as const;
+  const useDeploys = !!prodDeploys && (authoritative || prodDeploys.length > 0);
+  const count = useDeploys ? prodDeploys!.length : merged.length;
+  const source = useDeploys ? "deployments" as const : "merges" as const;
   const perWeek = Math.round((count / weeks) * 10) / 10;
   const leads = merged.map((p) => (Date.parse(p.merged_at!) - Date.parse(p.created_at)) / HOUR).filter((h) => h >= 0);
   const med = percentile(leads, 0.5);

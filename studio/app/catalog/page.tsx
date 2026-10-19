@@ -13,6 +13,8 @@ import { ScoreAll } from "@/components/catalog/ScoreAll";
 import { CHECKS } from "@/lib/scorecards/checks";
 import { connectGithub, disconnectGithub } from "./actions";
 import { humanName } from "@/lib/names";
+import { listEntities, allRelations, type EntityRow } from "@/lib/db/entities";
+import { KindTabs, ServicesTable, DatabasesTable } from "@/components/catalog/EntityViews";
 
 export const metadata = { title: "Catalog · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -44,7 +46,21 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const cfg = githubConfig();
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-  const catalog = await loadCatalog(ctx.supabase, ctx.workspace.id);
+  const [catalog, services, databases] = await Promise.all([loadCatalog(ctx.supabase, ctx.workspace.id), listEntities(ctx.supabase, ctx.workspace.id, "service"), listEntities(ctx.supabase, ctx.workspace.id, "database")]);
+  const kindCounts = { repository: catalog.entities.filter((e) => !e.archived).length, service: services.length, database: databases.length };
+  if (sp.type === "service" || sp.type === "database") {
+    const rels = await allRelations(ctx.supabase, ctx.workspace.id);
+    const all = new Map<string, EntityRow>([...services, ...databases, ...(catalog.entities as unknown as EntityRow[])].map((e) => [e.id, e]));
+    const rows = sp.type === "service" ? services : databases;
+    return (
+      <>
+        <PageHead eyebrow="Context Lake" title="What you" em="run" after="." lead={sp.type === "service" ? "Services from Vercel: what each is built from, where it runs in production, how often it ships, and the database it uses." : "Databases from Supabase, and the services that use each."} />
+        <KindTabs active={sp.type} counts={kindCounts} />
+        {rows.length ? (sp.type === "service" ? <ServicesTable rows={rows} all={all} rels={rels} /> : <DatabasesTable rows={rows} all={all} rels={rels} />)
+          : <section className="card card-pad"><p className="none" style={{ margin: 0 }}>None yet — connect and sync {sp.type === "service" ? "Vercel" : "Supabase"} on <Link className="link" href="/integrations">Integrations</Link>.</p></section>}
+      </>
+    );
+  }
   const scores = new Map<string, { check_id: string; verdict: string; summary: string; created_at: string }[]>();
   for (const r of catalog.scores) scores.set(r.entity_id, [...(scores.get(r.entity_id) ?? []), r]);
   const canScore = ctx.role === "admin" || ctx.role === "author";
@@ -70,6 +86,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
       <PageHead eyebrow="Context Lake" title="What you" em="run" after="."
         lead="Your repositories, read from GitHub: what each one is built with, who owns it, and which skills apply — with the files that prove it." />
 
+      <KindTabs active="repository" counts={kindCounts} />
       {sp.connected && <p className="notice notice-ok mb-4" role="status">Connected <b>{sp.connected}</b> — {sp.synced ?? 0} repositories synced.</p>}
       {sp.error && <p className="notice notice-err mb-4" role="alert">{ERRORS[sp.error] ?? "GitHub returned an error."}{sp.detail ? ` (${sp.detail})` : ""}</p>}
       {sp.disconnected && <p className="notice notice-info mb-4" role="status">Disconnected. Its repositories were removed from the catalog; uninstall the App on GitHub to revoke access there too.</p>}
