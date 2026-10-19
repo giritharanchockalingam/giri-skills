@@ -367,7 +367,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                         <td>{s.skipped ? <span className="na-pill">skipped</span> : <PassPill pass={s.ok} />}</td>
                         <td className="muted">{s.exit ?? "—"}</td>
                         <td className="muted tnum">{s.duration_s != null ? `${s.duration_s}s` : "—"}</td>
-                        <td className="ink-2">{s.skipped ? (s.skipped_reason ? `skipped — ${s.skipped_reason === "no provider key (LLM step not run)" ? "no provider key" : s.skipped_reason}` : s.reason) : s.ok ? (s.provider ? `provider ${s.provider}` : "") : s.error}</td>
+                        <td className="ink-2">{s.skipped ? (s.skipped_reason ? `skipped — ${s.skipped_reason === "no provider key (LLM step not run)" ? "no provider key" : s.skipped_reason}` : s.reason) : s.ok ? (s.provider ? (s.provider === "dry" ? "no model (scripts only)" : `model provider ${s.provider}`) : "") : s.error}</td>
                       </tr>
                     ))}</tbody>
                   </table></div>

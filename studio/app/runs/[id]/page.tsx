@@ -1,3 +1,4 @@
+import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -53,7 +54,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
             <div className="h3 mb-2">Steps <span className="muted font-normal">({rj.steps?.length ?? 0})</span></div>
             {rj.steps?.length ? (
               <div className="run-tablewrap"><table className="mini run-steps"><thead><tr><th>Step</th><th>Kind</th><th>Status</th><th>Exit</th><th>Duration</th><th>Detail</th></tr></thead>
-                <tbody>{rj.steps.map((s) => <tr key={s.step}><td><code>{s.step}</code></td><td><span className={`agent-kind agent-kind-${s.kind}`}>{s.kind}</span></td><td>{s.skipped ? <span className="na-pill">skipped</span> : <PassPill pass={s.ok} />}</td><td className="muted">{s.exit ?? "—"}</td><td className="muted tnum">{s.duration_s != null ? `${s.duration_s}s` : "—"}</td><td className="ink-2" style={{ whiteSpace: "normal" }}>{s.skipped ? (s.skipped_reason ?? s.reason) : s.ok ? (s.provider ? `provider ${s.provider}` : "") : s.error}</td></tr>)}</tbody></table></div>
+                <tbody>{rj.steps.map((s) => <tr key={s.step}><td><code>{s.step}</code></td><td><span className={`agent-kind agent-kind-${s.kind}`}>{s.kind}</span></td><td>{s.skipped ? <span className="na-pill">skipped</span> : <PassPill pass={s.ok} />}</td><td className="muted">{s.exit ?? "—"}</td><td className="muted tnum">{s.duration_s != null ? `${s.duration_s}s` : "—"}</td><td className="ink-2" style={{ whiteSpace: "normal" }}>{s.skipped ? (s.skipped_reason ?? s.reason) : s.ok ? (s.provider ? (s.provider === "dry" ? "no model (scripts only)" : `model provider ${s.provider}`) : "") : s.error}</td></tr>)}</tbody></table></div>
             ) : <p className="none">No steps were recorded{run.error ? ` — ${run.error}` : ""}.</p>}
           </div>
           <div className="card card-pad">
@@ -72,7 +73,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
             <div className="h3 mb-2">Execution</div>
             <dl className="kv">
               <dt>Provider</dt><dd>{run.provider ?? "—"}{f.provider?.note && <div className="caption">{f.provider.note}</div>}</dd>
-              <dt>Model</dt><dd>{run.model ?? <span className="muted">none used</span>}</dd>
+              <dt>Model</dt><dd>{run.model ? <span title={`model id: ${run.model}`}>{modelLabel(run.model)} <span className="caption">· <code>{run.model}</code></span></span> : <span className="muted">none used</span>}</dd>
               <dt>Usage</dt><dd>{usage?.calls ? `${usage.input_tokens?.toLocaleString()} in · ${usage.output_tokens?.toLocaleString()} out · ${usage.calls} call${usage.calls === 1 ? "" : "s"}${usage.retries ? ` · ${usage.retries} retr${usage.retries === 1 ? "y" : "ies"}` : ""}` : <span className="muted">no model calls</span>}{usage?.source && <div className="caption">{usage.source}</div>}</dd>
               <dt>Cost</dt><dd>{run.cost_usd != null ? <>{fmtUsd(run.cost_usd, run.cost_is_estimate)} <span className="caption">({run.cost_is_estimate ? "estimate: provider tokens × price table" : "measured"})</span></> : <span className="muted">— (no billable calls)</span>}</dd>
               <dt>Duration</dt><dd>{fmtMs(run.duration_ms)}</dd>

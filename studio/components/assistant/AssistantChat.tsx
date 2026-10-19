@@ -1,4 +1,5 @@
 "use client";
+import { modelLabel } from "@/lib/modelLabel";
 /* Assistant conversation: the question goes to /api/assistant with the recent turns; the answer is shown with the
  * evidence it rests on (which lookups ran, what they found, links to the records) and its token cost. */
 import { useEffect, useRef, useState } from "react";
@@ -41,7 +42,7 @@ export function AssistantChat({ starters }: { starters: string[] }) {
       if (!res.ok) setMsgs((m) => [...m, { role: "assistant", content: j?.error?.message ?? `The assistant failed (${res.status}).`, error: true }]);
       else {
         const u = j.usage ?? {};
-        const meta = [`${j.model}`, `${(u.prompt ?? 0) + (u.completion ?? 0)} tokens`, u.cost_usd != null ? `$${Number(u.cost_usd).toFixed(4)}` : null, j.note, j.warning].filter(Boolean).join(" · ");
+        const meta = [modelLabel(j.model, {}), `${(u.prompt ?? 0) + (u.completion ?? 0)} tokens`, u.cost_usd != null ? `$${Number(u.cost_usd).toFixed(4)}` : null, j.note, j.warning].filter(Boolean).join(" · ");
         setMsgs((m) => [...m, { role: "assistant", content: j.answer, evidence: j.evidence, meta }]);
       }
     } catch {

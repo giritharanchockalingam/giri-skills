@@ -1,3 +1,4 @@
+import { modelLabel } from "@/lib/modelLabel";
 import { scorecard, skills, DOMAINS, domainSummaries, misroutesFor, failedWithItemsFor, agentCasesFor, proposalFor, meta } from "@/lib/data";
 import { summarize, summarizeAgent, conclusionSentence, VERDICTS_FOR_LEGEND, verdictInfo, type VerdictFilter } from "@/lib/verdict";
 import { ScorecardTable, type ScorecardDrill } from "@/components/ScorecardTable";
@@ -33,7 +34,7 @@ export default function EvalsPage() {
         title="What the evals"
         em="found"
         lead={conclusionSentence(s, a)}
-        caption={<>{meta.model} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} agent checks · {meta.spend} spend (est.) · {meta.date}</>}
+        caption={<>{modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} agent checks · {meta.spend} spend (est.) · {meta.date}</>}
       />
 
       <div className="summary-grid">

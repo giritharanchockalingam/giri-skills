@@ -1,3 +1,4 @@
+import { modelLabel } from "@/lib/modelLabel";
 import { catalogRows, DOMAINS, meta } from "@/lib/data";
 import { summarize } from "@/lib/verdict";
 import { CatalogTable } from "@/components/CatalogTable";
@@ -18,7 +19,7 @@ export default function RepoCatalogPage() {
         title={`${s.total} skills,`}
         em="ready to run"
         lead={<>Every skill here runs in your browser on its own example, or on your files. Open one and press Run. {s.healthy} are rated healthy by their evaluations; {s.needsWork} need work.</>}
-        caption={<>{cases} evaluation cases · {meta.runs} evaluation runs with {meta.model} on {meta.date}</>}
+        caption={<>{cases} evaluation cases · {meta.runs} evaluation runs with {modelLabel(meta.model)} on {meta.date}</>}
         note={<><Link href="/" className="link-flame">← Describe a task instead</Link> · <Link href="/upstream/" className="link-flame">{meta.counts.upstream} reference skills from GitHub →</Link></>}
       />
       <CatalogTable rows={rows} domains={DOMAINS} />

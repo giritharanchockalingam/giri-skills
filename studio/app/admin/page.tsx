@@ -1,3 +1,4 @@
+import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
@@ -79,9 +80,9 @@ export default async function AdminPage() {
                 <div className="h3 mb-2">Model providers</div>
                 <dl className="kv">
                   <dt>OpenAI-compatible</dt><dd>{compatPresent ? <span className="pass">configured · {process.env.SF_LLM_BASE_URL || DEFAULT_COMPAT_BASE_URL}</span> : <span className="fail">not configured — set SF_LLM_API_KEY (Groq free tier by default)</span>}</dd>
-                  <dt>Anthropic</dt><dd>{anthropicPresent ? <span className="pass">configured</span> : <span className="muted">not configured (paid; optional)</span>}</dd>
+                  <dt>Anthropic</dt><dd>{anthropicPresent ? <span className="pass">configured</span> : <span className="muted">not configured (paid; optional) — skills that ask for Anthropic run on the OpenAI-compatible model when you switch them; nothing else breaks</span>}</dd>
                   <dt>Without a key</dt><dd className="caption">llm steps are skipped and reported, never faked.</dd>
-                  {compatPresent && <><dt>Model</dt><dd><code>{process.env.SF_LLM_MODEL || DEFAULT_COMPAT_MODEL}</code>{process.env.SF_LLM_PRICE_IN && process.env.SF_LLM_PRICE_OUT ? <span className="caption"> · ${process.env.SF_LLM_PRICE_IN} in / ${process.env.SF_LLM_PRICE_OUT} out per 1M tokens</span> : <span className="caption"> · no price set (SF_LLM_PRICE_IN/OUT) — cost and budget not tracked</span>}</dd></>}
+                  {compatPresent && <><dt>Model</dt><dd><b>{modelLabel(process.env.SF_LLM_MODEL || DEFAULT_COMPAT_MODEL)}</b> <span className="caption">· model id <code>{process.env.SF_LLM_MODEL || DEFAULT_COMPAT_MODEL}</code> at {process.env.SF_LLM_BASE_URL || DEFAULT_COMPAT_BASE_URL} (SF_LLM_MODEL)</span>{process.env.SF_LLM_PRICE_IN && process.env.SF_LLM_PRICE_OUT ? <span className="caption"> · cost tracked at ${process.env.SF_LLM_PRICE_IN} in / ${process.env.SF_LLM_PRICE_OUT} out per 1M tokens — your SF_LLM_PRICE_IN/OUT settings; check them against the provider&apos;s price list</span> : <span className="caption"> · no price set (SF_LLM_PRICE_IN/OUT) — cost and budget not tracked</span>}</dd></>}
                   <dt>Python runtime</dt><dd>{admin ? <RuntimeStatus /> : <span className="muted">admins can check the runtime here</span>}</dd>
                 </dl>
                 {admin && compatPresent && <div className="mt-4"><ActionForm action={useCompatForDrafts} submit="Use this model for all drafts with llm steps" submitClass="btn btn-secondary btn-sm" confirm="Switch every draft that has llm steps to this provider and model? Published versions are not changed." /></div>}
@@ -108,7 +109,7 @@ export default async function AdminPage() {
           </section>
 
           <section className="section" id="keys">
-            <SectionHead title="API" em="keys" caption="Applications call published skills with a key. The key is shown once at creation; only its hash is stored. See docs/API.md." />
+            <SectionHead title="API" em="keys" caption="Applications call published skills with a key. The key is shown once at creation; only its hash is stored." />
             <div className="card card-pad">
               {admin ? (
                 <>
@@ -130,7 +131,7 @@ export default async function AdminPage() {
               <ActionForm action={savePolicy} submit="Save policy" disabled={!admin}>
                 <div className="form-grid form-grid-2">
                   <fieldset className="field"><legend className="field-label">Allowed tools</legend>{["script", "llm"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_tools" value={t} defaultChecked={(pol?.allowed_tools ?? ["script", "llm"]).includes(t)} disabled={!admin} /> {t}</label>)}</fieldset>
-                  <fieldset className="field"><legend className="field-label">Allowed providers</legend>{["none", "anthropic", "openai_compat"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_providers" value={t} defaultChecked={(pol?.allowed_providers ?? ["none", "anthropic", "openai_compat"]).includes(t)} disabled={!admin} /> {t}</label>)}</fieldset>
+                  <fieldset className="field"><legend className="field-label">Allowed providers</legend>{["none", "anthropic", "openai_compat"].map((t) => <label key={t} className="check-row"><input type="checkbox" name="allowed_providers" value={t} defaultChecked={(pol?.allowed_providers ?? ["none", "anthropic", "openai_compat"]).includes(t)} disabled={!admin} /> {({ none: "No model — deterministic steps only", anthropic: "Anthropic (Claude)", openai_compat: "OpenAI-compatible (your SF_LLM_* model)" } as Record<string, string>)[t]}</label>)}</fieldset>
                   <div className="field"><label htmlFor="p-budget">Monthly budget (USD, estimated spend; empty = no limit)</label><input id="p-budget" name="monthly_budget_usd" className="input" type="number" min={0} step={0.01} defaultValue={pol?.monthly_budget_usd ?? ""} disabled={!admin} /></div>
                   <div className="field"><label htmlFor="p-conc">Max concurrent runs</label><input id="p-conc" name="max_concurrency" className="input" type="number" min={1} max={50} defaultValue={pol?.max_concurrency ?? 2} disabled={!admin} /></div>
                   <div className="field span-2"><label htmlFor="p-appr">Self-service actions need a reviewer&apos;s approval</label>
@@ -150,11 +151,11 @@ export default async function AdminPage() {
             <div className="card">
               {auditRows.length === 0 ? <div className="empty"><div className="none">No events yet.</div></div> : (
                 <div className="tablewrap"><table className="tbl"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th className="col-wide">Details</th></tr></thead>
-                  <tbody>{auditRows.map((a) => <tr key={a.id}><td className="muted" style={{ whiteSpace: "nowrap" }}><LocalTime iso={a.created_at} /></td><td className="mono-sm">{a.actor_kind}{a.actor_id ? ` ${a.actor_id === ctx.user.id ? "(you)" : a.actor_id.slice(0, 8)}` : ""}</td><td><code>{a.action}</code></td><td className="mono-sm">{a.entity_type}{a.entity_id ? ` ${a.entity_id.slice(0, 8)}` : ""}</td><td className="col-wide mono-sm" style={{ maxWidth: 420 }}>{JSON.stringify(a.details).slice(0, 160)}</td></tr>)}</tbody></table></div>
+                  <tbody>{auditRows.map((a) => <tr key={a.id}><td className="muted" style={{ whiteSpace: "nowrap" }}><LocalTime iso={a.created_at} /></td><td className="mono-sm">{a.actor_kind}{a.actor_id ? ` ${a.actor_id === ctx.user.id ? "(you)" : a.actor_id.slice(0, 8)}` : ""}</td><td><code>{a.action}</code></td><td className="mono-sm">{a.entity_type}{a.entity_id ? ` ${a.entity_id.slice(0, 8)}` : ""}</td><td className="col-wide caption" style={{ maxWidth: 420 }}>{Object.entries(a.details ?? {}).filter(([, v]) => v != null && v !== "" && typeof v !== "object").slice(0, 4).map(([k, v]) => <span key={k} className="audit-kv"><b>{k.replace(/_/g, " ")}</b> {String(v).slice(0, 60)}</span>)}</td></tr>)}</tbody></table></div>
               )}
             </div>
           </section>
-          <p className="caption mt-6">Consumer API documentation: <code>studio/docs/API.md</code> in the repository (endpoints, curl examples, error codes).</p>
+          <p className="caption mt-6">How to call the API: <Link className="link" href="/connect/api">API reference</Link> (endpoints, curl examples, error codes).</p>
         </>
       )}
     </>
