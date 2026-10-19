@@ -1,0 +1,94 @@
+# ops/alerts.yaml — vendor-neutral alert definitions. Translate to the monitor/log sink's format.
+# Every rule: signal, condition, window, tier (page|notify), runbook, owner, channel.
+defaults:
+  channel_notify: "#alerts-<app>"
+  channel_page: "oncall-<app>"
+  owner: "[TO BE BASELINED — owner: <role>]"
+
+rules:
+  - id: A1-liveness
+    signal: http_probe
+    target: "https://<prod-domain>/api/health"
+    condition: "status != 200 for 2 consecutive probes"
+    interval: 1m
+    tier: page
+    runbook: runbooks/app-down.md
+
+  - id: A2-readiness
+    signal: http_probe
+    target: "https://<prod-domain>/api/health/deep"
+    headers: { Authorization: "Bearer ${HEALTH_CHECK_TOKEN}" }
+    condition: "status == 503 for 2 consecutive probes"
+    interval: 5m
+    tier: page
+    runbook: runbooks/dependency-down.md
+
+  - id: A3-5xx-rate
+    signal: vercel_requests
+    condition: "rate(status>=500) > 0.02 AND count > 20"
+    window: 5m
+    tier: page
+    runbook: runbooks/error-spike.md
+
+  - id: A4-p95-latency
+    signal: vercel_requests
+    filter: "route =~ '^/(app)/'"
+    condition: "p95(duration) > 1500ms"
+    window: 10m
+    tier: notify
+    runbook: runbooks/latency.md
+
+  - id: A5-new-issue
+    signal: error_tracker
+    condition: "new issue in env=production"
+    tier: notify
+    runbook: triage
+
+  - id: A6-issue-spike
+    signal: error_tracker
+    condition: "events(issue) > 10"
+    window: 5m
+    tier: page
+    runbook: runbooks/error-spike.md
+
+  - id: A7-error-logs
+    signal: logs
+    query: 'level:"error" env:"production"'
+    condition: "count > 10"
+    window: 5m
+    tier: notify
+    runbook: "search logs by requestId"
+
+  - id: A8-jobs-stuck
+    signal: logs
+    query: 'action:"health.deep" checks.queue.status:"degraded"'
+    condition: "count >= 1"
+    window: 15m
+    tier: notify
+    runbook: runbooks/jobs-stuck.md
+
+  - id: A9-db-capacity
+    signal: supabase_metrics
+    condition: "cpu > 80% for 10m OR disk > 85% OR connections > 80% of pool"
+    tier: notify
+    runbook: runbooks/db-capacity.md
+
+  - id: A10-auth-failures
+    signal: logs
+    query: 'action:"auth.signin"'
+    condition: "rate(outcome != ok) > 0.30 AND count > 50"
+    window: 15m
+    tier: notify
+    runbook: runbooks/auth-failures.md
+
+  - id: A11-deploy-failed
+    signal: github_actions
+    condition: "workflow prod.yml conclusion != success"
+    tier: notify
+    runbook: "ci-cd-vercel-github/references/rollback.md"
+
+  - id: A12-spend
+    signal: billing
+    condition: "month-to-date > 80% of cap"
+    tier: notify
+    runbook: "finance owner"

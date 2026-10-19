@@ -80,3 +80,14 @@ def test_javascript_nextjs_app_is_linted(tmp_path):
     assert ("NX1", "app/(shop)/cart/page.jsx") in got          # data access in a page component
     assert ("NX2", "components/Total.js") in got               # console.log
     assert "in 2 file(s)" in report.read_text(encoding="utf-8")
+
+
+def test_build_output_is_not_linted(tmp_path):
+    """`next export` output (out/) is generated code, like .next/: never linted."""
+    root = tmp_path / "app-with-export"
+    (root / "app").mkdir(parents=True)
+    (root / "out" / "_next").mkdir(parents=True)
+    (root / "app" / "page.tsx").write_text("export default function P() { return null }\n")
+    (root / "out" / "_next" / "chunk.js").write_text("console.log('generated')\n")
+    res, rows, report = run(tmp_path, root)
+    assert res.returncode == 0 and rows == [], rows

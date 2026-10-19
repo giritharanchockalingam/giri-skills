@@ -365,6 +365,19 @@ select test_expect_error($$insert into sf_roi_baselines (workspace_id, skill, ma
 select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_browser_runs) = 0 and (select count(*) from sf_roi_baselines) = 0, 'other workspace sees no runs or baselines');
 
+-- ───────── 0010: workspace_id on child tables is derived from the parent, never supplied ─────────
+select test_assert((select count(*) from sf_skill_versions where workspace_id is null) = 0, 'every version carries its workspace');
+select test_assert((select count(*) from sf_skill_versions v join sf_skills s on s.id = v.skill_id where v.workspace_id <> s.workspace_id) = 0, 'version workspace matches its skill');
+select test_assert((select count(*) from sf_files f join sf_skill_versions v on v.id = f.version_id where f.workspace_id <> v.workspace_id) = 0, 'file workspace matches its version');
+select test_assert((select count(*) from sf_approvals a join sf_skill_versions v on v.id = a.version_id where a.workspace_id <> v.workspace_id) = 0, 'approval workspace matches its version');
+select test_as('00000000-0000-0000-0000-000000000002');
+insert into sf_talent_versions (talent_id, version, spec, spec_hash, created_by, workspace_id)
+  values (:'tr', 9, '{"name":"architect","skills":["c/d"]}', repeat('e', 64), auth.uid(), (select id from sf_workspaces where slug = 'other'))
+  returning workspace_id as derived \gset
+select test_assert(:'derived' = :'ws_acme', 'a spoofed workspace_id is overwritten with the parent''s');
+select test_as_anon();
+select test_assert(sf_health_ping() = 1, 'health ping answers over the anon role');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

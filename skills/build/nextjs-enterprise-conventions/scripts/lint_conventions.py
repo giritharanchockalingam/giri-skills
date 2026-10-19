@@ -26,7 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-SKIP_DIRS = {"node_modules", ".next", "dist", "build", "coverage", ".git", "tests", "test", "__tests__"}
+SKIP_DIRS = {"node_modules", ".next", "out", "dist", "build", "coverage", ".git", "tests", "test", "__tests__"}   # out: next export output
 EXTS = {".ts", ".tsx", ".js", ".jsx", ".mjs"}   # the conventions apply to JavaScript Next.js apps too
 RULES = {
     "NX1": ("supabase-in-component", "high", "No Supabase call outside lib/db or server/services (stack-conventions: Data access)"),

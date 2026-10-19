@@ -1,4 +1,4 @@
-/* Session refresh + route protection. Everything except /login, the consumer API (/api/v1) and MCP servers (/api/mcp), both key-authenticated,
+/* Session refresh + route protection. Everything except /login, the consumer API (/api/v1) and MCP servers (/api/mcp), both key-authenticated, health checks (/api/health, deep check bearer-protected),
  * the Python runtime (/api/py, secret-authenticated) and static assets requires a signed-in user. */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -33,5 +33,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|run-worker.js|runtime/|api/v1/|api/py/|api/mcp|.*\\.(?:png|svg|ico|txt|json)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|run-worker.js|runtime/|api/v1/|api/py/|api/mcp|api/health|.*\\.(?:png|svg|ico|txt|json)$).*)"],
 };
