@@ -8,6 +8,11 @@ export interface AiAsset { kind: AssetKind; name: string; path: string; detail: 
 export const ASSET_LABEL: Record<AssetKind, string> = {
   skill: "Skill", mcp_server: "MCP server", mcp_config: "MCP client config", agent: "Agent", agent_instructions: "Agent instructions",
 };
+export const ASSET_PLURAL: Record<AssetKind, string> = {
+  skill: "Skills", mcp_server: "MCP servers", mcp_config: "MCP client configs", agent: "Agents", agent_instructions: "Agent instruction files",
+};
+/** Test fixtures, examples and templates are not live assets (a skill's evals/fixtures/CLAUDE.md is sample input). */
+export const NOT_LIVE = /(^|\/)(evals?|fixtures?|__fixtures__|examples?|templates?|samples?|testdata|tests?|__tests__)\/|(^|\/)skills\/[^/]+\/[^/]+\/assets\/|(^|\/)assets\/(templates?\/)?[^/]*$/;
 const MAX_PER_KIND = 200;
 const IGNORE = /(^|\/)(node_modules|\.next|\.venv|__pycache__|site-packages)\//;   // not build/ or dist/: real source folders use those names
 
@@ -31,7 +36,7 @@ const AGENT_FRAMEWORKS: { id: string; label: string; npm?: RegExp; py?: RegExp }
 ];
 
 export function discoverAssets(paths: string[], manifests: { packageJson?: string | null; requirements?: string | null; pyproject?: string | null } = {}): AiAsset[] {
-  const P = paths.filter((p) => !IGNORE.test(p));
+  const P = paths.filter((p) => !IGNORE.test(p) && !NOT_LIVE.test(p));
   const d = deps(manifests.packageJson ?? null);
   const py = `${manifests.requirements ?? ""}\n${manifests.pyproject ?? ""}`.toLowerCase();
   const out: AiAsset[] = [];
@@ -43,14 +48,15 @@ export function discoverAssets(paths: string[], manifests: { packageJson?: strin
     push({ kind: "skill", name: base(folder) || "(root)", path: folder || ".", detail: folder.startsWith("vendor/") ? "vendored skill" : "skill", evidence: [p] });
   }
 
-  // MCP servers: the SDK as a dependency, and/or an MCP endpoint route in the code
-  const routes = P.filter((p) => /(^|\/)(app|pages|src\/app)\/api\/mcp(\/|$)|(^|\/)mcp[-_]?server[^/]*\.(ts|js|py)$|(^|\/)server\.py$/.test(p) && /mcp/i.test(p));
+  // MCP servers: one per MCP endpoint folder in the code, else one for the repository when only the SDK proves it
+  const routes = P.filter((p) => /(^|\/)(app|pages|src\/app)\/api\/mcp(\/|$)|(^|\/)mcp[-_]?server[^/]*\.(ts|js|py)$/.test(p));
   const sdk = [...(d["@modelcontextprotocol/sdk"] ? ["package.json: @modelcontextprotocol/sdk"] : []), ...(/\b(mcp|fastmcp)\b/.test(py) ? ["python deps: mcp / fastmcp"] : [])];
-  if (sdk.length || routes.length) {
-    const where = routes.length ? dir(routes[0]) : ".";
-    push({ kind: "mcp_server", name: routes.length ? `MCP endpoint ${where.replace(/^(.*\/)?(src\/)?(app|pages)\/api\//, "/api/").replace(/\[\[?\.\.\.[^\]]+\]?\]/, "*")}` : "MCP server", path: where,
-      detail: sdk.length ? "built on the MCP SDK" : "MCP endpoint route", evidence: [...sdk, ...routes.slice(0, 3)] });
-  }
+  const endpoints = new Map<string, string[]>();
+  for (const r of routes) { const k = r.match(/^(.*?\/api\/mcp)(\/|$)/)?.[1] ?? dir(r); endpoints.set(k, [...(endpoints.get(k) ?? []), r]); }
+  for (const [where, files] of endpoints)
+    push({ kind: "mcp_server", name: /\/api\/mcp$/.test(where) ? `MCP endpoint ${where.replace(/^(.*\/)?(src\/)?(app|pages)\/api\//, "/api/")}` : base(files[0]), path: where,
+      detail: sdk.length ? "MCP endpoint, built on the MCP SDK" : "MCP endpoint route", evidence: [...files.slice(0, 3), ...sdk] });
+  if (!endpoints.size && sdk.length) push({ kind: "mcp_server", name: "MCP server", path: ".", detail: "the MCP SDK is a dependency", evidence: sdk });
 
   // MCP client configs: the servers this repo's own agents/IDE connect to
   for (const p of P.filter((x) => /(^|\/)(\.?mcp\.json|\.cursor\/mcp\.json|\.vscode\/mcp\.json|claude_desktop_config\.json)$/.test(x)).sort())
@@ -62,8 +68,10 @@ export function discoverAssets(paths: string[], manifests: { packageJson?: strin
     if (f.id === "vercel-ai" && !P.some((p) => /agent/i.test(p))) continue;   // the AI SDK alone is an LLM SDK, not an agent
     if (ev.length) push({ kind: "agent", name: f.label, path: ".", detail: "agent framework in use", evidence: ev });
   }
-  for (const p of P.filter((x) => /(^|\/)\.claude\/agents\/[^/]+\.md$|(^|\/)agents\/[^/]+\.(agent\.)?(ya?ml|json)$|(^|\/)crew\.ya?ml$/.test(x)).sort())
-    push({ kind: "agent", name: base(p).replace(/\.(agent\.)?(md|ya?ml|json)$/, ""), path: p, detail: p.includes(".claude/agents/") ? "Claude Code subagent" : "agent definition", evidence: [p] });
+  // definition files with a known format only (agents/openai.yaml next to a SKILL.md is skill display metadata, not an agent)
+  for (const p of P.filter((x) => /(^|\/)\.claude\/agents\/[^/]+\.md$|(^|\/)config\/agents\.ya?ml$|(^|\/)crew\.ya?ml$/.test(x)).sort())
+    push({ kind: "agent", name: p.includes(".claude/agents/") ? base(p).replace(/\.md$/, "") : dir(p) || base(p), path: p,
+      detail: p.includes(".claude/agents/") ? "Claude Code subagent" : "CrewAI agents config", evidence: [p] });
 
   // agent instructions: files coding agents read in this repository
   for (const p of P.filter((x) => /(^|\/)(AGENTS\.md|CLAUDE\.md|GEMINI\.md|\.cursorrules|\.github\/copilot-instructions\.md)$/.test(x)).sort())
