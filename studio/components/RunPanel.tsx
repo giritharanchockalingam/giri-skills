@@ -78,6 +78,10 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [log]);
 
+  // An auto-run example should open on its answer: bring the Result card into view, from its first line.
+  const answerRef = useRef<HTMLDivElement>(null);
+  const answerShown = useRef(false);
+
   const fixturePath = (i: AgentInput) => {
     const v = demo?.inputs[i.name];
     return v && v.startsWith("evals/") ? v : null;
@@ -288,7 +292,16 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
               )}
 
               {primary && (
-                <div className="run-answer">
+                <div className="run-answer" ref={(el) => {
+                  answerRef.current = el;
+                  if (el && auto === "done" && !answerShown.current) {
+                    answerShown.current = true;
+                    requestAnimationFrame(() => {
+                      el.querySelectorAll<HTMLElement>(".run-prose, .run-raw").forEach((p) => { p.scrollTop = 0; });
+                      el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                  }
+                }}>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className="h3" style={{ margin: 0 }}>Result <span className="caption font-normal">· {primary.split("/").pop()}</span></div>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => download(primary.split("/").pop() || primary, result.files[primary] ?? "")}>Download</button>

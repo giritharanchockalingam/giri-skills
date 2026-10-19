@@ -761,4 +761,4 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .fd-example:hover, .fd-example:focus-visible { border-left-color: var(--flame); color: var(--flame); }
 .fd-role-foot { margin-top: auto; padding-top: 6px; display: flex; gap: 12px; align-items: center; }
 .run-asked { padding: 12px 14px; background: var(--wash); border-radius: var(--r-sm); margin-bottom: 12px; }
-.run-answer { margin-top: 16px; }
+.run-answer { margin-top: 16px; scroll-margin-top: 120px; }
