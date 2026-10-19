@@ -238,6 +238,30 @@ select test_assert((select count(*) from sf_runs) = 0, 'other workspace sees no 
 select test_assert((select count(*) from sf_audit_events) = 1, 'other workspace sees only its own audit');
 select test_expect_error($$select sf_run_insert('$$ || :'v1' || $$', 'ui', '[]'::jsonb)$$, 'not a member');
 
+-- ───────── 11. composed agents: draft editable, publish by reviewer, published spec frozen ─────────
+select test_as('00000000-0000-0000-0000-000000000005');
+select id as ws_other from sf_workspaces where slug = 'other' \gset
+select test_as('00000000-0000-0000-0000-000000000002');
+select id as ws_acme from sf_workspaces where slug <> 'other' limit 1 \gset
+insert into sf_agents (workspace_id, slug, name, owner_id) values (:'ws_acme', 'pursuit', 'Pursuit', '00000000-0000-0000-0000-000000000002') returning id as ag \gset
+insert into sf_agent_versions (agent_id, version, spec, spec_hash, created_by)
+  values (:'ag', 1, '{"name":"pursuit","steps":[]}', repeat('a', 64), '00000000-0000-0000-0000-000000000002') returning id as av \gset
+update sf_agent_versions set spec = '{"name":"pursuit","steps":[{"id":"x"}]}', spec_hash = repeat('b', 64) where id = :'av';
+select test_assert((select spec_hash from sf_agent_versions where id = :'av') = repeat('b', 64), 'author edits a draft agent');
+select test_expect_error($$update sf_agent_versions set status = 'published' where id = '$$ || :'av' || $$'$$, 'only through sf_publish_agent_version');
+select test_expect_error($$select sf_publish_agent_version('$$ || :'av' || $$')$$, 'reviewers or admins only');
+select test_as('00000000-0000-0000-0000-000000000003');
+select sf_publish_agent_version(:'av');
+select test_assert((select status from sf_agents where id = :'ag') = 'published', 'agent published');
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$update sf_agent_versions set spec = '{"steps":[]}', spec_hash = repeat('c', 64) where id = '$$ || :'av' || $$'$$, 'immutable');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_expect_error($$insert into sf_agents (workspace_id, slug, name, owner_id) values ('$$ || :'ws_acme' || $$', 'c', 'C', '00000000-0000-0000-0000-000000000004')$$, 'row-level security');
+insert into sf_agent_runs (workspace_id, agent_version_id, invoked_by) values (:'ws_acme', :'av', '00000000-0000-0000-0000-000000000004') returning id as ar \gset
+select test_assert((select count(*) from sf_agent_runs where id = :'ar') = 1, 'consumer starts a run of a published agent');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_agents) = 0 and (select count(*) from sf_agent_runs) = 0, 'other workspace sees no acme agents or runs');
+
 -- the shared project's own tables were never touched
 select test_assert((select count(*) from pg_policies where tablename = 'profiles') = 0, 'profiles untouched');
 select 'ALL SQL TESTS PASSED' as result;

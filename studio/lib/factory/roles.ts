@@ -6,7 +6,8 @@ export const ROLES: readonly Role[] = ["consumer", "author", "reviewer", "admin"
 export type Action =
   | "skill.create" | "skill.edit" | "version.create" | "version.edit" | "version.request_review" | "version.review"
   | "version.publish" | "version.retire" | "eval.edit" | "eval.run" | "run.any_version" | "run.published"
-  | "admin.members" | "admin.keys" | "admin.connections" | "admin.policies" | "audit.read";
+  | "admin.members" | "admin.keys" | "admin.connections" | "admin.policies" | "audit.read"
+  | "agent.edit" | "agent.publish" | "agent.approve";
 
 const ALLOW: Record<Action, readonly Role[]> = {
   "skill.create": ["author", "admin"], "skill.edit": ["author", "admin"],
@@ -16,6 +17,7 @@ const ALLOW: Record<Action, readonly Role[]> = {
   "run.any_version": ["author", "reviewer", "admin"], "run.published": ["consumer", "author", "reviewer", "admin"],
   "admin.members": ["admin"], "admin.keys": ["admin"], "admin.connections": ["admin"], "admin.policies": ["admin"],
   "audit.read": ["consumer", "author", "reviewer", "admin"],
+  "agent.edit": ["author", "admin"], "agent.publish": ["reviewer", "admin"], "agent.approve": ["reviewer", "admin"],
 };
 
 export const can = (role: Role | null | undefined, action: Action): boolean => !!role && ALLOW[action].includes(role);

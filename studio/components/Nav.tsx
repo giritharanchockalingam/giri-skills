@@ -9,6 +9,7 @@ import { supabaseConfigured } from "@/lib/supabase/env";
 const links = [
   { href: "/overview", label: "Overview", match: ["/overview"] },
   { href: "/", label: "Skills", match: ["/", "/skills/", "/repo/", "/upstream/"] },
+  { href: "/agents", label: "Agents", match: ["/agents", "/agent-runs/"] },
   { href: "/evaluations", label: "Evaluations", match: ["/evaluations", "/evals/", "/findings/"] },
   { href: "/activity", label: "Activity", match: ["/activity", "/runs/"] },
   { href: "/admin", label: "Administration", short: "Admin", match: ["/admin"] },

@@ -253,6 +253,54 @@ def checks_of(run_json: Path) -> tuple[int, int, list[str]]:
     return sum(bool(c.get("pass")) for c in checks), len(checks), failed
 
 
+def execute_step(n: int, step: dict, spec: dict, inputs: dict, step_dirs: dict, out: Path, provider: str, model: str,
+                 inproc: bool, approved: set, approver: str = "") -> dict:
+    """Run one step; record it; register its output dir in step_dirs. Shared by the CLI loop and the portal runtime
+    (which executes one step per request and restores earlier steps' files into step_dirs first)."""
+    kind, sid = step_kind(step), step["id"]
+    sdir = out / "steps" / f"{n:02d}-{sid}"
+    sdir.mkdir(parents=True, exist_ok=True)
+    rec = {"id": sid, "kind": kind, "status": "ok"}
+    t0 = time.time()
+    try:
+        if kind == "approval":
+            ap_cfg = step["approval"]
+            rec.update(role=ap_cfg["role"], note=ap_cfg.get("note", ""))
+            if sid in approved:
+                rec.update(status="approved", approver=approver or f"(role: {ap_cfg['role']})", at=time.strftime("%Y-%m-%dT%H:%M:%S"))
+            else:
+                rec["status"] = "awaiting_approval"
+        elif kind == "compose":
+            path = do_compose(step["compose"], inputs, step_dirs, sdir)
+            rec["out"] = str(path)
+        else:
+            rec["skill"] = step["skill"]
+            optional = {i["name"] for i in spec.get("inputs") or [] if not i.get("required")}
+            args = []
+            for k, v in (step.get("inputs") or {}).items():
+                m = REF_RE.match(v) if isinstance(v, str) else None
+                if m and m.group(1) == "in" and m.group(2) in optional and not str(inputs.get(m.group(2), "")).strip():
+                    continue  # optional agent input not supplied: the skill applies its own rule (e.g. TBD with owner)
+                args.append(f"--input={k}={resolve(v, inputs, step_dirs)}")
+            args += [f"--assume={k}={v}" for k, v in (step.get("assume") or {}).items()]
+            code, log = run_skill(step["skill"], args, sdir, step.get("provider", provider), step.get("model", model), inproc)
+            (sdir / "agent-step.log").write_text(log, encoding="utf-8")
+            passed, total, failed = checks_of(sdir / "run.json")
+            rec.update(exit=code, checks_passed=passed, checks_total=total, out=str(sdir))
+            if code == 2:
+                rec.update(status="needs_input", error="skill reported a missing input — see needs_input.json")
+            elif code != 0:
+                tail = log.strip().splitlines()
+                reason = next((ln.strip() for ln in tail if "step " in ln and "failed:" in ln), None) or (failed[0] if failed else (tail[-1] if tail else ""))
+                # a gate step saying "no" (exit 1, outputs written) is a verdict, not a malfunction
+                rec.update(status="blocked" if step.get("gate") and (sdir / "run.json").is_file() else "failed", error=reason[:240])
+    except RefError as e:
+        rec.update(status="failed", error=str(e))
+    rec["duration_s"] = round(time.time() - t0, 3)
+    step_dirs[sid] = sdir
+    return rec
+
+
 # ------------------------------------------------------------------ main
 
 def demo_inputs(agent_dir: Path) -> dict:
@@ -303,8 +351,9 @@ def main() -> int:
         inputs[k.strip()] = v
     missing = [i["name"] for i in spec.get("inputs") or [] if i.get("required") and not str(inputs.get(i["name"], "")).strip()]
     cfg = spec.get("config") or {}
-    provider = a.provider or str(cfg.get("provider", "none"))
-    model = a.model or str(cfg.get("model", "claude-sonnet-4-5"))
+    # config.provider: "auto" = the deployment's configured model (portal); the CLI runs no model unless --provider is given
+    provider = a.provider or ("none" if str(cfg.get("provider", "auto")) == "auto" else str(cfg.get("provider")))
+    model = a.model or str(cfg.get("model") or "claude-sonnet-4-5")
     out = Path(a.out or ROOT / "runs" / f"agent-{spec['name']}-{int(time.time())}").expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
     spec_sha = hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
@@ -338,53 +387,13 @@ def main() -> int:
         return finish("needs_input", 2)
 
     for n, step in enumerate(spec["steps"], 1):
-        kind, sid = step_kind(step), step["id"]
-        sdir = out / "steps" / f"{n:02d}-{sid}"
-        sdir.mkdir(parents=True, exist_ok=True)
-        rec = {"id": sid, "kind": kind, "status": "ok"}
-        t0 = time.time()
-        try:
-            if kind == "approval":
-                ap_cfg = step["approval"]
-                rec["role"] = ap_cfg["role"]
-                if sid in a.approve:
-                    rec.update(status="approved", approver=a.approver or f"(role: {ap_cfg['role']})", at=time.strftime("%Y-%m-%dT%H:%M:%S"))
-                else:
-                    rec["status"] = "awaiting_approval"
-                    (out / "awaiting_approval.json").write_text(json.dumps(
-                        {"agent": spec["name"], "step": sid, "role": ap_cfg["role"], "note": ap_cfg.get("note", ""),
-                         "resume": f"re-run with --approve {sid}"}, indent=2), encoding="utf-8")
-                    trace["steps"].append(rec)
-                    return finish("awaiting_approval", 4)
-            elif kind == "compose":
-                path = do_compose(step["compose"], inputs, step_dirs, sdir)
-                rec["out"] = str(path)
-            else:
-                rec["skill"] = step["skill"]
-                optional = {i["name"] for i in spec.get("inputs") or [] if not i.get("required")}
-                args = []
-                for k, v in (step.get("inputs") or {}).items():
-                    m = REF_RE.match(v) if isinstance(v, str) else None
-                    if m and m.group(1) == "in" and m.group(2) in optional and not str(inputs.get(m.group(2), "")).strip():
-                        continue  # optional agent input not supplied: the skill applies its own rule (e.g. TBD with owner)
-                    args.append(f"--input={k}={resolve(v, inputs, step_dirs)}")
-                args += [f"--assume={k}={v}" for k, v in (step.get("assume") or {}).items()]
-                code, log = run_skill(step["skill"], args, sdir, step.get("provider", provider), step.get("model", model), a.inproc)
-                (sdir / "agent-step.log").write_text(log, encoding="utf-8")
-                passed, total, failed = checks_of(sdir / "run.json")
-                rec.update(exit=code, checks_passed=passed, checks_total=total, out=str(sdir))
-                if code == 2:
-                    rec.update(status="needs_input", error="skill reported a missing input — see needs_input.json")
-                elif code != 0:
-                    tail = log.strip().splitlines()
-                    reason = next((ln.strip() for ln in tail if "step " in ln and "failed:" in ln), None) or (failed[0] if failed else (tail[-1] if tail else ""))
-                    # a gate step saying "no" (exit 1, outputs written) is a verdict, not a malfunction
-                    rec.update(status="blocked" if step.get("gate") and (sdir / "run.json").is_file() else "failed", error=reason[:240])
-        except RefError as e:
-            rec.update(status="failed", error=str(e))
-        rec["duration_s"] = round(time.time() - t0, 3)
+        rec = execute_step(n, step, spec, inputs, step_dirs, out, provider, model, a.inproc, set(a.approve), a.approver)
         trace["steps"].append(rec)
-        step_dirs[sid] = sdir
+        if rec["status"] == "awaiting_approval":
+            (out / "awaiting_approval.json").write_text(json.dumps(
+                {"agent": spec["name"], "step": rec["id"], "role": rec["role"], "note": rec.get("note", ""),
+                 "resume": f"re-run with --approve {rec['id']}"}, indent=2), encoding="utf-8")
+            return finish("awaiting_approval", 4)
         if rec["status"] == "blocked":
             return finish("blocked", 5)
         if rec["status"] in ("failed", "needs_input") and not step.get("continue_on_fail"):

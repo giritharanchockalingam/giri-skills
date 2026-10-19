@@ -199,3 +199,73 @@ test("content pin: drafts run current files; non-drafts must match their pin", (
   assert.ok(legacy.ok && legacy.note?.includes("before content pinning"));
   assert.equal(checkPin({ kind: "authored" }, "published").ok, true);
 });
+
+// ───────────────────────── composed agents ─────────────────────────
+import { validateAgentSpec, autoWire, composeFile, resolveRef, newStepId, unusedInputs, type AgentSpec, type CatalogSkill, type StepRecord } from "../lib/factory/agents.ts";
+import { execFileSync } from "node:child_process";
+
+function agentCatalog(): Map<string, CatalogSkill> {
+  const skills = JSON.parse(readFileSync(new URL("../data/skills.json", import.meta.url), "utf8")) as RepoSkill[];
+  return new Map(skills.filter((s) => s.agent).map((s) => [s.id, {
+    id: s.id, name: s.name, stage: (s as unknown as { stage: string | null }).stage, description: s.description,
+    inputs: s.agent!.inputs.map((i) => ({ name: i.name, type: i.type, required: i.required, from: i.from, default: (i as { default?: string | null }).default ?? null })),
+    outputs: s.agent!.outputs.map((o) => o.path),
+  }]));
+}
+
+test("shipped agent templates validate in TypeScript exactly as in Python", () => {
+  const cat = agentCatalog();
+  for (const name of ["presales-pursuit", "ai-use-case-to-release"]) {
+    const spec = JSON.parse(readFileSync(new URL(`../../agents/${name}/agent.json`, import.meta.url), "utf8")) as AgentSpec;
+    assert.deepEqual(validateAgentSpec(spec, cat), [], name);
+  }
+});
+
+test("validator reports wiring mistakes with the CLI's wording", () => {
+  const spec = { name: "bad", description: "x", inputs: [{ name: "client", type: "string", required: true }], steps: [
+    { id: "est", skill: "presales/effort-estimator", inputs: { client: "$in.client", nope: "1" } },
+    { id: "prop", skill: "presales/proposal-writer", inputs: { win_themes: "$in.themes", estimate: "$steps.est:not-written.md", discovery: "$steps.later:x.md" } },
+    { id: "gate", approval: { role: " " } },
+  ] } as AgentSpec;
+  const p = validateAgentSpec(spec, agentCatalog()).join("\n");
+  for (const want of ["has no input 'nope'", "required input 'wbs'", "$in.themes is not a declared agent input", "does not declare 'not-written.md'", "refers to a step that does not run before it", "approval needs a role"]) assert.ok(p.includes(want), want);
+});
+
+test("auto-wiring maps a skill's inputs to earlier outputs, else to new agent inputs", () => {
+  const cat = agentCatalog();
+  const spec: AgentSpec = { name: "a", description: "d", inputs: [], steps: [] };
+  for (const sk of ["presales/discovery-interview", "presales/effort-estimator", "presales/value-case-builder"]) {
+    const w = autoWire(spec, cat.get(sk)!, cat);
+    spec.inputs.push(...w.newAgentInputs);
+    spec.steps.push({ id: newStepId(spec, sk), skill: sk, inputs: w.inputs });
+  }
+  const w = autoWire(spec, cat.get("presales/proposal-writer")!, cat);
+  assert.equal(w.inputs.estimate, "$steps.effort-estimator:estimate.md");
+  assert.equal(w.inputs.value_case, "$steps.value-case-builder:value-case.md");
+  assert.equal(w.inputs.win_themes, "$in.win_themes");
+  assert.deepEqual(w.newAgentInputs.map((i) => i.name), ["win_themes"]);
+  spec.steps.push({ id: "proposal", skill: "presales/proposal-writer", inputs: w.inputs });
+  spec.inputs.push(...w.newAgentInputs);
+  assert.deepEqual(validateAgentSpec(spec, cat), []);
+  assert.equal(newStepId(spec, "presales/proposal-writer"), "proposal-writer");
+  assert.deepEqual(unusedInputs({ ...spec, inputs: [...spec.inputs, { name: "orphan", type: "string", required: false }] }), ["orphan"]);
+});
+
+test("compose output is byte-identical to run_agent.py do_compose (1.0 stays 1.0)", () => {
+  const steps: StepRecord[] = [{ id: "ev", kind: "skill", status: "ok", files: [{ path: "s.json", bytes: 0, sha256: "", content_text: '{"overall": {"pass_rate": 1.0, "n": 38, "ok": true, "note": "a, \\"b\\""}}' }] }];
+  const inputs = { extra: { kind: "text" as const, content: "# fictional\nkey,value,source,notes\nrollback_time_min,15,owner,\"x, y\"\npass_rate,0.1,owner,\n", ext: "csv" } };
+  const c = { out: "facts.csv", format: "kv-csv" as const, include: "$in.extra", rows: { pass_rate: "$steps.ev:s.json#overall.pass_rate", n: "$steps.ev:s.json#overall.n", ok: "$steps.ev:s.json#overall.ok", note: "$steps.ev:s.json#overall.note", tier: "medium" } };
+  const ts = composeFile(c, inputs, steps).content;
+  const py = execFileSync("python3", ["-I", "-c", `
+import json, sys, tempfile, pathlib
+sys.path.insert(0, ${JSON.stringify(new URL("../../scripts", import.meta.url).pathname)})
+import run_agent
+d = pathlib.Path(tempfile.mkdtemp()); (d / "ev").mkdir(); (d / "out").mkdir()
+(d / "ev" / "s.json").write_text(${JSON.stringify(steps[0].files![0].content_text)})
+(d / "extra.csv").write_text(${JSON.stringify(inputs.extra.content)})
+p = run_agent.do_compose(json.loads(${JSON.stringify(JSON.stringify(c))}), {"extra": str(d / "extra.csv")}, {"ev": d / "ev"}, d / "out")
+sys.stdout.write(p.read_text())`], { encoding: "utf8" });
+  assert.equal(ts, py);
+  assert.match(ts, /^pass_rate,1\.0,/m);
+  assert.throws(() => resolveRef("$steps.ev:s.json#overall.nope", {}, steps), /not found/);
+});

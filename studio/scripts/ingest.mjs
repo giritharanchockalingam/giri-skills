@@ -478,6 +478,29 @@ const w = (f, d) => writeFileSync(join(OUT, f), JSON.stringify(d, null, 1) + "\n
 w("upstream.json", upstream);
 w("skills.json", skills);
 w("stages.json", JSON.parse(readFileSync(join(ROOT, "shared", "adlc-stages.json"), "utf8")));
+// Agent templates for the Builder: spec + demo inputs with file contents embedded (fixtures are labelled fictional)
+{
+  const tpl = [];
+  const agentsDir = join(ROOT, "agents");
+  for (const name of existsSync(agentsDir) ? readdirSync(agentsDir).sort() : []) {
+    const specPath = join(agentsDir, name, "agent.json");
+    if (!existsSync(specPath)) continue;
+    const spec = JSON.parse(readFileSync(specPath, "utf8"));
+    const demoPath = join(agentsDir, name, "demo.json");
+    const demo = {};
+    if (existsSync(demoPath)) {
+      const d = JSON.parse(readFileSync(demoPath, "utf8"));
+      for (const [k, v] of Object.entries(d.inputs || {})) {
+        const p = typeof v === "string" ? join(ROOT, v) : null;
+        demo[k] = p && existsSync(p) && statSync(p).isFile()
+          ? { kind: "text", content: readFileSync(p, "utf8"), ext: (p.split(".").pop() || "txt").toLowerCase(), source: v }
+          : { kind: "value", value: String(v) };
+      }
+    }
+    tpl.push({ name, spec, demo });
+  }
+  w("agent-templates.json", tpl);
+}
 w("scorecard.json", scorecard);
 w("trigger.json", trigger);
 w("quality.json", quality);

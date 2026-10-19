@@ -24,7 +24,7 @@
     {"name": "release_facts", "type": "csv", "required": true, "from": "facts the earlier steps cannot measure: risk tier, latency, traffic, rollback time, owners"},
     {"name": "gates", "type": "csv", "required": true, "from": "owner-set release gates per stage"}
   ],
-  "config": {"provider": "none", "model": "claude-sonnet-4-5", "on_fail": "stop"},
+  "config": {"provider": "auto", "on_fail": "stop"},
   "steps": [
     {"id": "qualify", "skill": "ai-platform/ai-use-case-canvas", "inputs": {"answers": "$in.answers"}},
     {"id": "govern", "skill": "ai-platform/ai-governance-risk", "inputs": {"canvas": "$steps.qualify:canvas.md"}},

@@ -14,7 +14,7 @@
     {"name": "costs", "type": "csv", "required": true, "from": "cost lines for the value case"},
     {"name": "win_themes", "type": "json", "required": true, "from": "{client, initiative, themes:[{theme, proof, so_what}]}"}
   ],
-  "config": {"provider": "none", "model": "claude-sonnet-4-5", "on_fail": "stop"},
+  "config": {"provider": "auto", "on_fail": "stop"},
   "steps": [
     {"id": "discovery", "skill": "presales/discovery-interview",
      "inputs": {"vertical": "$in.vertical", "personas": "$in.personas", "notes": "$in.notes", "client": "$in.client"}},

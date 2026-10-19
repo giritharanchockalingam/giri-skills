@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireWorkspace, fmtDate } from "@/lib/factory/db";
+import { can } from "@/lib/factory/roles";
+import { PageHead } from "@/components/PageHead";
+import { ActionForm } from "@/components/factory/ActionForm";
+import { AgentBuilder } from "@/components/factory/AgentBuilder";
+import { newAgentDraft, publishAgentVersion } from "@/app/agentActions";
+import { agentCatalog, type AgentRow, type AgentVersionRow, type AgentRunRow } from "@/lib/factory/agentRun";
+import { STAGES, SHELVES } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${slug} · Agents` }; }
+
+export default async function AgentPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
+  const { slug } = await params; const { v } = await searchParams;
+  const ctx = await requireWorkspace();
+  const { data: a } = await ctx.supabase.from("sf_agents").select("*").eq("workspace_id", ctx.workspace.id).eq("slug", slug).maybeSingle();
+  if (!a) notFound();
+  const agent = a as AgentRow;
+  const { data: vs } = await ctx.supabase.from("sf_agent_versions").select("*").eq("agent_id", agent.id).order("version", { ascending: false });
+  const versions = (vs ?? []) as AgentVersionRow[];
+  const current = versions.find((x) => String(x.version) === v) ?? versions.find((x) => x.status === "draft") ?? versions[0];
+  if (!current) notFound();
+  const { data: rs } = await ctx.supabase.from("sf_agent_runs").select("id, status, created_at, agent_version_id, cost_usd").in("agent_version_id", versions.map((x) => x.id)).order("created_at", { ascending: false }).limit(8);
+  const runs = (rs ?? []) as Pick<AgentRunRow, "id" | "status" | "created_at" | "agent_version_id" | "cost_usd">[];
+  const editable = current.status === "draft" && can(ctx.role, "agent.edit");
+  const catalog = [...agentCatalog().values()].sort((x, y) => x.id.localeCompare(y.id));
+
+  return (
+    <>
+      <PageHead eyebrow={`Agents · ${agent.slug}`} title={agent.name} em="" lead={agent.description}
+        caption={<span className="chip-group">{versions.map((x) => <Link key={x.id} href={`/agents/${slug}?v=${x.version}`} className="chip" aria-pressed={x.id === current.id}>v{x.version} · {x.status}</Link>)}</span>} />
+      <div className="action-row mb-6" style={{ marginTop: 0 }}>
+        <Link href={`/agents/${slug}/run?v=${current.version}`} className="btn btn-primary">Run v{current.version}</Link>
+        {current.status === "draft" && can(ctx.role, "agent.publish") && <ActionForm action={publishAgentVersion} submit="Publish" submitClass="btn btn-secondary" confirm={`Publish v${current.version}? It becomes frozen and runnable by every member.`} hidden={{ version_id: current.id }} />}
+        {current.status !== "draft" && !versions.some((x) => x.status === "draft") && can(ctx.role, "agent.edit") && <ActionForm action={newAgentDraft} submit="Edit as new draft" submitClass="btn btn-secondary" hidden={{ agent_id: agent.id }} />}
+        {!editable && current.status === "draft" && <span className="caption">Read-only for your role.</span>}
+        {current.status !== "draft" && <span className="caption">v{current.version} is {current.status} and frozen.</span>}
+      </div>
+      <AgentBuilder key={current.id} initial={current.spec} versionId={current.id} catalog={catalog} stages={[...STAGES, ...SHELVES]} editable={editable} />
+      <section className="section">
+        <div className="h3 mb-2">Recent runs</div>
+        <div className="list">{runs.map((r) => (
+          <Link key={r.id} href={`/agent-runs/${r.id}`} className="list-row row-link"><span>{fmtDate(r.created_at)} · v{versions.find((x) => x.id === r.agent_version_id)?.version}</span><span>{r.status}{r.cost_usd != null ? ` · ≈$${Number(r.cost_usd).toFixed(4)}` : ""}</span></Link>))}
+          {runs.length === 0 && <p className="none">No runs yet.</p>}</div>
+      </section>
+    </>
+  );
+}

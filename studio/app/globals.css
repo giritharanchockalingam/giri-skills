@@ -696,3 +696,26 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .select-inline { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 1000px) { .stage-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .stage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .stage-q { display: none; } }
+
+/* Agent Builder and agent runs */
+.agent-builder { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.ab-steps, .ab-trace { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.ab-step, .ab-trace-step { padding: 14px 18px; }
+.ab-step-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ab-n { font-family: var(--mono); font-size: 12px; color: var(--flame); min-width: 18px; }
+.ab-id { width: auto; max-width: 220px; min-height: 34px; font-family: var(--mono); font-size: 13px; }
+.ab-tools { margin-left: auto; display: inline-flex; gap: 6px; }
+.ab-wiring { margin-top: 10px; width: 100%; }
+.ab-wiring td { vertical-align: top; }
+.ab-wiring .select { min-width: 240px; }
+.ab-from { max-width: 340px; }
+.ab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; margin-top: 10px; }
+.ab-problems { margin: 8px 0 0 18px; list-style: disc; font-size: 13px; color: var(--rust); display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+.ab-inputs { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.ab-picker { position: relative; }
+.ab-pick-list { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow: auto; display: flex; flex-direction: column; }
+.ab-pick { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 10px 8px; border: 0; border-bottom: 1px solid var(--rule-soft); background: none; cursor: pointer; color: var(--ink); }
+.ab-pick:hover, .ab-pick:focus-visible { background: var(--wash); }
+.ab-pick-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ab-file { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); font-size: 12.5px; max-height: 520px; overflow: auto; margin: 10px 0 0; }
+@media (max-width: 1000px) { .agent-builder { grid-template-columns: minmax(0, 1fr); } .ab-wiring .select { min-width: 0; width: 100%; } }
