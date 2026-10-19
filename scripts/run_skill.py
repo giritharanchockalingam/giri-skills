@@ -122,13 +122,34 @@ def cmd_list() -> int:
     return 0
 
 
-def demo_args(arg: str) -> list[str]:
-    """Translate --demo <skill> into a normal run using the skill's own happy-path eval fixtures."""
+MODES = ("new", "existing")
+
+
+def mode_case_id(skill_dir: Path, mode: str) -> str:
+    """The eval case a skill declares for a mode (metadata.agent.modes.<mode>.case); exits if not declared."""
+    modes = (skillmeta.agent_block(skillmeta.load_skill(skill_dir)) or {}).get("modes") or {}
+    m = modes.get(mode)
+    if not isinstance(m, dict) or not m.get("case"):
+        sys.exit(f"error: {skill_key(skill_dir)} does not declare a '{mode}' mode "
+                 f"(declares: {', '.join(sorted(modes)) or 'none'})")
+    return str(m["case"])
+
+
+def demo_args(arg: str, case_id: str | None = None, mode: str | None = None) -> list[str]:
+    """Translate --demo <skill> into a normal run using the skill's own eval fixtures: the case named by --case, the
+    case its --mode declares, or else the happy-path case."""
     skill_dir = resolve_skill_dir(arg)
+    if mode:
+        case_id = mode_case_id(skill_dir, mode)
     ev = skill_dir / "evals" / "evals.json"
     cases = json.loads(ev.read_text(encoding="utf-8")).get("cases", []) if ev.exists() else []
-    case = next((c for c in cases if c.get("inputs") and "happy" in str(c.get("id", ""))), None) \
-        or next((c for c in cases if c.get("inputs")), None)
+    if case_id:
+        case = next((c for c in cases if c.get("id") == case_id), None)
+        if not case or not case.get("inputs"):
+            sys.exit(f"error: {arg} has no eval case '{case_id}' with inputs")
+    else:
+        case = next((c for c in cases if c.get("inputs") and "happy" in str(c.get("id", ""))), None) \
+            or next((c for c in cases if c.get("inputs")), None)
     if not case:
         sys.exit(f"error: {arg} has no eval case with inputs to demo")
     argv = [skill_key(skill_dir)]
@@ -355,13 +376,27 @@ def build_args():
     ap.add_argument("--list", action="store_true", help="list agent skills and their inputs")
     ap.add_argument("--explain", metavar="SKILL", help="print the input contract in plain words")
     ap.add_argument("--demo", metavar="SKILL", help="run the skill on its own happy-path eval fixtures")
+    ap.add_argument("--case", metavar="ID", help="with --demo: run this eval case instead of the happy path")
+    ap.add_argument("--mode", choices=MODES, help="with --demo: run the case the skill declares for this mode "
+                                                  "(new = starting from scratch, existing = improving what exists)")
     ap.add_argument("--reproduce", metavar="RUN_DIR",
                     help="audit a finished run: re-run its script steps on the recorded inputs and require every "
                          "declared output to be byte-identical (exit 0 identical, 1 differs, 3 not reproducible)")
     argv = sys.argv[1:]
     if "--demo" in argv:
+        def take(flag: str) -> str | None:
+            nonlocal argv
+            if flag not in argv:
+                return None
+            j = argv.index(flag)
+            v = argv[j + 1] if j + 1 < len(argv) else None
+            argv = argv[:j] + argv[j + 2:]
+            return v
+        case_id, mode = take("--case"), take("--mode")
+        if mode is not None and mode not in MODES:
+            sys.exit(f"error: --mode must be one of {', '.join(MODES)}")
         i = argv.index("--demo")
-        argv = demo_args(argv[i + 1]) + argv[:i] + argv[i + 2:]
+        argv = demo_args(argv[i + 1], case_id, mode) + argv[:i] + argv[i + 2:]
     return ap.parse_args(argv)
 
 
