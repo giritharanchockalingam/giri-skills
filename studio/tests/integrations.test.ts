@@ -95,3 +95,14 @@ test("vercel fetch: team lookup refused â†’ still syncs; project list refused â†
   const denied = (async () => j({ error: { message: "You are not authorized" } }, 403)) as unknown as typeof fetch;
   await assert.rejects(readVercel({ token: "t", teamId: "team_1" }, denied), /cannot list team team_1's projects \(403\)\. Create the token with Scope set to that team/);
 });
+
+test("vercel fetch: production deployments are paged to the end of the window, not cut at 100", async () => {
+  const j = (o: unknown) => new Response(JSON.stringify(o));
+  const page = (n: number, start: number) => Array.from({ length: n }, (_, i) => ({ uid: `d${start + i}`, created: 1000 - start - i, readyState: "READY", target: "production" }));
+  const f = (async (url: string) => { const u = new URL(url);
+    if (u.pathname === "/v10/projects") return j({ projects: [{ id: "p1", name: "one" }], pagination: { next: null } });
+    if (u.pathname === "/v6/deployments") return u.searchParams.get("until") ? j({ deployments: page(37, 100), pagination: { next: null } }) : j({ deployments: page(100, 0), pagination: { next: 900 } });
+    return j({ envs: [], slug: "acme" }); }) as unknown as typeof fetch;
+  const r = await readVercel({ token: "t", teamId: "team_1" }, f);
+  assert.equal(r.deploys.get("p1")?.length, 137);
+});
