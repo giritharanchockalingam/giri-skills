@@ -36,6 +36,8 @@ export function AgentBuilder({ initial, versionId, catalog, stages, editable }: 
   const remove = (i: number) => update((s) => {
     const [gone] = s.steps.splice(i, 1);
     if (gone) s.outputs = (s.outputs ?? []).filter((ref) => { const r = parseRef(ref); return !(r?.kind === "step" && r.step === gone.id); });
+    // and the agent inputs only that step used (otherwise the run form keeps asking for them)
+    const u = new Set(unusedInputs(s)); s.inputs = s.inputs.filter((x) => !u.has(x.name));
     return s;
   });
   const dropUnused = () => update((s) => { const u = new Set(unusedInputs(s)); s.inputs = s.inputs.filter((i) => !u.has(i.name)); return s; });

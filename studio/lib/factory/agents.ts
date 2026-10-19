@@ -105,6 +105,8 @@ export function autoWire(spec: AgentSpec, skill: CatalogSkill, catalog: Map<stri
   }
   const mapping: Record<string, string> = {};
   const add: AgentInputDecl[] = [];
+  // an agent input is reused only when its type matches (a "system" name string is not the "system" questionnaire CSV)
+  const existingType = new Map(spec.inputs.map((i) => [i.name, i.type]));
   const existing = new Set(spec.inputs.map((i) => i.name));
   for (const i of skill.inputs) {
     const exts = EXT_OF[i.type] ?? [];
@@ -118,9 +120,16 @@ export function autoWire(spec: AgentSpec, skill: CatalogSkill, catalog: Map<stri
       mapping[i.name] = `$steps.${c.step}:${c.file}`;
       continue;
     }
-    if (!i.required && !existing.has(i.name)) continue; // optional and nothing to wire: leave it to the skill's own rule
-    mapping[i.name] = `$in.${i.name}`;
-    if (!existing.has(i.name) && !add.some((a) => a.name === i.name)) add.push({ name: i.name, type: i.type, required: i.required, from: i.from });
+    const clash = existing.has(i.name) && existingType.get(i.name) !== i.type;
+    if (!i.required && (!existing.has(i.name) || clash)) continue; // optional and nothing compatible to wire: skill's own rule
+    let name = i.name;
+    if (clash) {  // required, same name, different type: ask for it under a distinct agent input name
+      const base = `${skill.name.split("/").pop()!.replace(/-/g, "_")}_${i.name}`;
+      name = base; let n = 2;
+      while (existing.has(name) || add.some((a) => a.name === name)) name = `${base}_${n++}`;
+    }
+    mapping[i.name] = `$in.${name}`;
+    if (!existing.has(name) && !add.some((a) => a.name === name)) add.push({ name, type: i.type, required: i.required, from: i.from });
   }
   return { inputs: mapping, newAgentInputs: add };
 }

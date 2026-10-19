@@ -16,10 +16,12 @@ export default async function RunAgentPage({ params, searchParams }: { params: P
   const versions = (vs ?? []) as AgentVersionRow[];
   const version = versions.find((x) => String(x.version) === v) ?? versions.find((x) => x.status === "published") ?? versions[0];
   if (!version) notFound();
-  // demo inputs from a shipped template whose inputs cover this agent's required inputs (fictional fixtures, labelled)
+  // demo inputs from shipped templates (fictional fixtures, labelled in each file)
   const tpls = templates as unknown as { name: string; demo: Record<string, { kind: "text"; content: string; ext: string; source?: string } | { kind: "value"; value: string }> }[];
-  const required = version.spec.inputs.filter((i) => i.required).map((i) => i.name);
-  const demo = tpls.find((t) => required.length > 0 && required.every((n) => n in t.demo))?.demo ?? null;
+  // the template covering the most of this agent's inputs; a tailored agent still gets demo values for the inputs it shares
+  const names = version.spec.inputs.map((i) => i.name);
+  const best = tpls.map((t) => ({ t, n: names.filter((n) => n in t.demo).length })).sort((a, b) => b.n - a.n)[0];
+  const demo = best && best.n > 0 ? Object.fromEntries(Object.entries(best.t.demo).filter(([k]) => names.includes(k))) as typeof best.t.demo : null;
   return (
     <>
       <PageHead eyebrow={`Agents · ${slug} · v${version.version}`} title="Run" em={(a as AgentRow).name} after="." lead="Supply the inputs. Steps run on the server one after another; each is checked; approvals pause the run for a reviewer." />

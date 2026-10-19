@@ -269,3 +269,15 @@ sys.stdout.write(p.read_text())`], { encoding: "utf8" });
   assert.match(ts, /^pass_rate,1\.0,/m);
   assert.throws(() => resolveRef("$steps.ev:s.json#overall.nope", {}, steps), /not found/);
 });
+
+test("autoWire: same-named agent input of a different type is not reused", async () => {
+  const { autoWire } = await import("../lib/factory/agents.ts");
+  const cat = new Map([["a/one", { id: "a/one", name: "one", stage: null, description: "", inputs: [{ name: "system", type: "csv", required: true, from: "", default: null }], outputs: [] }],
+                       ["a/two", { id: "a/two", name: "two", stage: null, description: "", inputs: [{ name: "system", type: "string", required: false, from: "", default: null }, { name: "data", type: "csv", required: true, from: "", default: null }, { name: "mode", type: "csv", required: true, from: "", default: null }], outputs: [] }]]);
+  const spec = { name: "x", description: "x", inputs: [{ name: "system", type: "csv", required: true, from: "" }, { name: "mode", type: "string", required: true, from: "" }], steps: [{ id: "one", skill: "a/one", inputs: { system: "$in.system" } }], outputs: [] };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = autoWire(spec as any, cat.get("a/two") as any, cat as any);
+  assert.equal(w.inputs.system, undefined, "optional string 'system' must not be wired to the csv 'system'");
+  assert.equal(w.inputs.mode, "$in.two_mode", "required csv 'mode' gets its own agent input");
+  assert.deepEqual(w.newAgentInputs.map((i) => i.name).sort(), ["data", "two_mode"]);
+});
