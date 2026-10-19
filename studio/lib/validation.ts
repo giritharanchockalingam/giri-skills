@@ -54,7 +54,7 @@ export const AddMemberForm = z.object({ email: text(200), role: text(20) });
 export const RemoveMemberForm = z.object({ user_id: id64 });
 export const CreateApiKeyForm = z.object({ name: text(80) });
 export const RevokeApiKeyForm = z.object({ key_id: id64 });
-export const SavePolicyForm = z.object({ allowed_tools: textList, allowed_providers: textList, monthly_budget_usd: text(20), max_concurrency: text(5) });
+export const SavePolicyForm = z.object({ allowed_tools: textList, allowed_providers: textList, monthly_budget_usd: text(20), max_concurrency: text(5), action_approval: text(20) });
 export const SaveConnectionForm = z.object({ name: text(80), kind: text(20), secret_ref: text(64), base_url: text(300) });
 export const CancelRunForm = z.object({ run_id: id64 });
 

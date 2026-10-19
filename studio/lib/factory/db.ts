@@ -37,7 +37,7 @@ export interface RunRow {
 }
 export interface ApiKeyRow { id: string; workspace_id: string; name: string; prefix: string; created_by: string; created_at: string; last_used_at: string | null; revoked_at: string | null }
 export interface ConnectionRow { id: string; workspace_id: string; kind: string; name: string; config: Record<string, unknown>; secret_ref: string; status: string; created_at: string; updated_at: string }
-export interface PolicyRow { workspace_id: string; allowed_tools: string[]; allowed_providers: string[]; monthly_budget_usd: number | string | null; max_concurrency: number; updated_at: string }
+export interface PolicyRow { workspace_id: string; allowed_tools: string[]; allowed_providers: string[]; monthly_budget_usd: number | string | null; max_concurrency: number; action_approval?: "none" | "model_steps" | "always"; updated_at: string }
 export interface AuditRow { id: number; workspace_id: string; actor_id: string | null; actor_kind: string; action: string; entity_type: string; entity_id: string | null; details: Record<string, unknown>; created_at: string }
 export type { ReleaseStateRow };
 

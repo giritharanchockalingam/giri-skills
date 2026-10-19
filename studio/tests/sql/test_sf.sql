@@ -424,6 +424,39 @@ select test_as('00000000-0000-0000-0000-000000000001');
 delete from sf_initiatives where id = :'ini';
 select test_assert((select count(*) from sf_initiatives where id = :'ini') = 0, 'an admin deletes an initiative');
 
+-- ───────── Actions (0014): requests only via functions; policy decides approval; no self-approval; valid transitions ─────────
+select test_as('00000000-0000-0000-0000-000000000004');   -- consumer
+select (sf_action_request(:'ws_acme', 'acme-org/billing', 'security-review', '{"code":{"folder":"src"}}', false, 'pre-release'))->>'status' as st_script \gset
+select test_assert(:'st_script' = 'approved', 'default policy: an action without model steps runs without approval');
+select (sf_action_request(:'ws_acme', 'acme-org/billing', 'proposal-writer', '{}', true, ''))->>'id' as act \gset
+select test_assert((select status from sf_action_runs where id = :'act') = 'pending_approval', 'default policy: an action with model steps waits for approval');
+select test_expect_error($$select sf_action_request('$$ || :'ws_acme' || $$', 'acme-org/not-there', 's', '{}', false, '')$$, 'not in this workspace');
+select test_expect_error($$insert into sf_action_runs (workspace_id, repo, skill, status, requested_by) values ('$$ || :'ws_acme' || $$', 'acme-org/billing', 's', 'approved', auth.uid())$$, 'permission denied');
+select test_expect_error($$update sf_action_runs set status = 'approved' where id = '$$ || :'act' || $$'$$, 'permission denied');
+select test_expect_error($$select sf_action_mark('$$ || :'act' || $$', 'running', null, null)$$, 'cannot move');
+select test_expect_error($$select sf_action_decide('$$ || :'act' || $$', true, 'mine')$$, 'only reviewers');
+select test_as('00000000-0000-0000-0000-000000000002');   -- author
+select test_expect_error($$select sf_action_decide('$$ || :'act' || $$', true, '')$$, 'only reviewers');
+select test_as('00000000-0000-0000-0000-000000000003');   -- reviewer
+select test_assert(sf_action_decide(:'act', true, 'ok for staging') = 'approved', 'a reviewer approves someone else''s request');
+select test_expect_error($$select sf_action_decide('$$ || :'act' || $$', false, '')$$, 'already approved');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert(sf_action_mark(:'act', 'running', null, null, repeat('a', 40)) = 'running', 'the requester starts the approved action');
+select test_assert(sf_action_mark(:'act', 'succeeded', null, null) = 'succeeded', 'and finishes it');
+select test_assert((select commit_sha from sf_action_runs where id = :'act') = repeat('a', 40), 'the commit is recorded');
+select test_expect_error($$select sf_action_mark('$$ || :'act' || $$', 'running', null, null)$$, 'cannot move');
+select test_as('00000000-0000-0000-0000-000000000003');
+select (sf_action_request(:'ws_acme', 'acme-org/billing', 'x', '{}', true, ''))->>'id' as own \gset
+select test_expect_error($$select sf_action_decide('$$ || :'own' || $$', true, '')$$, 'your own request');
+select test_as('00000000-0000-0000-0000-000000000001');
+update sf_policies set action_approval = 'none' where workspace_id = :'ws_acme';
+select test_assert((sf_action_request(:'ws_acme', 'acme-org/billing', 'x', '{}', true, ''))->>'status' = 'approved', 'policy none: no approval even with model steps');
+update sf_policies set action_approval = 'always' where workspace_id = :'ws_acme';
+select test_assert((sf_action_request(:'ws_acme', 'acme-org/billing', 'x', '{}', false, ''))->>'status' = 'pending_approval', 'policy always: every action waits');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_action_runs) = 0, 'other workspace sees no actions');
+select test_expect_error($$select sf_action_decide('$$ || :'own' || $$', true, '')$$, 'not found');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
