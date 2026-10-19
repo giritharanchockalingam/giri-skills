@@ -2,7 +2,8 @@
 /* Server actions for the factory UI. Every action re-checks the caller's role (the database enforces it again via
  * RLS and SECURITY DEFINER RPCs); the UI only decides what to show. Each returns {ok, message} for inline feedback. */
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { adminConfigured, createAdminSupabase } from "@/lib/supabase/server-admin";
 import { redirect } from "next/navigation";
 import { getContext, requireWorkspace, must, WS_COOKIE, type VersionRow, type SkillRow, type WsCtx } from "@/lib/factory/db";
 import { validateManifest, emptyManifest, type Manifest } from "@/lib/factory/manifest";
@@ -343,12 +344,43 @@ export async function addMember(_: ActionResult | null, fd: FormData): Promise<A
     if (!isRole(role)) return fail("Pick a role.");
     const { data: uid, error } = await ctx.supabase.rpc("sf_user_id_by_email", { p_email: email });
     if (error) return fail(error.message);
-    if (!uid) return fail(`No account with the email ${email}. The person must sign up at /login first.`);
+    if (!uid) return inviteByEmail(ctx, email.trim().toLowerCase(), role);
     const { error: ie } = await ctx.supabase.from("sf_memberships").upsert({ workspace_id: ctx.workspace.id, user_id: uid, role }, { onConflict: "workspace_id,user_id" });
     if (ie) return fail(ie.message);
     await audit(ctx, "membership.upsert", "user", String(uid), { email, role });
     revalidatePath("/admin");
     return okay(`${email} is now ${role}.`);
+  });
+}
+
+/** No account yet: record an invitation (accepted when that email signs in) and, when the server holds the Supabase
+ *  service key, have Supabase email the invite link. Otherwise the admin shares the sign-in link. */
+async function inviteByEmail(ctx: WsCtx, email: string, role: string): Promise<ActionResult> {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail("Enter a valid email.");
+  const { error } = await ctx.supabase.from("sf_invitations").insert({ workspace_id: ctx.workspace.id, email, role, invited_by: ctx.user.id });
+  if (error) return fail(error.message.includes("duplicate") ? `${email} already has a pending invitation.` : error.message);
+  await audit(ctx, "invitation.create", "invitation", email, { email, role });
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
+  let sent = false, why = "";
+  if (adminConfigured()) {
+    const { error: ie } = await createAdminSupabase().auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/auth/callback?next=/` });
+    sent = !ie; why = ie?.message ?? "";
+  }
+  revalidatePath("/admin");
+  return okay(sent ? `Invitation emailed to ${email} (${role}). They join when they accept.`
+    : `Invitation recorded for ${email} (${role}). Send them ${origin}/login — they join when they sign in with that email.${why ? ` (Email not sent: ${why})` : ""}`);
+}
+
+export async function revokeInvitation(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const id = String(fd.get("id") ?? "");
+  if (!/^[0-9a-f-]{36}$/.test(id)) return fail("Unknown invitation.");
+  return guarded("admin.members", async (ctx) => {
+    const { error } = await ctx.supabase.from("sf_invitations").update({ revoked_at: new Date().toISOString() }).eq("workspace_id", ctx.workspace.id).eq("id", id);
+    if (error) return fail(error.message);
+    await audit(ctx, "invitation.revoke", "invitation", id);
+    revalidatePath("/admin");
+    return okay("Invitation revoked.");
   });
 }
 

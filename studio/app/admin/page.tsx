@@ -3,7 +3,7 @@ import { providerKeyPresent, providerEnvKey, DEFAULT_COMPAT_BASE_URL, DEFAULT_CO
 import { getContext, fmtDate } from "@/lib/factory/db";
 import { loadAdminData, EMPTY_ADMIN_DATA } from "@/lib/db/admin";
 import { can, ROLES, ROLE_HELP } from "@/lib/factory/roles";
-import { addMember, removeMember, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace, useCompatForDrafts } from "@/app/actions";
+import { addMember, removeMember, revokeInvitation, createApiKey, revokeApiKey, savePolicy, saveConnection, signOut, createWorkspace, useCompatForDrafts } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { RolePill } from "@/components/factory/Pills";
@@ -18,6 +18,7 @@ export default async function AdminPage() {
   const ws = ctx.workspace;
   const data = ws ? await loadAdminData(ctx.supabase, ws.id, admin) : EMPTY_ADMIN_DATA;
   const memberRows = data.members;
+  const invites = data.invites;
   const keyRows = data.keys;
   const connRows = data.connections;
   const pol = data.policy;
@@ -59,8 +60,13 @@ export default async function AdminPage() {
               {admin && (
                 <div className="mt-5">
                   <div className="h3" style={{ fontSize: 14 }}>Add or change a member</div>
-                  <p className="caption mb-3">The person must already have an account (they sign up at /login). Setting a role for an existing member changes it.</p>
-                  <ActionForm action={addMember} submit="Save member">
+                  <p className="caption mb-3">Setting a role for an existing member changes it. Someone without an account gets an invitation: they join with that role when they first sign in with the email (it expires in 14 days).</p>
+                  {invites.length > 0 && (
+                    <div className="mb-4"><div className="h3" style={{ fontSize: 14 }}>Pending invitations</div>
+                      <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th></th></tr></thead>
+                        <tbody>{invites.map((i) => <tr key={i.id}><td>{i.email}</td><td><RolePill role={i.role} /></td><td className="muted">{fmtDate(i.expires_at)}</td>
+                          <td><ActionForm action={revokeInvitation} submit="Revoke" submitClass="btn btn-secondary btn-sm" hidden={{ id: i.id }} /></td></tr>)}</tbody></table></div></div>)}
+                  <ActionForm action={addMember} submit="Save or invite">
                     <div className="form-grid form-grid-2">
                       <div className="field"><label htmlFor="m-email">Email</label><input id="m-email" name="email" className="input" type="email" required /></div>
                       <div className="field"><label htmlFor="m-role">Role</label><select id="m-role" name="role" className="select" defaultValue="author">{ROLES.map((r) => <option key={r} value={r}>{r} — {ROLE_HELP[r]}</option>)}</select></div>

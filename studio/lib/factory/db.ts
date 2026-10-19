@@ -56,8 +56,14 @@ export async function getContext(): Promise<Ctx> {
   const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: rows, error } = await supabase.from("sf_memberships").select("*, workspace:sf_workspaces(*)").order("created_at");
+  let { data: rows, error } = await supabase.from("sf_memberships").select("*, workspace:sf_workspaces(*)").order("created_at");
   if (error) throw new Error(error.message);
+  if (!rows?.length) {
+    // first visit after an invitation: turn pending invitations for this email into memberships (no-op otherwise)
+    const { data: n } = await supabase.rpc("sf_accept_invitations");
+    if (n) ({ data: rows, error } = await supabase.from("sf_memberships").select("*, workspace:sf_workspaces(*)").order("created_at"));
+    if (error) throw new Error(error.message);
+  }
   const memberships = (rows ?? []) as (Membership & { workspace: Workspace })[];
   const wanted = (await cookies()).get(WS_COOKIE)?.value;
   const m = memberships.find((x) => x.workspace_id === wanted) ?? memberships[0] ?? null;

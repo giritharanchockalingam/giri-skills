@@ -467,6 +467,28 @@ select test_expect_error($$insert into sf_delivery_snapshots (workspace_id, enti
 select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_delivery_snapshots) = 0, 'other workspace sees no delivery metrics');
 
+-- ───────── Invitations (0016): admins invite; acceptance on sign-in by email; never downgrades; expiry/revoke ─────────
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_invitations (workspace_id, email, role, invited_by) values (:'ws_acme', 'new.person@example.com', 'reviewer', auth.uid());
+insert into sf_invitations (workspace_id, email, role, invited_by) values (:'ws_acme', 'author@example.com', 'consumer', auth.uid());
+select test_expect_error($$insert into sf_invitations (workspace_id, email, role, invited_by) values ('$$ || :'ws_acme' || $$', 'Mixed@Case.com', 'author', auth.uid())$$, 'check');
+select test_expect_error($$insert into sf_invitations (workspace_id, email, role, invited_by) values ('$$ || :'ws_acme' || $$', 'new.person@example.com', 'author', auth.uid())$$, 'duplicate');
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$insert into sf_invitations (workspace_id, email, role, invited_by) values ('$$ || :'ws_acme' || $$', 'x@example.com', 'admin', auth.uid())$$, 'row-level security');
+select test_assert((select count(*) from sf_invitations) = 0, 'a non-admin sees no invitations');
+reset role;
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-000000000009', 'New.Person@example.com');
+select test_as('00000000-0000-0000-0000-000000000009');
+select test_assert(sf_accept_invitations() = 1, 'the invited email accepts on sign-in (case-insensitive)');
+select test_assert(sf_role(:'ws_acme') = 'reviewer', 'with the invited role');
+select test_assert(sf_accept_invitations() = 0, 'accepting twice does nothing');
+reset role;
+select email as author_email from auth.users where id = '00000000-0000-0000-0000-000000000002' \gset
+update sf_invitations set email = lower(:'author_email') where email = 'author@example.com';
+select test_as('00000000-0000-0000-0000-000000000002');
+select sf_accept_invitations();
+select test_assert(sf_role(:'ws_acme') = 'author', 'an invitation never downgrades an existing member');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

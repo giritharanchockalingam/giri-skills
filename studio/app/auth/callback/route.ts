@@ -33,5 +33,7 @@ export async function GET(request: NextRequest) {
     : tokenHash && type
       ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
       : { error: { message: searchParams.get("error_description") ?? "Missing auth code." } };
-  return error ? fail(error.message) : response;
+  if (error) return fail(error.message);
+  await supabase.rpc("sf_accept_invitations");   // pending invitations for this email become memberships (no-op otherwise)
+  return response;
 }
