@@ -89,7 +89,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
       </div>
 
       <div className="card">
-        <table className="tbl only-desktop">
+        <div className="tablewrap"><table className="tbl only-desktop">
           <thead>
             <tr>
               {COLS.map((c) => (
@@ -117,7 +117,7 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
             ))}
             {sorted.length === 0 && <tr><td colSpan={COLS.length} className="none">No skills match.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
 
         <div className="row-list only-mobile">
           {sorted.map((r) => (

@@ -15,7 +15,7 @@ export function DomainTable({ rows, total, showAverages = true }: { rows: Domain
   const all = [...rows, total];
   return (
     <div className="card">
-      <table className="tbl only-desktop">
+      <div className="tablewrap"><table className="tbl only-desktop">
         <thead>
           <tr>
             <th>Domain</th>
@@ -43,7 +43,7 @@ export function DomainTable({ rows, total, showAverages = true }: { rows: Domain
             );
           })}
         </tbody>
-      </table>
+      </table></div>
 
       <div className="row-list only-mobile">
         {all.map((d, i) => {

@@ -28,7 +28,7 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
       <div className="card">
         {items.length === 0 ? <div className="empty"><div className="none">No runs recorded yet.</div><p className="caption">Runs appear here when someone tests a skill, runs an evaluation, or calls the API.</p></div> : (
           <>
-            <table className="tbl only-desktop">
+            <div className="tablewrap"><table className="tbl only-desktop">
               <thead><tr><th>When</th>{showSkill && <th>Skill</th>}<th>Status</th><th>Source</th><th>Provider · model</th><th className="num">Duration</th><th className="num" title="Estimated from provider-reported tokens × price table; — when no model call was made">Cost (est.)</th><th>Detail</th></tr></thead>
               <tbody>{filtered.map((r) => (
                 <tr key={r.id} className="clickable" tabIndex={0} onClick={() => go(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(r.id); } }}>
@@ -40,7 +40,7 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
                   <td className="desc" title={r.error ?? ""}><span>{r.error ?? ""}</span></td>
                 </tr>
               ))}{filtered.length === 0 && <tr><td colSpan={8} className="none">No runs match.</td></tr>}</tbody>
-            </table>
+            </table></div>
             <div className="row-list only-mobile">{filtered.map((r) => (
               <Link key={r.id} href={`/runs/${r.id}`} className="row-card">
                 <div className="row-card-top"><span className="row-card-name">{showSkill ? `${r.skill} v${r.version}` : fmtDate(r.created_at)}</span><RunPill status={r.status} small /></div>

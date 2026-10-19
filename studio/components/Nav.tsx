@@ -6,22 +6,31 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseConfigured } from "@/lib/supabase/env";
 
-const links: { href: string; label: string; short?: string; match: string[] }[] = [
-  { href: "/", label: "Home", match: ["/"] },
-  { href: "/catalog", label: "Catalog", match: ["/catalog"] },
-  { href: "/insights", label: "Insights", match: ["/insights"] },
-  { href: "/automations", label: "Automations", match: ["/automations"] },
-  { href: "/assistant", label: "Assistant", match: ["/assistant"] },
-  { href: "/roles", label: "Roles & teams", match: ["/roles", "/pools"] },
-  { href: "/agents", label: "Playbooks", match: ["/agents", "/agent-runs/"] },
-  { href: "/repo/", label: "Library", match: ["/repo", "/upstream/"] },
-  { href: "/connect", label: "Connect", match: ["/connect"] },
-  { href: "/admin", label: "Admin", match: ["/admin", "/pipeline", "/skills/", "/evaluations", "/evals/", "/findings/", "/activity", "/runs/"] },
+const links: { href: string; label: string; short?: string; hint?: string; match: string[] }[] = [
+  { href: "/", label: "Home", hint: "What do you need done?", match: ["/"] },
+  { href: "/catalog", label: "Catalog", hint: "Your repositories and scorecards", match: ["/catalog"] },
+  { href: "/insights", label: "Insights", hint: "Usage, spend and ROI", match: ["/insights"] },
+  { href: "/automations", label: "Automations", hint: "Run on GitHub events", match: ["/automations"] },
+  { href: "/assistant", label: "Assistant", hint: "Ask your workspace", match: ["/assistant"] },
+  { href: "/roles", label: "Roles & teams", hint: "Roles and talent pools", match: ["/roles", "/pools"] },
+  { href: "/agents", label: "Playbooks", hint: "Skills chained into agents", match: ["/agents", "/agent-runs/"] },
+  { href: "/repo/", label: "Library", hint: "Every skill", match: ["/repo", "/upstream/"] },
+  { href: "/connect", label: "Connect", hint: "API and MCP", match: ["/connect"] },
+  { href: "/admin", label: "Admin", hint: "Members, keys, pipeline", match: ["/admin", "/pipeline", "/skills/", "/evaluations", "/evals/", "/findings/", "/activity", "/runs/"] },
 ];
 
 export function Nav() {
   const path = usePathname();
   const [email, setEmail] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setOpen(false); }, [path]);
+  useEffect(() => {
+    document.body.dataset.navOpen = open ? "true" : "false";
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   useEffect(() => {
     if (!supabaseConfigured()) return;
     const sb = createBrowserSupabase();
@@ -46,10 +55,20 @@ export function Nav() {
             </Link>
           ))}
         </nav>
+        <button type="button" className="nav-toggle" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} aria-controls="nav-sheet" onClick={() => setOpen((o) => !o)}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">{open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}</svg>
+        </button>
         <div className="user">
           {email && <Link href="/admin#account" className="btn btn-icon" aria-label={`Account and workspace (${email})`} title={email}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 4-6 8-6s8 2 8 6" /></svg></Link>}
         </div>
       </div>
+      <nav id="nav-sheet" className="nav-sheet" data-open={open} aria-label="Areas (menu)" hidden={!open}>
+        {links.map((l) => (
+          <Link key={l.href} href={l.href} aria-current={active(l) ? "page" : undefined} onClick={() => setOpen(false)}>
+            <span>{l.label}</span>{l.hint && <span className="nav-hint">{l.hint}</span>}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

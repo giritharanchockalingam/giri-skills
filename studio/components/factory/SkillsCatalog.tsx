@@ -50,7 +50,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
         <span className="toolbar-count">{filtered.length} of {items.length}</span>
       </div>
       <div className="card">
-        <table className="tbl only-desktop">
+        <div className="tablewrap"><table className="tbl only-desktop">
           <thead><tr><th>Skill</th><th>Status</th><th>Published</th><th>In progress</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th style={{ width: "34%" }}>Purpose</th></tr></thead>
           <tbody>
             {filtered.map((i) => (
@@ -66,7 +66,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
             ))}
             {filtered.length === 0 && <tr><td colSpan={7} className="none">No skills match.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
         <div className="row-list only-mobile">
           {filtered.map((i) => (
             <Link key={i.id} href={`/skills/${i.slug}`} className="row-card">

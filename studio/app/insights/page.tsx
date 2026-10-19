@@ -63,14 +63,14 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
         </section>
         <section className="card card-pad">
           <div className="h3" style={{ marginTop: 0 }}>Where runs came from</div>
-          <table className="ins-bars"><tbody>
+          <div className="tablewrap"><table className="ins-bars"><tbody>
             {ins.channels.map((c) => (
               <tr key={c.channel} title={`${CHANNEL_LABEL[c.channel]}: ${c.runs}`}>
                 <th scope="row">{CHANNEL_LABEL[c.channel]}</th>
                 <td><span className="ins-bar" style={{ width: `${(c.runs / maxChan) * 100}%` }} /></td>
                 <td className="ins-n">{c.runs}</td>
               </tr>))}
-          </tbody></table>
+          </tbody></table></div>
         </section>
       </div>
 
@@ -79,7 +79,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
           <div className="h3" style={{ marginTop: 0 }}>Return on each skill</div>
           <p className="caption">A run counts as work when it succeeded, was not on sample inputs (the shipped samples, which are labelled fictional) and was not an evaluation. Hours = counted runs × your baseline minutes.</p>
         </div>
-        <table className="mini">
+        <div className="tablewrap"><table className="mini">
           <thead><tr><th>Skill</th><th>Runs</th><th>Counted as work</th><th>Baseline (by hand)</th><th>Hours saved</th><th>Value</th>{admin && <th />}</tr></thead>
           <tbody>{ins.skills.length === 0 ? <tr><td colSpan={7} className="none">No runs in this period.</td></tr> : ins.skills.map((s) => (
             <tr key={s.skill}>
@@ -90,7 +90,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
               <td>{s.hours ?? "—"}</td><td>{s.value != null ? usd(s.value) : "—"}</td>
               {admin && <td>{s.baseline && <form action={removeBaseline}><input type="hidden" name="skill" value={s.skill} /><button className="link caption" type="submit">remove</button></form>}</td>}
             </tr>))}</tbody>
-        </table>
+        </table></div>
         {admin && (
           <div className="card-pad" id="baseline">
             <div className="h3" style={{ marginTop: 0 }}>Set a baseline</div>
@@ -101,12 +101,12 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
 
       <section className="card mb-6">
         <div className="card-pad" style={{ paddingBottom: 0 }}><div className="h3" style={{ marginTop: 0 }}>Scorecards across the catalog</div></div>
-        <table className="mini">
+        <div className="tablewrap"><table className="mini">
           <thead><tr><th>Check</th><th>Pass</th><th>Warn</th><th>Fail</th><th>Error</th></tr></thead>
           <tbody>{ins.scorecards.byCheck.length === 0 ? <tr><td colSpan={5} className="none">No scorecards yet — run them from the <Link className="link" href="/catalog">Catalog</Link>.</td></tr>
             : ins.scorecards.byCheck.map((c) => (
               <tr key={c.check}><td><Link className="link" href="/catalog">{CHECKS.find((x) => x.id === c.check)?.title ?? c.check}</Link></td><td>{c.pass}</td><td>{c.warn}</td><td>{c.fail}</td><td>{c.error}</td></tr>))}</tbody>
-        </table>
+        </table></div>
       </section>
 
       <p className="caption">Counted: runs in the portal, through the API and MCP, playbook steps, scorecard checks, evaluations, and skills run in the browser (recorded without their inputs since 19 Oct 2026). Spend is the cost the model provider reported, an estimate where marked.{truncated ? " Showing the most recent 5,000 records per source." : ""}</p>

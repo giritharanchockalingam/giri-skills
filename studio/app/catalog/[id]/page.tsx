@@ -52,9 +52,9 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
       {all.length > latest.length && (
         <section className="section">
           <div className="h3">History</div>
-          <table className="mini"><thead><tr><th>When</th><th>Check</th><th>Verdict</th><th>Summary</th><th>Commit</th></tr></thead>
+          <div className="tablewrap"><table className="mini"><thead><tr><th>When</th><th>Check</th><th>Verdict</th><th>Summary</th><th>Commit</th></tr></thead>
             <tbody>{all.map((r) => <tr key={r.id}><td className="caption">{when(r.created_at)}</td><td>{CHECKS.find((c) => c.id === r.check_id)?.title.split(" (")[0] ?? r.check_id}</td>
-              <td><span className={`pill pill-sm ${CLS[r.verdict] ?? ""}`}>{r.verdict}</span></td><td className="ink-2">{r.summary}</td><td><code>{r.commit_sha?.slice(0, 7) ?? "—"}</code></td></tr>)}</tbody></table>
+              <td><span className={`pill pill-sm ${CLS[r.verdict] ?? ""}`}>{r.verdict}</span></td><td className="ink-2">{r.summary}</td><td><code>{r.commit_sha?.slice(0, 7) ?? "—"}</code></td></tr>)}</tbody></table></div>
         </section>)}
     </>
   );

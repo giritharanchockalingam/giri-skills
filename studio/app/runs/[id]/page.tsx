@@ -46,7 +46,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
       <div className="two-col mt-6">
         <div className="stack min-w-0">
           {f.needs_input?.missing?.length ? (
-            <div className="card card-pad"><div className="h3 mb-2">Missing inputs</div><table className="mini"><thead><tr><th>Input</th><th>What it is</th></tr></thead><tbody>{f.needs_input.missing.map((m) => <tr key={m.name}><td><code>{m.name}</code></td><td className="ink-2">{m.question}</td></tr>)}</tbody></table></div>
+            <div className="card card-pad"><div className="h3 mb-2">Missing inputs</div><div className="tablewrap"><table className="mini"><thead><tr><th>Input</th><th>What it is</th></tr></thead><tbody>{f.needs_input.missing.map((m) => <tr key={m.name}><td><code>{m.name}</code></td><td className="ink-2">{m.question}</td></tr>)}</tbody></table></div></div>
           ) : null}
           <div className="card card-pad">
             <div className="h3 mb-2">Steps <span className="muted font-normal">({rj.steps?.length ?? 0})</span></div>

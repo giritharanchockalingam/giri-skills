@@ -609,7 +609,9 @@ table.up-tbl td.desc { max-width: none; }
 .gate-title { font-weight: 600; font-size: 15px; }
 .gate-detail { grid-column: 2; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
 
-.tablewrap { overflow-x: auto; max-width: 100%; }
+.tablewrap { overflow-x: auto; max-width: 100%; contain: inline-size; -webkit-overflow-scrolling: touch; }
+/* A scroll box must never widen the grid/flex item it sits in (that pushed whole pages wider than a phone). */
+.subnav, .run-tablewrap { contain: inline-size; }
 .pill-ink { background: var(--ink); color: var(--paper); }
 .mono-sm { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); overflow-wrap: anywhere; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -874,3 +876,16 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .ask-form textarea { width: 100%; resize: vertical; min-height: 56px; }
 .ask-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ───────────── Phone navigation: menu button + sheet (all areas reachable, nothing hidden off-screen) ───────────── */
+.nav-toggle { display: none; }
+.nav-sheet { display: none; }
+@media (max-width: 767px) {
+  .topnav { display: none; }
+  .nav-toggle { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--paper); color: var(--ink); }
+  .nav-sheet[data-open="true"] { display: block; position: fixed; inset: 60px 0 0 0; z-index: 60; background: var(--paper); overflow-y: auto; padding: 8px 14px 32px; border-top: 1px solid var(--rule); }
+  .nav-sheet a { display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 6px; font-size: 17px; color: var(--ink); border-bottom: 1px solid var(--rule-soft); }
+  .nav-sheet a[aria-current="page"] { color: var(--flame); font-weight: 600; }
+  .nav-sheet .nav-hint { font-size: 13px; color: var(--ink-3); font-weight: 400; }
+  body[data-nav-open="true"] { overflow: hidden; }
+}

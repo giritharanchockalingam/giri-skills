@@ -208,7 +208,7 @@ function ComposeEditor({ step, files, spec, editable, onChange }: {
             <option value="">— none —</option>{spec.inputs.map((a) => <option key={a.name} value={`$in.${a.name}`}>{a.name}</option>)}
           </select></div>
       </div>
-      <table className="mini"><thead><tr><th>Key</th><th>Value from</th><th /></tr></thead><tbody>
+      <div className="tablewrap"><table className="mini"><thead><tr><th>Key</th><th>Value from</th><th /></tr></thead><tbody>
         {rows.map(([k, v]) => (
           <tr key={k}>
             <td><code>{k}</code></td>
@@ -217,7 +217,7 @@ function ComposeEditor({ step, files, spec, editable, onChange }: {
             <td>{editable && <button type="button" className="btn btn-sm" onClick={() => { const r = { ...c.rows }; delete r[k]; set({ rows: r }); }}>×</button>}</td>
           </tr>
         ))}
-      </tbody></table>
+      </tbody></table></div>
       {editable && <AddRow jsonFiles={jsonFiles} onAdd={(k, v) => set({ rows: { ...c.rows, [k]: v } })} />}
     </div>
   );

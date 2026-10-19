@@ -21,7 +21,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
   return (
     <div className="stack">
       <div className="card">
-        <div className="tbl-scroll"><table className="tbl"><thead><tr>
+        <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr>
           <th>{kind === "role" ? "Role" : "Pool"}</th><th>{kind === "role" ? "Skills" : "Team"}</th><th>{kind === "role" ? "Stages" : "Playbooks"}</th><th>Version</th><th>Based on</th>
         </tr></thead><tbody>
           {rows.map((r) => {
@@ -39,7 +39,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
             );
           })}
           {rows.length === 0 && <tr><td colSpan={5} className="none">None yet. Start from a template below.</td></tr>}
-        </tbody></table></div>
+        </tbody></table></div></div>
       </div>
 
       {can(ctx.role, "talent.edit") && (
@@ -61,7 +61,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
 
       <section className="section">
         <div className="h3 mb-2">Templates</div>
-        <div className="tbl-scroll"><table className="tbl"><thead><tr><th>Template</th><th>{kind === "role" ? "Default skills" : "Roles"}</th><th>Playbooks</th><th /></tr></thead><tbody>
+        <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr><th>Template</th><th>{kind === "role" ? "Default skills" : "Roles"}</th><th>Playbooks</th><th /></tr></thead><tbody>
           {templates.map((t) => (
             <tr key={t.name}>
               <td><b>{t.title}</b><div className="caption">{t.description}</div></td>
@@ -70,7 +70,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
               <td className="caption">{have.has(t.name) ? "in use" : ""}</td>
             </tr>
           ))}
-        </tbody></table></div>
+        </tbody></table></div></div>
       </section>
     </div>
   );
