@@ -951,3 +951,8 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .nav-sheet-pages { display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 6px 6px 10px; border-bottom: 1px solid var(--rule-soft); }
 .nav-sheet .nav-sheet-pages a { min-height: 36px; font-size: 14px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink-2); }
 @media (min-width: 1180px) { .nav-toggle, .nav-sheet { display: none !important; } }
+.funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 18px; }
+.funnel-step { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-sm); background: var(--paper); color: inherit; }
+.funnel-step b { font: 400 26px/1 var(--serif); }
+.funnel-step:hover { border-color: var(--ink-3); }
+.funnel-step.is-on { border-color: var(--flame); }
