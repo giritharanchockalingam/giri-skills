@@ -29,7 +29,7 @@ export function supabaseRefs(envs: VercelEnv[]): { ref: string; key: string }[] 
   return [...out.entries()].map(([ref, key]) => ({ ref, key }));
 }
 
-export function mapVercel(team: { slug: string }, projects: VercelProject[], deploys: Map<string, VercelDeployment[]>, envs: Map<string, VercelEnv[]>, now = Date.now()):
+export function mapVercel(team: { slug: string | null }, projects: VercelProject[], deploys: Map<string, VercelDeployment[]>, envs: Map<string, VercelEnv[]>, now = Date.now()):
   { entities: EntityRow[]; relations: RelationSpec[] } {
   const entities: EntityRow[] = [], relations: RelationSpec[] = [];
   for (const p of projects) {
@@ -41,7 +41,7 @@ export function mapVercel(team: { slug: string }, projects: VercelProject[], dep
     const alias = p.targets?.production?.alias?.find((a) => !a.includes("-git-")) ?? null;
     const repo = p.link?.type === "github" && p.link.org && p.link.repo ? `${p.link.org}/${p.link.repo}` : null;
     entities.push({
-      kind: "service", source: "vercel", key: p.name, external_id: p.id, title: p.name, url: `https://vercel.com/${team.slug}/${p.name}`,
+      kind: "service", source: "vercel", key: p.name, external_id: p.id, title: p.name, url: team.slug ? `https://vercel.com/${team.slug}/${p.name}` : "https://vercel.com/dashboard",
       owner: null, archived: false, last_activity_at: iso(last?.created ?? p.updatedAt),
       properties: {
         framework: p.framework ?? null, production_url: alias ? `https://${alias}` : null, repo, production_branch: p.link?.productionBranch ?? null,

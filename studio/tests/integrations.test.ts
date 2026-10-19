@@ -79,6 +79,19 @@ test("vercel fetch: team slug, paginated projects, per-project deployments and s
   assert.match(r.problems.join(), /two deployments: .*403 Forbidden/);
   assert.ok(seen.some((s) => s.includes("target=production") && s.includes("teamId=team_1")));
   assert.equal(vercelConfig({}).ok, false);
-  assert.deepEqual(vercelConfig({ VERCEL_TOKEN: " x ", VERCEL_TEAM_ID: "team_1" }), { ok: true, token: "x", teamId: "team_1" });
+  assert.deepEqual(vercelConfig({ VERCEL_TOKEN: " x ", VERCEL_TEAM_ID: "team_1" }), { ok: true, token: "x", teamId: "team_1", slug: null });
   assert.equal(supabaseConfig({ SUPABASE_ACCESS_TOKEN: "s" }).ok, true);
+});
+
+test("vercel fetch: team lookup refused → still syncs; project list refused → says the token's scope is wrong", async () => {
+  const j = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status });
+  const ok = (async (url: string) => { const u = new URL(url);
+    if (u.pathname.startsWith("/v2/teams")) return j({ error: { message: "You are not authorized" } }, 403);
+    if (u.pathname === "/v10/projects") return j({ projects: [{ id: "p1", name: "one" }], pagination: { next: null } });
+    return j({ deployments: [], envs: [] }); }) as unknown as typeof fetch;
+  const r = await readVercel({ token: "t", teamId: "team_1", slug: "acme" }, ok);
+  assert.equal(r.team.slug, "acme");
+  assert.equal(r.projects.length, 1);
+  const denied = (async () => j({ error: { message: "You are not authorized" } }, 403)) as unknown as typeof fetch;
+  await assert.rejects(readVercel({ token: "t", teamId: "team_1" }, denied), /cannot list team team_1's projects \(403\)\. Create the token with Scope set to that team/);
 });
