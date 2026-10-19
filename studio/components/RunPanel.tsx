@@ -105,7 +105,9 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     for (const i of inputs) {
       const d = drafts[i.name];
       let given = false;
-      if (FILE_TYPES.has(i.type)) {
+      if (i.type === "dir" && d.text.trim()) {  // one pasted/uploaded file stands in for the folder (scripts that accept a file)
+        req[i.name] = { kind: "text", ext: ((d.fileName ?? "").split(".").pop() || "sql").toLowerCase(), content: d.text }; given = true;
+      } else if (FILE_TYPES.has(i.type)) {
         if (d.text.trim()) { req[i.name] = { kind: "text", ext: extOf(d.fileName, i.type), content: d.text }; given = true; }
       } else if (i.type === "flag") {
         if (d.checked) { req[i.name] = { kind: "value", value: "true" }; given = true; }
@@ -186,11 +188,16 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                   )}
                   {i.type === "dir" && (
                     <>
-                      <div className="run-note">Not runnable in the browser with your own folder (needs a directory).{fx && <> The example fixture folder is available:</>}</div>
+                      <div className="run-note">Paste or upload one file from the folder (e.g. a single migration), or use the example fixture folder.</div>
+                      <div className="run-file-row">
+                        <input type="file" className="input" aria-label={`Upload a file for ${i.name}`} onChange={(e) => onFile(i, e.target.files?.[0] ?? null)} />
+                      </div>
+                      <textarea className="run-textarea" value={d.text} placeholder="…or paste the file content here" spellCheck={false}
+                        onChange={(e) => setDraft(i.name, { text: e.target.value, value: "", fixture: false, fileName: d.fileName })} />
                       {fx && (
                         <div className="run-file-row">
                           <input id={`in-${i.name}`} className="input run-input-text" value={d.value} readOnly placeholder="(none)" />
-                          <button type="button" className="btn btn-secondary" onClick={() => setDraft(i.name, { value: `/repo/skills/${skillId}/${fx}`, fixture: true })}>Use example fixture folder</button>
+                          <button type="button" className="btn btn-secondary" onClick={() => setDraft(i.name, { value: `/repo/skills/${skillId}/${fx}`, text: "", fixture: true })}>Use example fixture folder</button>
                         </div>
                       )}
                     </>

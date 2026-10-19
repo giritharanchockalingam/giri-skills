@@ -50,8 +50,24 @@ def test_warn_only_downgrades_errors(tmp_path):
     assert r.returncode == 0
 
 
-def test_not_a_directory(tmp_path):
-    f = tmp_path / "not-a-dir.sql"
+def test_not_a_directory_or_sql_file(tmp_path):
+    # a single .sql file is now valid input (as the SKILL.md always said); anything else still exits 2
+    f = tmp_path / "not-a-dir.txt"
     f.write_text("select 1;\n", encoding="utf-8")
     r = run_script(SCRIPT, str(f))
     assert r.returncode == 2
+    assert run_script(SCRIPT, str(tmp_path / "missing")).returncode == 2
+
+
+def test_single_sql_file_is_accepted(tmp_path):
+    """The skill says 'a migrations directory (or a single .sql file)'; the script must honour that."""
+    f = tmp_path / "0001_x.sql"
+    f.write_text("create table public.t (id uuid primary key);\nalter table public.t enable row level security;\n"
+                 "create policy t_sel on public.t for select to authenticated using (true);\n-- rollback: drop table public.t;\n",
+                 encoding="utf-8")
+    res = run_script("skills/build/supabase-schema-rls/scripts/rls_lint.py", str(f))
+    assert res.returncode in (0, 1), res.stderr
+    assert "not a directory" not in res.stderr
+    bad = tmp_path / "notes.txt"
+    bad.write_text("x", encoding="utf-8")
+    assert run_script("skills/build/supabase-schema-rls/scripts/rls_lint.py", str(bad)).returncode == 2

@@ -85,7 +85,7 @@ def line_of(text: str, pos: int) -> int:
 
 
 def lint_migrations(mig_dir: Path, findings: list[Finding]) -> None:
-    files = sorted(mig_dir.glob("*.sql"))
+    files = [mig_dir] if mig_dir.is_file() else sorted(mig_dir.glob("*.sql"))
     if not files:
         findings.append(Finding("RLS000", "warn", str(mig_dir), 0, "no .sql migrations found"))
         return
@@ -178,7 +178,7 @@ def lint_client_dirs(paths: list[str], root: Path, findings: list[Finding]) -> N
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Offline RLS linter for Supabase migrations.")
-    ap.add_argument("migrations", nargs="?", default="supabase/migrations", help="migrations directory")
+    ap.add_argument("migrations", nargs="?", default="supabase/migrations", help="migrations directory, or a single .sql file")
     ap.add_argument("--client-dirs", nargs="*", default=[], help="dirs/files that must not reference service role (e.g. app components)")
     ap.add_argument("--root", default=".", help="repo root for --client-dirs")
     ap.add_argument("--warn-only", action="store_true")
@@ -187,8 +187,8 @@ def main() -> int:
 
     findings: list[Finding] = []
     mig = Path(args.migrations)
-    if not mig.is_dir():
-        print(f"error: not a directory: {mig}", file=sys.stderr)
+    if not (mig.is_dir() or (mig.is_file() and mig.suffix.lower() == ".sql")):
+        print(f"error: not a migrations directory or a .sql file: {mig}", file=sys.stderr)
         return 2
     lint_migrations(mig, findings)
     lint_client_dirs(args.client_dirs, Path(args.root), findings)
