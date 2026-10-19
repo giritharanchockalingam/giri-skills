@@ -818,3 +818,13 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .connect-snip { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px; min-width: 0; }
 .connect-snip pre { margin: 8px 0 0; white-space: pre-wrap; word-break: break-all; font-size: 12.5px; }
 @media (max-width: 600px) { .connect-snips { grid-template-columns: 1fr; } .lc-seg { flex-wrap: wrap; border-radius: 14px; } }
+
+/* ───────────────────────────── Catalog (Context Lake) ───────────────────────────── */
+.cat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.cat-tile { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; background: var(--paper); display: flex; flex-direction: column; }
+.cat-tile b { font: 400 30px/1.1 var(--serif); } .cat-tile span { color: var(--ink-2); font-size: 13px; }
+.chip-on { background: var(--deep); color: var(--deep-ink); border-color: var(--deep); }
+.chip-sm { font-size: 12px; padding: 2px 8px; margin: 0 4px 4px 0; display: inline-block; }
+.cat-table td { vertical-align: top; } .cat-why { margin: 6px 0 0 16px; padding: 0; font-size: 13.5px; } .cat-why li { margin-bottom: 6px; }
+@media (max-width: 760px) { .cat-table thead { display: none; } .cat-table tr { display: block; padding: 10px 12px; border-bottom: 1px solid var(--rule-soft); } .cat-table td { display: block; border: 0; padding: 2px 0; } }
+.ink-rust { color: var(--rust); }

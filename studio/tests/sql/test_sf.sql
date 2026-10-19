@@ -303,6 +303,33 @@ select test_expect_error($$select sf_api_talent(repeat('8', 64), 'role', 'archit
 select test_assert(jsonb_typeof(sf_api_catalog(repeat('7', 64))) = 'array', 'mcp: catalog is an array');
 select test_expect_error($$select sf_api_catalog(repeat('8', 64))$$, 'invalid api key');
 
+-- ───────── Context Lake (0007): installations admin-only and verified by the acting user; catalog per workspace ─────────
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_github_installations (workspace_id, installation_id, account_login, account_type, verified_by)
+  values (:'ws_acme', 9001, 'acme-org', 'Organization', auth.uid());
+select test_expect_error($$insert into sf_github_installations (workspace_id, installation_id, account_login, verified_by)
+  values ('$$ || :'ws_acme' || $$', 9002, 'x', '00000000-0000-0000-0000-000000000002')$$, 'row-level security');   -- must be verified by yourself
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_expect_error($$insert into sf_github_installations (workspace_id, installation_id, account_login, verified_by)
+  values ('$$ || :'ws_acme' || $$', 9003, 'x', auth.uid())$$, 'row-level security');                                 -- authors cannot connect GitHub
+insert into sf_catalog_entities (workspace_id, kind, key, external_id, installation_id, title, url, properties)
+  values (:'ws_acme', 'repository', 'acme-org/billing', '1', 9001, 'billing', 'https://github.com/acme-org/billing', '{"stack":["supabase"]}');
+insert into sf_catalog_syncs (workspace_id, installation_id, status, started_by) values (:'ws_acme', 9001, 'succeeded', auth.uid());
+select test_expect_error($$insert into sf_catalog_entities (workspace_id, kind, key, external_id, title, url)
+  values ('$$ || :'ws_acme' || $$', 'repository', 'acme-org/billing', '1', 'dup', 'https://github.com/x')$$, 'duplicate');
+select test_expect_error($$insert into sf_catalog_entities (workspace_id, kind, key, external_id, title, url)
+  values ('$$ || :'ws_acme' || $$', 'repository', 'acme-org/x', '2', 'x', 'javascript:alert(1)')$$, 'check');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((select count(*) from sf_catalog_entities where workspace_id = :'ws_acme') = 1, 'consumer reads the catalog');
+update sf_catalog_entities set title = 'hijack' where workspace_id = :'ws_acme';
+select test_assert((select title from sf_catalog_entities where key = 'acme-org/billing') = 'billing', 'consumer cannot edit the catalog');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_catalog_entities) = 0 and (select count(*) from sf_github_installations) = 0
+                   and (select count(*) from sf_catalog_syncs) = 0, 'other workspace sees no catalog, installation or sync');
+select test_as('00000000-0000-0000-0000-000000000001');
+select test_expect_error($$insert into sf_github_installations (workspace_id, installation_id, account_login, verified_by)
+  values ('$$ || :'ws_acme' || $$', 9001, 'again', auth.uid())$$, 'duplicate');                                     -- one workspace per installation
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
