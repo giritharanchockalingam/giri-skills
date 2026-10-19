@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import csv
 import json
+
+import pytest
 from pathlib import Path
 
 from conftest import REPO_ROOT, run_script
@@ -231,3 +233,17 @@ def test_audit_non_utf8_input_exit_2_no_traceback(tmp_path):
     bom = tmp_path / "bom.csv"
     bom.write_bytes("﻿key,value\nlarge_scale,yes\n".encode("utf-8"))
     assert run_script(SCRIPT, "--processing", str(bom), "--out-dir", str(tmp_path / "o2")).returncode == 0
+
+
+@pytest.mark.parametrize("placeholder", ["none", "TBD", "n/a", "[TO BE BASELINED — owner: DPO]", "-"])
+def test_placeholder_measure_cannot_clear_the_gate(tmp_path, placeholder):
+    """Re-audit finding: a score-9 risk with a placeholder measure and a stated 'low' residual passed the gate."""
+    fix = REPO_ROOT / "skills/ai-platform/dpia/evals/fixtures"
+    risks = tmp_path / "risks.csv"
+    risks.write_text("risk,likelihood,severity,measure,owner,residual\n"
+                     f"Re-identification from model outputs,3,3,{placeholder},DPO,low\n", encoding="utf-8")
+    res = run_script("skills/ai-platform/dpia/scripts/dpia.py", "--processing", str(fix / "processing.csv"),
+                     "--risks", str(risks), "--out-dir", str(tmp_path / "o"))
+    assert res.returncode == 1, res.stdout + res.stderr
+    assert json.loads((tmp_path / "o" / "screening.json").read_text()) is not None
+    assert "Art. 36" in (tmp_path / "o" / "dpia.md").read_text(encoding="utf-8")

@@ -17753,6 +17753,24 @@
      "default": "20000",
      "flag": null,
      "copy": false
+    },
+    {
+     "name": "currency",
+     "type": "string",
+     "required": false,
+     "from": "reporting currency (ISO code) when the rate card mixes currencies",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "fx",
+     "type": "string",
+     "required": false,
+     "from": "sourced FX rates into the reporting currency, comma list CUR=rate (1 CUR = rate reporting currency), e.g. INR=0.012; needed with currency for a mixed-currency card",
+     "default": null,
+     "flag": null,
+     "copy": false
     }
    ],
    "steps": [
@@ -17773,13 +17791,13 @@
     {
      "step": "model-json",
      "kind": "script",
-     "cmd": "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} --seed 7 --json",
+     "cmd": "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --json",
      "stdout": "{out}/estimate.json"
     },
     {
      "step": "model-report",
      "kind": "script",
-     "cmd": "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} --seed 7 --out {out}/estimate.md"
+     "cmd": "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --out {out}/estimate.md"
     },
     {
      "step": "memo",

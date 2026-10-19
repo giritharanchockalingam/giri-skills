@@ -238,7 +238,7 @@ def load_rates(path: Path, as_of: date | None = None) -> dict[str, dict[str, dic
 def parse_fx(items: list[str]) -> dict[str, float]:
     """--fx INR=0.012 means 1 INR = 0.012 units of the reporting currency."""
     fx: dict[str, float] = {}
-    for it in items or []:
+    for it in [x for item in (items or []) for x in item.split(",") if x.strip()]:  # repeatable and/or comma list
         cur, sep, val = it.partition("=")
         rate = _num(val) if sep else None
         if not cur.strip() or rate is None or rate <= 0:

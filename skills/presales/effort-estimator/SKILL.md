@@ -13,9 +13,11 @@ metadata:
       - {name: rates, type: csv, required: false, from: "user rate card (layout: assets/rate-card.example.csv); without it: effort only, no price"}
       - {name: client, type: string, required: true, from: "client name for the memo"}
       - {name: iterations, type: string, required: false, default: "20000"}
+      - {name: currency, type: string, required: false, from: "reporting currency (ISO code) when the rate card mixes currencies"}
+      - {name: fx, type: string, required: false, from: "sourced FX rates into the reporting currency, comma list CUR=rate (1 CUR = rate reporting currency), e.g. INR=0.012; needed with currency for a mixed-currency card"}
     run:
-      - {step: model-json, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} --seed 7 --json", stdout: "{out}/estimate.json"}
-      - {step: model-report, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} --seed 7 --out {out}/estimate.md"}
+      - {step: model-json, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --json", stdout: "{out}/estimate.json"}
+      - {step: model-report, kind: script, cmd: "python3 -I scripts/estimate.py {wbs} [--rates {rates}] --iterations {iterations} [--currency {currency}] [--fx {fx}] --seed 7 --out {out}/estimate.md"}
       - {step: memo, kind: llm, template: assets/estimate-summary-template.md, context: ["{out}/estimate.md", "{out}/estimate.json", "references/estimation-method.md"], out: "{out}/estimate-memo.md"}
     outputs:
       - {path: "{out}/estimate.json", checks: [exists, json]}

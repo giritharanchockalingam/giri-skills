@@ -98,6 +98,17 @@ _FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
 _NUMBER = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
 
 
+
+# A placeholder is not a measure: these never reduce a risk or clear the sign-off gate.
+PLACEHOLDER_MEASURES = {"none", "n/a", "na", "tbd", "tbc", "todo", "pending", "-", "--", "no", "nil", "null", "unknown", "?"}
+
+
+def real_measure(text: str) -> str:
+    t = (text or "").strip()
+    if t.lower().strip(" .") in PLACEHOLDER_MEASURES or t.upper().startswith(("[TO BE BASELINED", "TBD", "TO BE DEFINED")):
+        return ""
+    return t
+
 def csv_safe(v) -> str:
     """OWASP CSV-injection guard: prefix a formula-leading text cell with a single quote (numbers untouched)."""
     s = "" if v is None else str(v)
@@ -182,7 +193,7 @@ def load_risks(path: Path | None) -> list[dict]:
         if res and res not in LEVELS:
             raise InputError(f"risks line {i}: residual must be low|medium|high (got {r.get('residual')!r})")
         out.append({"risk": r["risk"], "source": "risks input", "likelihood": vals["likelihood"],
-                    "severity": vals["severity"], "measure": r.get("measure", ""), "owner": r.get("owner", ""),
+                    "severity": vals["severity"], "measure": real_measure(r.get("measure", "")), "owner": r.get("owner", ""),
                     "residual": res})
     return out
 
