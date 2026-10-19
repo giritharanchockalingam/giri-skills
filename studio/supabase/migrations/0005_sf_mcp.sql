@@ -1,13 +1,14 @@
 -- 0005_sf_mcp.sql — read paths the MCP server needs for an API-key caller (anon role + key hash, like 0002's sf_api_*):
 --   sf_api_catalog(key)            published skills of the key's workspace, with the library skill each was imported from
 --   sf_api_talent(key, kind, slug) the PUBLISHED spec of a workspace role or team (pool), so a tailored role scopes its server
--- Read-only, SECURITY DEFINER with a fixed search_path; re-verifies the key on every call. Idempotent; sf_ prefix only.
+-- VOLATILE (not STABLE): PostgREST runs STABLE functions in a read-only transaction, and the key check records
+-- last_used_at. SECURITY DEFINER with a fixed search_path; re-verifies the key on every call. Idempotent; sf_ prefix only.
 -- rollback: (manual, in this order — drops everything this migration created; no data)
 --   drop function if exists public.sf_api_talent(text, text, text);
 --   drop function if exists public.sf_api_catalog(text);
 
 create or replace function public.sf_api_catalog(p_key_hash text)
-returns jsonb language plpgsql stable security definer set search_path = public as $$
+returns jsonb language plpgsql volatile security definer set search_path = public as $$
 declare v_ws uuid; v_key uuid; out jsonb;
 begin
   select api_key_id, workspace_id into v_key, v_ws from public.sf_resolve_api_key(p_key_hash);
@@ -24,7 +25,7 @@ end $$;
 grant execute on function public.sf_api_catalog(text) to anon, authenticated;
 
 create or replace function public.sf_api_talent(p_key_hash text, p_kind text, p_slug text)
-returns jsonb language plpgsql stable security definer set search_path = public as $$
+returns jsonb language plpgsql volatile security definer set search_path = public as $$
 declare v_ws uuid; v_key uuid; out jsonb;
 begin
   select api_key_id, workspace_id into v_key, v_ws from public.sf_resolve_api_key(p_key_hash);

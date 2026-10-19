@@ -21,7 +21,7 @@ psql -tA -v ON_ERROR_STOP=1 -d "$DB" -c "select 'objects: ' || count(*) || ' sf_
 
 # Rollback proof: run every migration's `-- rollback:` block newest-first; nothing sf_ may remain; then re-apply cleanly.
 for f in $(ls -r supabase/migrations/*.sql); do
-  sed -n 's/^--   //p' "$f" | grep -E '^drop ' | psql -q -v ON_ERROR_STOP=1 -d "$DB" >/dev/null 2>&1 \
+  sed -n 's/^--   //p' "$f" | { grep -E '^drop ' || true; } | psql -q -v ON_ERROR_STOP=1 -d "$DB" >/dev/null 2>&1 \
     || { echo "ERROR rollback of $(basename "$f") failed"; exit 1; }
 done
 left=$(psql -tA -d "$DB" -c "select (select count(*) from pg_tables where tablename like 'sf\_%') + (select count(*) from pg_views where viewname like 'sf\_%') + (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and proname like 'sf\_%')")

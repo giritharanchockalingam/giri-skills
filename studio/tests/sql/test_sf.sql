@@ -303,6 +303,12 @@ select test_expect_error($$select sf_api_talent(repeat('8', 64), 'role', 'archit
 select test_assert(jsonb_typeof(sf_api_catalog(repeat('7', 64))) = 'array', 'mcp: catalog is an array');
 select test_expect_error($$select sf_api_catalog(repeat('8', 64))$$, 'invalid api key');
 
+-- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
+-- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
+select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                    where n.nspname = 'public' and p.proname like 'sf\_api\_%' and p.provolatile <> 'v') = 0,
+                   'all sf_api_* functions are VOLATILE');
+
 -- the shared project's own tables were never touched
 select test_assert((select count(*) from pg_policies where tablename = 'profiles') = 0, 'profiles untouched');
 select 'ALL SQL TESTS PASSED' as result;
