@@ -64,7 +64,11 @@
    "id": "improve",
    "n": 11,
    "name": "Improve",
-   "question": "What do we change next, and how safely?"
+   "question": "What do we change next, and how safely?",
+   "modes": [
+    "existing"
+   ],
+   "modes_why": "Improving always starts from something that exists: results, incidents, feedback or code."
   }
  ],
  "shelves": [
