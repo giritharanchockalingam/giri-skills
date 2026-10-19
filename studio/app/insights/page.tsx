@@ -45,7 +45,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
       </nav>
 
       <div className="cat-tiles mb-6">
-        <div className="cat-tile"><b>{ins.total}</b><span>skill runs</span></div>
+        <div className="cat-tile"><b>{ins.total}</b><span title="Every run in this period: server (portal, API, MCP, playbook steps) and in the browser">runs (server + browser)</span></div>
         <div className="cat-tile"><b>{pct(ins.successRate)}</b><span>succeeded</span></div>
         <div className="cat-tile"><b>{ins.people}</b><span>people and keys</span></div>
         <div className="cat-tile"><b>{ins.roi.skillsWithBaseline ? `${ins.roi.hours} h` : "—"}</b><span>{ins.roi.skillsWithBaseline ? `hours saved (${ins.roi.skillsWithBaseline} baseline${ins.roi.skillsWithBaseline === 1 ? "" : "s"})` : "hours saved: set a baseline below"}</span></div>

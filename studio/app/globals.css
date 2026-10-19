@@ -956,3 +956,4 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .funnel-step b { font: 400 26px/1 var(--serif); }
 .funnel-step:hover { border-color: var(--ink-3); }
 .funnel-step.is-on { border-color: var(--flame); }
+.metric-defs { font-size: 13px; color: var(--ink-2); }

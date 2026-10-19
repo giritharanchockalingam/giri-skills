@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
+import { skillCounts, countsSentence } from "@/lib/counts";
 import { FunnelStrip } from "@/components/factory/Funnel";
 import { GATE_ORDER, GATE_LABEL, GATE_HELP, type Gate } from "@/lib/factory/funnel";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -17,7 +18,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const ctx = await requireWorkspace();
   const { skills, versions, states } = await loadPipeline(ctx.supabase, ctx.workspace.id);
-  const funnel = await loadFunnel(ctx.supabase, ctx.workspace.id);
+  const [funnel, counts] = await Promise.all([loadFunnel(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id)]);
   const gate = (GATE_ORDER as string[]).includes(sp.gate ?? "") ? (sp.gate as Gate) : null;
   const inGate = gate ? new Set(funnel.filter((f) => f.gate === gate).map((f) => f.slug)) : null;
   const stateById = new Map(states.map((s) => [s.version_id, s]));
@@ -37,13 +38,11 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   });
   const imported = new Set(versions.filter((v) => v.source.kind === "repo").map((v) => v.source.repo_skill));
   const importable = repoSkills.filter((s) => s.agent).map((s) => ({ id: s.id, name: s.name, domain: s.domain, description: s.description, imported: imported.has(s.id) }));
-  const published = items.filter((i) => i.status === "published").length;
-  const drafts = items.filter((i) => i.workingVersion != null).length;
 
   return (
     <>
       <PageHead eyebrow={`Skills · publish pipeline · ${ctx.workspace.name}`} title="Publish" em="pipeline" after="."
-        lead={items.length ? `${items.length} skill${items.length === 1 ? "" : "s"}: ${published} published, ${drafts} with a draft in progress.` : "No skills in this workspace yet."}
+        lead={items.length ? countsSentence(counts) : "No skills in this workspace yet."}
         caption="For people who publish skills: versions, evaluation evidence, approvals. To use a skill, start from Home or the Library — nothing here needs to be published for that."
         note={<><Link href="/repo/" className="link-flame">Library ({repoSkills.length} skills, evaluation scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Reference skills →</Link></>} />
       <div className="hero-actions mb-6">

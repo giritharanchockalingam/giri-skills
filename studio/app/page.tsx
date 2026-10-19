@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
+import { skillCounts } from "@/lib/counts";
+import { SkillCountsLine } from "@/components/SkillCountsLine";
 import { ReadyQueue } from "@/components/factory/Funnel";
 import { getContext, type WsCtx } from "@/lib/factory/db";
 import { listRecentAgents } from "@/lib/db/agents";
@@ -48,7 +50,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
     for (const [k, v] of Object.entries(patch)) { if (v) n.set(k, v); else n.delete(k); }
     return `/?${n.toString()}`;
   };
-  const [recentAgents, funnel] = await Promise.all([listRecentAgents(ctx.supabase, ctx.workspace.id),
+  const [recentAgents, counts, funnel] = await Promise.all([listRecentAgents(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id),
     ctx.role === "consumer" ? Promise.resolve([]) : loadFunnel(ctx.supabase, ctx.workspace.id)]);
   const suggestions = ["Check the RLS policies in my Supabase migration", "Is our AI chatbot high-risk under the EU AI Act?", "Estimate effort and price for this work breakdown"];
   const runnable = repoSkills.filter((s) => (s as unknown as { agent?: unknown }).agent).length;
@@ -68,6 +70,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
 
       <TaskBox suggestions={suggestions} />
       <ReadyQueue items={funnel} />
+      <SkillCountsLine c={counts} />
 
       <section className="section lc" aria-label="AI lifecycle">
         <Suspense fallback={null}><LifecycleFilters roles={roleOptions()} /></Suspense>
