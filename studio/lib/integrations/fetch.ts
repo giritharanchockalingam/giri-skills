@@ -6,8 +6,8 @@ type Fetch = typeof fetch;
 export class IntegrationError extends Error { status: number; constructor(status: number, message: string) { super(message); this.status = status; } }
 
 export function vercelConfig(env: Record<string, string | undefined> = process.env) {
-  const token = env.VERCEL_TOKEN?.trim(), teamId = env.VERCEL_TEAM_ID?.trim() || null;
-  return token ? { ok: true as const, token, teamId } : { ok: false as const, missing: ["VERCEL_TOKEN"] };
+  const token = env.VERCEL_TOKEN?.trim(), teamId = env.VERCEL_TEAM_ID?.trim() || null, slug = env.VERCEL_TEAM_SLUG?.trim() || null;
+  return token ? { ok: true as const, token, teamId, slug } : { ok: false as const, missing: ["VERCEL_TOKEN"] };
 }
 export function supabaseConfig(env: Record<string, string | undefined> = process.env) {
   const token = env.SUPABASE_ACCESS_TOKEN?.trim();
@@ -31,13 +31,21 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Prom
 }
 
 const V = "https://api.vercel.com";
-export async function readVercel(cfg: { token: string; teamId: string | null }, f: Fetch = fetch, now = Date.now()) {
+export async function readVercel(cfg: { token: string; teamId: string | null; slug?: string | null }, f: Fetch = fetch, now = Date.now()) {
   const q = (extra: Record<string, string>) => new URLSearchParams({ ...(cfg.teamId ? { teamId: cfg.teamId } : {}), ...extra }).toString();
-  const team = cfg.teamId ? await getJson<{ slug: string }>(`${V}/v2/teams/${cfg.teamId}`, cfg.token, f) : await getJson<{ user: { username: string } }>(`${V}/v2/user`, cfg.token, f).then((u) => ({ slug: u.user.username }));
+  // the team's URL slug (for dashboard links) is a nicety: a token that may not read team details still syncs projects
+  const team = await (cfg.teamId ? getJson<{ slug: string }>(`${V}/v2/teams/${cfg.teamId}`, cfg.token, f) : getJson<{ user: { username: string } }>(`${V}/v2/user`, cfg.token, f).then((u) => ({ slug: u.user.username })))
+    .catch(() => ({ slug: cfg.slug ?? null }));
   const projects: VercelProject[] = [];
   let from: string | null = null, pages = 0;
   do {
-    const r: { projects: VercelProject[]; pagination?: { next: number | null } } = await getJson(`${V}/v10/projects?${q({ limit: "100", ...(from ? { from } : {}) })}`, cfg.token, f);
+    let r: { projects: VercelProject[]; pagination?: { next: number | null } };
+    try { r = await getJson(`${V}/v10/projects?${q({ limit: "100", ...(from ? { from } : {}) })}`, cfg.token, f); }
+    catch (e) {
+      if (e instanceof IntegrationError && (e.status === 401 || e.status === 403))
+        throw new IntegrationError(e.status, `the Vercel token cannot list ${cfg.teamId ? `team ${cfg.teamId}'s` : "your"} projects (${e.status}). Create the token with Scope set to that team (vercel.com/account/tokens), then update VERCEL_TOKEN.`);
+      throw e;
+    }
     projects.push(...r.projects);
     from = r.pagination?.next ? String(r.pagination.next) : null;
   } while (from && ++pages < 10);
@@ -54,5 +62,10 @@ export async function readVercel(cfg: { token: string; teamId: string | null }, 
 }
 
 export async function readSupabase(cfg: { token: string }, f: Fetch = fetch): Promise<SupabaseProject[]> {
-  return getJson<SupabaseProject[]>("https://api.supabase.com/v1/projects", cfg.token, f);
+  try { return await getJson<SupabaseProject[]>("https://api.supabase.com/v1/projects", cfg.token, f); }
+  catch (e) {
+    if (e instanceof IntegrationError && e.status === 403 && /permission/i.test(e.message))
+      throw new IntegrationError(403, `${e.message.replace(/^.*?: /, "")}. Edit the Supabase access token (supabase.com/dashboard/account/tokens) and grant the permission named, read-only, then sync again.`);
+    throw e;
+  }
 }
