@@ -1,0 +1,118 @@
+{
+  "skill": "program-raid-status",
+  "cases": [
+    {
+      "id": "prompt-steerco-status",
+      "prompt": "Give me this week's steerco status for the Northwind Billing Assistant program from our RAID log and milestone plan: what's red, what's late and who owns the fix.",
+      "expected": [
+        "Asks for the as-of date if not given; never assumes today",
+        "Runs scripts/raid_status.py; reports overall RAG with the documented rule, the critical path and the top 5 risks by exposure",
+        "Unowned items show [TO BE BASELINED — owner: Program manager]"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the status report for the attached Northwind Billing Assistant RAID log and milestones as of 2026-10-16.",
+      "expected": [
+        "Overall RED; critical path M1 → M2 → M3 → M5 → M7 = 85 days; M3 slips 28 days; I1 overdue 14 days"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "status-report.md", "check": "contains:\"**Overall RAG: RED**\""},
+        {"file": "status-report.md", "check": "contains:\"M1 → M2 → M3 → M5 → M7 = 85 days\""},
+        {"file": "status.csv", "check": "contains:\"M3,RAG index on billing knowledge base,2026-09-25,2026-10-23,28,red,yes,in_progress\""},
+        {"file": "status.csv", "check": "contains:\"M6,Agent desktop integration,2026-10-30,2026-11-06,7,amber,no,in_progress\""},
+        {"file": "raid-actions.csv", "check": "contains:\"I1,issue,20,Integration lead,2026-10-02,14,36,\""},
+        {"file": "status-report.md", "check": "mermaid_parses"}
+      ]
+    },
+    {
+      "id": "agent-missing-as-of",
+      "prompt": "Status as of today please.",
+      "expected": [
+        "Asks once for the as-of date; does not use the system date"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:as_of"
+      ]
+    },
+    {
+      "id": "agent-unowned-not-invented",
+      "prompt": "R3 has no owner yet - just put the platform lead on it.",
+      "expected": [
+        "R3 and M7 owners are TBD for the Program manager; no owner is invented; a decision asks to name the owner"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "status-report.md", "check": "no_unowned_tbd"},
+        {"file": "raid-actions.csv", "check": "contains:\"R3,risk,15,[TO BE BASELINED — owner: Program manager],2026-10-20,0,45,Assign an owner; Mask notes before indexing\""},
+        {"file": "status-report.md", "check": "contains:\"Name an owner for R3\""}
+      ]
+    },
+    {
+      "id": "agent-strict-red-exits-1",
+      "prompt": "Gate the steerco pack: fail if the program is red.",
+      "expected": [
+        "Overall RED; strict exits 1 but every output is written"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "status-report.md", "check": "contains:\"`--strict` was set: the run fails (exit 1) because overall RAG is red.\""}
+      ]
+    },
+    {
+      "id": "agent-strict-amber-passes",
+      "prompt": "Gate the status for the on-plan variant; amber is acceptable.",
+      "expected": [
+        "Overall AMBER (M3 slips 10 days, at the amber boundary); strict passes with exit 0"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid-clean.csv",
+        "milestones": "evals/fixtures/milestones-green.csv",
+        "as_of": "2026-10-16",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "status-report.md", "check": "contains:\"**Overall RAG: AMBER**\""},
+        {"file": "status.csv", "check": "contains:\"M3,Agent desktop integration,2026-11-20,2026-11-30,10,amber,no,in_progress\""}
+      ]
+    },
+    {
+      "id": "agent-dependency-cycle-exits-1",
+      "prompt": "Status for the plan where data extract and RAG index depend on each other.",
+      "expected": [
+        "Stops with exit 1 and a clear dependency-cycle error naming M2 and M3"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones-cycle.csv",
+        "as_of": "2026-10-16"
+      },
+      "checks": [
+        "exit:1"
+      ]
+    }
+  ]
+}

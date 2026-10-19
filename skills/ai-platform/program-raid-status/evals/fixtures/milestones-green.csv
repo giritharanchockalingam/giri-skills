@@ -1,0 +1,5 @@
+# fictional fixture — Northwind Billing Assistant; on-plan variant
+id,milestone,baseline_date,forecast_date,duration_days,depends_on,status,owner
+M1,Discovery and use-case sign-off,2026-07-31,2026-07-31,20,,done,Product owner
+M2,RAG index,2026-11-20,2026-11-20,20,M1,in_progress,Platform lead
+M3,Agent desktop integration,2026-11-20,2026-11-30,10,M1,in_progress,Integration lead

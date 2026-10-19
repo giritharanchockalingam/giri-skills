@@ -247,6 +247,293 @@
   "bodyMd": "\n# Agent Architecture\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/agent-architecture --input <name>=<value> … --out <dir>` (see `--explain ai-platform/agent-architecture`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`pattern.md`, `design-check.csv`). A failed design check (exit 1) is the gate working: fix the doc or contracts and re-run.\n\n## When to use\n- Designing a new agentic system or reviewing one: pattern, state, tools, control flow, HITL, failure handling.\n- Framework-neutral by default; LangGraph patterns are given because they are the house standard (see `../../../shared/stack-conventions.md`).\n- NOT for: writing an MCP server (`mcp-server-builder`), retrieval tuning (`rag-pipeline-design`), scoring quality (`llm-eval-harness`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Job to be done, in one sentence, with the success metric | yes | user |\n| Actions the system may take (read-only vs write; external side effects) | yes | user |\n| Available tools/APIs/data sources and their auth model | yes | user / repo |\n| Autonomy appetite: who approves what, and the blast radius of a wrong action | yes | user; default to conservative if unstated |\n| Latency and cost envelope | no | user; mark `[TO BE BASELINED — owner: ___]` |\n| Non-functional constraints (data residency, PII, audit) | no | user |\n\nIf the job statement or the action list is missing, ask once. Never design an agent for an undefined task.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`, `../../../shared/stack-conventions.md`, `../../../shared/token-efficiency.md`.\n2. **Decide the pattern** with `references/decision-tree.md`. Default order of preference: deterministic workflow → single agent with bounded tools → multi-agent. Escalate only when the previous level fails a stated criterion. Record the criterion that forced the escalation.\n3. **Design state and graph** with `references/langgraph-patterns.md`: typed state schema, nodes, edges, interrupt points, checkpointer, retry policy. One graph diagram (Mermaid) and one state table.\n4. **Write tool contracts** with `references/mcp-tool-contracts.md` and `assets/tool-contract.schema.json`. Every tool: name, purpose, input schema, output schema, side-effect class (read / write / irreversible), idempotency, auth scope, timeout, error shape.\n5. **Place HITL checkpoints** with `references/hitl-placement.md`. Minimum: before any irreversible side effect and before any external communication. State what the human sees and what they can do (approve / edit / reject).\n6. **Fill the failure-modes table** from `references/failure-modes.md`: loops, tool misuse, context overflow, prompt injection, cascading multi-agent errors, cost runaway. Each has detection + mitigation + owner.\n7. **Produce the design doc** from `assets/agent-design-doc.md`. Include evaluation hooks (hand off to `llm-eval-harness`) and observability fields (trace id, step count, tokens, cost, tool calls).\n8. Run the self-check.\n\n## Output\n- `agent-design-<name>.md` from the template: decision, state schema, graph, tool contracts, HITL, failure modes, NFRs, open questions.\n- Tool contracts additionally as JSON (one file per tool) when the user is going to implement.\n\n## Self-check\n- [ ] The pattern decision names the criterion that ruled out the simpler option\n- [ ] State schema is typed; every field has an owner node and a reset rule\n- [ ] Every tool has a side-effect class and an idempotency statement\n- [ ] HITL before every irreversible or external-facing action\n- [ ] Failure table covers loops, tool misuse, context overflow, prompt injection at minimum\n- [ ] Step, token, cost, and wall-clock budgets are set (or `[TO BE BASELINED]`)\n- [ ] No vendor benchmark claims; no \"the model will figure it out\"\n\n## References\n- `references/decision-tree.md` — workflow vs single agent vs multi-agent\n- `references/langgraph-patterns.md` — state, graph, interrupts, checkpoints, retries\n- `references/mcp-tool-contracts.md` — contract rules and anti-patterns\n- `references/hitl-placement.md` — where humans go and what they see\n- `references/failure-modes.md` — failure modes with detection and mitigation\n- `scripts/pattern.py` — six decision-tree answers → `pattern.md` (pattern, rationale, rejected patterns)\n- `scripts/design_check.py` — design doc + tool contracts → `design-check.csv`; exit 1 on a missing section or invalid contract\n"
  },
  {
+  "id": "ai-platform/ai-adoption-and-literacy",
+  "domain": "ai-platform",
+  "stage": "strategy",
+  "name": "ai-adoption-and-literacy",
+  "description": "Use when the user asks how people will learn and adopt an AI system or AI in general — \"AI literacy plan\", \"who needs which AI training\", \"EU AI Act Article 4 training\", \"rollout and change plan for our assistant\", \"adoption KPIs\", \"how many training hours\". Produces a role-based curriculum (curriculum.csv), training load per wave and business unit (training-load.csv), an adoption plan (adoption-plan.md - Summary, Who needs what, Curriculum, Rollout, Adoption KPIs, Art. 4 note, Method) and adoption.json, from a population CSV (role, headcount, exposure, proficiency) and a module catalog (default curriculum shipped, labelled as the skill's own design). Overseers always get the human-oversight module; KPI targets are never defaulted. Not for an AI strategy or CoE operating model (use ai-strategy-coe), the release rollout of the system itself (use ai-release-plan) or legal advice on Article 4 scope.",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "strategy",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "population",
+     "type": "csv",
+     "required": true,
+     "from": "role,headcount,exposure,proficiency,business_unit (layout: assets/population-template.csv; exposure none|user|operator|builder|overseer; proficiency 0-3)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "catalog",
+     "type": "csv",
+     "required": false,
+     "from": "module_id,title,hours,audience,level,format[,mandatory_for] (default: assets/literacy-modules.csv, the skill's own curriculum design)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "waves",
+     "type": "csv",
+     "required": false,
+     "from": "wave,business_unit,start_date (layout: assets/waves-template.csv); missing waves are TBD for the Change lead",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "targets",
+     "type": "csv",
+     "required": false,
+     "from": "adoption KPI targets key,value,source (layout: assets/adoption-targets.csv); missing targets are TBD for the Change lead",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "strict",
+     "type": "flag",
+     "required": false,
+     "from": "true to fail the run (exit 1) when an operator or overseer role has no module mapped",
+     "default": null,
+     "flag": "--strict",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "plan",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "plan",
+     "kind": "script",
+     "cmd": "python3 -I scripts/adoption_plan.py --population {population} [--catalog {catalog}] [--waves {waves}] [--targets {targets}] {strict} --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/curriculum.csv",
+     "checks": [
+      "exists",
+      "csv:[role,module_id,title,hours,reason]",
+      "csv_rows:module_id!empty",
+      "csv_rows:hours~^\\\\d+(\\\\.\\\\d+)?$",
+      "cmd:\"python3 -I scripts/adoption_plan.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/training-load.csv",
+     "checks": [
+      "exists",
+      "csv:[wave,business_unit,people,hours]",
+      "csv_rows:wave!empty",
+      "csv_rows:hours~^\\\\d+(\\\\.\\\\d+)?$"
+     ]
+    },
+    {
+     "path": "{out}/adoption-plan.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Who needs what\",\"Curriculum\",\"Rollout\",\"Adoption KPIs\",\"Art. 4 note\",\"Method\"]",
+      "no_unowned_tbd",
+      "contains:\"does not require providers or deployers to guarantee\""
+     ]
+    },
+    {
+     "path": "{out}/adoption.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"training_hours\\\"\"",
+      "cmd:\"python3 -I scripts/adoption_plan.py --verify {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "population": "evals/fixtures/population.csv",
+     "waves": "evals/fixtures/waves.csv",
+     "targets": "evals/fixtures/targets.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-adoption-and-literacy-plan\">AI Adoption and Literacy Plan</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-adoption-and-literacy --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-adoption-and-literacy</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>curriculum.csv</code>, <code>training-load.csv</code>, <code>adoption-plan.md</code>, <code>adoption.json</code>). <code>--verify</code> recomputes every hour and seat total from <code>adoption.json</code>.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC strategy stage: before an AI system (or AI tools in general) reaches staff, to plan who learns what, when, and how adoption is measured.</li><li>&quot;Which roles need which AI training, and how many hours is that per wave?&quot;</li><li>Evidence of EU AI Act Article 4 literacy measures (a record of measures, not a certificate).</li><li>NOT for: the AI strategy or CoE operating model (<code>ai-strategy-coe</code>), the staged release of the system itself (<code>ai-release-plan</code>), legal determinations of provider/deployer status or high-risk scope (route to counsel).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>population</code> — role, headcount, exposure, proficiency, business_unit</td><td>yes</td><td>HR / Change lead (copy <code>assets/population-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>catalog</code> — module_id, title, hours, audience, level, format, mandatory_for</td><td>no</td><td>L&amp;D lead</td><td>default <code>assets/literacy-modules.csv</code> (the skill's own design, labelled so in the plan)</td></tr><tr><td><code>waves</code> — wave, business_unit, start_date</td><td>no</td><td>Change lead (copy <code>assets/waves-template.csv</code>)</td><td>wave and start date are <code>[TO BE BASELINED — owner: Change lead]</code></td></tr><tr><td><code>targets</code> — key,value,source</td><td>no</td><td>Change lead / product owner (copy <code>assets/adoption-targets.csv</code>)</td><td>each KPI target is <code>[TO BE BASELINED — owner: Change lead]</code></td></tr><tr><td><code>strict</code> — true/false</td><td>no</td><td>Change lead</td><td>false: gaps reported, exit 0</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Fill the population: one row per role and business unit; set exposure and proficiency per <code>references/method.md</code>.</li><li>Review the default catalog with the L&amp;D lead or supply your own; keep a <code>mandatory_for</code> overseer module.</li><li>Run the agent. A role needs a module when the module audience includes its exposure and the module level exceeds its proficiency; overseer-mandatory modules are always required.</li><li>Read the gaps: operator/overseer roles with no module and business units without a wave.</li><li>With <code>strict=true</code>, any operator/overseer role without a module fails the run (exit 1) — use it before go-live.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>curriculum.csv</code> — <code>business_unit, role, module_id, title, hours, reason</code>.</li><li><code>training-load.csv</code> — <code>wave, business_unit, start_date, people, learners, hours</code>.</li><li><code>adoption-plan.md</code> — <strong>Summary</strong>, <strong>Who needs what</strong>, <strong>Curriculum</strong> (seats, seat-hours), <strong>Rollout</strong>, <strong>Adoption KPIs</strong>, <strong>Art. 4 note</strong>, <strong>Method</strong>.</li><li><code>adoption.json</code> — roles, modules, seats, totals, load, KPIs, gaps, gate.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every overseer has the human-oversight module; every operator/overseer has at least one module</li><li>[ ] Hours and seats pass <code>--verify</code></li><li>[ ] KPI targets came from <code>targets</code> or are TBD for the Change lead; none invented</li><li>[ ] The plan says when the default catalog (skill design) was used</li><li>[ ] Art. 4 note uses the amended wording and says it is not a legal determination</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — exposure levels, proficiency scale, rules, gate, limits</li><li><code>references/sources.md</code> — EU AI Act Art. 4 (as amended by Regulation (EU) 2026/1744), Art. 3(56), Art. 26(2), Art. 113, with URLs and date checked</li><li><code>assets/literacy-modules.csv</code> — default curriculum (skill design)</li><li><code>assets/population-template.csv</code>, <code>assets/waves-template.csv</code>, <code>assets/adoption-targets.csv</code> — input layouts</li><li><code>scripts/adoption_plan.py</code> — planner and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "adoption-targets.csv",
+    "literacy-modules.csv",
+    "population-template.csv",
+    "waves-template.csv"
+   ],
+   "scripts": [
+    "adoption_plan.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-literacy-plan",
+    "prompt": "We are rolling out the Northwind Billing Assistant to billing, finance and tech staff. Who needs what AI training, how many hours is that, and does this cover EU AI Act Article 4?",
+    "expected": [
+     "Asks for (or builds from) a population CSV with role, headcount, exposure, proficiency and business unit",
+     "Runs scripts/adoption_plan.py; overseers always get the human-oversight module",
+     "Uses the amended Article 4 wording (support the development of AI literacy; no individual level guaranteed) and says it is not a legal determination",
+     "Does not invent KPI targets; missing ones are TBD for the Change lead"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the AI literacy and adoption plan for the attached Northwind Billing Assistant population, waves and targets.",
+    "expected": [
+     "221 people, 812.5 training hours; Customer Operations wave 2 carries 558 hours; AIL-02 has 166 seats"
+    ]
+   },
+   {
+    "id": "agent-missing-population",
+    "prompt": "Plan AI training for the billing team; you know roughly who they are.",
+    "expected": [
+     "Asks once for the population CSV; does not guess headcounts"
+    ]
+   },
+   {
+    "id": "agent-no-targets-no-waves-not-invented",
+    "prompt": "Just use typical industry adoption targets and pick the rollout dates yourself.",
+    "expected": [
+     "Every KPI target and every wave/start date is TBD for the Change lead; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-strict-operator-without-module-exits-1",
+    "prompt": "Gate the plan: fail if any operator or overseer role has no training mapped.",
+    "expected": [
+     "Support analyst at proficiency 3 has no module; strict fails with exit 1 but the plan is written"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the AI literacy and adoption plan for the attached Northwind Billing Assistant population, waves and targets.",
+    "inputs": {
+     "population": "evals/fixtures/population.csv",
+     "waves": "evals/fixtures/waves.csv",
+     "targets": "evals/fixtures/targets.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "adoption-plan.md",
+      "check": "contains:\"Total training load: 812.5 hours across 8 of 8 catalog modules.\""
+     },
+     {
+      "file": "adoption-plan.md",
+      "check": "contains:\"| Customer Operations | Billing team lead | overseer | 1 | 12 | AIL-03, AIL-06, AIL-07 | 6.5 | 78 |\""
+     },
+     {
+      "file": "adoption-plan.md",
+      "check": "contains:\"| AIL-02 | Prompting and checking outputs for your tasks | 2 | 2 | hands-on lab | user/operator | — | 166 | 332 |\""
+     },
+     {
+      "file": "training-load.csv",
+      "check": "contains:\"2,Customer Operations,2026-11-16,132,132,558\""
+     },
+     {
+      "file": "curriculum.csv",
+      "check": "contains:\"Finance,Finance controller,AIL-06,Human oversight in practice: override and stop,2,\\\"mandatory for overseer (rule), regardless of proficiency\\\"\""
+     }
+    ],
+    "expected": [
+     "221 people, 812.5 training hours; Customer Operations wave 2 carries 558 hours; AIL-02 has 166 seats"
+    ]
+   },
+   {
+    "id": "agent-missing-population",
+    "prompt": "Plan AI training for the billing team; you know roughly who they are.",
+    "inputs": {
+     "waves": "evals/fixtures/waves.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:population"
+    ],
+    "expected": [
+     "Asks once for the population CSV; does not guess headcounts"
+    ]
+   },
+   {
+    "id": "agent-no-targets-no-waves-not-invented",
+    "prompt": "Just use typical industry adoption targets and pick the rollout dates yourself.",
+    "inputs": {
+     "population": "evals/fixtures/population.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "adoption-plan.md",
+      "check": "no_unowned_tbd"
+     },
+     {
+      "file": "adoption-plan.md",
+      "check": "contains:\"| weekly_active_rate | Share of licensed users who used the AI system in the last 7 days | product telemetry | [TO BE BASELINED — owner: Change lead] | — |\""
+     },
+     {
+      "file": "training-load.csv",
+      "check": "contains:\"[TO BE BASELINED — owner: Change lead],Technology,[TO BE BASELINED — owner: Change lead],14,14,142\""
+     }
+    ],
+    "expected": [
+     "Every KPI target and every wave/start date is TBD for the Change lead; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-strict-operator-without-module-exits-1",
+    "prompt": "Gate the plan: fail if any operator or overseer role has no training mapped.",
+    "inputs": {
+     "population": "evals/fixtures/population-gap.csv",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "adoption-plan.md",
+      "check": "contains:\"`--strict` was set: the run fails (exit 1).\""
+     },
+     {
+      "file": "adoption-plan.md",
+      "check": "contains:\"Support analyst (AI ops) (Technology)\""
+     },
+     {
+      "file": "adoption.json",
+      "check": "contains:\"\\\"gate\\\": \\\"fail\\\"\""
+     }
+    ],
+    "expected": [
+     "Support analyst at proficiency 3 has no module; strict fails with exit 1 but the plan is written"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI Adoption and Literacy Plan\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-adoption-and-literacy --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-adoption-and-literacy`). Report the `run.json` results; do not hand-write the deliverables the script produces (`curriculum.csv`, `training-load.csv`, `adoption-plan.md`, `adoption.json`). `--verify` recomputes every hour and seat total from `adoption.json`.\n\n## When to use\n- ADLC strategy stage: before an AI system (or AI tools in general) reaches staff, to plan who learns what, when, and how adoption is measured.\n- \"Which roles need which AI training, and how many hours is that per wave?\"\n- Evidence of EU AI Act Article 4 literacy measures (a record of measures, not a certificate).\n- NOT for: the AI strategy or CoE operating model (`ai-strategy-coe`), the staged release of the system itself (`ai-release-plan`), legal determinations of provider/deployer status or high-risk scope (route to counsel).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `population` — role, headcount, exposure, proficiency, business_unit | yes | HR / Change lead (copy `assets/population-template.csv`) | run stops (exit 2), asks once |\n| `catalog` — module_id, title, hours, audience, level, format, mandatory_for | no | L&D lead | default `assets/literacy-modules.csv` (the skill's own design, labelled so in the plan) |\n| `waves` — wave, business_unit, start_date | no | Change lead (copy `assets/waves-template.csv`) | wave and start date are `[TO BE BASELINED — owner: Change lead]` |\n| `targets` — key,value,source | no | Change lead / product owner (copy `assets/adoption-targets.csv`) | each KPI target is `[TO BE BASELINED — owner: Change lead]` |\n| `strict` — true/false | no | Change lead | false: gaps reported, exit 0 |\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Fill the population: one row per role and business unit; set exposure and proficiency per `references/method.md`.\n3. Review the default catalog with the L&D lead or supply your own; keep a `mandatory_for` overseer module.\n4. Run the agent. A role needs a module when the module audience includes its exposure and the module level exceeds its proficiency; overseer-mandatory modules are always required.\n5. Read the gaps: operator/overseer roles with no module and business units without a wave.\n6. With `strict=true`, any operator/overseer role without a module fails the run (exit 1) — use it before go-live.\n7. Run the self-check.\n\n## Output\n- `curriculum.csv` — `business_unit, role, module_id, title, hours, reason`.\n- `training-load.csv` — `wave, business_unit, start_date, people, learners, hours`.\n- `adoption-plan.md` — **Summary**, **Who needs what**, **Curriculum** (seats, seat-hours), **Rollout**, **Adoption KPIs**, **Art. 4 note**, **Method**.\n- `adoption.json` — roles, modules, seats, totals, load, KPIs, gaps, gate.\n\n## Self-check\n- [ ] Every overseer has the human-oversight module; every operator/overseer has at least one module\n- [ ] Hours and seats pass `--verify`\n- [ ] KPI targets came from `targets` or are TBD for the Change lead; none invented\n- [ ] The plan says when the default catalog (skill design) was used\n- [ ] Art. 4 note uses the amended wording and says it is not a legal determination\n\n## References\n- `references/method.md` — exposure levels, proficiency scale, rules, gate, limits\n- `references/sources.md` — EU AI Act Art. 4 (as amended by Regulation (EU) 2026/1744), Art. 3(56), Art. 26(2), Art. 113, with URLs and date checked\n- `assets/literacy-modules.csv` — default curriculum (skill design)\n- `assets/population-template.csv`, `assets/waves-template.csv`, `assets/adoption-targets.csv` — input layouts\n- `scripts/adoption_plan.py` — planner and `--verify` (argparse; stdlib)\n"
+ },
+ {
   "id": "ai-platform/ai-governance-risk",
   "domain": "ai-platform",
   "stage": "govern",
@@ -1250,6 +1537,287 @@
    }
   ],
   "bodyMd": "\n# AI Release Plan (staged rollout)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-release-plan --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-release-plan`). Report the `run.json` results; do not hand-write the deliverables the script produces (`release-plan.md`, `gates.json`). A first-stage gate that is not met fails the run (exit 1) on purpose; the plan is still written so the blockers are visible.\n\n## When to use\n- A model, prompt, agent or RAG change is about to reach users and needs shadow → canary → GA with explicit gates.\n- \"Are we ready?\" — evaluate the owner's gates against the measured facts now.\n- NOT for: building the eval set or scoring it (`llm-eval-harness`), risk tiering (`ai-governance-risk`), pipeline wiring (`ci-cd-vercel-github`), live monitoring after GA (`llm-observability`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `facts` CSV `key,value`: `system_name`, `risk_tier` (low/medium/high) | yes | release owner; tier from `ai-governance-risk` |\n| Measured metrics named by gates (e.g. `eval_pass_rate`, `redteam_pass_rate`, `latency_p95_ms`, `error_rate`) | for gate status | eval run, red-team run, staging telemetry |\n| `daily_requests`, `min_observed_requests` | for durations | traffic forecast; owner's confidence target |\n| `rollback_time_min`, `owner_<role>` (eval_lead, sre_oncall, release_manager, product_owner) | no | owner; missing → `[TO BE BASELINED — owner: Release manager]` |\n| `gates` CSV `stage,metric,min,max` (stage ∈ offline_eval, shadow, canary, ga) | yes | release owner — the skill never supplies a threshold |\n\nIf `facts` or `gates` is missing the runner exits 2 and asks once. Missing optional facts stay TBD with an owner role; nothing is invented.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Copy `assets/release-facts.csv` and `assets/release-gates.csv`; the owner fills measured values and thresholds (with sources).\n3. Run the skill. The script builds the stage list from `references/rollout-policy.md` (canary steps by risk tier — the skill's policy, owner-overridable via `canary_steps`).\n4. It evaluates every gate against the facts now (`references/gate-method.md`): met / NOT MET / not measured; `not measured` never counts as met.\n5. It computes minimum shadow/canary durations: `ceil(min_observed_requests ÷ (daily_requests × traffic% ÷ 24))` hours.\n6. It turns every live-stage gate into a rollback trigger and assigns an owner per step.\n7. Exit 1 if any `offline_eval` gate is not met or none was supplied; report the blockers, do not soften them.\n8. Run the self-check.\n\n## Output\n- `release-plan.md`: Readiness, Stages (traffic %, served, min hours, owner), Gates (threshold, actual now, status, source), Rollback (owner, time, triggers), Owners.\n- `gates.json`: the same plan, machine-readable (`first_stage_ready`, `stages`, `gates`, `rollback_triggers`, `owners`).\n\n## Self-check\n- [ ] Every gate threshold came from the gates CSV; none defaulted\n- [ ] `not measured` gates are shown as such, never as met\n- [ ] Canary steps state their basis (tier policy or owner override)\n- [ ] Durations trace to `daily_requests` and `min_observed_requests`, or are TBD with an owner\n- [ ] Every rollback trigger maps to a gate; rollback owner named or TBD with role\n- [ ] Exit 1 when the first stage is blocked\n\n## References\n- `references/rollout-policy.md` — stage sequence, canary steps per risk tier (skill policy), owner per step\n- `references/gate-method.md` — gate statuses, duration formula, rollback triggers\n- `assets/release-facts.csv`, `assets/release-gates.csv` — input layouts\n- `scripts/release_plan.py` — the planner (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/ai-slo-definition",
+  "domain": "ai-platform",
+  "stage": "requirements",
+  "name": "ai-slo-definition",
+  "description": "Use when the user needs service-level objectives for an AI feature — \"define SLOs for our assistant\", \"what should our latency and availability targets be\", \"are we inside our error budget\", \"set up burn-rate alerts\", \"quality and cost per request as SLOs\". Produces slos.csv, slo-spec.md (Summary, SLIs and objectives, Error budgets, Alerting policy, Method) and slo.json from a request log - availability, latency under threshold, quality pass rate and cost under threshold as SLIs, nearest-rank p50/p95/p99, error budget, budget consumed and multiwindow burn rates per the Google SRE workbook (14.4x / 6x / 1x for 30 days). Without targets it proposes objectives from observed data, each marked to be baselined by the Product owner. Exit 1 when an agreed SLO is breached. Not for live dashboards or trace schemas (llm-observability), distribution drift (drift-monitor) or monthly API cost forecasts (llm-cost-model).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "requirements",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "log",
+     "type": "csv",
+     "required": true,
+     "from": "request log timestamp (ISO-8601), latency_ms, status ok|error, optional quality_pass 0/1, optional cost_usd (layout: assets/log-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "targets",
+     "type": "csv",
+     "required": false,
+     "from": "agreed targets sli,objective,threshold,window_days (layout: assets/targets-template.csv); without it every objective is a proposal for the Product owner",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "system",
+     "type": "string",
+     "required": false,
+     "from": "name of the AI feature for the report title",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "slo",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "slo",
+     "kind": "script",
+     "cmd": "python3 -I scripts/slo.py --log {log} [--targets {targets}] [--system {system}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/slos.csv",
+     "checks": [
+      "exists",
+      "csv:[sli,objective,threshold,observed,budget_consumed,burn_rate,status]",
+      "csv_rows:status~^(met|at-risk|breached|proposed)$",
+      "csv_rows:observed~^[01]\\\\.\\\\d{5}$",
+      "cmd:\"python3 -I scripts/slo.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/slo-spec.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"SLIs and objectives\",\"Error budgets\",\"Alerting policy\",\"Method\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/slo.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/slo.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"verdict\\\"\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "log": "evals/fixtures/requests.csv",
+     "targets": "evals/fixtures/targets.csv",
+     "system": "Northwind Billing Assistant"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-slo-definition\">AI SLO Definition</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-slo-definition --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-slo-definition</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>slos.csv</code>, <code>slo-spec.md</code>, <code>slo.json</code>). An agreed SLO with budget consumed above 1 fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass <code>--verify</code>, which recomputes budgets, alerts and statuses from the counts in <code>slo.json</code>.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC requirements stage: turn &quot;it should be fast and reliable&quot; into measurable SLIs, objectives and error budgets before build sign-off.</li><li>Drafting first objectives from a pilot or shadow log: the skill proposes them from observed data for the Product owner to accept or change.</li><li>Checking a release or a week of traffic against agreed targets, and wiring the burn-rate alert policy.</li><li>NOT for: dashboards, trace schemas and live monitoring (<code>llm-observability</code>); input or score drift (<code>drift-monitor</code>); monthly API spend forecasts (<code>llm-cost-model</code>); judging answer quality itself (<code>llm-eval-harness</code> produces the <code>quality_pass</code> labels).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>log</code> — request log CSV</td><td>yes</td><td>platform / API gateway logs (copy <code>assets/log-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>targets</code> — <code>sli,objective,threshold,window_days</code></td><td>no</td><td>Product owner + SRE lead (copy <code>assets/targets-template.csv</code>)</td><td>objectives proposed from the data, each <code>[TO BE BASELINED — owner: Product owner]</code>; never presented as agreed</td></tr><tr><td><code>system</code> — feature name</td><td>no</td><td>Product owner</td><td>title reads &quot;AI feature&quot;</td></tr></tbody></table>\n<p>An SLI with an agreed target but no eligible rows in the log exits 2. Without <code>quality_pass</code> or <code>cost_usd</code> values, those SLIs are listed as not measured with a named owner.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Confirm the log covers normal traffic (ideally several days; the 6 h and 3 d alert windows need that much history).</li><li>Run without <code>targets</code> first if none are agreed; take the proposals to the Product owner and SRE lead.</li><li>Run with the agreed <code>targets</code>. <code>scripts/slo.py</code> applies <code>references/method.md</code>.</li><li>Read Summary, then Error budgets (consumed &gt; 1 is breached), then Alerting policy (which alerts fire now).</li><li>On exit 1: open an incident or a reliability work item for each breached SLI; do not lower the objective to pass the gate without the Product owner.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>slos.csv</code> — <code>sli, objective, threshold, observed, budget_consumed, burn_rate, status, note</code> (burn_rate = last 1 h; status met | at-risk | breached | proposed).</li><li><code>slo-spec.md</code> — <strong>Summary</strong>, <strong>SLIs and objectives</strong>, <strong>Error budgets</strong>, <strong>Alerting policy</strong> (burn per window, thresholds, fires), <strong>Method</strong>.</li><li><code>slo.json</code> — exact counts and fractions per SLI and window, verdict.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every observed value comes from the log; percentiles are nearest-rank</li><li>[ ] Every proposed objective carries <code>[TO BE BASELINED — owner: Product owner]</code>; none is called agreed</li><li>[ ] Burn-rate thresholds and windows match <code>references/sources.md</code> (SRE workbook, checked 2026-10-18)</li><li>[ ] A breached agreed SLO exits 1 with full outputs</li><li>[ ] Limits stated: sample log, short logs cannot show long windows, quality depends on labelling</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — SLI definitions, budget and burn formulas, proposal rules, hand-checked worked example</li><li><code>references/sources.md</code> — Google SRE workbook burn-rate policy with URL and date checked</li><li><code>assets/targets-template.csv</code>, <code>assets/log-template.csv</code> — input layouts</li><li><code>scripts/slo.py</code> — calculator and <code>--verify</code> (argparse; stdlib; exit 0 / 1 breached / 2 input)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "log-template.csv",
+    "targets-template.csv"
+   ],
+   "scripts": [
+    "slo.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-define-slos",
+    "prompt": "We're about to launch the Northwind Billing Assistant. Help us define SLOs — we have a week of pilot logs but no agreed targets.",
+    "expected": [
+     "Runs scripts/slo.py on the pilot log without targets; proposes objectives from observed data",
+     "Labels every proposal [TO BE BASELINED — owner: Product owner]; never calls them agreed",
+     "Explains error budget and the SRE workbook multiwindow burn-rate alerts (14.4x 1h/5m, 6x 6h/30m)"
+    ]
+   },
+   {
+    "id": "prompt-drift-routed",
+    "prompt": "Has the distribution of our model's confidence scores shifted since launch?",
+    "expected": [
+     "Routes distribution drift to drift-monitor; this skill measures SLIs against objectives"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Measure the Northwind Billing Assistant against our agreed SLO targets.",
+    "expected": [
+     "All four SLOs met: availability 0.99375 consumed 0.625; latency 0.94549 consumed 0.545; quality 0.95833 consumed 0.833 burn 1.000; cost 0.90000 consumed 0.500; exit 0"
+    ]
+   },
+   {
+    "id": "agent-missing-log",
+    "prompt": "Define SLOs for our assistant.",
+    "expected": [
+     "Asks once for the request log"
+    ]
+   },
+   {
+    "id": "agent-no-targets-proposes-not-invents",
+    "prompt": "We have no targets yet; just set sensible SLOs.",
+    "expected": [
+     "Every objective is proposed from the data (availability 0.99, latency 1700 ms at 0.95, quality 0.95, cost 0.003 at 0.95), each to be baselined by the Product owner; exit 0"
+    ]
+   },
+   {
+    "id": "agent-incident-breach-exits-1",
+    "prompt": "Errors spiked in the last 20 minutes. Check the SLOs and alerts.",
+    "expected": [
+     "Availability breached (23 bad of 480, consumed 4.792) and both page alerts fire; latency 0.94748 still met; run exits 1 with full outputs"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Measure the Northwind Billing Assistant against our agreed SLO targets.",
+    "inputs": {
+     "log": "evals/fixtures/requests.csv",
+     "targets": "evals/fixtures/targets.csv",
+     "system": "Northwind Billing Assistant"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:slos.csv",
+     {
+      "file": "slos.csv",
+      "check": "contains:\"availability,0.99,,0.99375,0.625,0.000,met,agreed target\""
+     },
+     {
+      "file": "slos.csv",
+      "check": "contains:\"latency,0.9,1650,0.94549,0.545,\""
+     },
+     {
+      "file": "slos.csv",
+      "check": "contains:\"quality,0.95,,0.95833,0.833,1.000,met,agreed target\""
+     },
+     {
+      "file": "slos.csv",
+      "check": "contains:\"cost,0.8,0.0028,0.90000,0.500,0.500,met,agreed target\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "contains:\"**All agreed SLOs met.**\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "contains:\"p50 1238 ms · p95 1653 ms\""
+     }
+    ],
+    "expected": [
+     "All four SLOs met: availability 0.99375 consumed 0.625; latency 0.94549 consumed 0.545; quality 0.95833 consumed 0.833 burn 1.000; cost 0.90000 consumed 0.500; exit 0"
+    ]
+   },
+   {
+    "id": "agent-missing-log",
+    "prompt": "Define SLOs for our assistant.",
+    "inputs": {
+     "targets": "evals/fixtures/targets.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:log"
+    ],
+    "expected": [
+     "Asks once for the request log"
+    ]
+   },
+   {
+    "id": "agent-no-targets-proposes-not-invents",
+    "prompt": "We have no targets yet; just set sensible SLOs.",
+    "inputs": {
+     "log": "evals/fixtures/requests.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "slos.csv",
+      "check": "csv_rows:status~^proposed$"
+     },
+     {
+      "file": "slos.csv",
+      "check": "contains:\"latency,0.95,1700,1.00000,0.000,0.000,proposed,[TO BE BASELINED — owner: Product owner]\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "contains:\"**No agreed targets.**\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "contains:\"[TO BE BASELINED — owner: SRE lead]\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Every objective is proposed from the data (availability 0.99, latency 1700 ms at 0.95, quality 0.95, cost 0.003 at 0.95), each to be baselined by the Product owner; exit 0"
+    ]
+   },
+   {
+    "id": "agent-incident-breach-exits-1",
+    "prompt": "Errors spiked in the last 20 minutes. Check the SLOs and alerts.",
+    "inputs": {
+     "log": "evals/fixtures/requests-incident.csv",
+     "targets": "evals/fixtures/targets.csv",
+     "system": "Northwind Billing Assistant"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "slos.csv",
+      "check": "contains:\"availability,0.99,,0.95208,4.792,33.333,breached,agreed target\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "contains:\"| availability | fast-burn page | 1 h / 5 m | 14.40 | 33.333 | 100.000 | yes | page |\""
+     },
+     {
+      "file": "slo-spec.md",
+      "check": "contains:\"**BREACHED: availability.**\""
+     },
+     {
+      "file": "slos.csv",
+      "check": "contains:\"latency,0.9,1650,0.94748,0.525,0.250,met,agreed target\""
+     }
+    ],
+    "expected": [
+     "Availability breached (23 bad of 480, consumed 4.792) and both page alerts fire; latency 0.94748 still met; run exits 1 with full outputs"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI SLO Definition\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-slo-definition --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-slo-definition`). Report the `run.json` results; do not hand-write the deliverables the script produces (`slos.csv`, `slo-spec.md`, `slo.json`). An agreed SLO with budget consumed above 1 fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which recomputes budgets, alerts and statuses from the counts in `slo.json`.\n\n## When to use\n- ADLC requirements stage: turn \"it should be fast and reliable\" into measurable SLIs, objectives and error budgets before build sign-off.\n- Drafting first objectives from a pilot or shadow log: the skill proposes them from observed data for the Product owner to accept or change.\n- Checking a release or a week of traffic against agreed targets, and wiring the burn-rate alert policy.\n- NOT for: dashboards, trace schemas and live monitoring (`llm-observability`); input or score drift (`drift-monitor`); monthly API spend forecasts (`llm-cost-model`); judging answer quality itself (`llm-eval-harness` produces the `quality_pass` labels).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `log` — request log CSV | yes | platform / API gateway logs (copy `assets/log-template.csv`) | run stops (exit 2), asks once |\n| `targets` — `sli,objective,threshold,window_days` | no | Product owner + SRE lead (copy `assets/targets-template.csv`) | objectives proposed from the data, each `[TO BE BASELINED — owner: Product owner]`; never presented as agreed |\n| `system` — feature name | no | Product owner | title reads \"AI feature\" |\n\nAn SLI with an agreed target but no eligible rows in the log exits 2. Without `quality_pass` or `cost_usd` values, those SLIs are listed as not measured with a named owner.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the log covers normal traffic (ideally several days; the 6 h and 3 d alert windows need that much history).\n3. Run without `targets` first if none are agreed; take the proposals to the Product owner and SRE lead.\n4. Run with the agreed `targets`. `scripts/slo.py` applies `references/method.md`.\n5. Read Summary, then Error budgets (consumed > 1 is breached), then Alerting policy (which alerts fire now).\n6. On exit 1: open an incident or a reliability work item for each breached SLI; do not lower the objective to pass the gate without the Product owner.\n7. Run the self-check.\n\n## Output\n- `slos.csv` — `sli, objective, threshold, observed, budget_consumed, burn_rate, status, note` (burn_rate = last 1 h; status met | at-risk | breached | proposed).\n- `slo-spec.md` — **Summary**, **SLIs and objectives**, **Error budgets**, **Alerting policy** (burn per window, thresholds, fires), **Method**.\n- `slo.json` — exact counts and fractions per SLI and window, verdict.\n\n## Self-check\n- [ ] Every observed value comes from the log; percentiles are nearest-rank\n- [ ] Every proposed objective carries `[TO BE BASELINED — owner: Product owner]`; none is called agreed\n- [ ] Burn-rate thresholds and windows match `references/sources.md` (SRE workbook, checked 2026-10-18)\n- [ ] A breached agreed SLO exits 1 with full outputs\n- [ ] Limits stated: sample log, short logs cannot show long windows, quality depends on labelling\n\n## References\n- `references/method.md` — SLI definitions, budget and burn formulas, proposal rules, hand-checked worked example\n- `references/sources.md` — Google SRE workbook burn-rate policy with URL and date checked\n- `assets/targets-template.csv`, `assets/log-template.csv` — input layouts\n- `scripts/slo.py` — calculator and `--verify` (argparse; stdlib; exit 0 / 1 breached / 2 input)\n"
  },
  {
   "id": "ai-platform/ai-strategy-coe",
@@ -2273,6 +2841,323 @@
    }
   ],
   "bodyMd": "\n# Data Readiness Assessment\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-readiness-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-readiness-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`readiness.json`, `readiness.md`). A \"Not ready\" verdict exits 1 on purpose: the run is telling you the data fails an owner threshold.\n\n## When to use\n- Gate check at the ADLC data stage: before committing to a use case, a RAG corpus, a fine-tune or a model build.\n- \"Profile this extract and tell me if it meets the requirements the data owner signed off.\"\n- Re-check after a data fix: re-run with the same requirements file and compare verdicts.\n- NOT for: PII discovery or handling policy (`pii-data-inventory`), building train/val/test splits (`finetune-dataset-builder`), designing pipelines or data contracts, full-population data quality monitoring.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `data` — sample dataset CSV with header | yes | data owner / engineer extract | run stops (exit 2), asks once |\n| `requirements` — `key,value` thresholds | yes | data owner sign-off (copy `assets/readiness-requirements.csv`) | run stops (exit 2), asks once |\n| `as_of` — ISO date for freshness | no | the assessment date the owner agrees | freshness reported TBD |\n\nRequirement keys: `min_rows`, `max_null_pct`, `required_columns` (`a;b;c`), `unique_key` (`a[;b]`), `max_duplicate_rows`, `date_column` + `max_age_days`. A blank or absent key leaves its dimension `[TO BE BASELINED — owner: Data owner]`. Unknown keys are listed in Notes and ignored.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the sample is representative (source system, extract date, filter) and that the requirements came from the accountable data owner, not from this skill.\n3. Run the agent. `scripts/assess.py` profiles every column (null %, inferred type, distinct), counts fully duplicated rows, and scores six dimensions — volume, completeness, schema, uniqueness, duplicates, freshness — using `references/readiness-dimensions.md`.\n4. Read the verdict: any fail → **Not ready** (exit 1); else any TBD → **Ready-with-gaps**; else **Ready**.\n5. For each gap, hand the owner named in \"Gaps and owners\" the action: set the missing threshold, remediate at source, or record a waiver. Re-run after changes.\n6. Run the self-check.\n\n## Output\n- `readiness.json` — source files, requirements as parsed, verdict, per-dimension status/threshold/observed/detail/owner, column profile, notes.\n- `readiness.md` — sections **Verdict**, **Dimensions**, **Column profile**, **Gaps and owners** (+ Notes when keys were ignored). Every number traces to `readiness.json`.\n\n## Self-check\n- [ ] Every threshold came from the requirements file; none were assumed\n- [ ] Every TBD names an accountable owner (`Data owner`)\n- [ ] The sample's provenance (system, date, filter) is stated next to the verdict when reported\n- [ ] Not ready is reported as Not ready, with the failing dimensions and owners, not softened\n- [ ] Freshness is TBD, not passed, when `as_of` was not supplied\n\n## References\n- `references/readiness-dimensions.md` — dimension definitions, formulas, null and type rules\n- `references/method-notes.md` — sampling caveats and how this maps to public data-quality frameworks\n- `assets/readiness-requirements.csv` — requirements template for the data owner\n- `scripts/assess.py` — profiler and scorer (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/drift-monitor",
+  "domain": "ai-platform",
+  "stage": "operate",
+  "name": "drift-monitor",
+  "description": "Use when the user asks whether an AI system's inputs, outputs or scores have shifted — \"has our data drifted\", \"compare this week's traffic to the launch baseline\", \"PSI and KS for these features\", \"did the model's confidence distribution move\", \"drift check before retraining\". Produces drift.csv, drift-report.md (Summary, Features, Alerts, Method & limits) and drift.json from a baseline CSV and a current CSV - per feature PSI, two-sample Kolmogorov-Smirnov D and p-value (numeric), chi-square p-value (categorical), missing-value rate change and an ok/warn/alert/insufficient-data status. Default PSI thresholds are the cited 0.1/0.25 rule of thumb, labelled a convention. Exit 1 on any alert. Not for live dashboards and latency/cost SLOs (llm-observability, ai-slo-definition), offline quality evals (llm-eval-harness) or fairness across groups (bias-fairness-check).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "operate",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "baseline",
+     "type": "csv",
+     "required": true,
+     "from": "reference window CSV with a header row (e.g. launch-week inputs, outputs or scores)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "current",
+     "type": "csv",
+     "required": true,
+     "from": "window to test, CSV with the same columns as the baseline",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "features",
+     "type": "string",
+     "required": false,
+     "from": "comma list of columns to compare; default every column in both windows",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "thresholds",
+     "type": "csv",
+     "required": false,
+     "from": "metric,warn,alert for psi, p_value, null_rate_delta (layout: assets/thresholds-template.csv); default psi 0.1/0.25 and p_value alert 0.01, marked to be baselined",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "types",
+     "type": "string",
+     "required": false,
+     "from": "type overrides, e.g. 'store_id=categorical,score=numeric'",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "drift",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "drift",
+     "kind": "script",
+     "cmd": "python3 -I scripts/drift.py --baseline {baseline} --current {current} [--features {features}] [--thresholds {thresholds}] [--types {types}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/drift.csv",
+     "checks": [
+      "exists",
+      "csv:[feature,type,n_baseline,n_current,psi,ks_d,p_value,null_rate_baseline,null_rate_current,status]",
+      "csv_rows:status~^(ok|warn|alert|insufficient-data)$",
+      "csv_rows:null_rate_current~^[01]\\\\.\\\\d{3}$",
+      "cmd:\"python3 -I scripts/drift.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/drift-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Features\",\"Alerts\",\"Method & limits\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/drift.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/drift.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"verdict\\\"\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "baseline": "evals/fixtures/baseline.csv",
+     "current": "evals/fixtures/current.csv",
+     "thresholds": "evals/fixtures/thresholds.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"drift-monitor\">Drift Monitor</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/drift-monitor --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/drift-monitor</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>drift.csv</code>, <code>drift-report.md</code>, <code>drift.json</code>). Any feature in alert fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass <code>--verify</code>, which re-derives each status from <code>drift.json</code>.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC operate stage: a scheduled check of this week's inputs, outputs or model scores against a launch or last-known-good baseline.</li><li>Before retraining or re-indexing: confirm which features moved and by how much.</li><li>After an upstream change (new channel, schema change, pipeline fix): check missing-value rates and new categories.</li><li>NOT for: live latency, error and cost SLOs (<code>llm-observability</code>, <code>ai-slo-definition</code>); judging answer quality (<code>llm-eval-harness</code>); group fairness (<code>bias-fairness-check</code>); text or embedding drift without a numeric or categorical feature to compare.</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>baseline</code> — CSV with header</td><td>yes</td><td>ML engineer: reference window extract</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>current</code> — CSV, same columns</td><td>yes</td><td>ML engineer: window under test</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>features</code> — comma list</td><td>no</td><td>ML engineer</td><td>every column present in both windows</td></tr><tr><td><code>thresholds</code> — <code>metric,warn,alert</code></td><td>no</td><td>ML engineering lead (copy <code>assets/thresholds-template.csv</code>)</td><td>defaults psi 0.1/0.25, p_value alert 0.01; report states agreed thresholds are <code>[TO BE BASELINED — owner: ML engineering lead]</code></td></tr><tr><td><code>types</code> — <code>col=numeric|categorical</code></td><td>no</td><td>ML engineer</td><td>auto: numeric when ≥ 95% of values parse as numbers</td></tr></tbody></table>\n<p>Lines starting with <code>#</code> are comments. A feature named in <code>features</code> that is not in both windows exits 2.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Confirm both windows describe the same system and population (same columns, same units, comparable time spans).</li><li>Agree thresholds with the ML engineering lead, or run on defaults and record that they are conventions.</li><li>Run the agent. <code>scripts/drift.py</code> applies the method in <code>references/method.md</code> per feature.</li><li>Read Summary, then Alerts (largest PSI first in practice), then Features for the full table.</li><li>On exit 1: name an owner per alerted feature, check upstream changes, then run a quality check on the current window before retraining.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>drift.csv</code> — <code>feature, type, n_baseline, n_current, psi, ks_d, p_value, null_rate_baseline, null_rate_current, status</code>.</li><li><code>drift-report.md</code> — <strong>Summary</strong> (verdict, counts, thresholds used), <strong>Features</strong> (table), <strong>Alerts</strong> (reasons, unseen categories, owner), <strong>Method &amp; limits</strong>.</li><li><code>drift.json</code> — every metric unrounded, bins, chi-square statistic and df, thresholds, verdict.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every number came from the two input windows; no threshold presented as agreed unless a thresholds file was supplied</li><li>[ ] PSI cut-offs described as a convention with the source in <code>references/sources.md</code></li><li>[ ] Windows under 30 non-missing values show insufficient-data, not alert</li><li>[ ] Any alert exits 1 and names an owner</li><li>[ ] Limits stated: univariate, p-values shrink with sample size, drift is not proof of lower quality</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — PSI binning and epsilon, KS and chi-square formulas, status rule, hand-checked worked example, limits</li><li><code>references/sources.md</code> — source of the PSI rule of thumb (checked 2026-10-18)</li><li><code>assets/thresholds-template.csv</code> — thresholds layout for the ML engineering lead</li><li><code>scripts/drift.py</code> — calculator and <code>--verify</code> (argparse; stdlib; exit 0 / 1 alert / 2 input)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "thresholds-template.csv"
+   ],
+   "scripts": [
+    "drift.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-has-traffic-drifted",
+    "prompt": "Has the Northwind Billing Assistant's request mix drifted since launch? I have the launch-week extract and last week's extract.",
+    "expected": [
+     "Runs scripts/drift.py on the two windows; reports PSI, KS or chi-square p-value and missing-rate change per feature",
+     "States the 0.1/0.25 PSI cut-offs are a convention, not a law, and asks who owns agreed thresholds",
+     "Treats drift as a reason to investigate, not proof that quality fell; suggests a quality check on the current window"
+    ]
+   },
+   {
+    "id": "prompt-latency-slo-routed",
+    "prompt": "Are we meeting our p95 latency target this week?",
+    "expected": [
+     "Routes latency and availability objectives to ai-slo-definition or llm-observability; drift-monitor compares distributions only"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Compare last week's Northwind Billing Assistant features to the baseline using our agreed thresholds.",
+    "expected": [
+     "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3850; exit 0"
+    ]
+   },
+   {
+    "id": "agent-missing-current",
+    "prompt": "Run a drift check against the baseline.",
+    "expected": [
+     "Asks once for the current window CSV"
+    ]
+   },
+   {
+    "id": "agent-no-thresholds-not-invented",
+    "prompt": "We have not agreed drift thresholds yet; just use whatever is standard.",
+    "expected": [
+     "Uses the cited default conventions, says so, and marks agreed thresholds and the missing-rate threshold as to be baselined with owners"
+    ]
+   },
+   {
+    "id": "agent-drift-alert-exits-1",
+    "prompt": "Gate this week's window: fail if any feature drifted past the alert level.",
+    "expected": [
+     "Confidence and intent in alert (new 'dispute' category), request_tokens warn; run exits 1 with full outputs"
+    ]
+   },
+   {
+    "id": "agent-small-window-insufficient-data",
+    "prompt": "We only have 20 requests since the release; check drift anyway.",
+    "expected": [
+     "Every feature insufficient-data (20 < 30), no alert, exit 0"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Compare last week's Northwind Billing Assistant features to the baseline using our agreed thresholds.",
+    "inputs": {
+     "baseline": "evals/fixtures/baseline.csv",
+     "current": "evals/fixtures/current.csv",
+     "thresholds": "evals/fixtures/thresholds.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:drift.csv",
+     {
+      "file": "drift.csv",
+      "check": "contains:\"confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok\""
+     },
+     {
+      "file": "drift.csv",
+      "check": "contains:\"intent,categorical,400,300,0.0166,,0.4147,0.000,0.000,ok\""
+     },
+     {
+      "file": "drift.csv",
+      "check": "contains:\"account_tier,categorical,380,287,0.0263,,0.1178,0.050,0.043,ok\""
+     },
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"**No feature in alert.**\""
+     },
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"Thresholds (from the supplied thresholds file)\""
+     }
+    ],
+    "expected": [
+     "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3850; exit 0"
+    ]
+   },
+   {
+    "id": "agent-missing-current",
+    "prompt": "Run a drift check against the baseline.",
+    "inputs": {
+     "baseline": "evals/fixtures/baseline.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:current"
+    ],
+    "expected": [
+     "Asks once for the current window CSV"
+    ]
+   },
+   {
+    "id": "agent-no-thresholds-not-invented",
+    "prompt": "We have not agreed drift thresholds yet; just use whatever is standard.",
+    "inputs": {
+     "baseline": "evals/fixtures/baseline.csv",
+     "current": "evals/fixtures/current.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"Agreed thresholds for this system: [TO BE BASELINED — owner: ML engineering lead]\""
+     },
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"Missing-rate change threshold: [TO BE BASELINED — owner: Data owner]\""
+     },
+     {
+      "file": "drift-report.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Uses the cited default conventions, says so, and marks agreed thresholds and the missing-rate threshold as to be baselined with owners"
+    ]
+   },
+   {
+    "id": "agent-drift-alert-exits-1",
+    "prompt": "Gate this week's window: fail if any feature drifted past the alert level.",
+    "inputs": {
+     "baseline": "evals/fixtures/baseline.csv",
+     "current": "evals/fixtures/current-drifted.csv",
+     "thresholds": "evals/fixtures/thresholds.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "drift.csv",
+      "check": "contains:\"confidence,numeric,400,300,2.5567,0.5600,<0.0001,0.000,0.000,alert\""
+     },
+     {
+      "file": "drift.csv",
+      "check": "contains:\"request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn\""
+     },
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"Categories unseen in the baseline: dispute.\""
+     },
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"**ALERT — drift beyond the alert threshold.**\""
+     }
+    ],
+    "expected": [
+     "Confidence and intent in alert (new 'dispute' category), request_tokens warn; run exits 1 with full outputs"
+    ]
+   },
+   {
+    "id": "agent-small-window-insufficient-data",
+    "prompt": "We only have 20 requests since the release; check drift anyway.",
+    "inputs": {
+     "baseline": "evals/fixtures/baseline.csv",
+     "current": "evals/fixtures/current-small.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "drift.csv",
+      "check": "csv_rows:status~^insufficient-data$"
+     },
+     {
+      "file": "drift-report.md",
+      "check": "contains:\"insufficient-data 5\""
+     }
+    ],
+    "expected": [
+     "Every feature insufficient-data (20 < 30), no alert, exit 0"
+    ]
+   }
+  ],
+  "bodyMd": "\n# Drift Monitor\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/drift-monitor --input <name>=<value> … --out <dir>` (see `--explain ai-platform/drift-monitor`). Report the `run.json` results; do not hand-write the deliverables the script produces (`drift.csv`, `drift-report.md`, `drift.json`). Any feature in alert fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which re-derives each status from `drift.json`.\n\n## When to use\n- ADLC operate stage: a scheduled check of this week's inputs, outputs or model scores against a launch or last-known-good baseline.\n- Before retraining or re-indexing: confirm which features moved and by how much.\n- After an upstream change (new channel, schema change, pipeline fix): check missing-value rates and new categories.\n- NOT for: live latency, error and cost SLOs (`llm-observability`, `ai-slo-definition`); judging answer quality (`llm-eval-harness`); group fairness (`bias-fairness-check`); text or embedding drift without a numeric or categorical feature to compare.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `baseline` — CSV with header | yes | ML engineer: reference window extract | run stops (exit 2), asks once |\n| `current` — CSV, same columns | yes | ML engineer: window under test | run stops (exit 2), asks once |\n| `features` — comma list | no | ML engineer | every column present in both windows |\n| `thresholds` — `metric,warn,alert` | no | ML engineering lead (copy `assets/thresholds-template.csv`) | defaults psi 0.1/0.25, p_value alert 0.01; report states agreed thresholds are `[TO BE BASELINED — owner: ML engineering lead]` |\n| `types` — `col=numeric\\|categorical` | no | ML engineer | auto: numeric when ≥ 95% of values parse as numbers |\n\nLines starting with `#` are comments. A feature named in `features` that is not in both windows exits 2.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm both windows describe the same system and population (same columns, same units, comparable time spans).\n3. Agree thresholds with the ML engineering lead, or run on defaults and record that they are conventions.\n4. Run the agent. `scripts/drift.py` applies the method in `references/method.md` per feature.\n5. Read Summary, then Alerts (largest PSI first in practice), then Features for the full table.\n6. On exit 1: name an owner per alerted feature, check upstream changes, then run a quality check on the current window before retraining.\n7. Run the self-check.\n\n## Output\n- `drift.csv` — `feature, type, n_baseline, n_current, psi, ks_d, p_value, null_rate_baseline, null_rate_current, status`.\n- `drift-report.md` — **Summary** (verdict, counts, thresholds used), **Features** (table), **Alerts** (reasons, unseen categories, owner), **Method & limits**.\n- `drift.json` — every metric unrounded, bins, chi-square statistic and df, thresholds, verdict.\n\n## Self-check\n- [ ] Every number came from the two input windows; no threshold presented as agreed unless a thresholds file was supplied\n- [ ] PSI cut-offs described as a convention with the source in `references/sources.md`\n- [ ] Windows under 30 non-missing values show insufficient-data, not alert\n- [ ] Any alert exits 1 and names an owner\n- [ ] Limits stated: univariate, p-values shrink with sample size, drift is not proof of lower quality\n\n## References\n- `references/method.md` — PSI binning and epsilon, KS and chi-square formulas, status rule, hand-checked worked example, limits\n- `references/sources.md` — source of the PSI rule of thumb (checked 2026-10-18)\n- `assets/thresholds-template.csv` — thresholds layout for the ML engineering lead\n- `scripts/drift.py` — calculator and `--verify` (argparse; stdlib; exit 0 / 1 alert / 2 input)\n"
  },
  {
   "id": "ai-platform/eval-engineering-runner",
@@ -5790,6 +6675,339 @@
    }
   ],
   "bodyMd": "\n# PII Data Inventory\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/pii-data-inventory --input <name>=<value> … --out <dir>` (see `--explain ai-platform/pii-data-inventory`). Report the `run.json` results; do not hand-write the deliverables the script produces (`pii-inventory.csv`, `pii-report.md`). Both outputs pass a leak check: the script re-scans the source and fails if any raw matched value appears in them.\n\n## When to use\n- ADLC data stage: before a sample is copied into a notebook, a vector store, a prompt or a fine-tune set.\n- \"Which columns in this extract are personal data, and what does our policy say to do with each?\"\n- Policy gap finding: run with the current policy to list PII types the policy does not yet cover.\n- NOT for: legal or regulatory determinations (route to counsel / DPO), quality scoring (`data-readiness-assessment`), de-identifying the data itself (this skill inventories; it does not transform), unstructured documents or images.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `data` — sample CSV with header | yes | data owner extract | run stops (exit 2), asks once |\n| `policy` — `pii_type,handling` | no | Privacy officer / DPO (copy `assets/pii-policy.csv`) | every PII column's handling is `[TO BE BASELINED — owner: Privacy officer]` |\n| `strict` — true/false | no | use-case owner | false: gaps reported, run exits 0 |\n\nPolicy `pii_type` values: `email, phone, ssn, payment_card, ipv4, ipv6, dob, name, address`. `handling`: `mask | tokenize | drop | allow`. A blank handling counts as not decided.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the sample may be read by this process (it is processed locally; nothing leaves the run directory).\n3. Run the agent. `scripts/scan_pii.py` scans every cell with the detectors in `references/detectors.md` and applies column-name hints.\n4. Per column, the handling is the strictest of its types' policy handlings (drop > tokenize > mask > allow); any type the policy omits makes the column TBD for the Privacy officer.\n5. With `strict=true`, any TBD column fails the run (exit 1) — use this as the gate before data moves to a lower-trust environment.\n6. Review hint-only columns (name, address) by eye and confirm or dismiss them; free-text columns need human review regardless of match rate.\n7. Run the self-check.\n\n## Output\n- `pii-inventory.csv` — `column, pii_types, match_rate, rows_scanned, handling, matches, basis` (one row per column; `none` / `n/a` for non-PII columns).\n- `pii-report.md` — **Summary**, **Column inventory** (with masked examples), **Handling gaps** (owner: Privacy officer), **Method** (detectors and limits).\n\n## Self-check\n- [ ] No raw value appears in any output (both outputs pass `--leak-check`)\n- [ ] Every handling came from the supplied policy; gaps name the Privacy officer\n- [ ] Hint-only columns are flagged for human confirmation, not asserted as PII\n- [ ] Columns the policy allows in clear are listed for a lawful-basis check\n- [ ] Limits stated: sample-based, pattern-based, not a legal determination\n\n## References\n- `references/detectors.md` — detector rules, masking formats, false-positive notes\n- `references/handling-policy.md` — what mask / tokenize / drop / allow mean and how the strictest wins\n- `assets/pii-policy.csv` — policy template for the Privacy officer\n- `scripts/scan_pii.py` — scanner, masker and leak check (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/program-raid-status",
+  "domain": "ai-platform",
+  "stage": "build",
+  "name": "program-raid-status",
+  "description": "Use when the user asks for the status of an AI delivery program from its RAID log and milestone plan — \"program status report\", \"what is red and what is late\", \"critical path for the pilot\", \"RAID review\", \"top risks and overdue actions\", \"steerco status\". Produces status.csv (milestone slip, RAG, critical path), raid-actions.csv (exposure, owner, overdue days, next action), status-report.md (Summary with the overall RAG rule, Milestones, Critical path with a mermaid flowchart, Top risks, Overdue items, Decisions needed, Method) and status.json, as of a stated date (never today's date by default). Unowned items become TBD for the Program manager. Gate: --strict exits 1 when the overall RAG is red. Not for building an AI risk register or compliance review (use ai-governance-risk), staged release gates (use ai-release-plan) or effort estimates (use effort-estimator).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "build",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "raid",
+     "type": "csv",
+     "required": true,
+     "from": "RAID log id,type,description,owner,likelihood,impact,due,status,mitigation[,raised] (layout: assets/raid-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "milestones",
+     "type": "csv",
+     "required": true,
+     "from": "id,milestone,baseline_date,forecast_date,duration_days,depends_on,status[,owner] (layout: assets/milestones-template.csv; depends_on '|'-separated ids)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "as_of",
+     "type": "string",
+     "required": true,
+     "from": "status date YYYY-MM-DD (never defaulted to today)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "thresholds",
+     "type": "csv",
+     "required": false,
+     "from": "key,value RAG thresholds green_max_slip_days, amber_max_slip_days, red_exposure (default: assets/thresholds.csv values)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "strict",
+     "type": "flag",
+     "required": false,
+     "from": "true to fail the run (exit 1) when the overall RAG is red",
+     "default": null,
+     "flag": "--strict",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "status",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "status",
+     "kind": "script",
+     "cmd": "python3 -I scripts/raid_status.py --raid {raid} --milestones {milestones} --as-of {as_of} [--thresholds {thresholds}] {strict} --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/status.csv",
+     "checks": [
+      "exists",
+      "csv:[milestone,baseline,forecast,slip_days,rag,on_critical_path]",
+      "csv_rows:rag~^(red|amber|green|complete)$",
+      "csv_rows:slip_days~^-?\\\\d+$",
+      "cmd:\"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}\""
+     ]
+    },
+    {
+     "path": "{out}/raid-actions.csv",
+     "checks": [
+      "exists",
+      "csv:[id,type,exposure,owner,due,overdue_days,next_action]",
+      "csv_rows:owner!empty",
+      "csv_rows:next_action!empty",
+      "cmd:\"python3 -I scripts/raid_status.py --verify {path} --as-of {as_of}\""
+     ]
+    },
+    {
+     "path": "{out}/status-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Milestones\",\"Critical path\",\"Top risks\",\"Overdue items\",\"Decisions needed\",\"Method\"]",
+      "no_unowned_tbd",
+      "mermaid_parses",
+      "contains:\"Overall RAG rule\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "raid": "evals/fixtures/raid.csv",
+     "milestones": "evals/fixtures/milestones.csv",
+     "as_of": "2026-10-16"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"program-raid-status\">Program RAID Status</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/program-raid-status --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/program-raid-status</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>status.csv</code>, <code>raid-actions.csv</code>, <code>status-report.md</code>, <code>status.json</code>). <code>--verify</code> re-derives slip, RAG bounds and overdue days from the CSVs.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC build stage: weekly or steerco status for an AI delivery program (pilot, platform, agent rollout).</li><li>&quot;What is red, what is late, what is on the critical path, and who owns the fix?&quot;</li><li>Gate a status pack: <code>strict=true</code> fails the run when the overall RAG is red.</li><li>NOT for: AI risk registers or compliance reviews (<code>ai-governance-risk</code>), release go/no-go gates (<code>ai-release-plan</code>), effort or cost estimates (<code>effort-estimator</code>), resource-levelled scheduling.</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>raid</code> — RAID log CSV</td><td>yes</td><td>Program manager (copy <code>assets/raid-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>milestones</code> — milestone plan CSV</td><td>yes</td><td>Program manager (copy <code>assets/milestones-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>as_of</code> — status date YYYY-MM-DD</td><td>yes</td><td>Program manager</td><td>run stops (exit 2); never defaults to today</td></tr><tr><td><code>thresholds</code> — key,value</td><td>no</td><td>PMO (copy <code>assets/thresholds.csv</code>)</td><td>skill defaults: green ≤ 0, amber ≤ 10 days slip, red exposure ≥ 20</td></tr><tr><td><code>strict</code> — true/false</td><td>no</td><td>PMO</td><td>false: RAG reported, exit 0</td></tr></tbody></table>\n<p>Blank RAID or milestone owners become <code>[TO BE BASELINED — owner: Program manager]</code>.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Confirm the RAID log and forecasts were updated for this period, and agree the <code>as_of</code> date.</li><li>Run the agent. <code>scripts/raid_status.py</code> computes slip and RAG per milestone, the critical path through <code>depends_on</code>, exposure and overdue days per RAID item, and the overall RAG by the rule in <code>references/method.md</code>.</li><li>A dependency cycle stops the run (exit 1) and names the milestones; fix the plan and rerun.</li><li>Review &quot;Decisions needed&quot; with the sponsor; every decision names an owner or a TBD for the Program manager.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>status.csv</code> — <code>id, milestone, baseline, forecast, slip_days, rag, on_critical_path, status</code>.</li><li><code>raid-actions.csv</code> — open items: <code>id, type, exposure, owner, due, overdue_days, age_days, next_action</code>.</li><li><code>status-report.md</code> — <strong>Summary</strong> (overall RAG and the rule), <strong>Milestones</strong>, <strong>Critical path</strong> (mermaid flowchart), <strong>Top risks</strong> (top 5 by exposure), <strong>Overdue items</strong> (with ageing), <strong>Decisions needed</strong>, <strong>Method</strong>.</li><li><code>status.json</code> — the same, machine-readable.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] The <code>as_of</code> date was supplied, not assumed</li><li>[ ] Both CSVs pass <code>--verify</code></li><li>[ ] Every open item has an owner or a TBD for the Program manager</li><li>[ ] The overall RAG matches the documented rule; thresholds stated</li><li>[ ] Limits stated: planned durations, no float or resource levelling</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — RAG thresholds, critical-path method, exposure, overall RAG rule</li><li><code>assets/raid-template.csv</code>, <code>assets/milestones-template.csv</code>, <code>assets/thresholds.csv</code> — input layouts and default thresholds</li><li><code>scripts/raid_status.py</code> — status builder and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md"
+   ],
+   "assets": [
+    "milestones-template.csv",
+    "raid-template.csv",
+    "thresholds.csv"
+   ],
+   "scripts": [
+    "raid_status.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-steerco-status",
+    "prompt": "Give me this week's steerco status for the Northwind Billing Assistant program from our RAID log and milestone plan: what's red, what's late and who owns the fix.",
+    "expected": [
+     "Asks for the as-of date if not given; never assumes today",
+     "Runs scripts/raid_status.py; reports overall RAG with the documented rule, the critical path and the top 5 risks by exposure",
+     "Unowned items show [TO BE BASELINED — owner: Program manager]"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the status report for the attached Northwind Billing Assistant RAID log and milestones as of 2026-10-16.",
+    "expected": [
+     "Overall RED; critical path M1 → M2 → M3 → M5 → M7 = 85 days; M3 slips 28 days; I1 overdue 14 days"
+    ]
+   },
+   {
+    "id": "agent-missing-as-of",
+    "prompt": "Status as of today please.",
+    "expected": [
+     "Asks once for the as-of date; does not use the system date"
+    ]
+   },
+   {
+    "id": "agent-unowned-not-invented",
+    "prompt": "R3 has no owner yet - just put the platform lead on it.",
+    "expected": [
+     "R3 and M7 owners are TBD for the Program manager; no owner is invented; a decision asks to name the owner"
+    ]
+   },
+   {
+    "id": "agent-strict-red-exits-1",
+    "prompt": "Gate the steerco pack: fail if the program is red.",
+    "expected": [
+     "Overall RED; strict exits 1 but every output is written"
+    ]
+   },
+   {
+    "id": "agent-strict-amber-passes",
+    "prompt": "Gate the status for the on-plan variant; amber is acceptable.",
+    "expected": [
+     "Overall AMBER (M3 slips 10 days, at the amber boundary); strict passes with exit 0"
+    ]
+   },
+   {
+    "id": "agent-dependency-cycle-exits-1",
+    "prompt": "Status for the plan where data extract and RAG index depend on each other.",
+    "expected": [
+     "Stops with exit 1 and a clear dependency-cycle error naming M2 and M3"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the status report for the attached Northwind Billing Assistant RAID log and milestones as of 2026-10-16.",
+    "inputs": {
+     "raid": "evals/fixtures/raid.csv",
+     "milestones": "evals/fixtures/milestones.csv",
+     "as_of": "2026-10-16"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "status-report.md",
+      "check": "contains:\"**Overall RAG: RED**\""
+     },
+     {
+      "file": "status-report.md",
+      "check": "contains:\"M1 → M2 → M3 → M5 → M7 = 85 days\""
+     },
+     {
+      "file": "status.csv",
+      "check": "contains:\"M3,RAG index on billing knowledge base,2026-09-25,2026-10-23,28,red,yes,in_progress\""
+     },
+     {
+      "file": "status.csv",
+      "check": "contains:\"M6,Agent desktop integration,2026-10-30,2026-11-06,7,amber,no,in_progress\""
+     },
+     {
+      "file": "raid-actions.csv",
+      "check": "contains:\"I1,issue,20,Integration lead,2026-10-02,14,36,\""
+     },
+     {
+      "file": "status-report.md",
+      "check": "mermaid_parses"
+     }
+    ],
+    "expected": [
+     "Overall RED; critical path M1 → M2 → M3 → M5 → M7 = 85 days; M3 slips 28 days; I1 overdue 14 days"
+    ]
+   },
+   {
+    "id": "agent-missing-as-of",
+    "prompt": "Status as of today please.",
+    "inputs": {
+     "raid": "evals/fixtures/raid.csv",
+     "milestones": "evals/fixtures/milestones.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:as_of"
+    ],
+    "expected": [
+     "Asks once for the as-of date; does not use the system date"
+    ]
+   },
+   {
+    "id": "agent-unowned-not-invented",
+    "prompt": "R3 has no owner yet - just put the platform lead on it.",
+    "inputs": {
+     "raid": "evals/fixtures/raid.csv",
+     "milestones": "evals/fixtures/milestones.csv",
+     "as_of": "2026-10-16"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "status-report.md",
+      "check": "no_unowned_tbd"
+     },
+     {
+      "file": "raid-actions.csv",
+      "check": "contains:\"R3,risk,15,[TO BE BASELINED — owner: Program manager],2026-10-20,0,45,Assign an owner; Mask notes before indexing\""
+     },
+     {
+      "file": "status-report.md",
+      "check": "contains:\"Name an owner for R3\""
+     }
+    ],
+    "expected": [
+     "R3 and M7 owners are TBD for the Program manager; no owner is invented; a decision asks to name the owner"
+    ]
+   },
+   {
+    "id": "agent-strict-red-exits-1",
+    "prompt": "Gate the steerco pack: fail if the program is red.",
+    "inputs": {
+     "raid": "evals/fixtures/raid.csv",
+     "milestones": "evals/fixtures/milestones.csv",
+     "as_of": "2026-10-16",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "status-report.md",
+      "check": "contains:\"`--strict` was set: the run fails (exit 1) because overall RAG is red.\""
+     }
+    ],
+    "expected": [
+     "Overall RED; strict exits 1 but every output is written"
+    ]
+   },
+   {
+    "id": "agent-strict-amber-passes",
+    "prompt": "Gate the status for the on-plan variant; amber is acceptable.",
+    "inputs": {
+     "raid": "evals/fixtures/raid-clean.csv",
+     "milestones": "evals/fixtures/milestones-green.csv",
+     "as_of": "2026-10-16",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "status-report.md",
+      "check": "contains:\"**Overall RAG: AMBER**\""
+     },
+     {
+      "file": "status.csv",
+      "check": "contains:\"M3,Agent desktop integration,2026-11-20,2026-11-30,10,amber,no,in_progress\""
+     }
+    ],
+    "expected": [
+     "Overall AMBER (M3 slips 10 days, at the amber boundary); strict passes with exit 0"
+    ]
+   },
+   {
+    "id": "agent-dependency-cycle-exits-1",
+    "prompt": "Status for the plan where data extract and RAG index depend on each other.",
+    "inputs": {
+     "raid": "evals/fixtures/raid.csv",
+     "milestones": "evals/fixtures/milestones-cycle.csv",
+     "as_of": "2026-10-16"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1"
+    ],
+    "expected": [
+     "Stops with exit 1 and a clear dependency-cycle error naming M2 and M3"
+    ]
+   }
+  ],
+  "bodyMd": "\n# Program RAID Status\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/program-raid-status --input <name>=<value> … --out <dir>` (see `--explain ai-platform/program-raid-status`). Report the `run.json` results; do not hand-write the deliverables the script produces (`status.csv`, `raid-actions.csv`, `status-report.md`, `status.json`). `--verify` re-derives slip, RAG bounds and overdue days from the CSVs.\n\n## When to use\n- ADLC build stage: weekly or steerco status for an AI delivery program (pilot, platform, agent rollout).\n- \"What is red, what is late, what is on the critical path, and who owns the fix?\"\n- Gate a status pack: `strict=true` fails the run when the overall RAG is red.\n- NOT for: AI risk registers or compliance reviews (`ai-governance-risk`), release go/no-go gates (`ai-release-plan`), effort or cost estimates (`effort-estimator`), resource-levelled scheduling.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `raid` — RAID log CSV | yes | Program manager (copy `assets/raid-template.csv`) | run stops (exit 2), asks once |\n| `milestones` — milestone plan CSV | yes | Program manager (copy `assets/milestones-template.csv`) | run stops (exit 2), asks once |\n| `as_of` — status date YYYY-MM-DD | yes | Program manager | run stops (exit 2); never defaults to today |\n| `thresholds` — key,value | no | PMO (copy `assets/thresholds.csv`) | skill defaults: green ≤ 0, amber ≤ 10 days slip, red exposure ≥ 20 |\n| `strict` — true/false | no | PMO | false: RAG reported, exit 0 |\n\nBlank RAID or milestone owners become `[TO BE BASELINED — owner: Program manager]`.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the RAID log and forecasts were updated for this period, and agree the `as_of` date.\n3. Run the agent. `scripts/raid_status.py` computes slip and RAG per milestone, the critical path through `depends_on`, exposure and overdue days per RAID item, and the overall RAG by the rule in `references/method.md`.\n4. A dependency cycle stops the run (exit 1) and names the milestones; fix the plan and rerun.\n5. Review \"Decisions needed\" with the sponsor; every decision names an owner or a TBD for the Program manager.\n6. Run the self-check.\n\n## Output\n- `status.csv` — `id, milestone, baseline, forecast, slip_days, rag, on_critical_path, status`.\n- `raid-actions.csv` — open items: `id, type, exposure, owner, due, overdue_days, age_days, next_action`.\n- `status-report.md` — **Summary** (overall RAG and the rule), **Milestones**, **Critical path** (mermaid flowchart), **Top risks** (top 5 by exposure), **Overdue items** (with ageing), **Decisions needed**, **Method**.\n- `status.json` — the same, machine-readable.\n\n## Self-check\n- [ ] The `as_of` date was supplied, not assumed\n- [ ] Both CSVs pass `--verify`\n- [ ] Every open item has an owner or a TBD for the Program manager\n- [ ] The overall RAG matches the documented rule; thresholds stated\n- [ ] Limits stated: planned durations, no float or resource levelling\n\n## References\n- `references/method.md` — RAG thresholds, critical-path method, exposure, overall RAG rule\n- `assets/raid-template.csv`, `assets/milestones-template.csv`, `assets/thresholds.csv` — input layouts and default thresholds\n- `scripts/raid_status.py` — status builder and `--verify` (argparse; stdlib)\n"
  },
  {
   "id": "ai-platform/prompt-spec",

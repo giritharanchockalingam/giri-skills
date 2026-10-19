@@ -8,7 +8,9 @@
     "ai-platform/ai-incident-runbook",
     "ai-platform/feedback-improvement-loop",
     "build/ci-cd-vercel-github",
-    "ai-platform/ai-postmortem"
+    "ai-platform/ai-postmortem",
+    "ai-platform/drift-monitor",
+    "ai-platform/ai-slo-definition"
   ],
   "playbooks": []
 }

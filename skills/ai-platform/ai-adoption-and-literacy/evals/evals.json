@@ -1,0 +1,82 @@
+{
+  "skill": "ai-adoption-and-literacy",
+  "cases": [
+    {
+      "id": "prompt-literacy-plan",
+      "prompt": "We are rolling out the Northwind Billing Assistant to billing, finance and tech staff. Who needs what AI training, how many hours is that, and does this cover EU AI Act Article 4?",
+      "expected": [
+        "Asks for (or builds from) a population CSV with role, headcount, exposure, proficiency and business unit",
+        "Runs scripts/adoption_plan.py; overseers always get the human-oversight module",
+        "Uses the amended Article 4 wording (support the development of AI literacy; no individual level guaranteed) and says it is not a legal determination",
+        "Does not invent KPI targets; missing ones are TBD for the Change lead"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the AI literacy and adoption plan for the attached Northwind Billing Assistant population, waves and targets.",
+      "expected": [
+        "221 people, 812.5 training hours; Customer Operations wave 2 carries 558 hours; AIL-02 has 166 seats"
+      ],
+      "inputs": {
+        "population": "evals/fixtures/population.csv",
+        "waves": "evals/fixtures/waves.csv",
+        "targets": "evals/fixtures/targets.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "adoption-plan.md", "check": "contains:\"Total training load: 812.5 hours across 8 of 8 catalog modules.\""},
+        {"file": "adoption-plan.md", "check": "contains:\"| Customer Operations | Billing team lead | overseer | 1 | 12 | AIL-03, AIL-06, AIL-07 | 6.5 | 78 |\""},
+        {"file": "adoption-plan.md", "check": "contains:\"| AIL-02 | Prompting and checking outputs for your tasks | 2 | 2 | hands-on lab | user/operator | — | 166 | 332 |\""},
+        {"file": "training-load.csv", "check": "contains:\"2,Customer Operations,2026-11-16,132,132,558\""},
+        {"file": "curriculum.csv", "check": "contains:\"Finance,Finance controller,AIL-06,Human oversight in practice: override and stop,2,\\\"mandatory for overseer (rule), regardless of proficiency\\\"\""}
+      ]
+    },
+    {
+      "id": "agent-missing-population",
+      "prompt": "Plan AI training for the billing team; you know roughly who they are.",
+      "expected": [
+        "Asks once for the population CSV; does not guess headcounts"
+      ],
+      "inputs": {
+        "waves": "evals/fixtures/waves.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:population"
+      ]
+    },
+    {
+      "id": "agent-no-targets-no-waves-not-invented",
+      "prompt": "Just use typical industry adoption targets and pick the rollout dates yourself.",
+      "expected": [
+        "Every KPI target and every wave/start date is TBD for the Change lead; nothing invented"
+      ],
+      "inputs": {
+        "population": "evals/fixtures/population.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "adoption-plan.md", "check": "no_unowned_tbd"},
+        {"file": "adoption-plan.md", "check": "contains:\"| weekly_active_rate | Share of licensed users who used the AI system in the last 7 days | product telemetry | [TO BE BASELINED — owner: Change lead] | — |\""},
+        {"file": "training-load.csv", "check": "contains:\"[TO BE BASELINED — owner: Change lead],Technology,[TO BE BASELINED — owner: Change lead],14,14,142\""}
+      ]
+    },
+    {
+      "id": "agent-strict-operator-without-module-exits-1",
+      "prompt": "Gate the plan: fail if any operator or overseer role has no training mapped.",
+      "expected": [
+        "Support analyst at proficiency 3 has no module; strict fails with exit 1 but the plan is written"
+      ],
+      "inputs": {
+        "population": "evals/fixtures/population-gap.csv",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "adoption-plan.md", "check": "contains:\"`--strict` was set: the run fails (exit 1).\""},
+        {"file": "adoption-plan.md", "check": "contains:\"Support analyst (AI ops) (Technology)\""},
+        {"file": "adoption.json", "check": "contains:\"\\\"gate\\\": \\\"fail\\\"\""}
+      ]
+    }
+  ]
+}

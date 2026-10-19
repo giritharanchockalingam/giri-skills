@@ -1,0 +1,108 @@
+{
+  "skill": "drift-monitor",
+  "cases": [
+    {
+      "id": "prompt-has-traffic-drifted",
+      "prompt": "Has the Northwind Billing Assistant's request mix drifted since launch? I have the launch-week extract and last week's extract.",
+      "expected": [
+        "Runs scripts/drift.py on the two windows; reports PSI, KS or chi-square p-value and missing-rate change per feature",
+        "States the 0.1/0.25 PSI cut-offs are a convention, not a law, and asks who owns agreed thresholds",
+        "Treats drift as a reason to investigate, not proof that quality fell; suggests a quality check on the current window"
+      ]
+    },
+    {
+      "id": "prompt-latency-slo-routed",
+      "prompt": "Are we meeting our p95 latency target this week?",
+      "expected": [
+        "Routes latency and availability objectives to ai-slo-definition or llm-observability; drift-monitor compares distributions only"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Compare last week's Northwind Billing Assistant features to the baseline using our agreed thresholds.",
+      "expected": [
+        "Five features, all ok; confidence PSI 0.0791, KS D 0.0692, p 0.3850; exit 0"
+      ],
+      "inputs": {
+        "baseline": "evals/fixtures/baseline.csv",
+        "current": "evals/fixtures/current.csv",
+        "thresholds": "evals/fixtures/thresholds.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:drift.csv",
+        {"file": "drift.csv", "check": "contains:\"confidence,numeric,400,300,0.0791,0.0692,0.3850,0.000,0.000,ok\""},
+        {"file": "drift.csv", "check": "contains:\"intent,categorical,400,300,0.0166,,0.4147,0.000,0.000,ok\""},
+        {"file": "drift.csv", "check": "contains:\"account_tier,categorical,380,287,0.0263,,0.1178,0.050,0.043,ok\""},
+        {"file": "drift-report.md", "check": "contains:\"**No feature in alert.**\""},
+        {"file": "drift-report.md", "check": "contains:\"Thresholds (from the supplied thresholds file)\""}
+      ]
+    },
+    {
+      "id": "agent-missing-current",
+      "prompt": "Run a drift check against the baseline.",
+      "expected": [
+        "Asks once for the current window CSV"
+      ],
+      "inputs": {
+        "baseline": "evals/fixtures/baseline.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:current"
+      ]
+    },
+    {
+      "id": "agent-no-thresholds-not-invented",
+      "prompt": "We have not agreed drift thresholds yet; just use whatever is standard.",
+      "expected": [
+        "Uses the cited default conventions, says so, and marks agreed thresholds and the missing-rate threshold as to be baselined with owners"
+      ],
+      "inputs": {
+        "baseline": "evals/fixtures/baseline.csv",
+        "current": "evals/fixtures/current.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "drift-report.md", "check": "contains:\"Agreed thresholds for this system: [TO BE BASELINED — owner: ML engineering lead]\""},
+        {"file": "drift-report.md", "check": "contains:\"Missing-rate change threshold: [TO BE BASELINED — owner: Data owner]\""},
+        {"file": "drift-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-drift-alert-exits-1",
+      "prompt": "Gate this week's window: fail if any feature drifted past the alert level.",
+      "expected": [
+        "Confidence and intent in alert (new 'dispute' category), request_tokens warn; run exits 1 with full outputs"
+      ],
+      "inputs": {
+        "baseline": "evals/fixtures/baseline.csv",
+        "current": "evals/fixtures/current-drifted.csv",
+        "thresholds": "evals/fixtures/thresholds.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "drift.csv", "check": "contains:\"confidence,numeric,400,300,2.5567,0.5600,<0.0001,0.000,0.000,alert\""},
+        {"file": "drift.csv", "check": "contains:\"request_tokens,numeric,400,300,0.1074,0.0675,0.4155,0.000,0.000,warn\""},
+        {"file": "drift-report.md", "check": "contains:\"Categories unseen in the baseline: dispute.\""},
+        {"file": "drift-report.md", "check": "contains:\"**ALERT — drift beyond the alert threshold.**\""}
+      ]
+    },
+    {
+      "id": "agent-small-window-insufficient-data",
+      "prompt": "We only have 20 requests since the release; check drift anyway.",
+      "expected": [
+        "Every feature insufficient-data (20 < 30), no alert, exit 0"
+      ],
+      "inputs": {
+        "baseline": "evals/fixtures/baseline.csv",
+        "current": "evals/fixtures/current-small.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "drift.csv", "check": "csv_rows:status~^insufficient-data$"},
+        {"file": "drift-report.md", "check": "contains:\"insufficient-data 5\""}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# Default AI literacy curriculum — this skill's own design (giri-skills), not a regulatory syllabus. Edit freely.
+# audience / mandatory_for: '|'-separated exposure levels (none|user|operator|builder|overseer); level 1-3.
+module_id,title,hours,audience,level,format,mandatory_for
+AIL-00,AI awareness: what AI is and where we use it,0.5,none|user|operator|builder|overseer,1,e-learning,
+AIL-01,Using AI assistants safely: data and verification,1.5,user|operator|builder|overseer,1,workshop,
+AIL-02,Prompting and checking outputs for your tasks,2,user|operator,2,hands-on lab,
+AIL-03,Operating AI systems: monitoring and escalation,3,operator|overseer,2,workshop,
+AIL-04,Building with AI: evaluation and guardrails,6,builder,2,hands-on lab,
+AIL-05,Advanced build: agents and red-teaming,8,builder,3,hands-on lab,
+AIL-06,Human oversight in practice: override and stop,2,overseer,2,workshop,overseer
+AIL-07,AI risk and accountability for leaders,1.5,overseer,3,briefing,

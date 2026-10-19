@@ -1,0 +1,94 @@
+{
+  "skill": "ai-slo-definition",
+  "cases": [
+    {
+      "id": "prompt-define-slos",
+      "prompt": "We're about to launch the Northwind Billing Assistant. Help us define SLOs — we have a week of pilot logs but no agreed targets.",
+      "expected": [
+        "Runs scripts/slo.py on the pilot log without targets; proposes objectives from observed data",
+        "Labels every proposal [TO BE BASELINED — owner: Product owner]; never calls them agreed",
+        "Explains error budget and the SRE workbook multiwindow burn-rate alerts (14.4x 1h/5m, 6x 6h/30m)"
+      ]
+    },
+    {
+      "id": "prompt-drift-routed",
+      "prompt": "Has the distribution of our model's confidence scores shifted since launch?",
+      "expected": [
+        "Routes distribution drift to drift-monitor; this skill measures SLIs against objectives"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Measure the Northwind Billing Assistant against our agreed SLO targets.",
+      "expected": [
+        "All four SLOs met: availability 0.99375 consumed 0.625; latency 0.94549 consumed 0.545; quality 0.95833 consumed 0.833 burn 1.000; cost 0.90000 consumed 0.500; exit 0"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/requests.csv",
+        "targets": "evals/fixtures/targets.csv",
+        "system": "Northwind Billing Assistant"
+      },
+      "checks": [
+        "exit:0",
+        "exists:slos.csv",
+        {"file": "slos.csv", "check": "contains:\"availability,0.99,,0.99375,0.625,0.000,met,agreed target\""},
+        {"file": "slos.csv", "check": "contains:\"latency,0.9,1650,0.94549,0.545,\""},
+        {"file": "slos.csv", "check": "contains:\"quality,0.95,,0.95833,0.833,1.000,met,agreed target\""},
+        {"file": "slos.csv", "check": "contains:\"cost,0.8,0.0028,0.90000,0.500,0.500,met,agreed target\""},
+        {"file": "slo-spec.md", "check": "contains:\"**All agreed SLOs met.**\""},
+        {"file": "slo-spec.md", "check": "contains:\"p50 1238 ms · p95 1653 ms\""}
+      ]
+    },
+    {
+      "id": "agent-missing-log",
+      "prompt": "Define SLOs for our assistant.",
+      "expected": [
+        "Asks once for the request log"
+      ],
+      "inputs": {
+        "targets": "evals/fixtures/targets.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:log"
+      ]
+    },
+    {
+      "id": "agent-no-targets-proposes-not-invents",
+      "prompt": "We have no targets yet; just set sensible SLOs.",
+      "expected": [
+        "Every objective is proposed from the data (availability 0.99, latency 1700 ms at 0.95, quality 0.95, cost 0.003 at 0.95), each to be baselined by the Product owner; exit 0"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/requests.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "slos.csv", "check": "csv_rows:status~^proposed$"},
+        {"file": "slos.csv", "check": "contains:\"latency,0.95,1700,1.00000,0.000,0.000,proposed,[TO BE BASELINED — owner: Product owner]\""},
+        {"file": "slo-spec.md", "check": "contains:\"**No agreed targets.**\""},
+        {"file": "slo-spec.md", "check": "contains:\"[TO BE BASELINED — owner: SRE lead]\""},
+        {"file": "slo-spec.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-incident-breach-exits-1",
+      "prompt": "Errors spiked in the last 20 minutes. Check the SLOs and alerts.",
+      "expected": [
+        "Availability breached (23 bad of 480, consumed 4.792) and both page alerts fire; latency 0.94748 still met; run exits 1 with full outputs"
+      ],
+      "inputs": {
+        "log": "evals/fixtures/requests-incident.csv",
+        "targets": "evals/fixtures/targets.csv",
+        "system": "Northwind Billing Assistant"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "slos.csv", "check": "contains:\"availability,0.99,,0.95208,4.792,33.333,breached,agreed target\""},
+        {"file": "slo-spec.md", "check": "contains:\"| availability | fast-burn page | 1 h / 5 m | 14.40 | 33.333 | 100.000 | yes | page |\""},
+        {"file": "slo-spec.md", "check": "contains:\"**BREACHED: availability.**\""},
+        {"file": "slos.csv", "check": "contains:\"latency,0.9,1650,0.94748,0.525,0.250,met,agreed target\""}
+      ]
+    }
+  ]
+}

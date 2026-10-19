@@ -1,0 +1,22 @@
+# fictional fixture — Northwind Billing Assistant (fictional) request features; invented values for tests only
+request_tokens,confidence,intent,channel,account_tier
+325,0.874,plan_change,web,basic
+438,0.922,billing_question,app,plus
+389,0.747,billing_question,app,basic
+381,0.875,billing_question,app,plus
+461,0.810,payment_issue,email,
+342,0.880,plan_change,web,basic
+424,0.796,plan_change,app,pro
+386,0.693,payment_issue,web,pro
+264,0.861,billing_question,web,pro
+386,0.753,refund_request,app,
+455,0.867,billing_question,app,pro
+377,0.999,payment_issue,web,basic
+484,0.727,billing_question,web,
+387,0.791,billing_question,app,pro
+300,0.675,billing_question,web,basic
+372,0.716,billing_question,app,plus
+172,0.843,plan_change,email,pro
+342,0.945,billing_question,web,plus
+214,0.764,billing_question,web,pro
+558,0.955,billing_question,web,plus

@@ -1,0 +1,5 @@
+# fictional fixture — Northwind Billing Assistant (fictional) drift thresholds agreed for tests only
+metric,warn,alert
+psi,0.1,0.25
+p_value,,0.01
+null_rate_delta,0.02,0.05

@@ -20,7 +20,9 @@
    "ai-platform/ai-incident-runbook",
    "ai-platform/feedback-improvement-loop",
    "build/ci-cd-vercel-github",
-   "ai-platform/ai-postmortem"
+   "ai-platform/ai-postmortem",
+   "ai-platform/drift-monitor",
+   "ai-platform/ai-slo-definition"
   ],
   "playbooks": []
  },
@@ -33,7 +35,9 @@
    "build/domain-modeling-runner",
    "build/spec-to-plan",
    "ai-platform/ai-use-case-canvas",
-   "ai-platform/feedback-improvement-loop"
+   "ai-platform/feedback-improvement-loop",
+   "ai-platform/program-raid-status",
+   "ai-platform/ai-slo-definition"
   ],
   "playbooks": []
  },
@@ -83,7 +87,8 @@
    "ai-platform/ai-strategy-coe",
    "ai-platform/ai-use-case-canvas",
    "presales/value-case-builder",
-   "ai-platform/ai-governance-risk"
+   "ai-platform/ai-governance-risk",
+   "ai-platform/ai-adoption-and-literacy"
   ],
   "playbooks": []
  },

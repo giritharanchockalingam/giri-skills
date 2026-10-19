@@ -1,0 +1,6 @@
+# fictional fixture — Northwind Billing Assistant (fictional) SLO targets for tests only
+sli,objective,threshold,window_days
+availability,0.99,,30
+latency,0.9,1650,30
+quality,0.95,,30
+cost,0.8,0.0028,30

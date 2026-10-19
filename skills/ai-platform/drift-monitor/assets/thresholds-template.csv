@@ -1,0 +1,9 @@
+# Drift thresholds — copy, agree with the ML engineering lead, and pass as `thresholds`.
+# metric: psi | p_value | null_rate_delta. Blank cell = that level is not used.
+# psi: status warn/alert when PSI >= value. p_value: warn/alert when p < value.
+# null_rate_delta: warn/alert when |missing rate current - baseline| >= value.
+# The psi values below are the industry rule of thumb (see references/sources.md), not a law.
+metric,warn,alert
+psi,0.1,0.25
+p_value,,0.01
+null_rate_delta,,

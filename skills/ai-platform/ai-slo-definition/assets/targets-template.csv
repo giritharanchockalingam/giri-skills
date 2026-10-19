@@ -1,0 +1,11 @@
+# SLO targets — copy, agree with the Product owner and SRE lead, and pass as `targets`.
+# sli: availability | latency | quality | cost. objective: fraction of good events, 0 < objective < 1.
+# threshold: latency in ms (good = ok request with latency_ms <= threshold); cost in USD per request
+#            (good = cost_usd <= threshold); leave blank for availability and quality.
+# window_days: SLO compliance window (the SRE workbook's alert thresholds assume 30).
+# Values below are placeholders to replace, not recommendations.
+sli,objective,threshold,window_days
+availability,0.995,,30
+latency,0.95,2000,30
+quality,0.9,,30
+cost,0.95,0.01,30

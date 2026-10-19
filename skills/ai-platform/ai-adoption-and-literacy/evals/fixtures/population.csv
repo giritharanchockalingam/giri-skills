@@ -1,0 +1,9 @@
+# fictional fixture — Northwind Billing Assistant rollout (invented roles and headcounts)
+role,headcount,exposure,proficiency,business_unit
+Billing agent,120,user,0,Customer Operations
+Billing team lead,12,overseer,1,Customer Operations
+Collections specialist,40,user,1,Finance
+Finance controller,5,overseer,2,Finance
+Back-office clerk,30,none,0,Finance
+AI platform engineer,8,builder,1,Technology
+Support analyst (AI ops),6,operator,1,Technology

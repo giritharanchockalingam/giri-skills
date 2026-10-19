@@ -1,0 +1,6 @@
+# Request log layout — one row per request to the AI feature.
+# timestamp: ISO-8601, with or without a UTC offset (be consistent). status: ok | error.
+# quality_pass: 1 when the response passed the eval/feedback check, 0 when it failed, blank when not judged.
+# cost_usd: model + tool cost of the request, blank when unknown.
+timestamp,latency_ms,status,quality_pass,cost_usd
+2026-01-01T00:00:00Z,950,ok,1,0.0021

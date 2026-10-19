@@ -1,0 +1,4 @@
+# fictional fixture — Northwind Billing Assistant; the operator role is already at proficiency 3
+role,headcount,exposure,proficiency,business_unit
+Billing agent,120,user,0,Customer Operations
+Support analyst (AI ops),6,operator,3,Technology

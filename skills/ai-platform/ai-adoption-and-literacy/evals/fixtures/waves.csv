@@ -1,0 +1,5 @@
+# fictional fixture — Northwind Billing Assistant rollout waves
+wave,business_unit,start_date
+1,Technology,2026-11-02
+2,Customer Operations,2026-11-16
+3,Finance,2026-12-07
