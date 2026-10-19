@@ -917,3 +917,7 @@ details.disclosure[open] > summary::before { content: "▼"; }
 a.cat-tile { color: inherit; transition: border-color .15s; }
 a.cat-tile:hover { border-color: var(--ink-3); }
 .cat-tile-on { border-color: var(--flame) !important; }
+/* 13 weekly bars (90 days) must fit a 360 px phone: columns shrink, and the strip scrolls if it still cannot fit. */
+.ins-cols { overflow-x: auto; contain: inline-size; }
+.ins-col { min-width: 0; flex: 1 1 0; }
+.ins-grid > * { min-width: 0; }
