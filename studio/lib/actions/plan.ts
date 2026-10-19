@@ -59,3 +59,14 @@ export function checkRequest(fields: ActionField[], given: Record<string, Action
   }
   return problems;
 }
+
+/** When a run "failed" only because the skill's own gate said so (every output produced and valid; each failed step
+ *  printed "gate: …"), that is the skill's verdict on the repository — the action itself worked. */
+export function gateVerdict(status: string, rj: Record<string, unknown> | null): string | null {
+  if (status !== "failed" || !rj) return null;
+  const steps = (rj.steps ?? []) as { ok?: boolean; error?: string }[];
+  const checks = (rj.checks ?? []) as { pass?: boolean }[];
+  const bad = steps.filter((x) => !x.ok);
+  if (!bad.length || !checks.length || checks.some((c) => !c.pass) || bad.some((x) => !/^gate:/i.test(x.error ?? ""))) return null;
+  return bad.map((x) => (x.error ?? "").replace(/^gate:\s*/i, "")).join("; ");
+}

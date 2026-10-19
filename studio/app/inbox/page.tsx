@@ -66,7 +66,7 @@ export default async function InboxPage() {
             <tbody>{decided.map((a) => <tr key={a.id}><td className="caption">{when(a.created_at)}</td><td>{a.skill}</td><td>{a.entity_id ? <Link className="link" href={`/catalog/${a.entity_id}`}>{a.repo}</Link> : a.repo}</td>
               <td><span className={`pill pill-sm ${CLS[a.status] ?? ""}`}>{a.status.replace("_", " ")}</span></td>
               <td className="caption">{a.requested_by_email ?? "—"}{a.decided_by_email ? ` → ${a.decided_by_email}` : ""}{a.decision_note ? ` (“${a.decision_note}”)` : ""}</td>
-              <td>{a.run_id ? <Link className="link" href={`/runs/${a.run_id}`}>run</Link> : a.error ? <span className="caption ink-rust">{a.error}</span> : "—"}</td></tr>)}</tbody></table></div></div>
+              <td>{a.run_id ? <><Link className="link" href={`/runs/${a.run_id}`}>run</Link>{a.error && <div className={`caption${a.status === "failed" ? " ink-rust" : ""}`}>{a.error}</div>}</> : a.error ? <span className="caption ink-rust">{a.error}</span> : "—"}</td></tr>)}</tbody></table></div></div>
         </section>)}
     </>
   );

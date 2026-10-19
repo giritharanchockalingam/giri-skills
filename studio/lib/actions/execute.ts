@@ -9,7 +9,7 @@ import { validateInputs, describeInputs } from "@/lib/factory/schema";
 import { sha256 } from "@/lib/factory/hash";
 import { executeRun } from "@/lib/factory/runtime";
 import type { TreeFile } from "@/lib/scorecards/checks";
-import { fieldsFor, filesUnder, foldersOf, usesModel, checkRequest, type ActionField, type ActionInput } from "./plan";
+import { fieldsFor, filesUnder, foldersOf, usesModel, checkRequest, gateVerdict, type ActionField, type ActionInput } from "./plan";
 
 type EntityRow = { id: string; key: string; installation_id: number | null; properties: { default_branch?: string; applicable?: { skill: string; input: { name: string; path: string } | null }[] } };
 type SkillRow = { id: string; slug: string; name: string; status: string };
@@ -72,7 +72,8 @@ export async function repoFolders(ctx: WsCtx, entityId: string): Promise<string[
   return foldersOf(tree.files);
 }
 
-export interface RequestResult { ok: boolean; status?: string; action_id?: string; run_id?: string | null; message: string }
+export interface RequestResult { ok: boolean; status?: string; action_id?: string; run_id?: string | null; verdict?: string | null; message: string }
+
 
 /** Create the request (approval decided in the database from policy), then run it at once if no approval is needed. */
 export async function requestAction(ctx: WsCtx, entityId: string, slug: string, given: Record<string, ActionInput>, reason: string): Promise<RequestResult> {
@@ -141,8 +142,11 @@ export async function runApproved(ctx: WsCtx, actionId: string): Promise<Request
   const { response, ...row } = patch;
   void response;
   await ctx.supabase.from("sf_runs").update(row).eq("id", runId);
-  const ok = row.status === "succeeded";
   const note = partial ? " (partial: the folder is larger than the scan limit)" : "";
-  await ctx.supabase.rpc("sf_action_mark", { p_id: a.id, p_status: ok ? "succeeded" : "failed", p_run: runId, p_error: ok ? (note || null) : `${row.error ?? row.status}${note}`, p_commit: null });
-  return { ok, action_id: a.id, run_id: runId, status: ok ? "succeeded" : "failed", message: ok ? `Ran on ${e.key}${repo.sha ? ` @ ${repo.sha.slice(0, 7)}` : ""}${note}.` : `The run ${row.status}: ${row.error ?? ""}` };
+  const verdict = gateVerdict(row.status, row.run_json);
+  const ok = row.status === "succeeded" || verdict !== null;   // a skill's own gate verdict is a result, not a failed action
+  const at = `${e.key}${repo.sha ? ` @ ${repo.sha.slice(0, 7)}` : ""}`;
+  await ctx.supabase.rpc("sf_action_mark", { p_id: a.id, p_status: ok ? "succeeded" : "failed", p_run: runId, p_error: ok ? (verdict ? `${verdict}${note}` : note || null) : `${row.error ?? row.status}${note}`, p_commit: null });
+  return { ok, action_id: a.id, run_id: runId, status: ok ? "succeeded" : "failed", verdict,
+    message: !ok ? `The run ${row.status}: ${row.error ?? ""}` : verdict ? `Ran on ${at}. The skill's verdict: ${verdict}${note}. Its report is in the run.` : `Ran on ${at}${note}.` };
 }

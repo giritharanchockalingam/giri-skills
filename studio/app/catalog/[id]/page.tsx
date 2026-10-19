@@ -56,7 +56,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
             <tbody>{actions.map((a) => <tr key={a.id}><td className="caption">{when(a.created_at)}</td><td>{a.skill}</td>
               <td><span className={`pill pill-sm ${ACTION_CLS[a.status] ?? ""}`}>{a.status.replace("_", " ")}</span></td>
               <td className="caption">{a.requested_by_email ?? "—"}{a.decided_by_email ? ` · decided by ${a.decided_by_email}` : ""}</td>
-              <td>{a.run_id ? <Link className="link" href={`/runs/${a.run_id}`}>run</Link> : a.error ? <span className="caption ink-rust">{a.error}</span> : <span className="caption">—</span>}</td></tr>)}</tbody></table></div>)}
+              <td>{a.run_id ? <><Link className="link" href={`/runs/${a.run_id}`}>run</Link>{a.error && <div className={`caption${a.status === "failed" ? " ink-rust" : ""}`}>{a.error}</div>}</> : a.error ? <span className="caption ink-rust">{a.error}</span> : <span className="caption">—</span>}</td></tr>)}</tbody></table></div>)}
       </section>
       {latest.length === 0 && <p className="none">Not scored yet.</p>}
       {latest.map((r) => (
