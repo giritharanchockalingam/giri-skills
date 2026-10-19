@@ -54,3 +54,11 @@ Optional model re-rank for the task router (top-3 → model pick, logged with co
 - Folder inputs ({kind:"files"}) for brownfield: server runtime, validation, browser "Choose folder" (tests/worker.test.mjs runs the real worker on Pyodide).
 - 9 skills whose main deliverable is a model step take `draft_only` for model-free examples (script-written draft, labelled); full quality needs a provider key.
 - Owner actions: publish skills to expose them as tools; create an API key and connect a client (end-to-end MCP call not yet witnessed).
+
+## 2026-10-19 — Context Lake, scorecards, Insights; portal passes its own scorecard
+- Catalog (/catalog): GitHub App (manifest create; install verified by OAuth ownership proof; installation tokens). Sync → sf_catalog_entities with stack, CODEOWNERS owner, applicable skills + evidence. Migration 0007.
+- Scorecards: lib/scorecards (checks rls, tenancy, nextjs, observability) run library skills on each repo's files at HEAD via callRuntime; append-only sf_scorecard_results + sf_scorecard_latest (0008). /catalog/[id] shows evidence + history.
+- Insights (/insights): runs by channel, success, people, spend, scorecards; ROI ONLY from sf_roi_baselines (admin-set, owner + method, audited). Browser runs recorded as metadata (sf_browser_runs, 0009). Example runs (browser or playbook with exact sample inputs) excluded from ROI.
+- Portal passes its own scorecard (live, f2fb1a8+): data access in lib/db/*, zod in every server action (lib/validation.ts), observability installed by the skill (deep health: db/auth/runtime/github; needs HEALTH_CHECK_TOKEN in production), tenancy migration 0010 (derived workspace_id + indexes, sf_health_ping).
+- Skill fixes found by dogfooding: tenancy audit --tenant-column auto; conventions lint covers JS and skips out/; runtime accepts Next.js route paths.
+- Owner actions: set HEALTH_CHECK_TOKEN in Vercel to enable /api/health/deep; set ROI baselines on /insights (none set yet, so no hours shown).
