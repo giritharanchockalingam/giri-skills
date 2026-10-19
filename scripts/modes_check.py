@@ -9,7 +9,8 @@ starting point runs green on its own example.
 Checks
   1. every agent skill declares at least one mode; a declared mode names an eval case that has inputs
   2. (--run) each declared mode's case runs with `run_skill.py --demo SKILL --mode M --provider none`:
-     exit 0 and every declared output check passes
+     every check the eval case declares passes (its expected exit code included; default exit:0) and every
+     output check the skill declares passes
   3. every lifecycle stage and business shelf has at least one skill for each mode
 
 Usage: python3 scripts/modes_check.py [--run] [--skills GLOB] [--json OUT]
@@ -56,7 +57,10 @@ def declared(skill_dir: Path) -> tuple[dict, list[str]]:
     return modes, probs
 
 
-def run_mode(key: str, mode: str) -> tuple[bool, str]:
+def run_mode(key: str, mode: str, case: dict, skill_dir: Path) -> tuple[bool, str]:
+    """Run the mode's example; it passes when every check the eval case itself declares holds (its expected exit code
+    included — default exit:0) AND every output check the skill declares holds."""
+    from behavioral_evals import eval_case_checks  # the same check engine the behavioral evals use
     with tempfile.TemporaryDirectory() as td:
         r = subprocess.run([sys.executable, str(ROOT / "scripts/run_skill.py"), "--demo", key, "--mode", mode,
                             "--provider", "none", "--out", td], capture_output=True, text=True, cwd=str(ROOT), timeout=300)
@@ -65,10 +69,12 @@ def run_mode(key: str, mode: str) -> tuple[bool, str]:
             return False, (r.stderr.strip().splitlines() or ["no run.json"])[-1][:160]
         run = json.loads(rj.read_text())
         bad = [c for c in run.get("checks", []) if not c.get("pass")]
-        if r.returncode != 0 or bad:
-            why = f"exit {r.returncode}" + (f"; {len(bad)} check(s) failed: {bad[0].get('check', '')[:60]}" if bad else "")
-            return False, why
-        return True, f"{len(run.get('checks', []))} checks passed"
+        case_res = eval_case_checks(case.get("checks") or ["exit:0"], r.returncode, Path(td), skill_dir)
+        bad_case = [c for c in case_res if not c["pass"]]
+        if bad or bad_case:
+            first = (bad[0].get("check", "") if bad else f"case check {bad_case[0]['check']}: {bad_case[0]['evidence']}")[:110]
+            return False, f"exit {r.returncode}; {len(bad) + len(bad_case)} check(s) failed: {first}"
+        return True, f"{len(run.get('checks', []))} output checks + {len(case_res)} case checks passed"
 
 
 def main() -> int:
@@ -95,8 +101,10 @@ def main() -> int:
                     cover[st].add(m)
         res = {"skill": key, "stage": stage, "modes": sorted(m for m in modes if m in MODES), "problems": probs, "runs": {}}
         if a.run and not probs:
+            ev = json.loads((sd / "evals" / "evals.json").read_text(encoding="utf-8"))
+            cases = {c.get("id"): c for c in ev.get("cases", [])}
             for m in sorted(modes):
-                ok, why = run_mode(key, m)
+                ok, why = run_mode(key, m, cases[modes[m]["case"]], sd)
                 res["runs"][m] = {"ok": ok, "detail": why}
                 if not ok:
                     probs.append(f"mode '{m}' run failed: {why}")
