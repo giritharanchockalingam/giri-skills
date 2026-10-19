@@ -1,0 +1,101 @@
+{
+  "skill": "ai-transparency-notice",
+  "cases": [
+    {
+      "id": "prompt-ai-notice",
+      "prompt": "Our billing chatbot launches in the EU next month. Write the 'you're talking to an AI' notice and tell me what Article 50 says we must disclose.",
+      "expected": [
+        "Collects the facts CSV (and classification.json if available) and runs scripts/transparency_notice.py",
+        "Notice sentences trace to facts; reading grade reported against the ceiling",
+        "Checklist shows applies / provided / missing per Art. 50 duty with owners; states it is not a legal determination and claims no compliance"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Produce the transparency notice, system card and Art. 50 checklist for the Northwind Billing Assistant from these facts and the classifier output.",
+      "expected": [
+        "Grade 3.9 within 8; interaction and marking duties provided; Art. 50(5) partial; classification tier shown"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts.csv",
+        "classification": "evals/fixtures/classification.json"
+      },
+      "checks": [
+        "exit:0",
+        "exists:notice.md",
+        {"file": "notice.md", "check": "contains:\"You are chatting with Northwind Billing Assistant. It is an AI system, not a person.\""},
+        {"file": "transparency.json", "check": "contains:\"\\\"grade\\\": 3.9\""},
+        {"file": "transparency.json", "check": "contains:\"\\\"word_count\\\": 94\""},
+        {"file": "disclosure-checklist.csv", "check": "contains:\"Art. 50(2),provider,yes,yes,provided\""},
+        {"file": "disclosure-checklist.csv", "check": "contains:\"Art. 50(5),provider and deployer,yes,partial,partial\""},
+        {"file": "system-card.md", "check": "contains:\"tier limited-risk (transparency obligations)\""},
+        {"file": "system-card.md", "check": "contains:\"Facts not supplied: none.\""}
+      ]
+    },
+    {
+      "id": "agent-missing-facts",
+      "prompt": "Write our AI disclosure notice.",
+      "expected": [
+        "Asks once for the facts CSV"
+      ],
+      "inputs": {
+        "max_grade": "8"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:facts"
+      ]
+    },
+    {
+      "id": "agent-partial-facts-not-invented",
+      "prompt": "We only know the name, provider and purpose so far — fill in the rest of the notice with typical wording.",
+      "expected": [
+        "Missing facts are TBD for the Product owner in notice and card; no wording invented; classification TBD for the Compliance lead; exit 0 without strict"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts-partial.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "notice.md", "check": "contains:\"Questions? Contact [TO BE BASELINED — owner: Product owner].\""},
+        {"file": "system-card.md", "check": "contains:\"EU AI Act classification: [TO BE BASELINED — owner: Compliance lead]\""},
+        {"file": "disclosure-checklist.csv", "check": "contains:\"Art. 50(2),provider,yes,no,missing,content_marking not stated,Engineering lead\""},
+        {"file": "system-card.md", "check": "no_unowned_tbd"},
+        {"file": "transparency.json", "check": "contains:\"\\\"strict\\\": false\""}
+      ]
+    },
+    {
+      "id": "agent-grade-gate-exits-1",
+      "prompt": "Our accessibility standard is reading grade 3.5 or lower. Fail if the notice is harder than that.",
+      "expected": [
+        "Grade 3.9 is above 3.5; run exits 1 with every output written"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts.csv",
+        "max_grade": "3.5"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "transparency.json", "check": "contains:\"\\\"grade_ok\\\": false\""},
+        {"file": "system-card.md", "check": "contains:\"ABOVE MAX\""},
+        {"file": "disclosure-checklist.csv", "check": "contains:\"Art. 50(5),provider and deployer,yes,no,missing\""}
+      ]
+    },
+    {
+      "id": "agent-strict-missing-notice-facts-exits-1",
+      "prompt": "Gate the notice: fail if any fact the notice needs is missing.",
+      "expected": [
+        "Six notice facts missing; strict exits 1; notice still written with TBD markers"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts-partial.csv",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "transparency.json", "check": "contains:\"\\\"strict\\\": true\""},
+        {"file": "notice.md", "check": "contains:\"It is here to answer questions about your bill.\""}
+      ]
+    }
+  ]
+}

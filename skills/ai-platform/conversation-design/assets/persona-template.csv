@@ -1,0 +1,6 @@
+key,value,source,notes
+name,,,assistant name shown to users
+tone,,,e.g. plain and friendly; short sentences
+reading_level,,,e.g. grade 8 or below
+escalation_channel,,,where a person takes over (live chat; phone queue; ticket)
+disallowed_topics,,,semicolon-separated topics the assistant declines

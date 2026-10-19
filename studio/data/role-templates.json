@@ -37,7 +37,8 @@
    "ai-platform/ai-use-case-canvas",
    "ai-platform/feedback-improvement-loop",
    "ai-platform/program-raid-status",
-   "ai-platform/ai-slo-definition"
+   "ai-platform/ai-slo-definition",
+   "ai-platform/conversation-design"
   ],
   "playbooks": []
  },
@@ -61,7 +62,8 @@
    "ai-platform/ai-governance-risk",
    "build/security-review",
    "ai-platform/guardrails-config",
-   "ai-platform/ai-release-plan"
+   "ai-platform/ai-release-plan",
+   "ai-platform/ai-transparency-notice"
   ],
   "playbooks": []
  },

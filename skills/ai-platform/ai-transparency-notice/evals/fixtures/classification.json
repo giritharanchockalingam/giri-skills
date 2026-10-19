@@ -1,0 +1,5 @@
+{
+  "_fixture": "fictional classification for the Northwind Billing Assistant (fictional); layout as read from ai-platform/eu-ai-act-classifier: tier and basis",
+  "tier": "limited-risk (transparency obligations)",
+  "basis": ["Art. 50(1): interacts directly with natural persons", "Art. 50(2): generates synthetic text"]
+}

@@ -1,0 +1,21 @@
+# Fictional fixture: Northwind Billing Assistant (Northwind Utilities is a fictional company). Not a real system.
+key,value,source,notes
+system_name,Northwind Billing Assistant,Product brief v3 (fictional),
+provider,Northwind Utilities,Product brief v3 (fictional),
+purpose,answer questions about your bill and help you pay it,Product brief v3 (fictional),
+model,Hosted LLM (vendor and version per model card NW-MC-07; fictional),Model card NW-MC-07 (fictional),
+data_sources,your account details and your past bills,Data inventory DI-12 (fictional),
+human_oversight,a billing agent checks every refund before it is paid,Ops runbook RB-4 (fictional),
+known_limitations,can make mistakes and does not see payments made today,Eval report ER-9 (fictional),
+intended_users,Northwind Utilities residential customers,Product brief v3 (fictional),
+not_intended_for,legal or tax advice,Billing policy BP-2 (fictional),
+contact,help@northwind.example,Support page (fictional),
+generates_synthetic_content,yes,Model card NW-MC-07 (fictional),text replies only
+emotion_recognition,no,Design review DR-3 (fictional),
+biometric_categorisation,no,Design review DR-3 (fictional),
+last_updated,2026-09-30,Product brief v3 (fictional),
+interacts_directly,yes,Product brief v3 (fictional),
+content_marking,replies carry a machine-readable ai_generated flag in the chat transcript metadata,Engineering spec ES-21 (fictional),
+deep_fake,no,Design review DR-3 (fictional),
+public_interest_text,no,Design review DR-3 (fictional),
+notice_placement,shown above the chat box before the first message,UX spec UX-5 (fictional),

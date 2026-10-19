@@ -1,0 +1,89 @@
+{
+  "skill": "conversation-design",
+  "cases": [
+    {
+      "id": "prompt-design-intents",
+      "prompt": "We're building a billing assistant. Here are our intents and a month of chat messages — how well do the intents cover what people actually ask, and where should fallback and hand-off go?",
+      "expected": [
+        "Runs scripts/conversation_design.py with the intents and utterances CSVs",
+        "Reports coverage, accuracy (if labelled), per-intent precision/recall and confusable pairs with the thresholds stated",
+        "Echoes at most 80 characters of any user message; states the router is lexical and sample-based"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Check our Northwind Billing Assistant intents against the labelled sample; fail if accuracy is under 80%.",
+      "expected": [
+        "Coverage 19/24, accuracy 20/23, pay_bill/payment_plan flagged confusable, gate met"
+      ],
+      "inputs": {
+        "intents": "evals/fixtures/intents.csv",
+        "utterances": "evals/fixtures/utterances.csv",
+        "persona": "evals/fixtures/persona.csv",
+        "min_accuracy": "0.8"
+      },
+      "checks": [
+        "exit:0",
+        "exists:routing.csv",
+        {"file": "conversation-spec.md", "check": "contains:\"Coverage: 19/24 (79.2%) reach an intent at score >= 0.25; 5 go to fallback.\""},
+        {"file": "conversation-spec.md", "check": "contains:\"Accuracy: 20/23 (87.0%) of labelled utterances routed correctly.\""},
+        {"file": "intent-quality.csv", "check": "contains:\"explain_bill,5,0.667,1.000,none\""},
+        {"file": "intent-quality.csv", "check": "contains:\"check_balance,5,1.000,0.667,none\""},
+        {"file": "conversation-spec.md", "check": "contains:\"Confusable: `pay_bill` and `payment_plan`\""},
+        {"file": "routing.csv", "check": "contains:\"I moved house last week and need to close my account and open a new one at my ne…\""},
+        {"file": "conversation-spec.md", "check": "mermaid_parses"}
+      ]
+    },
+    {
+      "id": "agent-missing-utterances",
+      "prompt": "Design the conversation flow for our billing assistant from these intents.",
+      "expected": [
+        "Asks once for the utterance sample; nothing invented"
+      ],
+      "inputs": {
+        "intents": "evals/fixtures/intents.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:utterances"
+      ]
+    },
+    {
+      "id": "agent-partial-persona-not-invented",
+      "prompt": "We haven't decided the escalation channel or the off-limits topics yet — just pick sensible ones.",
+      "expected": [
+        "Escalation channel, reading level and disallowed topics are TBD for the Conversation designer; none invented; no gate so exit 0"
+      ],
+      "inputs": {
+        "intents": "evals/fixtures/intents.csv",
+        "utterances": "evals/fixtures/utterances.csv",
+        "persona": "evals/fixtures/persona-partial.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "conversation-spec.md", "check": "contains:\"Escalation channel: [TO BE BASELINED — owner: Conversation designer].\""},
+        {"file": "conversation-spec.md", "check": "contains:\"Persona keys missing: reading_level, escalation_channel, disallowed_topics\""},
+        {"file": "conversation-spec.md", "check": "contains:\"Gate: none set (no min_accuracy).\""},
+        {"file": "conversation-spec.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-accuracy-gate-exits-1",
+      "prompt": "Gate the intent catalog: fail the build if routing accuracy is below 90%.",
+      "expected": [
+        "Accuracy 0.870 is below 0.900; run exits 1 with all outputs written"
+      ],
+      "inputs": {
+        "intents": "evals/fixtures/intents.csv",
+        "utterances": "evals/fixtures/utterances.csv",
+        "persona": "evals/fixtures/persona.csv",
+        "min_accuracy": "0.9"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "conversation-spec.md", "check": "contains:\"Gate: FAILED — accuracy 0.870 is below min_accuracy 0.900 (exit 1).\""},
+        {"file": "routing.csv", "check": "contains:\"i was charged twice this month,fallback,0.227,dispute_charge,no,dispute_charge\""}
+      ]
+    }
+  ]
+}

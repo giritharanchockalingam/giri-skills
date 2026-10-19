@@ -1,0 +1,8 @@
+# Fictional fixture: early-stage facts for the Northwind Billing Assistant (fictional). Several facts not yet known.
+key,value,source,notes
+system_name,Northwind Billing Assistant,Product brief v1 (fictional),
+provider,Northwind Utilities,Product brief v1 (fictional),
+purpose,answer questions about your bill,Product brief v1 (fictional),
+generates_synthetic_content,yes,Product brief v1 (fictional),
+emotion_recognition,no,Product brief v1 (fictional),
+interacts_directly,yes,Product brief v1 (fictional),

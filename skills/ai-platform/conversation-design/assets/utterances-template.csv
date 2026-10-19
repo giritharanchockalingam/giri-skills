@@ -1,0 +1,3 @@
+# Real or sampled user messages (one per row). expected_intent: an intent name, fallback (out of scope on purpose) or blank.
+# Treat as user data: the skill echoes at most the first 80 characters of each in its outputs.
+utterance,expected_intent

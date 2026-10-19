@@ -1,0 +1,10 @@
+# Fictional fixture: Northwind Billing Assistant (Northwind Utilities is fictional). Not real customer data.
+intent,description,examples,response_type,handoff,owner
+check_balance,Tell the customer their current balance and due date,what is my balance|how much do I owe|when is my bill due|what is my current balance|amount due this month,answer,no,Billing product owner
+pay_bill,Take a one-off payment on the account,I want to pay my bill|pay my bill now|make a payment|can I pay online today|pay the amount due,action,no,Payments lead
+payment_plan,Set up a payment arrangement or extension for customers who cannot pay in full,I can't pay my bill in full|set up a payment plan|can I get an extension|split my payment into installments|need more time to pay,action,no,Collections lead
+dispute_charge,Open a dispute on a charge the customer thinks is wrong,this charge is wrong|I was overcharged|dispute a charge on my bill|why was I charged twice|my bill is too high and wrong,handoff,yes,Billing operations lead
+update_card,Change the stored card or bank account used for autopay,update my card|change my payment method|new credit card for autopay|replace my bank account details,action,no,Payments lead
+explain_bill,Explain line items fees and taxes on the bill,what is this fee|explain my bill|what does the delivery charge mean|why are there taxes on my bill|break down my statement,answer,no,Billing product owner
+usage_history,Show past energy usage by month,show my usage history|how much energy did I use last month|compare my usage to last year|monthly usage,answer,no,Billing product owner
+talk_to_agent,Connect the customer to a human billing agent,talk to a person|I want a human|speak to an agent|connect me to customer service|real person please,handoff,yes,Contact centre lead

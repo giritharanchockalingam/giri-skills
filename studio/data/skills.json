@@ -2098,6 +2098,328 @@
   "bodyMd": "\n# AI Strategy & CoE Design\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-strategy-coe --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-strategy-coe`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`portfolio.csv`, `portfolio.md`, `maturity.md`, `roadmap.md`); fill the operating-model and governance sections of the roadmap by hand from the references.\n\n## When to use\n- \"Build our AI strategy\", \"stand up an AI CoE\", \"where are we on AI maturity\", \"prioritize our AI backlog\", \"12-month AI roadmap\".\n- Executive audience: CIO, CDO, CTO, board.\n- NOT for: qualifying one idea (`ai-use-case-canvas`), risk/compliance only (`ai-governance-risk`), agent design (`agent-architecture`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Organization context (industry, size, regulatory posture) | yes | user |\n| Current-state evidence (data platforms, cloud, existing AI/ML, team) | yes | user / documents |\n| Candidate use-case list (even rough) | no | user; skill elicits if missing |\n| Executive sponsor and budget envelope | no | user; mark `[TO BE BASELINED — owner: ___]` if absent |\n| Strategic priorities for the next 12 months | yes | user / annual plan |\n\nIf organization context or current-state evidence is missing, ask once. Do not infer maturity from industry averages.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.\n2. **Assess maturity.** Score each of the five dimensions 1–5 using `references/maturity-model.md`. Record evidence per score in `assets/maturity-scorecard.csv`. A score without evidence is `[TO BE BASELINED]`.\n3. **Pick the operating model.** Apply the decision table in `references/operating-models.md`. State the chosen model, the two rejected ones, and why. Maturity level and organizational breadth drive this, not preference.\n4. **Score the portfolio.** Score every candidate use case on value, feasibility, risk, data readiness (1–5 each) with `references/use-case-scoring.md`; fill `assets/use-case-scoring.csv`. Compute priority = value × feasibility × data readiness ÷ risk. Classify: Now / Next / Later / Stop.\n5. **Define governance.** Minimum: intake gate, risk tiering, model inventory, review cadence. Point deeper controls to `ai-governance-risk`.\n6. **Build the roadmap.** Use `assets/roadmap.md` with `references/roadmap-skeleton.md`. Q1 is foundations and 1–2 lighthouse use cases; never schedule scale before measurement exists.\n7. **Write the executive summary** (≤5 bullets): maturity headline, model choice, top-3 use cases, investment envelope or `[TO BE BASELINED]`, first 90-day commitments.\n8. Run the self-check.\n\n## Output\n- `ai-strategy-<org>.md`: exec summary, maturity table, operating model, portfolio table, governance, roadmap, risks, next steps (owner + date).\n- `maturity-scorecard.csv` and `use-case-scoring.csv` filled.\n- Saved to the working directory unless the user names a path.\n\n## Self-check\n- [ ] Every maturity score has an evidence line or a `[TO BE BASELINED — owner: ___]` marker\n- [ ] Operating model choice cites the decision criteria it satisfied\n- [ ] Portfolio table has every candidate scored on all four axes; no \"high/med/low\" without the numeric score\n- [ ] Roadmap quarters each have an exit criterion and an owner\n- [ ] No vendor named as a recommendation without a stated selection criterion\n- [ ] No invented benchmark figures; industry comparisons carry a source or are omitted\n- [ ] First line is the answer\n\n## References\n- `references/maturity-model.md` — 5-level model with criteria per dimension\n- `references/operating-models.md` — central / hub-and-spoke / federated, when to choose\n- `references/use-case-scoring.md` — rubric and formula\n- `references/roadmap-skeleton.md` — 12-month quarter plan with exit criteria\n- `scripts/score_portfolio.py` — scoring CSV → ranked `portfolio.csv` + `unscored.csv` + `portfolio.md`\n- `scripts/maturity.py` — scorecard CSV → `maturity.md` + `roadmap.md` skeleton (one item per gap)\n"
  },
  {
+  "id": "ai-platform/ai-transparency-notice",
+  "domain": "ai-platform",
+  "stage": "deploy",
+  "name": "ai-transparency-notice",
+  "description": "Use when an AI system is about to reach users and needs its transparency material — \"write the 'you are talking to an AI' notice\", \"draft a system card\", \"what must we disclose under EU AI Act Article 50\", \"is our AI disclosure readable\", \"transparency checklist for our chatbot\". Produces notice.md (short plain-language user notice, every sentence traced to a fact, Flesch-Kincaid graded), system-card.md (Overview, Intended use, Not intended for, Data, Model, Human oversight, Limitations, Contact, Change log), disclosure-checklist.csv (Art. 50 duties as applies / provided / missing with owners) and transparency.json from a facts CSV and an optional eu-ai-act-classifier classification.json. Exit 1 when the notice grade is above max_grade. Never claims compliance. Not for risk-tier classification (use eu-ai-act-classifier), the AI risk register (use ai-governance-risk) or rollout gates (use ai-release-plan).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "deploy",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "facts",
+     "type": "csv",
+     "required": true,
+     "from": "system facts key,value,source,notes (layout: assets/facts-template.csv) - system_name, provider, purpose, model, data_sources, human_oversight, known_limitations, intended_users, not_intended_for, contact, yes/no flags, last_updated, Art. 50 evidence facts",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "classification",
+     "type": "json",
+     "required": false,
+     "from": "classification.json from ai-platform/eu-ai-act-classifier (tier and basis read if present); absent -> TBD for the Compliance lead",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "max_grade",
+     "type": "string",
+     "required": false,
+     "from": "reading-grade ceiling for the notice (default 8)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "strict",
+     "type": "flag",
+     "required": false,
+     "from": "true to fail the run (exit 1) when a fact the notice needs is missing",
+     "default": null,
+     "flag": "--strict",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "notice",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "notice",
+     "kind": "script",
+     "cmd": "python3 -I scripts/transparency_notice.py --facts {facts} [--classification {classification}] [--max-grade {max_grade}] {strict} --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/notice.md",
+     "checks": [
+      "exists",
+      "contains:\"It is an AI system, not a person.\"",
+      "max_lines:30",
+      "cmd:\"python3 -I scripts/transparency_notice.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/system-card.md",
+     "checks": [
+      "exists",
+      "sections:[\"Overview\",\"Intended use\",\"Not intended for\",\"Data\",\"Model\",\"Human oversight\",\"Limitations\",\"Contact\",\"Change log\"]",
+      "no_unowned_tbd",
+      "contains:\"does not claim compliance\""
+     ]
+    },
+    {
+     "path": "{out}/disclosure-checklist.csv",
+     "checks": [
+      "exists",
+      "csv:[duty,article,applies,provided,evidence,owner]",
+      "csv_rows:owner!empty",
+      "csv_rows:article~^Art\\\\. 50\\\\(\\\\d\\\\)$",
+      "csv_rows:status~^(provided|partial|missing|to confirm|not applicable)$"
+     ]
+    },
+    {
+     "path": "{out}/transparency.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"grade\\\"\"",
+      "contains:\"\\\"missing_facts\\\"\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "facts": "evals/fixtures/facts.csv",
+     "classification": "evals/fixtures/classification.json"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-transparency-notice-user-notice-system-card-art-50-checklist\">AI Transparency Notice (user notice, system card, Art. 50 checklist)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-transparency-notice --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-transparency-notice</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>notice.md</code>, <code>system-card.md</code>, <code>disclosure-checklist.csv</code>, <code>transparency.json</code>). A notice above the reading-grade ceiling fails the run (exit 1) on purpose; every output is still written so the facts can be rewritten in plainer words.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC deploy stage: before users first see an AI assistant, chatbot or content generator.</li><li>&quot;What do we tell users, and what does Article 50 expect us to disclose?&quot; — notice plus a duty-by-duty checklist with evidence and owners.</li><li>Reviewer pack: a system card whose every row cites the source of the fact.</li><li>NOT for: deciding the EU AI Act risk tier (<code>eu-ai-act-classifier</code>), the risk register (<code>ai-governance-risk</code>), staged rollout (<code>ai-release-plan</code>), legal sign-off (route to counsel — this skill never claims compliance).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>facts</code> — kv-csv <code>key,value,source,notes</code></td><td>yes</td><td>Product owner (copy <code>assets/facts-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>classification</code> — <code>classification.json</code></td><td>no</td><td>output of <code>ai-platform/eu-ai-act-classifier</code></td><td>system card classification line is <code>[TO BE BASELINED — owner: Compliance lead]</code></td></tr><tr><td><code>max_grade</code> — reading grade</td><td>no</td><td>accessibility or brand standard</td><td>8</td></tr><tr><td><code>strict</code> — true/false</td><td>no</td><td>release owner</td><td>false: notice written with TBD markers, exit 0</td></tr></tbody></table>\n<p>Each missing fact is <code>[TO BE BASELINED — owner: Product owner]</code> in the card and notice. Yes/no facts (<code>generates_synthetic_content</code>, <code>emotion_recognition</code>, <code>biometric_categorisation</code>, <code>interacts_directly</code>, <code>deep_fake</code>, <code>public_interest_text</code>) accept only yes or no; anything else exits 2.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>The Product owner fills <code>assets/facts-template.csv</code>, writing each fact as a plain phrase that completes its template sentence, with a source for every row.</li><li>Optionally run <code>ai-platform/eu-ai-act-classifier</code> first and pass its <code>classification.json</code>.</li><li>Run the agent. <code>scripts/transparency_notice.py</code> assembles the notice from <code>assets/notice-sentences.csv</code>, grades it (<code>references/readability.md</code>), writes the system card and evaluates <code>assets/art50-duties.csv</code> (<code>references/method.md</code>).</li><li>Grade above <code>max_grade</code> → exit 1: rewrite the long facts, not the notice.</li><li>Work every <code>missing</code> and <code>to confirm</code> checklist row with its owner. Treat <code>partial</code> on Art. 50(5) as a prompt for an accessibility review.</li><li>Have counsel review the checklist before launch; run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>notice.md</code> — the user-facing notice (one sentence per line, ≤ 15 sentences).</li><li><code>system-card.md</code> — Overview (with classification), Intended use, Not intended for, Data, Model, Human oversight, Limitations, Contact, Change log (grade, checklist counts, facts not supplied).</li><li><code>disclosure-checklist.csv</code> — <code>duty, article, addressee, applies, provided, status, evidence, owner</code>.</li><li><code>transparency.json</code> — <code>grade</code>, <code>max_grade</code>, <code>grade_ok</code>, <code>word_count</code>, <code>sentence_count</code>, <code>syllable_count</code>, <code>notice_sentences</code>, <code>notice_missing_facts</code>, <code>missing_facts</code>, checklist counts, classification.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every notice sentence comes from a template and a fact; <code>--verify</code> re-grades <code>notice.md</code> to the same numbers</li><li>[ ] Grade within <code>max_grade</code>, or the run failed and says so</li><li>[ ] Every checklist row has an owner; nothing says &quot;compliant&quot;</li><li>[ ] Missing facts are TBD for the Product owner; missing classification is TBD for the Compliance lead</li><li>[ ] Limits stated: heuristic syllable count, exemptions not assessed, not a legal determination</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/sources.md</code> — Article 50, 111(4), 113 text checked 2026-10-18; Flesch–Kincaid source</li><li><code>references/readability.md</code> — grade formula, syllable heuristic and its limits</li><li><code>references/method.md</code> — notice assembly, card rules, checklist rules</li><li><code>assets/facts-template.csv</code>, <code>assets/notice-sentences.csv</code>, <code>assets/art50-duties.csv</code> — input layout, templates, duty catalog</li><li><code>scripts/transparency_notice.py</code> — builder and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "readability.md",
+    "sources.md"
+   ],
+   "assets": [
+    "art50-duties.csv",
+    "facts-template.csv",
+    "notice-sentences.csv"
+   ],
+   "scripts": [
+    "transparency_notice.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-ai-notice",
+    "prompt": "Our billing chatbot launches in the EU next month. Write the 'you're talking to an AI' notice and tell me what Article 50 says we must disclose.",
+    "expected": [
+     "Collects the facts CSV (and classification.json if available) and runs scripts/transparency_notice.py",
+     "Notice sentences trace to facts; reading grade reported against the ceiling",
+     "Checklist shows applies / provided / missing per Art. 50 duty with owners; states it is not a legal determination and claims no compliance"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Produce the transparency notice, system card and Art. 50 checklist for the Northwind Billing Assistant from these facts and the classifier output.",
+    "expected": [
+     "Grade 3.9 within 8; interaction and marking duties provided; Art. 50(5) partial; classification tier shown"
+    ]
+   },
+   {
+    "id": "agent-missing-facts",
+    "prompt": "Write our AI disclosure notice.",
+    "expected": [
+     "Asks once for the facts CSV"
+    ]
+   },
+   {
+    "id": "agent-partial-facts-not-invented",
+    "prompt": "We only know the name, provider and purpose so far — fill in the rest of the notice with typical wording.",
+    "expected": [
+     "Missing facts are TBD for the Product owner in notice and card; no wording invented; classification TBD for the Compliance lead; exit 0 without strict"
+    ]
+   },
+   {
+    "id": "agent-grade-gate-exits-1",
+    "prompt": "Our accessibility standard is reading grade 3.5 or lower. Fail if the notice is harder than that.",
+    "expected": [
+     "Grade 3.9 is above 3.5; run exits 1 with every output written"
+    ]
+   },
+   {
+    "id": "agent-strict-missing-notice-facts-exits-1",
+    "prompt": "Gate the notice: fail if any fact the notice needs is missing.",
+    "expected": [
+     "Six notice facts missing; strict exits 1; notice still written with TBD markers"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Produce the transparency notice, system card and Art. 50 checklist for the Northwind Billing Assistant from these facts and the classifier output.",
+    "inputs": {
+     "facts": "evals/fixtures/facts.csv",
+     "classification": "evals/fixtures/classification.json"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:notice.md",
+     {
+      "file": "notice.md",
+      "check": "contains:\"You are chatting with Northwind Billing Assistant. It is an AI system, not a person.\""
+     },
+     {
+      "file": "transparency.json",
+      "check": "contains:\"\\\"grade\\\": 3.9\""
+     },
+     {
+      "file": "transparency.json",
+      "check": "contains:\"\\\"word_count\\\": 94\""
+     },
+     {
+      "file": "disclosure-checklist.csv",
+      "check": "contains:\"Art. 50(2),provider,yes,yes,provided\""
+     },
+     {
+      "file": "disclosure-checklist.csv",
+      "check": "contains:\"Art. 50(5),provider and deployer,yes,partial,partial\""
+     },
+     {
+      "file": "system-card.md",
+      "check": "contains:\"tier limited-risk (transparency obligations)\""
+     },
+     {
+      "file": "system-card.md",
+      "check": "contains:\"Facts not supplied: none.\""
+     }
+    ],
+    "expected": [
+     "Grade 3.9 within 8; interaction and marking duties provided; Art. 50(5) partial; classification tier shown"
+    ]
+   },
+   {
+    "id": "agent-missing-facts",
+    "prompt": "Write our AI disclosure notice.",
+    "inputs": {
+     "max_grade": "8"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:facts"
+    ],
+    "expected": [
+     "Asks once for the facts CSV"
+    ]
+   },
+   {
+    "id": "agent-partial-facts-not-invented",
+    "prompt": "We only know the name, provider and purpose so far — fill in the rest of the notice with typical wording.",
+    "inputs": {
+     "facts": "evals/fixtures/facts-partial.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "notice.md",
+      "check": "contains:\"Questions? Contact [TO BE BASELINED — owner: Product owner].\""
+     },
+     {
+      "file": "system-card.md",
+      "check": "contains:\"EU AI Act classification: [TO BE BASELINED — owner: Compliance lead]\""
+     },
+     {
+      "file": "disclosure-checklist.csv",
+      "check": "contains:\"Art. 50(2),provider,yes,no,missing,content_marking not stated,Engineering lead\""
+     },
+     {
+      "file": "system-card.md",
+      "check": "no_unowned_tbd"
+     },
+     {
+      "file": "transparency.json",
+      "check": "contains:\"\\\"strict\\\": false\""
+     }
+    ],
+    "expected": [
+     "Missing facts are TBD for the Product owner in notice and card; no wording invented; classification TBD for the Compliance lead; exit 0 without strict"
+    ]
+   },
+   {
+    "id": "agent-grade-gate-exits-1",
+    "prompt": "Our accessibility standard is reading grade 3.5 or lower. Fail if the notice is harder than that.",
+    "inputs": {
+     "facts": "evals/fixtures/facts.csv",
+     "max_grade": "3.5"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "transparency.json",
+      "check": "contains:\"\\\"grade_ok\\\": false\""
+     },
+     {
+      "file": "system-card.md",
+      "check": "contains:\"ABOVE MAX\""
+     },
+     {
+      "file": "disclosure-checklist.csv",
+      "check": "contains:\"Art. 50(5),provider and deployer,yes,no,missing\""
+     }
+    ],
+    "expected": [
+     "Grade 3.9 is above 3.5; run exits 1 with every output written"
+    ]
+   },
+   {
+    "id": "agent-strict-missing-notice-facts-exits-1",
+    "prompt": "Gate the notice: fail if any fact the notice needs is missing.",
+    "inputs": {
+     "facts": "evals/fixtures/facts-partial.csv",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "transparency.json",
+      "check": "contains:\"\\\"strict\\\": true\""
+     },
+     {
+      "file": "notice.md",
+      "check": "contains:\"It is here to answer questions about your bill.\""
+     }
+    ],
+    "expected": [
+     "Six notice facts missing; strict exits 1; notice still written with TBD markers"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI Transparency Notice (user notice, system card, Art. 50 checklist)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-transparency-notice --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-transparency-notice`). Report the `run.json` results; do not hand-write the deliverables the script produces (`notice.md`, `system-card.md`, `disclosure-checklist.csv`, `transparency.json`). A notice above the reading-grade ceiling fails the run (exit 1) on purpose; every output is still written so the facts can be rewritten in plainer words.\n\n## When to use\n- ADLC deploy stage: before users first see an AI assistant, chatbot or content generator.\n- \"What do we tell users, and what does Article 50 expect us to disclose?\" — notice plus a duty-by-duty checklist with evidence and owners.\n- Reviewer pack: a system card whose every row cites the source of the fact.\n- NOT for: deciding the EU AI Act risk tier (`eu-ai-act-classifier`), the risk register (`ai-governance-risk`), staged rollout (`ai-release-plan`), legal sign-off (route to counsel — this skill never claims compliance).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `facts` — kv-csv `key,value,source,notes` | yes | Product owner (copy `assets/facts-template.csv`) | run stops (exit 2), asks once |\n| `classification` — `classification.json` | no | output of `ai-platform/eu-ai-act-classifier` | system card classification line is `[TO BE BASELINED — owner: Compliance lead]` |\n| `max_grade` — reading grade | no | accessibility or brand standard | 8 |\n| `strict` — true/false | no | release owner | false: notice written with TBD markers, exit 0 |\n\nEach missing fact is `[TO BE BASELINED — owner: Product owner]` in the card and notice. Yes/no facts (`generates_synthetic_content`, `emotion_recognition`, `biometric_categorisation`, `interacts_directly`, `deep_fake`, `public_interest_text`) accept only yes or no; anything else exits 2.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. The Product owner fills `assets/facts-template.csv`, writing each fact as a plain phrase that completes its template sentence, with a source for every row.\n3. Optionally run `ai-platform/eu-ai-act-classifier` first and pass its `classification.json`.\n4. Run the agent. `scripts/transparency_notice.py` assembles the notice from `assets/notice-sentences.csv`, grades it (`references/readability.md`), writes the system card and evaluates `assets/art50-duties.csv` (`references/method.md`).\n5. Grade above `max_grade` → exit 1: rewrite the long facts, not the notice.\n6. Work every `missing` and `to confirm` checklist row with its owner. Treat `partial` on Art. 50(5) as a prompt for an accessibility review.\n7. Have counsel review the checklist before launch; run the self-check.\n\n## Output\n- `notice.md` — the user-facing notice (one sentence per line, ≤ 15 sentences).\n- `system-card.md` — Overview (with classification), Intended use, Not intended for, Data, Model, Human oversight, Limitations, Contact, Change log (grade, checklist counts, facts not supplied).\n- `disclosure-checklist.csv` — `duty, article, addressee, applies, provided, status, evidence, owner`.\n- `transparency.json` — `grade`, `max_grade`, `grade_ok`, `word_count`, `sentence_count`, `syllable_count`, `notice_sentences`, `notice_missing_facts`, `missing_facts`, checklist counts, classification.\n\n## Self-check\n- [ ] Every notice sentence comes from a template and a fact; `--verify` re-grades `notice.md` to the same numbers\n- [ ] Grade within `max_grade`, or the run failed and says so\n- [ ] Every checklist row has an owner; nothing says \"compliant\"\n- [ ] Missing facts are TBD for the Product owner; missing classification is TBD for the Compliance lead\n- [ ] Limits stated: heuristic syllable count, exemptions not assessed, not a legal determination\n\n## References\n- `references/sources.md` — Article 50, 111(4), 113 text checked 2026-10-18; Flesch–Kincaid source\n- `references/readability.md` — grade formula, syllable heuristic and its limits\n- `references/method.md` — notice assembly, card rules, checklist rules\n- `assets/facts-template.csv`, `assets/notice-sentences.csv`, `assets/art50-duties.csv` — input layout, templates, duty catalog\n- `scripts/transparency_notice.py` — builder and `--verify` (argparse; stdlib)\n"
+ },
+ {
   "id": "ai-platform/ai-use-case-canvas",
   "domain": "ai-platform",
   "stage": "use-case",
@@ -2577,6 +2899,289 @@
    }
   ],
   "bodyMd": "\n# Bias & Fairness Check\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/bias-fairness-check --input <name>=<value> … --out <dir>` (see `--explain ai-platform/bias-fairness-check`). Report the `run.json` results; do not hand-write the deliverables the script produces (`fairness.json`, `fairness-report.md`). A metric that breaches a supplied threshold fails the run (exit 1) on purpose; a metric with no threshold is `[TO BE BASELINED — owner: Responsible AI lead]` and the verdict is INCOMPLETE, never PASS.\n\n## When to use\n- Pre-launch or periodic fairness gate on a binary classifier or a yes/no AI decision (approve/deny, flag/not flag, shortlist/reject).\n- Answering \"is there disparate impact\", \"is the error rate the same across groups\", \"which groups are too small to judge\".\n- NOT for: LLM answer quality or groundedness (`llm-eval-harness`); the risk register, controls and model card (`ai-governance-risk` — attach this report as evidence); legal advice on anti-discrimination law (route to counsel); multi-class or regression outputs (binarise first and say how).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `predictions` CSV: sensitive-attribute column (default `group`), `label`, `prediction` (0/1, true/false, yes/no), optional `score` | yes | model owner's labelled evaluation sample; fixture rows must be labelled fictional |\n| `thresholds` CSV: `metric,threshold` for `demographic_parity_difference`, `disparate_impact_ratio`, `equal_opportunity_difference`, `equalized_odds_difference` | no | Responsible AI lead; policy decision, never invented by the skill |\n| `sensitive_attr` | no (default `group`) | user |\n| `reference_group` | no | user / policy (often the historically advantaged group) |\n| `min_sample` | no | Responsible AI lead / statistician |\n\nIf `predictions` is missing the runner exits 2 and asks once. Thresholds are never assumed: the four-fifths rule applies only when the user sets `disparate_impact_ratio` to 0.8.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the decision, the positive outcome (what `prediction = 1` means), the sensitive attribute and the evaluation sample's provenance. Copy `assets/predictions-template.csv` and `assets/thresholds-template.csv`.\n3. Run the agent (above) or the script directly: `python3 -I scripts/fairness.py --predictions p.csv --thresholds t.csv --reference-group A --min-sample 30 --out <dir>`.\n4. Read the verdict: FAIL (a breach, exit 1), INCOMPLETE (a threshold to be baselined or a metric undefined), PASS (every metric within its supplied threshold).\n5. Interpret with `references/fairness-metrics.md`: which metric governs for this decision, why base rates differ, whether small groups drive the gap.\n6. Hand the report to `ai-governance-risk` as bias-risk evidence; record mitigations (re-threshold per group only with legal sign-off, rebalance data, add human review).\n7. Run the self-check.\n\n## Output\n- `fairness.json`: verdict, breaches, metrics (value, rule, threshold, status, owner when unbaselined), per-group stats, reference group and basis, small groups, notes.\n- `fairness-report.md`: sections Verdict, Metrics, Per-group, Small groups, Limits. Every number traces to `fairness.json`.\n\n## Self-check\n- [ ] Every threshold came from the user; missing ones read `[TO BE BASELINED — owner: Responsible AI lead]`, never \"pass\"\n- [ ] Reference group and its basis stated\n- [ ] Small groups flagged and kept in the metrics (not silently dropped)\n- [ ] Undefined rates (no positives / no negatives in a group) named, not shown as 0\n- [ ] Limits section kept: no confidence intervals, metric conflict, label bias, no legal conclusion\n- [ ] No fixture or fictional data presented as a real model's results\n\n## References\n- `references/fairness-metrics.md` — definitions, worked example (the eval fixture, hand-checked), choosing a metric, standards by name\n- `scripts/fairness.py` — calculator (argparse; stdlib; exit 0 / 1 breach / 2 input)\n- `assets/predictions-template.csv`, `assets/thresholds-template.csv` — input layouts\n"
+ },
+ {
+  "id": "ai-platform/conversation-design",
+  "domain": "ai-platform",
+  "stage": "requirements",
+  "name": "conversation-design",
+  "description": "Use when the user is designing or checking the conversation layer of an AI assistant or chatbot — \"design the intents for our assistant\", \"how well do our intents cover what users actually say\", \"which intents get confused\", \"where is the fallback and human hand-off\", \"check our utterances against the intent list\". Produces routing.csv (each utterance's best intent and score), intent-quality.csv (examples, precision, recall, confusable intents) and conversation-spec.md (Summary, Persona, Intents, Fallback and hand-off with a mermaid flowchart, Coverage, Gaps, Method) from an intent catalog and real user utterances, using a deterministic TF-IDF router. Exit 1 when labelled accuracy is below the supplied min_accuracy. Not for prompt wording (use prompt-spec), LLM answer quality (use llm-eval-harness) or agent topology (use agent-architecture).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "requirements",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "intents",
+     "type": "csv",
+     "required": true,
+     "from": "intent catalog intent,description,examples(pipe-separated),response_type answer|action|handoff|clarify,handoff yes/no,owner (layout: assets/intents-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "utterances",
+     "type": "csv",
+     "required": true,
+     "from": "real or sampled user messages utterance[,expected_intent] (layout: assets/utterances-template.csv); echoed to 80 characters at most",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "persona",
+     "type": "csv",
+     "required": false,
+     "from": "kv-csv key,value,source,notes: name, tone, reading_level, escalation_channel, disallowed_topics (layout: assets/persona-template.csv); missing keys are TBD for the Conversation designer",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "min_accuracy",
+     "type": "string",
+     "required": false,
+     "from": "gate 0-1 on labelled routing accuracy; below it the run exits 1",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "design",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "design",
+     "kind": "script",
+     "cmd": "python3 -I scripts/conversation_design.py --intents {intents} --utterances {utterances} [--persona {persona}] [--min-accuracy {min_accuracy}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/routing.csv",
+     "checks": [
+      "exists",
+      "csv:[utterance,predicted_intent,score,expected_intent,correct]",
+      "csv_rows:score~^[01]\\\\.\\\\d{3}$",
+      "csv_rows:predicted_intent!empty",
+      "cmd:\"python3 -I scripts/conversation_design.py --verify {path} --intents {intents} --utterances {utterances}\"",
+      "cmd:\"python3 -I scripts/conversation_design.py --leak-check {path} --utterances {utterances}\""
+     ]
+    },
+    {
+     "path": "{out}/intent-quality.csv",
+     "checks": [
+      "exists",
+      "csv:[intent,examples,precision,recall,confusable_with]",
+      "csv_rows:examples~^\\\\d+$",
+      "csv_rows:recall~^(n/a|[01]\\\\.\\\\d{3})$"
+     ]
+    },
+    {
+     "path": "{out}/conversation-spec.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Persona\",\"Intents\",\"Fallback and hand-off\",\"Coverage\",\"Gaps\",\"Method\"]",
+      "mermaid_parses",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/conversation_design.py --leak-check {path} --utterances {utterances}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "intents": "evals/fixtures/intents.csv",
+     "utterances": "evals/fixtures/utterances.csv",
+     "persona": "evals/fixtures/persona.csv",
+     "min_accuracy": "0.8"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"conversation-design-intents-fallback-hand-off-coverage\">Conversation Design (intents, fallback, hand-off, coverage)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/conversation-design --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/conversation-design</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>routing.csv</code>, <code>intent-quality.csv</code>, <code>conversation-spec.md</code>). Accuracy below a supplied <code>min_accuracy</code> fails the run (exit 1) on purpose; the outputs are still written so the misses are visible.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC requirements stage: before building an assistant, to agree the intent catalog, response types, fallback and the human hand-off path.</li><li>&quot;How much of what users actually say do our intents cover?&quot; — route a sample of real messages and read coverage and gaps.</li><li>Regression check after editing intents: run with labelled utterances and a <code>min_accuracy</code> gate.</li><li>NOT for: prompt wording or system prompts (<code>prompt-spec</code>), grading LLM answers (<code>llm-eval-harness</code>), single- vs multi-agent design (<code>agent-architecture</code>), production NLU benchmarking (this router is lexical).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>intents</code> — <code>intent,description,examples,response_type,handoff,owner</code></td><td>yes</td><td>Conversation designer (copy <code>assets/intents-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>utterances</code> — <code>utterance[,expected_intent]</code></td><td>yes</td><td>chat logs, search logs, call-centre notes, sampled and de-identified</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>persona</code> — kv-csv <code>name, tone, reading_level, escalation_channel, disallowed_topics</code></td><td>no</td><td>Conversation designer / brand voice guide</td><td>each missing key is <code>[TO BE BASELINED — owner: Conversation designer]</code></td></tr><tr><td><code>min_accuracy</code> — 0–1</td><td>no</td><td>product owner</td><td>no gate; accuracy reported only</td></tr></tbody></table>\n<p><code>expected_intent</code> may be an intent name, <code>fallback</code> (out of scope on purpose) or blank (unlabelled; counts toward coverage only). An unknown label, a bad <code>response_type</code>, a <code>handoff</code> other than yes/no, a duplicate intent or an intent named <code>fallback</code> stops the run (exit 2) with the line number.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Strip personal data from the utterance sample. Outputs echo at most 80 characters of each utterance, but the run reads all of it.</li><li>Run the agent. <code>scripts/conversation_design.py</code> routes each utterance by TF-IDF cosine (<code>references/method.md</code>); below 0.25 it goes to <code>fallback</code>.</li><li>With labels it computes accuracy, per-intent precision/recall and confusion pairs; it flags intent pairs whose example sets reach cosine 0.40.</li><li>With <code>min_accuracy</code>, accuracy below it (or no labels to measure it) exits 1.</li><li>Work the Gaps list with each intent's owner: add missed phrasings, split or merge confusable intents, confirm out-of-scope messages.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>routing.csv</code> — <code>utterance</code> (≤ 80 chars), <code>predicted_intent</code>, <code>score</code>, <code>expected_intent</code>, <code>correct</code>, <code>nearest_intent</code>.</li><li><code>intent-quality.csv</code> — <code>intent, examples, precision, recall, confusable_with, response_type, handoff, routed, labelled, owner</code>.</li><li><code>conversation-spec.md</code> — <strong>Summary</strong>, <strong>Persona</strong>, <strong>Intents</strong>, <strong>Fallback and hand-off</strong> (mermaid flowchart), <strong>Coverage</strong> (uncovered utterances, confusion pairs), <strong>Gaps</strong> (each with an owner), <strong>Method</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] <code>routing.csv</code> re-derives exactly (<code>--verify</code>) and no output echoes more than 80 characters of an utterance (<code>--leak-check</code>)</li><li>[ ] Every gap names an owner; missing persona keys are TBD for the Conversation designer</li><li>[ ] The flowchart shows fallback and a path to a person</li><li>[ ] Threshold values (0.25 route, 0.40 confusable) are stated in the report</li><li>[ ] Limits stated: lexical router, sample-based, not a production NLU benchmark</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — tokenising, TF-IDF formula, thresholds, metrics, limits</li><li><code>assets/intents-template.csv</code>, <code>assets/utterances-template.csv</code>, <code>assets/persona-template.csv</code> — input layouts</li><li><code>scripts/conversation_design.py</code> — router, metrics, spec writer, <code>--verify</code> and <code>--leak-check</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md"
+   ],
+   "assets": [
+    "intents-template.csv",
+    "persona-template.csv",
+    "utterances-template.csv"
+   ],
+   "scripts": [
+    "conversation_design.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-design-intents",
+    "prompt": "We're building a billing assistant. Here are our intents and a month of chat messages — how well do the intents cover what people actually ask, and where should fallback and hand-off go?",
+    "expected": [
+     "Runs scripts/conversation_design.py with the intents and utterances CSVs",
+     "Reports coverage, accuracy (if labelled), per-intent precision/recall and confusable pairs with the thresholds stated",
+     "Echoes at most 80 characters of any user message; states the router is lexical and sample-based"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Check our Northwind Billing Assistant intents against the labelled sample; fail if accuracy is under 80%.",
+    "expected": [
+     "Coverage 19/24, accuracy 20/23, pay_bill/payment_plan flagged confusable, gate met"
+    ]
+   },
+   {
+    "id": "agent-missing-utterances",
+    "prompt": "Design the conversation flow for our billing assistant from these intents.",
+    "expected": [
+     "Asks once for the utterance sample; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-partial-persona-not-invented",
+    "prompt": "We haven't decided the escalation channel or the off-limits topics yet — just pick sensible ones.",
+    "expected": [
+     "Escalation channel, reading level and disallowed topics are TBD for the Conversation designer; none invented; no gate so exit 0"
+    ]
+   },
+   {
+    "id": "agent-accuracy-gate-exits-1",
+    "prompt": "Gate the intent catalog: fail the build if routing accuracy is below 90%.",
+    "expected": [
+     "Accuracy 0.870 is below 0.900; run exits 1 with all outputs written"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Check our Northwind Billing Assistant intents against the labelled sample; fail if accuracy is under 80%.",
+    "inputs": {
+     "intents": "evals/fixtures/intents.csv",
+     "utterances": "evals/fixtures/utterances.csv",
+     "persona": "evals/fixtures/persona.csv",
+     "min_accuracy": "0.8"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     "exists:routing.csv",
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Coverage: 19/24 (79.2%) reach an intent at score >= 0.25; 5 go to fallback.\""
+     },
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Accuracy: 20/23 (87.0%) of labelled utterances routed correctly.\""
+     },
+     {
+      "file": "intent-quality.csv",
+      "check": "contains:\"explain_bill,5,0.667,1.000,none\""
+     },
+     {
+      "file": "intent-quality.csv",
+      "check": "contains:\"check_balance,5,1.000,0.667,none\""
+     },
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Confusable: `pay_bill` and `payment_plan`\""
+     },
+     {
+      "file": "routing.csv",
+      "check": "contains:\"I moved house last week and need to close my account and open a new one at my ne…\""
+     },
+     {
+      "file": "conversation-spec.md",
+      "check": "mermaid_parses"
+     }
+    ],
+    "expected": [
+     "Coverage 19/24, accuracy 20/23, pay_bill/payment_plan flagged confusable, gate met"
+    ]
+   },
+   {
+    "id": "agent-missing-utterances",
+    "prompt": "Design the conversation flow for our billing assistant from these intents.",
+    "inputs": {
+     "intents": "evals/fixtures/intents.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:utterances"
+    ],
+    "expected": [
+     "Asks once for the utterance sample; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-partial-persona-not-invented",
+    "prompt": "We haven't decided the escalation channel or the off-limits topics yet — just pick sensible ones.",
+    "inputs": {
+     "intents": "evals/fixtures/intents.csv",
+     "utterances": "evals/fixtures/utterances.csv",
+     "persona": "evals/fixtures/persona-partial.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Escalation channel: [TO BE BASELINED — owner: Conversation designer].\""
+     },
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Persona keys missing: reading_level, escalation_channel, disallowed_topics\""
+     },
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Gate: none set (no min_accuracy).\""
+     },
+     {
+      "file": "conversation-spec.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Escalation channel, reading level and disallowed topics are TBD for the Conversation designer; none invented; no gate so exit 0"
+    ]
+   },
+   {
+    "id": "agent-accuracy-gate-exits-1",
+    "prompt": "Gate the intent catalog: fail the build if routing accuracy is below 90%.",
+    "inputs": {
+     "intents": "evals/fixtures/intents.csv",
+     "utterances": "evals/fixtures/utterances.csv",
+     "persona": "evals/fixtures/persona.csv",
+     "min_accuracy": "0.9"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "conversation-spec.md",
+      "check": "contains:\"Gate: FAILED — accuracy 0.870 is below min_accuracy 0.900 (exit 1).\""
+     },
+     {
+      "file": "routing.csv",
+      "check": "contains:\"i was charged twice this month,fallback,0.227,dispute_charge,no,dispute_charge\""
+     }
+    ],
+    "expected": [
+     "Accuracy 0.870 is below 0.900; run exits 1 with all outputs written"
+    ]
+   }
+  ],
+  "bodyMd": "\n# Conversation Design (intents, fallback, hand-off, coverage)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/conversation-design --input <name>=<value> … --out <dir>` (see `--explain ai-platform/conversation-design`). Report the `run.json` results; do not hand-write the deliverables the script produces (`routing.csv`, `intent-quality.csv`, `conversation-spec.md`). Accuracy below a supplied `min_accuracy` fails the run (exit 1) on purpose; the outputs are still written so the misses are visible.\n\n## When to use\n- ADLC requirements stage: before building an assistant, to agree the intent catalog, response types, fallback and the human hand-off path.\n- \"How much of what users actually say do our intents cover?\" — route a sample of real messages and read coverage and gaps.\n- Regression check after editing intents: run with labelled utterances and a `min_accuracy` gate.\n- NOT for: prompt wording or system prompts (`prompt-spec`), grading LLM answers (`llm-eval-harness`), single- vs multi-agent design (`agent-architecture`), production NLU benchmarking (this router is lexical).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `intents` — `intent,description,examples,response_type,handoff,owner` | yes | Conversation designer (copy `assets/intents-template.csv`) | run stops (exit 2), asks once |\n| `utterances` — `utterance[,expected_intent]` | yes | chat logs, search logs, call-centre notes, sampled and de-identified | run stops (exit 2), asks once |\n| `persona` — kv-csv `name, tone, reading_level, escalation_channel, disallowed_topics` | no | Conversation designer / brand voice guide | each missing key is `[TO BE BASELINED — owner: Conversation designer]` |\n| `min_accuracy` — 0–1 | no | product owner | no gate; accuracy reported only |\n\n`expected_intent` may be an intent name, `fallback` (out of scope on purpose) or blank (unlabelled; counts toward coverage only). An unknown label, a bad `response_type`, a `handoff` other than yes/no, a duplicate intent or an intent named `fallback` stops the run (exit 2) with the line number.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Strip personal data from the utterance sample. Outputs echo at most 80 characters of each utterance, but the run reads all of it.\n3. Run the agent. `scripts/conversation_design.py` routes each utterance by TF-IDF cosine (`references/method.md`); below 0.25 it goes to `fallback`.\n4. With labels it computes accuracy, per-intent precision/recall and confusion pairs; it flags intent pairs whose example sets reach cosine 0.40.\n5. With `min_accuracy`, accuracy below it (or no labels to measure it) exits 1.\n6. Work the Gaps list with each intent's owner: add missed phrasings, split or merge confusable intents, confirm out-of-scope messages.\n7. Run the self-check.\n\n## Output\n- `routing.csv` — `utterance` (≤ 80 chars), `predicted_intent`, `score`, `expected_intent`, `correct`, `nearest_intent`.\n- `intent-quality.csv` — `intent, examples, precision, recall, confusable_with, response_type, handoff, routed, labelled, owner`.\n- `conversation-spec.md` — **Summary**, **Persona**, **Intents**, **Fallback and hand-off** (mermaid flowchart), **Coverage** (uncovered utterances, confusion pairs), **Gaps** (each with an owner), **Method**.\n\n## Self-check\n- [ ] `routing.csv` re-derives exactly (`--verify`) and no output echoes more than 80 characters of an utterance (`--leak-check`)\n- [ ] Every gap names an owner; missing persona keys are TBD for the Conversation designer\n- [ ] The flowchart shows fallback and a path to a person\n- [ ] Threshold values (0.25 route, 0.40 confusable) are stated in the report\n- [ ] Limits stated: lexical router, sample-based, not a production NLU benchmark\n\n## References\n- `references/method.md` — tokenising, TF-IDF formula, thresholds, metrics, limits\n- `assets/intents-template.csv`, `assets/utterances-template.csv`, `assets/persona-template.csv` — input layouts\n- `scripts/conversation_design.py` — router, metrics, spec writer, `--verify` and `--leak-check` (argparse; stdlib)\n"
  },
  {
   "id": "ai-platform/data-readiness-assessment",

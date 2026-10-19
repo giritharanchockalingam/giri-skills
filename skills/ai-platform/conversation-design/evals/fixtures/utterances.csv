@@ -1,0 +1,26 @@
+# Fictional fixture: sampled user messages for the Northwind Billing Assistant (fictional). No real users.
+utterance,expected_intent
+how much do i owe right now,check_balance
+when is the bill due,check_balance
+whats my balance,check_balance
+i want to pay my bill today,pay_bill
+make a payment please,pay_bill
+pay online,pay_bill
+can i set up a plan to pay over 3 months,payment_plan
+i need an extension on my bill,payment_plan
+i cant pay in full this month,payment_plan
+i was charged twice this month,dispute_charge
+this fee is wrong and i want to dispute it,dispute_charge
+change my card for autopay,update_card
+i have a new bank account for payments,update_card
+what is this delivery charge on my statement,explain_bill
+explain the taxes on my bill,explain_bill
+how much energy did i use in july,usage_history
+compare my usage with last year,usage_history
+let me talk to a real person,talk_to_agent
+customer service agent please,talk_to_agent
+is my power going to be shut off tomorrow because of the storm in the north part of the county near the river,fallback
+what is the weather like,fallback
+do you sell solar panels,fallback
+my bill is wrong,dispute_charge
+I moved house last week and need to close my account and open a new one at my new address,

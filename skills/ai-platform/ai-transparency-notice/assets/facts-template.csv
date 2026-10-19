@@ -1,0 +1,22 @@
+key,value,source,notes
+system_name,,,name users see (notice + card)
+provider,,,organisation that provides or runs the system (notice: "<provider> runs it.")
+purpose,,,verb phrase completing "It is here to ..." e.g. answer questions about your bill
+model,,,model name and version (system card only)
+data_sources,,,noun phrase completing "It uses ..." e.g. your account and billing history
+human_oversight,,,clause after "People stay in charge: ..." e.g. a billing agent checks every refund
+known_limitations,,,verb phrase completing "Keep in mind that it ..." e.g. can make mistakes
+intended_users,,,who the system is for (system card)
+not_intended_for,,,noun phrase completing "It is not for ..." e.g. legal or tax advice
+contact,,,where users send questions (email address or URL)
+generates_synthetic_content,,,yes | no — produces AI-generated text/image/audio/video (Art. 50(2))
+emotion_recognition,,,yes | no — infers emotions of people (Art. 50(3))
+biometric_categorisation,,,yes | no — sorts people into categories from biometric data (Art. 50(3))
+last_updated,,,ISO date the facts were last reviewed (YYYY-MM-DD)
+interacts_directly,,,yes | no — intended to interact directly with people (Art. 50(1))
+content_marking,,,how outputs are marked machine-readable and detectable (Art. 50(2) evidence)
+deep_fake,,,yes | no — generates or manipulates image/audio/video that resembles real people/places/events (Art. 50(4))
+deep_fake_label,,,how deep-fake content is labelled for viewers (Art. 50(4) evidence)
+public_interest_text,,,yes | no — publishes AI text to inform the public on matters of public interest (Art. 50(4))
+public_interest_text_label,,,how that text is disclosed, or the human editorial review that exempts it (Art. 50(4) evidence)
+notice_placement,,,where and when users see the notice e.g. shown above the chat box before the first message (Art. 50(5) evidence)

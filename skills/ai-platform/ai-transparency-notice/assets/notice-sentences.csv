@@ -1,0 +1,16 @@
+# Notice templates. Each sentence traces to the facts in its {placeholders} or its `when` condition.
+# when: always | <fact>=yes. Edit wording here; keep sentences short (the notice is graded with Flesch-Kincaid).
+id,when,template
+ai_interaction,always,"You are chatting with {system_name}. It is an AI system, not a person."
+provider,always,{provider} runs it.
+purpose,always,It is here to {purpose}.
+data,always,It uses {data_sources}.
+not_for,always,It is not for {not_intended_for}.
+limits,always,Keep in mind that it {known_limitations}.
+oversight,always,People stay in charge: {human_oversight}.
+synthetic,generates_synthetic_content=yes,What it writes or makes is created by AI.
+deep_fake,deep_fake=yes,"Images, audio or video it makes may look real, but they are made by AI."
+emotion,emotion_recognition=yes,It tries to recognise emotions from what you share.
+biometric,biometric_categorisation=yes,It uses biometric data to sort people into groups.
+contact,always,Questions? Contact {contact}.
+updated,always,Last updated: {last_updated}.

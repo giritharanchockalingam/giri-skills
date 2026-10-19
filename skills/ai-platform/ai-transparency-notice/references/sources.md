@@ -1,0 +1,15 @@
+# Sources (checked 2026-10-18)
+
+| ID | Source | What it supports | Checked |
+|---|---|---|---|
+| S1 | Regulation (EU) 2024/1689 (AI Act), Article 50 "Transparency obligations for providers and deployers of certain AI systems" — official text as published by the European Commission AI Act Service Desk, which reproduces the EUR-Lex consolidated version as at 27 July 2026: https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-50 | The seven duty rows in `assets/art50-duties.csv`: 50(1) interaction disclosure (provider), 50(2) machine-readable, detectable marking of synthetic audio/image/video/text (provider), 50(3) informing people exposed to emotion recognition or biometric categorisation (deployer), 50(4) deep-fake disclosure and public-interest text disclosure with the human-review/editorial-responsibility exception (deployer), 50(5) "clear and distinguishable manner at the latest at the time of the first interaction or exposure" plus accessibility requirements | 2026-10-18 |
+| S2 | Same regulation, Article 113 (entry into force and application): https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-113 | "It shall apply from 2 August 2026." Chapter IV (Article 50) is not among the listed exceptions, so Article 50 applies from 2 August 2026 | 2026-10-18 |
+| S3 | Same regulation, Article 111(4) (marked NEW by the Digital Omnibus on AI): https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-111 | Providers of systems generating synthetic content placed on the market before 2 August 2026 "shall take the necessary steps in order to comply with Article 50(2) by 2 December 2026" | 2026-10-18 |
+| S4 | EUR-Lex official journal entry, Regulation (EU) 2024/1689: https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng | Primary publication (ELI). The EUR-Lex page did not render the article body to the fetch tool on 2026-10-18; S1–S3 are the Commission's reproduction of the EUR-Lex consolidated text | 2026-10-18 |
+| S5 | Kincaid, J.P., Fishburne, R.P., Rogers, R.L., Chissom, B.S. (1975), *Derivation of new readability formulas … for Navy enlisted personnel*, Research Branch Report 8-75, Naval Technical Training Command | Flesch–Kincaid grade formula `0.39 × words/sentences + 11.8 × syllables/words − 15.59` (public-domain US government report) | formula as published |
+
+## Notes
+- Duty wording in the checklist is a short paraphrase; quoted fragments come from S1. Read the article itself before relying on any row.
+- Article 50(1) exempts systems where AI interaction is obvious from context; 50(2) exempts assistive editing and outputs that do not substantially alter the input; 50(1)–(4) carry law-enforcement exemptions. The script does not assess exemptions: an owner records them by setting the trigger fact to `no` and citing the basis in `source`.
+- Article 50(7) (codes of practice on marking and labelling) is marked AMENDED by the Digital Omnibus; it does not create a duty row here.
+- Nothing in this skill is a legal determination. The checklist records what the facts show; counsel decides compliance.

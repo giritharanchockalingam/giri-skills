@@ -1,0 +1,5 @@
+# Intent catalog layout. examples are pipe-separated real phrasings (aim for 5+ per intent).
+# response_type: answer | action | clarify | handoff. handoff: yes | no. owner: the named role who maintains the intent.
+intent,description,examples,response_type,handoff,owner
+check_balance,Tell the customer their current balance and due date,what is my balance|how much do I owe|when is my bill due,answer,no,
+talk_to_agent,Connect the customer to a person,talk to a person|I want a human|speak to an agent,handoff,yes,

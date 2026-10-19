@@ -1,0 +1,11 @@
+# Article 50 duties (Regulation (EU) 2024/1689), paraphrased. Verified against the official text: see references/sources.md.
+# applies_when: the yes/no fact that triggers the duty, or "any" (applies when any other duty applies).
+# evidence: notice:<sentence id> (the notice carries it), a fact key (non-empty = provided), or placement+grade.
+id,duty,article,addressee,applies_when,evidence,owner
+interaction,Inform people they are interacting with an AI system (unless obvious from context),Art. 50(1),provider,interacts_directly,notice:ai_interaction,Product owner
+synthetic_marking,Mark synthetic audio/image/video/text outputs in a machine-readable format detectable as AI-generated,Art. 50(2),provider,generates_synthetic_content,content_marking,Engineering lead
+emotion_info,Inform people exposed to an emotion recognition system of its operation,Art. 50(3),deployer,emotion_recognition,notice:emotion,Privacy officer
+biometric_info,Inform people exposed to a biometric categorisation system of its operation,Art. 50(3),deployer,biometric_categorisation,notice:biometric,Privacy officer
+deep_fake,Disclose that deep-fake image/audio/video content is artificially generated or manipulated,Art. 50(4),deployer,deep_fake,deep_fake_label,Content lead
+public_text,Disclose AI-generated text published to inform the public on matters of public interest (unless human-reviewed under editorial responsibility),Art. 50(4),deployer,public_interest_text,public_interest_text_label,Content lead
+timing,Give the information clearly and distinguishably at the latest at first interaction or exposure and meet accessibility requirements,Art. 50(5),provider and deployer,any,placement+grade,Product owner

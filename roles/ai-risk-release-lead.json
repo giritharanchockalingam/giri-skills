@@ -6,7 +6,8 @@
     "ai-platform/ai-governance-risk",
     "build/security-review",
     "ai-platform/guardrails-config",
-    "ai-platform/ai-release-plan"
+    "ai-platform/ai-release-plan",
+    "ai-platform/ai-transparency-notice"
   ],
   "playbooks": []
 }
