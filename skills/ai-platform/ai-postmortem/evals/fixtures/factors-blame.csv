@@ -1,0 +1,6 @@
+# fictional fixture - Northwind Billing Assistant (fictional); deliberately blameful wording to exercise the check
+factor,category,evidence
+The v15 instruction to be accommodating about fees overrode the fee policy,prompt-guardrail-gap,Prompt diff v14 to v15
+No eval case covered fee-waiver requests before release,evaluation-gap,The prompt author failed to run the eval suite
+No alert on replies that promise account changes,monitoring-gap,Human error by the on-call reviewer
+The prompt change reached 100% of traffic with no canary,change-management,Release log for prompt v15

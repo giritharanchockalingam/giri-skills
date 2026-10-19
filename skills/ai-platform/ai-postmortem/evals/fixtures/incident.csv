@@ -1,0 +1,10 @@
+# fictional fixture - Northwind Billing Assistant (fictional company and incident); all values are test values
+key,value,source,notes
+id,INC-NW-0412,incident ticket,
+title,Billing assistant promised late-fee waivers it cannot grant,incident ticket,
+severity,SEV2,ai-incident-runbook run,
+system,Northwind Billing Assistant,service catalog,
+started_at,2026-09-14T13:40:00Z,first affected conversation in the transcript log,
+customer_impact,312 conversations told customers a late fee was waived,transcript log query,
+detection_source,support ticket queue alert,alerting system,
+went_well,Prompt rollback to v14 took one command;Support had a customer callback macro ready,review meeting,

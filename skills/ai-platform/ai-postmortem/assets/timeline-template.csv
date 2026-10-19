@@ -1,0 +1,2 @@
+timestamp,event,description,actor_role
+,,,"timestamp ISO 8601 with timezone; event detected|acknowledged|mitigated|resolved|note|change; actor_role is a role (On-call AI engineer), never a person's name; mark a failing user input as input:""..."" and the bad reply as output:""..."""

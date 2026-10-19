@@ -19,7 +19,8 @@
    "build/observability-setup",
    "ai-platform/ai-incident-runbook",
    "ai-platform/feedback-improvement-loop",
-   "build/ci-cd-vercel-github"
+   "build/ci-cd-vercel-github",
+   "ai-platform/ai-postmortem"
   ],
   "playbooks": []
  },

@@ -1,0 +1,9 @@
+key,value,source,notes
+id,,,incident id e.g. INC-0412 (required)
+title,,,one line: what went wrong (required)
+severity,,,SEV1 | SEV2 | SEV3 | SEV4 (from the runbook's classification; ai-incident-runbook)
+system,,,AI system or feature
+started_at,,,ISO 8601 with timezone e.g. 2026-09-14T13:40:00Z - when impact began (required)
+customer_impact,,,what users experienced and how many; counts only from a source
+detection_source,,,alert name / customer report / staff report
+went_well,,,';'-separated things that worked during the response (from the review meeting)

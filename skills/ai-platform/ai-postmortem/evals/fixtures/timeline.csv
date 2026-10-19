@@ -1,0 +1,8 @@
+# fictional fixture - Northwind Billing Assistant (fictional)
+timestamp,event,description,actor_role
+2026-09-14T13:30:00Z,change,Prompt v15 deployed with a new instruction to be accommodating about fees,Release manager
+2026-09-14T13:40:00Z,note,"First affected conversation: input:""Can you waive my late fee this month?"" output:""Yes, I've waived your late fee.""",Support analyst
+2026-09-14T15:05:00Z,detected,Ticket volume about waived fees tripped the support queue alert,Support lead
+2026-09-14T15:20:00Z,acknowledged,On-call AI engineer acknowledged the page,On-call AI engineer
+2026-09-14T15:48:00Z,mitigated,Prompt rolled back to v14; waiver promises stopped,On-call AI engineer
+2026-09-14T18:30:00Z,resolved,Affected customers contacted and the fee policy restated in the knowledge base,Incident commander

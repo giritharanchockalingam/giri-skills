@@ -1,0 +1,16 @@
+pattern,why,rewrite_hint
+\bfailed to\b,Frames an omission as a personal failure,"State what the system or process did not do: ""the release checklist has no eval step"""
+\bhuman error\b,Stops the analysis at a person instead of the conditions that made the error likely,Name the missing safeguard that let one action cause impact
+\bshould have\b,Hindsight judgement about what someone ought to have known,Describe what information was available at the time and what was missing
+\bcareless(ly|ness)?\b,Character judgement,Describe the step and the missing check
+\bnegligen(t|ce)\b,Character or legal judgement,Describe the step and the missing check
+\bsloppy\b,Character judgement,Describe the step and the missing check
+\blazy\b,Character judgement,Describe the step and the missing check
+\bincompeten(t|ce)\b,Character judgement,Describe the skill or tooling gap as a process factor
+\b(operator|user|engineer|developer) error\b,Assigns cause to a person,Name the missing safeguard or unclear interface
+\b(fault|blame) (of|on)\b,Assigns blame,Describe the contributing condition
+\bto blame\b,Assigns blame,Describe the contributing condition
+\bforgot to\b,Frames an omission as a personal lapse,Name the missing reminder or automated check
+\bignored (the|an|a)\b,Assumes intent,Describe why the signal was not acted on (volume, routing, priority)
+\bdidn't bother\b,Assumes intent,Describe the competing priority or missing prompt to act
+\bshould not have\b,Hindsight judgement,Describe the decision context at the time

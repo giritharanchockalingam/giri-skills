@@ -1,0 +1,2 @@
+action,type,owner,due,factor
+,,,,"type prevent|detect|mitigate|process; owner = accountable role or person; due = YYYY-MM-DD; factor = F1..Fn (row order of the factors CSV) or the factor text, ';'-separated for several"

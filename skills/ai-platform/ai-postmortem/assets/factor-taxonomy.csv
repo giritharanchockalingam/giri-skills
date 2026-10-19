@@ -1,0 +1,10 @@
+id,name,eval_relevant,description,example
+model-behaviour,model behaviour,yes,"The model produced wrong, fabricated, unsafe or off-policy output with correct inputs","Assistant invents a refund policy clause"
+prompt-guardrail-gap,prompt/guardrail gap,yes,"A system prompt, instruction or guardrail allowed or caused the failure, including prompt injection","New instruction overrides the fee policy; injected text obeyed"
+retrieval-data,retrieval/data,yes,"Retrieved context or source data was missing, stale, wrong or over-permissive","Outdated tariff document ranked first"
+evaluation-gap,evaluation gap,yes,"No eval case, threshold or red-team test covered the failure before release","Golden set had no fee-waiver cases"
+monitoring-gap,monitoring gap,no,"No alert, SLO or dashboard detected the failure in time","Detected from support tickets, not telemetry"
+change-management,change management,no,"A change reached users without review, staging, canary or rollback readiness","Prompt shipped to 100% traffic at once"
+capacity-cost,capacity/cost,no,"Token, rate-limit, quota, GPU or budget limits caused or worsened the incident","Retry loop multiplied token spend"
+third-party-provider,third-party/model provider,no,"A model provider, API or vendor change or outage contributed","Provider model version changed without notice"
+human-process,human process,no,"A runbook, handoff, training, staffing or decision process gap (a process, never a person)","No on-call owner for the AI feature on weekends"

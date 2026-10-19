@@ -1,0 +1,6 @@
+# fictional fixture - Northwind Billing Assistant (fictional)
+action,type,owner,due,factor
+Add a guardrail that blocks promises of fee waivers,prevent,AI engineering lead,2026-10-08,F1
+Add fee-waiver requests to the golden set and gate releases on them,prevent,Eval lead,2026-10-15,F2;F1
+Alert on assistant replies that promise account changes,detect,Observability lead,2026-10-22,F3
+Require shadow and canary stages for prompt changes,process,Release manager,2026-10-31,F4

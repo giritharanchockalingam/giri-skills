@@ -1,0 +1,6 @@
+# fictional fixture - Northwind Billing Assistant (fictional)
+factor,category,evidence
+The v15 instruction to be accommodating about fees overrode the fee policy,prompt-guardrail-gap,"Prompt diff v14 to v15; transcript input:""Can you waive my late fee this month?"""
+No eval case covered fee-waiver requests before release,evaluation gap,Golden set held 0 fee-waiver cases
+No alert on replies that promise account changes the assistant cannot make,monitoring-gap,Detection came from the support queue 85 minutes after impact began
+The prompt change reached 100% of traffic with no shadow or canary stage,change-management,Release log for prompt v15

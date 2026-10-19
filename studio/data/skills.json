@@ -728,6 +728,332 @@
   "bodyMd": "\n# AI Incident Runbook\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-incident-runbook --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-incident-runbook`). Report the `run.json` results; do not hand-write the deliverables the script produces (`runbook.md`, `incident.json`). A severity matrix in which no row fires fails the run (exit 1) on purpose.\n\n## When to use\n- A live AI incident: hallucination, data leak, prompt injection, outage, cost spike or harmful output.\n- Classifying severity consistently and showing why; producing the comms checklist and the postmortem skeleton.\n- NOT for: legal advice on notification duties (route to counsel), detection and SLO alerting (`llm-observability`), pre-launch risk review (`ai-governance-risk`), turning feedback into fixes (`feedback-improvement-loop`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `incident` CSV: `category`, `started_at` | yes | incident commander |\n| `users_affected`, `data_exposed`, `regulated_data` (yes/no/unknown) | no — missing = unknown, and unknown escalates | incident commander, privacy |\n| `detected_at`, `detected_by`, `system_name`, `summary` | no | alert or report |\n| `owner_<role>`: incident_commander, engineering_lead, comms_lead, legal_privacy, security_lead | no — missing = TBD with the accountable role | on-call rota |\n| `matrix` CSV (rule_id, conditions, severity, reason) | no | your incident policy; default = the skill's documented matrix |\n\nIf `incident` is missing the runner exits 2 and asks once. No time, name or count is invented.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Fill `assets/incident-template.csv` with what is known now; leave unknowns as `unknown`.\n3. Run the skill. The script evaluates every matrix row (`references/severity-matrix.md`), takes the most severe, and lists every fired row as reasoning.\n4. It loads `assets/playbooks/<category>.md` into Containment (contain, eradicate) and Recovery (recover, verify).\n5. It builds the timeline from `started_at` / `detected_at` only; later events are TBD for the Incident commander.\n6. Communications: internal always; customer unless `users_affected = 0`; regulator only when `regulated_data` is yes or unknown, with Legal / privacy confirming obligations.\n7. Re-run as facts change (unknown → yes/no); severity can go down only with evidence.\n8. Run the self-check.\n\n## Output\n- `runbook.md`: Severity (fired rules, facts, unknowns), Immediate actions (+ Timeline), Containment, Recovery, Communications (internal, customer, regulator), Postmortem (fields and action items).\n- `incident.json`: the same record, machine-readable.\n\n## Self-check\n- [ ] Severity shows every fired row and the matrix source (supplied or the skill's default)\n- [ ] Unknown data/regulated status escalated, not assumed away\n- [ ] Regulator track present only for regulated yes/unknown; no deadlines invented\n- [ ] Timeline holds only supplied times; the rest TBD with an owner role\n- [ ] Every owner named or `[TO BE BASELINED — owner: <role>]`\n- [ ] Postmortem action items include a regression eval case and the missing alert\n\n## References\n- `references/severity-matrix.md` — the default matrix, method, comms rule\n- `references/severity-matrix.default.csv` — machine copy of the default matrix\n- `assets/playbooks/` — per-category playbooks (contain, eradicate, recover, verify)\n- `assets/incident-template.csv` — input layout\n- `scripts/runbook.py` — the classifier and runbook builder (argparse; stdlib)\n"
  },
  {
+  "id": "ai-platform/ai-postmortem",
+  "domain": "ai-platform",
+  "stage": "improve",
+  "name": "ai-postmortem",
+  "description": "Use after an AI incident is contained and the team needs to learn from it — \"write the postmortem for the billing bot incident\", \"blameless postmortem for the prompt injection\", \"how long did it take us to detect and mitigate\", \"turn this incident into regression evals\". Produces postmortem.md (Summary, Impact, Timeline, Timings, Contributing factors, What went well, Actions, Lessons for the eval set, Method), timings.json, actions.csv and eval-cases.csv from incident facts, a timeline and optional factors and actions - measured time to detect, acknowledge, mitigate and resolve; missing or out-of-order milestones flagged, never invented; AI factor taxonomy; factor-to-action coverage; owner TBDs; a blame-phrasing check; regression cases in llm-eval-harness golden-set columns. --strict exits 1 when a factor has no action or an action has no owner. Not for responding during a live incident (use ai-incident-runbook), alerting (llm-observability) or scoring evals (llm-eval-harness).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "improve",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "incident",
+     "type": "csv",
+     "required": true,
+     "from": "incident facts key,value,source,notes (layout: assets/incident-template.csv) - id, title, started_at required; severity SEV1-4, system, customer_impact, detection_source, went_well optional",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "timeline",
+     "type": "csv",
+     "required": true,
+     "from": "timestamp,event,description,actor_role (layout: assets/timeline-template.csv); event detected|acknowledged|mitigated|resolved|note|change; ISO 8601 with timezone",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "factors",
+     "type": "csv",
+     "required": false,
+     "from": "factor,category,evidence (layout: assets/factors-template.csv; category from assets/factor-taxonomy.csv); without it factors are TBD for the Incident commander",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "actions",
+     "type": "csv",
+     "required": false,
+     "from": "action,type,owner,due,factor (layout: assets/actions-template.csv; type prevent|detect|mitigate|process); without it actions are TBD for the Incident commander",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "strict",
+     "type": "flag",
+     "required": false,
+     "from": "true to fail the run (exit 1) when a factor has no action, an action has no owner, or no factors were supplied",
+     "default": null,
+     "flag": "--strict",
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "postmortem",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "postmortem",
+     "kind": "script",
+     "cmd": "python3 -I scripts/postmortem.py --incident {incident} --timeline {timeline} [--factors {factors}] [--actions {actions}] {strict} --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/postmortem.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Impact\",\"Timeline\",\"Timings\",\"Contributing factors\",\"What went well\",\"Actions\",\"Lessons for the eval set\",\"Method\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/postmortem.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/timings.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"timings_min\\\"\"",
+      "contains:\"\\\"strict_gate\\\"\"",
+      "cmd:\"python3 -I scripts/postmortem.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/actions.csv",
+     "checks": [
+      "exists",
+      "csv:[action,type,owner,due,factor,status]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/postmortem.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/eval-cases.csv",
+     "checks": [
+      "exists",
+      "csv:[id,category,difficulty,input,expected,must_contain,must_not_contain,expected_json_valid,weight,source,notes]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/postmortem.py --verify {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "incident": "evals/fixtures/incident.csv",
+     "timeline": "evals/fixtures/timeline.csv",
+     "factors": "evals/fixtures/factors.csv",
+     "actions": "evals/fixtures/actions.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-postmortem-blameless-measured-owned\">AI Postmortem (blameless, measured, owned)</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-postmortem --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-postmortem</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>postmortem.md</code>, <code>timings.json</code>, <code>actions.csv</code>, <code>eval-cases.csv</code>). With <code>strict=true</code> the run is a gate: it exits 1 when a factor has no action or an action has no owner, and still writes every output so the gaps are visible.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>After an AI incident is mitigated: bad answers at scale, prompt-injection exploit, cost runaway, outage, harmful output, data leak.</li><li>Measuring time to detect, acknowledge, mitigate and resolve from the real timeline, and showing which milestones are missing.</li><li>Closing the loop: every contributing factor has an owned, dated action; failing inputs become regression evals.</li><li>NOT for: responding while the incident is live — severity, containment, comms (<code>ai-incident-runbook</code>); alerts and SLOs (<code>llm-observability</code>); scoring the eval set (<code>llm-eval-harness</code>); legal or HR determinations.</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>incident</code> — <code>key,value,source,notes</code>: <code>id</code>, <code>title</code>, <code>started_at</code> (+ <code>severity</code>, <code>system</code>, <code>customer_impact</code>, <code>detection_source</code>, <code>went_well</code>)</td><td>yes</td><td>Incident commander; severity and start time from the <code>ai-incident-runbook</code> run</td><td>run stops (exit 2), asks once; optional keys become <code>[TO BE BASELINED — owner: Incident commander]</code></td></tr><tr><td><code>timeline</code> — <code>timestamp,event,description,actor_role</code></td><td>yes</td><td>incident channel, pager, deploy log</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>factors</code> — <code>factor,category,evidence</code></td><td>no</td><td>postmortem review meeting</td><td>factors TBD for the Incident commander; strict gate fails</td></tr><tr><td><code>actions</code> — <code>action,type,owner,due,factor</code></td><td>no</td><td>postmortem review meeting</td><td>actions TBD for the Incident commander</td></tr><tr><td><code>strict</code> — true/false</td><td>no</td><td>engineering lead</td><td>false: gaps reported, run exits 0</td></tr></tbody></table>\n<p>Write <code>actor_role</code> as a role, never a person's name. Mark a failing user input in any description or evidence as <code>input:&quot;...&quot;</code> and the bad reply as <code>output:&quot;...&quot;</code> so it can become a regression case.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code> and <code>../../../shared/writing-style.md</code>.</li><li>Copy <code>assets/incident-template.csv</code>, <code>assets/timeline-template.csv</code>, <code>assets/factors-template.csv</code> and <code>assets/actions-template.csv</code>. Carry <code>started_at</code>, <code>detected_at</code> and severity over from the <code>ai-incident-runbook</code> output.</li><li>Pick each factor's category from <code>assets/factor-taxonomy.csv</code>. Describe systems and processes, not people.</li><li>Run the skill. <code>scripts/postmortem.py</code> computes timings per <code>references/method.md</code>, flags missing and out-of-order milestones, links actions to factors and scans for blame phrasing (<code>assets/blame-phrases.csv</code>).</li><li>Fix every flag in the inputs (rewrite blameful text, add owners, link uncovered factors) and re-run until the strict gate passes.</li><li>Hand <code>eval-cases.csv</code> to the Eval lead: fill <code>must_contain</code> / <code>must_not_contain</code>, then feed it to <code>llm-eval-harness</code>.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>postmortem.md</code> — <strong>Summary</strong>, <strong>Impact</strong>, <strong>Timeline</strong>, <strong>Timings</strong>, <strong>Contributing factors</strong>, <strong>What went well</strong>, <strong>Actions</strong>, <strong>Lessons for the eval set</strong>, <strong>Method</strong> (with the blameless language check).</li><li><code>timings.json</code> — milestones, minutes per measure with basis, flags, coverage and gate result.</li><li><code>actions.csv</code> — <code>action, type, owner, due, factor, status</code> (status <code>open | in-progress | done | blocked: no owner | blocked: no due date</code>).</li><li><code>eval-cases.csv</code> — proposed regression cases in the <code>llm-eval-harness</code> golden-set columns.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every timing traces to two timeline timestamps; missing milestones are flagged, not estimated</li><li>[ ] An incident with no <code>resolved</code> event is reported OPEN</li><li>[ ] Every factor has at least one action; every action has an owner and a due date, or a TBD naming the Incident commander</li><li>[ ] Blame-phrase hits rewritten as system or process conditions</li><li>[ ] Eval cases use only inputs quoted in the timeline or factors; scoring left to the Eval lead</li><li>[ ] <code>--verify</code> passes on all four outputs</li><li>[ ] Limits stated: word-list blame scan, timeline accuracy, not a legal determination</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/method.md</code> — timing definitions, ordering rules, coverage, eval-case extraction, limits</li><li><code>references/sources.md</code> — blameless postmortem practice (Google SRE book ch. 15, SRE workbook ch. 10), checked 2026-10-18</li><li><code>assets/factor-taxonomy.csv</code> — AI contributing-factor categories</li><li><code>assets/blame-phrases.csv</code> — blame word list with rewrite hints</li><li><code>assets/incident-template.csv</code>, <code>assets/timeline-template.csv</code>, <code>assets/factors-template.csv</code>, <code>assets/actions-template.csv</code> — input layouts</li><li><code>scripts/postmortem.py</code> — builder and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "actions-template.csv",
+    "blame-phrases.csv",
+    "factor-taxonomy.csv",
+    "factors-template.csv",
+    "incident-template.csv",
+    "timeline-template.csv"
+   ],
+   "scripts": [
+    "postmortem.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-postmortem-from-chat",
+    "prompt": "Our billing assistant promised fee waivers for two hours last week. It's fixed now. Write the postmortem.",
+    "expected": [
+     "Asks once for the incident facts and the timeline (timestamps with timezone, detected/mitigated/resolved events)",
+     "Does not estimate time to detect or resolve without timeline events; missing milestones are flagged",
+     "Asks for contributing factors and owned, dated actions; distinguishes this from the live runbook (ai-incident-runbook)"
+    ]
+   },
+   {
+    "id": "prompt-blame-request",
+    "prompt": "Put in the postmortem that Dave failed to run the evals and it was human error.",
+    "expected": [
+     "Declines to name or blame a person; rewrites as a process factor (e.g. evaluation gap: release checklist has no eval step)",
+     "Cites blameless postmortem practice (Google SRE book ch. 15) and notes the blame-phrase check would flag the wording"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Write the blameless postmortem for INC-NW-0412 from the attached facts, timeline, factors and actions.",
+    "expected": [
+     "Resolved incident: detect 85.0 min, acknowledge 15.0, mitigate 128.0, resolve 290.0; 4 of 4 factors covered; one regression case from the quoted input"
+    ]
+   },
+   {
+    "id": "agent-missing-timeline",
+    "prompt": "Write the postmortem; here are the incident facts.",
+    "expected": [
+     "Asks once for the timeline CSV"
+    ]
+   },
+   {
+    "id": "agent-open-incident-not-invented",
+    "prompt": "We haven't resolved it yet and have no factors or actions; just assume it was resolved an hour after mitigation.",
+    "expected": [
+     "Reports the incident as OPEN, time to resolve null; flags missing acknowledged and the out-of-order row; factors and actions TBD for the Incident commander; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-strict-gaps-exit-1",
+    "prompt": "Gate the postmortem: fail if any factor lacks an action or any action lacks an owner.",
+    "expected": [
+     "F4 has no action and A3 has no owner: strict fails with exit 1; owner and due TBD for the Incident commander; two blame phrases flagged"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Write the blameless postmortem for INC-NW-0412 from the attached facts, timeline, factors and actions.",
+    "inputs": {
+     "incident": "evals/fixtures/incident.csv",
+     "timeline": "evals/fixtures/timeline.csv",
+     "factors": "evals/fixtures/factors.csv",
+     "actions": "evals/fixtures/actions.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"| Time to detect | started_at → detected | 85.0 min (1h 25m) | measured |\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"| Time to acknowledge | detected → acknowledged | 15.0 min (0h 15m) | measured |\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"| Time to resolve | started_at → resolved | 290.0 min (4h 50m) | measured |\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"with at least one action: 4 of 4\""
+     },
+     {
+      "file": "timings.json",
+      "check": "contains:\"\\\"time_to_mitigate\\\": 128.0\""
+     },
+     {
+      "file": "eval-cases.csv",
+      "check": "contains:\"INC-NW-0412-RC01,prompt-guardrail-gap,adversarial,Can you waive my late fee this month?\""
+     },
+     {
+      "file": "actions.csv",
+      "check": "contains:\"Require shadow and canary stages for prompt changes,process,Release manager,2026-10-31,F4,open\""
+     }
+    ],
+    "expected": [
+     "Resolved incident: detect 85.0 min, acknowledge 15.0, mitigate 128.0, resolve 290.0; 4 of 4 factors covered; one regression case from the quoted input"
+    ]
+   },
+   {
+    "id": "agent-missing-timeline",
+    "prompt": "Write the postmortem; here are the incident facts.",
+    "inputs": {
+     "incident": "evals/fixtures/incident.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:timeline"
+    ],
+    "expected": [
+     "Asks once for the timeline CSV"
+    ]
+   },
+   {
+    "id": "agent-open-incident-not-invented",
+    "prompt": "We haven't resolved it yet and have no factors or actions; just assume it was resolved an hour after mitigation.",
+    "inputs": {
+     "incident": "evals/fixtures/incident.csv",
+     "timeline": "evals/fixtures/timeline-open.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"**Status:** OPEN — no `resolved` event in the timeline\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"| Time to resolve | started_at → resolved | — | open — not resolved |\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"missing milestone: `acknowledged`\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"contributing factors [TO BE BASELINED — owner: Incident commander]\""
+     },
+     {
+      "file": "timings.json",
+      "check": "contains:\"\\\"time_to_resolve\\\": null\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Reports the incident as OPEN, time to resolve null; flags missing acknowledged and the out-of-order row; factors and actions TBD for the Incident commander; nothing invented"
+    ]
+   },
+   {
+    "id": "agent-strict-gaps-exit-1",
+    "prompt": "Gate the postmortem: fail if any factor lacks an action or any action lacks an owner.",
+    "inputs": {
+     "incident": "evals/fixtures/incident.csv",
+     "timeline": "evals/fixtures/timeline.csv",
+     "factors": "evals/fixtures/factors-blame.csv",
+     "actions": "evals/fixtures/actions-gaps.csv",
+     "strict": "true"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"FAIL — factor F4 has no action; action A3 has no owner\""
+     },
+     {
+      "file": "actions.csv",
+      "check": "contains:\"detect,[TO BE BASELINED — owner: Incident commander],[TO BE BASELINED — owner: Incident commander],F3,blocked: no owner\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"| factors | F3 evidence | Human error |\""
+     },
+     {
+      "file": "postmortem.md",
+      "check": "contains:\"**Blame phrasing flagged:** 2\""
+     }
+    ],
+    "expected": [
+     "F4 has no action and A3 has no owner: strict fails with exit 1; owner and due TBD for the Incident commander; two blame phrases flagged"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI Postmortem (blameless, measured, owned)\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-postmortem --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-postmortem`). Report the `run.json` results; do not hand-write the deliverables the script produces (`postmortem.md`, `timings.json`, `actions.csv`, `eval-cases.csv`). With `strict=true` the run is a gate: it exits 1 when a factor has no action or an action has no owner, and still writes every output so the gaps are visible.\n\n## When to use\n- After an AI incident is mitigated: bad answers at scale, prompt-injection exploit, cost runaway, outage, harmful output, data leak.\n- Measuring time to detect, acknowledge, mitigate and resolve from the real timeline, and showing which milestones are missing.\n- Closing the loop: every contributing factor has an owned, dated action; failing inputs become regression evals.\n- NOT for: responding while the incident is live — severity, containment, comms (`ai-incident-runbook`); alerts and SLOs (`llm-observability`); scoring the eval set (`llm-eval-harness`); legal or HR determinations.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `incident` — `key,value,source,notes`: `id`, `title`, `started_at` (+ `severity`, `system`, `customer_impact`, `detection_source`, `went_well`) | yes | Incident commander; severity and start time from the `ai-incident-runbook` run | run stops (exit 2), asks once; optional keys become `[TO BE BASELINED — owner: Incident commander]` |\n| `timeline` — `timestamp,event,description,actor_role` | yes | incident channel, pager, deploy log | run stops (exit 2), asks once |\n| `factors` — `factor,category,evidence` | no | postmortem review meeting | factors TBD for the Incident commander; strict gate fails |\n| `actions` — `action,type,owner,due,factor` | no | postmortem review meeting | actions TBD for the Incident commander |\n| `strict` — true/false | no | engineering lead | false: gaps reported, run exits 0 |\n\nWrite `actor_role` as a role, never a person's name. Mark a failing user input in any description or evidence as `input:\"...\"` and the bad reply as `output:\"...\"` so it can become a regression case.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.\n2. Copy `assets/incident-template.csv`, `assets/timeline-template.csv`, `assets/factors-template.csv` and `assets/actions-template.csv`. Carry `started_at`, `detected_at` and severity over from the `ai-incident-runbook` output.\n3. Pick each factor's category from `assets/factor-taxonomy.csv`. Describe systems and processes, not people.\n4. Run the skill. `scripts/postmortem.py` computes timings per `references/method.md`, flags missing and out-of-order milestones, links actions to factors and scans for blame phrasing (`assets/blame-phrases.csv`).\n5. Fix every flag in the inputs (rewrite blameful text, add owners, link uncovered factors) and re-run until the strict gate passes.\n6. Hand `eval-cases.csv` to the Eval lead: fill `must_contain` / `must_not_contain`, then feed it to `llm-eval-harness`.\n7. Run the self-check.\n\n## Output\n- `postmortem.md` — **Summary**, **Impact**, **Timeline**, **Timings**, **Contributing factors**, **What went well**, **Actions**, **Lessons for the eval set**, **Method** (with the blameless language check).\n- `timings.json` — milestones, minutes per measure with basis, flags, coverage and gate result.\n- `actions.csv` — `action, type, owner, due, factor, status` (status `open | in-progress | done | blocked: no owner | blocked: no due date`).\n- `eval-cases.csv` — proposed regression cases in the `llm-eval-harness` golden-set columns.\n\n## Self-check\n- [ ] Every timing traces to two timeline timestamps; missing milestones are flagged, not estimated\n- [ ] An incident with no `resolved` event is reported OPEN\n- [ ] Every factor has at least one action; every action has an owner and a due date, or a TBD naming the Incident commander\n- [ ] Blame-phrase hits rewritten as system or process conditions\n- [ ] Eval cases use only inputs quoted in the timeline or factors; scoring left to the Eval lead\n- [ ] `--verify` passes on all four outputs\n- [ ] Limits stated: word-list blame scan, timeline accuracy, not a legal determination\n\n## References\n- `references/method.md` — timing definitions, ordering rules, coverage, eval-case extraction, limits\n- `references/sources.md` — blameless postmortem practice (Google SRE book ch. 15, SRE workbook ch. 10), checked 2026-10-18\n- `assets/factor-taxonomy.csv` — AI contributing-factor categories\n- `assets/blame-phrases.csv` — blame word list with rewrite hints\n- `assets/incident-template.csv`, `assets/timeline-template.csv`, `assets/factors-template.csv`, `assets/actions-template.csv` — input layouts\n- `scripts/postmortem.py` — builder and `--verify` (argparse; stdlib)\n"
+ },
+ {
   "id": "ai-platform/ai-release-plan",
   "domain": "ai-platform",
   "stage": "deploy",

@@ -1,0 +1,100 @@
+{
+  "skill": "ai-postmortem",
+  "cases": [
+    {
+      "id": "prompt-postmortem-from-chat",
+      "prompt": "Our billing assistant promised fee waivers for two hours last week. It's fixed now. Write the postmortem.",
+      "expected": [
+        "Asks once for the incident facts and the timeline (timestamps with timezone, detected/mitigated/resolved events)",
+        "Does not estimate time to detect or resolve without timeline events; missing milestones are flagged",
+        "Asks for contributing factors and owned, dated actions; distinguishes this from the live runbook (ai-incident-runbook)"
+      ]
+    },
+    {
+      "id": "prompt-blame-request",
+      "prompt": "Put in the postmortem that Dave failed to run the evals and it was human error.",
+      "expected": [
+        "Declines to name or blame a person; rewrites as a process factor (e.g. evaluation gap: release checklist has no eval step)",
+        "Cites blameless postmortem practice (Google SRE book ch. 15) and notes the blame-phrase check would flag the wording"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Write the blameless postmortem for INC-NW-0412 from the attached facts, timeline, factors and actions.",
+      "expected": [
+        "Resolved incident: detect 85.0 min, acknowledge 15.0, mitigate 128.0, resolve 290.0; 4 of 4 factors covered; one regression case from the quoted input"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident.csv",
+        "timeline": "evals/fixtures/timeline.csv",
+        "factors": "evals/fixtures/factors.csv",
+        "actions": "evals/fixtures/actions.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "postmortem.md", "check": "contains:\"| Time to detect | started_at → detected | 85.0 min (1h 25m) | measured |\""},
+        {"file": "postmortem.md", "check": "contains:\"| Time to acknowledge | detected → acknowledged | 15.0 min (0h 15m) | measured |\""},
+        {"file": "postmortem.md", "check": "contains:\"| Time to resolve | started_at → resolved | 290.0 min (4h 50m) | measured |\""},
+        {"file": "postmortem.md", "check": "contains:\"with at least one action: 4 of 4\""},
+        {"file": "timings.json", "check": "contains:\"\\\"time_to_mitigate\\\": 128.0\""},
+        {"file": "eval-cases.csv", "check": "contains:\"INC-NW-0412-RC01,prompt-guardrail-gap,adversarial,Can you waive my late fee this month?\""},
+        {"file": "actions.csv", "check": "contains:\"Require shadow and canary stages for prompt changes,process,Release manager,2026-10-31,F4,open\""}
+      ]
+    },
+    {
+      "id": "agent-missing-timeline",
+      "prompt": "Write the postmortem; here are the incident facts.",
+      "expected": [
+        "Asks once for the timeline CSV"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:timeline"
+      ]
+    },
+    {
+      "id": "agent-open-incident-not-invented",
+      "prompt": "We haven't resolved it yet and have no factors or actions; just assume it was resolved an hour after mitigation.",
+      "expected": [
+        "Reports the incident as OPEN, time to resolve null; flags missing acknowledged and the out-of-order row; factors and actions TBD for the Incident commander; nothing invented"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident.csv",
+        "timeline": "evals/fixtures/timeline-open.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "postmortem.md", "check": "contains:\"**Status:** OPEN — no `resolved` event in the timeline\""},
+        {"file": "postmortem.md", "check": "contains:\"| Time to resolve | started_at → resolved | — | open — not resolved |\""},
+        {"file": "postmortem.md", "check": "contains:\"missing milestone: `acknowledged`\""},
+        {"file": "postmortem.md", "check": "contains:\"contributing factors [TO BE BASELINED — owner: Incident commander]\""},
+        {"file": "timings.json", "check": "contains:\"\\\"time_to_resolve\\\": null\""},
+        {"file": "postmortem.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-strict-gaps-exit-1",
+      "prompt": "Gate the postmortem: fail if any factor lacks an action or any action lacks an owner.",
+      "expected": [
+        "F4 has no action and A3 has no owner: strict fails with exit 1; owner and due TBD for the Incident commander; two blame phrases flagged"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident.csv",
+        "timeline": "evals/fixtures/timeline.csv",
+        "factors": "evals/fixtures/factors-blame.csv",
+        "actions": "evals/fixtures/actions-gaps.csv",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "postmortem.md", "check": "contains:\"FAIL — factor F4 has no action; action A3 has no owner\""},
+        {"file": "actions.csv", "check": "contains:\"detect,[TO BE BASELINED — owner: Incident commander],[TO BE BASELINED — owner: Incident commander],F3,blocked: no owner\""},
+        {"file": "postmortem.md", "check": "contains:\"| factors | F3 evidence | Human error |\""},
+        {"file": "postmortem.md", "check": "contains:\"**Blame phrasing flagged:** 2\""}
+      ]
+    }
+  ]
+}

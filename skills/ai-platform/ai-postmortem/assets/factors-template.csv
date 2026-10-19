@@ -1,0 +1,2 @@
+factor,category,evidence
+,,"category = an id or name from assets/factor-taxonomy.csv; evidence = log, diff, metric or transcript; mark a failing user input as input:""..."""

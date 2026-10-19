@@ -1,0 +1,4 @@
+# fictional fixture - Northwind Billing Assistant (fictional); no acknowledged or resolved event yet, rows out of order
+timestamp,event,description,actor_role
+2026-09-14T15:48:00Z,mitigated,Prompt rolled back to v14; waiver promises stopped,On-call AI engineer
+2026-09-14T15:05:00Z,detected,Ticket volume about waived fees tripped the support queue alert,Support lead
