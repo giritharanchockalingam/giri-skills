@@ -4,7 +4,9 @@ import { humanName, shortOutcome } from "../lib/names.ts";
 
 test("humanName: acronyms and runner suffix", () => {
   assert.equal(humanName("ai-bom-license-check"), "AI BOM license check");
-  assert.equal(humanName("langgraph-hitl-runner"), "Langgraph HITL");
+  assert.equal(humanName("langgraph-hitl-runner"), "LangGraph HITL");
+  assert.equal(humanName("ci-cd-vercel-github"), "CI CD Vercel GitHub");
+  assert.equal(humanName("multi-tenant-saas-patterns"), "Multi tenant SaaS patterns");
   assert.equal(humanName("ai-finops-chargeback"), "AI FinOps chargeback");
 });
 

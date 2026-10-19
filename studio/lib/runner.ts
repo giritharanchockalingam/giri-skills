@@ -18,7 +18,7 @@ export function pyodideBase(): string {
   return PYODIDE_CDN;
 }
 
-export type RunInputValue = { kind: "text"; ext: string; content: string } | { kind: "value"; value: string } | null;
+export type RunInputValue = { kind: "text"; ext: string; content: string } | { kind: "value"; value: string } | { kind: "files"; files: { path: string; content: string }[] } | null;
 
 export interface RunStep {
   step: string; kind: string; ok: boolean; exit?: number; expected_exit?: number[]; duration_s?: number; cmd?: string;

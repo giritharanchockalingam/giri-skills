@@ -2,7 +2,8 @@
 const ACRONYMS = /\b(ai|llm|rls|rag|mcp|slm|sow|rfp|pii|dpia|slo|slos|bom|eu|ab|raid|nextjs|tdd|ci|cd|gpu|coe|prd|jd|ui|ux|api|sql|nist|crm|kpi|finops|hitl)\b/gi;
 export const humanName = (slug: string): string =>
   slug.replace(/-runner$/, "").replace(/[-_]/g, " ").replace(ACRONYMS, (m) => (m.toLowerCase() === "finops" ? "FinOps" : m.toLowerCase() === "nextjs" ? "Next.js" : m.toUpperCase()))
-    .replace(/\bA\/?B\b/, "A/B").replace(/^./, (c) => c.toUpperCase());
+    .replace(/\bA\/?B\b/, "A/B").replace(/\blanggraph\b/gi, "LangGraph").replace(/\blangchain\b/gi, "LangChain").replace(/\bsupabase\b/gi, "Supabase")
+    .replace(/\bvercel\b/gi, "Vercel").replace(/\bgithub\b/gi, "GitHub").replace(/\bsaas\b/gi, "SaaS").replace(/\bwebapp\b/gi, "Web app").replace(/^./, (c) => c.toUpperCase());
 
 /** "Produces a forward-only migration SQL with a rollback block, …" → "Forward-only migration SQL" (≤ maxWords). */
 export function shortOutcome(youGet: string, maxWords = 12): string {

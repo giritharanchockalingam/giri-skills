@@ -128,6 +128,17 @@ function run(msg) {
       const p = `${inDir}/${name}.${extFor(v.ext)}`;
       FS.writeFile(p, v.content, { encoding: "utf8" });
       argv.push("--input", `${name}=${p}`);
+    } else if (v.kind === "files") {             // an existing folder (brownfield): written as inputs/<name>/<path>
+      const root = `${inDir}/${name}`;
+      for (const f of v.files || []) {
+        const parts = String(f.path || "").split("/");
+        if (!f.path || parts.some((p) => p === "" || p === "." || p === "..")) continue;
+        const dest = `${root}/${parts.join("/")}`;
+        mkdirp(dest.slice(0, dest.lastIndexOf("/")));
+        FS.writeFile(dest, String(f.content ?? ""), { encoding: "utf8" });
+      }
+      mkdirp(root);
+      argv.push("--input", `${name}=${root}`);
     } else if (v.kind === "value" && v.value !== "") {
       argv.push("--input", `${name}=${v.value}`);
     }

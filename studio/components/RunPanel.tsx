@@ -11,8 +11,24 @@ import { PassPill } from "./Badge";
 const FILE_TYPES = new Set(["csv", "json", "md", "txt", "file", "sql"]);
 const MODELS = ["claude-sonnet-4-5", "claude-opus-4-1", "claude-haiku-4-5"];
 
-type Draft = { text: string; fileName: string | null; fixture: boolean; value: string; assume: string; checked: boolean };
-const emptyDraft = (): Draft => ({ text: "", fileName: null, fixture: false, value: "", assume: "", checked: false });
+type FolderFile = { path: string; content: string };
+type Draft = { text: string; fileName: string | null; fixture: boolean; value: string; assume: string; checked: boolean; folder: FolderFile[] | null; folderNote: string };
+const emptyDraft = (): Draft => ({ text: "", fileName: null, fixture: false, value: "", assume: "", checked: false, folder: null, folderNote: "" });
+
+/** Read a chosen folder as text files (same limits as the server: 200 files, 2 MB); skips VCS/dependency folders and binaries. */
+const SKIP_DIR = /(^|\/)(\.git|node_modules|\.next|dist|build|__pycache__|\.venv)(\/|$)/;
+async function readFolder(list: FileList): Promise<{ files: FolderFile[]; note: string }> {
+  const files: FolderFile[] = []; let bytes = 0, skipped = 0;
+  for (const f of Array.from(list)) {
+    const rel = ((f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name).split("/").slice(1).join("/") || f.name;
+    if (SKIP_DIR.test(rel) || f.size > 512 * 1024) { skipped++; continue; }
+    const text = await f.text();
+    if (text.includes("\u0000")) { skipped++; continue; }                     // binary
+    if (files.length >= 200 || bytes + f.size > 2 * 1024 * 1024) { skipped++; continue; }
+    files.push({ path: rel, content: text }); bytes += f.size;
+  }
+  return { files, note: `${files.length} file${files.length === 1 ? "" : "s"} read${skipped ? ` · ${skipped} skipped (binary, too large, or .git / node_modules)` : ""}` };
+}
 
 const extOf = (name: string | null, type: string) => {
   const m = name?.match(/\.([A-Za-z0-9]+)$/);
@@ -106,7 +122,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
       const v = demo.inputs[i.name];
       if (v == null) continue;
       if (FILE_TYPES.has(i.type)) await loadFixture(i);
-      else if (i.type === "dir") setDraft(i.name, { value: v.startsWith("evals/") ? `/repo/skills/${skillId}/${v}` : v, fixture: true });
+      else if (i.type === "dir") setDraft(i.name, { value: v.startsWith("evals/") ? `/repo/skills/${skillId}/${v}` : v, fixture: true, folder: null, folderNote: "" });
       else if (i.type === "flag") setDraft(i.name, { checked: isTruthy(v) });
       else setDraft(i.name, { value: v });
     }
@@ -124,7 +140,9 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     for (const i of inputs) {
       const d = drafts[i.name];
       let given = false;
-      if (i.type === "dir" && d.text.trim()) {  // one pasted/uploaded file stands in for the folder (scripts that accept a file)
+      if (i.type === "dir" && d.folder?.length) {   // a whole chosen folder (e.g. your repo's migrations)
+        req[i.name] = { kind: "files", files: d.folder }; given = true;
+      } else if (i.type === "dir" && d.text.trim()) {  // one pasted/uploaded file stands in for the folder (scripts that accept a file)
         req[i.name] = { kind: "text", ext: ((d.fileName ?? "").split(".").pop() || "sql").toLowerCase(), content: d.text }; given = true;
       } else if (FILE_TYPES.has(i.type)) {
         if (d.text.trim()) { req[i.name] = { kind: "text", ext: extOf(d.fileName, i.type), content: d.text }; given = true; }
@@ -226,16 +244,22 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                   )}
                   {i.type === "dir" && (
                     <>
-                      <div className="run-note">Paste or upload one file from the folder (e.g. a single migration), or use the example fixture folder.</div>
+                      <div className="run-note">Choose your existing folder (read in this browser, never uploaded), or paste one file from it, or use the example folder.</div>
                       <div className="run-file-row">
-                        <input type="file" className="input" aria-label={`Upload a file for ${i.name}`} onChange={(e) => onFile(i, e.target.files?.[0] ?? null)} />
+                        <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>Choose folder…
+                          <input type="file" multiple hidden aria-label={`Choose a folder for ${i.name}`}
+                            {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+                            onChange={async (e) => { if (!e.target.files?.length) return; const r = await readFolder(e.target.files); setDraft(i.name, { folder: r.files, folderNote: r.note, text: "", value: "", fixture: false }); }} />
+                        </label>
+                        <input type="file" className="input" aria-label={`Upload a file for ${i.name}`} onChange={(e) => { setDraft(i.name, { folder: null, folderNote: "" }); onFile(i, e.target.files?.[0] ?? null); }} />
                       </div>
+                      {d.folder && <div className="caption">{d.folderNote} <button type="button" className="link" onClick={() => setDraft(i.name, { folder: null, folderNote: "" })}>clear</button></div>}
                       <textarea className="run-textarea" value={d.text} placeholder="…or paste the file content here" spellCheck={false}
                         onChange={(e) => setDraft(i.name, { text: e.target.value, value: "", fixture: false, fileName: d.fileName })} />
                       {fx && (
                         <div className="run-file-row">
                           <input id={`in-${i.name}`} className="input run-input-text" value={d.value} readOnly placeholder="(none)" />
-                          <button type="button" className="btn btn-secondary" onClick={() => setDraft(i.name, { value: `/repo/skills/${skillId}/${fx}`, text: "", fixture: true })}>Use example fixture folder</button>
+                          <button type="button" className="btn btn-secondary" onClick={() => setDraft(i.name, { value: `/repo/skills/${skillId}/${fx}`, text: "", fixture: true, folder: null, folderNote: "" })}>Use example fixture folder</button>
                         </div>
                       )}
                     </>
