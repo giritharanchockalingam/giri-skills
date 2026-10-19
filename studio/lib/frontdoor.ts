@@ -10,9 +10,23 @@ const BY_ID = new Map(REPO.map((s) => [s.id, s]));
 
 /** "What you get", in one sentence, from the skill's own description (its "Produces …" sentence). */
 export function whatYouGet(description: string): string {
-  const m = description.match(/\b(Produces|Builds|Creates|Writes|Generates|Returns|Runs)\b[^.]*\./);
-  const s = m ? m[0] : description.replace(/^Use when (the user )?/i, "").split(/(?<=\.)\s/)[0];
-  return s.length > 220 ? s.slice(0, 217).replace(/\s+\S*$/, "") + "…" : s;
+  let d = description;
+  for (let i = 0; i < 3; i++) d = d.replace(/\s*\([^()]*\)/g, "");                       // drop parenthetical detail first
+  d = d.replace(/\b(Art|e\.g|i\.e|vs|No|Reg)\.\s/g, "$1.\u00a0");                         // abbreviations do not end a sentence
+  // the "Produces …" sentence; a sentence ends at a full stop followed by a space (not the dot in "report.md")
+  let t = (d.match(/\b(Produces|Builds|Creates|Writes|Generates|Returns|Runs)\b.*?\.(?=\s|$)/) ?? [d.replace(/^Use (when|for) (the user )?/i, "")])[0];
+  const seen = new Set<string>();
+  t = t.replace(/\b([a-z0-9][a-z0-9-]*)\.(jsonl|json|csv|md|txt|yaml|yml|sql|py|html)\b/gi, (_m, base: string) => {   // report.md -> "report", once
+    const w = base.replace(/-/g, " ").toLowerCase();
+    if (seen.has(w)) return "";
+    seen.add(w); return w;
+  });
+  t = t.replace(/(,\s*)+(?=,|\s+and\b|\s+from\b)/g, "").replace(/\band\s+(?=from\b|,|\.)/g, "").replace(/,\s*(?=and\b)/g, " ")
+       .replace(/\b(ai|eu|llm|rls|nist|dpia|slo|pii|rag|mcp|csv|sql)\b/gi, (m) => m.toUpperCase()).replace(/\s+([,.])/g, "$1").replace(/\s+/g, " ").trim();
+  t = t.replace(/\s+-\s+.*$/, ".")                                                       // " - detail…" is detail
+       .replace(/^(\w+ )(.+?)( from\b)/, (m, verb: string, list: string, from: string) =>        // "a, b from" -> "a and b from"
+         / and /.test(list) || !list.includes(",") ? m : verb + list.replace(/,\s*([^,]+)$/, " and $1") + from);
+  return t.length > 200 ? t.slice(0, 197).replace(/\s+\S*$/, "") + "…" : t;
 }
 
 export interface Example { skill: string; name: string; prompt: string }
