@@ -38,7 +38,7 @@ export function UpstreamTable({ rows, categories }: { rows: UpstreamSkill[]; cat
       </div>
 
       <div className="card">
-        <table className="tbl up-tbl only-desktop">
+        <div className="tablewrap"><table className="tbl up-tbl only-desktop">
           <thead>
             <tr>
               <th className="num">#</th>
@@ -65,7 +65,7 @@ export function UpstreamTable({ rows, categories }: { rows: UpstreamSkill[]; cat
             ))}
             {filtered.length === 0 && <tr><td colSpan={7} className="none">No skills match.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
 
         <div className="row-list only-mobile">
           {filtered.map((r) => (

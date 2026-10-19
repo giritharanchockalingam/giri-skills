@@ -21,7 +21,7 @@ export default async function AgentsPage() {
         lead="An agent is a configuration of skills: pick skills, they wire themselves, add approvals where a person decides. Change the configuration and you have a different agent." />
       <div className="stack">
         <div className="card">
-          <table className="tbl"><thead><tr><th>Agent</th><th>Steps</th><th>Version</th><th>Last run</th><th>What it does</th></tr></thead><tbody>
+          <div className="tablewrap"><table className="tbl"><thead><tr><th>Agent</th><th>Steps</th><th>Version</th><th>Last run</th><th>What it does</th></tr></thead><tbody>
             {agents.map((a) => {
               const vs = versions.filter((v) => v.agent_id === a.id).sort((x, y) => y.version - x.version);
               const latest = vs[0];
@@ -37,7 +37,7 @@ export default async function AgentsPage() {
               );
             })}
             {agents.length === 0 && <tr><td colSpan={5} className="none">No agents yet. Start from a template or a blank canvas.</td></tr>}
-          </tbody></table>
+          </tbody></table></div>
         </div>
         {can(ctx.role, "agent.edit") && (
           <div className="card card-pad" style={{ maxWidth: 720 }}>

@@ -328,8 +328,8 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
               <div className={`run-banner run-banner-${banner.tone}`} role="status">{banner.text}<span className="caption"> · exit {result.exitCode}</span></div>
 
               {result.needsInput && (
-                <table className="mini mt-4"><thead><tr><th>Missing input</th><th>Type</th><th>What it is</th></tr></thead>
-                  <tbody>{result.needsInput.missing.map((m) => <tr key={m.name}><td><code>{m.name}</code></td><td className="muted">{m.type}</td><td className="ink-2">{m.question}</td></tr>)}</tbody></table>
+                <div className="tablewrap"><table className="mini mt-4"><thead><tr><th>Missing input</th><th>Type</th><th>What it is</th></tr></thead>
+                  <tbody>{result.needsInput.missing.map((m) => <tr key={m.name}><td><code>{m.name}</code></td><td className="muted">{m.type}</td><td className="ink-2">{m.question}</td></tr>)}</tbody></table></div>
               )}
 
               {primary && (

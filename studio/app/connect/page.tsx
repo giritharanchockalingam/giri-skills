@@ -117,11 +117,11 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
       <section className="card card-pad">
         <div className="h3" style={{ marginTop: 0 }}>Tools on this server</div>
         <p className="caption">Every server also has <code>find_skill</code> (describe a task, get the right tool) and <code>get_run</code>.</p>
-        <table className="mini"><thead><tr><th>Skill</th><th>What you get</th><th>Status here</th></tr></thead>
+        <div className="tablewrap"><table className="mini"><thead><tr><th>Skill</th><th>What you get</th><th>Status here</th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.id}><td><Link className="link" href={`/repo/${r.id}`}>{r.name}</Link></td><td className="ink-2">{r.card}</td>
               <td>{r.status === "published" ? <span className="pill pill-sm pill-sage">live tool</span> : <span className="caption">{r.status === "not added" ? "not in workspace" : "draft — publish to expose"}</span>}</td></tr>
-          ))}{rows.length === 0 && <tr><td colSpan={3} className="none">Nothing published yet. Publish skills under Admin to make them tools.</td></tr>}</tbody></table>
+          ))}{rows.length === 0 && <tr><td colSpan={3} className="none">Nothing published yet. Publish skills under Admin to make them tools.</td></tr>}</tbody></table></div>
       </section>
     </>
   );

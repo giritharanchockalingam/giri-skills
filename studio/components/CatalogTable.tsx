@@ -35,7 +35,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
       </div>
 
       <div className="card">
-        <table className="tbl only-desktop">
+        <div className="tablewrap"><table className="tbl only-desktop">
           <thead>
             <tr>
               <th>Skill</th>
@@ -62,7 +62,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
             ))}
             {filtered.length === 0 && <tr><td colSpan={7} className="none">No skills match.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
 
         <div className="row-list only-mobile">
           {filtered.map((r) => (

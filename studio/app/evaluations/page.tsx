@@ -24,7 +24,7 @@ export default async function EvaluationsPage() {
       <div className="card">
         {rows.length === 0 ? <div className="empty"><div className="none">Nothing to show yet.</div><p className="caption">Create or import a skill, add evaluation cases and run the evaluation.</p></div> : (
           <>
-            <table className="tbl only-desktop">
+            <div className="tablewrap"><table className="tbl only-desktop">
               <thead><tr><th>Skill</th><th>Version</th><th>Cases</th><th title="Latest finished evaluation on this version">Latest evaluation</th><th title="Whether the latest evaluation ran on the current case set and meets release_criteria.min_eval_pass_rate">Evaluation gate</th><th>Approval</th><th>Publishable</th></tr></thead>
               <tbody>{rows.map(({ s, skill }) => { const eg = evalGate(s), ag = approvalGate(s); return (
                 <tr key={s.version_id}>
@@ -36,7 +36,7 @@ export default async function EvaluationsPage() {
                   <td><span className={ag.met ? "pass" : "fail"}>{ag.met ? (s.require_approval ? "valid" : "not required") : s.approval_stale ? "stale" : s.status === "in_review" ? "pending" : "none"}</span></td>
                   <td>{s.status === "published" ? <span className="muted">published</span> : s.publishable ? <span className="pass">yes</span> : <span className="muted">no</span>}</td>
                 </tr>); })}</tbody>
-            </table>
+            </table></div>
             <div className="row-list only-mobile">{rows.map(({ s, skill }) => { const eg = evalGate(s), ag = approvalGate(s); return (
               <Link key={s.version_id} href={`/skills/${skill.slug}/evaluations?v=${s.version}`} className="row-card">
                 <div className="row-card-top"><span className="row-card-name">{skill.name} <span className="muted">v{s.version}</span></span><VersionPill status={s.status} small /></div>

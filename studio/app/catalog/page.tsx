@@ -127,7 +127,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           ))}
         </div>
         <div className="card">
-          <table className="mini cat-table">
+          <div className="tablewrap"><table className="mini cat-table">
             <thead><tr><th>Repository</th><th>Built with</th><th>Scorecard</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
             <tbody>{rows.map((e) => {
               const ap = e.properties.applicable ?? [];
@@ -152,7 +152,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                 </tr>
               );
             })}</tbody>
-          </table>
+          </table></div>
         </div>
 
       </>)}

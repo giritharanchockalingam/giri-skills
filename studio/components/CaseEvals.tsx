@@ -52,7 +52,7 @@ function CaseBlock({ c, trigger, quality, skillName }: { c: EvalCase; trigger: T
         <div>
           <div className="h3 mb-1">Router picks</div>
           <div className="caption mb-2">Expected: {skillName}</div>
-          <table className="mini">
+          <div className="tablewrap"><table className="mini">
             <thead><tr><th>Run</th><th>Picked</th><th>Result</th></tr></thead>
             <tbody>
               {[...trigger].sort((a, b) => a.run - b.run).map((t) => (
@@ -64,7 +64,7 @@ function CaseBlock({ c, trigger, quality, skillName }: { c: EvalCase; trigger: T
               ))}
               {trigger.length === 0 && <tr><td colSpan={3} className="none">No router rows.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         </div>
 
         <div className="min-w-0">
@@ -72,7 +72,7 @@ function CaseBlock({ c, trigger, quality, skillName }: { c: EvalCase; trigger: T
           <div className="caption mb-2">Per expected item, without and with the skill loaded. Select an item for the judge's evidence.</div>
 
           {/* desktop: grid */}
-          <table className="mini judge-table">
+          <div className="tablewrap"><table className="mini judge-table">
             <thead>
               <tr>
                 <th>#</th><th style={{ width: "50%" }}>Expected</th>
@@ -98,7 +98,7 @@ function CaseBlock({ c, trigger, quality, skillName }: { c: EvalCase; trigger: T
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
 
           {/* mobile: one stacked block per expected item */}
           <div className="judge-blocks">

@@ -221,7 +221,7 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
 
         <div className="card card-pad">
           <div className="h3">Team <span className="muted font-normal">({spec.members.length} roles · {seats} seats · {unique} distinct skills)</span></div>
-          <div className="tbl-scroll"><table className="tbl ab-wiring"><thead><tr><th>Role</th><th>Name in team</th><th>Seats</th><th>Skills</th>{editable && <th />}</tr></thead><tbody>
+          <div className="tbl-scroll"><div className="tablewrap"><table className="tbl ab-wiring"><thead><tr><th>Role</th><th>Name in team</th><th>Seats</th><th>Skills</th>{editable && <th />}</tr></thead><tbody>
             {spec.members.map((m, i) => (
               <tr key={i}>
                 <td><select className="select" value={m.role} disabled={!editable} onChange={(e) => setMember(i, { role: e.target.value })} aria-label="Role">
@@ -237,7 +237,7 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
               </tr>
             ))}
             {spec.members.length === 0 && <tr><td colSpan={5} className="none">No members yet.</td></tr>}
-          </tbody></table></div>
+          </tbody></table></div></div>
           {editable && (
             <div className="ab-grid">
               <select className="select" value="" aria-label="Add a role" onChange={(e) => { if (e.target.value) set({ members: [...spec.members, { role: e.target.value }] }); }}>
@@ -251,14 +251,14 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
         <div className="card card-pad">
           <div className="h3">Coverage <span className="muted font-normal">({cov.covered} of {cov.rows.length} stages)</span></div>
           <p className="caption">Which member brings a skill for each stage. A gap means nobody on this team can do that work.</p>
-          <div className="tbl-scroll"><table className="tbl tl-cov"><thead><tr><th>Stage</th>{members.map((m) => <th key={m.key}>{m.key}</th>)}</tr></thead><tbody>
+          <div className="tbl-scroll"><div className="tablewrap"><table className="tbl tl-cov"><thead><tr><th>Stage</th>{members.map((m) => <th key={m.key}>{m.key}</th>)}</tr></thead><tbody>
             {shown.map((r) => (
               <tr key={r.stage.id} className={r.covered ? "" : "tl-gap"}>
                 <td>{r.stage.n ? `${r.stage.n} · ` : ""}{r.stage.name}{!r.covered && <span className="pill pill-sm pill-rust" style={{ marginLeft: 6 }}>gap</span>}</td>
                 {r.by.map((b) => <td key={b.key} title={b.skills.map((s) => cat.get(s)?.name ?? s).join(", ")}>{b.skills.length ? b.skills.length : ""}</td>)}
               </tr>
             ))}
-          </tbody></table></div>
+          </tbody></table></div></div>
         </div>
 
         <div className="card card-pad">
