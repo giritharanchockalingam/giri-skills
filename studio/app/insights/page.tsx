@@ -77,7 +77,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
       <section className="card mb-6">
         <div className="card-pad" style={{ paddingBottom: 0 }}>
           <div className="h3" style={{ marginTop: 0 }}>Return on each skill</div>
-          <p className="caption">A run counts as work when it succeeded, was not on sample inputs and was not an evaluation. Hours = counted runs × your baseline minutes.</p>
+          <p className="caption">A run counts as work when it succeeded, was not on sample inputs (the shipped samples, which are labelled fictional) and was not an evaluation. Hours = counted runs × your baseline minutes.</p>
         </div>
         <table className="mini">
           <thead><tr><th>Skill</th><th>Runs</th><th>Counted as work</th><th>Baseline (by hand)</th><th>Hours saved</th><th>Value</th>{admin && <th />}</tr></thead>

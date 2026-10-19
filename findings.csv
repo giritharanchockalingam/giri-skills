@@ -1,0 +1,4 @@
+rule,file,line,snippet,severity,status
+NX2,scripts/ingest.mjs,548,"console.log(`ingest: runtime bundle: ${runtimeFiles.length} files, ${(runtimeBytes / 1024).toFixed(0)} KB -> public/runt",medium,new
+NX2,scripts/ingest.mjs,549,console.log(`ingest: skills=${skills.length} scorecard=${scorecard.length} trigger=${trigger.length} quality=${quality.l,medium,new
+NX2,scripts/serve.mjs,30,"}).listen(port, () => console.log(`serving ${root} on http://localhost:${port}`));",medium,new

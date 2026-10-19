@@ -276,10 +276,16 @@ export function exampleInputs(spec: Pick<AgentSpec, "inputs" | "steps">, templat
   return Object.keys(out).length ? out : null;
 }
 
-/** A run is an example (a demo, not work) when every input it was given is exactly the shipped sample input. */
+/** Shipped sample files are labelled fictional by convention (first line, a note column or a field). */
+export const SAMPLE_MARK = /\bfictional\b/i;
+
+/** A run is an example (a demo, not work) when every input it was given is exactly the shipped sample input, or when
+ *  any file input carries the sample label — which also catches runs on OLDER versions of the samples. */
 export function isExampleRun(inputs: Record<string, { kind: string; content?: string; value?: string }> | null | undefined, demo: Record<string, DemoValue> | null): boolean {
   const entries = Object.entries(inputs ?? {});
-  if (!demo || entries.length === 0) return false;
+  if (entries.length === 0) return false;
+  if (entries.some(([, v]) => v.kind === "text" && SAMPLE_MARK.test(v.content ?? ""))) return true;
+  if (!demo) return false;
   return entries.every(([k, v]) => {
     const d = demo[k];
     if (!d) return false;

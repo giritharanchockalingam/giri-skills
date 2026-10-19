@@ -330,4 +330,7 @@ test("isExampleRun: only exact sample inputs count as an example; any real input
   assert.equal(isExampleRun({ system: { kind: "text", content: "a,b\n1,2" }, extra: { kind: "value", value: "x" } }, demo), false);
   assert.equal(isExampleRun({}, demo), false);
   assert.equal(isExampleRun({ as_of: { kind: "value", value: "2026-10-18" } }, null), false);
+  // an older version of a sample file still carries the label
+  assert.equal(isExampleRun({ system: { kind: "text", content: "# fictional example\nkey,answer\nq1,yes" } }, demo), true);
+  assert.equal(isExampleRun({ system: { kind: "text", content: "key,answer\nq1,yes" } }, null), false);
 });
