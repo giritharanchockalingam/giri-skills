@@ -54,9 +54,19 @@ export function validateRoleSpec(spec: RoleSpec, skills: Map<string, SkillInfo>,
   return p;
 }
 
-/** Which member staffs each skill step of a playbook (first member, in team order, that has the skill). */
-export function staffPlaybook(pb: PlaybookInfo, members: { key: string; skills: string[] }[]): { skill: string; member: string | null }[] {
-  return pb.skills.map((s) => ({ skill: s, member: members.find((m) => m.skills.includes(s))?.key ?? null }));
+/** Which member staffs each skill step of a playbook: among members that have the skill, the specialist — the one
+ *  with the most skills in that skill's stage — wins; ties go to team order. `stageOf` maps skill → stage. */
+export function staffPlaybook(pb: PlaybookInfo, members: { key: string; skills: string[] }[], stageOf: (skill: string) => string | null | undefined = () => null): { skill: string; member: string | null }[] {
+  return pb.skills.map((s) => {
+    const st = stageOf(s);
+    let best: { key: string; depth: number } | null = null;
+    for (const m of members) {
+      if (!m.skills.includes(s)) continue;
+      const depth = st ? m.skills.filter((x) => stageOf(x) === st).length : 0;
+      if (!best || depth > best.depth) best = { key: m.key, depth };
+    }
+    return { skill: s, member: best?.key ?? null };
+  });
 }
 
 /** A member's name in the team: its label, else its role (role#2, #3… when the role repeats unlabelled). */
@@ -66,7 +76,7 @@ export function memberKey(m: PoolMember, i: number, members: PoolMember[] = []) 
   return before ? `${m.role}#${before + 1}` : m.role;
 }
 
-export function validatePoolSpec(spec: PoolSpec, roles: Map<string, RoleSpec>, playbooks: Map<string, PlaybookInfo>): string[] {
+export function validatePoolSpec(spec: PoolSpec, roles: Map<string, RoleSpec>, playbooks: Map<string, PlaybookInfo>, stageOf?: (skill: string) => string | null | undefined): string[] {
   const p: string[] = [];
   if (!SLUG.test(spec.name ?? "")) p.push("name must be a lowercase slug");
   if (!spec.title?.trim()) p.push("missing 'title'");
@@ -84,7 +94,7 @@ export function validatePoolSpec(spec: PoolSpec, roles: Map<string, RoleSpec>, p
   for (const pb of spec.playbooks ?? []) {
     const info = playbooks.get(pb);
     if (!info) { p.push(`playbook ${pb} does not exist`); continue; }
-    const gaps = staffPlaybook(info, members).filter((x) => !x.member).map((x) => x.skill);
+    const gaps = staffPlaybook(info, members, stageOf).filter((x) => !x.member).map((x) => x.skill);
     if (gaps.length) p.push(`playbook ${pb} has steps no member can staff: ${[...new Set(gaps)].join(", ")}`);
   }
   return p;

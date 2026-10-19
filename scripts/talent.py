@@ -77,8 +77,21 @@ def validate_role(spec: dict, skills: dict[str, str], playbooks: dict[str, list[
     return p
 
 
-def staff(pb_skills: list[str], members: list[tuple[str, list[str]]]) -> list[tuple[str, str | None]]:
-    return [(s, next((k for k, sk in members if s in sk), None)) for s in pb_skills]
+def staff(pb_skills: list[str], members: list[tuple[str, list[str]]], stages: dict[str, str] | None = None) -> list[tuple[str, str | None]]:
+    """Among members that have the skill, the specialist (most skills in that skill's stage) wins; ties go to team order."""
+    stages = stages or {}
+    out = []
+    for s in pb_skills:
+        st = stages.get(s)
+        best = None
+        for k, sk in members:
+            if s not in sk:
+                continue
+            depth = sum(1 for x in sk if st and stages.get(x) == st)
+            if best is None or depth > best[1]:
+                best = (k, depth)
+        out.append((s, best[0] if best else None))
+    return out
 
 
 def validate_pool(spec: dict, roles: dict[str, dict], playbooks: dict[str, list[str]]) -> list[str]:

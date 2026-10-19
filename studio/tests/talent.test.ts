@@ -38,6 +38,8 @@ test("talent: staffing follows team order; repeated roles get distinct names", (
   const keyed = ms.map((m, i) => ({ key: memberKey(m, i, ms), skills: roleMap.get(m.role)!.skills }));
   assert.deepEqual(staffPlaybook({ name: "x", skills: ["ai-platform/ai-governance-risk", "ai-platform/ai-release-plan", "nope/x"] }, keyed),
     [{ skill: "ai-platform/ai-governance-risk", member: "ai-strategist" }, { skill: "ai-platform/ai-release-plan", member: "Risk" }, { skill: "nope/x", member: null }]);
+  const stageOf = (id: string) => skillMap.get(id)?.stage;
+  assert.equal(staffPlaybook({ name: "x", skills: ["ai-platform/ai-governance-risk"] }, keyed, stageOf)[0].member, "Risk", "the specialist wins");
 });
 
 test("talent: coverage shows real gaps that adding a role closes", () => {

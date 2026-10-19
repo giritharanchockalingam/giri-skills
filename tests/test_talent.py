@@ -43,7 +43,9 @@ def test_pool_staffing_follows_team_order_and_repeated_roles_get_distinct_names(
     assert [talent.member_key(m, i, members) for i, m in enumerate(members)] == ["ai-strategist", "ai-strategist#2", "Risk"]
     keyed = [(talent.member_key(m, i, members), ROLES[m["role"]]["skills"]) for i, m in enumerate(members)]
     assert dict(talent.staff(["ai-platform/ai-governance-risk", "ai-platform/ai-release-plan"], keyed)) == {
-        "ai-platform/ai-governance-risk": "ai-strategist", "ai-platform/ai-release-plan": "Risk"}
+        "ai-platform/ai-governance-risk": "ai-strategist", "ai-platform/ai-release-plan": "Risk"}   # no stages: team order
+    # with stages the specialist wins: the risk lead has more govern skills than the strategist
+    assert dict(talent.staff(["ai-platform/ai-governance-risk"], keyed, SKILLS)) == {"ai-platform/ai-governance-risk": "Risk"}
 
 
 def test_coverage_reports_real_gaps():

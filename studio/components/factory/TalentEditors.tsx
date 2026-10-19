@@ -197,12 +197,16 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
   const [spec, setSpec] = useState<PoolSpec>(() => ({ ...initial, members: initial.members ?? [], playbooks: initial.playbooks ?? [] }));
   const [saved, setSaved] = useState(JSON.stringify(initial));
   const dirty = JSON.stringify(spec) !== saved;
-  const problems = validatePoolSpec(spec, roleMap, pbMap);
+  const stageOf = (id: string) => cat.get(id)?.stage;
+  const problems = validatePoolSpec(spec, roleMap, pbMap, stageOf);
   const set = (p: Partial<PoolSpec>) => setSpec((s) => ({ ...s, ...p }));
   const setMember = (i: number, m: Partial<PoolSpec["members"][number]>) => set({ members: spec.members.map((x, k) => (k === i ? { ...x, ...m } : x)) });
   const members = spec.members.map((m, i) => ({ key: memberKey(m, i, spec.members), skills: roleMap.get(m.role)?.skills ?? [] }));
-  const cov = coverage(members, cat, stages);
-  const shown = cov.rows.filter((r) => r.covered || !r.stage.id.match(/^(opportunity|career)$/));
+  // ADLC stages are scored (gaps count); business shelves are shown only when a member brings them
+  const adlc = stages.filter((s) => s.n != null);
+  const cov = coverage(members, cat, adlc);
+  const shelves = coverage(members, cat, stages.filter((s) => s.n == null)).rows.filter((r) => r.covered);
+  const shown = [...cov.rows, ...shelves];
   const seats = spec.members.reduce((a, m) => a + (m.seats ?? 1), 0);
   const unique = new Set(members.flatMap((m) => m.skills)).size;
 
@@ -258,11 +262,11 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
 
         <div className="card card-pad">
           <div className="h3">Playbooks</div>
-          <p className="caption">Agents this team runs. Each step is handed to the first member (in team order) who has its skill.</p>
+          <p className="caption">Agents this team runs. Each step goes to the member who has its skill and is most specialised in that stage (ties: team order).</p>
           <ul className="ab-inputs">
             {playbooks.map((p) => {
               const on = spec.playbooks.includes(p.name);
-              const staffing = staffPlaybook(p, members);
+              const staffing = staffPlaybook(p, members, stageOf);
               const gaps = staffing.filter((x) => !x.member).length;
               return (
                 <li key={p.name}>

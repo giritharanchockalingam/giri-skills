@@ -101,7 +101,8 @@ export async function createTalent(_: ActionResult | null, fd: FormData): Promis
 async function problemsFor(ctx: WsCtx, kind: Kind, spec: RoleSpec | PoolSpec): Promise<string[]> {
   const playbooks = await workspacePlaybooks(ctx);
   if (kind === "role") return validateRoleSpec(spec as RoleSpec, skillMap(), playbooks);
-  return validatePoolSpec(spec as PoolSpec, await workspaceRoles(ctx), playbooks);
+  const sm = skillMap();
+  return validatePoolSpec(spec as PoolSpec, await workspaceRoles(ctx), playbooks, (id) => sm.get(id)?.stage);
 }
 
 export async function saveTalentDraft(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
