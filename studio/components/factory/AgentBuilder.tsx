@@ -32,7 +32,12 @@ export function AgentBuilder({ initial, versionId, catalog, stages, editable }: 
   const addApproval = () => update((s) => { s.steps.push({ id: newStepId(s, "approval"), approval: { role: "Reviewer", note: "" } }); return s; });
   const addCompose = () => update((s) => { s.steps.push({ id: newStepId(s, "compose"), compose: { out: "facts.csv", format: "kv-csv", rows: {} } }); return s; });
   const move = (i: number, d: -1 | 1) => update((s) => { const j = i + d; if (j < 0 || j >= s.steps.length) return s; [s.steps[i], s.steps[j]] = [s.steps[j], s.steps[i]]; return s; });
-  const remove = (i: number) => update((s) => { s.steps.splice(i, 1); return s; });
+  // removing a step also drops the deliverables that pointed at its files (they could no longer be produced or unticked)
+  const remove = (i: number) => update((s) => {
+    const [gone] = s.steps.splice(i, 1);
+    if (gone) s.outputs = (s.outputs ?? []).filter((ref) => { const r = parseRef(ref); return !(r?.kind === "step" && r.step === gone.id); });
+    return s;
+  });
   const dropUnused = () => update((s) => { const u = new Set(unusedInputs(s)); s.inputs = s.inputs.filter((i) => !u.has(i.name)); return s; });
 
   // every file an earlier step writes, for wiring dropdowns and the outputs list
