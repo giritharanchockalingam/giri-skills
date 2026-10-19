@@ -1,3 +1,4 @@
+import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import {requireWorkspace } from "@/lib/factory/db";
@@ -47,7 +48,7 @@ export default async function EvaluationsPage() {
         )}
       </div>
       <section className="section">
-        <SectionHead title="Repository" em="evals" caption={`Behavioural eval results shipped with the repository (${meta.model} · ${meta.runs} runs · ${meta.date}). These measure the repository SKILL.md files, not workspace versions.`} />
+        <SectionHead title="Repository" em="evals" caption={`Behavioural eval results shipped with the repository (${modelLabel(meta.model)} · ${meta.runs} runs · ${meta.date}). These measure the repository SKILL.md files, not workspace versions.`} />
         <div className="flex flex-wrap gap-3"><Link href="/evals/" className="btn btn-secondary">Open the scorecard</Link><Link href="/findings/" className="btn btn-secondary">Open the findings</Link></div>
       </section>
     </>

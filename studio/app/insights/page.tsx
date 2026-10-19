@@ -28,6 +28,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const { acts, baselines, scores, truncated } = await loadActivity(ctx.supabase, ctx.workspace.id, since);
   const ins = computeInsights(acts, baselines, scores, days);
+  // a baseline whose owner or source says "estimate" is not a measurement: the headline says so
+  const estimated = baselines.filter((b) => /estimat/i.test(`${b.owner} ${b.source}`)).length;
   const delivery = await loadDelivery(ctx.supabase, ctx.workspace.id);
   const dWin: 30 | 90 = days === 90 ? 90 : 30;
   const notes = [...new Set(delivery.flatMap((r) => r.notes))];
@@ -46,9 +48,9 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
 
       <div className="cat-tiles mb-6">
         <div className="cat-tile"><b>{ins.total}</b><span title="Every run in this period: server (portal, API, MCP, playbook steps) and in the browser">runs (server + browser)</span></div>
-        <div className="cat-tile"><b>{pct(ins.successRate)}</b><span>succeeded</span></div>
+        <div className="cat-tile"><b>{pct(ins.successRate)}</b><span>succeeded ({ins.ok} of {ins.total} runs, server + browser)</span></div>
         <div className="cat-tile"><b>{ins.people}</b><span>people and keys</span></div>
-        <div className="cat-tile"><b>{ins.roi.skillsWithBaseline ? `${ins.roi.hours} h` : "—"}</b><span>{ins.roi.skillsWithBaseline ? `hours saved (${ins.roi.skillsWithBaseline} baseline${ins.roi.skillsWithBaseline === 1 ? "" : "s"})` : "hours saved: set a baseline below"}</span></div>
+        <div className={`cat-tile${estimated ? " cat-tile-est" : ""}`}><b>{ins.roi.skillsWithBaseline ? ins.roi.hours : "—"}</b><span>{ins.roi.skillsWithBaseline ? <>hours saved{estimated ? <> — <b>estimated</b>: {estimated} of {ins.roi.skillsWithBaseline} baselines are estimates, not timed</> : ` (${ins.roi.skillsWithBaseline} measured baseline${ins.roi.skillsWithBaseline === 1 ? "" : "s"})`}</> : "hours saved: set a baseline below"}</span></div>
         <div className="cat-tile"><b>{ins.roi.value != null ? usd(ins.roi.value) : "—"}</b><span>{ins.roi.value != null ? "value at your rates" : "value: no rate set"}</span></div>
         <div className="cat-tile"><b>{usd(ins.spend.usd)}</b><span>LLM spend ({ins.spend.runsWithCost} costed run{ins.spend.runsWithCost === 1 ? "" : "s"})</span></div>
         <div className="cat-tile"><b>{ins.scorecards.repos ? `${ins.scorecards.passingAll}/${ins.scorecards.repos}` : "—"}</b><span>repositories passing every check</span></div>

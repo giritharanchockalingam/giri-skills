@@ -79,6 +79,7 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHead eyebrow="Connect" title="Use these skills from" em="your tools" after="."
+        note={<Link href="/connect/api" className="link-flame">HTTP API reference →</Link>}
         lead="Every workspace, role, team and lifecycle stage is an MCP server. Connect it to Claude Code, Claude Desktop, Cursor or VS Code and its skills become tools — running the published, tested version, within your workspace's limits, with every run recorded." />
 
       <section className="card card-pad mb-6">

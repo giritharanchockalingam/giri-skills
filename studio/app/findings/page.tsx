@@ -1,3 +1,4 @@
+import { modelLabel } from "@/lib/modelLabel";
 import { findings, scorecard, domainSummaries, meta } from "@/lib/data";
 import { summarize, conclusionSentence } from "@/lib/verdict";
 import { FindingsList } from "@/components/FindingsList";
@@ -20,7 +21,7 @@ export default function FindingsPage() {
         em="fix"
         after=" list."
         lead={<>{conclusionSentence(s)} Below: {f.proposals.length} proposals, worst first, each with a paste-ready description.</>}
-        caption={<>From the {meta.date} run · {meta.model} · {meta.runs} runs</>}
+        caption={<>From the {meta.date} run · {modelLabel(meta.model)} · {meta.runs} runs</>}
       />
 
       <Collapsible title="Read before acting on any proposal" caption="How the verdicts were produced and what they cannot tell you." defaultOpen={false}>

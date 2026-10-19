@@ -87,7 +87,7 @@ export const AGENT_VERDICT_INFO: Record<AgentVerdict, AgentVerdictInfo> = {
 export const NO_AGENT_VERDICT: AgentVerdictInfo = { code: "Works", label: "Not wired", tone: "none", severity: 3, explanation: "No agent cases ran for this skill." };
 
 /** Column tooltip for every "Runs" column. */
-export const AGENT_COL_TIP = "Deterministic: did the skill's scripts produce the deliverables and pass their output checks (dry provider)";
+export const AGENT_COL_TIP = "Deterministic: did the skill's scripts produce the deliverables and pass their output checks (no model — scripts only)";
 
 export const agentVerdictInfo = (v: AgentVerdict | null | undefined): AgentVerdictInfo => (v ? AGENT_VERDICT_INFO[v] : NO_AGENT_VERDICT);
 export const agentVerdictSeverity = (v: AgentVerdict | null | undefined) => agentVerdictInfo(v).severity;
