@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
+import { skillCounts } from "@/lib/counts";
+import { SkillCountsLine } from "@/components/SkillCountsLine";
 import { FunnelStrip } from "@/components/factory/Funnel";
 import { headers } from "next/headers";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -25,7 +27,7 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   const kind: Kind = (["role", "team", "stage"] as const).includes(sp.kind as never) ? (sp.kind as Kind) : "workspace";
-  const funnel = await loadFunnel(ctx.supabase, ctx.workspace.id);
+  const [funnel, counts] = await Promise.all([loadFunnel(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id)]);
   const [wsRoles, wsTeams, published] = await Promise.all([
     listTalentSummaries(ctx.supabase, ctx.workspace.id, "role"),
     listTalentSummaries(ctx.supabase, ctx.workspace.id, "pool"),
@@ -98,6 +100,7 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
         <p className="mt-4" style={{ marginBottom: 0 }}><b>{live}</b> tool{live === 1 ? "" : "s"} live on this server{rows.length > live ? <span className="caption"> · {rows.length - live} more skill{rows.length - live === 1 ? "" : "s"} in scope become tools once published</span> : null}</p>
         {rows.length > live && (
           <div className="mt-3">
+            <SkillCountsLine c={counts} />
             <FunnelStrip items={funnel} />
             <div className="hero-actions">
               {funnel.some((f) => f.gate === "ready") && <Link className="btn btn-primary btn-sm" href="/pipeline?gate=ready">Publish the {funnel.filter((f) => f.gate === "ready").length} ready</Link>}

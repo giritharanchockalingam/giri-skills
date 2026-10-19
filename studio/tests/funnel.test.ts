@@ -14,3 +14,9 @@ test("funnel: each version lands in exactly the stage its gates say", () => {
   assert.equal(gateOf({ ...base, eval_gate_met: true, require_approval: false }, false), "ready");
   assert.equal(gateOf({ ...base, eval_gate_met: true, approval_valid: true, publishable: true }, false), "ready");
 });
+
+import { countsSentence } from "../lib/countsText.ts";
+test("counts: one sentence, numbers that add up", () => {
+  assert.equal(countsSentence({ library: 78, reference: 50, workspace: 61, published: 1, inProgress: 60 }),
+    "78 skills in the library · 61 in this workspace (1 published, 60 in progress) · 50 reference skills");
+});
