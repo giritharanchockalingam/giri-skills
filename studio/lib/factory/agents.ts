@@ -247,3 +247,9 @@ export function composeFile(c: ComposeStep["compose"], inputs: Record<string, St
   }
   return { path: c.out, content: lines.join("\n") + "\n" };
 }
+
+/** The input's own description, without the file-layout path (people read "AI Act questionnaire", not a repo path). */
+export function humanInput(i: { name: string; from?: string }): string {
+  const d = (i.from ?? "").replace(/\s*\((layout|see|format)[^)]*\)/gi, "").trim();
+  return d || i.name.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}

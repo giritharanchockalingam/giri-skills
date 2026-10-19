@@ -281,3 +281,10 @@ test("autoWire: same-named agent input of a different type is not reused", async
   assert.equal(w.inputs.mode, "$in.two_mode", "required csv 'mode' gets its own agent input");
   assert.deepEqual(w.newAgentInputs.map((i) => i.name).sort(), ["data", "two_mode"]);
 });
+
+test("humanInput: description without the layout path; falls back to the name", async () => {
+  const { humanInput } = await import("../lib/factory/agents.ts");
+  assert.equal(humanInput({ name: "system", from: "AI Act questionnaire (layout: skills/ai-platform/eu-ai-act-classifier/assets/system-questionnaire.csv)" }), "AI Act questionnaire");
+  assert.equal(humanInput({ name: "as_of" }), "As of");
+  assert.equal(humanInput({ name: "x", from: "review date YYYY-MM-DD" }), "review date YYYY-MM-DD");
+});
