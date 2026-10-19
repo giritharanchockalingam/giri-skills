@@ -5,6 +5,7 @@ import type { AssistantData, InitiativeFact, RepoFact, RunFact, ScoreFact, Skill
 import { factsOf } from "@/lib/scorecards/levels";
 import { listInitiatives } from "@/lib/db/initiatives";
 import { loadDelivery } from "@/lib/db/delivery";
+import { listEntities, allRelations } from "@/lib/db/entities";
 import type { CatalogEntityRow } from "@/lib/db/catalog";
 import { computeInsights } from "@/lib/insights/compute";
 import { loadActivity } from "@/lib/insights/load";
@@ -50,6 +51,8 @@ export function assistantData(sb: SupabaseClient, ws: string): AssistantData {
     },
     initiatives: async (): Promise<InitiativeFact[]> => listInitiatives(sb, ws),
     delivery: () => loadDelivery(sb, ws),
+    entities: async () => [...await listEntities(sb, ws, "service"), ...await listEntities(sb, ws, "database")],
+    relations: () => allRelations(sb, ws),
     route: (task, k) => getRouter().route(task, undefined, k).map((h) => ({ skill: h.skill, score: h.score })),
     skill(id): SkillFact | null {
       const s = LIB.get(id);

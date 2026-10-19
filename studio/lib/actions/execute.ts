@@ -29,7 +29,7 @@ async function versionFor(ctx: WsCtx, slug: string): Promise<{ skill: SkillRow; 
 }
 
 async function entity(ctx: WsCtx, id: string) {
-  const { data } = await ctx.supabase.from("sf_catalog_entities").select("id, key, installation_id, properties").eq("workspace_id", ctx.workspace.id).eq("id", id).maybeSingle<EntityRow>();
+  const { data } = await ctx.supabase.from("sf_catalog_entities").select("id, key, installation_id, properties").eq("workspace_id", ctx.workspace.id).eq("kind", "repository").eq("id", id).maybeSingle<EntityRow>();
   return data;
 }
 

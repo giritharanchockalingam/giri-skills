@@ -11,7 +11,7 @@ interface Msg { role: "user" | "assistant"; content: string; evidence?: Evidence
 const TOOL_LABEL: Record<string, string> = {
   search_catalog: "Searched the catalog", get_scorecard: "Read a scorecard", find_skill: "Searched the skills library",
   list_automation_runs: "Read automation runs", insights_summary: "Read Insights", list_initiatives: "Read initiatives",
-  delivery_metrics: "Read delivery metrics", list_ai_assets: "Read AI assets",
+  delivery_metrics: "Read delivery metrics", list_ai_assets: "Read AI assets", search_services_and_databases: "Searched services and databases",
 };
 /** The conversation survives navigation within this tab (sessionStorage); it is never sent anywhere but /api/assistant. */
 const KEY = "sf-assistant-thread-v1";

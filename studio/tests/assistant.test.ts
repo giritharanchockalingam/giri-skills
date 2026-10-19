@@ -319,3 +319,17 @@ test("tools: levels on the scorecard, below_level filter, initiatives with live 
   assert.deepEqual(rows[0].repositories.map((r) => [r.repository, r.meets_target]), [["acme/b", false], ["acme/a", true]]);
   assert.equal(((await call("list_initiatives", { include_closed: true }, d)).content as { initiatives: unknown[] }).initiatives.length, 2);
 });
+
+test("tools: services and databases with relations", async () => {
+  const ents = [{ id: "s1", kind: "service", source: "vercel", key: "web", title: "web", url: "https://vercel.com/t/web", properties: { repo: "acme/billing-api", prod_deploys: ["x"], deploys_30d: 4 } },
+    { id: "d1", kind: "database", source: "supabase", key: "abcdefghijklmnopqrst", title: "Billing DB", url: "https://supabase.com/dashboard/project/abcdefghijklmnopqrst", properties: { status: "ACTIVE_HEALTHY" } }];
+  const rels = [{ from: "s1", to: "id-billing-api", type: "built_from", evidence: "Vercel Git link acme/billing-api" }, { from: "s1", to: "d1", type: "uses_database", evidence: "Vercel env SUPABASE_URL" }];
+  const d = data({ entities: async () => ents, relations: async () => rels });
+  const r = await call("search_services_and_databases", { kind: "service" }, d);
+  const e = (r.content as { entities: { name: string; properties: Record<string, unknown>; relations: { type: string; other: string }[] }[] }).entities;
+  assert.deepEqual(e.map((x) => x.name), ["web"]);
+  assert.equal(e[0].properties.prod_deploys, undefined, "the raw deploy list is not sent to the model");
+  assert.deepEqual(e[0].relations.map((x) => [x.type, x.other]), [["built_from", "acme/billing-api"], ["uses_database", "Billing DB (abcdefghijklmnopqrst)"]]);
+  const db = await call("search_services_and_databases", { kind: "database" }, d);
+  assert.deepEqual((db.content as { entities: { relations: { direction: string; other: string }[] }[] }).entities[0].relations.map((x) => [x.direction, x.other]), [["in", "web"]]);
+});

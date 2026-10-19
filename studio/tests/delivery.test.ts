@@ -45,6 +45,8 @@ test("delivery: production deployments are used when GitHub has them; nothing in
     { created_at: new Date(NOW - 5 * H).toISOString(), environment: "production" }];
   const d = computeDelivery([pr(1, 10, 8)], deploys, 7, NOW);
   assert.deepEqual([d.deploys.source, d.deploys.count], ["deployments", 2]);
+  const linked = computeDelivery([pr(1, 10, 8)], [], 30, NOW, true);
+  assert.deepEqual([linked.deploys.source, linked.deploys.count, linked.deploys.band], ["deployments", 0, null], "Vercel says zero: zero, not merges");
   const empty = computeDelivery([], [], 30, NOW);
   assert.deepEqual([empty.deploys.count, empty.deploys.band, empty.lead_time.median_hours, empty.lead_time.band, empty.change_failure.rate], [0, null, null, null, null]);
 });
