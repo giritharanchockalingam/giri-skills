@@ -503,6 +503,24 @@ w("stages.json", JSON.parse(readFileSync(join(ROOT, "shared", "adlc-stages.json"
   }
   w("agent-templates.json", tpl);
 }
+// Each skill's own example inputs (its happy-path eval fixtures, contents embedded; files only, not folders), so a
+// tailored playbook can still be tried on an example for steps no shipped template covers.
+{
+  const out = {};
+  for (const s of skills) {
+    const d = s.agent && s.agent.demo;
+    if (!d) continue;
+    const ins = {};
+    for (const [k, v] of Object.entries(d.inputs || {})) {
+      const p = join(ROOT, "skills", s.id, v);
+      if (v.startsWith("evals/") && existsSync(p) && statSync(p).isFile())
+        ins[k] = { kind: "text", content: readFileSync(p, "utf8"), ext: (p.split(".").pop() || "txt").toLowerCase(), source: `skills/${s.id}/${v}` };
+      else if (!v.startsWith("evals/") && !v.includes("{")) ins[k] = { kind: "value", value: v };
+    }
+    if (Object.keys(ins).length) out[s.id] = ins;
+  }
+  w("skill-demos.json", out);
+}
 // Role and pool templates (roles/*.json, pools/*.json; validated in CI by scripts/talent.py)
 for (const [dir, file] of [["roles", "role-templates.json"], ["pools", "pool-templates.json"]]) {
   const d = join(ROOT, dir);

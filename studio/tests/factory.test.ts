@@ -288,3 +288,15 @@ test("humanInput: description without the layout path; falls back to the name", 
   assert.equal(humanInput({ name: "as_of" }), "As of");
   assert.equal(humanInput({ name: "x", from: "review date YYYY-MM-DD" }), "review date YYYY-MM-DD");
 });
+
+test("exampleInputs: template first, then the consuming skill's own example", async () => {
+  const { exampleInputs } = await import("../lib/factory/agents.ts");
+  const spec = { inputs: [{ name: "system", type: "csv", required: true }, { name: "bom", type: "csv", required: true }, { name: "zzz", type: "csv", required: false }],
+    steps: [{ id: "lic", skill: "ai-platform/ai-bom-license-check", inputs: { bom: "$in.bom" } }] };
+  const tpl = [{ demo: { system: { kind: "value" as const, value: "T" } } }];
+  const sd = { "ai-platform/ai-bom-license-check": { bom: { kind: "text" as const, content: "a,b", ext: "csv" } } };
+  const d = exampleInputs(spec as never, tpl, sd)!;
+  assert.deepEqual(Object.keys(d).sort(), ["bom", "system"]);
+  assert.equal((d.bom as { content: string }).content, "a,b");
+  assert.equal(exampleInputs({ inputs: [{ name: "q", type: "csv", required: true }], steps: [] } as never, tpl, sd), null);
+});

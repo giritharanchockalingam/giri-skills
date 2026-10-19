@@ -253,3 +253,25 @@ export function humanInput(i: { name: string; from?: string }): string {
   const d = (i.from ?? "").replace(/\s*\((layout|see|format)[^)]*\)/gi, "").trim();
   return d || i.name.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
+
+export type DemoValue = { kind: "text"; content: string; ext: string; source?: string } | { kind: "value"; value: string };
+
+/** Example inputs for a (possibly tailored) agent: the shipped template that covers most of its inputs first, then
+ *  any other template, then the example of the skill step that consumes the input ($in.<name> -> that skill's input). */
+export function exampleInputs(spec: Pick<AgentSpec, "inputs" | "steps">, templates: { demo: Record<string, DemoValue> }[],
+                              skillDemos: Record<string, Record<string, DemoValue>>): Record<string, DemoValue> | null {
+  const names = spec.inputs.map((i) => i.name);
+  const ranked = [...templates].map((t) => ({ t, n: names.filter((n) => n in t.demo).length })).sort((a, b) => b.n - a.n);
+  const out: Record<string, DemoValue> = {};
+  for (const n of names) {
+    const hit = ranked.find((r) => n in r.t.demo);
+    if (hit) { out[n] = hit.t.demo[n]; continue; }
+    for (const st of spec.steps) {
+      if (!isSkill(st)) continue;
+      const k = Object.entries(st.inputs).find(([, ref]) => ref === `$in.${n}`)?.[0];
+      const v = k ? skillDemos[st.skill]?.[k] : undefined;
+      if (v) { out[n] = v; break; }
+    }
+  }
+  return Object.keys(out).length ? out : null;
+}
