@@ -7,7 +7,9 @@
     "build/security-review",
     "ai-platform/guardrails-config",
     "ai-platform/ai-release-plan",
-    "ai-platform/ai-transparency-notice"
+    "ai-platform/ai-transparency-notice",
+    "ai-platform/dpia",
+    "ai-platform/ai-bom-license-check"
   ],
   "playbooks": []
 }

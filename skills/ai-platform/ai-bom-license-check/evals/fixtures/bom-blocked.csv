@@ -1,0 +1,5 @@
+# FICTIONAL fixture: a non-commercial dataset used commercially and an AGPL library (gate case).
+component,type,version,license,source_url,use
+nw-research-corpus,dataset,1.0,CC-BY-NC-4.0,https://example.com/data/nw-research-corpus,commercial
+nw-pdf-server,library,3.0.0,AGPL-3.0-only,https://example.com/lib/nw-pdf-server,internal
+nw-agent-runtime,library,1.4.2,MIT,https://example.com/lib/nw-agent-runtime,redistribution

@@ -1,0 +1,4 @@
+# FICTIONAL fixture: a high risk with no measure (gate case).
+risk,likelihood,severity,measure,owner,residual
+Payment-plan ranking used to refuse service without human review,3,3,,Product owner (fictional),
+Model reveals another customer's billing data in a chat,2,3,Retrieval filtered by authenticated customer id,Engineering lead (fictional),low

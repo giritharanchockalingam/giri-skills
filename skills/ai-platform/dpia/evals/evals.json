@@ -1,0 +1,78 @@
+{
+  "skill": "dpia",
+  "cases": [
+    {
+      "id": "prompt-do-we-need-a-dpia",
+      "prompt": "Our billing chatbot ranks customers for payment plans and runs on an LLM. Do we need a DPIA, and can you write it?",
+      "expected": [
+        "Asks for the processing description (template) and the PII inventory; does not assume facts",
+        "Screens against the nine WP248 criteria and Art. 35(3); two or more met means a DPIA is required",
+        "Blank facts shown as [TO BE BASELINED — owner: Data protection officer]; states it is not legal advice"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Write the DPIA for the Northwind Billing Assistant from the attached processing description, PII inventory and risk list.",
+      "expected": [
+        "5 of 9 criteria met (C1, C4 via payment_card, C5, C6, C8) so a DPIA is required",
+        "R4 scores 3x3 = 9 high with stated residual high, so Art. 36 prior consultation is flagged; no gate (it has a measure)",
+        "date_of_birth and comment (TBD handling) become DPO-owned risks"
+      ],
+      "inputs": {
+        "processing": "evals/fixtures/processing.csv",
+        "pii_inventory": "evals/fixtures/pii-inventory.csv",
+        "risks": "evals/fixtures/risks.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "screening.json", "check": "contains:\"\\\"criteria_met\\\": 5\""},
+        {"file": "screening.json", "check": "contains:\"\\\"required\\\": true\""},
+        {"file": "dpia-risks.csv", "check": "contains:\"Re-identification from combined billing and chat data,risks input,3,3,9,high\""},
+        {"file": "dpia-risks.csv", "check": "contains:\"Chat transcripts kept longer than needed,risks input,3,1,3,medium\""},
+        {"file": "dpia-risks.csv", "check": "contains:\"pii_inventory:date_of_birth\""},
+        {"file": "dpia.md", "check": "contains:\"Prior consultation required (Art. 36(1))\""},
+        {"file": "dpia.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-missing-processing",
+      "prompt": "Do the DPIA for our assistant using the risk list.",
+      "expected": ["Asks once for the processing description"],
+      "inputs": {"risks": "evals/fixtures/risks.csv"},
+      "checks": ["exit:2", "needs_input:processing"]
+    },
+    {
+      "id": "agent-minimal-facts-not-invented",
+      "prompt": "We only know it's large scale. Fill in the rest of the DPIA with sensible defaults.",
+      "expected": [
+        "Does not fill defaults: 8 criteria unanswered and TBD for the DPO; DPIA required on the precautionary rule",
+        "Placeholder risk owned by the DPO; Art. 36 not indicated; exit 0"
+      ],
+      "inputs": {"processing": "evals/fixtures/processing-minimal.csv"},
+      "checks": [
+        "exit:0",
+        {"file": "screening.json", "check": "contains:\"\\\"criteria_unanswered\\\": 8\""},
+        {"file": "dpia.md", "check": "contains:\"| Lawful basis (Art. 6; Art. 9 condition if special categories) | [TO BE BASELINED — owner: Data protection officer] |\""},
+        {"file": "dpia-risks.csv", "check": "contains:\"Risks to rights and freedoms not yet identified\""},
+        {"file": "dpia.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-gate-high-residual-no-measure",
+      "prompt": "Sign off the DPIA; the ranking risk has no mitigation yet but we go live Monday.",
+      "expected": [
+        "Ranking risk scores 9 high, no measure: residual = inherent high; gate fails (exit 1), outputs still written, Art. 36 flagged"
+      ],
+      "inputs": {
+        "processing": "evals/fixtures/processing.csv",
+        "risks": "evals/fixtures/risks-blocked.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "dpia.md", "check": "contains:\"GATE — cannot sign off\""},
+        {"file": "screening.json", "check": "contains:\"\\\"signoff_status\\\": \\\"blocked\\\"\""},
+        {"file": "dpia-risks.csv", "check": "contains:\"Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high\""}
+      ]
+    }
+  ]
+}

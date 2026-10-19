@@ -1,0 +1,37 @@
+key,value,source,notes
+system_name,,,name of the AI system
+controller,,,legal entity that decides purposes and means
+dpo,,,data protection officer (name or role)
+purpose,,,specific purpose(s) of the processing
+data_subjects,,,who the data is about (customers / employees / patients ...)
+data_categories,,,categories of personal data processed
+data_sources,,,where the data comes from
+recipients,,,who receives the data or the outputs
+processors,,,processors and sub-processors (Art. 28 contracts)
+retention,,,retention period and deletion rule for each data set
+international_transfers,,,yes|no - transfers outside the EEA
+transfer_mechanism,,,adequacy decision / SCCs / BCRs ...
+assessment_date,,,date this DPIA was carried out (YYYY-MM-DD)
+lawful_basis,,,Art. 6 basis; add the Art. 9 condition if special categories
+necessity_justification,,,why each data item is necessary for the purpose
+data_minimisation,,,how data is limited to what is necessary
+accuracy_measures,,,how accuracy is kept (inputs and model outputs)
+transparency,,,how data subjects are informed (Art. 13/14)
+data_subject_rights,,,how rights are honoured incl. Art. 22 safeguards
+evaluation_scoring,,,yes|no - WP248 C1 evaluation or scoring incl. profiling and predicting
+automated_decision_making,,,yes|no - WP248 C2 decisions with legal or similarly significant effect (Art. 22)
+systematic_monitoring,,,yes|no - WP248 C3 observing or monitoring data subjects
+special_categories,,,yes|no - Art. 9(1) data (health biometric ...)
+criminal_data,,,yes|no - Art. 10 criminal convictions and offences
+highly_personal_data,,,yes|no - other highly personal data (financial communications location ...)
+large_scale,,,yes|no - WP248 C5 (number of subjects volume duration geography)
+combining_datasets,,,yes|no - WP248 C6 matching or combining datasets
+vulnerable_subjects,,,yes|no - WP248 C7 children employees patients ...
+new_technology,,,yes|no - WP248 C8 innovative use or new technology
+prevents_rights_or_service,,,yes|no - WP248 C9 blocks access to a right service or contract
+publicly_accessible_area,,,yes|no - monitoring of a publicly accessible area (Art. 35(3)(c))
+signoff_measures_approved_by,,,name and role
+signoff_residual_risk_accepted_by,,,name and role
+signoff_dpo_advice,,,summary of the DPO's advice
+signoff_dpo_advice_accepted,,,accepted / overruled with reasons
+next_review,,,date of next review (YYYY-MM-DD)

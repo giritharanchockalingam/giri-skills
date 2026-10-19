@@ -1,0 +1,10 @@
+# FICTIONAL fixture: components of the invented Northwind Billing Assistant; names and URLs are placeholders.
+component,type,version,license,source_url,use
+nw-billing-llm,model,3.1-ft1,Llama 3.1 Community License,https://example.com/models/nw-billing-llm,commercial
+nw-invoice-faq,dataset,2026.09,CC BY 4.0,https://example.com/data/nw-invoice-faq,commercial
+nw-agent-runtime,library,1.4.2,MIT,https://example.com/lib/nw-agent-runtime,redistribution
+nw-pdf-parser,library,0.9.0,MIT OR Apache-2.0,https://example.com/lib/nw-pdf-parser,commercial
+nw-research-corpus,dataset,1.0,CC-BY-NC-4.0,https://example.com/data/nw-research-corpus,internal
+nw-embeddings-api,service,v2,Vendor Terms 2026,https://example.com/svc/nw-embeddings,internal
+nw-tokenizer,library,2.1.0,"Apache License, Version 2.0",https://example.com/lib/nw-tokenizer,redistribution
+nw-reranker,model,,BSD-3-Clause,https://example.com/models/nw-reranker,internal

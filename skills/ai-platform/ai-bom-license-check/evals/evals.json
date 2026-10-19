@@ -1,0 +1,75 @@
+{
+  "skill": "ai-bom-license-check",
+  "cases": [
+    {
+      "id": "prompt-can-we-ship-llama",
+      "prompt": "We fine-tuned Llama 3.1 and trained on a CC BY-NC dataset. Can we ship the billing assistant commercially?",
+      "expected": [
+        "Asks for the BOM (components, licences, intended use) and the licence policy; does not decide from memory",
+        "Flags the CC BY-NC dataset as denied for commercial use and Llama 3.1 as conditional (700M MAU clause, Built with Llama, AUP)",
+        "States the result is not legal advice and names Legal counsel for reviews"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the AI-BOM for the Northwind Billing Assistant and check it against our licence policy.",
+      "expected": [
+        "8 components: 5 allowed, 3 review (Llama conditional, NC dataset used internally, unknown vendor terms), 0 denied; gate PASS",
+        "'Apache License, Version 2.0' normalised to Apache-2.0; 'MIT OR Apache-2.0' resolved with MIT chosen"
+      ],
+      "inputs": {
+        "bom": "evals/fixtures/bom.csv",
+        "policy": "evals/fixtures/policy.csv",
+        "system": "Northwind Billing Assistant"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "license-report.md", "check": "contains:\"**Release gate: PASS** — 0 blocked, 3 need review, 5 allowed, of 8 components (1 with an unrecognised licence).\""},
+        {"file": "aibom.csv", "check": "contains:\"nw-tokenizer,library,2.1.0,\\\"Apache License, Version 2.0\\\",Apache-2.0,allow\""},
+        {"file": "aibom.csv", "check": "contains:\"nw-embeddings-api,service,v2,Vendor Terms 2026,unknown,review\""},
+        {"file": "aibom.json", "check": "contains:\"\\\"type\\\": \\\"machine-learning-model\\\"\""},
+        {"file": "aibom.json", "check": "contains:\"\\\"expression\\\": \\\"LicenseRef-Llama-3.1-Community\\\"\""},
+        {"file": "license-report.md", "check": "contains:\"Display 'Built with Llama'\""}
+      ]
+    },
+    {
+      "id": "agent-missing-bom",
+      "prompt": "Check our AI licences against the policy.",
+      "expected": ["Asks once for the BOM CSV"],
+      "inputs": {"policy": "evals/fixtures/policy.csv"},
+      "checks": ["exit:2", "needs_input:bom"]
+    },
+    {
+      "id": "agent-no-policy-not-invented",
+      "prompt": "We have no licence policy yet; just approve the usual permissive ones.",
+      "expected": [
+        "Does not approve anything: every decision is TBD for Legal counsel; licences still normalised; exit 0"
+      ],
+      "inputs": {"bom": "evals/fixtures/bom.csv"},
+      "checks": [
+        "exit:0",
+        {"file": "aibom.csv", "check": "contains:\"nw-agent-runtime,library,1.4.2,MIT,MIT,[TO BE BASELINED — owner: Legal counsel]\""},
+        {"file": "license-report.md", "check": "contains:\"No licence policy supplied: every decision is [TO BE BASELINED — owner: Legal counsel].\""},
+        {"file": "license-report.md", "check": "no_unowned_tbd"},
+        {"file": "aibom.csv", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-gate-noncommercial-in-commercial-use",
+      "prompt": "Release check: the research corpus is CC BY-NC but we use it commercially now; the PDF server is AGPL.",
+      "expected": [
+        "CC-BY-NC-4.0 with commercial use is denied even though the policy says review; AGPL denied by policy; gate FAIL, exit 1, outputs written"
+      ],
+      "inputs": {
+        "bom": "evals/fixtures/bom-blocked.csv",
+        "policy": "evals/fixtures/policy.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "aibom.csv", "check": "contains:\"nw-research-corpus,dataset,1.0,CC-BY-NC-4.0,CC-BY-NC-4.0,deny,policy: CC-BY-NC-4.0 = review; use 'commercial' conflicts with a non-commercial licence\""},
+        {"file": "license-report.md", "check": "contains:\"**Release gate: FAIL** — 2 blocked\""},
+        {"file": "aibom.json", "check": "contains:\"\\\"value\\\": \\\"fail\\\"\""}
+      ]
+    }
+  ]
+}

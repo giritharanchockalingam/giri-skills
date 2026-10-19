@@ -1,0 +1,6 @@
+# FICTIONAL fixture for Northwind Billing Assistant.
+risk,likelihood,severity,measure,owner,residual
+Model reveals another customer's billing data in a chat,2,3,Retrieval filtered by authenticated customer id; output PII scan,Engineering lead (fictional),low
+Inaccurate payment-plan ranking disadvantages a customer,2,2,Agent reviews every offer; monthly accuracy audit,Product owner (fictional),low
+Chat transcripts kept longer than needed,3,1,,,
+Re-identification from combined billing and chat data,3,3,Pseudonymise transcripts before analytics,DPO (fictional),high

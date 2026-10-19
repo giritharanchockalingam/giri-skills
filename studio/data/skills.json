@@ -798,6 +798,274 @@
   "bodyMd": "\n# AI Adoption and Literacy Plan\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-adoption-and-literacy --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-adoption-and-literacy`). Report the `run.json` results; do not hand-write the deliverables the script produces (`curriculum.csv`, `training-load.csv`, `adoption-plan.md`, `adoption.json`). `--verify` recomputes every hour and seat total from `adoption.json`.\n\n## When to use\n- ADLC strategy stage: before an AI system (or AI tools in general) reaches staff, to plan who learns what, when, and how adoption is measured.\n- \"Which roles need which AI training, and how many hours is that per wave?\"\n- Evidence of EU AI Act Article 4 literacy measures (a record of measures, not a certificate).\n- NOT for: the AI strategy or CoE operating model (`ai-strategy-coe`), the staged release of the system itself (`ai-release-plan`), legal determinations of provider/deployer status or high-risk scope (route to counsel).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `population` — role, headcount, exposure, proficiency, business_unit | yes | HR / Change lead (copy `assets/population-template.csv`) | run stops (exit 2), asks once |\n| `catalog` — module_id, title, hours, audience, level, format, mandatory_for | no | L&D lead | default `assets/literacy-modules.csv` (the skill's own design, labelled so in the plan) |\n| `waves` — wave, business_unit, start_date | no | Change lead (copy `assets/waves-template.csv`) | wave and start date are `[TO BE BASELINED — owner: Change lead]` |\n| `targets` — key,value,source | no | Change lead / product owner (copy `assets/adoption-targets.csv`) | each KPI target is `[TO BE BASELINED — owner: Change lead]` |\n| `strict` — true/false | no | Change lead | false: gaps reported, exit 0 |\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Fill the population: one row per role and business unit; set exposure and proficiency per `references/method.md`.\n3. Review the default catalog with the L&D lead or supply your own; keep a `mandatory_for` overseer module.\n4. Run the agent. A role needs a module when the module audience includes its exposure and the module level exceeds its proficiency; overseer-mandatory modules are always required.\n5. Read the gaps: operator/overseer roles with no module and business units without a wave.\n6. With `strict=true`, any operator/overseer role without a module fails the run (exit 1) — use it before go-live.\n7. Run the self-check.\n\n## Output\n- `curriculum.csv` — `business_unit, role, module_id, title, hours, reason`.\n- `training-load.csv` — `wave, business_unit, start_date, people, learners, hours`.\n- `adoption-plan.md` — **Summary**, **Who needs what**, **Curriculum** (seats, seat-hours), **Rollout**, **Adoption KPIs**, **Art. 4 note**, **Method**.\n- `adoption.json` — roles, modules, seats, totals, load, KPIs, gaps, gate.\n\n## Self-check\n- [ ] Every overseer has the human-oversight module; every operator/overseer has at least one module\n- [ ] Hours and seats pass `--verify`\n- [ ] KPI targets came from `targets` or are TBD for the Change lead; none invented\n- [ ] The plan says when the default catalog (skill design) was used\n- [ ] Art. 4 note uses the amended wording and says it is not a legal determination\n\n## References\n- `references/method.md` — exposure levels, proficiency scale, rules, gate, limits\n- `references/sources.md` — EU AI Act Art. 4 (as amended by Regulation (EU) 2026/1744), Art. 3(56), Art. 26(2), Art. 113, with URLs and date checked\n- `assets/literacy-modules.csv` — default curriculum (skill design)\n- `assets/population-template.csv`, `assets/waves-template.csv`, `assets/adoption-targets.csv` — input layouts\n- `scripts/adoption_plan.py` — planner and `--verify` (argparse; stdlib)\n"
  },
  {
+  "id": "ai-platform/ai-bom-license-check",
+  "domain": "ai-platform",
+  "stage": "govern",
+  "name": "ai-bom-license-check",
+  "description": "Use when an AI system is heading to release and the user needs to know what it is built from and whether every licence is allowed — \"build our AI bill of materials\", \"AI-BOM\", \"check model and dataset licences\", \"can we ship with Llama / CC BY-NC data\", \"licence compliance before release\", \"CycloneDX for our models\". Produces aibom.csv, a CycloneDX 1.6-shaped aibom.json (models, datasets, libraries, services) and license-report.md (Summary, Components, Blocked, Needs review, Obligations, Method) - each licence normalised to an SPDX or LicenseRef id from a verified catalog, decided by the organisation's policy, flagged for commercial restriction, copyleft, attribution and use-based restrictions; unknown licences go to Legal counsel, never guessed. Gate: any deny, or commercial use of a non-commercial licence, fails the run. Not legal advice. Not for vulnerability scanning (security-review), PII in data (pii-data-inventory) or model choice (model-selection).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "govern",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "bom",
+     "type": "csv",
+     "required": true,
+     "from": "component,type (model|dataset|library|service),version,license,source_url,use (internal|commercial|redistribution)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "policy",
+     "type": "csv",
+     "required": false,
+     "from": "licence policy license,decision (allow|review|deny),notes (layout: assets/license-policy.example.csv); without it every decision is TBD for Legal counsel",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "system",
+     "type": "string",
+     "required": false,
+     "from": "name of the AI system the BOM describes",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "check",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "check",
+     "kind": "script",
+     "cmd": "python3 -I scripts/aibom.py --bom {bom} [--policy {policy}] [--system {system}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/aibom.csv",
+     "checks": [
+      "exists",
+      "csv:[component,type,version,license_raw,spdx_id,decision,reason,flags]",
+      "csv_rows:spdx_id!empty",
+      "csv_rows:type~^(model|dataset|library|service)$",
+      "no_unowned_tbd"
+     ]
+    },
+    {
+     "path": "{out}/aibom.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"bomFormat\\\": \\\"CycloneDX\\\"\"",
+      "contains:\"\\\"specVersion\\\": \\\"1.6\\\"\"",
+      "cmd:\"python3 -I scripts/aibom.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/license-report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Components\",\"Blocked\",\"Needs review\",\"Obligations\",\"Method\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/aibom.py --verify {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "bom": "evals/fixtures/bom.csv",
+     "policy": "evals/fixtures/policy.csv",
+     "system": "Northwind Billing Assistant"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"ai-bom-licence-check\">AI-BOM Licence Check</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/ai-bom-license-check --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/ai-bom-license-check</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>aibom.csv</code>, <code>aibom.json</code>, <code>license-report.md</code>). <strong>Gate:</strong> any denied component fails the run (exit 1) on purpose; all three outputs are still written. Not legal advice.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC govern stage: before an AI release, or when a model, dataset, library or API is added or upgraded.</li><li>&quot;Can we ship this?&quot; — every component's licence against the organisation's licence policy, with the use it will be put to.</li><li>Producing an AI bill of materials in a CycloneDX-shaped JSON for a release record.</li><li>NOT for: vulnerability or dependency CVE scanning (<code>security-review</code>), finding personal data (<code>pii-data-inventory</code>), choosing a model (<code>model-selection</code>), a legal opinion on a licence (route to Legal counsel).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>bom</code> — <code>component,type,version,license,source_url,use</code></td><td>yes</td><td>engineering lead; model cards, dataset cards, package metadata</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>policy</code> — <code>license,decision,notes</code></td><td>no</td><td>Legal counsel (start from <code>assets/license-policy.example.csv</code>)</td><td>every decision is <code>[TO BE BASELINED — owner: Legal counsel]</code></td></tr><tr><td><code>system</code> — AI system name</td><td>no</td><td>product owner</td><td>report title TBD (owner: Engineering lead); JSON omits <code>metadata</code></td></tr></tbody></table>\n<p><code>type</code>: model | dataset | library | service. <code>use</code>: internal | commercial | redistribution. Other values stop the run (exit 2). Blank version or licence → TBD (owner: Engineering lead); a blank licence counts as unknown.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>List every model, dataset, library and hosted service the AI system depends on, with the licence string exactly as published and the intended use.</li><li>Run the skill. <code>scripts/aibom.py</code> normalises each licence through <code>assets/license-catalog.csv</code> (<code>references/method.md</code>); unknown strings stay <code>unknown</code> and go to review.</li><li>Decisions come only from the policy. Commercial or redistribution use of a non-commercial licence is denied; Llama's conditional commercial terms turn an allow into a review.</li><li>Any deny fails the gate (exit 1). Resolve each Blocked row (replace, relicense, or change use), then re-run.</li><li>Send Needs review rows to Legal counsel; ship the Obligations (notices, attribution, flow-down terms) with the release.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>aibom.csv</code> — <code>component, type, version, license_raw, spdx_id, decision, reason, flags, use</code>.</li><li><code>aibom.json</code> — CycloneDX-shaped subset (specVersion 1.6): <code>components</code> typed <code>machine-learning-model</code> / <code>data</code> / <code>library</code>, <code>services</code>, <code>licenses</code> (SPDX <code>id</code> or <code>expression</code>; <code>name</code> for unknown), <code>externalReferences</code>, decision/flags in <code>properties</code>.</li><li><code>license-report.md</code> — <strong>Summary</strong> (gate), <strong>Components</strong>, <strong>Blocked</strong>, <strong>Needs review</strong>, <strong>Obligations</strong>, <strong>Method</strong>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every <code>spdx_id</code> is from the catalog or <code>unknown</code>; no licence guessed</li><li>[ ] Every decision came from the policy, a documented use rule, or is TBD for Legal counsel</li><li>[ ] Commercial/redistribution use of a non-commercial licence is denied and the run exits 1</li><li>[ ] <code>aibom.json</code> passes <code>--verify</code>; it is described as a CycloneDX-shaped subset, not a validated SBOM</li><li>[ ] Obligations listed for every shipped component; limits and &quot;not legal advice&quot; stated</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/sources.md</code> — SPDX list 3.29.0, publisher licence pages, CycloneDX 1.6 schema, with dates checked</li><li><code>references/method.md</code> — normalisation, expressions, decision and use rules, gate</li><li><code>assets/license-catalog.csv</code> — SPDX/LicenseRef catalog with flags, obligations and source URL per row</li><li><code>assets/license-policy.example.csv</code> — example policy for Legal counsel to replace</li><li><code>scripts/aibom.py</code> — checker, CycloneDX writer and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "license-catalog.csv",
+    "license-policy.example.csv"
+   ],
+   "scripts": [
+    "aibom.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-can-we-ship-llama",
+    "prompt": "We fine-tuned Llama 3.1 and trained on a CC BY-NC dataset. Can we ship the billing assistant commercially?",
+    "expected": [
+     "Asks for the BOM (components, licences, intended use) and the licence policy; does not decide from memory",
+     "Flags the CC BY-NC dataset as denied for commercial use and Llama 3.1 as conditional (700M MAU clause, Built with Llama, AUP)",
+     "States the result is not legal advice and names Legal counsel for reviews"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the AI-BOM for the Northwind Billing Assistant and check it against our licence policy.",
+    "expected": [
+     "8 components: 5 allowed, 3 review (Llama conditional, NC dataset used internally, unknown vendor terms), 0 denied; gate PASS",
+     "'Apache License, Version 2.0' normalised to Apache-2.0; 'MIT OR Apache-2.0' resolved with MIT chosen"
+    ]
+   },
+   {
+    "id": "agent-missing-bom",
+    "prompt": "Check our AI licences against the policy.",
+    "expected": [
+     "Asks once for the BOM CSV"
+    ]
+   },
+   {
+    "id": "agent-no-policy-not-invented",
+    "prompt": "We have no licence policy yet; just approve the usual permissive ones.",
+    "expected": [
+     "Does not approve anything: every decision is TBD for Legal counsel; licences still normalised; exit 0"
+    ]
+   },
+   {
+    "id": "agent-gate-noncommercial-in-commercial-use",
+    "prompt": "Release check: the research corpus is CC BY-NC but we use it commercially now; the PDF server is AGPL.",
+    "expected": [
+     "CC-BY-NC-4.0 with commercial use is denied even though the policy says review; AGPL denied by policy; gate FAIL, exit 1, outputs written"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Build the AI-BOM for the Northwind Billing Assistant and check it against our licence policy.",
+    "inputs": {
+     "bom": "evals/fixtures/bom.csv",
+     "policy": "evals/fixtures/policy.csv",
+     "system": "Northwind Billing Assistant"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "license-report.md",
+      "check": "contains:\"**Release gate: PASS** — 0 blocked, 3 need review, 5 allowed, of 8 components (1 with an unrecognised licence).\""
+     },
+     {
+      "file": "aibom.csv",
+      "check": "contains:\"nw-tokenizer,library,2.1.0,\\\"Apache License, Version 2.0\\\",Apache-2.0,allow\""
+     },
+     {
+      "file": "aibom.csv",
+      "check": "contains:\"nw-embeddings-api,service,v2,Vendor Terms 2026,unknown,review\""
+     },
+     {
+      "file": "aibom.json",
+      "check": "contains:\"\\\"type\\\": \\\"machine-learning-model\\\"\""
+     },
+     {
+      "file": "aibom.json",
+      "check": "contains:\"\\\"expression\\\": \\\"LicenseRef-Llama-3.1-Community\\\"\""
+     },
+     {
+      "file": "license-report.md",
+      "check": "contains:\"Display 'Built with Llama'\""
+     }
+    ],
+    "expected": [
+     "8 components: 5 allowed, 3 review (Llama conditional, NC dataset used internally, unknown vendor terms), 0 denied; gate PASS",
+     "'Apache License, Version 2.0' normalised to Apache-2.0; 'MIT OR Apache-2.0' resolved with MIT chosen"
+    ]
+   },
+   {
+    "id": "agent-missing-bom",
+    "prompt": "Check our AI licences against the policy.",
+    "inputs": {
+     "policy": "evals/fixtures/policy.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:bom"
+    ],
+    "expected": [
+     "Asks once for the BOM CSV"
+    ]
+   },
+   {
+    "id": "agent-no-policy-not-invented",
+    "prompt": "We have no licence policy yet; just approve the usual permissive ones.",
+    "inputs": {
+     "bom": "evals/fixtures/bom.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "aibom.csv",
+      "check": "contains:\"nw-agent-runtime,library,1.4.2,MIT,MIT,[TO BE BASELINED — owner: Legal counsel]\""
+     },
+     {
+      "file": "license-report.md",
+      "check": "contains:\"No licence policy supplied: every decision is [TO BE BASELINED — owner: Legal counsel].\""
+     },
+     {
+      "file": "license-report.md",
+      "check": "no_unowned_tbd"
+     },
+     {
+      "file": "aibom.csv",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Does not approve anything: every decision is TBD for Legal counsel; licences still normalised; exit 0"
+    ]
+   },
+   {
+    "id": "agent-gate-noncommercial-in-commercial-use",
+    "prompt": "Release check: the research corpus is CC BY-NC but we use it commercially now; the PDF server is AGPL.",
+    "inputs": {
+     "bom": "evals/fixtures/bom-blocked.csv",
+     "policy": "evals/fixtures/policy.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "aibom.csv",
+      "check": "contains:\"nw-research-corpus,dataset,1.0,CC-BY-NC-4.0,CC-BY-NC-4.0,deny,policy: CC-BY-NC-4.0 = review; use 'commercial' conflicts with a non-commercial licence\""
+     },
+     {
+      "file": "license-report.md",
+      "check": "contains:\"**Release gate: FAIL** — 2 blocked\""
+     },
+     {
+      "file": "aibom.json",
+      "check": "contains:\"\\\"value\\\": \\\"fail\\\"\""
+     }
+    ],
+    "expected": [
+     "CC-BY-NC-4.0 with commercial use is denied even though the policy says review; AGPL denied by policy; gate FAIL, exit 1, outputs written"
+    ]
+   }
+  ],
+  "bodyMd": "\n# AI-BOM Licence Check\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-bom-license-check --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-bom-license-check`). Report the `run.json` results; do not hand-write the deliverables the script produces (`aibom.csv`, `aibom.json`, `license-report.md`). **Gate:** any denied component fails the run (exit 1) on purpose; all three outputs are still written. Not legal advice.\n\n## When to use\n- ADLC govern stage: before an AI release, or when a model, dataset, library or API is added or upgraded.\n- \"Can we ship this?\" — every component's licence against the organisation's licence policy, with the use it will be put to.\n- Producing an AI bill of materials in a CycloneDX-shaped JSON for a release record.\n- NOT for: vulnerability or dependency CVE scanning (`security-review`), finding personal data (`pii-data-inventory`), choosing a model (`model-selection`), a legal opinion on a licence (route to Legal counsel).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `bom` — `component,type,version,license,source_url,use` | yes | engineering lead; model cards, dataset cards, package metadata | run stops (exit 2), asks once |\n| `policy` — `license,decision,notes` | no | Legal counsel (start from `assets/license-policy.example.csv`) | every decision is `[TO BE BASELINED — owner: Legal counsel]` |\n| `system` — AI system name | no | product owner | report title TBD (owner: Engineering lead); JSON omits `metadata` |\n\n`type`: model | dataset | library | service. `use`: internal | commercial | redistribution. Other values stop the run (exit 2). Blank version or licence → TBD (owner: Engineering lead); a blank licence counts as unknown.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. List every model, dataset, library and hosted service the AI system depends on, with the licence string exactly as published and the intended use.\n3. Run the skill. `scripts/aibom.py` normalises each licence through `assets/license-catalog.csv` (`references/method.md`); unknown strings stay `unknown` and go to review.\n4. Decisions come only from the policy. Commercial or redistribution use of a non-commercial licence is denied; Llama's conditional commercial terms turn an allow into a review.\n5. Any deny fails the gate (exit 1). Resolve each Blocked row (replace, relicense, or change use), then re-run.\n6. Send Needs review rows to Legal counsel; ship the Obligations (notices, attribution, flow-down terms) with the release.\n7. Run the self-check.\n\n## Output\n- `aibom.csv` — `component, type, version, license_raw, spdx_id, decision, reason, flags, use`.\n- `aibom.json` — CycloneDX-shaped subset (specVersion 1.6): `components` typed `machine-learning-model` / `data` / `library`, `services`, `licenses` (SPDX `id` or `expression`; `name` for unknown), `externalReferences`, decision/flags in `properties`.\n- `license-report.md` — **Summary** (gate), **Components**, **Blocked**, **Needs review**, **Obligations**, **Method**.\n\n## Self-check\n- [ ] Every `spdx_id` is from the catalog or `unknown`; no licence guessed\n- [ ] Every decision came from the policy, a documented use rule, or is TBD for Legal counsel\n- [ ] Commercial/redistribution use of a non-commercial licence is denied and the run exits 1\n- [ ] `aibom.json` passes `--verify`; it is described as a CycloneDX-shaped subset, not a validated SBOM\n- [ ] Obligations listed for every shipped component; limits and \"not legal advice\" stated\n\n## References\n- `references/sources.md` — SPDX list 3.29.0, publisher licence pages, CycloneDX 1.6 schema, with dates checked\n- `references/method.md` — normalisation, expressions, decision and use rules, gate\n- `assets/license-catalog.csv` — SPDX/LicenseRef catalog with flags, obligations and source URL per row\n- `assets/license-policy.example.csv` — example policy for Legal counsel to replace\n- `scripts/aibom.py` — checker, CycloneDX writer and `--verify` (argparse; stdlib)\n"
+ },
+ {
   "id": "ai-platform/ai-governance-risk",
   "domain": "ai-platform",
   "stage": "govern",
@@ -4602,6 +4870,282 @@
    }
   ],
   "bodyMd": "\n# Data Readiness Assessment\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-readiness-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-readiness-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`readiness.json`, `readiness.md`). A \"Not ready\" verdict exits 1 on purpose: the run is telling you the data fails an owner threshold.\n\n## When to use\n- Gate check at the ADLC data stage: before committing to a use case, a RAG corpus, a fine-tune or a model build.\n- \"Profile this extract and tell me if it meets the requirements the data owner signed off.\"\n- Re-check after a data fix: re-run with the same requirements file and compare verdicts.\n- NOT for: PII discovery or handling policy (`pii-data-inventory`), building train/val/test splits (`finetune-dataset-builder`), designing pipelines or data contracts, full-population data quality monitoring.\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `data` — sample dataset CSV with header | yes | data owner / engineer extract | run stops (exit 2), asks once |\n| `requirements` — `key,value` thresholds | yes | data owner sign-off (copy `assets/readiness-requirements.csv`) | run stops (exit 2), asks once |\n| `as_of` — ISO date for freshness | no | the assessment date the owner agrees | freshness reported TBD |\n\nRequirement keys: `min_rows`, `max_null_pct`, `required_columns` (`a;b;c`), `unique_key` (`a[;b]`), `max_duplicate_rows`, `date_column` + `max_age_days`. A blank or absent key leaves its dimension `[TO BE BASELINED — owner: Data owner]`. Unknown keys are listed in Notes and ignored.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Confirm the sample is representative (source system, extract date, filter) and that the requirements came from the accountable data owner, not from this skill.\n3. Run the agent. `scripts/assess.py` profiles every column (null %, inferred type, distinct), counts fully duplicated rows, and scores six dimensions — volume, completeness, schema, uniqueness, duplicates, freshness — using `references/readiness-dimensions.md`.\n4. Read the verdict: any fail → **Not ready** (exit 1); else any TBD → **Ready-with-gaps**; else **Ready**.\n5. For each gap, hand the owner named in \"Gaps and owners\" the action: set the missing threshold, remediate at source, or record a waiver. Re-run after changes.\n6. Run the self-check.\n\n## Output\n- `readiness.json` — source files, requirements as parsed, verdict, per-dimension status/threshold/observed/detail/owner, column profile, notes.\n- `readiness.md` — sections **Verdict**, **Dimensions**, **Column profile**, **Gaps and owners** (+ Notes when keys were ignored). Every number traces to `readiness.json`.\n\n## Self-check\n- [ ] Every threshold came from the requirements file; none were assumed\n- [ ] Every TBD names an accountable owner (`Data owner`)\n- [ ] The sample's provenance (system, date, filter) is stated next to the verdict when reported\n- [ ] Not ready is reported as Not ready, with the failing dimensions and owners, not softened\n- [ ] Freshness is TBD, not passed, when `as_of` was not supplied\n\n## References\n- `references/readiness-dimensions.md` — dimension definitions, formulas, null and type rules\n- `references/method-notes.md` — sampling caveats and how this maps to public data-quality frameworks\n- `assets/readiness-requirements.csv` — requirements template for the data owner\n- `scripts/assess.py` — profiler and scorer (argparse; stdlib)\n"
+ },
+ {
+  "id": "ai-platform/dpia",
+  "domain": "ai-platform",
+  "stage": "govern",
+  "name": "dpia",
+  "description": "Use when an AI system processes personal data and the user needs a Data Protection Impact Assessment under GDPR Art. 35 — \"do we need a DPIA\", \"write the DPIA for our assistant\", \"screen this use case against the EDPB criteria\", \"is prior consultation needed\", \"turn the PII inventory into DPIA risks\". Produces dpia.md (Screening, Description of processing, Necessity and proportionality, Risks to rights and freedoms, Measures, Residual risk and consultation, Sign-off), dpia-risks.csv and screening.json from a processing description, the pii-data-inventory output and an optional risk list - nine WP248 criteria screening, Art. 35(3) cases, 3x3 risk scores, Art. 36 prior-consultation flag, and a gate that fails when a high residual risk has no measure. Blank facts become TBDs owned by the Data protection officer. Not legal advice. Not for finding the PII (pii-data-inventory), EU AI Act or enterprise AI risk registers (ai-governance-risk) or bias testing (bias-fairness-check).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "ai-platform",
+   "adlc_stage": "govern",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "processing",
+     "type": "csv",
+     "required": true,
+     "from": "processing description key,value,source,notes (layout: assets/processing-template.csv) - controller, purpose, lawful_basis, data_subjects, retention, transfers, and yes|no screening keys",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "pii_inventory",
+     "type": "csv",
+     "required": false,
+     "from": "pii-inventory.csv from ai-platform/pii-data-inventory; PII columns with TBD handling become risks",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "risks",
+     "type": "csv",
+     "required": false,
+     "from": "risk,likelihood (1-3),severity (1-3),measure,owner,residual (low|medium|high) (layout: assets/risks-template.csv)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "dpia",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "dpia",
+     "kind": "script",
+     "cmd": "python3 -I scripts/dpia.py --processing {processing} [--pii-inventory {pii_inventory}] [--risks {risks}] --out-dir {out}"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/dpia.md",
+     "checks": [
+      "exists",
+      "sections:[\"Screening\",\"Description of processing\",\"Necessity and proportionality\",\"Risks to rights and freedoms\",\"Measures\",\"Residual risk and consultation\",\"Sign-off\"]",
+      "no_unowned_tbd",
+      "cmd:\"python3 -I scripts/dpia.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/dpia-risks.csv",
+     "checks": [
+      "exists",
+      "csv:[risk,source,likelihood,severity,score,level,measure,owner,residual]",
+      "csv_rows:risk!empty",
+      "csv_rows:level~^(low|medium|high|unscored)$",
+      "no_unowned_tbd"
+     ]
+    },
+    {
+     "path": "{out}/screening.json",
+     "checks": [
+      "exists",
+      "json",
+      "contains:\"\\\"required\\\":\"",
+      "contains:\"\\\"criteria_met\\\":\"",
+      "cmd:\"python3 -I scripts/dpia.py --verify {path}\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "processing": "evals/fixtures/processing.csv",
+     "pii_inventory": "evals/fixtures/pii-inventory.csv",
+     "risks": "evals/fixtures/risks.csv"
+    },
+    "assume": {}
+   }
+  },
+  "bodyHtml": "<h1 id=\"dpia-gdpr-art-35-for-an-ai-system\">DPIA (GDPR Art. 35) for an AI system</h1>\n<h2 id=\"how-to-run\">How to run</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py ai-platform/dpia --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain ai-platform/dpia</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>dpia.md</code>, <code>dpia-risks.csv</code>, <code>screening.json</code>). <strong>Gate:</strong> a high residual risk with no measure fails the run (exit 1) on purpose — the DPIA is still written and states it cannot be signed off. Not legal advice.</p>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>ADLC govern stage: before an AI system that processes personal data goes live, or when its purpose, data or model changes.</li><li>&quot;Do we need a DPIA?&quot; — screening against the nine WP248 criteria and the Art. 35(3) cases.</li><li>Turning a <code>pii-data-inventory</code> result into DPIA risks: undecided handling becomes a risk owned by the DPO.</li><li>Deciding whether Art. 36 prior consultation of the supervisory authority is needed.</li><li>NOT for: finding PII in data (<code>pii-data-inventory</code>), EU AI Act classification or the enterprise AI risk register (<code>ai-governance-risk</code>), fairness testing (<code>bias-fairness-check</code>), legal opinions (route to counsel / DPO).</li></ul>\n<h2 id=\"inputs\">Inputs</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>processing</code> — kv-csv <code>key,value,source,notes</code></td><td>yes</td><td>controller / product owner, reviewed by DPO (copy <code>assets/processing-template.csv</code>)</td><td>run stops (exit 2), asks once</td></tr><tr><td><code>pii_inventory</code> — <code>pii-inventory.csv</code></td><td>no</td><td><code>ai-platform/pii-data-inventory</code> run on a sample</td><td>description says no inventory: TBD (owner: Data protection officer); criterion 4 relies on facts only</td></tr><tr><td><code>risks</code> — <code>risk,likelihood,severity,measure,owner,residual</code></td><td>no</td><td>risk workshop with DPO, security, product (copy <code>assets/risks-template.csv</code>)</td><td>one placeholder risk &quot;not yet identified&quot;, owner Data protection officer</td></tr></tbody></table>\n<p>Screening keys take <code>yes|no</code>; blank means not answered. Any other value stops the run (exit 2). Likelihood and severity take 1–3; residual takes low|medium|high.</p>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/quality-bar.md</code>.</li><li>Run <code>pii-data-inventory</code> on a sample first if the data has not been inventoried.</li><li>Fill <code>processing-template.csv</code> with the controller; leave unknowns blank (they become TBDs, never guesses).</li><li>Run the skill. <code>scripts/dpia.py</code> screens against WP248 C1–C9 and Art. 35(3) (<code>references/risk-method.md</code>); a DPIA is required at two or more criteria, or precautionarily when unanswered criteria could reach two.</li><li>It scores each risk <code>likelihood × severity</code> (1–2 low, 3–4 medium, 6–9 high) and adds a risk for every PII column whose handling is blank or TBD.</li><li>Residual risk: stated by the owner; with no measure it equals the inherent level. Any high residual flags Art. 36 prior consultation; a high residual without a measure is the gate (exit 1).</li><li>Hand <code>dpia.md</code> to the DPO for advice (Art. 35(2)) and record it in the Sign-off rows; re-run after changes.</li><li>Run the self-check.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>dpia.md</code> — <strong>Screening</strong>, <strong>Description of processing</strong> (Art. 35(7)(a)), <strong>Necessity and proportionality</strong> (7(b)), <strong>Risks to rights and freedoms</strong> (7(c)), <strong>Measures</strong> (7(d)), <strong>Residual risk and consultation</strong> (Art. 36 flag, gate), <strong>Sign-off</strong>.</li><li><code>dpia-risks.csv</code> — <code>risk, source, likelihood, severity, score, level, measure, owner, residual</code>.</li><li><code>screening.json</code> — criteria with met/basis, <code>criteria_met</code>, <code>art35_3_cases</code>, <code>required</code> (bool), <code>basis</code>, <code>prior_consultation_required</code>, <code>signoff_status</code>, <code>gate_blockers</code>.</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every blank fact is <code>[TO BE BASELINED — owner: Data protection officer]</code>; nothing inferred beyond the documented rules</li><li>[ ] Screening cites the key behind each criterion; <code>required</code> matches the rule</li><li>[ ] Every TBD-handling PII column appears as a risk</li><li>[ ] Scores are likelihood × severity; levels follow the bands (<code>--verify</code> passes)</li><li>[ ] Art. 36 flagged when any residual is high; exit 1 when a high residual has no measure</li><li>[ ] &quot;Not legal advice&quot; stated; sources in <code>references/sources.md</code></li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/sources.md</code> — GDPR Art. 35/36 (EUR-Lex), WP248 rev.01 and EDPB endorsement, with dates checked</li><li><code>references/risk-method.md</code> — criteria mapping, required rule, scoring, gate</li><li><code>assets/processing-template.csv</code>, <code>assets/risks-template.csv</code> — input layouts</li><li><code>scripts/dpia.py</code> — screener, DPIA writer and <code>--verify</code> (argparse; stdlib)</li></ul>",
+  "files": {
+   "references": [
+    "risk-method.md",
+    "sources.md"
+   ],
+   "assets": [
+    "processing-template.csv",
+    "risks-template.csv"
+   ],
+   "scripts": [
+    "dpia.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "prompt-do-we-need-a-dpia",
+    "prompt": "Our billing chatbot ranks customers for payment plans and runs on an LLM. Do we need a DPIA, and can you write it?",
+    "expected": [
+     "Asks for the processing description (template) and the PII inventory; does not assume facts",
+     "Screens against the nine WP248 criteria and Art. 35(3); two or more met means a DPIA is required",
+     "Blank facts shown as [TO BE BASELINED — owner: Data protection officer]; states it is not legal advice"
+    ]
+   },
+   {
+    "id": "agent-happy-path",
+    "prompt": "Write the DPIA for the Northwind Billing Assistant from the attached processing description, PII inventory and risk list.",
+    "expected": [
+     "5 of 9 criteria met (C1, C4 via payment_card, C5, C6, C8) so a DPIA is required",
+     "R4 scores 3x3 = 9 high with stated residual high, so Art. 36 prior consultation is flagged; no gate (it has a measure)",
+     "date_of_birth and comment (TBD handling) become DPO-owned risks"
+    ]
+   },
+   {
+    "id": "agent-missing-processing",
+    "prompt": "Do the DPIA for our assistant using the risk list.",
+    "expected": [
+     "Asks once for the processing description"
+    ]
+   },
+   {
+    "id": "agent-minimal-facts-not-invented",
+    "prompt": "We only know it's large scale. Fill in the rest of the DPIA with sensible defaults.",
+    "expected": [
+     "Does not fill defaults: 8 criteria unanswered and TBD for the DPO; DPIA required on the precautionary rule",
+     "Placeholder risk owned by the DPO; Art. 36 not indicated; exit 0"
+    ]
+   },
+   {
+    "id": "agent-gate-high-residual-no-measure",
+    "prompt": "Sign off the DPIA; the ranking risk has no mitigation yet but we go live Monday.",
+    "expected": [
+     "Ranking risk scores 9 high, no measure: residual = inherent high; gate fails (exit 1), outputs still written, Art. 36 flagged"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Write the DPIA for the Northwind Billing Assistant from the attached processing description, PII inventory and risk list.",
+    "inputs": {
+     "processing": "evals/fixtures/processing.csv",
+     "pii_inventory": "evals/fixtures/pii-inventory.csv",
+     "risks": "evals/fixtures/risks.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "screening.json",
+      "check": "contains:\"\\\"criteria_met\\\": 5\""
+     },
+     {
+      "file": "screening.json",
+      "check": "contains:\"\\\"required\\\": true\""
+     },
+     {
+      "file": "dpia-risks.csv",
+      "check": "contains:\"Re-identification from combined billing and chat data,risks input,3,3,9,high\""
+     },
+     {
+      "file": "dpia-risks.csv",
+      "check": "contains:\"Chat transcripts kept longer than needed,risks input,3,1,3,medium\""
+     },
+     {
+      "file": "dpia-risks.csv",
+      "check": "contains:\"pii_inventory:date_of_birth\""
+     },
+     {
+      "file": "dpia.md",
+      "check": "contains:\"Prior consultation required (Art. 36(1))\""
+     },
+     {
+      "file": "dpia.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "5 of 9 criteria met (C1, C4 via payment_card, C5, C6, C8) so a DPIA is required",
+     "R4 scores 3x3 = 9 high with stated residual high, so Art. 36 prior consultation is flagged; no gate (it has a measure)",
+     "date_of_birth and comment (TBD handling) become DPO-owned risks"
+    ]
+   },
+   {
+    "id": "agent-missing-processing",
+    "prompt": "Do the DPIA for our assistant using the risk list.",
+    "inputs": {
+     "risks": "evals/fixtures/risks.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:processing"
+    ],
+    "expected": [
+     "Asks once for the processing description"
+    ]
+   },
+   {
+    "id": "agent-minimal-facts-not-invented",
+    "prompt": "We only know it's large scale. Fill in the rest of the DPIA with sensible defaults.",
+    "inputs": {
+     "processing": "evals/fixtures/processing-minimal.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "screening.json",
+      "check": "contains:\"\\\"criteria_unanswered\\\": 8\""
+     },
+     {
+      "file": "dpia.md",
+      "check": "contains:\"| Lawful basis (Art. 6; Art. 9 condition if special categories) | [TO BE BASELINED — owner: Data protection officer] |\""
+     },
+     {
+      "file": "dpia-risks.csv",
+      "check": "contains:\"Risks to rights and freedoms not yet identified\""
+     },
+     {
+      "file": "dpia.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "Does not fill defaults: 8 criteria unanswered and TBD for the DPO; DPIA required on the precautionary rule",
+     "Placeholder risk owned by the DPO; Art. 36 not indicated; exit 0"
+    ]
+   },
+   {
+    "id": "agent-gate-high-residual-no-measure",
+    "prompt": "Sign off the DPIA; the ranking risk has no mitigation yet but we go live Monday.",
+    "inputs": {
+     "processing": "evals/fixtures/processing.csv",
+     "risks": "evals/fixtures/risks-blocked.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "dpia.md",
+      "check": "contains:\"GATE — cannot sign off\""
+     },
+     {
+      "file": "screening.json",
+      "check": "contains:\"\\\"signoff_status\\\": \\\"blocked\\\"\""
+     },
+     {
+      "file": "dpia-risks.csv",
+      "check": "contains:\"Payment-plan ranking used to refuse service without human review,risks input,3,3,9,high,[TO BE BASELINED — owner: Data protection officer],Product owner (fictional),high\""
+     }
+    ],
+    "expected": [
+     "Ranking risk scores 9 high, no measure: residual = inherent high; gate fails (exit 1), outputs still written, Art. 36 flagged"
+    ]
+   }
+  ],
+  "bodyMd": "\n# DPIA (GDPR Art. 35) for an AI system\n\n## How to run\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/dpia --input <name>=<value> … --out <dir>` (see `--explain ai-platform/dpia`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dpia.md`, `dpia-risks.csv`, `screening.json`). **Gate:** a high residual risk with no measure fails the run (exit 1) on purpose — the DPIA is still written and states it cannot be signed off. Not legal advice.\n\n## When to use\n- ADLC govern stage: before an AI system that processes personal data goes live, or when its purpose, data or model changes.\n- \"Do we need a DPIA?\" — screening against the nine WP248 criteria and the Art. 35(3) cases.\n- Turning a `pii-data-inventory` result into DPIA risks: undecided handling becomes a risk owned by the DPO.\n- Deciding whether Art. 36 prior consultation of the supervisory authority is needed.\n- NOT for: finding PII in data (`pii-data-inventory`), EU AI Act classification or the enterprise AI risk register (`ai-governance-risk`), fairness testing (`bias-fairness-check`), legal opinions (route to counsel / DPO).\n\n## Inputs\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `processing` — kv-csv `key,value,source,notes` | yes | controller / product owner, reviewed by DPO (copy `assets/processing-template.csv`) | run stops (exit 2), asks once |\n| `pii_inventory` — `pii-inventory.csv` | no | `ai-platform/pii-data-inventory` run on a sample | description says no inventory: TBD (owner: Data protection officer); criterion 4 relies on facts only |\n| `risks` — `risk,likelihood,severity,measure,owner,residual` | no | risk workshop with DPO, security, product (copy `assets/risks-template.csv`) | one placeholder risk \"not yet identified\", owner Data protection officer |\n\nScreening keys take `yes|no`; blank means not answered. Any other value stops the run (exit 2). Likelihood and severity take 1–3; residual takes low|medium|high.\n\n## Procedure\n1. Read `../../../shared/quality-bar.md`.\n2. Run `pii-data-inventory` on a sample first if the data has not been inventoried.\n3. Fill `processing-template.csv` with the controller; leave unknowns blank (they become TBDs, never guesses).\n4. Run the skill. `scripts/dpia.py` screens against WP248 C1–C9 and Art. 35(3) (`references/risk-method.md`); a DPIA is required at two or more criteria, or precautionarily when unanswered criteria could reach two.\n5. It scores each risk `likelihood × severity` (1–2 low, 3–4 medium, 6–9 high) and adds a risk for every PII column whose handling is blank or TBD.\n6. Residual risk: stated by the owner; with no measure it equals the inherent level. Any high residual flags Art. 36 prior consultation; a high residual without a measure is the gate (exit 1).\n7. Hand `dpia.md` to the DPO for advice (Art. 35(2)) and record it in the Sign-off rows; re-run after changes.\n8. Run the self-check.\n\n## Output\n- `dpia.md` — **Screening**, **Description of processing** (Art. 35(7)(a)), **Necessity and proportionality** (7(b)), **Risks to rights and freedoms** (7(c)), **Measures** (7(d)), **Residual risk and consultation** (Art. 36 flag, gate), **Sign-off**.\n- `dpia-risks.csv` — `risk, source, likelihood, severity, score, level, measure, owner, residual`.\n- `screening.json` — criteria with met/basis, `criteria_met`, `art35_3_cases`, `required` (bool), `basis`, `prior_consultation_required`, `signoff_status`, `gate_blockers`.\n\n## Self-check\n- [ ] Every blank fact is `[TO BE BASELINED — owner: Data protection officer]`; nothing inferred beyond the documented rules\n- [ ] Screening cites the key behind each criterion; `required` matches the rule\n- [ ] Every TBD-handling PII column appears as a risk\n- [ ] Scores are likelihood × severity; levels follow the bands (`--verify` passes)\n- [ ] Art. 36 flagged when any residual is high; exit 1 when a high residual has no measure\n- [ ] \"Not legal advice\" stated; sources in `references/sources.md`\n\n## References\n- `references/sources.md` — GDPR Art. 35/36 (EUR-Lex), WP248 rev.01 and EDPB endorsement, with dates checked\n- `references/risk-method.md` — criteria mapping, required rule, scoring, gate\n- `assets/processing-template.csv`, `assets/risks-template.csv` — input layouts\n- `scripts/dpia.py` — screener, DPIA writer and `--verify` (argparse; stdlib)\n"
  },
  {
   "id": "ai-platform/drift-monitor",

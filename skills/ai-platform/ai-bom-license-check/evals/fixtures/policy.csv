@@ -1,0 +1,10 @@
+# FICTIONAL fixture policy for the Northwind Billing Assistant.
+license,decision,notes
+Apache-2.0,allow,fixture
+MIT,allow,fixture
+BSD-3-Clause,allow,fixture
+CC-BY-4.0,allow,fixture
+CC-BY-NC-4.0,review,fixture
+LicenseRef-Llama-3.1-Community,review,fixture
+GPL-3.0-only,review,fixture
+AGPL-3.0-only,deny,fixture

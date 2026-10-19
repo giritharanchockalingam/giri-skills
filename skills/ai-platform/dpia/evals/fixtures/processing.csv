@@ -1,0 +1,30 @@
+# FICTIONAL fixture: Northwind Billing Assistant is an invented system; all names are placeholders.
+key,value,source,notes
+system_name,Northwind Billing Assistant,fictional fixture,
+controller,Northwind Traders Ltd (fictional),fictional fixture,
+dpo,Data protection officer (fictional),fictional fixture,
+purpose,Answer customer billing questions and draft payment-plan offers for agent review,fictional fixture,
+data_subjects,Retail customers,fictional fixture,
+data_categories,Contact details; billing history; payment card tokens; date of birth,fictional fixture,
+data_sources,Billing system extract; chat transcripts,fictional fixture,
+recipients,Customer service agents,fictional fixture,
+processors,LLM API provider under DPA (fictional),fictional fixture,
+retention,Chat transcripts 90 days; billing data per finance policy,fictional fixture,
+international_transfers,no,fictional fixture,
+lawful_basis,Art. 6(1)(b) contract,fictional fixture,
+necessity_justification,Billing history is needed to answer the customer's own billing question,fictional fixture,
+data_minimisation,Only last 12 months of invoices sent to the model,fictional fixture,
+transparency,Privacy notice updated; chat banner discloses AI use,fictional fixture,
+data_subject_rights,Agent reviews every payment-plan offer; customers can request a human,fictional fixture,
+evaluation_scoring,yes,fictional fixture,ranks customers for payment-plan eligibility
+automated_decision_making,no,fictional fixture,agent decides
+systematic_monitoring,no,fictional fixture,
+special_categories,no,fictional fixture,
+criminal_data,no,fictional fixture,
+large_scale,yes,fictional fixture,
+combining_datasets,yes,fictional fixture,billing + chat transcripts
+vulnerable_subjects,no,fictional fixture,
+new_technology,yes,fictional fixture,LLM
+prevents_rights_or_service,no,fictional fixture,
+publicly_accessible_area,no,fictional fixture,
+signoff_measures_approved_by,Product owner (fictional),fictional fixture,

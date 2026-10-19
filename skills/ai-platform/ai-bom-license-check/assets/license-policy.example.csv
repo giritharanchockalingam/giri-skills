@@ -1,0 +1,12 @@
+# EXAMPLE policy: Legal counsel replaces every decision before use. decision: allow | review | deny.
+license,decision,notes
+Apache-2.0,allow,example
+MIT,allow,example
+BSD-3-Clause,allow,example
+CC-BY-4.0,allow,example - attribution notice required
+CC-BY-SA-4.0,review,example - share-alike on adaptations
+CC-BY-NC-4.0,deny,example - non-commercial
+GPL-3.0-only,review,example
+AGPL-3.0-only,deny,example
+LicenseRef-Llama-3.1-Community,review,example - check MAU threshold and AUP
+LicenseRef-Gemma-Terms-of-Use,review,example - prohibited use policy flows down

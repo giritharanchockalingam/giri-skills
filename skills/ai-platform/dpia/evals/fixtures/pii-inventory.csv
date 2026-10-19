@@ -1,0 +1,7 @@
+column,pii_types,match_rate,rows_scanned,handling,matches,basis
+customer_id,none,0.000,8,n/a,0,
+email,email,1.000,8,mask,8,pattern
+card_number,payment_card,1.000,8,tokenize,8,pattern
+date_of_birth,dob,1.000,8,[TO BE BASELINED — owner: Privacy officer],8,pattern
+phone,phone,1.000,8,allow,8,pattern
+comment,email,0.375,8,[TO BE BASELINED — owner: Privacy officer],3,pattern
