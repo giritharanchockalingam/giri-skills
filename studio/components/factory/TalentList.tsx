@@ -22,7 +22,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
     <div className="stack">
       <div className="card">
         <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr>
-          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Team"}</th><th>{kind === "role" ? "Stages" : "Playbooks"}</th><th>Version</th><th>Based on</th>
+          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Members"}</th><th>{kind === "role" ? "Stages" : "Playbooks"}</th><th>Version</th><th>Based on</th>
         </tr></thead><tbody>
           {rows.map((r) => {
             const v = versions.find((x) => x.talent_id === r.id);
@@ -61,13 +61,13 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
 
       <section className="section">
         <div className="h3 mb-2">Templates</div>
-        <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr><th>Template</th><th>{kind === "role" ? "Default skills" : "Roles"}</th><th>Playbooks</th><th /></tr></thead><tbody>
+        <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr><th>Template</th><th>{kind === "role" ? "Default skills" : "Roles"}</th><th>Playbooks</th><th>In this workspace</th></tr></thead><tbody>
           {templates.map((t) => (
             <tr key={t.name}>
               <td><b>{t.title}</b><div className="caption">{t.description}</div></td>
               <td className="caption">{kind === "role" ? (t as RoleSpec).skills.map((s) => sm.get(s)?.name ?? s).join(", ") : (t as PoolSpec).members.map((m) => m.label ? `${m.label} (${m.role})` : m.role).join(", ")}</td>
               <td className="caption">{t.playbooks.join(", ") || "—"}</td>
-              <td className="caption">{have.has(t.name) ? "in use" : ""}</td>
+              <td className="caption">{have.has(t.name) ? "in use" : "—"}</td>
             </tr>
           ))}
         </tbody></table></div></div>

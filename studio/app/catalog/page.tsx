@@ -116,7 +116,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
               {insts.map((i) => (
                 <div key={i.installation_id} className="flex flex-wrap items-center gap-2">
                   <b>{i.account_login}</b><span className="caption">{i.account_type} · {i.repository_selection === "all" ? "all repositories" : "selected repositories"}{i.suspended_at ? " · suspended" : ""}</span>
-                  {admin && <form action={disconnectGithub}><input type="hidden" name="installation_id" value={i.installation_id} /><button className="link caption" type="submit">disconnect</button></form>}
+                  {admin && <form action={disconnectGithub}><input type="hidden" name="installation_id" value={i.installation_id} /><button className="link caption" type="submit">Disconnect</button></form>}
                 </div>
               ))}
               <div className="caption">{last ? `Last sync ${ago(last.started_at)} · ${last.status}${last.status === "succeeded" ? ` · ${(last.counts as { repos?: number }).repos ?? 0} repositories` : last.error ? ` · ${last.error}` : ""}` : "Not synced yet"}</div>
@@ -167,7 +167,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                     <Link href={`/catalog/${e.id}`} className="cat-score">{(scores.get(e.id) ?? []).sort((a, b) => a.check_id.localeCompare(b.check_id)).map((r) => (
                       <span key={r.check_id} className={`pill pill-sm ${VERDICT_CLASS[r.verdict] ?? ""}`} title={`${titleOf(r.check_id)}: ${r.summary}`}>{titleOf(r.check_id).split(" (")[0]}: {r.verdict}</span>
                     ))}</Link>)}</td>
-                  <td>{e.owner ? <code>{e.owner}</code> : <span className="caption">no CODEOWNERS</span>}</td>
+                  <td>{e.owner ? <code>{e.owner}</code> : <span className="caption" title="No CODEOWNERS file assigns an owner. Add one (e.g. .github/CODEOWNERS with “* @team”) and sync.">Unassigned</span>}</td>
                   <td className="caption">{ago(e.last_activity_at)}</td>
                   <td>{ap.length === 0 ? <span className="caption">—</span> : (
                     <details><summary className="caption">{ap.length} skill{ap.length === 1 ? "" : "s"}: {ap.slice(0, 2).map((a) => humanName(a.skill.split("/")[1])).join(", ")}{ap.length > 2 ? "…" : ""}</summary>
