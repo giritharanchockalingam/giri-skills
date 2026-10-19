@@ -11,7 +11,7 @@
     "start": "next start",
     "start:static": "node scripts/serve.mjs",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node --experimental-strip-types --test tests/factory.test.ts tests/talent.test.ts",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.ts",
     "test:py": "python3 -m pytest tests/test_factory_runtime.py -q",
     "test:sql": "bash tests/sql/run.sh",
     "test": "npm run typecheck && npm run test:unit && npm run test:py"

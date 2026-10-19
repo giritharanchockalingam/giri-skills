@@ -291,6 +291,18 @@ select test_assert((select name from sf_talent where id = :'tr') = 'Architect', 
 select test_as('00000000-0000-0000-0000-000000000005');
 select test_assert((select count(*) from sf_talent) = 0 and (select count(*) from sf_talent_versions) = 0, 'other workspace sees no acme roles or pools');
 
+-- ───────── MCP read paths (0005): catalog and published talent, by API key only ─────────
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_api_keys (workspace_id, name, key_hash, prefix, created_by) values (:'ws_acme', 'mcp', repeat('7', 64), 'sf_live_mcp1', auth.uid());
+select test_as_anon();
+select test_assert((sf_api_talent(repeat('7', 64), 'role', 'architect')->'spec'->'skills') = '["c/d"]'::jsonb, 'mcp: published role spec (latest published version)');
+select test_assert(sf_api_talent(repeat('7', 64), 'pool', 'architect') is null, 'mcp: team without a published version -> null');
+select test_assert(sf_api_talent(repeat('7', 64), 'role', 'nope') is null, 'mcp: unknown role -> null');
+select test_expect_error($$select sf_api_talent(repeat('7', 64), 'skill', 'architect')$$, 'kind must be role or pool');
+select test_expect_error($$select sf_api_talent(repeat('8', 64), 'role', 'architect')$$, 'invalid api key');
+select test_assert(jsonb_typeof(sf_api_catalog(repeat('7', 64))) = 'array', 'mcp: catalog is an array');
+select test_expect_error($$select sf_api_catalog(repeat('8', 64))$$, 'invalid api key');
+
 -- the shared project's own tables were never touched
 select test_assert((select count(*) from pg_policies where tablename = 'profiles') = 0, 'profiles untouched');
 select 'ALL SQL TESTS PASSED' as result;

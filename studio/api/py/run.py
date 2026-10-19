@@ -16,7 +16,8 @@ Security model
 
 Request (JSON):
   {run_id, skill: {kind:"repo", repo_skill:"domain/name"} | {kind:"authored", slug, manifest, files:[{path,content}]},
-   inputs: {name: {kind:"text",content,ext?} | {kind:"value",value} | {kind:"fixture",path}}, assumptions: {name: value},
+   inputs: {name: {kind:"text",content,ext?} | {kind:"value",value} | {kind:"fixture",path}
+                 | {kind:"files", files:[{path,content}]}  (a folder, e.g. an existing repo's migrations)}, assumptions: {name: value},
    provider: "none"|"anthropic", model, temperature, max_tokens, timeout_s, max_retries, checks?: [eval-case checks]}
 Response (JSON): see `execute()`; always HTTP 200 with a `status` field, or 4xx/5xx with {"error": ...}.
 """
@@ -47,6 +48,8 @@ RUNNER_VERSION = "run_skill.py@inproc-1"
 MAX_TIMEOUT_S = 55
 MAX_CONTENT_TEXT = 200 * 1024
 MAX_OUTPUT_FILES = 200
+MAX_INPUT_FILES = 200                 # a folder input ({kind:"files"}): at most this many files …
+MAX_INPUT_FOLDER_BYTES = 2 * 1024 * 1024  # … and this many bytes in total
 WORK_ROOT = Path(os.environ.get("SF_WORK_ROOT", "/tmp/sf"))
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_COMPAT_BASE_URL = "https://api.groq.com/openai/v1"  # provider "openai_compat": SF_LLM_BASE_URL overrides
@@ -426,6 +429,27 @@ def execute(req: dict) -> dict:
                 p = inputs_dir / f"{name}.{ext}"
                 p.write_text(str(v.get("content", "")), encoding="utf-8")
                 argv += ["--input", f"{name}={p}"]
+            elif kind == "files":           # an existing folder (brownfield): [{path, content}] → inputs/<name>/<path>
+                files = v.get("files")
+                if not isinstance(files, list) or not files:
+                    raise ValueError(f"input {name}: no files")
+                if len(files) > MAX_INPUT_FILES:
+                    raise ValueError(f"input {name}: too many files (max {MAX_INPUT_FILES})")
+                total = sum(len(str((f or {}).get("content", "")).encode("utf-8")) for f in files if isinstance(f, dict))
+                if total > MAX_INPUT_FOLDER_BYTES:
+                    raise ValueError(f"input {name}: folder too large (max {MAX_INPUT_FOLDER_BYTES // 1024 // 1024} MB)")
+                folder = inputs_dir / name
+                folder.mkdir(parents=True, exist_ok=True)
+                for f in files:
+                    rel = str((f or {}).get("path", "")) if isinstance(f, dict) else ""
+                    parts = rel.replace("\\", "/").split("/")
+                    if (not rel or rel.startswith("/") or any(p in ("", ".", "..") for p in parts)
+                            or not all(re.fullmatch(r"[A-Za-z0-9._ -]{1,120}", p) for p in parts) or len(parts) > 8):
+                        raise ValueError(f"input {name}: bad file path: {rel[:80]}")
+                    dest = folder.joinpath(*parts)
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_text(str(f.get("content", "")), encoding="utf-8")
+                argv += ["--input", f"{name}={folder}"]
             elif kind == "fixture":
                 rel = str(v.get("path", ""))
                 if ".." in rel or not rel.startswith("evals/fixtures/"):

@@ -811,3 +811,10 @@ details.disclosure[open] > summary::before { content: "▼"; }
   .lc-row { flex-direction: column; align-items: stretch; gap: 8px; }
   .lc-panel { padding: 14px; }
 }
+.lc-seg-link { border-radius: 999px; padding: 7px 16px; font: 600 14px var(--sans); color: var(--ink-2); text-decoration: none; }
+.lc-seg-link.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(15,26,33,.12); }
+.connect-url { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .connect-url code { word-break: break-all; }
+.connect-snips { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.connect-snip { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px; min-width: 0; }
+.connect-snip pre { margin: 8px 0 0; white-space: pre-wrap; word-break: break-all; font-size: 12.5px; }
+@media (max-width: 600px) { .connect-snips { grid-template-columns: 1fr; } .lc-seg { flex-wrap: wrap; border-radius: 14px; } }

@@ -12,6 +12,7 @@ const links: { href: string; label: string; short?: string; match: string[] }[] 
   { href: "/pools", label: "Teams", match: ["/pools"] },
   { href: "/agents", label: "Playbooks", match: ["/agents", "/agent-runs/"] },
   { href: "/repo/", label: "Library", match: ["/repo", "/upstream/"] },
+  { href: "/connect", label: "Connect", match: ["/connect"] },
   { href: "/admin", label: "Admin", match: ["/admin", "/pipeline", "/skills/", "/evaluations", "/evals/", "/findings/", "/activity", "/runs/"] },
 ];
 

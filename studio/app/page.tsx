@@ -91,6 +91,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             </div>
             <div className="caption lc-panel-meta">
               {rows.length} skill{rows.length === 1 ? "" : "s"} · {mode === "new" ? "starting new" : "improving what exists"}{roleTitle ? ` · ${roleTitle}` : ""}
+              {" · "}<Link className="link" href={role ? `/connect?kind=role&slug=${role}` : `/connect?kind=stage&slug=${stage.id}`}>Use in Claude, Cursor or VS Code</Link>
             </div>
           </div>
           {rows.length === 0 ? (

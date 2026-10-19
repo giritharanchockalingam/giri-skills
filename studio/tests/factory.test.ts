@@ -50,7 +50,7 @@ test("manifest: problems are reported with paths", () => {
   assert.equal(validateManifest("nope").ok, false);
 });
 
-test("inputs: required, unknown, json schema, csv header, flags, dir rejected", () => {
+test("inputs: required, unknown, json schema, csv header, flags, a server path is not a folder", () => {
   const m = good();
   let r = validateInputs(m, {});
   assert.deepEqual(r.missing, ["invoice"]);
@@ -68,7 +68,7 @@ test("inputs: required, unknown, json schema, csv header, flags, dir rejected", 
   assert.equal(r.problems.length, 0);
   const m2 = { inputs: [{ name: "d", type: "dir" as const, required: true, from: "", default: null, flag: null, schema: null }, { name: "f", type: "flag" as const, required: false, from: "", default: null, flag: "--x", schema: null }] };
   r = validateInputs(m2, { d: "/tmp", f: true });
-  assert.match(r.problems[0].message, /directory inputs/);
+  assert.match(r.problems[0].message, /a folder input takes/);
   assert.deepEqual(r.inputs.f, { kind: "value", value: "true" });
   // fixtures only from eval cases
   r = validateInputs(m, { invoice: { kind: "fixture", path: "evals/fixtures/x.json" } });
@@ -299,4 +299,19 @@ test("exampleInputs: template first, then the consuming skill's own example", as
   assert.deepEqual(Object.keys(d).sort(), ["bom", "system"]);
   assert.equal((d.bom as { content: string }).content, "a,b");
   assert.equal(exampleInputs({ inputs: [{ name: "q", type: "csv", required: true }], steps: [] } as never, tpl, sd), null);
+});
+
+test("folder inputs: map or files form accepted, unsafe or oversized rejected, fixture still allowed in evals", () => {
+  const m = { inputs: [{ name: "migrations", type: "dir", required: true }] } as never;
+  const ok = validateInputs(m, { migrations: { "0001_a.sql": "create table x();", "sub/0002_b.sql": "select 1;" } });
+  assert.deepEqual(ok.problems, []);
+  assert.equal((ok.inputs.migrations as { kind: string; files: unknown[] }).files.length, 2);
+  assert.deepEqual(validateInputs(m, { migrations: { kind: "files", files: [{ path: "a.sql", content: "x" }] } }).problems, []);
+  for (const bad of [{ "../x.sql": "x" }, { "/abs.sql": "x" }, { "a/./b.sql": "x" }, {}, "just text", { kind: "files", files: [{ path: "a", content: 1 }] }]) {
+    assert.equal(validateInputs(m, { migrations: bad }).problems.length, 1, JSON.stringify(bad));
+  }
+  assert.match(validateInputs(m, { migrations: { "a.sql": "x".repeat(2 * 1024 * 1024 + 1) } }).problems[0].message, /larger than/);
+  assert.deepEqual(validateInputs(m, { migrations: { kind: "fixture", path: "evals/fixtures/m" } }, { allowFixtures: true }).problems, []);
+  const ref = describeInputs(ok.inputs, sha256)[0];
+  assert.equal(ref.kind, "files"); assert.equal(ref.value, "2 file(s)"); assert.match(ref.sha256!, /^[0-9a-f]{64}$/);
 });

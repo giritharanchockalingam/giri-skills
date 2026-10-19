@@ -43,7 +43,33 @@ export function validateJson(schema: JsonSchema, value: unknown, path = "$"): Pr
 }
 
 /** What a caller may send per input: file-content text for text types, a value for the rest. */
-export type RunInput = { kind: "text"; content: string; ext?: string } | { kind: "value"; value: string } | { kind: "fixture"; path: string };
+export interface InputFile { path: string; content: string }
+/** "files" is a folder (e.g. an existing repo's migrations) for brownfield runs; the runtime writes it under the run. */
+export type RunInput = { kind: "text"; content: string; ext?: string } | { kind: "value"; value: string } | { kind: "fixture"; path: string } | { kind: "files"; files: InputFile[] };
+export const MAX_FOLDER_FILES = 200;
+export const MAX_FOLDER_BYTES = 2 * 1024 * 1024;
+const SAFE_REL = /^(?!\/)(?:[A-Za-z0-9._ -]{1,120}\/){0,7}[A-Za-z0-9._ -]{1,120}$/;
+
+/** A folder given as {kind:"files", files:[{path,content}]} or as a plain {"rel/path": "content"} map. */
+function normaliseFolder(v: unknown): { input: RunInput } | { problem: string } {
+  let files: InputFile[] | null = null;
+  if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    if (o.kind === "files") files = Array.isArray(o.files) ? (o.files as InputFile[]) : null;
+    else if (!("kind" in o)) files = Object.entries(o).map(([path, content]) => ({ path, content: content as string }));
+  }
+  if (!files) return { problem: "a folder input takes {\"relative/path.ext\": \"file content\", …}" };
+  if (!files.length) return { problem: "the folder has no files" };
+  if (files.length > MAX_FOLDER_FILES) return { problem: `too many files (max ${MAX_FOLDER_FILES})` };
+  let bytes = 0;
+  for (const f of files) {
+    if (!f || typeof f.path !== "string" || typeof f.content !== "string") return { problem: "each file needs a string path and string content" };
+    if (!SAFE_REL.test(f.path) || f.path.split("/").some((p) => p === "." || p === "..")) return { problem: `bad file path: ${String(f.path).slice(0, 80)}` };
+    bytes += byteLength(f.content);
+  }
+  if (bytes > MAX_FOLDER_BYTES) return { problem: `folder larger than ${MAX_FOLDER_BYTES / 1024 / 1024} MB` };
+  return { input: { kind: "files", files: files.map((f) => ({ path: f.path, content: f.content })) } };
+}
 
 export interface ValidatedInputs { inputs: Record<string, RunInput>; problems: Problem[]; missing: string[] }
 
@@ -78,6 +104,7 @@ export function validateInputs(manifest: Pick<Manifest, "inputs">, raw: unknown,
 
 function normalise(spec: InputSpec, v: unknown, allowFixtures: boolean): { input: RunInput } | { problem: string } {
   const isText = (TEXT_INPUT_TYPES as readonly string[]).includes(spec.type);
+  if (spec.type === "dir" && !(typeof v === "object" && v !== null && (v as { kind?: string }).kind === "fixture")) return normaliseFolder(v);
   if (typeof v === "object" && v !== null && !Array.isArray(v) && "kind" in v) {
     const o = v as Record<string, unknown>;
     if (o.kind === "fixture") {
@@ -89,7 +116,6 @@ function normalise(spec: InputSpec, v: unknown, allowFixtures: boolean): { input
     if (o.kind === "value") return typeof o.value === "string" ? { input: { kind: "value", value: o.value } } : { problem: "value input needs a string value" };
     return { problem: "unknown input kind" };
   }
-  if (spec.type === "dir") return { problem: "directory inputs cannot be supplied over HTTP (use a file input or a fixture in an evaluation case)" };
   if (isText) {
     if (spec.type === "json" && typeof v === "object") return { input: { kind: "text", content: JSON.stringify(v, null, 2) } };
     if (typeof v !== "string") return { problem: `expected file content (string) for a ${spec.type} input` };
@@ -133,6 +159,10 @@ export function describeInputs(inputs: Record<string, RunInput>, sha256: (s: str
   return Object.entries(inputs).map(([name, i]) => {
     if (i.kind === "text") return { name, kind: i.kind, bytes: byteLength(i.content), sha256: sha256(i.content) };
     if (i.kind === "fixture") return { name, kind: i.kind, bytes: 0, sha256: null, value: i.path };
+    if (i.kind === "files") {
+      const canon = i.files.map((f) => `${f.path}\u0000${sha256(f.content)}`).sort().join("\n");
+      return { name, kind: i.kind, bytes: i.files.reduce((n, f) => n + byteLength(f.content), 0), sha256: sha256(canon), value: `${i.files.length} file(s)` };
+    }
     return { name, kind: i.kind, bytes: byteLength(i.value), sha256: sha256(i.value), value: i.value.length > 200 ? i.value.slice(0, 200) + "…" : i.value };
   });
 }

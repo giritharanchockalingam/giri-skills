@@ -316,3 +316,34 @@ def test_empty_completion_is_an_error_not_a_blank_file(rt, monkeypatch):
     assert res["status"] == "failed"
     assert seen[0]["max_completion_tokens"] == 12000 and seen[0]["reasoning_effort"] == "low"
     assert "no text" in res["logs"] or "no text" in json.dumps(res.get("run_json") or {})
+
+
+MIGRATION_NO_RLS = "-- fictional example migration (test)\ncreate table public.notes (id uuid primary key, body text);\n"
+MIGRATION_RLS = ("-- fictional example migration (test)\ncreate table public.tags (id uuid primary key, name text);\n"
+                 "alter table public.tags enable row level security;\n"
+                 "create policy tags_read on public.tags for select to authenticated using (true);\n")
+
+
+def test_files_input_materialises_an_existing_folder(rt):
+    """Brownfield over HTTP/MCP: an existing migrations folder arrives as {kind: files}, is written as a folder and linted."""
+    res = rt.execute({"run_id": "t-files", "skill": {"kind": "repo", "repo_skill": "build/supabase-schema-rls"},
+                      "inputs": {"migrations": {"kind": "files", "files": [
+                          {"path": "0001_notes.sql", "content": MIGRATION_NO_RLS},
+                          {"path": "nested/0002_tags.sql", "content": MIGRATION_RLS}]}},
+                      "provider": "none"})
+    lint = next(o for o in res["outputs"] if o["path"] == "rls-lint.txt")["content_text"]
+    assert "ERROR RLS001 table public.notes created without" in lint, lint   # the gap is found
+    assert "public.tags" not in lint, lint                                                       # the compliant table is not
+
+
+@pytest.mark.parametrize("files,why", [
+    ([{"path": "../escape.sql", "content": "x"}], "bad file path"),
+    ([{"path": "/abs.sql", "content": "x"}], "bad file path"),
+    ([{"path": "a.sql", "content": "x"}] * 201, "too many files"),
+    ([{"path": "a.sql", "content": "x" * (2 * 1024 * 1024 + 1)}], "too large"),
+    ([], "no files"),
+])
+def test_files_input_is_bounded_and_confined(rt, files, why):
+    res = rt.execute({"run_id": "t-files-bad", "skill": {"kind": "repo", "repo_skill": "build/supabase-schema-rls"},
+                      "inputs": {"migrations": {"kind": "files", "files": files}}, "provider": "none"})
+    assert res["status"] == "failed" and why in res["error"], res["error"]
