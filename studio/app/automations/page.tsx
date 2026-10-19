@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -14,7 +15,6 @@ export const dynamic = "force-dynamic";
 
 const CLS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
 const titleOf = (id: string) => CHECKS.find((c) => c.id === id)?.title.split(" (")[0] ?? id;
-const when = (iso: string) => new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
 /** Workflow orchestrator: when something happens in GitHub, run checks and report back — with every run recorded. */
 export default async function AutomationsPage() {
@@ -78,7 +78,7 @@ export default async function AutomationsPage() {
           <thead><tr><th>When</th><th>Automation</th><th>Repository</th><th>Event</th><th>Verdicts</th><th>On GitHub</th></tr></thead>
           <tbody>{runs.length === 0 ? <tr><td colSpan={6} className="none">No runs yet — they appear when GitHub sends an event.</td></tr> : runs.map((r) => (
             <tr key={r.id}>
-              <td className="caption">{when(r.started_at)}</td>
+              <td className="caption"><LocalTime iso={r.started_at} /></td>
               <td>{automations.find((a) => a.id === r.automation_id)?.name ?? "—"}</td>
               <td>{r.entity_id ? <Link className="link" href={`/catalog/${r.entity_id}`}>{r.repo}</Link> : r.repo}</td>
               <td className="caption">{r.event === "pull_request" ? `PR #${r.pr_number}` : "default branch"} · <code>{r.head_sha?.slice(0, 7)}</code></td>

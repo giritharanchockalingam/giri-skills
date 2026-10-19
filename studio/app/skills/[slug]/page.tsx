@@ -1,7 +1,7 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { evalGate, approvalGate, pct } from "@/lib/factory/release";
-import { fmtDate } from "@/lib/factory/db";
 import { VersionBar } from "@/components/factory/VersionBar";
 import { GateList } from "@/components/factory/GateList";
 import { RunPill } from "@/components/factory/Pills";
@@ -40,7 +40,7 @@ export default async function SkillOverview({ params, searchParams }: { params: 
             {d.state ? <GateList compact gates={[evalGate(d.state), approvalGate(d.state)]} /> : <p className="none">No release state.</p>}
             <dl className="kv mt-3">
               <dt>Evaluation</dt><dd>{d.state?.latest_eval_run_id ? <Link href={`/skills/${slug}/evaluations/${vq}`} className="link">{pct(d.state.latest_eval_pass_rate)} on {d.state.eval_case_count} case{d.state.eval_case_count === 1 ? "" : "s"}</Link> : <span className="none">{d.state?.eval_case_count ?? 0} cases, not run</span>}</dd>
-              <dt>Runs</dt><dd>{lastRun ? <><Link href={`/runs/${lastRun.id}`} className="link"><RunPill status={lastRun.status as RunStatus} small /></Link> <span className="caption">{fmtDate(lastRun.created_at)} · {d.runCount} total</span></> : <span className="none">never run</span>}</dd>
+              <dt>Runs</dt><dd>{lastRun ? <><Link href={`/runs/${lastRun.id}`} className="link"><RunPill status={lastRun.status as RunStatus} small /></Link> <span className="caption"><LocalTime iso={lastRun.created_at} /> · {d.runCount} total</span></> : <span className="none">never run</span>}</dd>
               <dt>Next</dt><dd><Link href={`/skills/${slug}/release/${vq}`} className="link-flame">Release gates →</Link></dd>
             </dl>
           </div>

@@ -1,9 +1,9 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
 import { evalGate, pct } from "@/lib/factory/release";
 import { runtimeConfig } from "@/lib/factory/runtime";
-import { fmtDate } from "@/lib/factory/db";
 import { loadVersionEvaluations } from "@/lib/db/skills";
 import { saveEvalCase, deleteEvalCase } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
@@ -80,7 +80,7 @@ export default async function EvaluationsPage({ params, searchParams }: { params
             <div className="h3 mb-2">Evaluation history <span className="muted font-normal">({runs.length})</span></div>
             {runs.length === 0 ? <p className="none">No evaluation has run for this version.</p> : runs.map((r) => (
               <details key={r.id} className="disclosure" style={{ borderBottom: "1px solid var(--rule-soft)", padding: "4px 0" }} open={r.id === runs[0].id}>
-                <summary><span>{fmtDate(r.started_at)}</span><span className="muted">·</span><span className={r.status === "finished" ? (Number(r.pass_rate) >= (d.version.manifest.release_criteria.min_eval_pass_rate || 0) ? "pass" : "fail") : "muted"}>{r.status === "finished" ? `${pct(r.pass_rate)} passed` : r.status}</span>
+                <summary><span><LocalTime iso={r.started_at} /></span><span className="muted">·</span><span className={r.status === "finished" ? (Number(r.pass_rate) >= (d.version.manifest.release_criteria.min_eval_pass_rate || 0) ? "pass" : "fail") : "muted"}>{r.status === "finished" ? `${pct(r.pass_rate)} passed` : r.status}</span>
                   <span className="caption">· {r.results.length} cases · {r.provider ?? "none"}{r.model ? ` · ${r.model}` : ""} · set {r.eval_set_hash.slice(0, 8)}{d.state?.current_eval_set_hash && r.eval_set_hash !== d.state.current_eval_set_hash ? " (outdated: cases changed since)" : ""}</span></summary>
                 <div className="tablewrap mt-2"><table className="mini"><thead><tr><th>Case</th><th>Run</th><th>Checks</th><th>Detail</th></tr></thead>
                   <tbody>{r.results.map((c) => (

@@ -1,4 +1,5 @@
 "use client";
+import { failureText } from "@/lib/runText";
 /* "Run it" — runs scripts/run_skill.py for this skill in the browser (CPython via Pyodide, in a Web Worker).
  * Nothing on this panel is simulated: the inputs are written into the runner's virtual FS, the real runner and the
  * skill's real scripts execute, and every status shown is read back from the run.json the runner wrote. */
@@ -183,7 +184,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
   const rj = result?.runJson ?? null;
   const banner = !result ? null
     : result.needsInput ? { tone: "hold", text: `NEEDS INPUT — missing: ${result.needsInput.missing.map((m) => m.name).join(", ")}` }
-    : rj ? (rj.ok ? { tone: "sage", text: "OK — every step ran and every check passed" } : { tone: "rust", text: `FAILED — ${rj.steps.filter((s) => !s.ok).length} step(s) not ok, ${rj.checks.filter((c) => !c.pass).length} check(s) failed` })
+    : rj ? (rj.ok ? { tone: "sage", text: "OK — every step ran and every check passed" } : { tone: "rust", text: `FAILED — ${failureText(rj)}` })
     : { tone: "rust", text: `FAILED — the runner exited ${result.exitCode} without writing run.json` };
   const outputFiles = result ? Object.keys(result.files).filter((p) => !p.startsWith("logs/")).sort() : [];
   // the deliverable to show first: the skill's first declared Markdown output that was written, else its first output

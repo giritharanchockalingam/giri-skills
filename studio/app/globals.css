@@ -921,3 +921,12 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .ins-cols { overflow-x: auto; contain: inline-size; }
 .ins-col { min-width: 0; flex: 1 1 0; }
 .ins-grid > * { min-width: 0; }
+/* ───────────── Loading state (app/loading.tsx) ───────────── */
+.page-loading { position: relative; }
+.page-loading-bar { position: fixed; top: 0; left: 0; height: 3px; width: 40%; background: var(--flame); z-index: 80; animation: pl-bar 1.1s ease-in-out infinite; }
+@keyframes pl-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+.skel { background: var(--wash); border-radius: var(--r-sm); margin-bottom: 12px; animation: pl-pulse 1.4s ease-in-out infinite; }
+.skel-eyebrow { width: 120px; height: 12px; } .skel-title { width: min(520px, 90%); height: 40px; } .skel-line { width: min(640px, 100%); height: 14px; }
+.skel-line.short { width: min(380px, 70%); } .skel-card { height: 220px; margin-top: 24px; }
+@keyframes pl-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .page-loading-bar, .skel { animation: none; } }

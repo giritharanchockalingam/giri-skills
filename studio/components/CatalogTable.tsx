@@ -1,4 +1,5 @@
 "use client";
+import { matches } from "@/lib/search";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -21,7 +22,7 @@ export function CatalogTable({ rows, domains }: { rows: CatalogRow[]; domains: s
       .filter((r) =>
         (dom === "all" || r.domain === dom) &&
         matchesVerdictFilter(ver, r.verdict) &&
-        (!needle || r.name.toLowerCase().includes(needle) || r.description.toLowerCase().includes(needle)))
+        matches(needle, r.name, r.description))
       .sort((a, b) => verdictSeverity(a.verdict) - verdictSeverity(b.verdict) || (a.lift ?? 0) - (b.lift ?? 0) || a.name.localeCompare(b.name));
   }, [rows, dom, ver, q]);
 

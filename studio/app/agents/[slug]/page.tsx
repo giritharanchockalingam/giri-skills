@@ -1,6 +1,7 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireWorkspace, fmtDate } from "@/lib/factory/db";
+import {requireWorkspace } from "@/lib/factory/db";
 import { can } from "@/lib/factory/roles";
 import { PageHead } from "@/components/PageHead";
 import { ActionForm } from "@/components/factory/ActionForm";
@@ -40,7 +41,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
       <section className="section">
         <div className="h3 mb-2">Recent runs</div>
         <div className="list">{runs.map((r) => (
-          <Link key={r.id} href={`/agent-runs/${r.id}`} className="list-row row-link"><span>{fmtDate(r.created_at)} · v{versions.find((x) => x.id === r.agent_version_id)?.version}</span><span>{r.status}{r.cost_usd != null ? ` · ≈$${Number(r.cost_usd).toFixed(4)}` : ""}</span></Link>))}
+          <Link key={r.id} href={`/agent-runs/${r.id}`} className="list-row row-link"><span><LocalTime iso={r.created_at} /> · v{versions.find((x) => x.id === r.agent_version_id)?.version}</span><span>{r.status}{r.cost_usd != null ? ` · ≈$${Number(r.cost_usd).toFixed(4)}` : ""}</span></Link>))}
           {runs.length === 0 && <p className="none">No runs yet.</p>}</div>
       </section>
     </>

@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import type { DeliveryRow } from "@/lib/db/delivery";
 import { BAND_LABEL, fmtHours, type Band, type Delivery } from "@/lib/insights/delivery";
@@ -18,7 +19,7 @@ export function DeliveryTable({ rows, window }: { rows: DeliveryRow[]; window: 3
           <td>{fmtHours(d.lead_time.median_hours)} <BandPill b={d.lead_time.band} /><div className="caption">p75 {fmtHours(d.lead_time.p75_hours)} · {d.lead_time.samples} PR{d.lead_time.samples === 1 ? "" : "s"}</div></td>
           <td>{d.change_failure.rate == null ? "—" : `${d.change_failure.rate}%`}<div className="caption" title={d.change_failure.examples.join("\n")}>{d.change_failure.failures} of {d.change_failure.of} merges</div></td>
           <td>{d.open_prs.count}{d.open_prs.oldest_days != null && <div className="caption">oldest {d.open_prs.oldest_days} days</div>}</td>
-          <td className="caption">{new Date(r.computed_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}{r.notes.length > 0 && <div title={r.notes.join("\n")}>ⓘ {r.notes.length} note{r.notes.length === 1 ? "" : "s"}</div>}</td>
+          <td className="caption"><LocalTime iso={r.computed_at} />{r.notes.length > 0 && <div title={r.notes.join("\n")}>ⓘ {r.notes.length} note{r.notes.length === 1 ? "" : "s"}</div>}</td>
         </tr>); })}</tbody>
     </table></div>
   );

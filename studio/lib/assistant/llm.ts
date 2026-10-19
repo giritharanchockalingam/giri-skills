@@ -29,9 +29,16 @@ export class LlmError extends Error {
   constructor(status: number, message: string) { super(message); this.name = "LlmError"; this.status = status; }
 }
 
-export function openAiChat(cfg: LlmConfig, fetchImpl: typeof fetch = fetch, timeoutMs = 45_000): Chat {
+/** Models seen refusing tools unless reasoning is off: remembered for the life of the server instance so every later
+ *  call goes right the first time (each refusal costs a full round trip). SF_LLM_REASONING_EFFORT presets it. */
+const needsNoReasoning = new Set<string>();
+
+export function openAiChat(cfg: LlmConfig, fetchImpl: typeof fetch = fetch, timeoutMs = 45_000, env: Record<string, string | undefined> = process.env): Chat {
   return async (messages, tools) => {
     const payload: Record<string, unknown> = { model: cfg.model, messages, ...(tools.length ? { tools, tool_choice: "auto" } : {}) };
+    const preset = env.SF_LLM_REASONING_EFFORT?.trim();
+    if (preset) payload.reasoning_effort = preset;
+    else if (tools.length && needsNoReasoning.has(cfg.model)) payload.reasoning_effort = "none";
     // Reasoning models that default to reasoning reject function tools unless reasoning is switched off ("set
     // reasoning_effort to 'none'"); a model that does not know the parameter rejects it. Either way, adjust once and retry.
     for (let attempt = 0; ; attempt++) {
@@ -50,7 +57,7 @@ export function openAiChat(cfg: LlmConfig, fetchImpl: typeof fetch = fetch, time
         let msg = text.slice(0, 300);
         try { msg = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? msg; } catch { /* keep the raw text */ }
         if (res.status === 400 && attempt === 0 && /reasoning_effort/i.test(msg)) {
-          if ("reasoning_effort" in payload) delete payload.reasoning_effort; else payload.reasoning_effort = "none";
+          if ("reasoning_effort" in payload) delete payload.reasoning_effort; else { payload.reasoning_effort = "none"; needsNoReasoning.add(cfg.model); }
           continue;
         }
         throw new LlmError(res.status, `model error ${res.status}: ${msg.replace(/sk-[A-Za-z0-9_-]{8,}/g, "sk-…")}`);

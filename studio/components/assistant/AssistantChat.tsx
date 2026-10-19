@@ -1,7 +1,7 @@
 "use client";
 /* Assistant conversation: the question goes to /api/assistant with the recent turns; the answer is shown with the
  * evidence it rests on (which lookups ran, what they found, links to the records) and its token cost. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { mdToHtml } from "@/lib/markdown.mjs";
 
@@ -10,14 +10,24 @@ interface Msg { role: "user" | "assistant"; content: string; evidence?: Evidence
 
 const TOOL_LABEL: Record<string, string> = {
   search_catalog: "Searched the catalog", get_scorecard: "Read a scorecard", find_skill: "Searched the skills library",
-  list_automation_runs: "Read automation runs", insights_summary: "Read Insights",
+  list_automation_runs: "Read automation runs", insights_summary: "Read Insights", list_initiatives: "Read initiatives",
+  delivery_metrics: "Read delivery metrics", list_ai_assets: "Read AI assets",
 };
+/** The conversation survives navigation within this tab (sessionStorage); it is never sent anywhere but /api/assistant. */
+const KEY = "sf-assistant-thread-v1";
+const load = (): Msg[] => { try { const v = JSON.parse(sessionStorage.getItem(KEY) ?? "[]"); return Array.isArray(v) ? v.slice(-40) : []; } catch { return []; } };
+const save = (m: Msg[]) => { try { sessionStorage.setItem(KEY, JSON.stringify(m.slice(-40))); } catch { /* private mode: in memory only */ } };
 
 export function AssistantChat({ starters }: { starters: string[] }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => { setMsgs(load()); setLoaded(true); }, []);
+  useEffect(() => { if (loaded) save(msgs); }, [msgs, loaded]);
+  useEffect(() => { if (!busy) { setElapsed(0); return; } const t0 = Date.now(); const id = setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 1000); return () => clearInterval(id); }, [busy]);
 
   async function send(q: string) {
     const question = q.trim();
@@ -66,7 +76,7 @@ export function AssistantChat({ starters }: { starters: string[] }) {
               {m.meta && <p className="caption ask-meta">{m.meta}</p>}
             </>}
           </li>))}
-        {busy && <li className="ask-msg ask-assistant"><p className="caption">Looking it up…</p></li>}
+        {busy && <li className="ask-msg ask-assistant"><p className="caption" role="status">Looking it up in your workspace… {elapsed > 2 ? `${elapsed}s` : ""}</p></li>}
       </ol>
       <div ref={endRef} />
       <form className="ask-form" onSubmit={(e) => { e.preventDefault(); send(draft); }}>

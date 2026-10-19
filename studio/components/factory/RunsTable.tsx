@@ -1,10 +1,11 @@
 "use client";
+import { LocalTime } from "@/components/LocalTime";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChoiceFilter } from "@/components/FilterBar";
 import { RunPill } from "./Pills";
-import { fmtDate, fmtMs, fmtUsd } from "@/lib/factory/format";
+import {fmtMs, fmtUsd } from "@/lib/factory/format";
 import type { RunStatus } from "@/lib/factory/db";
 
 export interface RunListItem { id: string; status: RunStatus; source: string; created_at: string; duration_ms: number | null; provider: string | null; model: string | null; cost_usd: number | string | null; cost_is_estimate: boolean; error: string | null; skill: string; slug: string; version: number }
@@ -32,7 +33,7 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
               <thead><tr><th>When</th>{showSkill && <th>Skill</th>}<th>Status</th><th>Source</th><th>Provider · model</th><th className="num">Duration</th><th className="num" title="Estimated from provider-reported tokens × price table; — when no model call was made">Cost (est.)</th><th>Detail</th></tr></thead>
               <tbody>{filtered.map((r) => (
                 <tr key={r.id} className="clickable" tabIndex={0} onClick={() => go(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(r.id); } }}>
-                  <td><Link href={`/runs/${r.id}`} className="cell-name" onClick={(e) => e.stopPropagation()}>{fmtDate(r.created_at)}</Link></td>
+                  <td><Link href={`/runs/${r.id}`} className="cell-name" onClick={(e) => e.stopPropagation()}><LocalTime iso={r.created_at} /></Link></td>
                   {showSkill && <td>{r.skill} <span className="muted">v{r.version}</span></td>}
                   <td><RunPill status={r.status} small /></td><td className="muted">{r.source}</td>
                   <td className="ink-2">{r.provider ?? "—"}{r.model ? ` · ${r.model}` : ""}</td>
@@ -43,8 +44,8 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
             </table></div>
             <div className="row-list only-mobile">{filtered.map((r) => (
               <Link key={r.id} href={`/runs/${r.id}`} className="row-card">
-                <div className="row-card-top"><span className="row-card-name">{showSkill ? `${r.skill} v${r.version}` : fmtDate(r.created_at)}</span><RunPill status={r.status} small /></div>
-                <div className="row-card-meta">{showSkill && <span>{fmtDate(r.created_at)}</span>}<span>{r.source}</span><span>{fmtMs(r.duration_ms)}</span>{r.cost_usd != null && <span>{fmtUsd(r.cost_usd, r.cost_is_estimate)}</span>}</div>
+                <div className="row-card-top"><span className="row-card-name">{showSkill ? `${r.skill} v${r.version}` : <LocalTime iso={r.created_at} />}</span><RunPill status={r.status} small /></div>
+                <div className="row-card-meta">{showSkill && <span><LocalTime iso={r.created_at} /></span>}<span>{r.source}</span><span>{fmtMs(r.duration_ms)}</span>{r.cost_usd != null && <span>{fmtUsd(r.cost_usd, r.cost_is_estimate)}</span>}</div>
                 {r.error && <div className="row-card-desc">{r.error}</div>}
               </Link>
             ))}{filtered.length === 0 && <div className="row-card none">No runs match.</div>}</div>

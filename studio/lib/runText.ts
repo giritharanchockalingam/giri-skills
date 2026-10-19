@@ -1,0 +1,13 @@
+/* What failed in a run, in plain words (mirrors api/py/run.py failure_summary for in-browser runs). Pure. */
+type Step = { step?: string; ok?: boolean; error?: string; exit?: number | null };
+type Check = { pass?: boolean; check?: string; path?: string };
+export function failureText(rj: { steps: Step[]; checks: Check[] }): string {
+  const bad = rj.steps.filter((s) => !s.ok), badC = rj.checks.filter((c) => !c.pass);
+  const parts = bad.slice(0, 3).map((s) => {
+    const e = (s.error ?? "").trim();
+    return /^gate:/i.test(e) ? `the skill's gate in step '${s.step}' said ${e.slice(5).trim()}` : `step '${s.step ?? "?"}' failed${e ? `: ${e}` : s.exit != null ? ` (exit ${s.exit})` : ""}`;
+  });
+  if (bad.length > 3) parts.push(`${bad.length - 3} more step(s) failed`);
+  if (badC.length) parts.push(`${badC.length} output check(s) failed, e.g. ${badC[0].check ?? "?"} on ${(badC[0].path ?? "?").split("/").pop()}`);
+  return parts.join("; ") || "the run did not complete";
+}
