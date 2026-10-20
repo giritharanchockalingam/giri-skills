@@ -107,3 +107,9 @@ Next: re-sync with the new tokens and verify relations (service → database); n
 - Batch E (#35): a "How to read this table" legend on Evaluations, every table column has a header, Connect lists live tools first.
 - Verified live: the changed pages return the new copy, and no page scrolls sideways at 360 px.
 - `/home/claude/bin/ship.sh` now creates the branch itself when run from main.
+
+## 2026-10-20 — Port.io integration, live
+- Port org (EU, app.port.io): **Governed AI Skills** catalog page (23 AI Skill entities with version, eval pass rate, cases, approval, library status), **Run governed skill** workflow (verified: bad input refused with a readable reason; LLM cost model succeeded), **Skills Factory** MCP connector (25 tools; Port AI used find_skill correctly).
+- Code: lib/integrations/port/*, app/api/port/actions (workflows: sync within 10 s, bearer key or Port signature; classic actions supported), Integrations → Port card. Docs: studio/docs/PORT.md.
+- Also today: library drift detection + Update from library; Guardrails pin incident (library change blocked a live tool; reverted; caveat parked until a v3 is published with it); all 78 skills model-evaluated (24 healthy, 54 need work).
+- Owner rules learned: never `vercel --prod` from a laptop (it replaced prod with a stale checkout); redeploy main from the Vercel dashboard.
