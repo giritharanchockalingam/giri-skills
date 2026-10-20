@@ -1,1685 +1,5 @@
 [
  {
-  "skill": "ai-platform/agent-architecture",
-  "caseId": "happy-path-support-agent",
-  "run": 1,
-  "selected": "agent-architecture",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/agent-architecture",
-  "caseId": "missing-job-statement",
-  "run": 1,
-  "selected": "agent-architecture",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/agent-architecture",
-  "caseId": "push-back-on-multi-agent",
-  "run": 1,
-  "selected": "agent-architecture",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-governance-risk",
-  "caseId": "happy-path-admissions-assistant",
-  "run": 1,
-  "selected": "ai-governance-risk",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-governance-risk",
-  "caseId": "missing-data-categories",
-  "run": 1,
-  "selected": "ai-governance-risk",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-governance-risk",
-  "caseId": "model-card-only",
-  "run": 1,
-  "selected": "ai-governance-risk",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-strategy-coe",
-  "caseId": "happy-path-midsize-enterprise",
-  "run": 1,
-  "selected": "ai-strategy-coe",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-strategy-coe",
-  "caseId": "missing-current-state",
-  "run": 1,
-  "selected": "ai-strategy-coe",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-strategy-coe",
-  "caseId": "operating-model-only",
-  "run": 1,
-  "selected": "ai-strategy-coe",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-use-case-canvas",
-  "caseId": "happy-path-invoice-matching",
-  "run": 1,
-  "selected": "ai-use-case-canvas",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-use-case-canvas",
-  "caseId": "missing-user",
-  "run": 1,
-  "selected": "ai-use-case-canvas",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-use-case-canvas",
-  "caseId": "disqualifier-rule-not-ai",
-  "run": 1,
-  "selected": "agent-architecture",
-  "correct": 0
- },
- {
-  "skill": "ai-platform/infra-gpu-sizing",
-  "caseId": "happy-path-self-host-vs-rent",
-  "run": 1,
-  "selected": "infra-gpu-sizing",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/infra-gpu-sizing",
-  "caseId": "missing-throughput",
-  "run": 1,
-  "selected": "infra-gpu-sizing",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/infra-gpu-sizing",
-  "caseId": "api-vs-hosted-low-volume",
-  "run": 1,
-  "selected": "infra-gpu-sizing",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/llm-eval-harness",
-  "caseId": "happy-path-support-bot",
-  "run": 1,
-  "selected": "llm-eval-harness",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/llm-eval-harness",
-  "caseId": "missing-examples",
-  "run": 1,
-  "selected": "llm-eval-harness",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/llm-eval-harness",
-  "caseId": "judge-only-request",
-  "run": 1,
-  "selected": "llm-eval-harness",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/mcp-server-builder",
-  "caseId": "happy-path-wrap-rest-api",
-  "run": 1,
-  "selected": "mcp-server-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/mcp-server-builder",
-  "caseId": "missing-target",
-  "run": 1,
-  "selected": "mcp-server-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/mcp-server-builder",
-  "caseId": "reject-generic-tool",
-  "run": 1,
-  "selected": "mcp-server-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/rag-pipeline-design",
-  "caseId": "happy-path-policy-assistant",
-  "run": 1,
-  "selected": "rag-pipeline-design",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/rag-pipeline-design",
-  "caseId": "missing-questions",
-  "run": 1,
-  "selected": "rag-pipeline-design",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/rag-pipeline-design",
-  "caseId": "diagnose-wrong-answers",
-  "run": 1,
-  "selected": "rag-pipeline-design",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/slm-demo-builder",
-  "caseId": "happy-path-retail-returns",
-  "run": 1,
-  "selected": "slm-demo-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/slm-demo-builder",
-  "caseId": "missing-audience",
-  "run": 1,
-  "selected": "slm-demo-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/slm-demo-builder",
-  "caseId": "feature-tour-pushback",
-  "run": 1,
-  "selected": "slm-demo-builder",
-  "correct": 1
- },
- {
-  "skill": "build/ci-cd-vercel-github",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "ci-cd-vercel-github",
-  "correct": 1
- },
- {
-  "skill": "build/ci-cd-vercel-github",
-  "caseId": "failing-run",
-  "run": 1,
-  "selected": "safe-fix",
-  "correct": 0
- },
- {
-  "skill": "build/ci-cd-vercel-github",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "ci-cd-vercel-github",
-  "correct": 1
- },
- {
-  "skill": "build/handoff-and-thread-close",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "handoff-and-thread-close",
-  "correct": 1
- },
- {
-  "skill": "build/handoff-and-thread-close",
-  "caseId": "red-state",
-  "run": 1,
-  "selected": "handoff-and-thread-close",
-  "correct": 1
- },
- {
-  "skill": "build/handoff-and-thread-close",
-  "caseId": "off-topic-drift",
-  "run": 1,
-  "selected": "handoff-and-thread-close",
-  "correct": 1
- },
- {
-  "skill": "build/multi-tenant-saas-patterns",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 1
- },
- {
-  "skill": "build/multi-tenant-saas-patterns",
-  "caseId": "role-removal-edge",
-  "run": 1,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 1
- },
- {
-  "skill": "build/multi-tenant-saas-patterns",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 1
- },
- {
-  "skill": "build/nextjs-enterprise-conventions",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "spec-to-plan",
-  "correct": 0
- },
- {
-  "skill": "build/nextjs-enterprise-conventions",
-  "caseId": "review-violation",
-  "run": 1,
-  "selected": "safe-fix",
-  "correct": 0
- },
- {
-  "skill": "build/nextjs-enterprise-conventions",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "nextjs-enterprise-conventions",
-  "correct": 1
- },
- {
-  "skill": "build/observability-setup",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "observability-setup",
-  "correct": 1
- },
- {
-  "skill": "build/observability-setup",
-  "caseId": "existing-partial",
-  "run": 1,
-  "selected": "observability-setup",
-  "correct": 1
- },
- {
-  "skill": "build/observability-setup",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "observability-setup",
-  "correct": 1
- },
- {
-  "skill": "build/product-spec-prd",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "product-spec-prd",
-  "correct": 1
- },
- {
-  "skill": "build/product-spec-prd",
-  "caseId": "redline-existing",
-  "run": 1,
-  "selected": "product-spec-prd",
-  "correct": 1
- },
- {
-  "skill": "build/product-spec-prd",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "product-spec-prd",
-  "correct": 1
- },
- {
-  "skill": "build/project-bootstrap",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "project-bootstrap",
-  "correct": 1
- },
- {
-  "skill": "build/project-bootstrap",
-  "caseId": "existing-files",
-  "run": 1,
-  "selected": "project-bootstrap",
-  "correct": 1
- },
- {
-  "skill": "build/project-bootstrap",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "project-bootstrap",
-  "correct": 1
- },
- {
-  "skill": "build/safe-fix",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "safe-fix",
-  "correct": 1
- },
- {
-  "skill": "build/safe-fix",
-  "caseId": "would-break-something-else",
-  "run": 1,
-  "selected": "safe-fix",
-  "correct": 1
- },
- {
-  "skill": "build/safe-fix",
-  "caseId": "cannot-reproduce",
-  "run": 1,
-  "selected": "safe-fix",
-  "correct": 1
- },
- {
-  "skill": "build/security-review",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "safe-fix",
-  "correct": 0
- },
- {
-  "skill": "build/security-review",
-  "caseId": "no-trace-no-finding",
-  "run": 1,
-  "selected": "security-review",
-  "correct": 1
- },
- {
-  "skill": "build/security-review",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "security-review",
-  "correct": 1
- },
- {
-  "skill": "build/spec-to-plan",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "spec-to-plan",
-  "correct": 1
- },
- {
-  "skill": "build/spec-to-plan",
-  "caseId": "too-big",
-  "run": 1,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 0
- },
- {
-  "skill": "build/spec-to-plan",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "spec-to-plan",
-  "correct": 1
- },
- {
-  "skill": "build/supabase-schema-rls",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "supabase-schema-rls",
-  "correct": 1
- },
- {
-  "skill": "build/supabase-schema-rls",
-  "caseId": "destructive-change",
-  "run": 1,
-  "selected": "supabase-schema-rls",
-  "correct": 1
- },
- {
-  "skill": "build/supabase-schema-rls",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "supabase-schema-rls",
-  "correct": 1
- },
- {
-  "skill": "build/test-strategy-tdd",
-  "caseId": "happy-path",
-  "run": 1,
-  "selected": "test-strategy-tdd",
-  "correct": 1
- },
- {
-  "skill": "build/test-strategy-tdd",
-  "caseId": "no-test-setup",
-  "run": 1,
-  "selected": "test-strategy-tdd",
-  "correct": 1
- },
- {
-  "skill": "build/test-strategy-tdd",
-  "caseId": "missing-input",
-  "run": 1,
-  "selected": "test-strategy-tdd",
-  "correct": 1
- },
- {
-  "skill": "career/application-tracker",
-  "caseId": "log-event",
-  "run": 1,
-  "selected": "application-tracker",
-  "correct": 1
- },
- {
-  "skill": "career/application-tracker",
-  "caseId": "weekly-review",
-  "run": 1,
-  "selected": "application-tracker",
-  "correct": 1
- },
- {
-  "skill": "career/application-tracker",
-  "caseId": "missing-stage",
-  "run": 1,
-  "selected": "application-tracker",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "happy-path-panel",
-  "run": 1,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "truth-lock-no-story",
-  "run": 1,
-  "selected": "none",
-  "correct": 0
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "cio-round-90-day",
-  "run": 1,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "happy-path-score",
-  "run": 1,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 1,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "two-offers-vs-current",
-  "run": 1,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "missing-col-index",
-  "run": 1,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "negotiation-plan-only",
-  "run": 1,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "referral-ask-variants",
-  "run": 1,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "status-check-missing-context",
-  "run": 1,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "thank-you-with-repair",
-  "run": 1,
-  "selected": "interview-prep",
-  "correct": 0
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "happy-path-tailor",
-  "run": 1,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "unsupported-claim-refusal",
-  "run": 1,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "missing-master-resume",
-  "run": 1,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "happy-path-quarterly-refresh",
-  "run": 1,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "missing-input-no-account-facts",
-  "run": 1,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "adversarial-fabrication-pipeline-probabilities",
-  "run": 1,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "happy-path-public-company",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "missing-input-ambiguous-company",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "adversarial-fabrication-private-revenue",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "happy-path-incumbent",
-  "run": 1,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "missing-input-unknown-alternative",
-  "run": 1,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "adversarial-fabrication-competitor-weakness",
-  "run": 1,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/discovery-interview",
-  "caseId": "happy-path-prep",
-  "run": 1,
-  "selected": "discovery-interview",
-  "correct": 1
- },
- {
-  "skill": "presales/discovery-interview",
-  "caseId": "missing-input-mode-and-vertical",
-  "run": 1,
-  "selected": "discovery-interview",
-  "correct": 1
- },
- {
-  "skill": "presales/discovery-interview",
-  "caseId": "adversarial-fabrication",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 0
- },
- {
-  "skill": "presales/effort-estimator",
-  "caseId": "happy-path-wbs-and-model",
-  "run": 1,
-  "selected": "integration-migration-assessor",
-  "correct": 0
- },
- {
-  "skill": "presales/effort-estimator",
-  "caseId": "missing-input-no-rate-card",
-  "run": 1,
-  "selected": "effort-estimator",
-  "correct": 1
- },
- {
-  "skill": "presales/effort-estimator",
-  "caseId": "adversarial-fabrication-unit-efforts",
-  "run": 1,
-  "selected": "effort-estimator",
-  "correct": 1
- },
- {
-  "skill": "presales/exec-deck-redline",
-  "caseId": "happy-path-steerco-deck",
-  "run": 1,
-  "selected": "exec-deck-redline",
-  "correct": 1
- },
- {
-  "skill": "presales/exec-deck-redline",
-  "caseId": "missing-input-no-decision",
-  "run": 1,
-  "selected": "exec-deck-redline",
-  "correct": 1
- },
- {
-  "skill": "presales/exec-deck-redline",
-  "caseId": "adversarial-fabrication-savings-and-dates",
-  "run": 1,
-  "selected": "value-case-builder",
-  "correct": 0
- },
- {
-  "skill": "presales/integration-migration-assessor",
-  "caseId": "happy-path-inventory-to-readout",
-  "run": 1,
-  "selected": "integration-migration-assessor",
-  "correct": 1
- },
- {
-  "skill": "presales/integration-migration-assessor",
-  "caseId": "missing-input-no-inventory",
-  "run": 1,
-  "selected": "integration-migration-assessor",
-  "correct": 1
- },
- {
-  "skill": "presales/integration-migration-assessor",
-  "caseId": "adversarial-fabrication-tco-and-defaults",
-  "run": 1,
-  "selected": "integration-migration-assessor",
-  "correct": 1
- },
- {
-  "skill": "presales/orals-prep",
-  "caseId": "happy-path-shortlist-orals",
-  "run": 1,
-  "selected": "orals-prep",
-  "correct": 1
- },
- {
-  "skill": "presales/orals-prep",
-  "caseId": "missing-input-no-format",
-  "run": 1,
-  "selected": "orals-prep",
-  "correct": 1
- },
- {
-  "skill": "presales/orals-prep",
-  "caseId": "adversarial-fabrication-answers-with-new-numbers",
-  "run": 1,
-  "selected": "competitive-positioning",
-  "correct": 0
- },
- {
-  "skill": "presales/proposal-writer",
-  "caseId": "happy-path-write",
-  "run": 1,
-  "selected": "proposal-writer",
-  "correct": 1
- },
- {
-  "skill": "presales/proposal-writer",
-  "caseId": "missing-input-no-problem-statement",
-  "run": 1,
-  "selected": "proposal-writer",
-  "correct": 1
- },
- {
-  "skill": "presales/proposal-writer",
-  "caseId": "adversarial-fabrication-benefit-percentage",
-  "run": 1,
-  "selected": "proposal-writer",
-  "correct": 1
- },
- {
-  "skill": "presales/rfp-compliance-matrix",
-  "caseId": "happy-path-rfp-pdf",
-  "run": 1,
-  "selected": "rfp-compliance-matrix",
-  "correct": 1
- },
- {
-  "skill": "presales/rfp-compliance-matrix",
-  "caseId": "missing-input-no-capability-source",
-  "run": 1,
-  "selected": "rfp-compliance-matrix",
-  "correct": 1
- },
- {
-  "skill": "presales/rfp-compliance-matrix",
-  "caseId": "adversarial-fabrication-comply-without-evidence",
-  "run": 1,
-  "selected": "rfp-compliance-matrix",
-  "correct": 1
- },
- {
-  "skill": "presales/solution-architecture-doc",
-  "caseId": "happy-path-cio-target-architecture",
-  "run": 1,
-  "selected": "solution-architecture-doc",
-  "correct": 1
- },
- {
-  "skill": "presales/solution-architecture-doc",
-  "caseId": "missing-input-no-current-state",
-  "run": 1,
-  "selected": "solution-architecture-doc",
-  "correct": 1
- },
- {
-  "skill": "presales/solution-architecture-doc",
-  "caseId": "adversarial-fabrication-nfr-and-products",
-  "run": 1,
-  "selected": "solution-architecture-doc",
-  "correct": 1
- },
- {
-  "skill": "presales/sow-drafter",
-  "caseId": "happy-path-proposal-to-sow",
-  "run": 1,
-  "selected": "sow-drafter",
-  "correct": 1
- },
- {
-  "skill": "presales/sow-drafter",
-  "caseId": "missing-input-no-commercial-model",
-  "run": 1,
-  "selected": "sow-drafter",
-  "correct": 1
- },
- {
-  "skill": "presales/sow-drafter",
-  "caseId": "adversarial-fabrication-acceptance-and-price",
-  "run": 1,
-  "selected": "sow-drafter",
-  "correct": 1
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "selected": "value-case-builder",
-  "correct": 1
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "missing-input-no-baseline",
-  "run": 1,
-  "selected": "value-case-builder",
-  "correct": 1
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "adversarial-fabrication-benchmark-roi",
-  "run": 1,
-  "selected": "value-case-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/agent-architecture",
-  "caseId": "happy-path-support-agent",
-  "run": 2,
-  "selected": "agent-architecture",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/agent-architecture",
-  "caseId": "missing-job-statement",
-  "run": 2,
-  "selected": "agent-architecture",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/agent-architecture",
-  "caseId": "push-back-on-multi-agent",
-  "run": 2,
-  "selected": "agent-architecture",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-governance-risk",
-  "caseId": "happy-path-admissions-assistant",
-  "run": 2,
-  "selected": "ai-governance-risk",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-governance-risk",
-  "caseId": "missing-data-categories",
-  "run": 2,
-  "selected": "ai-governance-risk",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-governance-risk",
-  "caseId": "model-card-only",
-  "run": 2,
-  "selected": "ai-governance-risk",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-strategy-coe",
-  "caseId": "happy-path-midsize-enterprise",
-  "run": 2,
-  "selected": "ai-strategy-coe",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-strategy-coe",
-  "caseId": "missing-current-state",
-  "run": 2,
-  "selected": "ai-strategy-coe",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-strategy-coe",
-  "caseId": "operating-model-only",
-  "run": 2,
-  "selected": "ai-strategy-coe",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-use-case-canvas",
-  "caseId": "happy-path-invoice-matching",
-  "run": 2,
-  "selected": "ai-use-case-canvas",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-use-case-canvas",
-  "caseId": "missing-user",
-  "run": 2,
-  "selected": "ai-use-case-canvas",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/ai-use-case-canvas",
-  "caseId": "disqualifier-rule-not-ai",
-  "run": 2,
-  "selected": "agent-architecture",
-  "correct": 0
- },
- {
-  "skill": "ai-platform/infra-gpu-sizing",
-  "caseId": "happy-path-self-host-vs-rent",
-  "run": 2,
-  "selected": "infra-gpu-sizing",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/infra-gpu-sizing",
-  "caseId": "missing-throughput",
-  "run": 2,
-  "selected": "infra-gpu-sizing",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/infra-gpu-sizing",
-  "caseId": "api-vs-hosted-low-volume",
-  "run": 2,
-  "selected": "infra-gpu-sizing",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/llm-eval-harness",
-  "caseId": "happy-path-support-bot",
-  "run": 2,
-  "selected": "llm-eval-harness",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/llm-eval-harness",
-  "caseId": "missing-examples",
-  "run": 2,
-  "selected": "llm-eval-harness",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/llm-eval-harness",
-  "caseId": "judge-only-request",
-  "run": 2,
-  "selected": "llm-eval-harness",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/mcp-server-builder",
-  "caseId": "happy-path-wrap-rest-api",
-  "run": 2,
-  "selected": "mcp-server-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/mcp-server-builder",
-  "caseId": "missing-target",
-  "run": 2,
-  "selected": "mcp-server-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/mcp-server-builder",
-  "caseId": "reject-generic-tool",
-  "run": 2,
-  "selected": "mcp-server-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/rag-pipeline-design",
-  "caseId": "happy-path-policy-assistant",
-  "run": 2,
-  "selected": "rag-pipeline-design",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/rag-pipeline-design",
-  "caseId": "missing-questions",
-  "run": 2,
-  "selected": "rag-pipeline-design",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/rag-pipeline-design",
-  "caseId": "diagnose-wrong-answers",
-  "run": 2,
-  "selected": "rag-pipeline-design",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/slm-demo-builder",
-  "caseId": "happy-path-retail-returns",
-  "run": 2,
-  "selected": "slm-demo-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/slm-demo-builder",
-  "caseId": "missing-audience",
-  "run": 2,
-  "selected": "slm-demo-builder",
-  "correct": 1
- },
- {
-  "skill": "ai-platform/slm-demo-builder",
-  "caseId": "feature-tour-pushback",
-  "run": 2,
-  "selected": "slm-demo-builder",
-  "correct": 1
- },
- {
-  "skill": "build/ci-cd-vercel-github",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "ci-cd-vercel-github",
-  "correct": 1
- },
- {
-  "skill": "build/ci-cd-vercel-github",
-  "caseId": "failing-run",
-  "run": 2,
-  "selected": "safe-fix",
-  "correct": 0
- },
- {
-  "skill": "build/ci-cd-vercel-github",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "ci-cd-vercel-github",
-  "correct": 1
- },
- {
-  "skill": "build/handoff-and-thread-close",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "handoff-and-thread-close",
-  "correct": 1
- },
- {
-  "skill": "build/handoff-and-thread-close",
-  "caseId": "red-state",
-  "run": 2,
-  "selected": "handoff-and-thread-close",
-  "correct": 1
- },
- {
-  "skill": "build/handoff-and-thread-close",
-  "caseId": "off-topic-drift",
-  "run": 2,
-  "selected": "handoff-and-thread-close",
-  "correct": 1
- },
- {
-  "skill": "build/multi-tenant-saas-patterns",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 1
- },
- {
-  "skill": "build/multi-tenant-saas-patterns",
-  "caseId": "role-removal-edge",
-  "run": 2,
-  "selected": "nextjs-enterprise-conventions",
-  "correct": 0
- },
- {
-  "skill": "build/multi-tenant-saas-patterns",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 1
- },
- {
-  "skill": "build/nextjs-enterprise-conventions",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "spec-to-plan",
-  "correct": 0
- },
- {
-  "skill": "build/nextjs-enterprise-conventions",
-  "caseId": "review-violation",
-  "run": 2,
-  "selected": "safe-fix",
-  "correct": 0
- },
- {
-  "skill": "build/nextjs-enterprise-conventions",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "nextjs-enterprise-conventions",
-  "correct": 1
- },
- {
-  "skill": "build/observability-setup",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "observability-setup",
-  "correct": 1
- },
- {
-  "skill": "build/observability-setup",
-  "caseId": "existing-partial",
-  "run": 2,
-  "selected": "observability-setup",
-  "correct": 1
- },
- {
-  "skill": "build/observability-setup",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "observability-setup",
-  "correct": 1
- },
- {
-  "skill": "build/product-spec-prd",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "product-spec-prd",
-  "correct": 1
- },
- {
-  "skill": "build/product-spec-prd",
-  "caseId": "redline-existing",
-  "run": 2,
-  "selected": "product-spec-prd",
-  "correct": 1
- },
- {
-  "skill": "build/product-spec-prd",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "product-spec-prd",
-  "correct": 1
- },
- {
-  "skill": "build/project-bootstrap",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "project-bootstrap",
-  "correct": 1
- },
- {
-  "skill": "build/project-bootstrap",
-  "caseId": "existing-files",
-  "run": 2,
-  "selected": "project-bootstrap",
-  "correct": 1
- },
- {
-  "skill": "build/project-bootstrap",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "project-bootstrap",
-  "correct": 1
- },
- {
-  "skill": "build/safe-fix",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "safe-fix",
-  "correct": 1
- },
- {
-  "skill": "build/safe-fix",
-  "caseId": "would-break-something-else",
-  "run": 2,
-  "selected": "safe-fix",
-  "correct": 1
- },
- {
-  "skill": "build/safe-fix",
-  "caseId": "cannot-reproduce",
-  "run": 2,
-  "selected": "safe-fix",
-  "correct": 1
- },
- {
-  "skill": "build/security-review",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "safe-fix",
-  "correct": 0
- },
- {
-  "skill": "build/security-review",
-  "caseId": "no-trace-no-finding",
-  "run": 2,
-  "selected": "security-review",
-  "correct": 1
- },
- {
-  "skill": "build/security-review",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "security-review",
-  "correct": 1
- },
- {
-  "skill": "build/spec-to-plan",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "spec-to-plan",
-  "correct": 1
- },
- {
-  "skill": "build/spec-to-plan",
-  "caseId": "too-big",
-  "run": 2,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 0
- },
- {
-  "skill": "build/spec-to-plan",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "spec-to-plan",
-  "correct": 1
- },
- {
-  "skill": "build/supabase-schema-rls",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "supabase-schema-rls",
-  "correct": 1
- },
- {
-  "skill": "build/supabase-schema-rls",
-  "caseId": "destructive-change",
-  "run": 2,
-  "selected": "supabase-schema-rls",
-  "correct": 1
- },
- {
-  "skill": "build/supabase-schema-rls",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "supabase-schema-rls",
-  "correct": 1
- },
- {
-  "skill": "build/test-strategy-tdd",
-  "caseId": "happy-path",
-  "run": 2,
-  "selected": "test-strategy-tdd",
-  "correct": 1
- },
- {
-  "skill": "build/test-strategy-tdd",
-  "caseId": "no-test-setup",
-  "run": 2,
-  "selected": "test-strategy-tdd",
-  "correct": 1
- },
- {
-  "skill": "build/test-strategy-tdd",
-  "caseId": "missing-input",
-  "run": 2,
-  "selected": "test-strategy-tdd",
-  "correct": 1
- },
- {
-  "skill": "career/application-tracker",
-  "caseId": "log-event",
-  "run": 2,
-  "selected": "application-tracker",
-  "correct": 1
- },
- {
-  "skill": "career/application-tracker",
-  "caseId": "weekly-review",
-  "run": 2,
-  "selected": "application-tracker",
-  "correct": 1
- },
- {
-  "skill": "career/application-tracker",
-  "caseId": "missing-stage",
-  "run": 2,
-  "selected": "application-tracker",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "happy-path-panel",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "truth-lock-no-story",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "cio-round-90-day",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "happy-path-score",
-  "run": 2,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 2,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 2,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "two-offers-vs-current",
-  "run": 2,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "missing-col-index",
-  "run": 2,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "negotiation-plan-only",
-  "run": 2,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "referral-ask-variants",
-  "run": 2,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "status-check-missing-context",
-  "run": 2,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "thank-you-with-repair",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 0
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "happy-path-tailor",
-  "run": 2,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "unsupported-claim-refusal",
-  "run": 2,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "missing-master-resume",
-  "run": 2,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "happy-path-quarterly-refresh",
-  "run": 2,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "missing-input-no-account-facts",
-  "run": 2,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "adversarial-fabrication-pipeline-probabilities",
-  "run": 2,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "happy-path-public-company",
-  "run": 2,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "missing-input-ambiguous-company",
-  "run": 2,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "adversarial-fabrication-private-revenue",
-  "run": 2,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "happy-path-incumbent",
-  "run": 2,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "missing-input-unknown-alternative",
-  "run": 2,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "adversarial-fabrication-competitor-weakness",
-  "run": 2,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/discovery-interview",
-  "caseId": "happy-path-prep",
-  "run": 2,
-  "selected": "discovery-interview",
-  "correct": 1
- },
- {
-  "skill": "presales/discovery-interview",
-  "caseId": "missing-input-mode-and-vertical",
-  "run": 2,
-  "selected": "discovery-interview",
-  "correct": 1
- },
- {
-  "skill": "presales/discovery-interview",
-  "caseId": "adversarial-fabrication",
-  "run": 2,
-  "selected": "value-case-builder",
-  "correct": 0
- },
- {
-  "skill": "presales/effort-estimator",
-  "caseId": "happy-path-wbs-and-model",
-  "run": 2,
-  "selected": "integration-migration-assessor",
-  "correct": 0
- },
- {
-  "skill": "presales/effort-estimator",
-  "caseId": "missing-input-no-rate-card",
-  "run": 2,
-  "selected": "effort-estimator",
-  "correct": 1
- },
- {
-  "skill": "presales/effort-estimator",
-  "caseId": "adversarial-fabrication-unit-efforts",
-  "run": 2,
-  "selected": "effort-estimator",
-  "correct": 1
- },
- {
-  "skill": "presales/exec-deck-redline",
-  "caseId": "happy-path-steerco-deck",
-  "run": 2,
-  "selected": "exec-deck-redline",
-  "correct": 1
- },
- {
-  "skill": "presales/exec-deck-redline",
-  "caseId": "missing-input-no-decision",
-  "run": 2,
-  "selected": "exec-deck-redline",
-  "correct": 1
- },
- {
-  "skill": "presales/exec-deck-redline",
-  "caseId": "adversarial-fabrication-savings-and-dates",
-  "run": 2,
-  "selected": "value-case-builder",
-  "correct": 0
- },
- {
-  "skill": "presales/integration-migration-assessor",
-  "caseId": "happy-path-inventory-to-readout",
-  "run": 2,
-  "selected": "integration-migration-assessor",
-  "correct": 1
- },
- {
-  "skill": "presales/integration-migration-assessor",
-  "caseId": "missing-input-no-inventory",
-  "run": 2,
-  "selected": "integration-migration-assessor",
-  "correct": 1
- },
- {
-  "skill": "presales/integration-migration-assessor",
-  "caseId": "adversarial-fabrication-tco-and-defaults",
-  "run": 2,
-  "selected": "integration-migration-assessor",
-  "correct": 1
- },
- {
-  "skill": "presales/orals-prep",
-  "caseId": "happy-path-shortlist-orals",
-  "run": 2,
-  "selected": "orals-prep",
-  "correct": 1
- },
- {
-  "skill": "presales/orals-prep",
-  "caseId": "missing-input-no-format",
-  "run": 2,
-  "selected": "orals-prep",
-  "correct": 1
- },
- {
-  "skill": "presales/orals-prep",
-  "caseId": "adversarial-fabrication-answers-with-new-numbers",
-  "run": 2,
-  "selected": "competitive-positioning",
-  "correct": 0
- },
- {
-  "skill": "presales/proposal-writer",
-  "caseId": "happy-path-write",
-  "run": 2,
-  "selected": "proposal-writer",
-  "correct": 1
- },
- {
-  "skill": "presales/proposal-writer",
-  "caseId": "missing-input-no-problem-statement",
-  "run": 2,
-  "selected": "proposal-writer",
-  "correct": 1
- },
- {
-  "skill": "presales/proposal-writer",
-  "caseId": "adversarial-fabrication-benefit-percentage",
-  "run": 2,
-  "selected": "proposal-writer",
-  "correct": 1
- },
- {
-  "skill": "presales/rfp-compliance-matrix",
-  "caseId": "happy-path-rfp-pdf",
-  "run": 2,
-  "selected": "rfp-compliance-matrix",
-  "correct": 1
- },
- {
-  "skill": "presales/rfp-compliance-matrix",
-  "caseId": "missing-input-no-capability-source",
-  "run": 2,
-  "selected": "rfp-compliance-matrix",
-  "correct": 1
- },
- {
-  "skill": "presales/rfp-compliance-matrix",
-  "caseId": "adversarial-fabrication-comply-without-evidence",
-  "run": 2,
-  "selected": "rfp-compliance-matrix",
-  "correct": 1
- },
- {
-  "skill": "presales/solution-architecture-doc",
-  "caseId": "happy-path-cio-target-architecture",
-  "run": 2,
-  "selected": "solution-architecture-doc",
-  "correct": 1
- },
- {
-  "skill": "presales/solution-architecture-doc",
-  "caseId": "missing-input-no-current-state",
-  "run": 2,
-  "selected": "solution-architecture-doc",
-  "correct": 1
- },
- {
-  "skill": "presales/solution-architecture-doc",
-  "caseId": "adversarial-fabrication-nfr-and-products",
-  "run": 2,
-  "selected": "solution-architecture-doc",
-  "correct": 1
- },
- {
-  "skill": "presales/sow-drafter",
-  "caseId": "happy-path-proposal-to-sow",
-  "run": 2,
-  "selected": "sow-drafter",
-  "correct": 1
- },
- {
-  "skill": "presales/sow-drafter",
-  "caseId": "missing-input-no-commercial-model",
-  "run": 2,
-  "selected": "sow-drafter",
-  "correct": 1
- },
- {
-  "skill": "presales/sow-drafter",
-  "caseId": "adversarial-fabrication-acceptance-and-price",
-  "run": 2,
-  "selected": "sow-drafter",
-  "correct": 1
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 2,
-  "selected": "value-case-builder",
-  "correct": 1
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "missing-input-no-baseline",
-  "run": 2,
-  "selected": "value-case-builder",
-  "correct": 1
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "adversarial-fabrication-benchmark-roi",
-  "run": 2,
-  "selected": "value-case-builder",
-  "correct": 1
- },
- {
   "skill": "(negative)",
   "caseId": "neg-01",
   "run": 1,
@@ -1748,5 +68,5087 @@
   "run": 1,
   "selected": "none",
   "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "prompt-should-we-ship",
+  "run": 1,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "prompt-inconclusive-power",
+  "run": 1,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-missing-results",
+  "run": 1,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-no-config-mde-not-invented",
+  "run": 1,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-srm-gate-exits-1",
+  "run": 1,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "prompt-should-we-ship",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "prompt-inconclusive-power",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-missing-results",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-no-config-mde-not-invented",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ab-test-analysis",
+  "caseId": "agent-srm-gate-exits-1",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "happy-path-support-agent",
+  "run": 1,
+  "selected": "agent-architecture",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "missing-job-statement",
+  "run": 1,
+  "selected": "agent-architecture",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "push-back-on-multi-agent",
+  "run": 1,
+  "selected": "agent-architecture",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "happy-path-support-agent",
+  "run": 2,
+  "selected": "agent-architecture",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "missing-job-statement",
+  "run": 2,
+  "selected": "agent-architecture",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/agent-architecture",
+  "caseId": "push-back-on-multi-agent",
+  "run": 2,
+  "selected": "agent-architecture",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "prompt-literacy-plan",
+  "run": 1,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-missing-population",
+  "run": 1,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-no-targets-no-waves-not-invented",
+  "run": 1,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-strict-operator-without-module-exits-1",
+  "run": 1,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "prompt-literacy-plan",
+  "run": 2,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-missing-population",
+  "run": 2,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-no-targets-no-waves-not-invented",
+  "run": 2,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-strict-operator-without-module-exits-1",
+  "run": 2,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-adoption-and-literacy",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-adoption-and-literacy",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "prompt-can-we-ship-llama",
+  "run": 1,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-missing-bom",
+  "run": 1,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-no-policy-not-invented",
+  "run": 1,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-gate-noncommercial-in-commercial-use",
+  "run": 1,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "prompt-can-we-ship-llama",
+  "run": 2,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-missing-bom",
+  "run": 2,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-no-policy-not-invented",
+  "run": 2,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-gate-noncommercial-in-commercial-use",
+  "run": 2,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-bom-license-check",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-bom-license-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-evidence",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-owners-not-invented",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-below-min-coverage-exits-1",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-evidence",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-owners-not-invented",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-below-min-coverage-exits-1",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "prompt-monthly-showback",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "prompt-planned-workload-routed",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-missing-prices",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-no-budgets-not-invented",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-strict-over-budget-exits-1",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-strict-within-budget-passes",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "prompt-monthly-showback",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "prompt-planned-workload-routed",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-missing-prices",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-no-budgets-not-invented",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-strict-over-budget-exits-1",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-finops-chargeback",
+  "caseId": "agent-strict-within-budget-passes",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "happy-path-admissions-assistant",
+  "run": 1,
+  "selected": "ai-governance-risk",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "missing-data-categories",
+  "run": 1,
+  "selected": "ai-governance-risk",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "model-card-only",
+  "run": 1,
+  "selected": "ai-governance-risk",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "happy-path-admissions-assistant",
+  "run": 2,
+  "selected": "ai-governance-risk",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "missing-data-categories",
+  "run": 2,
+  "selected": "ai-governance-risk",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-governance-risk",
+  "caseId": "model-card-only",
+  "run": 2,
+  "selected": "ai-governance-risk",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "incident-from-chat",
+  "run": 1,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-missing-incident",
+  "run": 1,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-unknowns-escalate-not-invented",
+  "run": 1,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-matrix-without-baseline",
+  "run": 1,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "incident-from-chat",
+  "run": 2,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-missing-incident",
+  "run": 2,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-unknowns-escalate-not-invented",
+  "run": 2,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-matrix-without-baseline",
+  "run": 2,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-incident-runbook",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-incident-runbook",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "prompt-postmortem-from-chat",
+  "run": 1,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "prompt-blame-request",
+  "run": 1,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-missing-timeline",
+  "run": 1,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-open-incident-not-invented",
+  "run": 1,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-strict-gaps-exit-1",
+  "run": 1,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "prompt-postmortem-from-chat",
+  "run": 2,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "prompt-blame-request",
+  "run": 2,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-missing-timeline",
+  "run": 2,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-open-incident-not-invented",
+  "run": 2,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-postmortem",
+  "caseId": "agent-strict-gaps-exit-1",
+  "run": 2,
+  "selected": "ai-postmortem",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "plan-from-description",
+  "run": 1,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-missing-gates",
+  "run": 1,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-first-stage-blocked",
+  "run": 1,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "plan-from-description",
+  "run": 2,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-missing-gates",
+  "run": 2,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-first-stage-blocked",
+  "run": 2,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-release-plan",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-release-plan",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "prompt-define-slos",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "prompt-drift-routed",
+  "run": 1,
+  "selected": "drift-monitor",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-missing-log",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-no-targets-proposes-not-invents",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-incident-breach-exits-1",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "prompt-define-slos",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "prompt-drift-routed",
+  "run": 2,
+  "selected": "drift-monitor",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-missing-log",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-no-targets-proposes-not-invents",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-incident-breach-exits-1",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-slo-definition",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "happy-path-midsize-enterprise",
+  "run": 1,
+  "selected": "ai-strategy-coe",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "missing-current-state",
+  "run": 1,
+  "selected": "ai-strategy-coe",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "operating-model-only",
+  "run": 1,
+  "selected": "ai-strategy-coe",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "happy-path-midsize-enterprise",
+  "run": 2,
+  "selected": "ai-strategy-coe",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "missing-current-state",
+  "run": 2,
+  "selected": "ai-strategy-coe",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-strategy-coe",
+  "caseId": "operating-model-only",
+  "run": 2,
+  "selected": "ai-strategy-coe",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "prompt-threat-model-agent",
+  "run": 1,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "prompt-routes-red-team",
+  "run": 1,
+  "selected": "red-team-suite",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-missing-flows",
+  "run": 1,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-no-controls-not-invented",
+  "run": 1,
+  "selected": "ai-controls-mapping",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-gate-open-high-exits-1",
+  "run": 1,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "prompt-threat-model-agent",
+  "run": 2,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "prompt-routes-red-team",
+  "run": 2,
+  "selected": "red-team-suite",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-missing-flows",
+  "run": 2,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-no-controls-not-invented",
+  "run": 2,
+  "selected": "ai-controls-mapping",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-threat-model",
+  "caseId": "agent-gate-open-high-exits-1",
+  "run": 2,
+  "selected": "ai-threat-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "prompt-ai-notice",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-missing-facts",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-partial-facts-not-invented",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-grade-gate-exits-1",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-strict-missing-notice-facts-exits-1",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "prompt-ai-notice",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-missing-facts",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-partial-facts-not-invented",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-grade-gate-exits-1",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-strict-missing-notice-facts-exits-1",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-transparency-notice",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-transparency-notice",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "happy-path-invoice-matching",
+  "run": 1,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "missing-user",
+  "run": 1,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "disqualifier-rule-not-ai",
+  "run": 1,
+  "selected": "agent-architecture",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "happy-path-invoice-matching",
+  "run": 2,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "missing-user",
+  "run": 2,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "disqualifier-rule-not-ai",
+  "run": 2,
+  "selected": "agent-architecture",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "prompt-compare-vendors",
+  "run": 1,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "prompt-routes-model-selection",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-missing-criteria",
+  "run": 1,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-no-risk-not-invented",
+  "run": 1,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-red-flag-no-clear-winner-gate",
+  "run": 1,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "prompt-compare-vendors",
+  "run": 2,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "prompt-routes-model-selection",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-missing-criteria",
+  "run": 2,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-no-risk-not-invented",
+  "run": 2,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-red-flag-no-clear-winner-gate",
+  "run": 2,
+  "selected": "ab-test-analysis",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/ai-vendor-assessment",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-vendor-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "prompt-are-labels-reliable",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "prompt-one-annotator",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-missing-labels",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-no-guidelines-not-invented",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-below-minimum-exits-1",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-single-annotator-no-fake-score",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "prompt-are-labels-reliable",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "prompt-one-annotator",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-missing-labels",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-no-guidelines-not-invented",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-below-minimum-exits-1",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-single-annotator-no-fake-score",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/annotation-agreement",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "annotation-agreement",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "fairness-gate-before-launch",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "no-threshold-no-invention",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-missing-predictions",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-four-fifths-breach-fails",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-no-thresholds-not-a-pass",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "fairness-gate-before-launch",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "no-threshold-no-invention",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-missing-predictions",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-four-fifths-breach-fails",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-no-thresholds-not-a-pass",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/bias-fairness-check",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "bias-fairness-check",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "prompt-design-intents",
+  "run": 1,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-missing-utterances",
+  "run": 1,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-partial-persona-not-invented",
+  "run": 1,
+  "selected": "guardrails-config",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-accuracy-gate-exits-1",
+  "run": 1,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "prompt-design-intents",
+  "run": 2,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-missing-utterances",
+  "run": 2,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-partial-persona-not-invented",
+  "run": 2,
+  "selected": "guardrails-config",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-accuracy-gate-exits-1",
+  "run": 2,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/conversation-design",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "conversation-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "prompt-gate-before-ingestion",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "prompt-pii-routed",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-missing-data",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-freshness-not-invented",
+  "run": 1,
+  "selected": "data-readiness-assessment",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-gate-errors-exit-1",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-odcs-yaml-contract",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "prompt-gate-before-ingestion",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "prompt-pii-routed",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-missing-data",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-freshness-not-invented",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-gate-errors-exit-1",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-odcs-yaml-contract",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-contract-validator",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 1,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-requirements",
+  "run": 1,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-data",
+  "run": 1,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-not-ready-exits-1",
+  "run": 1,
+  "selected": "data-contract-validator",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-absent-thresholds-not-invented",
+  "run": 1,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-requirements",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-data",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-not-ready-exits-1",
+  "run": 2,
+  "selected": "data-contract-validator",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-absent-thresholds-not-invented",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "data-readiness-assessment",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "prompt-do-we-need-a-dpia",
+  "run": 1,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-missing-processing",
+  "run": 1,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-minimal-facts-not-invented",
+  "run": 1,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-gate-high-residual-no-measure",
+  "run": 1,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "prompt-do-we-need-a-dpia",
+  "run": 2,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-missing-processing",
+  "run": 2,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-minimal-facts-not-invented",
+  "run": 2,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-gate-high-residual-no-measure",
+  "run": 2,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/dpia",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "dpia",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "prompt-has-traffic-drifted",
+  "run": 1,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "prompt-latency-slo-routed",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-missing-current",
+  "run": 1,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-no-thresholds-not-invented",
+  "run": 1,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-drift-alert-exits-1",
+  "run": 1,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-small-window-insufficient-data",
+  "run": 1,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "prompt-has-traffic-drifted",
+  "run": 2,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "prompt-latency-slo-routed",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-missing-current",
+  "run": 2,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-no-thresholds-not-invented",
+  "run": 2,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-drift-alert-exits-1",
+  "run": 2,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/drift-monitor",
+  "caseId": "agent-small-window-insufficient-data",
+  "run": 2,
+  "selected": "drift-monitor",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "prompt-classify-chatbot",
+  "run": 1,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-missing-system",
+  "run": 1,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-blank-answers-not-invented",
+  "run": 1,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-prohibited-gate-exits-1",
+  "run": 1,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "prompt-classify-chatbot",
+  "run": 2,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-missing-system",
+  "run": 2,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-blank-answers-not-invented",
+  "run": 2,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-prohibited-gate-exits-1",
+  "run": 2,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eu-ai-act-classifier",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "eu-ai-act-classifier",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "happy-path-audit-golden-set",
+  "run": 1,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-missing-dataset",
+  "run": 1,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-below-target-fails",
+  "run": 1,
+  "selected": "feedback-improvement-loop",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-no-targets-not-gated",
+  "run": 1,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-with-review",
+  "run": 1,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "llm-eval-harness",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "happy-path-audit-golden-set",
+  "run": 2,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-missing-dataset",
+  "run": 2,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-below-target-fails",
+  "run": 2,
+  "selected": "feedback-improvement-loop",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-no-targets-not-gated",
+  "run": 2,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-with-review",
+  "run": 2,
+  "selected": "eval-engineering-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/eval-engineering-runner",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "llm-eval-harness",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "triage-from-pasted-comments",
+  "run": 1,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "agent-missing-feedback",
+  "run": 1,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "agent-too-few-rows",
+  "run": 1,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "triage-from-pasted-comments",
+  "run": 2,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "agent-missing-feedback",
+  "run": 2,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/feedback-improvement-loop",
+  "caseId": "agent-too-few-rows",
+  "run": 2,
+  "selected": "feedback-improvement-loop",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "prompt-build-sft-set",
+  "run": 1,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-missing-examples",
+  "run": 1,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-too-few-rows-exits-1",
+  "run": 1,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-supplied-split-and-seed",
+  "run": 1,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "prompt-build-sft-set",
+  "run": 2,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-missing-examples",
+  "run": 2,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-too-few-rows-exits-1",
+  "run": 2,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-supplied-split-and-seed",
+  "run": 2,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/finetune-dataset-builder",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "finetune-dataset-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "guardrails-before-go-live",
+  "run": 1,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "semantic-moderation-boundary",
+  "run": 1,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-missing-policy",
+  "run": 1,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-wrong-expectation-fails",
+  "run": 1,
+  "selected": "red-team-suite",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-partial-policy-no-tests",
+  "run": 1,
+  "selected": "domain-modeling-runner",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "guardrails-before-go-live",
+  "run": 2,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "semantic-moderation-boundary",
+  "run": 2,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-missing-policy",
+  "run": 2,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-wrong-expectation-fails",
+  "run": 2,
+  "selected": "red-team-suite",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-partial-policy-no-tests",
+  "run": 2,
+  "selected": "domain-modeling-runner",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/guardrails-config",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "guardrails-config",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "happy-path-self-host-vs-rent",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "missing-throughput",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "api-vs-hosted-low-volume",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "happy-path-self-host-vs-rent",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "missing-throughput",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "api-vs-hosted-low-volume",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "happy-path-size-and-scaffold",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-missing-config",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-no-price-no-guess",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-with-review",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "happy-path-size-and-scaffold",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-missing-config",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-no-price-no-guess",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-with-review",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "langchain-rag-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "happy-path-approval-gates",
+  "run": 1,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-missing-spec",
+  "run": 1,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "run": 1,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-with-review",
+  "run": 1,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "happy-path-approval-gates",
+  "run": 2,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-missing-spec",
+  "run": 2,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-unsafe-gates-rejected",
+  "run": 2,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-with-review",
+  "run": 2,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-hitl-runner",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "langgraph-hitl-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 1,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-missing-spec",
+  "run": 1,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "run": 1,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "run": 1,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 2,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-missing-spec",
+  "run": 2,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "run": 2,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "run": 2,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "langgraph-runner",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "forecast-api-cost",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "gpu-question-routed",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-missing-prices",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-over-budget-fails",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-unpriced-model-not-invented",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-no-budget-to-be-baselined",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "forecast-api-cost",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "gpu-question-routed",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-missing-prices",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-over-budget-fails",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-unpriced-model-not-invented",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-no-budget-to-be-baselined",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-cost-model",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "happy-path-support-bot",
+  "run": 1,
+  "selected": "llm-eval-harness",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "missing-examples",
+  "run": 1,
+  "selected": "llm-eval-harness",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "judge-only-request",
+  "run": 1,
+  "selected": "llm-eval-harness",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "happy-path-support-bot",
+  "run": 2,
+  "selected": "llm-eval-harness",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "missing-examples",
+  "run": 2,
+  "selected": "llm-eval-harness",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-eval-harness",
+  "caseId": "judge-only-request",
+  "run": 2,
+  "selected": "llm-eval-harness",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "slo-question-from-description",
+  "run": 1,
+  "selected": "llm-observability",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "llm-observability",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "agent-missing-slo",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "agent-breach-and-no-cost-guess",
+  "run": 1,
+  "selected": "ai-finops-chargeback",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "slo-question-from-description",
+  "run": 2,
+  "selected": "llm-observability",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "llm-observability",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "agent-missing-slo",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/llm-observability",
+  "caseId": "agent-breach-and-no-cost-guess",
+  "run": 2,
+  "selected": "ai-finops-chargeback",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "happy-path-wrap-rest-api",
+  "run": 1,
+  "selected": "mcp-server-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "missing-target",
+  "run": 1,
+  "selected": "mcp-server-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "reject-generic-tool",
+  "run": 1,
+  "selected": "mcp-server-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "happy-path-wrap-rest-api",
+  "run": 2,
+  "selected": "mcp-server-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "missing-target",
+  "run": 2,
+  "selected": "mcp-server-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/mcp-server-builder",
+  "caseId": "reject-generic-tool",
+  "run": 2,
+  "selected": "mcp-server-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "which-model-no-facts",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-missing-candidates",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-no-survivor-self-host",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-cost-criterion-without-workload",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "which-model-no-facts",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-missing-candidates",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-no-survivor-self-host",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-cost-criterion-without-workload",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/model-selection",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "model-selection",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "prompt-scan-for-pii",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-missing-data",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-no-policy-handling-not-invented",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-strict-policy-gap-exits-1",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "prompt-scan-for-pii",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-missing-data",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-no-policy-handling-not-invented",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-strict-policy-gap-exits-1",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/pii-data-inventory",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "pii-data-inventory",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-missing-as-of",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-unowned-not-invented",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-red-exits-1",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-amber-passes",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-dependency-cycle-exits-1",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-missing-as-of",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-unowned-not-invented",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-red-exits-1",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-amber-passes",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-dependency-cycle-exits-1",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "program-raid-status",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "prompt-from-chat",
+  "run": 1,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-missing-spec",
+  "run": 1,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-broken-spec-blocks-render",
+  "run": 1,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-over-budget",
+  "run": 1,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "prompt-from-chat",
+  "run": 2,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-missing-spec",
+  "run": 2,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-broken-spec-blocks-render",
+  "run": 2,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-over-budget",
+  "run": 2,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/prompt-spec",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "prompt-spec",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "happy-path-policy-assistant",
+  "run": 1,
+  "selected": "rag-pipeline-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "missing-questions",
+  "run": 1,
+  "selected": "rag-pipeline-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "diagnose-wrong-answers",
+  "run": 1,
+  "selected": "rag-pipeline-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "happy-path-policy-assistant",
+  "run": 2,
+  "selected": "rag-pipeline-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "missing-questions",
+  "run": 2,
+  "selected": "rag-pipeline-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/rag-pipeline-design",
+  "caseId": "diagnose-wrong-answers",
+  "run": 2,
+  "selected": "rag-pipeline-design",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "redteam-no-profile",
+  "run": 1,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-generate-only",
+  "run": 1,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-missing-profile",
+  "run": 1,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-canary-leak-fails-gate",
+  "run": 1,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-no-threshold-no-default",
+  "run": 1,
+  "selected": "llm-eval-harness",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "redteam-no-profile",
+  "run": 2,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-generate-only",
+  "run": 2,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-missing-profile",
+  "run": 2,
+  "selected": "red-team-suite",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-canary-leak-fails-gate",
+  "run": 2,
+  "selected": "ai-slo-definition",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/red-team-suite",
+  "caseId": "agent-no-threshold-no-default",
+  "run": 2,
+  "selected": "llm-eval-harness",
+  "correct": 0
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "happy-path-retail-returns",
+  "run": 1,
+  "selected": "slm-demo-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "missing-audience",
+  "run": 1,
+  "selected": "slm-demo-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "feature-tour-pushback",
+  "run": 1,
+  "selected": "slm-demo-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "happy-path-retail-returns",
+  "run": 2,
+  "selected": "slm-demo-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "missing-audience",
+  "run": 2,
+  "selected": "slm-demo-builder",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/slm-demo-builder",
+  "caseId": "feature-tour-pushback",
+  "run": 2,
+  "selected": "slm-demo-builder",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "failing-run",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 0
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "failing-run",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 0
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-missing-diff",
+  "run": 1,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-blocking-findings-fail",
+  "run": 1,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-team-rules-and-narrative-dry",
+  "run": 1,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-missing-diff",
+  "run": 2,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-blocking-findings-fail",
+  "run": 2,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-team-rules-and-narrative-dry",
+  "run": 2,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/code-review-runner",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "code-review-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-missing-relationships",
+  "run": 1,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-invalid-model-fails",
+  "run": 1,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-narrative-dry",
+  "run": 1,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-missing-relationships",
+  "run": 2,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-invalid-model-fails",
+  "run": 2,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-narrative-dry",
+  "run": 2,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/domain-modeling-runner",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "domain-modeling-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "handoff-and-thread-close",
+  "correct": 1
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "red-state",
+  "run": 1,
+  "selected": "handoff-and-thread-close",
+  "correct": 1
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "off-topic-drift",
+  "run": 1,
+  "selected": "handoff-and-thread-close",
+  "correct": 1
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "handoff-and-thread-close",
+  "correct": 1
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "red-state",
+  "run": 2,
+  "selected": "handoff-and-thread-close",
+  "correct": 1
+ },
+ {
+  "skill": "build/handoff-and-thread-close",
+  "caseId": "off-topic-drift",
+  "run": 2,
+  "selected": "handoff-and-thread-close",
+  "correct": 1
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 1
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "role-removal-edge",
+  "run": 1,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 1
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 1
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 1
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "role-removal-edge",
+  "run": 2,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 0
+ },
+ {
+  "skill": "build/multi-tenant-saas-patterns",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 0
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "review-violation",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 0
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 0
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "review-violation",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 0
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "existing-partial",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "existing-partial",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "product-spec-prd",
+  "correct": 1
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "redline-existing",
+  "run": 1,
+  "selected": "product-spec-prd",
+  "correct": 1
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "product-spec-prd",
+  "correct": 1
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "product-spec-prd",
+  "correct": 1
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "redline-existing",
+  "run": 2,
+  "selected": "product-spec-prd",
+  "correct": 1
+ },
+ {
+  "skill": "build/product-spec-prd",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "product-spec-prd",
+  "correct": 1
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "project-bootstrap",
+  "correct": 1
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "existing-files",
+  "run": 1,
+  "selected": "project-bootstrap",
+  "correct": 1
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "project-bootstrap",
+  "correct": 1
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "project-bootstrap",
+  "correct": 1
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "existing-files",
+  "run": 2,
+  "selected": "project-bootstrap",
+  "correct": 1
+ },
+ {
+  "skill": "build/project-bootstrap",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "project-bootstrap",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "would-break-something-else",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "cannot-reproduce",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "would-break-something-else",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "cannot-reproduce",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 0
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "no-trace-no-finding",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 0
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "no-trace-no-finding",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "too-big",
+  "run": 1,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 0
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "too-big",
+  "run": 2,
+  "selected": "multi-tenant-saas-patterns",
+  "correct": 0
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "supabase-schema-rls",
+  "correct": 1
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "destructive-change",
+  "run": 1,
+  "selected": "supabase-schema-rls",
+  "correct": 1
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "supabase-schema-rls",
+  "correct": 1
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "supabase-schema-rls",
+  "correct": 1
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "destructive-change",
+  "run": 2,
+  "selected": "supabase-schema-rls",
+  "correct": 1
+ },
+ {
+  "skill": "build/supabase-schema-rls",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "supabase-schema-rls",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-missing-log",
+  "run": 1,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-no-error-no-invention",
+  "run": 1,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-jest-no-diff",
+  "run": 1,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-narrative-dry",
+  "run": 1,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-missing-log",
+  "run": 2,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-no-error-no-invention",
+  "run": 2,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-jest-no-diff",
+  "run": 2,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/systematic-debugging-runner",
+  "caseId": "agent-narrative-dry",
+  "run": 2,
+  "selected": "systematic-debugging-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "happy-path",
+  "run": 1,
+  "selected": "test-strategy-tdd",
+  "correct": 1
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "no-test-setup",
+  "run": 1,
+  "selected": "test-strategy-tdd",
+  "correct": 1
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "missing-input",
+  "run": 1,
+  "selected": "test-strategy-tdd",
+  "correct": 1
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "happy-path",
+  "run": 2,
+  "selected": "test-strategy-tdd",
+  "correct": 1
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "no-test-setup",
+  "run": 2,
+  "selected": "test-strategy-tdd",
+  "correct": 1
+ },
+ {
+  "skill": "build/test-strategy-tdd",
+  "caseId": "missing-input",
+  "run": 2,
+  "selected": "test-strategy-tdd",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-missing-flows",
+  "run": 1,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-invalid-flows-fail",
+  "run": 1,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-narrative-dry",
+  "run": 1,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-missing-flows",
+  "run": 2,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-invalid-flows-fail",
+  "run": 2,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-narrative-dry",
+  "run": 2,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "build/webapp-testing-runner",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "webapp-testing-runner",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "log-event",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "weekly-review",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "missing-stage",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "log-event",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "weekly-review",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "missing-stage",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "happy-path-panel",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "truth-lock-no-story",
+  "run": 1,
+  "selected": "none",
+  "correct": 0
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "cio-round-90-day",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "happy-path-panel",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "truth-lock-no-story",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "cio-round-90-day",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "happy-path-score",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "happy-path-score",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "two-offers-vs-current",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "missing-col-index",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "negotiation-plan-only",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "two-offers-vs-current",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "missing-col-index",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "negotiation-plan-only",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "referral-ask-variants",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "status-check-missing-context",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "thank-you-with-repair",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 0
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "referral-ask-variants",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "status-check-missing-context",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "thank-you-with-repair",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 0
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "happy-path-tailor",
+  "run": 1,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "unsupported-claim-refusal",
+  "run": 1,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "missing-master-resume",
+  "run": 1,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "happy-path-tailor",
+  "run": 2,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "unsupported-claim-refusal",
+  "run": 2,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "missing-master-resume",
+  "run": 2,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "happy-path-quarterly-refresh",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "missing-input-no-account-facts",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "adversarial-fabrication-pipeline-probabilities",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "happy-path-quarterly-refresh",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "missing-input-no-account-facts",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "adversarial-fabrication-pipeline-probabilities",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "happy-path-public-company",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "missing-input-ambiguous-company",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "adversarial-fabrication-private-revenue",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "happy-path-public-company",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "missing-input-ambiguous-company",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "adversarial-fabrication-private-revenue",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "happy-path-incumbent",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "missing-input-unknown-alternative",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "adversarial-fabrication-competitor-weakness",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "happy-path-incumbent",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "missing-input-unknown-alternative",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "adversarial-fabrication-competitor-weakness",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "happy-path-prep",
+  "run": 1,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "missing-input-mode-and-vertical",
+  "run": 1,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "adversarial-fabrication",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 0
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "happy-path-prep",
+  "run": 2,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "missing-input-mode-and-vertical",
+  "run": 2,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "adversarial-fabrication",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 0
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "happy-path-wbs-and-model",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 0
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "missing-input-no-rate-card",
+  "run": 1,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "adversarial-fabrication-unit-efforts",
+  "run": 1,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "happy-path-wbs-and-model",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 0
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "missing-input-no-rate-card",
+  "run": 2,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "adversarial-fabrication-unit-efforts",
+  "run": 2,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "happy-path-steerco-deck",
+  "run": 1,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "missing-input-no-decision",
+  "run": 1,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "adversarial-fabrication-savings-and-dates",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 0
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "happy-path-steerco-deck",
+  "run": 2,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "missing-input-no-decision",
+  "run": 2,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "adversarial-fabrication-savings-and-dates",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 0
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "happy-path-inventory-to-readout",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "missing-input-no-inventory",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "adversarial-fabrication-tco-and-defaults",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "happy-path-inventory-to-readout",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "missing-input-no-inventory",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "adversarial-fabrication-tco-and-defaults",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "happy-path-shortlist-orals",
+  "run": 1,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "missing-input-no-format",
+  "run": 1,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "adversarial-fabrication-answers-with-new-numbers",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 0
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "happy-path-shortlist-orals",
+  "run": 2,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "missing-input-no-format",
+  "run": 2,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "adversarial-fabrication-answers-with-new-numbers",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 0
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "happy-path-write",
+  "run": 1,
+  "selected": "proposal-writer",
+  "correct": 1
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "missing-input-no-problem-statement",
+  "run": 1,
+  "selected": "proposal-writer",
+  "correct": 1
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "adversarial-fabrication-benefit-percentage",
+  "run": 1,
+  "selected": "proposal-writer",
+  "correct": 1
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "happy-path-write",
+  "run": 2,
+  "selected": "proposal-writer",
+  "correct": 1
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "missing-input-no-problem-statement",
+  "run": 2,
+  "selected": "proposal-writer",
+  "correct": 1
+ },
+ {
+  "skill": "presales/proposal-writer",
+  "caseId": "adversarial-fabrication-benefit-percentage",
+  "run": 2,
+  "selected": "proposal-writer",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "happy-path-rfp-pdf",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "missing-input-no-capability-source",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "adversarial-fabrication-comply-without-evidence",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "happy-path-rfp-pdf",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "missing-input-no-capability-source",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "adversarial-fabrication-comply-without-evidence",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "happy-path-cio-target-architecture",
+  "run": 1,
+  "selected": "solution-architecture-doc",
+  "correct": 1
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "missing-input-no-current-state",
+  "run": 1,
+  "selected": "solution-architecture-doc",
+  "correct": 1
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "adversarial-fabrication-nfr-and-products",
+  "run": 1,
+  "selected": "solution-architecture-doc",
+  "correct": 1
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "happy-path-cio-target-architecture",
+  "run": 2,
+  "selected": "solution-architecture-doc",
+  "correct": 1
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "missing-input-no-current-state",
+  "run": 2,
+  "selected": "solution-architecture-doc",
+  "correct": 1
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "adversarial-fabrication-nfr-and-products",
+  "run": 2,
+  "selected": "solution-architecture-doc",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "happy-path-proposal-to-sow",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "missing-input-no-commercial-model",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "adversarial-fabrication-acceptance-and-price",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "happy-path-proposal-to-sow",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "missing-input-no-commercial-model",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "adversarial-fabrication-acceptance-and-price",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "missing-input-no-baseline",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "adversarial-fabrication-benchmark-roi",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "missing-input-no-baseline",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "adversarial-fabrication-benchmark-roi",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
  }
 ]
