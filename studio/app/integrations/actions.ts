@@ -6,7 +6,7 @@ import { requireWorkspace } from "@/lib/factory/db";
 import { syncProvider } from "@/lib/integrations/sync";
 
 export interface SyncState { ok: boolean; message: string; problems: string[] }
-const P = z.enum(["vercel", "supabase"]);
+const P = z.enum(["vercel", "supabase", "port"]);
 
 export async function syncIntegration(_: SyncState | null, fd: FormData): Promise<SyncState> {
   const p = P.safeParse(fd.get("provider"));

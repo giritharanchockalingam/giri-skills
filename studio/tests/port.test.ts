@@ -76,3 +76,21 @@ test("port workflow: entity input as object/JSON/identifier; sync mode; workflow
   assert.match(JSON.stringify(w.nodes[1].config), /SF_API_KEY/);
   assert.deepEqual(w.connections[0], { sourceIdentifier: "trigger", targetIdentifier: "run_in_skills_factory", description: null });
 });
+
+test("port client: entities paged through search (limit/from), falling back to the list route", async () => {
+  const seen: string[] = [];
+  const f = (async (url: string, init: RequestInit) => {
+    const u = new URL(url); seen.push(`${init.method} ${u.pathname}`);
+    const j = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status });
+    if (u.pathname.endsWith("access_token")) return j({ accessToken: "t" });
+    if (u.pathname === "/v1/blueprints") return j({ ok: true, blueprints: [{ identifier: "a" }, { identifier: "b" }] });
+    if (u.pathname === "/v1/blueprints/a/entities/search") { const b = JSON.parse(String(init.body)); return j(b.from ? { entities: [{ identifier: "a2" }], next: null } : { entities: [{ identifier: "a1" }], next: "c1" }); }
+    if (u.pathname === "/v1/blueprints/b/entities/search") return j({}, 404);
+    if (u.pathname === "/v1/blueprints/b/entities") return j({ ok: true, entities: [{ identifier: "b1" }] });
+    return j({}, 404);
+  }) as unknown as typeof fetch;
+  const c = new PortClient({ apiUrl: "https://api.port.io", clientId: "i", clientSecret: "s" }, f);
+  assert.deepEqual((await c.listBlueprints()).map((b) => b.identifier), ["a", "b"]);
+  assert.deepEqual((await c.listEntities("a")).entities.map((e) => e.identifier), ["a1", "a2"]);
+  assert.deepEqual((await c.listEntities("b")).entities.map((e) => e.identifier), ["b1"]);
+});

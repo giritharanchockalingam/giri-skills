@@ -2,7 +2,7 @@
 import { useActionState } from "react";
 import { syncIntegration, type SyncState } from "@/app/integrations/actions";
 
-export function IntegrationSync({ provider, disabled }: { provider: "vercel" | "supabase"; disabled?: boolean }) {
+export function IntegrationSync({ provider, disabled }: { provider: "vercel" | "supabase" | "port"; disabled?: boolean }) {
   const [state, action, pending] = useActionState<SyncState | null, FormData>(syncIntegration, null);
   return (
     <form action={action} className="stack-sm">

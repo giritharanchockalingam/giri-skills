@@ -1,7 +1,7 @@
 /* Data access for catalog entities of every kind and the relations between them (RLS-scoped). */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type Kind = "repository" | "service" | "database";
+export type Kind = "repository" | "service" | "database" | "component";
 export interface EntityRow { id: string; kind: Kind; source: string; key: string; title: string; url: string; owner: string | null; archived: boolean; last_activity_at: string | null; properties: Record<string, unknown> }
 export interface RelatedRow { relation: string; direction: "out" | "in"; evidence: string; other: Pick<EntityRow, "id" | "kind" | "key" | "title" | "url"> }
 export interface SyncLogRow { provider: string; status: string; counts: Record<string, number>; error: string | null; started_at: string; finished_at: string | null }
@@ -35,7 +35,7 @@ export async function relationsOf(sb: SupabaseClient, ws: string, id: string): P
 
 export async function lastSyncs(sb: SupabaseClient, ws: string): Promise<Record<string, SyncLogRow | null>> {
   const { data } = await sb.from("sf_catalog_syncs").select("provider, status, counts, error, started_at, finished_at").eq("workspace_id", ws).order("started_at", { ascending: false }).limit(60);
-  const out: Record<string, SyncLogRow | null> = { github: null, vercel: null, supabase: null };
+  const out: Record<string, SyncLogRow | null> = { github: null, vercel: null, supabase: null, port: null };
   for (const r of (data ?? []) as SyncLogRow[]) if (!out[r.provider]) out[r.provider] = r;
   return out;
 }
@@ -44,4 +44,5 @@ export async function lastSyncs(sb: SupabaseClient, ws: string): Promise<Record<
 export const RELATION_LABEL: Record<string, { out: string; in: string }> = {
   built_from: { out: "Built from", in: "Deployed as" },
   uses_database: { out: "Uses database", in: "Used by" },
+  related: { out: "Related to", in: "Related from" },
 };

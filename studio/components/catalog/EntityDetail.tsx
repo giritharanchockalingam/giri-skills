@@ -3,7 +3,7 @@ import { PageHead } from "@/components/PageHead";
 import { LocalTime } from "@/components/LocalTime";
 import { RELATION_LABEL, type EntityRow, type RelatedRow } from "@/lib/db/entities";
 
-const KIND_LABEL: Record<string, string> = { repository: "Repository", service: "Service", database: "Database" };
+const KIND_LABEL: Record<string, string> = { repository: "Repository", service: "Service", database: "Database", component: "Component" };
 const SOURCE_LABEL: Record<string, string> = { github: "GitHub", vercel: "Vercel", supabase: "Supabase" };
 const HIDE = new Set(["prod_deploys"]);
 const LABEL: Record<string, string> = { deploys_30d: "successful production deploys (30 days)", failed_30d: "failed production deploys (30 days)", last_deploy: "last production deploy", production_url: "production URL" };
@@ -35,6 +35,7 @@ const show = (v: unknown): React.ReactNode => {
 
 /** A service or database: what the provider reports, and how it relates to the rest of the catalog. */
 export function EntityDetail({ e, rels }: { e: EntityRow; rels: RelatedRow[] }) {
+  if (e.kind === "component") return <ComponentDetail e={e} rels={rels} />;
   const props = Object.entries(e.properties).filter(([k]) => !HIDE.has(k));
   const deploys = (e.properties.prod_deploys as string[] | undefined) ?? null;
   return (
@@ -49,6 +50,29 @@ export function EntityDetail({ e, rels }: { e: EntityRow; rels: RelatedRow[] }) 
         <div className="h3" style={{ marginTop: 0 }}>Properties</div>
         <dl className="kv">{props.map(([k, v]) => <div key={k}><dt>{LABEL[k] ?? k.replace(/_/g, " ")}</dt><dd>{show(v)}</dd></div>)}</dl>
         {deploys && <p className="caption" style={{ margin: "8px 0 0" }}>{deploys.length} successful production deployment{deploys.length === 1 ? "" : "s"} in the last 90 days{deploys.length ? <>, newest <LocalTime iso={deploys[0]} /></> : ""}.</p>}
+      </section>
+    </>
+  );
+}
+
+/** A component from the delivery tools (a pull request, CI run, deployment…): its facts, its own page, its relations.
+ *  The tool that collected it stays in the background; the page links to the thing itself. */
+function ComponentDetail({ e, rels }: { e: EntityRow; rels: RelatedRow[] }) {
+  const type = String(e.properties.type ?? "Component");
+  const facts = (e.properties.facts ?? []) as { label: string; value: string }[];
+  const own = !/app\.(get)?port\.io/.test(e.url);
+  return (
+    <>
+      <PageHead eyebrow={`Catalog · ${type}`} title="" em={e.title} lead="From your delivery tools. Read-only: the catalog reflects them, it does not change them." />
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        {own && <a className="link" href={e.url} target="_blank" rel="noreferrer">Open the original</a>}
+        <Link className="link" href={`/catalog?type=component&of=${encodeURIComponent(type)}`}>All {type}</Link>
+      </div>
+      <section className="card card-pad mb-4"><div className="h3" style={{ marginTop: 0 }}>Related</div><RelatedList rels={rels} /></section>
+      <section className="card card-pad mb-4">
+        <div className="h3" style={{ marginTop: 0 }}>Details</div>
+        {facts.length ? <dl className="kv">{facts.map((f) => <div key={f.label}><dt>{f.label}</dt><dd>{show(f.value)}</dd></div>)}</dl> : <p className="caption" style={{ margin: 0 }}>No details reported.</p>}
+        <p className="caption" style={{ margin: "8px 0 0" }}>Updated <LocalTime iso={e.last_activity_at} /></p>
       </section>
     </>
   );

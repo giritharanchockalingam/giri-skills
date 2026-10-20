@@ -70,7 +70,10 @@ export default async function IntegrationsPage() {
             <div className="h3" style={{ margin: 0 }}>Port <span className={`pill pill-sm ${ready ? "pill-sage" : "pill-hold"}`}>{ready ? "configured" : "not set up"}</span> <span className="caption">writes to Port</span></div>
             <p style={{ margin: "6px 0" }}>Publishes your governed skills into a Port.io portal: an <b>AI Skill</b> catalog type (version, eval pass rate, approval, library status, inputs), a <b>Run skill</b> action that runs them here under the same validation, limits and audit, and your MCP server as a Port connector.</p>
             <p className="caption" style={{ margin: 0 }}>{ready ? <>Port API: <code>{pc.ok ? pc.apiUrl : ""}</code>. Built to Port&apos;s published API; verify each step on the first live run (docs/PORT.md).</> : <>Set in Vercel (sensitive): {missing.map((m, i) => <span key={m}>{i ? ", " : ""}<code>{m}</code></span>)}{pc.ok ? "" : <> · optional <code>PORT_API_URL</code> (https://api.us.port.io for US accounts)</>}. Setup: docs/PORT.md.</>}</p>
-            {admin && <div className="mt-3"><PortSync disabled={!pc.ok} /></div>}
+            {admin && <div className="mt-3 flex flex-wrap gap-4 items-start">
+              <div><div className="caption mb-1"><b>Read</b> the delivery catalog (pull requests, CI, deployments, environments, teams){syncs.port ? <> · last <LocalTime iso={syncs.port.started_at} /> — {syncs.port.status}{syncs.port.error ? `: ${syncs.port.error}` : ""}</> : ""}</div><IntegrationSync provider="port" disabled={!pc.ok} /></div>
+              <div><div className="caption mb-1"><b>Publish</b> governed skills so Port&apos;s engine can use them</div><PortSync disabled={!pc.ok} /></div>
+            </div>}
             <details className="mt-3"><summary className="caption" style={{ cursor: "pointer" }}><b>Run governed skill workflow</b>: in Port, Workflows → + Workflow → workflow JSON, paste. Needs the Port secret <code>SF_API_KEY</code> (a workspace API key).</summary>
               <div className="flex justify-end mb-1"><CopyButton text={workflowJson} /></div><pre className="run-raw">{workflowJson}</pre></details>
             <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>Classic self-service action</b> (older Port orgs): Self-service → + Action → Edit JSON</summary>

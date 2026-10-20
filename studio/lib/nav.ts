@@ -16,6 +16,7 @@ export const SECTIONS: Section[] = [
       { href: "/catalog", label: "Repositories", match: (p, q) => type(null)(p, q) || (p.startsWith("/catalog/") && !q.get("type")) },
       { href: "/catalog?type=service", label: "Services", match: type("service") },
       { href: "/catalog?type=database", label: "Databases", match: type("database") },
+      { href: "/catalog?type=component", label: "Delivery & more", match: type("component") },
       { href: "/ai-assets", label: "AI assets", match: starts("/ai-assets") },
       { href: "/initiatives", label: "Initiatives", match: starts("/initiatives") },
       { href: "/integrations", label: "Integrations", match: starts("/integrations") },
