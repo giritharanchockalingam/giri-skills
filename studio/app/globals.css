@@ -935,6 +935,7 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 /* ───────────── Information architecture: section tabs under the top bar; phone/tablet menu below 1180 px ───────────── */
 .section-tabs { background: var(--paper); border-bottom: 1px solid var(--rule); position: sticky; top: 60px; z-index: 25; }
 .section-tabs .subnav { margin: 0 auto; border-bottom: 0; max-width: var(--max); }
+.section-who { margin: 0 auto; max-width: var(--max); padding-top: 10px; font-size: 12px; color: var(--ink-3); }
 .section-tabs .subnav a[aria-current="page"] { color: var(--ink); }
 .section-tabs .subnav a[aria-current="page"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; background: var(--flame); }
 .section-tabs ~ main .tabbar { top: 105px; }
