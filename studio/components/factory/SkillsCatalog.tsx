@@ -14,13 +14,15 @@ export interface CatalogItem {
   id: string; slug: string; name: string; purpose: string; status: SkillStatus; updated_at: string; source: "repo" | "authored"; gate?: Gate;
   publishedVersion: number | null; workingVersion: number | null; workingStatus: VersionStatus | null;
   evalPassRate: number | null; evalCurrent: boolean | null; cases: number; approval: "valid" | "stale" | "none";
-  stage: string | null; minPassRate?: number | null;
+  stage: string | null; minPassRate?: number | null; drift?: import("@/lib/factory/drift").Drift;
 }
 
 /** One status vocabulary: the funnel stage (retired skills are outside the funnel). */
 const statusKey = (i: CatalogItem) => (i.status === "retired" ? "retired" : i.gate ?? i.status);
 const STATUS_OPTS = [...GATE_ORDER.map((g) => ({ key: g, label: GATE_LABEL[g] })), { key: "retired", label: "Retired" }];
-const Status = ({ i, small }: { i: CatalogItem; small?: boolean }) => (i.status !== "retired" && i.gate ? <GatePill gate={i.gate} small={small} /> : <SkillPill status={i.status} small={small} />);
+const Status = ({ i, small }: { i: CatalogItem; small?: boolean }) => (i.drift === "blocked"
+  ? <span className={`pill pill-rust ${small ? "pill-sm" : ""}`} title="The library changed this skill's files after its live version was approved; it can't run until a new version is published.">Blocked: library changed</span>
+  : i.status !== "retired" && i.gate ? <GatePill gate={i.gate} small={small} /> : <SkillPill status={i.status} small={small} />);
 const SOURCE_OPTS = [{ key: "repo", label: "From repository" }, { key: "authored", label: "Authored" }] as const;
 
 /** The next action for a skill at each funnel stage, and the tab where it happens. */
@@ -71,7 +73,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
                 <td className="muted">{i.workingVersion != null ? `v${i.workingVersion}` : "—"}</td>
                 <td className="ink-2">{evidence(i)}</td>
                 <td>{i.approval === "valid" ? <span className="pass">valid</span> : i.approval === "stale" ? <span className="fail">stale</span> : <span className="muted">none</span>}</td>
-                <td>{i.gate && NEXT[i.gate] ? <Link href={`/skills/${i.slug}/${NEXT[i.gate]!.tab}`} className="link" onClick={(e) => e.stopPropagation()}>{NEXT[i.gate]!.label}</Link> : <span className="muted">—</span>}</td>
+                <td>{i.drift === "blocked" || i.drift === "library_updated" ? <Link href={`/skills/${i.slug}`} className="link" onClick={(e) => e.stopPropagation()}>Update from library</Link> : i.gate && NEXT[i.gate] ? <Link href={`/skills/${i.slug}/${NEXT[i.gate]!.tab}`} className="link" onClick={(e) => e.stopPropagation()}>{NEXT[i.gate]!.label}</Link> : <span className="muted">—</span>}</td>
                 <td className="desc" title={i.purpose}><span>{i.purpose || <span className="none">No purpose written yet</span>}</span></td>
               </tr>
             ))}
