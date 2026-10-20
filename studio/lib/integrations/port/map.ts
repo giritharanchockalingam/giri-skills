@@ -139,7 +139,7 @@ export function runSkillWorkflow(webhookUrl: string) {
           userInputs: {
             properties: {
               skill: { title: "Skill", type: "string", format: "entity", blueprint: BLUEPRINT_ID },
-              inputs: { title: "Inputs (JSON)", type: "object", description: "e.g. {\"workload\": \"feature,requests_per_month,...\"}" },
+              inputs: { title: "Inputs (JSON)", type: "string", description: "JSON keyed by the skill input names, e.g. {\"workload\": \"feature,requests_per_month,...\"}" },
               note: { title: "Why (kept with the run)", type: "string" },
             },
             required: ["skill", "inputs"],
