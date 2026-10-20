@@ -1,6 +1,7 @@
 /* Data access for workspace skills, their versions, files, evaluation cases/runs and approvals. Queries run as the signed-in user. */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gateOf, type Gate, type GateInput } from "@/lib/factory/funnel";
+import { skillTitle } from "@/lib/names";
 import type { ApprovalRow, EvalCaseRow, EvalRunRow, FileRow, ReleaseStateRow, SkillRow, VersionRow } from "@/lib/factory/db";
 
 export type SkillStatusSummary = Pick<SkillRow, "slug" | "name" | "status">;
@@ -64,6 +65,6 @@ export async function loadFunnel(sb: SupabaseClient, workspaceId: string): Promi
     const vs = versions.filter((v) => v.skill_id === s.id);
     const working = vs.find((v) => ["draft", "in_review", "approved"].includes(v.status)) ?? null;
     const w: GateInput | null = working ? st.get(working.id) ?? null : null;
-    return { slug: s.slug, name: s.name, gate: gateOf(w, vs.some((v) => v.status === "published")), version: working?.version ?? null };
+    return { slug: s.slug, name: skillTitle(s.name), gate: gateOf(w, vs.some((v) => v.status === "published")), version: working?.version ?? null };
   });
 }

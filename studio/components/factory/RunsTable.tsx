@@ -1,4 +1,5 @@
 "use client";
+import { readableError } from "@/lib/runText";
 import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
 import { useMemo, useState } from "react";
@@ -50,7 +51,7 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
                   <td><RunPill status={r.status} small /></td><td className="muted">{SOURCE_LABEL[r.source] ?? r.source}</td>
                   <td className="ink-2">{r.model ? <span title={`${r.provider ?? ""} · model id: ${r.model}`}>{modelLabel(r.model, {})}</span> : r.provider === "none" || !r.provider ? "no model" : r.provider}</td>
                   <td className="num">{fmtMs(r.duration_ms)}</td><td className="num">{fmtUsd(r.cost_usd, r.cost_is_estimate)}</td>
-                  <td className="desc" title={r.error ?? ""}><span>{r.error ?? ""}</span></td>
+                  <td className="desc" title={readableError(r.error)}><span>{readableError(r.error)}</span></td>
                 </tr>
               ))}{filtered.length === 0 && <tr><td colSpan={8} className="none">No runs match.</td></tr>}</tbody>
             </table></div>
@@ -58,7 +59,7 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
               <Link key={r.id} href={`/runs/${r.id}`} className="row-card">
                 <div className="row-card-top"><span className="row-card-name">{showSkill ? `${r.skill} v${r.version}` : <LocalTime iso={r.created_at} />}</span><RunPill status={r.status} small /></div>
                 <div className="row-card-meta">{showSkill && <span><LocalTime iso={r.created_at} /></span>}<span>{SOURCE_LABEL[r.source] ?? r.source}</span><span>{fmtMs(r.duration_ms)}</span>{r.cost_usd != null && <span>{fmtUsd(r.cost_usd, r.cost_is_estimate)}</span>}</div>
-                {r.error && <div className="row-card-desc">{r.error}</div>}
+                {r.error && <div className="row-card-desc">{readableError(r.error)}</div>}
               </Link>
             ))}{filtered.length === 0 && <div className="row-card none">No runs match.</div>}</div>
           </>

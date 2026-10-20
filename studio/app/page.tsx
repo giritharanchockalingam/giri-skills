@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
 import { loadActivity } from "@/lib/insights/load";
@@ -123,6 +124,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             <p className="lc-empty">{stage.why ?? <>No skill here for this starting point{roleTitle ? " and role" : ""} yet.</>}{" "}
               {otherMode > 0 && <Link className="link" href={link({ start: mode === "new" ? "existing" : "new" })} scroll={false}>See {otherMode} for {mode === "new" ? "improving what exists" : "starting new"}</Link>}</p>
           ) : (
+            <><p className="caption lc-howto"><b>Try example</b> runs the skill on its own labelled sample inputs, so you see exactly what it produces. <b>Use mine</b> opens it ready for your own files and answers.</p>
             <ul className="lc-rows">
               {rows.map((r) => (
                 <li key={r.id} className="lc-row">
@@ -132,12 +134,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
                     {r.bring && <div className="caption lc-row-bring">You bring: {r.bring}</div>}
                   </div>
                   <div className="lc-row-act">
-                    {r.runnable && <Link href={modeHref(r.id, mode, true)} className="btn btn-primary btn-sm">Try example</Link>}
-                    <Link href={modeHref(r.id, mode, false)} className="btn btn-secondary btn-sm">Use mine</Link>
+                    {r.runnable && <Link href={modeHref(r.id, mode, true)} className="btn btn-primary btn-sm" title="Run it on its own sample inputs (fictional, labelled)">Try example</Link>}
+                    <Link href={modeHref(r.id, mode, false)} className="btn btn-secondary btn-sm" title="Open it ready for your own files">Use mine</Link>
                   </div>
                 </li>
               ))}
-            </ul>
+            </ul></>
           )}
           {rows.length > 0 && otherMode > 0 && (
             <p className="caption lc-foot">{otherMode} more in this stage only apply when {mode === "new" ? "improving what exists" : "starting new"}. <Link className="link" href={link({ start: mode === "new" ? "existing" : "new" })} scroll={false}>Show them</Link></p>
@@ -150,7 +152,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
           <div className="h3 mb-2">Playbooks — several skills chained, with approvals</div>
           <ul className="lc-playbooks">
             {recentAgents.map((a) => (
-              <li key={a.slug}><Link href={`/agents/${a.slug}/run`} className="lc-pb"><b>{a.name}</b><span className="caption">{(a.description || "").split(/[:.→]/)[0]}</span></Link></li>
+              <li key={a.slug}><Link href={`/agents/${a.slug}/run`} className="lc-pb"><b>{skillTitle(a.name)}</b>{(() => { const d = (a.description || "").split(/[:.→]/)[0].trim(); const n = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, ""); return d && n(d) !== n(a.name) ? <span className="caption">{d}</span> : null; })()}</Link></li>
             ))}
           </ul>
         </section>

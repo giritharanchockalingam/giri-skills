@@ -1,3 +1,4 @@
+import { failureText, readableError } from "@/lib/runText";
 import { skillTitle } from "@/lib/names";
 import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
@@ -30,7 +31,9 @@ export default async function RunPage({ params, searchParams }: { params: Promis
   const rel = (p: string) => (out && p.startsWith(out + "/") ? p.slice(out.length + 1) : p);
   const headline = run.status === "succeeded" ? "Succeeded — every step ran, every check passed and the output contract holds."
     : run.status === "needs_input" ? `Needs input — ${run.error}` : run.status === "timeout" ? `Timed out — ${run.error}` : run.status === "cancelled" ? "Cancelled before it started."
-    : run.status === "running" || run.status === "queued" ? "In progress." : `Failed — ${run.error ?? "see steps and checks"}`;
+    : run.status === "running" || run.status === "queued" ? "In progress."
+    // the failure line is derived from the steps and checks shown below (older runs stored a generic count that could contradict them)
+    : `Failed — ${rj.steps?.length ? failureText({ steps: rj.steps, checks: rj.checks ?? [] }) : readableError(run.error) || "see steps and checks"}`;
   const tone = run.status === "succeeded" ? "sage" : run.status === "needs_input" || run.status === "running" || run.status === "queued" ? "hold" : "rust";
   const usage = run.usage as { input_tokens?: number; output_tokens?: number; calls?: number; retries?: number; source?: string } | null;
 
