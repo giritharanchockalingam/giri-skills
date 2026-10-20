@@ -6,7 +6,7 @@ import { libraryContract } from "@/lib/factory/libraryContract";
 import { currentPin } from "@/lib/factory/pins";
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
-import { skillCounts, countsSentence } from "@/lib/counts";
+import { skillCounts } from "@/lib/counts";
 import { FunnelStrip, ClosestList } from "@/components/factory/Funnel";
 import { GATE_ORDER, GATE_LABEL, GATE_HELP, closestToPublish, type Gate } from "@/lib/factory/funnel";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -56,10 +56,8 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHead eyebrow={`Skills · publish pipeline · ${ctx.workspace.name}`} title="Publish" em="pipeline" after="."
-        lead={items.length ? countsSentence(counts) : "No skills in this workspace yet."}
-        caption="For people who publish skills: versions, evaluation evidence, approvals. To use a skill, start from Home or the Library — nothing here needs to be published for that."
-        note={<><Link href="/repo/" className="link-flame">Library ({repoSkills.length} skills, evaluation scorecard) →</Link> · <Link href="/upstream/" className="link-flame">Reference skills →</Link></>} />
+      <PageHead eyebrow={`Build · publish pipeline · ${ctx.workspace.name}`} title="Publish" em="pipeline" after="."
+        lead={items.length ? <>What stands between each skill and release: test it, get it approved, publish it. Only published versions run from Claude, Cursor or any app. This workspace: <b>{counts.published} published</b>, {counts.inProgress} in progress.</> : "No skills in this workspace yet. Import one from the library to start."} />
       <div className="hero-actions mb-6">
         {can(ctx.role, "skill.create") ? (
           <>
@@ -75,7 +73,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
         <div className="notice notice-hold mb-4" role="status">
           <b>The library has moved on for {staleDrafts.length + staleLive.length} skill{staleDrafts.length + staleLive.length === 1 ? "" : "s"}</b> (new inputs such as &ldquo;improve what exists&rdquo;, or changed steps).
           {staleDrafts.length > 0 && <> {staleDrafts.length} draft{staleDrafts.length === 1 ? "" : "s"} can be updated in place; test cases you added are kept.</>}
-          {staleLive.length > 0 && <> {staleLive.length} live tool{staleLive.length === 1 ? " keeps" : "s keep"} running as approved; each needs a new version to offer the new inputs ({staleLive.map((b, i) => <span key={b.slug}>{i ? ", " : ""}<Link className="link" href={`/skills/${b.slug}`}>{b.name}</Link></span>)}).</>}
+          {staleLive.length > 0 && <> {staleLive.length} live tool{staleLive.length === 1 ? " keeps" : "s keep"} running as approved; to offer the new inputs, open each one marked <b>Update from library</b> below.</>}
           {canCreate && staleDrafts.length > 0 && <div className="mt-2"><ActionForm action={updateDraftsFromLibrary} submit={`Update ${staleDrafts.length} draft${staleDrafts.length === 1 ? "" : "s"} from the library`} hidden={{ skill_ids: staleDrafts.map((d) => d.id).join(",") }} confirm={`Update ${staleDrafts.length} drafts to the library's current inputs, steps and test cases? Cases you added are kept.`} /></div>}
         </div>)}
       {!gate && <ClosestList rows={closest} />}
