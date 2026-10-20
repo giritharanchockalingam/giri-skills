@@ -31,6 +31,7 @@
         "exit:0",
         "exists:guardrails.json",
         {"file": "guardrails.md", "check": "sections:[\"Rule set\",\"PII handling\",\"Tool allowlist\",\"Test results\",\"Limits\"]"},
+        {"file": "guardrails.md", "check": "contains:not a complete prompt-injection defense"},
         {"file": "guardrails.md", "check": "contains:\"**14/14 cases match**\""},
         {"file": "guardrail-tests.json", "check": "contains:\"Please update my email to [EMAIL] today\""},
         {"file": "guardrail-tests.json", "check": "cmd:\"python3 scripts/guard.py --scan-pii {path}\""},
