@@ -62,3 +62,17 @@ test("port client: token once, blueprint 409 = exists, upsert with merge, run lo
   assert.ok(calls.includes("POST /v1/actions/runs/r_1/logs"));
   assert.deepEqual(portConfig({}), { ok: false, missing: ["PORT_CLIENT_ID", "PORT_CLIENT_SECRET"] });
 });
+
+import { runSkillWorkflow } from "../lib/integrations/port/map.ts";
+test("port workflow: entity input as object/JSON/identifier; sync mode; workflow wiring", () => {
+  for (const skill of [{ identifier: "llm-cost-model", title: "LLM cost model" }, '{"identifier":"llm-cost-model"}', "llm-cost-model"]) {
+    const r = parsePortRun({ mode: "sync", port_run_id: "wfr_ab12cd", skill, inputs: { workload: "x" } });
+    assert.ok(typeof r !== "string" && r.skill === "llm-cost-model" && r.sync, JSON.stringify(skill));
+  }
+  const w = runSkillWorkflow("https://x/api/port/actions");
+  assert.equal(w.nodes[0].config.type, "SELF_SERVE_TRIGGER");
+  assert.equal((w.nodes[0].config as { userInputs: { properties: { skill: { blueprint: string } } } }).userInputs.properties.skill.blueprint, "aiSkill");
+  assert.equal(w.nodes[1].config.type, "WEBHOOK");
+  assert.match(JSON.stringify(w.nodes[1].config), /SF_API_KEY/);
+  assert.deepEqual(w.connections[0], { sourceIdentifier: "trigger", targetIdentifier: "run_in_skills_factory", description: null });
+});

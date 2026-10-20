@@ -100,16 +100,76 @@ export function runSkillAction(webhookUrl: string) {
 }
 
 /** The webhook body, tolerant of Port rendering `inputs` as an object or as a JSON string. */
-export interface PortRunRequest { portRunId: string; skill: string; inputs: Record<string, unknown>; note: string; requestedBy: string }
+export interface PortRunRequest { portRunId: string; skill: string; inputs: Record<string, unknown>; note: string; requestedBy: string; sync: boolean }
 export function parsePortRun(body: unknown): PortRunRequest | string {
   if (!body || typeof body !== "object") return "body must be a JSON object";
   const b = body as Record<string, unknown>;
   const portRunId = typeof b.port_run_id === "string" ? b.port_run_id.trim() : "";
-  const skill = typeof b.skill === "string" ? b.skill.trim() : "";
+  // a workflow's entity input may render as the entity object, its JSON, or its identifier
+  let rawSkill: unknown = b.skill;
+  if (typeof rawSkill === "string" && rawSkill.trim().startsWith("{")) { try { rawSkill = JSON.parse(rawSkill); } catch { /* keep string */ } }
+  const skill = (typeof rawSkill === "string" ? rawSkill : rawSkill && typeof rawSkill === "object" ? String((rawSkill as { identifier?: unknown }).identifier ?? "") : "").trim();
   if (!/^[A-Za-z0-9_-]{4,100}$/.test(portRunId)) return "port_run_id missing or malformed";
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(skill)) return "skill missing or malformed";
   let inputs: unknown = b.inputs ?? {};
   if (typeof inputs === "string") { try { inputs = inputs.trim() ? JSON.parse(inputs) : {}; } catch { return "inputs is not valid JSON"; } }
   if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) return "inputs must be a JSON object keyed by input name";
-  return { portRunId, skill, inputs: inputs as Record<string, unknown>, note: typeof b.note === "string" ? b.note.slice(0, 500) : "", requestedBy: typeof b.requested_by === "string" ? b.requested_by.slice(0, 200) : "" };
+  return { portRunId, skill, inputs: inputs as Record<string, unknown>, note: typeof b.note === "string" ? b.note.slice(0, 500) : "", requestedBy: typeof b.requested_by === "string" ? b.requested_by.slice(0, 200) : "", sync: b.mode === "sync" };
+}
+
+/** Port workflows (the current self-service model): a self-serve trigger on an AI Skill plus a WEBHOOK node that waits
+ *  for our answer (Port allows 10 s; most skills finish in about 1 s, longer runs come back as "accepted" with a link).
+ *  Authenticated with a workspace API key stored as the Port secret SF_API_KEY. */
+export function runSkillWorkflow(webhookUrl: string) {
+  return {
+    identifier: "run_ai_skill",
+    title: "Run governed skill",
+    icon: "AI",
+    description: "Run a published Skills Factory skill under its evaluation, approval and audit. Inputs are JSON keyed by the skill's input names (see the Inputs column).",
+    category: "Governed AI Skills",
+    allowAnyoneToViewRuns: true,
+    nodes: [
+      {
+        identifier: "trigger",
+        title: "Run governed skill",
+        icon: null,
+        description: null,
+        config: {
+          type: "SELF_SERVE_TRIGGER",
+          userInputs: {
+            properties: {
+              skill: { title: "Skill", type: "string", format: "entity", blueprint: BLUEPRINT_ID },
+              inputs: { title: "Inputs (JSON)", type: "object", description: "e.g. {\"workload\": \"feature,requests_per_month,...\"}" },
+              note: { title: "Why (kept with the run)", type: "string" },
+            },
+            required: ["skill", "inputs"],
+            order: ["skill", "inputs", "note"],
+          },
+        },
+      },
+      {
+        identifier: "run_in_skills_factory",
+        title: "Run in Skills Factory",
+        icon: null,
+        description: "Validated, limited and audited exactly like the API and MCP server.",
+        config: {
+          type: "WEBHOOK",
+          url: webhookUrl,
+          method: "POST",
+          synchronized: true,
+          verbose: true,
+          onTimeout: "continue",
+          headers: { Authorization: "Bearer {{ .secrets[\"SF_API_KEY\"] }}", "Content-Type": "application/json" },
+          body: {
+            mode: "sync",
+            port_run_id: "{{ .workflowRun.identifier }}",
+            skill: "{{ .outputs.trigger.skill }}",
+            inputs: "{{ .outputs.trigger.inputs }}",
+            note: "{{ .outputs.trigger.note }}",
+          },
+        },
+      },
+    ],
+    connections: [{ sourceIdentifier: "trigger", targetIdentifier: "run_in_skills_factory", description: null }],
+  };
 }
