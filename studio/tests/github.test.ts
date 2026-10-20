@@ -118,3 +118,13 @@ test("profileRepo: tree + package.json + CODEOWNERS become one catalog record wi
   assert.ok(seen.every((x) => x.endsWith("Bearer itok")), "only the installation token is used");
   assert.ok(!seen.some((x) => x.includes("requirements.txt")), "absent files are not fetched");
 });
+
+test("detect: paths from someone's own machine are dropped at ingest, never shown as evidence", async () => {
+  const { isLocalArtifact } = await import("../lib/github/detect.ts");
+  const leak = "hms/apps/web/chmod +x /Users/alex/Desktop/hms/deploy.sh/google-cloud-sdk/bin/setup.py";
+  for (const p of [leak, "run /home/bob/notes.md", "/home/bob/x", "C:\\Users\\carol\\a.txt", "docs/C:/Users/dave/b.md"]) assert.ok(isLocalArtifact(p), p);
+  for (const p of ["src/users/list.ts", "app/Users.tsx", "home/page.tsx", "lib/homepage/x.ts", "x/home/bob/notes.md"]) assert.ok(!isLocalArtifact(p), p);
+  const d = detect([leak, "next.config.js", "app/page.tsx"]);
+  assert.ok(JSON.stringify(d).indexOf("/Users/") === -1, "no local path anywhere in the detection");
+  assert.equal(d.counts.files, 2);
+});
