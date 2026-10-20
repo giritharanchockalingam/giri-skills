@@ -2,52 +2,72 @@
  * the top bar), and the one name each concept goes by. Nav, section tabs, the phone menu and the glossary all read this. */
 
 export interface Page { href: string; label: string; match: (path: string, query: URLSearchParams) => boolean }
-export interface Section { id: string; label: string; href: string; hint: string; match: (path: string) => boolean; pages: Page[] }
+export interface Section { id: string; label: string; href: string; hint: string; who: string; match: (path: string) => boolean; pages: Page[] }
 
 const starts = (...p: string[]) => (path: string) => p.some((x) => path === x || path.startsWith(`${x}/`));
 const type = (t: string | null) => (path: string, q: URLSearchParams) => path === "/catalog" && (q.get("type") ?? null) === t;
 
 export const SECTIONS: Section[] = [
-  { id: "home", label: "Home", href: "/", hint: "What do you need done?", match: (p) => p === "/", pages: [] },
   {
-    id: "catalog", label: "Catalog", href: "/catalog", hint: "Repositories, services, databases, AI assets",
-    match: starts("/catalog", "/initiatives", "/ai-assets", "/integrations"),
+    id: "use", label: "Use", href: "/", who: "For everyone: find a skill that works and run it, here or from your own tools",
+    hint: "Find, run and connect skills",
+    match: (p) => p === "/" || starts("/repo", "/agents", "/agent-runs", "/connect", "/assistant")(p),
+    pages: [
+      { href: "/", label: "Find", match: (p) => p === "/" },
+      { href: "/repo/", label: "Library", match: starts("/repo") },
+      { href: "/agents", label: "Playbooks", match: starts("/agents", "/agent-runs") },
+      { href: "/connect", label: "Connect your tools", match: starts("/connect") },
+      { href: "/assistant", label: "Assistant", match: starts("/assistant") },
+    ],
+  },
+  {
+    id: "build", label: "Build", href: "/pipeline", who: "For skill owners: build, test and publish skills",
+    hint: "Publish pipeline, evaluations, reference skills",
+    match: starts("/pipeline", "/skills", "/evaluations", "/evals", "/findings", "/upstream"),
+    pages: [
+      { href: "/pipeline", label: "Publish pipeline", match: (p) => starts("/pipeline", "/skills")(p) },
+      { href: "/evaluations", label: "Evaluations", match: starts("/evaluations", "/evals", "/findings") },
+      { href: "/upstream", label: "Reference skills", match: starts("/upstream") },
+    ],
+  },
+  {
+    id: "govern", label: "Govern", href: "/inbox", who: "For governance and risk: approve releases, audit runs, track spend and value",
+    hint: "Approvals, runs, insights",
+    match: starts("/inbox", "/activity", "/runs", "/insights"),
+    pages: [
+      { href: "/inbox", label: "Inbox", match: starts("/inbox") },
+      { href: "/activity", label: "Runs", match: starts("/activity", "/runs") },
+      { href: "/insights", label: "Insights", match: starts("/insights") },
+    ],
+  },
+  {
+    id: "platform", label: "Platform", href: "/catalog", who: "For platform teams: the systems skills run on, and the checks enforced on every change",
+    hint: "Repositories, services, databases, automations",
+    match: starts("/catalog", "/automations", "/initiatives", "/ai-assets"),
     pages: [
       { href: "/catalog", label: "Repositories", match: (p, q) => type(null)(p, q) || (p.startsWith("/catalog/") && !q.get("type")) },
       { href: "/catalog?type=service", label: "Services", match: type("service") },
       { href: "/catalog?type=database", label: "Databases", match: type("database") },
-      { href: "/catalog?type=component", label: "Delivery & more", match: type("component") },
-      { href: "/ai-assets", label: "AI assets", match: starts("/ai-assets") },
+      { href: "/automations", label: "Automations", match: starts("/automations") },
       { href: "/initiatives", label: "Initiatives", match: starts("/initiatives") },
-      { href: "/integrations", label: "Integrations", match: starts("/integrations") },
+      { href: "/ai-assets", label: "AI assets", match: starts("/ai-assets") },
     ],
   },
   {
-    id: "skills", label: "Skills", href: "/repo/", hint: "Library, roles, teams, publishing",
-    match: starts("/repo", "/upstream", "/roles", "/pools", "/pipeline", "/skills", "/evaluations", "/evals", "/findings", "/activity", "/runs"),
+    id: "admin", label: "Admin", href: "/admin", who: "For administrators: access, keys, integrations and policies",
+    hint: "Members, keys, roles, teams, integrations, audit log",
+    match: starts("/admin", "/glossary", "/roles", "/pools", "/integrations"),
     pages: [
-      { href: "/repo/", label: "Library", match: starts("/repo") },
-      { href: "/pipeline", label: "Publish pipeline", match: (p) => starts("/pipeline", "/skills")(p) },
-      { href: "/evaluations", label: "Evaluations", match: starts("/evaluations", "/evals", "/findings") },
+      { href: "/admin", label: "Administration", match: starts("/admin") },
       { href: "/roles", label: "Roles", match: starts("/roles") },
       { href: "/pools", label: "Teams", match: starts("/pools") },
-      { href: "/activity", label: "Runs", match: starts("/activity", "/runs") },
-      { href: "/upstream", label: "Reference skills", match: starts("/upstream") },
+      { href: "/integrations", label: "Integrations", match: starts("/integrations") },
+      { href: "/glossary", label: "Glossary", match: starts("/glossary") },
     ],
   },
-  { id: "playbooks", label: "Playbooks", href: "/agents", hint: "Skills chained into agents, with approval gates", match: starts("/agents", "/agent-runs"), pages: [] },
-  { id: "automations", label: "Automations", href: "/automations", hint: "Run checks on GitHub events", match: starts("/automations"), pages: [] },
-  { id: "insights", label: "Insights", href: "/insights", hint: "Usage, delivery, spend and ROI", match: starts("/insights"), pages: [] },
-  { id: "inbox", label: "Inbox", href: "/inbox", hint: "Approvals waiting on you", match: starts("/inbox"), pages: [] },
-  { id: "assistant", label: "Assistant", href: "/assistant", hint: "Ask your workspace", match: starts("/assistant"), pages: [] },
-  { id: "connect", label: "Connect", href: "/connect", hint: "Use skills over MCP and the API", match: starts("/connect"), pages: [] },
-  { id: "admin", label: "Admin", href: "/admin", hint: "Members, keys, policies, audit log", match: starts("/admin", "/glossary"), pages: [
-    { href: "/admin", label: "Administration", match: starts("/admin") },
-    { href: "/glossary", label: "Glossary", match: starts("/glossary") },
-  ] },
 ];
 
-export const sectionOf = (path: string) => SECTIONS.find((s) => s.id !== "home" && s.match(path)) ?? (path === "/" ? SECTIONS[0] : null);
+export const sectionOf = (path: string) => SECTIONS.find((s) => s.match(path)) ?? null;
 
 /** One name per concept. Code and URLs may use older words (agents, pools, repo); the interface never does. */
 export const GLOSSARY: { term: string; means: string; not: string[]; where: string }[] = [

@@ -7,7 +7,7 @@ const STATE: Record<string, string> = { READY: "pill-sage", ERROR: "pill-rust", 
 
 /** Catalog type switcher (Port's blueprints): repositories, services, databases — each with its count. */
 export function KindTabs({ active, counts }: { active: "repository" | "service" | "database" | "component"; counts: Record<string, number> }) {
-  const tabs = [["repository", "Repositories", "/catalog"], ["service", "Services", "/catalog?type=service"], ["database", "Databases", "/catalog?type=database"], ["component", "Delivery & more", "/catalog?type=component"]] as const;
+  const tabs = [["repository", "Repositories", "/catalog"], ["service", "Services", "/catalog?type=service"], ["database", "Databases", "/catalog?type=database"] ] as const;
   return (
     <nav className="subnav" aria-label="Entity types">
       {tabs.map(([k, label, href]) => <Link key={k} href={href} aria-current={active === k ? "page" : undefined}>{label}<span className="tab-count">{counts[k] ?? 0}</span></Link>)}
