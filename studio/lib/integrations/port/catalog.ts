@@ -34,8 +34,9 @@ export function repoKeyOf(e: PortEntity): string | null {
   return m ? `${m[1]}/${m[2]}`.toLowerCase() : null;
 }
 
+/** A short, single-line value worth showing; file contents and long text (a .gitignore, a README) are not "details". */
 const scalar = (v: unknown): string | null =>
-  typeof v === "string" ? (v.length > 140 ? `${v.slice(0, 137)}…` : v) : typeof v === "number" || typeof v === "boolean" ? String(v) : null;
+  typeof v === "string" ? (!v.trim() || /\n/.test(v.trim()) ? null : v.length > 140 ? `${v.slice(0, 137)}…` : v) : typeof v === "number" || typeof v === "boolean" ? String(v) : null;
 
 export function mapPortCatalog(input: { blueprints: PortBlueprint[]; entities: Map<string, PortEntity[]>; nativeRepoKeys: Set<string>; fallbackUrl: string; now?: number }):
   { components: ComponentRow[]; aliases: number; relations: PortRelation[] } {
