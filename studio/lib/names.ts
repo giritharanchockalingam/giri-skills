@@ -5,6 +5,9 @@ export const humanName = (slug: string): string =>
     .replace(/\bA\/?B\b/, "A/B").replace(/\blanggraph\b/gi, "LangGraph").replace(/\blangchain\b/gi, "LangChain").replace(/\bsupabase\b/gi, "Supabase")
     .replace(/\bvercel\b/gi, "Vercel").replace(/\bgithub\b/gi, "GitHub").replace(/\bsaas\b/gi, "SaaS").replace(/\bwebapp\b/gi, "Web app").replace(/^./, (c) => c.toUpperCase());
 
+/** A stored skill or playbook name that is only a slug ("account-plan") reads as a title ("Account plan"); real titles pass through. */
+export const skillTitle = (name: string): string => (/^[a-z0-9][a-z0-9-]*$/.test(name) ? humanName(name) : name);
+
 /** "Produces a forward-only migration SQL with a rollback block, …" → "Forward-only migration SQL" (≤ maxWords). */
 export function shortOutcome(youGet: string, maxWords = 12): string {
   let t = youGet.replace(/^(Produces|Builds|Creates|Writes|Generates|Returns|Runs)\s+(an?\s+|the\s+)?/i, "").replace(/\.$/, "");

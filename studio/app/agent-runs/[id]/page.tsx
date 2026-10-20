@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -38,7 +39,7 @@ export default async function AgentRunPage({ params, searchParams }: { params: P
 
   return (
     <>
-      <PageHead eyebrow={`Playbook run · v${version.version}`} title={version.sf_agents.name} em=""
+      <PageHead eyebrow={`Playbook run · v${version.version}`} title={skillTitle(version.sf_agents.name)} em=""
         lead={<><span className={`pill ${TONE[run.status]}`}>{LABEL[run.status]}</span> {run.error && <span className="caption"> {run.error}</span>}</>}
         caption={<>Started <LocalTime iso={run.created_at} /> · {run.steps.filter((s) => s.status === "ok" || s.status === "approved").length}/{spec.steps.length} steps{run.cost_usd != null ? ` · model cost ≈$${Number(run.cost_usd).toFixed(4)}` : ""} · <Link href={`/agents/${version.sf_agents.slug}?v=${version.version}`} className="link">configuration</Link></>} />
       {run.status !== "running" && (() => {

@@ -1,4 +1,5 @@
 "use client";
+import { skillTitle } from "@/lib/names";
 import { useActionState } from "react";
 import { saveBaseline } from "@/app/insightsActions";
 
@@ -9,7 +10,7 @@ export function BaselineForm({ skills, preset }: { skills: { id: string; name: s
     <form action={action} className="ins-form">
       <div className="field"><label htmlFor="b-skill">Skill</label>
         <select id="b-skill" name="skill" className="select" defaultValue={preset ?? ""} required>
-          <option value="" disabled>Choose…</option>{skills.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <option value="" disabled>Choose…</option>{skills.map((s) => <option key={s.id} value={s.id}>{skillTitle(s.name)}</option>)}
         </select></div>
       <div className="field"><label htmlFor="b-min">Minutes by hand, per run</label><input id="b-min" name="manual_minutes" className="input" type="number" min={1} max={10000} step="0.5" required /></div>
       <div className="field"><label htmlFor="b-rate">Loaded hourly rate, USD (optional)</label><input id="b-rate" name="hourly_rate_usd" className="input" type="number" min={1} max={2000} step="0.01" /></div>

@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { VersionBar } from "@/components/factory/VersionBar";
 import { RunsTable, type RunListItem } from "@/components/factory/RunsTable";
@@ -9,7 +10,7 @@ export default async function SkillActivityPage({ params, searchParams }: { para
   const { slug } = await params; const { v } = await searchParams;
   const d = await loadSkillPage(slug, v ?? null);
   const runs = await listVersionRuns(d.ctx.supabase, d.version.id);
-  const items: RunListItem[] = runs.map((r) => ({ ...r, skill: d.skill.name, slug, version: d.version.version }));
+  const items: RunListItem[] = runs.map((r) => ({ ...r, skill: skillTitle(d.skill.name), slug, version: d.version.version }));
   return (
     <>
       <VersionBar slug={slug} view="activity" versions={d.versions} current={d.version} />

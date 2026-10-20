@@ -5,10 +5,19 @@
 export const esc = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** The "[TO BE BASELINED — owner: ___]" flag skills write where a number has no source: shown as a labelled flag,
+ *  never as raw brackets (it is a deliberate marker, not unfinished text). Input is HTML-escaped already. */
+const TBB = /\[?\s*TO BE BASELINED\s*(?:[—-]\s*owner:\s*([^\]]*?))?\s*\]/gi;
+export const flagBaselines = (s) => s.replace(TBB, (_, owner) => {
+  const who = owner && !/^_+$/.test(owner.trim()) ? `owner: ${owner.trim()}` : "owner to be named";
+  return `<span class="tbb" title="A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.">To be baselined · ${who}</span>`;
+});
+
 export function inline(s) {
-  // s is already HTML-escaped. Code spans first (protect their content).
+  // s is already HTML-escaped. Code spans first (protect their content); a code span that is only the baseline flag renders as the flag.
   const codes = [];
-  s = s.replace(/`([^`]+)`/g, (_, c) => { codes.push(`<code>${c}</code>`); return `\u0000${codes.length - 1}\u0000`; });
+  s = s.replace(/`([^`]+)`/g, (_, c) => { codes.push(TBB.test(c) ? flagBaselines(c) : `<code>${c}</code>`); TBB.lastIndex = 0; return `\u0000${codes.length - 1}\u0000`; });
+  s = flagBaselines(s);
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => {
     const safe = /^(https?:|mailto:|\/|#|\.)/.test(u) ? u : "#";
     return `<a href="${safe}"${safe.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}>${t}</a>`;

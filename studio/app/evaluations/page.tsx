@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
@@ -30,7 +31,7 @@ export default async function EvaluationsPage() {
               <thead><tr><th>Skill</th><th>Version</th><th>Cases</th><th title="Latest finished evaluation on this version">Latest evaluation</th><th title="Whether the latest evaluation ran on the current case set and meets release_criteria.min_eval_pass_rate">Evaluation gate</th><th>Approval</th><th>Publishable</th></tr></thead>
               <tbody>{rows.map(({ s, skill }) => { const eg = evalGate(s), ag = approvalGate(s); return (
                 <tr key={s.version_id}>
-                  <td><Link href={`/skills/${skill.slug}/evaluations?v=${s.version}`} className="cell-name">{skill.name}</Link></td>
+                  <td><Link href={`/skills/${skill.slug}/evaluations?v=${s.version}`} className="cell-name">{skillTitle(skill.name)}</Link></td>
                   <td><span className="muted">v{s.version}</span> <VersionPill status={s.status} small /></td>
                   <td className="num">{s.eval_case_count}</td>
                   <td className="ink-2">{s.latest_eval_run_id ? <>{pct(s.latest_eval_pass_rate)} <span className="caption">· <LocalTime iso={s.latest_eval_at} />{s.eval_current ? "" : " · outdated"}</span></> : <span className="muted">not run</span>}</td>
@@ -41,7 +42,7 @@ export default async function EvaluationsPage() {
             </table></div>
             <div className="row-list only-mobile">{rows.map(({ s, skill }) => { const eg = evalGate(s), ag = approvalGate(s); return (
               <Link key={s.version_id} href={`/skills/${skill.slug}/evaluations?v=${s.version}`} className="row-card">
-                <div className="row-card-top"><span className="row-card-name">{skill.name} <span className="muted">v{s.version}</span></span><VersionPill status={s.status} small /></div>
+                <div className="row-card-top"><span className="row-card-name">{skillTitle(skill.name)} <span className="muted">v{s.version}</span></span><VersionPill status={s.status} small /></div>
                 <div className="row-card-meta"><span>{s.eval_case_count} cases</span><span>Eval <b>{s.latest_eval_run_id ? pct(s.latest_eval_pass_rate) : "not run"}</b></span><span>Gate <b className={eg.met ? "pass" : "fail"}>{eg.met ? "met" : "not met"}</b></span><span>Approval <b className={ag.met ? "pass" : "fail"}>{ag.met ? "ok" : s.approval_stale ? "stale" : "none"}</b></span></div>
               </Link>); })}</div>
           </>

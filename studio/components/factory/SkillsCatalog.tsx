@@ -1,11 +1,11 @@
 "use client";
-import type { Gate } from "@/lib/factory/funnel";
+import { GATE_ORDER, GATE_LABEL, type Gate } from "@/lib/factory/funnel";
 import { matches } from "@/lib/search";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChoiceFilter } from "@/components/FilterBar";
-import { SkillPill, VersionPill } from "./Pills";
+import { SkillPill, GatePill } from "./Pills";
 import { EmptyState } from "./EmptyState";
 import type { SkillStatus } from "@/lib/factory/db";
 import type { VersionStatus } from "@/lib/factory/release";
@@ -14,10 +14,13 @@ export interface CatalogItem {
   id: string; slug: string; name: string; purpose: string; status: SkillStatus; updated_at: string; source: "repo" | "authored"; gate?: Gate;
   publishedVersion: number | null; workingVersion: number | null; workingStatus: VersionStatus | null;
   evalPassRate: number | null; evalCurrent: boolean | null; cases: number; approval: "valid" | "stale" | "none";
-  stage: string | null;
+  stage: string | null; minPassRate?: number | null;
 }
 
-const STATUS_OPTS = [{ key: "published", label: "Published" }, { key: "draft", label: "Draft" }, { key: "retired", label: "Retired" }] as const;
+/** One status vocabulary: the funnel stage (retired skills are outside the funnel). */
+const statusKey = (i: CatalogItem) => (i.status === "retired" ? "retired" : i.gate ?? i.status);
+const STATUS_OPTS = [...GATE_ORDER.map((g) => ({ key: g, label: GATE_LABEL[g] })), { key: "retired", label: "Retired" }];
+const Status = ({ i, small }: { i: CatalogItem; small?: boolean }) => (i.status !== "retired" && i.gate ? <GatePill gate={i.gate} small={small} /> : <SkillPill status={i.status} small={small} />);
 const SOURCE_OPTS = [{ key: "repo", label: "From repository" }, { key: "authored", label: "Authored" }] as const;
 
 /** The next action for a skill at each funnel stage, and the tab where it happens. */
@@ -35,7 +38,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
   const [stage, setStage] = useState<string>(initialStage);
   const filtered = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return items.filter((i) => (stage === "all" || (i.stage ?? "unassigned") === stage) && (status === "all" || i.status === status) && (source === "all" || i.source === source) && matches(n, i.name, i.slug, i.purpose));
+    return items.filter((i) => (stage === "all" || (i.stage ?? "unassigned") === stage) && (status === "all" || statusKey(i) === status) && (source === "all" || i.source === source) && matches(n, i.name, i.slug, i.purpose));
   }, [items, q, status, source, stage]);
   const go = (slug: string) => router.push(`/skills/${slug}`);
 
@@ -58,14 +61,14 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
       </div>
       <div className="card">
         <div className="tablewrap"><table className="tbl only-desktop">
-          <thead><tr><th>Skill</th><th>Status</th><th>Published</th><th title="The draft, in-review or approved version being worked on">Working version</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th>Next step</th><th style={{ width: "28%" }}>Purpose</th></tr></thead>
+          <thead><tr><th>Skill</th><th>Status</th><th>Live version</th><th title="The version being worked on; its stage is the Status">Working version</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th>Next step</th><th style={{ width: "28%" }}>Purpose</th></tr></thead>
           <tbody>
             {filtered.map((i) => (
               <tr key={i.id} className="clickable" tabIndex={0} onClick={() => go(i.slug)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(i.slug); } }}>
                 <td><Link href={`/skills/${i.slug}`} className="cell-name" onClick={(e) => e.stopPropagation()}>{i.name}</Link><div className="caption">{i.source === "repo" ? "from the library" : "authored here"}{i.slug !== i.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") ? ` · ${i.slug}` : ""}</div></td>
-                <td><SkillPill status={i.status} /></td>
+                <td><Status i={i} /></td>
                 <td className="muted">{i.publishedVersion != null ? `v${i.publishedVersion}` : "—"}</td>
-                <td>{i.workingVersion != null && i.workingStatus ? <span className="flex items-center gap-2"><span className="muted">v{i.workingVersion}</span><VersionPill status={i.workingStatus} small /></span> : <span className="muted">—</span>}</td>
+                <td className="muted">{i.workingVersion != null ? `v${i.workingVersion}` : "—"}</td>
                 <td className="ink-2">{evidence(i)}</td>
                 <td>{i.approval === "valid" ? <span className="pass">valid</span> : i.approval === "stale" ? <span className="fail">stale</span> : <span className="muted">none</span>}</td>
                 <td>{i.gate && NEXT[i.gate] ? <Link href={`/skills/${i.slug}/${NEXT[i.gate]!.tab}`} className="link" onClick={(e) => e.stopPropagation()}>{NEXT[i.gate]!.label}</Link> : <span className="muted">—</span>}</td>
@@ -78,10 +81,10 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
         <div className="row-list only-mobile">
           {filtered.map((i) => (
             <Link key={i.id} href={`/skills/${i.slug}`} className="row-card">
-              <div className="row-card-top"><span className="row-card-name">{i.name}</span><SkillPill status={i.status} small /></div>
+              <div className="row-card-top"><span className="row-card-name">{i.name}</span><Status i={i} small /></div>
               <div className="row-card-meta">
-                <span>Published <b>{i.publishedVersion != null ? `v${i.publishedVersion}` : "—"}</b></span>
-                {i.workingVersion != null && i.workingStatus && <span>v{i.workingVersion} <VersionPill status={i.workingStatus} small /></span>}
+                <span>Live <b>{i.publishedVersion != null ? `v${i.publishedVersion}` : "—"}</b></span>
+                {i.workingVersion != null && <span>Working <b>v{i.workingVersion}</b></span>}
                 <span>Evidence <b>{evidence(i)}</b></span>
               </div>
               <div className="row-card-desc">{i.purpose || "No purpose written yet"}</div>
