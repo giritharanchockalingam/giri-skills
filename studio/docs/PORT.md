@@ -22,8 +22,9 @@ vercel env add PORT_CLIENT_ID production --sensitive
 vercel env add PORT_CLIENT_SECRET production --sensitive
 vercel env add PORT_SF_API_KEY production --sensitive      # the sf_live_ key from step 2
 vercel env add PORT_API_URL production                     # only for US accounts: https://api.us.port.io
-vercel --prod
 ```
+
+Then redeploy **the latest `main`**: Vercel → giri-skills-studio → Deployments → the newest `main` deployment → **⋯ → Redeploy**. Don't run `vercel --prod` from a laptop: it deploys whatever that checkout holds, which can be older than `main`, and it would replace production with it.
 
 4. **Catalog.** In Skills Factory, go to **Integrations → Port → Push skills to Port**. This creates the `aiSkill` blueprint and one entity per published skill. Push again after publishing; it is idempotent.
 5. **Run skill action.** On the Port card, open **Run skill action**, copy the JSON, then in Port go to **Self-service → + Action → Edit JSON**, paste and save.
