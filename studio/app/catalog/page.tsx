@@ -13,6 +13,7 @@ import { ScoreAll } from "@/components/catalog/ScoreAll";
 import { CHECKS } from "@/lib/scorecards/checks";
 import { connectGithub, disconnectGithub } from "./actions";
 import { humanName } from "@/lib/names";
+import { specificMatches } from "@/lib/github/detect";
 import { listEntities, allRelations, type EntityRow } from "@/lib/db/entities";
 import { ServicesTable, DatabasesTable, ComponentsTable } from "@/components/catalog/EntityViews";
 
@@ -77,7 +78,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const all: Entity[] = catalog.entities;
   const active = all.filter((e) => !e.archived);
   const stackFilter = sp.stack ?? null;
-  const applies = (e: Entity) => (e.properties.applicable ?? []).length > 0;
+  const applies = (e: Entity) => specificMatches(e.properties.applicable).length > 0;
+  const topSkills = [...active.flatMap((e) => specificMatches(e.properties.applicable).map((a) => a.skill)).reduce((m, k) => m.set(k, (m.get(k) ?? 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1]).slice(0, 4);
   const withSkills = active.filter(applies).length;
   const noOwner = active.filter((e) => !e.owner).length;
   const rows = (sp.apply ? active.filter(applies) : stackFilter ? active.filter((e) => e.properties.stack?.some((s) => s.id === stackFilter)) : active)
@@ -144,10 +146,11 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
       {active.length > 0 && (<>
         <div className="cat-tiles mb-4">
-          <Link href="/catalog?apply=1" className="cat-tile"><b>{withSkills} of {active.length}</b><span>repositories have skills that apply — run them from each row</span></Link>
+          <Link href="/catalog?apply=1" className="cat-tile"><b>{withSkills} of {active.length}</b><span>repositories have skills matched to their code (a security review applies to all)</span></Link>
           <a href="#checks" className="cat-tile"><b>{scoredRepos.length ? `${passingRepos} of ${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "checked repositories pass every check" : "not checked yet — run the checks below"}</span></a>
           <div className="cat-tile"><b>{noOwner}</b><span>without an owner (no CODEOWNERS file)</span></div>
         </div>
+        {topSkills.length > 0 && <p className="mb-2">Most needed: {topSkills.map(([k, n], i) => <span key={k}>{i ? " · " : ""}<Link className="link" href={`/repo/${k}/`}>{humanName(k.split("/")[1])}</Link> ({n})</span>)}</p>}
         <p className="caption mb-4">Gaps found in the files: {noCi} without CI, {noTests} without tests, {withMig} with database migrations (the database skills apply to these).</p>
         <div className="card card-pad mb-4 level-strip" id="checks">
           <div className="h3" style={{ marginTop: 0 }}>Engineering checks</div>

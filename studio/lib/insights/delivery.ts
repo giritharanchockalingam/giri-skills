@@ -64,3 +64,6 @@ export function computeDelivery(prs: PrFact[], deploys: DeployFact[] | null, win
 
 export const BAND_LABEL: Record<Band, string> = { elite: "Elite", high: "High", medium: "Medium", low: "Low" };
 export const fmtHours = (h: number | null) => (h == null ? "—" : h < 1 ? `${Math.round(h * 60)} min` : h < 48 ? `${r1(h)} h` : `${r1(h / 24)} days`);
+
+/** A repository that shipped, merged or has work waiting in the window; the rest are listed as a count, not as rows of zeros. */
+export const isActiveDelivery = (d: Delivery) => d.deploys.count > 0 || d.lead_time.samples > 0 || d.open_prs.count > 0;

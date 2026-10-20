@@ -83,6 +83,15 @@ test("detect: empty repo and a repo with no tests or CI", () => {
   assert.equal(d.counts.tests, 0, "node_modules is ignored");
 });
 
+test("detect: CI is matched on a gap, and general skills are not specific matches", async () => {
+  const { specificMatches } = await import("../lib/github/detect.ts");
+  const withCi = detect(["vercel.json", ".github/workflows/ci.yml", "a.test.ts", "b.ts", "c.ts", "d.ts", "e.ts"]);
+  assert.ok(!withCi.applicable.some((a) => a.skill === "build/ci-cd-vercel-github"), "a repository with CI needs no CI skill");
+  assert.deepEqual(specificMatches(withCi.applicable).map((a) => a.skill), []);
+  const noCi = detect(["vercel.json", "a.test.ts", "b.ts"]);
+  assert.ok(noCi.applicable.some((a) => a.skill === "build/ci-cd-vercel-github"));
+});
+
 test("CODEOWNERS: the last catch-all rule wins; comments and path rules ignored", () => {
   assert.equal(defaultOwner("# owners\n*  @acme/platform\n/docs/ @acme/docs\n* @acme/core @lead # final\n"), "@acme/core @lead");
   assert.equal(defaultOwner("/src/ @a"), null);

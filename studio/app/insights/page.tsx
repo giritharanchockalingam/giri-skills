@@ -7,6 +7,7 @@ import { BaselineForm } from "@/components/insights/BaselineForm";
 import { removeBaseline } from "@/app/insightsActions";
 import { loadDelivery } from "@/lib/db/delivery";
 import { collapseNotes } from "@/lib/insights/notes";
+import { isActiveDelivery } from "@/lib/insights/delivery";
 import { DeliveryTable } from "@/components/insights/DeliveryTable";
 import { RefreshDelivery } from "@/components/insights/RefreshDelivery";
 import { humanName } from "@/lib/names";
@@ -33,6 +34,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const estimated = baselines.filter((b) => /estimat/i.test(`${b.owner} ${b.source}`)).length;
   const delivery = await loadDelivery(ctx.supabase, ctx.workspace.id);
   const dWin: 30 | 90 = days === 90 ? 90 : 30;
+  const activeDelivery = delivery.filter((r) => isActiveDelivery(dWin === 90 ? r.d90 : r.d30)).sort((a, b) => (dWin === 90 ? b.d90 : b.d30).deploys.per_week - (dWin === 90 ? a.d90 : a.d30).deploys.per_week);
   const notes = collapseNotes(delivery.flatMap((r) => r.notes));
   const admin = ctx.role === "admin";
   const maxWeek = Math.max(1, ...ins.weeks.map((w) => w.runs));
@@ -63,7 +65,10 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
           <p className="caption">From GitHub, per repository. Deploys: production deployments GitHub recorded, else merges to the default branch. Lead time: pull request opened → merged (approximates DORA&apos;s commit → production). Change failure: share of merges that revert or hotfix (a proxy; no incident data). Bands: DORA 2024 clusters for deploy frequency and lead time; none for change failure (2024&apos;s bands are not ordered).</p>
           {notes.map((n) => <p key={n} className="caption">ⓘ {n}</p>)}
         </div>
-        <div className="card-pad">{delivery.length ? <DeliveryTable rows={delivery} window={dWin} /> : <p className="none" style={{ margin: 0 }}>Not measured yet — refresh, or sync the catalog.</p>}</div>
+        <div className="card-pad">{delivery.length ? <>
+            <DeliveryTable rows={activeDelivery} window={dWin} />
+            {delivery.length > activeDelivery.length && <p className="caption" style={{ margin: "10px 0 0" }}>{delivery.length - activeDelivery.length} other repositor{delivery.length - activeDelivery.length === 1 ? "y" : "ies"} had no deployments, merges or open pull requests in the last {dWin} days.</p>}
+          </> : <p className="none" style={{ margin: 0 }}>Not measured yet — refresh, or sync the catalog.</p>}</div>
       </section>
 
       <div className="ins-grid mb-6">
