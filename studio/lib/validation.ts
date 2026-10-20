@@ -50,6 +50,7 @@ export const RetireVersionForm = z.object({ version_id: id64, note: text(500) })
 export const SaveEvalCaseForm = z.object({ version_id: id64, case_id: id64, name: text(160), inputs: text(200_000), checks: text(20_000), notes: text(4000), slug: slug80 });
 export const DeleteEvalCaseForm = z.object({ case_id: id64, slug: slug80 });
 export const ImportFromRepoForm = z.object({ repo_skill: textList });
+export const UpdateFromLibraryForm = z.object({ skill_id: id64 });
 export const AddMemberForm = z.object({ email: text(200), role: text(20) });
 export const RemoveMemberForm = z.object({ user_id: id64 });
 export const CreateApiKeyForm = z.object({ name: text(80) });

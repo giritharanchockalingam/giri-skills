@@ -14,9 +14,10 @@ import { manifestFromRepoSkill, casesFromRepoSkill, repoSlug, type RepoSkill } f
 import { skills as repoSkills } from "@/lib/data";
 import { providerKeyPresent, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
 import { currentPin } from "@/lib/factory/pins";
+import { contractKey } from "@/lib/factory/drift";
 import {
   fromForm, NoFields, EmptyForm, CreateWorkspaceForm, SelectWorkspaceForm, CreateSkillForm, UpdateSkillForm, SaveManifestForm, SaveFileForm, DeleteFileForm,
-  CreateDraftForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
+  CreateDraftForm, UpdateFromLibraryForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
   AddMemberForm, RemoveMemberForm, CreateApiKeyForm, RevokeApiKeyForm, SavePolicyForm, SaveConnectionForm, CancelRunForm,
 } from "@/lib/validation";
 
@@ -185,6 +186,81 @@ export async function createDraft(_: ActionResult | null, fd: FormData): Promise
   if (!r.ok) return r;
   revalidatePath(`/skills/${slug}`, "layout");
   redirect(`/skills/${slug}/authoring?v=${newVersion}`);
+}
+
+/** A new version from the library's current files: its contract, test cases and content pin. Used when the library
+ *  changed under a workspace skill (a published version pinned to the old files can no longer run). The previous
+ *  version keeps its record; the new one goes through evaluation, approval and publishing like any other. */
+/** Brings one workspace skill to the library's current version: updates its draft in place, or creates a new draft
+ *  version when the newest is past draft. Returns the version the caller should open. */
+async function syncFromLibrary(ctx: WsCtx, skillId: string): Promise<ActionResult & { slug?: string; version?: number }> {
+  let slug = "", newVersion = 0;
+  const res: ActionResult = await (async () => {
+    const skill = must(await ctx.supabase.from("sf_skills").select("*").eq("id", skillId).eq("workspace_id", ctx.workspace.id).single(), "skill") as SkillRow;
+    slug = skill.slug;
+    const vs = must(await ctx.supabase.from("sf_skill_versions").select("id, version, status, source").eq("skill_id", skill.id).order("version", { ascending: false }), "versions") as Pick<VersionRow, "id" | "version" | "status" | "source">[];
+    const repoId = vs.find((v) => v.source?.kind === "repo")?.source.repo_skill;
+    const lib = repoId ? (repoSkills as unknown as RepoSkill[]).find((x) => x.id === repoId) : null;
+    if (!lib) return fail("This skill is not from the library, or the library no longer has it.");
+    const working = vs.find((v) => ["draft", "in_review", "approved"].includes(v.status));
+    const pin = currentPin(lib.id);
+    const fresh = manifestFromRepoSkill(lib);
+    const sameContract = fresh.ok && working ? contractKey(((await ctx.supabase.from("sf_skill_versions").select("manifest").eq("id", working.id).single()).data?.manifest ?? null) as never) === contractKey(fresh.manifest) : false;
+    if (working && working.source?.content_sha === pin && sameContract) return fail(`v${working.version} already matches the library — evaluate and publish it.`);
+    if (working && working.status !== "draft") return fail(`v${working.version} is ${working.status.replace("_", " ")}; withdraw it to draft first.`);
+    const m = manifestFromRepoSkill(lib);
+    if (!m.ok) return fail(`The library version has problems: ${m.problems.map((p) => `${p.path} ${p.message}`).join("; ")}`);
+    if (working) {
+      // a draft is still being worked on: bring it to the library's files in place, and add library cases it lacks (cases added here are kept)
+      const { error } = await ctx.supabase.from("sf_skill_versions").update({ manifest: m.manifest, manifest_hash: manifestHash(m.manifest), source: { kind: "repo", repo_skill: lib.id, content_sha: pin ?? undefined } }).eq("id", working.id).eq("status", "draft");
+      if (error) return fail(error.message);
+      const have = new Set(((await ctx.supabase.from("sf_eval_cases").select("name").eq("version_id", working.id)).data ?? []).map((c: { name: string }) => c.name));
+      const add = casesFromRepoSkill(lib).filter((c) => !have.has(c.name));
+      if (add.length) { const { error: ce } = await ctx.supabase.from("sf_eval_cases").insert(add.map((c) => ({ ...c, version_id: working.id }))); if (ce) return fail(ce.message); }
+      await audit(ctx, "version.update_from_library", "skill_version", working.id, { skill_id: skill.id, version: working.version, repo_skill: lib.id, content_sha: pin, cases_added: add.length, in_place: true });
+      newVersion = working.version;
+      return okay(`v${working.version} updated to the library's current files.`);
+    }
+    newVersion = (vs[0]?.version ?? 0) + 1;
+    const prev = vs.find((v) => v.status === "published") ?? vs[0];
+    const nv = must(await ctx.supabase.from("sf_skill_versions").insert({
+      skill_id: skill.id, version: newVersion, manifest: m.manifest, manifest_hash: manifestHash(m.manifest),
+      source: { kind: "repo", repo_skill: lib.id, content_sha: pin ?? undefined }, created_by: ctx.user.id,
+      change_note: `Updated from the library (${lib.id}${prev?.source?.content_sha && pin ? `, files ${prev.source.content_sha.slice(0, 8)} → ${pin.slice(0, 8)}` : ""})`,
+    }).select("*").single(), "new version") as VersionRow;
+    const cases = casesFromRepoSkill(lib);
+    if (cases.length) { const { error } = await ctx.supabase.from("sf_eval_cases").insert(cases.map((c) => ({ ...c, version_id: nv.id }))); if (error) return fail(error.message); }
+    await ctx.supabase.from("sf_skills").update({ latest_version_id: nv.id }).eq("id", skill.id);
+    await audit(ctx, "version.update_from_library", "skill_version", nv.id, { skill_id: skill.id, version: newVersion, repo_skill: lib.id, content_sha: pin, cases: cases.length });
+    return okay(`v${newVersion} created from the library.`);
+  })();
+  return { ...res, slug, version: newVersion };
+}
+
+export async function updateFromLibrary(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = UpdateFromLibraryForm.parse(fromForm(UpdateFromLibraryForm, fd));
+  const r = await guarded("version.create", (ctx) => syncFromLibrary(ctx, input.skill_id));
+  if (!r.ok) return r;
+  const { slug, version } = r as ActionResult & { slug?: string; version?: number };
+  revalidatePath("/", "layout");
+  redirect(`/skills/${slug}/evaluations?v=${version}`);
+}
+
+/** Every draft whose library version moved on, updated in place (cases added here are kept). Live versions are not
+ *  touched: each needs its own new version, evaluation and approval. */
+export async function updateDraftsFromLibrary(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const ids = String(fd.get("skill_ids") ?? "").split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x)).slice(0, 200);
+  if (!ids.length) return fail("No drafts to update.");
+  const r = await guarded("version.create", async (ctx) => {
+    const done: string[] = [], problems: string[] = [];
+    for (const id of ids) {
+      const x = await syncFromLibrary(ctx, id);
+      if (x.ok) done.push(x.slug ?? id); else problems.push(`${x.slug || id}: ${x.message}`);
+    }
+    return problems.length ? { ok: done.length > 0, message: `${done.length} draft(s) updated. Not updated: ${problems.join(" · ")}` } : okay(`${done.length} draft(s) updated to the library. Run their evaluations next.`);
+  });
+  revalidatePath("/", "layout");
+  return r;
 }
 
 /* ───────────── lifecycle ───────────── */

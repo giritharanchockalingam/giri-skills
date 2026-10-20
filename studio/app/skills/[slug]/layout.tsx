@@ -3,6 +3,11 @@ import Link from "next/link";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { evalGate, approvalGate, nextAction, pct, STATUS_LABEL } from "@/lib/factory/release";
 import { gateOf, type GateInput } from "@/lib/factory/funnel";
+import { skillDrift, contractKey } from "@/lib/factory/drift";
+import { libraryContract } from "@/lib/factory/libraryContract";
+import { currentPin } from "@/lib/factory/pins";
+import { ActionForm } from "@/components/factory/ActionForm";
+import { updateFromLibrary } from "@/app/actions";
 import { can } from "@/lib/factory/roles";
 import { SkillPill, GatePill } from "@/components/factory/Pills";
 import { SkillSubNav } from "@/components/factory/SkillSubNav";
@@ -24,6 +29,7 @@ export default async function SkillLayout({ children, params }: { children: Reac
   // the header's one status is the funnel stage — the same words the pipeline and Home count with
   const working = ["draft", "in_review", "approved"].includes(d.version.status) ? (s as GateInput | null) : null;
   const gate = d.skill.status === "retired" ? null : gateOf(working, !!d.published);
+  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill));
   const eg = s ? evalGate(s) : null, ag = s ? approvalGate(s) : null;
   return (
     <>
@@ -44,6 +50,13 @@ export default async function SkillLayout({ children, params }: { children: Reac
         primary={na && (allowed ? <Link href={href(na.action)} className="btn btn-primary">{na.label}</Link> : <span className="caption">Next: {na.label} ({na.who})</span>)}
         secondary={na?.action !== "test" && na?.action !== "review" && na?.action !== "publish" && !["retired", "superseded"].includes(d.version.status) ? <Link href={`/skills/${slug}/test/${vq}`} className="btn btn-secondary">Test</Link> : null}
       />
+      {(drift === "blocked" || drift === "library_updated") && (
+        <div className={`notice ${drift === "blocked" ? "notice-err" : "notice-hold"} mb-4`} role="status">
+          {drift === "blocked"
+            ? <><b>Live version can&apos;t run:</b> the library changed this skill&apos;s files after v{d.published?.version} was approved, so the portal refuses to run files nobody reviewed. Create a version from the library, evaluate it, then approve and publish it.</>
+            : <><b>The library has a newer version of this skill</b> (its files or its inputs, outputs and steps changed). {d.published ? <>v{d.published.version} keeps running as approved; </> : null}update to evaluate and publish what the library offers now. Test cases you added to a draft are kept.</>}
+          {can(d.ctx.role, "version.create") && <div className="mt-2"><ActionForm action={updateFromLibrary} submit={drift === "blocked" || !["draft"].includes(d.version.status) ? "Create version from library" : "Update draft from library"} hidden={{ skill_id: d.skill.id }} /></div>}
+        </div>)}
       <SkillSubNav slug={slug} />
       {children}
     </>
