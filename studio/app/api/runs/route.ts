@@ -34,6 +34,7 @@ export async function POST(req: Request) {
   const idem = req.headers.get("idempotency-key")?.slice(0, 120) || null;
   const { data: created, error } = await ctx.supabase.rpc("sf_run_insert", { p_version: versionId, p_source: "ui", p_inputs_ref: describeInputs(validated.inputs, sha256), p_idempotency_key: idem });
   if (error) return apiError(error.message.includes("limit") || error.message.includes("budget") ? 429 : 403, "rejected", error.message);
+  if (created?.error === "not_in_role") return apiError(403, "not_in_role", String(created.message));
   const runId = String(created.run_id);
   if (created.existing) {
     const { data: ex } = await ctx.supabase.from("sf_runs").select("id, status, error").eq("id", runId).single();

@@ -135,6 +135,7 @@ export async function runApproved(ctx: WsCtx, actionId: string): Promise<Request
 
   const { data: created, error } = await ctx.supabase.rpc("sf_run_insert", { p_version: sv.version.id, p_source: "ui", p_inputs_ref: describeInputs(validated.inputs, sha256), p_idempotency_key: `action-${a.id}` });
   if (error) return fail(error.message);
+  if (created?.error === "not_in_role") return fail(String(created.message));
   const runId = String(created.run_id);
   await ctx.supabase.from("sf_runs").update({ status: "running", started_at: new Date().toISOString() }).eq("id", runId);
   const files = sv.version.source.kind === "authored" ? (must(await ctx.supabase.from("sf_files").select("path, content").eq("version_id", sv.version.id), "files") as { path: string; content: string }[]) : [];

@@ -40,8 +40,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     } else {
       const checks = Array.isArray(evalCase.checks) ? evalCase.checks : [];
       const { data: created, error } = await ctx.supabase.rpc("sf_run_insert", { p_version: version.id, p_source: "eval", p_inputs_ref: describeInputs(validated.inputs, sha256), p_idempotency_key: null });
-      if (error) {
-        result = { ...result, status: "failed", error: error.message, duration_ms: 0 };
+      if (error || created?.error) {
+        result = { ...result, status: "failed", error: error?.message ?? String(created.message), duration_ms: 0 };
       } else {
         const runId = String(created.run_id);
         await ctx.supabase.from("sf_runs").update({ status: "running", started_at: new Date().toISOString() }).eq("id", runId);

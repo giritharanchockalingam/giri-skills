@@ -1,6 +1,6 @@
 # Design: roles decide who can run which skill
 
-Status: proposed 20 Oct 2026. No code until approved.
+Status: approved 20 Oct 2026 (authors and reviewers unrestricted; any admin approves access requests). PR 1 shipped: schema, enforcement, audit.
 
 ## Problem
 
