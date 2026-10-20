@@ -99,3 +99,8 @@ export const RemoveBaselineForm = z.object({ skill: rawText() });
 
 export const DisconnectGithubForm = z.object({ installation_id: number });
 export const EntityIdArg = z.string().regex(/^[0-9a-f-]{36}$/);
+
+// access by job role (app/accessActions.ts)
+export const SetSkillsByRoleForm = z.object({ enabled: text(5) });
+export const AssignRoleForm = z.object({ holder: text(80), talent_id: id64 });
+export const UnassignRoleForm = z.object({ id: id64 });

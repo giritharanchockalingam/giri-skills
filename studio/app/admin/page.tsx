@@ -10,6 +10,9 @@ import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { RolePill } from "@/components/factory/Pills";
 import { RuntimeStatus } from "@/components/factory/RuntimeStatus";
+import { SkillAccess } from "@/components/admin/SkillAccess";
+import { loadAccessData } from "@/lib/db/access";
+import type { Access } from "@/lib/access";
 
 export const metadata = { title: "Administration · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -18,7 +21,7 @@ export default async function AdminPage() {
   const ctx = await getContext();
   const admin = can(ctx.role, "admin.members");
   const ws = ctx.workspace;
-  const data = ws ? await loadAdminData(ctx.supabase, ws.id, admin) : EMPTY_ADMIN_DATA;
+  const [data, access] = ws ? await Promise.all([loadAdminData(ctx.supabase, ws.id, admin), loadAccessData(ctx.supabase, ws.id)]) : [EMPTY_ADMIN_DATA, null];
   const memberRows = data.members;
   const invites = data.invites;
   const keyRows = data.keys;
@@ -31,12 +34,7 @@ export default async function AdminPage() {
   return (
     <>
       <PageHead eyebrow={`Administration${ws ? ` · ${ws.name}` : ""}`} title="Access, connections," em="limits" after="."
-        lead={ws ? (admin ? "Members and roles, API keys for applications, provider connections, spending and concurrency limits, and the audit log." : `You are ${ctx.role} here. Only administrators can change members, keys, connections and policies; you can see the audit log and your account.`) : "You are not in a workspace yet."} />
-
-      <section className="card card-pad mb-6">
-        <div className="h3">Moved</div>
-        <p className="caption" style={{ margin: 0 }}>The publish pipeline, evaluations, runs and reference skills now live under <Link className="link" href="/pipeline">Skills</Link>. Words used across the portal: <Link className="link" href="/glossary">Glossary</Link>.</p>
-      </section>
+        lead={ws ? (admin ? "Members and their access, who can run which skills, API keys for applications, provider connections, spending and concurrency limits, and the audit log." : `You are ${ctx.role} here. Only administrators can change members, keys, connections and policies; you can see the audit log and your account.`) : "You are not in a workspace yet."} />
 
       <section id="account" className="card card-pad mb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -49,9 +47,9 @@ export default async function AdminPage() {
       {ws && (
         <>
           <section className="section" id="members">
-            <SectionHead title="Members and" em="roles" caption="Roles are enforced on the server and in the database for every action." />
+            <SectionHead title="Members and" em="access" caption="Access levels (run only, author, reviewer, admin) are enforced on the server and in the database for every action. Job roles are assigned below." />
             <div className="card card-pad">
-              <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Role</th><th>Since</th>{admin && <th>Actions</th>}</tr></thead>
+              <div className="tablewrap"><table className="mini"><thead><tr><th>Email</th><th>Access</th><th>Since</th>{admin && <th>Actions</th>}</tr></thead>
                 <tbody>{memberRows.map((m) => <tr key={m.user_id}><td>{m.email}{m.user_id === ctx.user.id && <span className="caption"> (you)</span>}</td><td><RolePill role={m.role} /></td><td className="muted"><LocalTime iso={m.created_at} /></td>{admin && <td>{m.user_id !== ctx.user.id && <ActionForm action={removeMember} submit="Remove" submitClass="btn btn-danger btn-sm" confirm={`Remove ${m.email} from ${ws.name}?`} hidden={{ user_id: m.user_id }} />}</td>}</tr>)}</tbody></table></div>
               {admin && (
                 <div className="mt-5">
@@ -65,12 +63,20 @@ export default async function AdminPage() {
                   <ActionForm action={addMember} submit="Save or invite">
                     <div className="form-grid form-grid-2">
                       <div className="field"><label htmlFor="m-email">Email</label><input id="m-email" name="email" className="input" type="email" required /></div>
-                      <div className="field"><label htmlFor="m-role">Role</label><select id="m-role" name="role" className="select" defaultValue="author">{ROLES.map((r) => <option key={r} value={r}>{r} — {ROLE_HELP[r]}</option>)}</select></div>
+                      <div className="field"><label htmlFor="m-role">Access level</label><select id="m-role" name="role" className="select" defaultValue="author">{ROLES.map((r) => <option key={r} value={r}>{r} — {ROLE_HELP[r]}</option>)}</select></div>
                     </div>
                   </ActionForm>
                 </div>
               )}
             </div>
+          </section>
+
+          <section className="section" id="skill-access">
+            <SectionHead title="Who can run which" em="skills" caption="Job roles (from Roles) decide which published skills people with run-only access and API keys may run. Enforced in the database for the portal, API, MCP, playbooks and Port; every refusal is audited." />
+            <SkillAccess data={access!} admin={admin} holders={[
+              ...memberRows.map((m) => ({ kind: "user" as const, id: m.user_id, label: m.email, access: m.role as Access })),
+              ...keyRows.filter((k) => !k.revoked_at).map((k) => ({ kind: "key" as const, id: k.id, label: `${k.name} (${k.prefix}…)`, access: "key" as const })),
+            ]} />
           </section>
 
           <section className="section" id="connections">

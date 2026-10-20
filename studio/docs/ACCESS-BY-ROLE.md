@@ -1,6 +1,6 @@
 # Design: roles decide who can run which skill
 
-Status: approved 20 Oct 2026 (authors and reviewers unrestricted; any admin approves access requests). PR 1 shipped: schema, enforcement, audit.
+Status: approved 20 Oct 2026 (authors and reviewers unrestricted; any admin approves access requests). PR 1 shipped: schema, enforcement, audit. PR 2 shipped: Admin switch, preview and assignments.
 
 ## Problem
 
