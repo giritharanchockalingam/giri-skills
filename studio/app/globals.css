@@ -971,3 +971,4 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .tbb { display: inline-block; padding: 0 6px; border-radius: 4px; border: 1px dashed var(--hold, #b7791f); color: var(--ink-2); font-size: 0.85em; white-space: nowrap; }
 .lt-pending { visibility: hidden; }
 .lc-howto { margin: 0 0 8px; }
+.home-proof { margin: 14px 0 28px; }
