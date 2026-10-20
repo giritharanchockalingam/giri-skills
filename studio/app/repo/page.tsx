@@ -1,33 +1,45 @@
-import { modelLabel } from "@/lib/modelLabel";
-import { catalogRows, DOMAINS, meta } from "@/lib/data";
-import { summarize } from "@/lib/verdict";
-import { CatalogTable } from "@/components/CatalogTable";
-import { PageHead } from "@/components/PageHead";
-import { COL_TIPS } from "@/components/DomainTable";
 import Link from "next/link";
+import { skills, scoreFor, stageName } from "@/lib/data";
+import { humanName, whatYouGet, displayDescription } from "@/lib/names";
+import { libraryRows, librarySummary } from "@/lib/library";
+import { requireWorkspace } from "@/lib/factory/db";
+import { loadPipeline } from "@/lib/db/skills";
+import { LibraryTable } from "@/components/LibraryTable";
+import { PageHead } from "@/components/PageHead";
 
-export const metadata = { title: "Repository skills · Skills Factory" };
+export const metadata = { title: "Library · Skills Factory" };
+export const dynamic = "force-dynamic";
 
-export default function RepoCatalogPage() {
-  const rows = catalogRows();
-  const s = summarize(rows.map((r) => r.verdict));
-  const cases = rows.reduce((a, r) => a + r.cases, 0);
+export default async function LibraryPage() {
+  const ctx = await requireWorkspace();
+  const { versions } = await loadPipeline(ctx.supabase, ctx.workspace.id);
+  const published = new Map<string, number>();
+  for (const v of versions) {
+    if (v.status !== "published" || v.source.kind !== "repo") continue;
+    const id = v.source.repo_skill;
+    if (!id) continue;
+    published.set(id, Math.max(published.get(id) ?? 0, v.version));
+  }
+  const rows = libraryRows(skills.map((s) => {
+    const stage = Array.isArray(s.stage) ? s.stage[0] : s.stage;
+    return {
+      id: s.id, title: humanName(s.id.split("/")[1] ?? s.name), outcome: displayDescription((s as { card?: string }).card || whatYouGet(s.description)),
+      stage: stageName(stage), domain: s.domain, verdict: scoreFor(s.id)?.verdict ?? null, published: published.get(s.id) ?? null,
+    };
+  }));
+  const sum = librarySummary(rows);
+  const stages = [...new Set(rows.map((r) => r.stage))].sort();
   return (
     <>
       <PageHead
         eyebrow="Library"
-        title={`${s.total} skills:`}
-        em={`${s.healthy} healthy, ${s.needsWork} need work${s.total - s.healthy - s.needsWork ? `, ${s.total - s.healthy - s.needsWork} not evaluated yet` : ""}`}
-        lead={<>Every skill here runs in your browser on its own example, or on your files. Open one and press Run. “Healthy” and “need work” come from each skill&apos;s evaluation (description and instructions verdicts below).</>}
-        caption={<>{cases} evaluation cases · {meta.runs} evaluation runs with {modelLabel(meta.model)} on {meta.date}</>}
-        note={<><Link href="/" className="link-flame">← Describe a task instead</Link> · <Link href="/upstream/" className="link-flame">{meta.counts.upstream} reference skills from GitHub →</Link></>}
+        title={`${sum.total} skills,`}
+        em={`${sum.approved} approved for use`}
+        lead={<>Approved skills passed their tests and were signed off in {ctx.workspace.name}: they run the tested version, here or from Claude, Cursor or any app. Every other skill can be tried on its own example. {sum.proven} of {sum.total} are proven by evaluation; the rest are being improved.</>}
+        note={<><Link href="/" className="link-flame">← Describe the work instead</Link> · <Link href="/connect" className="link-flame">Use from your tools →</Link></>}
       />
-      <CatalogTable rows={rows} domains={DOMAINS} />
-      <dl className="kv metric-defs mt-4" aria-label="What the columns mean">
-        <div><dt>Lift</dt><dd>{COL_TIPS.lift}: the share of expected items the answer got right with the skill loaded, minus without it, on the same cases. Positive = the skill helps.</dd></div>
-        <div><dt>Trigger</dt><dd>{COL_TIPS.trigger}. Low means people asking for this job may get a different skill.</dd></div>
-        <div><dt>Counts</dt><dd>{rows.length} skills in the library · {meta.counts.upstream} reference skills. Your workspace&apos;s own counts are on the Publish pipeline.</dd></div>
-      </dl>
+      <LibraryTable rows={rows} stages={stages} workspace={ctx.workspace.name} />
+      <p className="caption mt-4">Open a skill to run it and see its evidence. Detailed scores for skill owners are in <Link href="/evaluations" className="link">Evaluations</Link>.</p>
     </>
   );
 }
