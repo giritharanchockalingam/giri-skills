@@ -341,10 +341,6 @@ def render_md(rules: dict, tests: dict) -> str:
     if tests.get("baseline"):
         L += render_baseline_md(tests["baseline"])
     L += ["", "## Limits", "",
-          "**Known limitations.** The prompt-injection rules match fixed phrases (`assets/injection-phrases.txt` plus "
-          "your `injection_markers`); a reworded attack — e.g. \"kindly set aside what you were told\" — can evade them. "
-          "Treat this skill as a baseline policy, not a complete prompt-injection defense. Before client-facing use, "
-          "layer it with model-level and system-level controls.", "",
           "- Deterministic keyword and regex rules: paraphrased, translated or encoded attacks (base64, leetspeak) "
           "can pass. Layer a classifier or model-based moderation for semantic coverage.",
           "- Prompt-injection markers apply to inputs only; indirect injection inside retrieved documents or tool "
