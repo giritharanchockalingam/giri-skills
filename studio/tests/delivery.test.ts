@@ -58,3 +58,13 @@ test("delivery: helpers", () => {
   assert.equal(fmtHours(30), "30 h");
   assert.equal(fmtHours(72), "3 days");
 });
+
+test("active delivery: shipped, merged or waiting; all-zero repositories are not rows", async () => {
+  const { isActiveDelivery } = await import("../lib/insights/delivery.ts");
+  const NOW2 = Date.parse("2026-10-20T00:00:00Z");
+  assert.equal(isActiveDelivery(computeDelivery([], null, 30, NOW2)), false);
+  const open: PrFact[] = [{ number: 1, title: "wip", head_ref: "x", created_at: "2026-10-01T00:00:00Z", merged_at: null, closed_at: null }];
+  assert.equal(isActiveDelivery(computeDelivery(open, null, 30, NOW2)), true);
+  const merged: PrFact[] = [{ number: 2, title: "feat", head_ref: "y", created_at: "2026-10-10T00:00:00Z", merged_at: "2026-10-11T00:00:00Z", closed_at: "2026-10-11T00:00:00Z" }];
+  assert.equal(isActiveDelivery(computeDelivery(merged, null, 30, NOW2)), true);
+});

@@ -3,6 +3,10 @@
  * that triggered it) so the catalog can show WHY a skill applies — nothing is inferred without a file behind it. */
 
 export interface Signal { id: string; label: string; evidence: string[] }
+/** Skills that apply to every codebase. Listed per repository, but not counted as a match to what the repository contains. */
+export const GENERAL_SKILLS = new Set(["build/security-review"]);
+export const specificMatches = <T extends { skill: string }>(a: T[] | undefined) => (a ?? []).filter((x) => !GENERAL_SKILLS.has(x.skill));
+
 export interface Applicable { skill: string; why: string; evidence: string[]; input: { name: string; path: string } | null }
 export interface Detection { stack: Signal[]; applicable: Applicable[]; counts: { files: number; tests: number; migrations: number; workflows: number } }
 
@@ -64,7 +68,8 @@ export function detect(paths: string[], manifests: { packageJson?: string | null
     app("build/multi-tenant-saas-patterns", "Supabase schema: check tenant isolation, roles and plan checks", migrations, { name: "migrations", path: dirOf(migrations) });
   }
   if (s.has("nextjs")) app("build/nextjs-enterprise-conventions", "Next.js app: check against enterprise conventions", ev("nextjs"));
-  if (workflows.length || s.has("vercel")) app("build/ci-cd-vercel-github", workflows.length ? "Existing CI workflows to review and harden" : "Deployed on Vercel without CI workflows", [...workflows, ...ev("vercel")]);
+  // CI is matched on a gap (deployed or buildable code with no workflow), not on having CI: a repository with CI needs nothing
+  if (!workflows.length && s.has("vercel")) app("build/ci-cd-vercel-github", "Deployed on Vercel without CI workflows", ev("vercel"));
   if (!workflows.length && (s.has("nextjs") || s.has("python"))) app("build/ci-cd-vercel-github", "No CI workflow found", ["no .github/workflows/*.yml"]);
   if (!tests.length && P.length > 5) app("build/test-strategy-tdd", "No tests found", ["no test files"]);
   if (s.has("langgraph")) app("ai-platform/langgraph-runner", "LangGraph agent: validate the graph", ev("langgraph"));
@@ -75,7 +80,7 @@ export function detect(paths: string[], manifests: { packageJson?: string | null
     app("ai-platform/llm-eval-harness", "Calls an LLM: golden set and regression gate", ev("llm"));
   }
   if (s.has("prd")) app("build/product-spec-prd", "Product docs to redline", ev("prd"));
-  if (P.length) app("build/security-review", "Every codebase: security review of changes", P.slice(0, 1));
+  if (P.length) app("build/security-review", "Every codebase: security review of changes", P.slice(0, 1));   // general: see GENERAL_SKILLS
   // one entry per skill (first reason wins)
   const seen = new Set<string>();
   const unique = applicable.filter((a) => (seen.has(a.skill) ? false : (seen.add(a.skill), true)));
