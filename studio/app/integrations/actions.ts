@@ -20,3 +20,17 @@ export async function syncIntegration(_: SyncState | null, fd: FormData): Promis
   revalidatePath("/integrations"); revalidatePath("/catalog"); revalidatePath("/insights");
   return { ok: r.ok, message: r.message, problems: r.problems.slice(0, 20) };
 }
+
+/** Push published skills to Port as "AI Skill" entities (admins). */
+export async function syncToPort(_: SyncState | null): Promise<SyncState> {
+  const ctx = await requireWorkspace();
+  if (ctx.role !== "admin") return { ok: false, message: "Administrators push skills to Port.", problems: [] };
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  const base = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
+  const { syncSkillsToPort } = await import("@/lib/integrations/port/sync");
+  const r = await syncSkillsToPort(ctx.supabase, ctx.workspace.id, base);
+  await ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: "integration.sync.port", p_entity_type: "integration", p_entity_id: "port", p_details: { ok: r.ok, pushed: r.pushed, blueprint: r.blueprint ?? null, problems: r.problems.length } });
+  revalidatePath("/integrations");
+  return { ok: r.ok, message: r.message, problems: r.problems.slice(0, 20) };
+}
