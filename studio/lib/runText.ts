@@ -11,3 +11,14 @@ export function failureText(rj: { steps: Step[]; checks: Check[] }): string {
   if (badC.length) parts.push(`${badC.length} output check(s) failed, e.g. ${badC[0].check ?? "?"} on ${(badC[0].path ?? "?").split("/").pop()}`);
   return parts.join("; ") || "the run did not complete";
 }
+
+/** Older runs stored a generic count ("1 step(s) not ok, 0 check(s) failed"); lists show it in plain words and without
+ *  the zero half that read like a contradiction. Specific messages pass through unchanged. Pure. */
+export function readableError(error: string | null | undefined): string {
+  if (!error) return "";
+  const m = /^(\d+) step\(s\) not ok, (\d+) check\(s\) failed$/.exec(error.trim());
+  if (!m) return error;
+  const [steps, checks] = [Number(m[1]), Number(m[2])];
+  const part = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many} failed`;
+  return [steps && part(steps, "step", "steps"), checks && part(checks, "output check", "output checks")].filter(Boolean).join(" and ") + " (open the run for which)";
+}

@@ -2,10 +2,11 @@
 /* "What do you need done?" — the library picks the skill for a plain-language task, says what you will get and who
  * owns that work, and links straight to running it (on its own example first, or on your files). */
 import Link from "next/link";
+import { humanName } from "@/lib/names";
 import { useState, useTransition } from "react";
 import { routeAnyTask, type AnyRouteHit } from "@/app/talentActions";
 
-const human = (name: string) => name.replace(/-/g, " ").replace(/\b(ai|llm|rls|rag|mcp|slm|sow|rfp|pii|dpia|slo|bom|eu|ab|raid|nextjs|tdd|ci|cd|gpu|coe|prd)\b/gi, (m) => m.toUpperCase()).replace(/^./, (c) => c.toUpperCase());
+const human = humanName;
 const tryHref = (id: string, task: string) => `/repo/${id}/test?example=1&task=${encodeURIComponent(task.slice(0, 300))}`;
 const ownHref = (id: string, task: string) => `/repo/${id}/test?task=${encodeURIComponent(task.slice(0, 300))}`;
 
@@ -31,9 +32,10 @@ export function TaskBox({ suggestions }: { suggestions: string[] }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) go(task); }}
         placeholder="e.g. Check the row-level security in my Supabase migration before I merge" />
       <div className="action-row" style={{ marginTop: 10 }}>
-        <button type="button" className="btn btn-primary" disabled={pending || task.trim().length < 8} onClick={() => go(task)} aria-busy={pending}>
+        <button type="button" className="btn btn-primary" disabled={pending || task.trim().length < 8} onClick={() => go(task)} aria-busy={pending} aria-describedby="fd-task-hint">
           {pending ? "Finding…" : "Find who does this"}
         </button>
+        {task.trim().length < 8 && !pending && <span id="fd-task-hint" className="caption">{task.trim() ? `Say a little more (${8 - task.trim().length} more character${8 - task.trim().length === 1 ? "" : "s"})` : "Describe the work above to search"} · </span>}
         <span className="caption">or try:</span>
         {suggestions.map((s) => (
           <button key={s} type="button" className="chip fd-suggest" onClick={() => { setTask(s); go(s); }}>{s}</button>
