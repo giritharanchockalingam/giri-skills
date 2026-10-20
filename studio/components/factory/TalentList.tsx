@@ -18,12 +18,14 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
   const base = kind === "role" ? "/roles" : "/pools";
   const templates = kind === "role" ? ROLE_TEMPLATES : POOL_TEMPLATES;
   const have = new Set(rows.map((r) => r.based_on).filter(Boolean));
+  const { data: held } = kind === "role" ? await ctx.supabase.from("sf_role_assignments").select("talent_id, user_id").eq("workspace_id", ctx.workspace.id) : { data: [] };
+  const holders = (id: string) => { const h = ((held ?? []) as { talent_id: string; user_id: string | null }[]).filter((a) => a.talent_id === id); const p = h.filter((a) => a.user_id).length; return { people: p, keys: h.length - p }; };
 
   return (
     <div className="stack">
       <div className="card">
         <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr>
-          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Members"}</th><th title={kind === "role" ? "AI development lifecycle stages this role\u2019s skills cover" : undefined}>{kind === "role" ? "Lifecycle stages covered" : "Playbooks"}</th><th>Version</th><th>Based on</th>
+          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Members"}</th><th title={kind === "role" ? "AI development lifecycle stages this role\u2019s skills cover" : undefined}>{kind === "role" ? "Lifecycle stages covered" : "Playbooks"}</th><th>Version</th>{kind === "role" && <th title="People and API keys this job role is assigned to (Administration › Who can run which skills)">Held by</th>}<th>Based on</th>
         </tr></thead><tbody>
           {rows.map((r) => {
             const v = versions.find((x) => x.talent_id === r.id);
@@ -39,11 +41,12 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
                   ? (stageNames.length ? <><span>{stageNames.join(", ")}</span><div className="caption">{stageNames.length} of the {STAGES.length} lifecycle stages</div></> : <span className="muted">—</span>)
                   : (spec?.playbooks ?? []).map(skillTitle).join(", ") || "—"}</td>
                 <td>{v ? <>v{v.version} <span className="caption">{v.status}</span></> : "—"}</td>
+                {kind === "role" && <td className="caption">{(() => { const h = holders(r.id); return h.people + h.keys ? `${h.people} ${h.people === 1 ? "person" : "people"}${h.keys ? `, ${h.keys} key${h.keys === 1 ? "" : "s"}` : ""}` : "nobody"; })()}</td>}
                 <td className="caption">{r.based_on ?? "blank"}</td>
               </tr>
             );
           })}
-          {rows.length === 0 && <tr><td colSpan={5} className="none">None yet. Start from a template below.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={kind === "role" ? 6 : 5} className="none">None yet. Start from a template below.</td></tr>}
         </tbody></table></div></div>
       </div>
 

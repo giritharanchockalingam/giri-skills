@@ -5,6 +5,8 @@ import { libraryRows, librarySummary, publishedByLibrarySkill } from "@/lib/libr
 import { requireWorkspace } from "@/lib/factory/db";
 import { loadPipeline } from "@/lib/db/skills";
 import { LibraryTable } from "@/components/LibraryTable";
+import { loadAccessData } from "@/lib/db/access";
+import { allowedKeysFor } from "@/lib/access";
 import { PageHead } from "@/components/PageHead";
 
 export const metadata = { title: "Library · Skills Factory" };
@@ -12,13 +14,17 @@ export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
   const ctx = await requireWorkspace();
-  const { versions } = await loadPipeline(ctx.supabase, ctx.workspace.id);
+  const [{ versions, skills: wsSkills }, access] = await Promise.all([loadPipeline(ctx.supabase, ctx.workspace.id), loadAccessData(ctx.supabase, ctx.workspace.id)]);
+  const restricted = access.enabled && ctx.role === "consumer";
+  const mine = restricted ? allowedKeysFor(ctx.user.id, access.roles, access.assignments) : null;
+  const slugOf = new Map(versions.filter((v) => v.source.kind === "repo" && v.source.repo_skill).map((v) => [v.source.repo_skill as string, wsSkills.find((w) => w.id === v.skill_id)?.slug ?? ""]));
   const published = publishedByLibrarySkill(versions);
   const rows = libraryRows(skills.map((s) => {
     const stage = Array.isArray(s.stage) ? s.stage[0] : s.stage;
     return {
       id: s.id, title: humanName(s.id.split("/")[1] ?? s.name), outcome: displayDescription((s as { card?: string }).card || whatYouGet(s.description)),
       stage: stageName(stage), domain: s.domain, verdict: scoreFor(s.id)?.verdict ?? null, published: published.get(s.id) ?? null,
+      ...(mine ? { mine: mine.has(s.id) || mine.has(slugOf.get(s.id) ?? "") } : {}),
     };
   }));
   const sum = librarySummary(rows);
@@ -29,7 +35,7 @@ export default async function LibraryPage() {
         eyebrow="Library"
         title={`${sum.total} skills,`}
         em={`${sum.approved} approved for use`}
-        lead={<>Approved skills passed their tests and were signed off in {ctx.workspace.name}: they run the tested version, here or from Claude, Cursor or any app. Every other skill can be tried on its own example. {sum.proven} of {sum.total} are proven by evaluation; the rest are being improved.</>}
+        lead={<>Approved skills passed their tests and were signed off in {ctx.workspace.name}: they run the tested version, here or from Claude, Cursor or any app. Every other skill can be tried on its own example.{restricted ? " Your job roles decide which approved skills you can run; ask for access from any other." : ""} {sum.proven} of {sum.total} are proven by evaluation; the rest are being improved.</>}
         note={<><Link href="/" className="link-flame">← Describe the work instead</Link> · <Link href="/connect" className="link-flame">Use from your tools →</Link></>}
       />
       <LibraryTable rows={rows} stages={stages} workspace={ctx.workspace.name} />

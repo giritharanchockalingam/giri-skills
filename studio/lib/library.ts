@@ -9,6 +9,8 @@ export interface LibraryInput {
   verdict: LibVerdict;
   /** Published version in this workspace (approved for use), else null. */
   published: number | null;
+  /** Only when job roles restrict the viewer: whether one of their roles covers this skill. */
+  mine?: boolean;
 }
 export interface LibraryRow extends LibraryInput { evidence: Evidence; evidenceLabel: string; evidenceNote: string }
 

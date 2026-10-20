@@ -40,3 +40,11 @@ test("holder field parsing", () => {
   assert.equal(parseHolder("admin:00000000-0000-0000-0000-000000000004"), null);
   assert.equal(parseHolder("user:'; drop"), null);
 });
+
+test("what a person may run, and which roles to ask for", async () => {
+  const { allowedKeysFor, rolesCovering } = await import("../lib/access.ts");
+  const other: JobRole = { id: "r2", slug: "sec", name: "Security", skills: ["ai-platform/red-team"], playbooks: [] };
+  const keys = allowedKeysFor("c1", [finance, other], [{ id: "a", talent_id: "r1", user_id: "c1", api_key_id: null }, { id: "b", talent_id: "r2", user_id: "c2", api_key_id: null }]);
+  assert.ok(keys.has("invoice-check") && !keys.has("ai-platform/red-team"));
+  assert.deepEqual(rolesCovering([finance, other], ["ai-platform/red-team", "red-team"]).map((r) => r.slug), ["sec"]);
+});

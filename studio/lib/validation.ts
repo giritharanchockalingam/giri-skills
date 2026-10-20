@@ -104,3 +104,5 @@ export const EntityIdArg = z.string().regex(/^[0-9a-f-]{36}$/);
 export const SetSkillsByRoleForm = z.object({ enabled: text(5) });
 export const AssignRoleForm = z.object({ holder: text(80), talent_id: id64 });
 export const UnassignRoleForm = z.object({ id: id64 });
+export const RequestAccessForm = z.object({ talent_id: id64, skill: text(200), note: text(1000) });
+export const DecideAccessForm = z.object({ id: id64, decision: text(10), note: text(1000) });

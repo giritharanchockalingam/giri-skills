@@ -89,3 +89,18 @@ test("helpers: schema, scope and rendering", () => {
   assert.equal(inScope([{ ...CATALOG[0], slug: "find_skill" }], { kind: "workspace", slug: null, title: "", skills: null }).length, 0);   // reserved names never shadowed
   assert.match(renderRun({ run_id: "x", status: "succeeded", outputs: [{ path: "a.md", content_text: "# A" }, { path: "b.json", content_text: "{}" }] }), /--- a\.md ---\n# A[\s\S]*Other outputs: b\.json/);
 });
+
+test("job roles: a skill the key may not run is not a tool, cannot be called, and find_skill says why", async () => {
+  const restricted = CATALOG.map((s) => (s.slug === "supabase-schema-rls" ? { ...s, allowed: false } : s));
+  const be = { ...backend(), catalog: async () => restricted };
+  const list = await handle(rpc("tools/list"), be) as { result: { tools: { name: string }[] } };
+  assert.ok(!list.result.tools.some((t) => t.name === "supabase-schema-rls"));
+  assert.ok(list.result.tools.some((t) => t.name === "effort-estimator"));
+  const call = await handle(rpc("tools/call", { name: "supabase-schema-rls", arguments: {} }), be) as { error: { code: number } };
+  assert.equal(call.error.code, RPC.INVALID_PARAMS);
+  const find = await handle(rpc("tools/call", { name: "find_skill", arguments: { task: "check row level security in my migrations" } }), be) as { result: { content: { text: string }[]; structuredContent: { hits: { skill: string; tool: string | null; access?: string }[] } } };
+  const hit = find.result.structuredContent.hits.find((h) => h.skill === "build/supabase-schema-rls")!;
+  assert.equal(hit.tool, null);
+  assert.equal(hit.access, "not_in_role");
+  assert.match(find.result.content[0].text, /not in this key's job roles/);
+});

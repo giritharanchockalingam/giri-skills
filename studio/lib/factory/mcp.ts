@@ -16,7 +16,7 @@ export const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
 export const SERVER_INFO = { name: "skills-factory", title: "Skills Factory", version: "1.0.0" };
 
 export interface CatalogInput { name: string; type: string; required: boolean; from?: string; default?: string | null; schema?: unknown }
-export interface CatalogSkill { slug: string; name: string; purpose?: string | null; version: number; repo_skill: string | null; inputs: CatalogInput[] }
+export interface CatalogSkill { slug: string; name: string; purpose?: string | null; version: number; repo_skill: string | null; inputs: CatalogInput[]; /** false when job roles restrict this key and none covers the skill */ allowed?: boolean }
 export interface LibraryInfo { id: string; card: string; stage: string | null; modes: Partial<Record<"new" | "existing", { bring: string }>> }
 
 export interface McpScope { kind: "workspace" | "role" | "team" | "stage"; slug: string | null; title: string; skills: Set<string> | null /* library ids; null = all */ }
@@ -69,7 +69,7 @@ export function inputSchema(inputs: CatalogInput[]): Json {
 
 /** The skills of the catalog that are in scope (scope.skills holds library ids; workspace skills map via repo_skill). */
 export function inScope(catalog: CatalogSkill[], scope: McpScope): CatalogSkill[] {
-  return catalog.filter((s) => TOOL_NAME.test(s.slug) && !RESERVED.has(s.slug) && (!scope.skills || (s.repo_skill !== null && scope.skills.has(s.repo_skill))));
+  return catalog.filter((s) => s.allowed !== false && TOOL_NAME.test(s.slug) && !RESERVED.has(s.slug) && (!scope.skills || (s.repo_skill !== null && scope.skills.has(s.repo_skill))));
 }
 
 function toolFor(s: CatalogSkill, lib: LibraryInfo | null): Json {
@@ -172,15 +172,17 @@ function toolError(body: Json) {
 async function findSkill(args: Json, be: McpBackend) {
   const task = typeof args.task === "string" ? args.task.trim() : "";
   if (task.length < 4) return { content: [{ type: "text", text: "Describe the task in a sentence." }], isError: true };
-  const here = new Map(inScope(await be.catalog(), be.scope).filter((s) => s.repo_skill).map((s) => [s.repo_skill as string, s.slug]));
+  const catalog = await be.catalog();
+  const here = new Map(inScope(catalog, be.scope).filter((s) => s.repo_skill).map((s) => [s.repo_skill as string, s.slug]));
+  const denied = new Set(catalog.filter((s) => s.allowed === false && s.repo_skill).map((s) => s.repo_skill as string));
   // only real matches: drop hits far weaker than the best one (BM25 always returns k results, relevant or not)
   const ranked = be.route(task, 5);
   const top = ranked[0]?.score ?? 0;
   const hits = ranked.filter((h, i) => i === 0 || h.score >= top * RELEVANCE_FLOOR).map((h) => {
     const lib = be.library(h.skill);
-    return { skill: h.skill, produces: lib?.card ?? "", stage: lib?.stage ?? null, tool: here.get(h.skill) ?? null,
+    return { skill: h.skill, produces: lib?.card ?? "", stage: lib?.stage ?? null, tool: here.get(h.skill) ?? null, ...(denied.has(h.skill) ? { access: "not_in_role" } : {}),
       starting_points: Object.fromEntries(Object.entries(lib?.modes ?? {}).map(([k, v]) => [k, v?.bring])) };
   });
-  const lines = hits.map((h, i) => `${i + 1}. ${h.skill} — ${h.produces}${h.tool ? ` → call tool "${h.tool}"` : " (not published on this server; ask a workspace admin to publish it)"}`);
+  const lines = hits.map((h, i) => `${i + 1}. ${h.skill} — ${h.produces}${h.tool ? ` → call tool "${h.tool}"` : "access" in h ? " (published, but not in this key's job roles; ask a workspace admin to assign one)" : " (not published on this server; ask a workspace admin to publish it)"}`);
   return { content: [{ type: "text", text: lines.length ? lines.join("\n") : "No skill matches; try different words." }], structuredContent: { hits } };
 }

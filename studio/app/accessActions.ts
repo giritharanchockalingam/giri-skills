@@ -6,7 +6,7 @@ import { requireWorkspace, type WsCtx } from "@/lib/factory/db";
 import { can, type Action } from "@/lib/factory/roles";
 import { parseHolder } from "@/lib/access";
 import type { ActionResult } from "@/app/actions";
-import { fromForm, SetSkillsByRoleForm, AssignRoleForm, UnassignRoleForm } from "@/lib/validation";
+import { fromForm, SetSkillsByRoleForm, AssignRoleForm, UnassignRoleForm, RequestAccessForm, DecideAccessForm } from "@/lib/validation";
 
 const ok = (message: string): ActionResult => ({ ok: true, message });
 const fail = (message: string): ActionResult => ({ ok: false, message });
@@ -61,5 +61,27 @@ export async function unassignRole(_: ActionResult | null, fd: FormData): Promis
     await audit(ctx, "access.unassign", "role_assignment", id, data[0]);
     revalidatePath("/admin");
     return ok("Job role removed.");
+  });
+}
+
+/** Any member asks for a published job role; the database refuses duplicates, unpublished roles and roles already held. */
+export async function requestAccess(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = RequestAccessForm.parse(fromForm(RequestAccessForm, fd));
+  return guarded("run.published", async (ctx) => {
+    const { data, error } = await ctx.supabase.rpc("sf_access_request", { p_workspace: ctx.workspace.id, p_talent: input.talent_id, p_skill: input.skill || null, p_note: input.note });
+    if (error) return fail(error.message);
+    revalidatePath("/inbox");
+    return ok(data?.existing ? "You already asked for this job role; an admin will decide." : "Request sent. An admin decides in the Inbox; you can follow it there.");
+  });
+}
+
+/** Any admin approves (assigns the job role) or declines; never their own request (enforced in the database). */
+export async function decideAccess(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
+  const input = DecideAccessForm.parse(fromForm(DecideAccessForm, fd));
+  return guarded("admin.members", async (ctx) => {
+    const { data, error } = await ctx.supabase.rpc("sf_access_decide", { p_id: input.id, p_approve: input.decision === "approve", p_note: input.note });
+    if (error) return fail(error.message);
+    revalidatePath("/inbox"); revalidatePath("/admin");
+    return ok(data === "approved" ? "Approved: the job role is assigned." : "Declined.");
   });
 }

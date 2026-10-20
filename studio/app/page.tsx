@@ -55,7 +55,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const [week, waiting] = await Promise.all([
     loadActivity(ctx.supabase, ctx.workspace.id, weekAgo).then(({ acts, baselines, scores }) => computeInsights(acts, baselines, scores, 7)),
-    inboxCount(ctx.supabase, ctx.workspace.id),
+    inboxCount(ctx.supabase, ctx.workspace.id, ctx.role === "admin"),
   ]);
   const [recentAgents, { versions }, funnel] = await Promise.all([listRecentAgents(ctx.supabase, ctx.workspace.id), loadPipeline(ctx.supabase, ctx.workspace.id),
     ctx.role === "consumer" ? Promise.resolve([]) : loadFunnel(ctx.supabase, ctx.workspace.id)]);
