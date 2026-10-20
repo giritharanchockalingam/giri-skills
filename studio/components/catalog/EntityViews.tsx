@@ -79,7 +79,7 @@ export function ComponentsTable({ rows, all, rels, type }: { rows: EntityRow[]; 
             <tr key={c.id}>
               <td><Link className="link" href={`/catalog/${c.id}`}><b>{c.title}</b></Link></td>
               <td><span className="pill pill-sm">{String(c.properties.type ?? "Other")}</span></td>
-              <td className="caption">{facts.length ? facts.map((f) => <div key={f.label}><span className="muted">{f.label}:</span> {f.value}</div>) : "—"}</td>
+              <td className="caption">{facts.length ? facts.map((f) => <div key={f.label}><span className="muted">{f.label}:</span> {/^\d{4}-\d{2}-\d{2}T/.test(f.value) ? <LocalTime iso={f.value} /> : f.value}</div>) : "—"}</td>
               <td className="caption">{related.length ? related.map((r) => <div key={r.id}><Link className="link" href={`/catalog/${r.id}`}>{r.title}</Link></div>) : "—"}</td>
               <td className="caption"><LocalTime iso={c.last_activity_at} /></td>
             </tr>);

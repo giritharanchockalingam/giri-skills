@@ -26,3 +26,8 @@ test("port catalog: native repos are aliased (no duplicate); PRs become componen
   assert.equal(repoKeyOf({ identifier: "x", properties: { url: "https://github.com/A/B.git" } }), "a/b");
   assert.equal(repoKeyOf({ identifier: "x", properties: { url: "https://github.com/a/b/pull/3" } }), null);
 });
+
+test("port catalog: multi-line text (file contents) is not a detail", () => {
+  const r = mapPortCatalog({ blueprints: [{ identifier: "service", title: "Service" }], entities: new Map([["service", [{ identifier: "s", properties: { gitignore: "a\nb", owner: "team-x" } }]]]), nativeRepoKeys: new Set(), fallbackUrl: "https://example.org" });
+  assert.deepEqual(r.components[0].properties.facts, [{ label: "owner", value: "team-x" }]);
+});
