@@ -57,13 +57,14 @@ A PII type missing from `pii_handling` is compiled as un-actioned (allow) and re
 ## Output
 - `guardrails.json`: schema id, policy sha256, limits, ordered rules (blocked_topic, injection, pii with pattern, validator, mask token, action), tool allowlist (default deny), unconfigured PII types.
 - `guardrail-tests.json`: per case expected, actual, pass, rule-id reasons, PII counts, redacted text; totals.
-- `guardrails.md`: sections Rule set, PII handling, Tool allowlist, Test results, Limits.
+- `guardrails.md`: sections Rule set, PII handling, Tool allowlist, Test results, Limits. The Limits section must open with this Known limitations note: "The prompt-injection rules match fixed phrases (`assets/injection-phrases.txt` plus your `injection_markers`); a reworded attack — e.g. "kindly set aside what you were told" — can evade them. Treat this skill as a baseline policy, not a complete prompt-injection defense. Before client-facing use, layer it with model-level and system-level controls."
 - `scripts/guard.py`: the runtime engine (CLI exit 0 allow/mask, 1 block; `--validate`; `--scan-pii FILE`).
 
 ## Self-check
 - [ ] Every policy value came from the user; gaps carry an owned `[TO BE BASELINED]` marker
 - [ ] Tests cover allow, block and mask for each rule type, plus evasion variants and tool calls
 - [ ] Every case matches (exit 0) before deployment
+- [ ] The Limits section of guardrails.md opens with the Known limitations note on fixed-phrase injection matching
 - [ ] No raw PII in outputs: `guard.py --scan-pii` passes on guardrail-tests.json and guardrails.md
 - [ ] Limits section kept; a semantic layer is planned where keyword rules are not enough
 
