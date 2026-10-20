@@ -28,7 +28,7 @@ export default async function AgentsPage() {
 
   return (
     <>
-      <PageHead eyebrow={`Playbooks · ${ctx.workspace.name}`} title="Playbooks, configured" em="not coded" after="."
+      <PageHead eyebrow={`Playbooks · ${ctx.workspace.name}`} title="Skills in sequence," em="with approvals" after="."
         lead="A playbook chains skills: pick them, they wire themselves, add approvals where a person decides. Change the configuration and you have a different playbook." />
       <div className="stack">
         <div className="card">
@@ -52,8 +52,8 @@ export default async function AgentsPage() {
         </div>
         {can(ctx.role, "agent.edit") && (
           <div className="card card-pad" style={{ maxWidth: 720 }}>
-            <div className="h3">New agent</div>
-            <ActionForm action={createAgent} submit="Create agent">
+            <div className="h3">New playbook</div>
+            <ActionForm action={createAgent} submit="Create playbook">
               <div className="ab-grid">
                 <div className="field"><label htmlFor="na-name">Name</label><input id="na-name" name="name" className="input" required maxLength={160} placeholder="e.g. Pursuit for Acme" /></div>
                 <div className="field"><label htmlFor="na-tpl">Start from</label>

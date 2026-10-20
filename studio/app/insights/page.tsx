@@ -6,6 +6,7 @@ import { computeInsights, CHANNEL_LABEL } from "@/lib/insights/compute";
 import { BaselineForm } from "@/components/insights/BaselineForm";
 import { removeBaseline } from "@/app/insightsActions";
 import { loadDelivery } from "@/lib/db/delivery";
+import { collapseNotes } from "@/lib/insights/notes";
 import { DeliveryTable } from "@/components/insights/DeliveryTable";
 import { RefreshDelivery } from "@/components/insights/RefreshDelivery";
 import { humanName } from "@/lib/names";
@@ -32,7 +33,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
   const estimated = baselines.filter((b) => /estimat/i.test(`${b.owner} ${b.source}`)).length;
   const delivery = await loadDelivery(ctx.supabase, ctx.workspace.id);
   const dWin: 30 | 90 = days === 90 ? 90 : 30;
-  const notes = [...new Set(delivery.flatMap((r) => r.notes))];
+  const notes = collapseNotes(delivery.flatMap((r) => r.notes));
   const admin = ctx.role === "admin";
   const maxWeek = Math.max(1, ...ins.weeks.map((w) => w.runs));
   const maxChan = Math.max(1, ...ins.channels.map((c) => c.runs));
@@ -40,8 +41,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHead eyebrow="Insights" title="What the factory" em="delivered" after="."
-        lead="Adoption, quality, spend and ROI from what this workspace actually ran. Hours saved use your own baselines — no baseline, no number." />
+      <PageHead eyebrow="Govern · Insights" title="What skills" em="delivered" after="."
+        lead="Who used skills, how often they succeeded, what they cost and the time they saved, from what this workspace actually ran. Hours saved use your own baselines: no baseline, no number." />
       <nav className="flex flex-wrap gap-2 mb-4" aria-label="Period">
         {PERIODS.map((d) => <Link key={d} href={`/insights?days=${d}`} className={`chip${d === days ? " chip-on" : ""}`} aria-current={d === days ? "page" : undefined}>Last {d} days</Link>)}
       </nav>
@@ -51,9 +52,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
         <div className="cat-tile"><b>{pct(ins.successRate)}</b><span>succeeded ({ins.ok} of {ins.total} runs, server + browser)</span></div>
         <div className="cat-tile"><b>{ins.people}</b><span>people and keys</span></div>
         <div className={`cat-tile${estimated ? " cat-tile-est" : ""}`}><b>{ins.roi.skillsWithBaseline ? ins.roi.hours : "—"}</b><span>{ins.roi.skillsWithBaseline ? <>hours saved{estimated ? <> — <b>estimated</b>: {estimated} of {ins.roi.skillsWithBaseline} baselines are estimates, not timed</> : ` (${ins.roi.skillsWithBaseline} measured baseline${ins.roi.skillsWithBaseline === 1 ? "" : "s"})`}</> : "hours saved: set a baseline below"}</span></div>
-        <div className="cat-tile"><b>{ins.roi.value != null ? usd(ins.roi.value) : "—"}</b><span>{ins.roi.value != null ? "value at your rates" : "value: no rate set"}</span></div>
+        {ins.roi.value != null && <div className="cat-tile"><b>{usd(ins.roi.value)}</b><span>value at your rates</span></div>}
         <div className="cat-tile"><b>{usd(ins.spend.usd)}</b><span>LLM spend ({ins.spend.runsWithCost} costed run{ins.spend.runsWithCost === 1 ? "" : "s"})</span></div>
-        <div className="cat-tile"><b>{ins.scorecards.repos ? `${ins.scorecards.passingAll}/${ins.scorecards.repos}` : "—"}</b><span>repositories passing every check</span></div>
       </div>
 
       <section className="card mb-6" id="delivery">

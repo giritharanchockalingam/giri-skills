@@ -1,5 +1,7 @@
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
+import { readableError } from "@/lib/runText";
+import { humanName } from "@/lib/names";
 import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { loadInbox, listActions } from "@/lib/db/actions";
@@ -62,10 +64,10 @@ export default async function InboxPage() {
         <section className="section">
           <div className="h3">Recent actions</div>
           <div className="card"><div className="tablewrap"><table className="mini cat-table"><thead><tr><th>When</th><th>Skill</th><th>Repository</th><th>Status</th><th>People</th><th>Result</th></tr></thead>
-            <tbody>{decided.map((a) => <tr key={a.id}><td className="caption"><LocalTime iso={a.created_at} /></td><td>{a.skill}</td><td>{a.entity_id ? <Link className="link" href={`/catalog/${a.entity_id}`}>{a.repo}</Link> : a.repo}</td>
+            <tbody>{decided.map((a) => <tr key={a.id}><td className="caption"><LocalTime iso={a.created_at} /></td><td>{humanName(a.skill)}</td><td>{a.entity_id ? <Link className="link" href={`/catalog/${a.entity_id}`}>{a.repo}</Link> : a.repo}</td>
               <td><span className={`pill pill-sm ${CLS[a.status] ?? ""}`}>{a.status.replace("_", " ")}</span></td>
               <td className="caption">{a.requested_by_email ?? "—"}{a.decided_by_email ? ` → ${a.decided_by_email}` : ""}{a.decision_note ? ` (“${a.decision_note}”)` : ""}</td>
-              <td>{a.run_id ? <><Link className="link" href={`/runs/${a.run_id}`}>run</Link>{a.error && <div className={`caption${a.status === "failed" ? " ink-rust" : ""}`}>{a.error}</div>}</> : a.error ? <span className="caption ink-rust">{a.error}</span> : "—"}</td></tr>)}</tbody></table></div></div>
+              <td>{a.run_id ? <><Link className="link" href={`/runs/${a.run_id}`}>run</Link>{a.error && <div className={`caption${a.status === "failed" ? " ink-rust" : ""}`}>{readableError(a.error)}</div>}</> : a.error ? <span className="caption ink-rust">{readableError(a.error)}</span> : "—"}</td></tr>)}</tbody></table></div></div>
         </section>)}
     </>
   );
