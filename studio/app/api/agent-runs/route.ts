@@ -19,6 +19,12 @@ export async function POST(req: Request) {
   const version = v as (AgentVersionRow & { sf_agents: { id: string; workspace_id: string; slug: string } }) | null;
   if (!version || version.sf_agents.workspace_id !== ctx.workspace.id) return apiError(404, "not_found", "Agent version not found in this workspace.");
   if (!can(ctx.role, version.status === "published" ? "run.published" : "run.any_version")) return apiError(403, "forbidden", `Your role (${ctx.role}) can only run published agents.`);
+  const { data: access, error: ae } = await ctx.supabase.rpc("sf_playbook_access", { p_ws: ctx.workspace.id, p_agent_slug: version.sf_agents.slug });
+  if (ae) return apiError(500, "access_check_failed", ae.message);
+  if (!access?.allowed) {
+    await ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: "run.denied", p_entity_type: "agent", p_entity_id: version.sf_agents.slug, p_details: { reason: access?.reason ?? "not_in_role" } });
+    return apiError(403, "not_in_role", "This playbook is not in any role assigned to you. Ask an administrator for access.");
+  }
 
   const raw = (body.inputs ?? {}) as Record<string, unknown>;
   const inputs: Record<string, StoredInput> = {};

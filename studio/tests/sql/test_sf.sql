@@ -219,6 +219,62 @@ select test_assert((sf_record_run(repeat('1', 64), 'invoice-check', '[]'::jsonb,
 select sf_api_run_update(repeat('1', 64), :'apirun', '{"status":"succeeded","provider":"none","duration_ms":12}');
 select test_assert((sf_api_run_get(repeat('1', 64), :'apirun')->>'status') = 'succeeded', 'api run readback');
 select test_expect_error($$select count(*) from sf_skills$$, 'permission denied');  -- anon has no table grants at all
+
+-- ───────── 8b. roles decide who can run which skill (0019) ─────────
+-- policy off (default): consumer and key run as before (proved by sections 7 and 8); now turn it on
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_api_keys (workspace_id, name, key_hash, prefix, created_by) values (:'ws', 'finance-app', repeat('3', 64), 'sf_live_fin0', auth.uid()) returning id as key3 \gset
+update sf_policies set skills_by_role = true, max_concurrency = 50 where workspace_id = :'ws';
+-- consumer with no role: refused, answered (not raised) and audited
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'error') = 'not_in_role', 'consumer without a role is refused');
+select test_assert((select count(*) from sf_audit_events where action = 'run.denied' and actor_id = '00000000-0000-0000-0000-000000000004') = 1, 'refusal audited');
+-- the direct insert path is refused by the backstop
+select test_expect_error($$insert into sf_runs (workspace_id, version_id, invoked_by, source) values ('$$ || :'ws' || $$', '$$ || :'v3' || $$', auth.uid(), 'ui')$$, 'not_in_role');
+select test_expect_error($$insert into sf_runs (workspace_id, version_id, invoked_by, source) values ('$$ || :'ws' || $$', '$$ || :'v3' || $$', auth.uid(), 'eval')$$, 'not_in_role');
+-- key with no role: refused and audited
+select test_as_anon();
+select test_assert((sf_record_run(repeat('3', 64), 'invoice-check', '[]'::jsonb)->>'error') = 'not_in_role', 'key without a role is refused');
+-- authors are not restricted (they test before release)
+select test_as('00000000-0000-0000-0000-000000000002');
+select test_assert((sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'run_id') is not null, 'author unrestricted');
+-- a published role listing the skill (by workspace slug), assigned to the consumer and the key
+insert into sf_talent (workspace_id, kind, slug, name, owner_id) values (:'ws', 'role', 'finance-analyst', 'Finance analyst', auth.uid()) returning id as role1 \gset
+insert into sf_talent_versions (talent_id, version, status, spec, spec_hash, created_by)
+  values (:'role1', 1, 'draft', '{"name":"finance-analyst","title":"Finance analyst","description":"","skills":["invoice-check"],"playbooks":["month-end"]}', repeat('c', 64), auth.uid())
+  returning id as role1v \gset
+-- a draft role grants nothing
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_role_assignments (workspace_id, talent_id, user_id, granted_by) values (:'ws', :'role1', '00000000-0000-0000-0000-000000000004', auth.uid());
+insert into sf_role_assignments (workspace_id, talent_id, api_key_id, granted_by) values (:'ws', :'role1', :'key3', auth.uid());
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'error') = 'not_in_role', 'a draft role grants nothing');
+select test_assert((sf_playbook_access(:'ws', 'month-end')->>'allowed')::boolean = false, 'draft role: no playbook either');
+select test_as('00000000-0000-0000-0000-000000000003');
+select sf_publish_talent_version(:'role1v');
+select test_as('00000000-0000-0000-0000-000000000004');
+select (sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'run_id') as rolerun \gset
+select test_assert((select granted_by_role from sf_runs where id = :'rolerun') = :'role1', 'run records the role that allowed it');
+select test_assert((sf_playbook_access(:'ws', 'month-end')->>'allowed')::boolean, 'role lists the playbook');
+select test_assert((sf_playbook_access(:'ws', 'other-playbook')->>'allowed')::boolean = false, 'playbook not in the role');
+select test_as_anon();
+select (sf_record_run(repeat('3', 64), 'invoice-check', '[]'::jsonb)->>'run_id') as keyrun \gset
+select test_as('00000000-0000-0000-0000-000000000001');
+select test_assert((select count(*) from sf_runs where id = :'keyrun' and granted_by_role = :'role1') = 1, 'key runs through its role');
+-- only admins assign; assignments stay in the workspace; the rule function is not callable
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_expect_error($$insert into sf_role_assignments (workspace_id, talent_id, user_id, granted_by) values ('$$ || :'ws' || $$', '$$ || :'role1' || $$', '00000000-0000-0000-0000-000000000003', auth.uid())$$, 'row-level security');
+select test_expect_error($$select sf_run_access('$$ || :'ws' || $$', '$$ || :'v3' || $$', '00000000-0000-0000-0000-000000000004', null)$$, 'permission denied');
+select test_as('00000000-0000-0000-0000-000000000001');
+select test_expect_error($$insert into sf_role_assignments (workspace_id, talent_id, user_id, granted_by) values ('$$ || :'ws' || $$', '$$ || :'role1' || $$', '00000000-0000-0000-0000-000000000005', auth.uid())$$, 'member of this workspace');
+-- policy off again: everything as before
+update sf_policies set skills_by_role = false where workspace_id = :'ws';
+delete from sf_role_assignments where workspace_id = :'ws';
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'run_id') is not null, 'policy off: consumer runs without a role');
+select test_as('00000000-0000-0000-0000-000000000001');
+delete from sf_talent where id = :'role1';
+select test_assert((select granted_by_role from sf_runs where id = :'rolerun') is null, 'deleting a role keeps the run, clears the link');
 -- revoked key
 select test_as('00000000-0000-0000-0000-000000000001');
 update sf_api_keys set revoked_at = now() where id = :'key1';

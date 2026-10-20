@@ -31,6 +31,7 @@ export async function runPublishedSkill(caller: ApiCaller, slug: string, body: R
 
   const { data: created, error } = await caller.supabase.rpc("sf_record_run", { p_key_hash: caller.keyHash, p_slug: slug, p_inputs_ref: describeInputs(validated.inputs, sha256), p_idempotency_key: idem });
   if (error) return err(error.message.includes("limit") || error.message.includes("budget") ? 429 : 409, "rejected", error.message);
+  if (created?.error === "not_in_role") return err(403, "not_in_role", String(created.message));
   const runId = String(created.run_id);
   const statusUrl = new URL(`/api/v1/runs/${runId}`, statusBase).toString();
   if (created.existing) {
