@@ -1,6 +1,7 @@
 "use server";
 /* Server actions for the factory UI. Every action re-checks the caller's role (the database enforces it again via
  * RLS and SECURITY DEFINER RPCs); the UI only decides what to show. Each returns {ok, message} for inline feedback. */
+import { skillTitle } from "@/lib/names";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { adminConfigured, createAdminSupabase } from "@/lib/supabase/server-admin";
@@ -312,7 +313,7 @@ export async function importFromRepo(_: ActionResult | null, fd: FormData): Prom
       const slug = repoSlug(s, taken);
       if (taken.has(slug)) { problems.push(`${id}: already imported as “${slug}”`); continue; }
       const { data: skill, error } = await ctx.supabase.from("sf_skills").insert({
-        workspace_id: ctx.workspace.id, slug, name: s.name, owner_id: ctx.user.id, purpose: m.manifest.purpose, intended_users: m.manifest.intended_users, usage_guidance: m.manifest.usage_guidance,
+        workspace_id: ctx.workspace.id, slug, name: skillTitle(s.name), owner_id: ctx.user.id, purpose: m.manifest.purpose, intended_users: m.manifest.intended_users, usage_guidance: m.manifest.usage_guidance,
       }).select("*").single();
       if (error) { problems.push(`${id}: ${error.message}`); continue; }
       const { data: v, error: ve } = await ctx.supabase.from("sf_skill_versions").insert({

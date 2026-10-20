@@ -1,6 +1,7 @@
 "use client";
 /* Self-service action on one repository: pick a skill, fill its form (folders come from the repository itself), run.
  * Under workspace policy the request may wait for a reviewer's approval; the result links to the run. */
+import { skillTitle } from "@/lib/names";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { ActionField } from "@/lib/actions/plan";
@@ -60,7 +61,7 @@ export function ActionPanel({ entityId, repo, approvalRule }: { entityId: string
     <form onSubmit={run} className="auto-form action-form">
       <div className="field"><label htmlFor="act-skill">Skill</label>
         <select id="act-skill" className="select" value={slug} onChange={(e) => setSlug(e.target.value)}>
-          {data.skills.map((s) => <option key={s.slug} value={s.slug}>{s.name}{s.repo_skill && data.applicable.includes(s.repo_skill) ? " — applies to this repository" : ""}{s.uses_model ? " · uses a model" : ""}</option>)}
+          {data.skills.map((s) => <option key={s.slug} value={s.slug}>{skillTitle(s.name)}{s.repo_skill && data.applicable.includes(s.repo_skill) ? " — applies to this repository" : ""}{s.uses_model ? " · uses a model" : ""}</option>)}
         </select></div>
       {skill?.fields.map((f) => (
         <div className="field" key={f.name}>

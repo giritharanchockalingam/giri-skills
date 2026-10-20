@@ -25,7 +25,7 @@ export default async function RepoSkillLayout({ children, params }: { children: 
     <>
       <DetailHead
         crumbs={<><Link href="/repo/" className="link">Library</Link> <span aria-hidden="true">›</span> {d.domain}</>}
-        title={skill.name.replace(/-/g, " ")}
+        title={humanName(skill.name)}
         pills={<><VerdictBadge v={sc?.verdict} small /><AgentBadge v={sc?.agentVerdict} small /></>}
         description={displayDescription(skill.description)}
         meta={<>{skill.name}{skill.metadata.version && <> · v{skill.metadata.version}</>}{skill.metadata.author && <> · {skill.metadata.author}</>}{skill.license && <> · {skill.license}</>} · <span title={verdictInfo(sc?.verdict).explanation}>{verdictInfo(sc?.verdict).label}</span></>}

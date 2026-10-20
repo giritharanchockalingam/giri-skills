@@ -1,8 +1,9 @@
+import { skillTitle } from "@/lib/names";
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
 import { skillCounts, countsSentence } from "@/lib/counts";
-import { FunnelStrip } from "@/components/factory/Funnel";
-import { GATE_ORDER, GATE_LABEL, GATE_HELP, type Gate } from "@/lib/factory/funnel";
+import { FunnelStrip, ClosestList } from "@/components/factory/Funnel";
+import { GATE_ORDER, GATE_LABEL, GATE_HELP, closestToPublish, type Gate } from "@/lib/factory/funnel";
 import { requireWorkspace } from "@/lib/factory/db";
 import { loadPipeline } from "@/lib/db/skills";
 import { can } from "@/lib/factory/roles";
@@ -29,15 +30,17 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
     const published = vs.find((v) => v.status === "published") ?? null;
     const st = working ? stateById.get(working.id) ?? null : published ? stateById.get(published.id) ?? null : null;
     return {
-      id: s.id, slug: s.slug, name: s.name, purpose: s.purpose, status: s.status, updated_at: s.updated_at,
+      id: s.id, slug: s.slug, name: skillTitle(s.name), purpose: s.purpose, status: s.status, updated_at: s.updated_at,
       source: (vs[0]?.source.kind ?? "authored") as "repo" | "authored",
       publishedVersion: published?.version ?? null, workingVersion: working?.version ?? null, workingStatus: (working?.status ?? null) as CatalogItem["workingStatus"],
       evalPassRate: st?.latest_eval_pass_rate == null ? null : Number(st.latest_eval_pass_rate), evalCurrent: st?.eval_current ?? null, cases: st?.eval_case_count ?? 0,
       approval: st?.approval_valid ? "valid" : st?.approval_stale ? "stale" : "none",
       stage: vs[0]?.source.kind === "repo" ? stageOfRepoSkill(vs[0].source.repo_skill) : null,
       gate: gateBySlug.get(s.slug),
+      minPassRate: st?.min_eval_pass_rate == null ? null : Number(st.min_eval_pass_rate),
     };
   });
+  const closest = closestToPublish(items.map((i) => ({ slug: i.slug, name: i.name, gate: i.gate, passRate: i.evalPassRate, minPassRate: i.minPassRate ?? null, cases: i.cases, version: i.workingVersion })));
   const imported = new Set(versions.filter((v) => v.source.kind === "repo").map((v) => v.source.repo_skill));
   const importable = repoSkills.filter((s) => s.agent).map((s) => ({ id: s.id, name: s.name, domain: s.domain, description: s.description, imported: imported.has(s.id) }));
 
@@ -56,6 +59,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
         ) : <span className="caption">Your role ({ctx.role}) can run published skills. Authors create and import skills.</span>}
       </div>
       <FunnelStrip items={funnel} active={gate} />
+      {!gate && <ClosestList rows={closest} />}
       {gate && <p className="caption mb-4">Showing <b>{GATE_LABEL[gate]}</b>: {GATE_HELP[gate]} <Link className="link" href="/pipeline">Show all</Link></p>}
       <SkillsCatalog items={inGate ? items.filter((i) => inGate.has(i.slug)) : items} canCreate={can(ctx.role, "skill.create")} initialStage={sp.stage ?? "all"}
         stageOpts={[...STAGES.map((x) => ({ key: x.id, label: `${x.n} ${x.name}` })), ...SHELVES.map((x) => ({ key: x.id, label: x.name })), { key: "unassigned", label: "Unassigned" }]} />

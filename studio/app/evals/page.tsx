@@ -20,7 +20,7 @@ export default function EvalsPage() {
   );
 
   const cards: { value: number; label: React.ReactNode; filter: VerdictFilter; href: string }[] = [
-    { value: s.total, label: "skills evaluated", filter: "all", href: "#scorecard?verdict=all" },
+    { value: s.healthy + s.needsWork, label: <>evaluated, of <span className="tone">{s.total} skills</span>{s.total > s.healthy + s.needsWork ? ` (${s.total - s.healthy - s.needsWork} not yet)` : ""}</>, filter: "all", href: "#scorecard?verdict=all" },
     { value: s.healthy, label: <><span className="tone">healthy</span> — no action needed</>, filter: "OK", href: "#scorecard?verdict=OK" },
     { value: s.needsDesc, label: <>need a <span className="tone">better description</span></>, filter: "needs-desc", href: "#scorecard?verdict=needs-desc" },
     { value: s.needsBody, label: <>need <span className="tone">stronger instructions</span></>, filter: "needs-body", href: "#scorecard?verdict=needs-body" },
@@ -51,14 +51,14 @@ export default function EvalsPage() {
         <div className="card card-pad">
           <div className="vbar" role="img" aria-label={VERDICTS_FOR_LEGEND.map((v) => `${verdictInfo(v).label} ${s.counts[v]}`).join(", ")}>
             {VERDICTS_FOR_LEGEND.map((v) => s.counts[v] > 0 && (
-              <span key={v} className={`vbar-${v}`} style={{ width: `${(s.counts[v] / s.total) * 100}%` }} title={`${verdictInfo(v).label}: ${s.counts[v]}`} />
+              <span key={v} className={`vbar-${v}`} style={{ width: `${(s.counts[v] / Math.max(1, s.healthy + s.needsWork)) * 100}%` }} title={`${verdictInfo(v).label}: ${s.counts[v]}`} />
             ))}
           </div>
           <div className="vlegend">
             {VERDICTS_FOR_LEGEND.map((v) => (
               <div key={v} className="vlegend-item" title={`${v} — ${verdictInfo(v).explanation}`}>
                 <span className={`vswatch swatch-${v}`} aria-hidden="true" />
-                <span>{verdictInfo(v).label} <b>{s.counts[v]}</b> <span className="muted">· {Math.round((s.counts[v] / s.total) * 100)}%</span></span>
+                <span>{verdictInfo(v).label} <b>{s.counts[v]}</b> <span className="muted">· {Math.round((s.counts[v] / Math.max(1, s.healthy + s.needsWork)) * 100)}% of evaluated</span></span>
               </div>
             ))}
           </div>

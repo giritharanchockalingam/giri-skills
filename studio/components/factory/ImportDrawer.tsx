@@ -1,4 +1,5 @@
 "use client";
+import { skillTitle } from "@/lib/names";
 import { useMemo, useState } from "react";
 import { Drawer } from "@/components/Drawer";
 import { ActionForm } from "./ActionForm";
@@ -30,7 +31,7 @@ export function ImportDrawer({ importable, initialOpen = false }: { importable: 
               <label key={s.id} className="list-row" style={{ cursor: s.imported ? "default" : "pointer" }}>
                 <span className="flex items-start gap-3 min-w-0">
                   <input type="checkbox" name="repo_skill" value={s.id} disabled={s.imported} checked={sel.has(s.id)} onChange={() => toggle(s.id)} style={{ width: 18, height: 18, marginTop: 3, accentColor: "var(--flame)" }} />
-                  <span className="min-w-0"><span className="name">{s.name}</span> <span className="caption">{s.domain}{s.imported ? " · already imported" : ""}</span>
+                  <span className="min-w-0"><span className="name">{skillTitle(s.name)}</span> <span className="caption">{s.domain}{s.imported ? " · already imported" : ""}</span>
                     <div className="caption" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{s.description}</div></span>
                 </span>
               </label>

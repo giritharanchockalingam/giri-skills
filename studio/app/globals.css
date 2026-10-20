@@ -965,3 +965,6 @@ a.cat-tile:hover { border-color: var(--ink-3); }
 .legend-dl dt { font-weight: 600; }
 .legend-dl dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
 @media (max-width: 480px) { .legend-dl { grid-template-columns: 1fr; } .legend-dl dd { margin-bottom: 6px; } }
+.closest { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.closest li { overflow-wrap: anywhere; }
+.tbb { display: inline-block; padding: 0 6px; border-radius: 4px; border: 1px dashed var(--hold, #b7791f); color: var(--ink-2); font-size: 0.85em; white-space: nowrap; }

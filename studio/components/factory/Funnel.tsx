@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { GATE_LABEL, GATE_HELP, GATE_ORDER, type Gate } from "@/lib/factory/funnel";
+import { GATE_LABEL, GATE_HELP, GATE_ORDER, type Gate, type ClosestRow } from "@/lib/factory/funnel";
+import { GatePill } from "./Pills";
 
 const CLS: Record<Gate, string> = { ready: "pill-sage", needs_approval: "pill-hold", below_bar: "pill-rust", needs_eval: "pill-hold", draft: "", published: "pill-ink" };
 
@@ -29,6 +30,19 @@ export function ReadyQueue({ items }: { items: { slug: string; name: string; gat
       <p className="caption">Published skills become tools on your MCP server and API. These have passed their evaluation gate.</p>
       <ul className="ini-repos">{[...ready, ...approve].slice(0, 6).map((i) => (
         <li key={i.slug}><Link className="link" href={`/skills/${i.slug}/release`}>{i.name}{i.version ? ` v${i.version}` : ""}</Link> <span className="caption">— {i.gate === "ready" ? "publish" : "approve, then publish"}</span></li>))}</ul>
+    </section>
+  );
+}
+
+/** The skills nearest release, each with the one thing it is missing and a link to where that happens. */
+export function ClosestList({ rows }: { rows: ClosestRow[] }) {
+  if (!rows.length) return null;
+  return (
+    <section className="card card-pad mb-6">
+      <div className="h3" style={{ marginTop: 0 }}>Closest to publishable</div>
+      <p className="caption">Ranked by what stands between each skill and release: stage first, then the smallest gap to the required pass rate.</p>
+      <ol className="closest">{rows.map((r) => (
+        <li key={r.slug}><Link className="link" href={`/skills/${r.slug}/${r.tab}`}>{r.name}{r.version ? ` v${r.version}` : ""}</Link> <GatePill gate={r.gate} small /> <span className="caption">needs {r.missing}</span></li>))}</ol>
     </section>
   );
 }

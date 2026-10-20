@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import { requireWorkspace } from "@/lib/factory/db";
 import { listWorkspaceRuns } from "@/lib/db/runs";
 import { PageHead } from "@/components/PageHead";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function ActivityPage() {
   const ctx = await requireWorkspace();
   const rows = await listWorkspaceRuns(ctx.supabase, ctx.workspace.id);
-  const items: RunListItem[] = rows.map((r) => ({ ...r, skill: r.sf_skill_versions.sf_skills.name, slug: r.sf_skill_versions.sf_skills.slug, version: r.sf_skill_versions.version }));
+  const items: RunListItem[] = rows.map((r) => ({ ...r, skill: skillTitle(r.sf_skill_versions.sf_skills.name), slug: r.sf_skill_versions.sf_skills.slug, version: r.sf_skill_versions.version }));
   const failed = items.filter((r) => r.status === "failed" || r.status === "timeout").length;
   return (
     <>
