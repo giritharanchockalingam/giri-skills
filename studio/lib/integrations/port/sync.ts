@@ -7,6 +7,7 @@ import { skillDrift, contractKey } from "@/lib/factory/drift";
 import { currentPin } from "@/lib/factory/pins";
 import { libraryContract } from "@/lib/factory/libraryContract";
 import { stageOfRepoSkill } from "@/lib/data";
+import { skillTitle } from "@/lib/names";
 import type { Manifest } from "@/lib/factory/manifest";
 import type { VersionSource } from "@/lib/factory/db";
 
@@ -32,7 +33,7 @@ export async function syncSkillsToPort(sb: SupabaseClient, workspaceId: string, 
     const st = stateOf.get(live.id);
     const repo = live.source.kind === "repo" ? live.source.repo_skill : undefined;
     rows.push({
-      slug: s.slug, name: s.name, purpose: s.purpose ?? "", version: live.version, published_at: live.published_at, manifest_hash: live.manifest_hash,
+      slug: s.slug, name: skillTitle(s.name), purpose: s.purpose ?? "", version: live.version, published_at: live.published_at, manifest_hash: live.manifest_hash,
       inputs: live.manifest.inputs.map((i) => ({ name: i.name, required: i.required })), usesModel: live.manifest.model_config.provider !== "none",
       evalPassRate: st?.latest_eval_pass_rate == null ? null : Number(st.latest_eval_pass_rate), evalCases: st?.eval_case_count ?? 0, approved: !!st?.approval_valid,
       drift: skillDrift(vs.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(repo)),
