@@ -1,11 +1,10 @@
 import { skillTitle } from "@/lib/names";
 import Link from "next/link";
-import { loadFunnel } from "@/lib/db/skills";
+import { loadFunnel, loadPipeline } from "@/lib/db/skills";
+import { publishedByLibrarySkill } from "@/lib/library";
 import { loadActivity } from "@/lib/insights/load";
 import { computeInsights } from "@/lib/insights/compute";
 import { inboxCount } from "@/lib/db/actions";
-import { skillCounts } from "@/lib/counts";
-import { SkillCountsLine } from "@/components/SkillCountsLine";
 import { ReadyQueue } from "@/components/factory/Funnel";
 import { getContext, type WsCtx } from "@/lib/factory/db";
 import { listRecentAgents } from "@/lib/db/agents";
@@ -17,7 +16,6 @@ import { lifecycle, stageSkills, roleOptions, modeHref, PHASES } from "@/lib/fro
 import { LifecycleFilters } from "@/components/factory/LifecycleFilters";
 import { ROLE_TEMPLATES } from "@/lib/factory/talentData";
 import { Suspense } from "react";
-import { skills as repoSkills } from "@/lib/data";
 
 export const metadata = { title: "Home · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -59,15 +57,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
     loadActivity(ctx.supabase, ctx.workspace.id, weekAgo).then(({ acts, baselines, scores }) => computeInsights(acts, baselines, scores, 7)),
     inboxCount(ctx.supabase, ctx.workspace.id),
   ]);
-  const [recentAgents, counts, funnel] = await Promise.all([listRecentAgents(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id),
+  const [recentAgents, { versions }, funnel] = await Promise.all([listRecentAgents(ctx.supabase, ctx.workspace.id), loadPipeline(ctx.supabase, ctx.workspace.id),
     ctx.role === "consumer" ? Promise.resolve([]) : loadFunnel(ctx.supabase, ctx.workspace.id)]);
   const suggestions = ["Check the RLS policies in my Supabase migration", "Is our AI chatbot high-risk under the EU AI Act?", "Estimate effort and price for this work breakdown"];
-  const runnable = repoSkills.filter((s) => (s as unknown as { agent?: unknown }).agent).length;
+  const published = publishedByLibrarySkill(versions);
 
   return (
     <>
       <PageHead eyebrow={`Skills Factory · ${ctx.workspace.name}`} title="What do you need" em="done" after="?"
-        lead="Describe it, or pick a stage of the AI lifecycle below."
+        lead="Describe the work and get a tested skill for it, or browse by stage of the AI lifecycle below."
         caption={ctx.memberships.length > 1 ? (
           <form action={selectWorkspace} className="flex flex-wrap items-center gap-2">
             <span>Workspace</span>
@@ -77,16 +75,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             <button type="submit" className="btn btn-secondary btn-sm">Switch</button>
           </form>) : undefined} />
 
-      <div className="cat-tiles home-stats mb-6" aria-label="This week">
-        <Link href="/insights?days=7" className="cat-tile"><b>{week.total}</b><span>runs this week (server + browser)</span></Link>
-        <Link href="/insights?days=7" className="cat-tile"><b>{week.total && week.successRate != null ? `${Math.round(week.successRate * 100)}%` : "—"}</b><span>{week.total ? `succeeded (${week.ok} of ${week.total})` : "succeeded: no runs yet"}</span></Link>
-        <Link href="/connect" className="cat-tile"><b>{counts.published}</b><span>published skill{counts.published === 1 ? "" : "s"} live as MCP/API tools</span></Link>
-        <Link href="/pipeline?gate=ready" className="cat-tile"><b>{funnel.filter((f) => f.gate === "ready").length}</b><span>ready to publish</span></Link>
-        <Link href="/inbox" className={`cat-tile${waiting ? " cat-tile-est" : ""}`}><b>{waiting}</b><span>waiting on a person (Inbox)</span></Link>
-      </div>
       <TaskBox suggestions={suggestions} />
-      <ReadyQueue items={funnel} />
-      <SkillCountsLine c={counts} />
+      <p className="caption home-proof">
+        <Link href="/repo/" className="link"><b>{published.size}</b> skill{published.size === 1 ? "" : "s"} approved for use</Link> in {ctx.workspace.name}, usable here or from <Link href="/connect" className="link">Claude, Cursor or any app</Link>
+        {week.total > 0 && <> · <Link href="/insights?days=7" className="link">{week.total} runs this week{week.successRate != null ? `, ${Math.round(week.successRate * 100)}% succeeded` : ""}</Link></>}
+        {waiting > 0 && <> · <Link href="/inbox" className="link-flame">{waiting} decision{waiting === 1 ? "" : "s"} waiting on you →</Link></>}
+      </p>
+      {ctx.role !== "consumer" && <ReadyQueue items={funnel} />}
 
       <section className="section lc" aria-label="AI lifecycle">
         <Suspense fallback={null}><LifecycleFilters roles={roleOptions()} /></Suspense>
@@ -130,6 +125,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
                 <li key={r.id} className="lc-row">
                   <div className="lc-row-main">
                     <Link href={`/repo/${r.id}`} className="lc-row-name">{r.name}</Link>
+                    {published.has(r.id) && <> <span className="pill pill-sage pill-sm" title={`Approved for use in ${ctx.workspace.name}: tested and signed off`}>Approved · v{published.get(r.id)}</span></>}
                     <div className="lc-row-out">{r.outcome}</div>
                     {r.bring && <div className="caption lc-row-bring">You bring: {r.bring}</div>}
                   </div>
@@ -159,8 +155,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
       )}
 
       <p className="caption section">
-        {runnable} runnable skills across 11 lifecycle stages. Assemble your own <Link href="/roles" className="link">roles</Link> and <Link href="/pools" className="link">teams</Link>,
-        or manage publishing and approvals in <Link href="/admin" className="link">Admin</Link>.
+        Every skill here can be tried on its own example; approved ones also run from your tools. Owners build and publish skills under <Link href="/pipeline" className="link">Build</Link>; approvals and audit are under <Link href="/inbox" className="link">Govern</Link>.
       </p>
     </>
   );

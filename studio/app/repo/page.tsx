@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { skills, scoreFor, stageName } from "@/lib/data";
 import { humanName, whatYouGet, displayDescription } from "@/lib/names";
-import { libraryRows, librarySummary } from "@/lib/library";
+import { libraryRows, librarySummary, publishedByLibrarySkill } from "@/lib/library";
 import { requireWorkspace } from "@/lib/factory/db";
 import { loadPipeline } from "@/lib/db/skills";
 import { LibraryTable } from "@/components/LibraryTable";
@@ -13,13 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function LibraryPage() {
   const ctx = await requireWorkspace();
   const { versions } = await loadPipeline(ctx.supabase, ctx.workspace.id);
-  const published = new Map<string, number>();
-  for (const v of versions) {
-    if (v.status !== "published" || v.source.kind !== "repo") continue;
-    const id = v.source.repo_skill;
-    if (!id) continue;
-    published.set(id, Math.max(published.get(id) ?? 0, v.version));
-  }
+  const published = publishedByLibrarySkill(versions);
   const rows = libraryRows(skills.map((s) => {
     const stage = Array.isArray(s.stage) ? s.stage[0] : s.stage;
     return {

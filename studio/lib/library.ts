@@ -39,3 +39,14 @@ export const matchesLibraryFilter = (f: LibraryFilter, r: LibraryRow) => f === "
 export function librarySummary(rows: LibraryRow[]) {
   return { total: rows.length, approved: rows.filter((r) => r.published != null).length, proven: rows.filter((r) => r.evidence === "proven").length };
 }
+
+/** Library skill id → highest published version in this workspace. */
+export function publishedByLibrarySkill(versions: { status: string; version: number; source: { kind: string; repo_skill?: string | null } }[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const v of versions) {
+    const id = v.source.repo_skill;
+    if (v.status !== "published" || v.source.kind !== "repo" || !id) continue;
+    out.set(id, Math.max(out.get(id) ?? 0, v.version));
+  }
+  return out;
+}

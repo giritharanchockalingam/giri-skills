@@ -22,3 +22,14 @@ test("summary and filters", () => {
   assert.equal(r.filter((x) => matchesLibraryFilter("approved", x)).length, 1);
   assert.equal(r.filter((x) => matchesLibraryFilter("proven", x)).length, 2);
 });
+
+test("published versions by library skill: highest published, repo-sourced only", async () => {
+  const { publishedByLibrarySkill } = await import("../lib/library.ts");
+  const m = publishedByLibrarySkill([
+    { status: "published", version: 1, source: { kind: "repo", repo_skill: "a/x" } },
+    { status: "published", version: 2, source: { kind: "repo", repo_skill: "a/x" } },
+    { status: "draft", version: 3, source: { kind: "repo", repo_skill: "a/x" } },
+    { status: "published", version: 1, source: { kind: "authored" } },
+  ]);
+  assert.deepEqual([...m], [["a/x", 2]]);
+});
