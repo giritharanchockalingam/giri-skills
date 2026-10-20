@@ -10,8 +10,14 @@ export async function authenticateApiKey(req: Request): Promise<ApiCaller | Resp
   const auth = req.headers.get("authorization") ?? "";
   const m = auth.match(/^Bearer\s+(\S+)$/i);
   if (!m) return apiError(401, "unauthenticated", "Send `Authorization: Bearer <api key>`.");
-  if (!looksLikeApiKey(m[1])) return apiError(401, "invalid_key", "That is not a factory API key (keys start with sf_live_).");
-  const keyHash = apiKeyHash(m[1]);
+  return callerFromKey(m[1]);
+}
+
+/** The same resolution for a key the server holds itself (e.g. the Port integration's PORT_SF_API_KEY): identical
+ *  workspace scope, limits and audit as a caller presenting it over HTTP. */
+export async function callerFromKey(key: string): Promise<ApiCaller | Response> {
+  if (!looksLikeApiKey(key)) return apiError(401, "invalid_key", "That is not a factory API key (keys start with sf_live_).");
+  const keyHash = apiKeyHash(key);
   let supabase;
   try { supabase = createAnonSupabase(); } catch (e) { return apiError(503, "not_configured", (e as Error).message); }
   const { data, error } = await supabase.rpc("sf_resolve_api_key", { p_key_hash: keyHash });
