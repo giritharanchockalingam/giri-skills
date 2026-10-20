@@ -9,7 +9,7 @@ import { IntegrationSync } from "@/components/integrations/SyncButton";
 import { PortSync } from "@/components/integrations/PortSync";
 import { CopyButton } from "@/components/CopyButton";
 import { portConfig } from "@/lib/integrations/port/client";
-import { AI_SKILL_BLUEPRINT, runSkillAction } from "@/lib/integrations/port/map";
+import { AI_SKILL_BLUEPRINT, runSkillAction, runSkillWorkflow } from "@/lib/integrations/port/map";
 import { headers } from "next/headers";
 
 export const metadata = { title: "Integrations · Skills Factory" };
@@ -64,13 +64,16 @@ export default async function IntegrationsPage() {
         const ready = pc.ok && keySet;
         const missing = [...(pc.ok ? [] : pc.missing), ...(keySet ? [] : ["PORT_SF_API_KEY"])];
         const actionJson = JSON.stringify(runSkillAction(`${origin}/api/port/actions`), null, 2);
+        const workflowJson = JSON.stringify(runSkillWorkflow(`${origin}/api/port/actions`), null, 2);
         return (
           <section className="card card-pad mt-6">
             <div className="h3" style={{ margin: 0 }}>Port <span className={`pill pill-sm ${ready ? "pill-sage" : "pill-hold"}`}>{ready ? "configured" : "not set up"}</span> <span className="caption">writes to Port</span></div>
             <p style={{ margin: "6px 0" }}>Publishes your governed skills into a Port.io portal: an <b>AI Skill</b> catalog type (version, eval pass rate, approval, library status, inputs), a <b>Run skill</b> action that runs them here under the same validation, limits and audit, and your MCP server as a Port connector.</p>
             <p className="caption" style={{ margin: 0 }}>{ready ? <>Port API: <code>{pc.ok ? pc.apiUrl : ""}</code>. Built to Port&apos;s published API; verify each step on the first live run (docs/PORT.md).</> : <>Set in Vercel (sensitive): {missing.map((m, i) => <span key={m}>{i ? ", " : ""}<code>{m}</code></span>)}{pc.ok ? "" : <> · optional <code>PORT_API_URL</code> (https://api.us.port.io for US accounts)</>}. Setup: docs/PORT.md.</>}</p>
             {admin && <div className="mt-3"><PortSync disabled={!pc.ok} /></div>}
-            <details className="mt-3"><summary className="caption" style={{ cursor: "pointer" }}><b>Run skill action</b>: paste into Port (Self-service → + Action → Edit JSON)</summary>
+            <details className="mt-3"><summary className="caption" style={{ cursor: "pointer" }}><b>Run governed skill workflow</b>: in Port, Workflows → + Workflow → workflow JSON, paste. Needs the Port secret <code>SF_API_KEY</code> (a workspace API key).</summary>
+              <div className="flex justify-end mb-1"><CopyButton text={workflowJson} /></div><pre className="run-raw">{workflowJson}</pre></details>
+            <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>Classic self-service action</b> (older Port orgs): Self-service → + Action → Edit JSON</summary>
               <div className="flex justify-end mb-1"><CopyButton text={actionJson} /></div><pre className="run-raw">{actionJson}</pre></details>
             <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>MCP connector</b>: Port → Settings → Data sources → + Connector → MCP Servers → Custom Server</summary>
               <ul className="caption"><li>URL: <code>{origin}/api/mcp</code> <CopyButton text={`${origin}/api/mcp`} /></li><li>Header: <code>Authorization: Bearer {"{{ .secrets[\"SF_API_KEY\"] }}"}</code> (store a workspace API key as the Port secret <code>SF_API_KEY</code>)</li><li>Allowed tools: pick the skills Port&apos;s agents may call.</li></ul></details>
