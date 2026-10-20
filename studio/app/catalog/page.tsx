@@ -14,7 +14,7 @@ import { CHECKS } from "@/lib/scorecards/checks";
 import { connectGithub, disconnectGithub } from "./actions";
 import { humanName } from "@/lib/names";
 import { listEntities, allRelations, type EntityRow } from "@/lib/db/entities";
-import { ServicesTable, DatabasesTable } from "@/components/catalog/EntityViews";
+import { ServicesTable, DatabasesTable, ComponentsTable } from "@/components/catalog/EntityViews";
 
 export const metadata = { title: "Catalog · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -46,8 +46,19 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const cfg = githubConfig();
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-  const [catalog, services, databases] = await Promise.all([loadCatalog(ctx.supabase, ctx.workspace.id), listEntities(ctx.supabase, ctx.workspace.id, "service"), listEntities(ctx.supabase, ctx.workspace.id, "database")]);
-  const kindCounts = { repository: catalog.entities.filter((e) => !e.archived).length, service: services.length, database: databases.length };
+  const [catalog, services, databases, components] = await Promise.all([loadCatalog(ctx.supabase, ctx.workspace.id), listEntities(ctx.supabase, ctx.workspace.id, "service"), listEntities(ctx.supabase, ctx.workspace.id, "database"), listEntities(ctx.supabase, ctx.workspace.id, "component")]);
+  const kindCounts = { repository: catalog.entities.filter((e) => !e.archived).length, service: services.length, database: databases.length, component: components.length };
+  if (sp.type === "component") {
+    const rels = await allRelations(ctx.supabase, ctx.workspace.id);
+    const all = new Map<string, EntityRow>([...services, ...databases, ...components, ...(catalog.entities as unknown as EntityRow[])].map((e) => [e.id, e]));
+    return (
+      <>
+        <PageHead eyebrow="Context Lake" title="How it" em="ships" after="." lead="Everything the connected delivery tools know: pull requests, CI workflows and runs, deployments, environments and teams, each linked to the repositories and services above." />
+        {components.length ? <ComponentsTable rows={components} all={all} rels={rels} type={sp.of ?? null} />
+          : <section className="card card-pad"><p className="none" style={{ margin: 0 }}>Nothing yet. An administrator syncs the delivery catalog on <Link className="link" href="/integrations">Integrations</Link>.</p></section>}
+      </>
+    );
+  }
   if (sp.type === "service" || sp.type === "database") {
     const rels = await allRelations(ctx.supabase, ctx.workspace.id);
     const all = new Map<string, EntityRow>([...services, ...databases, ...(catalog.entities as unknown as EntityRow[])].map((e) => [e.id, e]));

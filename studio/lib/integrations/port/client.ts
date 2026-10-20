@@ -51,6 +51,34 @@ export class PortClient {
     if (r.status >= 400) this.fail(`upsert ${blueprint}/${entity.identifier}`, r);
   }
 
+  /** Every blueprint (Port: GET /v1/blueprints → { blueprints }). */
+  async listBlueprints(): Promise<Record<string, unknown>[]> {
+    const r = await this.call("GET", "/v1/blueprints");
+    if (r.status >= 400) this.fail("list blueprints", r);
+    return (Array.isArray(r.json.blueprints) ? r.json.blueprints : []) as Record<string, unknown>[];
+  }
+
+  /** A blueprint's entities, paged through Port's search route (limit/from); falls back to the plain list route. */
+  async listEntities(blueprint: string, max = 2000): Promise<{ entities: Record<string, unknown>[]; truncated: boolean }> {
+    const out: Record<string, unknown>[] = [];
+    let from: string | null = null;
+    for (let page = 0; page < 40 && out.length < max; page++) {
+      const r = await this.call("POST", `/v1/blueprints/${encodeURIComponent(blueprint)}/entities/search`, { limit: 500, ...(from ? { from } : {}) });
+      if (r.status === 404 || r.status === 405) break;                                           // older API: no search route
+      if (r.status >= 400) this.fail(`read ${blueprint} entities`, r);
+      out.push(...((Array.isArray(r.json.entities) ? r.json.entities : []) as Record<string, unknown>[]));
+      from = typeof r.json.next === "string" && r.json.next ? r.json.next : null;
+      if (!from) return { entities: out.slice(0, max), truncated: false };
+    }
+    if (!out.length) {
+      const r = await this.call("GET", `/v1/blueprints/${encodeURIComponent(blueprint)}/entities`);
+      if (r.status >= 400) this.fail(`read ${blueprint} entities`, r);
+      const all = (Array.isArray(r.json.entities) ? r.json.entities : []) as Record<string, unknown>[];
+      return { entities: all.slice(0, max), truncated: all.length > max };
+    }
+    return { entities: out.slice(0, max), truncated: out.length >= max };
+  }
+
   async runLog(runId: string, message: string, end?: { status: "SUCCESS" | "FAILURE"; label?: string }): Promise<void> {
     const body: Record<string, unknown> = { message: message.slice(0, 4000) };
     if (end) { body.terminationStatus = end.status; if (end.label) body.statusLabel = end.label.slice(0, 200); }

@@ -6,8 +6,8 @@ type Rel = { from: string; to: string; type: string; evidence: string };
 const STATE: Record<string, string> = { READY: "pill-sage", ERROR: "pill-rust", CANCELED: "", BUILDING: "pill-hold", ACTIVE_HEALTHY: "pill-sage" };
 
 /** Catalog type switcher (Port's blueprints): repositories, services, databases — each with its count. */
-export function KindTabs({ active, counts }: { active: "repository" | "service" | "database"; counts: Record<string, number> }) {
-  const tabs = [["repository", "Repositories", "/catalog"], ["service", "Services", "/catalog?type=service"], ["database", "Databases", "/catalog?type=database"]] as const;
+export function KindTabs({ active, counts }: { active: "repository" | "service" | "database" | "component"; counts: Record<string, number> }) {
+  const tabs = [["repository", "Repositories", "/catalog"], ["service", "Services", "/catalog?type=service"], ["database", "Databases", "/catalog?type=database"], ["component", "Delivery & more", "/catalog?type=component"]] as const;
   return (
     <nav className="subnav" aria-label="Entity types">
       {tabs.map(([k, label, href]) => <Link key={k} href={href} aria-current={active === k ? "page" : undefined}>{label}<span className="tab-count">{counts[k] ?? 0}</span></Link>)}
@@ -55,5 +55,37 @@ export function DatabasesTable({ rows, all, rels }: { rows: EntityRow[]; all: Ma
           </tr>);
       })}</tbody>
     </table></div></div>
+  );
+}
+
+/** Everything else the connected tools know (pull requests, CI workflows, deployments, environments, teams…), grouped
+ *  by type, each linked to its own page and to the catalog entries it relates to. */
+export function ComponentsTable({ rows, all, rels, type }: { rows: EntityRow[]; all: Map<string, EntityRow>; rels: Rel[]; type: string | null }) {
+  const types = new Map<string, number>();
+  for (const r of rows) { const t = String(r.properties.type ?? "Other"); types.set(t, (types.get(t) ?? 0) + 1); }
+  const shown = type ? rows.filter((r) => String(r.properties.type ?? "Other") === type) : rows;
+  return (
+    <>
+      <div className="chip-group mb-3" role="navigation" aria-label="Component types">
+        <Link className="chip" href="/catalog?type=component" aria-pressed={!type}>All <span className="tab-count">{rows.length}</span></Link>
+        {[...types.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => <Link key={t} className="chip" href={`/catalog?type=component&of=${encodeURIComponent(t)}`} aria-pressed={type === t}>{t} <span className="tab-count">{n}</span></Link>)}
+      </div>
+      <div className="card"><div className="tablewrap"><table className="mini cat-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Details</th><th>Related to</th><th>Updated</th></tr></thead>
+        <tbody>{shown.slice(0, 500).map((c) => {
+          const facts = ((c.properties.facts ?? []) as { label: string; value: string }[]).slice(0, 3);
+          const related = rels.filter((r) => r.type === "related" && (r.from === c.id || r.to === c.id)).map((r) => all.get(r.from === c.id ? r.to : r.from)).filter((x): x is EntityRow => !!x).slice(0, 3);
+          return (
+            <tr key={c.id}>
+              <td><Link className="link" href={`/catalog/${c.id}`}><b>{c.title}</b></Link></td>
+              <td><span className="pill pill-sm">{String(c.properties.type ?? "Other")}</span></td>
+              <td className="caption">{facts.length ? facts.map((f) => <div key={f.label}><span className="muted">{f.label}:</span> {f.value}</div>) : "—"}</td>
+              <td className="caption">{related.length ? related.map((r) => <div key={r.id}><Link className="link" href={`/catalog/${r.id}`}>{r.title}</Link></div>) : "—"}</td>
+              <td className="caption"><LocalTime iso={c.last_activity_at} /></td>
+            </tr>);
+        })}</tbody>
+      </table></div></div>
+      {shown.length > 500 && <p className="caption mt-2">Showing the 500 most recently updated of {shown.length}.</p>}
+    </>
   );
 }
