@@ -8,7 +8,7 @@ Skills Factory plugs into a [Port](https://port.io) portal three ways. All three
 | **2. Run skill action** | A **Run skill** button on every AI Skill entity; progress, result link and SUCCESS / FAILURE shown in Port | Port self-service action (WEBHOOK) → `/api/port/actions` (signed) |
 | **3. AI Skill catalog** | An **AI Skill** blueprint: version, eval pass rate, approval, library status, inputs, link back | Port REST API: blueprint + entity upsert (**Integrations → Push skills to Port**) |
 
-**Status (20 Oct 2026, live Port org, EU region):** verified live: access token, blueprint creation, a repeat push treating "blueprint exists" correctly, entity upsert with merge (23 of 23 skills), the AI Skill catalog page, and the **Run governed skill** workflow importing cleanly. Still to verify: the first workflow run end to end (it needs the Port secret `SF_API_KEY`).
+**Status (20 Oct 2026, live Port org, EU region):** verified live: access token, blueprint creation, a repeat push treating "blueprint exists" correctly, entity upsert with merge (23 of 23 skills), the AI Skill catalog page, the **Run governed skill** workflow, and two workflow runs end to end: a deliberately bad input refused with a readable reason in Port's log (`inputs.workload: CSV needs a header line with at least two columns`), and LLM cost model on its sample files **succeeded** (Port run `wfr_mWmOhBQBIui9vWw6` → Skills Factory run `98e4b04a…`).
 
 New Port orgs use **workflows** rather than classic self-service actions. Use the workflow JSON on the Integrations page; the classic action JSON is kept for older orgs.
 
