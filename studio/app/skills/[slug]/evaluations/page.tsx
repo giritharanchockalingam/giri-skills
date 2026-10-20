@@ -95,9 +95,11 @@ export default async function EvaluationsPage({ params, searchParams }: { params
               <details key={r.id} className="disclosure" style={{ borderBottom: "1px solid var(--rule-soft)", padding: "4px 0" }} open={r.id === runs[0].id}>
                 <summary><span><LocalTime iso={r.started_at} /></span><span className="muted">·</span><span className={r.status === "finished" ? (Number(r.pass_rate) >= (d.version.manifest.release_criteria.min_eval_pass_rate || 0) ? "pass" : "fail") : "muted"}>{r.status === "finished" ? `${pct(r.pass_rate)} passed` : r.status}</span>
                   <span className="caption">· {r.results.length} cases · {r.model ? modelLabel(r.model) : "no model"}{r.model ? "" : ""} · set {r.eval_set_hash.slice(0, 8)}{d.state?.current_eval_set_hash && r.eval_set_hash !== d.state.current_eval_set_hash ? " (outdated: cases changed since)" : ""}</span></summary>
-                <div className="tablewrap mt-2"><table className="mini"><thead><tr><th>Case</th><th>Run</th><th>Checks</th><th>Detail</th></tr></thead>
+                <div className="tablewrap mt-2"><table className="mini"><thead><tr><th>Case</th><th title="What the skill did. Some cases feed bad input on purpose; for those, refusing is the pass.">Outcome</th><th>Checks</th><th>Detail</th></tr></thead>
                   <tbody>{r.results.map((c) => (
-                    <tr key={c.case_id}><td>{c.name}</td><td>{c.run_id ? <Link href={`/runs/${c.run_id}`} className="link"><RunPill status={c.status as "failed"} small /></Link> : <span className="muted">{c.status}</span>}</td>
+                    <tr key={c.case_id}><td>{c.name}</td><td>{c.run_id ? <Link href={`/runs/${c.run_id}`} className="link">{c.status !== "succeeded" && c.total > 0 && c.passed === c.total
+                      ? <span className="pill pill-sm pill-sage" title={`The case gave bad input on purpose and expected the skill to stop (it did: ${c.status.replace("_", " ")}).`}>Refused as expected</span>
+                      : <RunPill status={c.status as "failed"} small />}</Link> : <span className="muted">{c.status}</span>}</td>
                       <td>{c.total ? <span className={c.passed === c.total ? "pass" : "fail"}>{c.passed}/{c.total}</span> : <span className="muted">—</span>}</td>
                       <td className="ink-2" style={{ fontSize: 13 }}>{c.error ? c.error : c.checks.filter((x) => !x.pass).map((x, k) => <div key={k}><PassPill pass={false} /> <span className="agent-check">{x.check}</span> <span className="agent-evidence">{x.evidence}</span></div>)}</td></tr>
                   ))}</tbody></table></div>
