@@ -19,7 +19,6 @@ import { ServicesTable, DatabasesTable, ComponentsTable } from "@/components/cat
 export const metadata = { title: "Catalog · Skills Factory" };
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-const VERDICT_CLASS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
 
 const ERRORS: Record<string, string> = {
   "not-configured": "The GitHub App is not set up for this deployment yet.",
@@ -53,7 +52,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     const all = new Map<string, EntityRow>([...services, ...databases, ...components, ...(catalog.entities as unknown as EntityRow[])].map((e) => [e.id, e]));
     return (
       <>
-        <PageHead eyebrow="Context Lake" title="How it" em="ships" after="." lead="Everything the connected delivery tools know: pull requests, CI workflows and runs, deployments, environments and teams, each linked to the repositories and services above." />
+        <PageHead eyebrow="Platform · Delivery data" title="How it" em="ships" after="." lead="Everything the connected delivery tools know: pull requests, CI workflows and runs, deployments, environments and teams, each linked to the repositories and services above." />
         {components.length ? <ComponentsTable rows={components} all={all} rels={rels} type={sp.of ?? null} />
           : <section className="card card-pad"><p className="none" style={{ margin: 0 }}>Nothing yet. An administrator syncs the delivery catalog on <Link className="link" href="/integrations">Integrations</Link>.</p></section>}
       </>
@@ -65,7 +64,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     const rows = sp.type === "service" ? services : databases;
     return (
       <>
-        <PageHead eyebrow="Context Lake" title="What you" em="run" after="." lead={sp.type === "service" ? "Services from Vercel: what each is built from, where it runs in production, how often it ships, and the database it uses." : "Databases from Supabase, and the services that use each."} />
+        <PageHead eyebrow={sp.type === "service" ? "Platform · Services" : "Platform · Databases"} title="What you" em="run" after="." lead={sp.type === "service" ? "Services from Vercel: what each is built from, where it runs in production, how often it ships, and the database it uses." : "Databases from Supabase, and the services that use each."} />
         {rows.length ? (sp.type === "service" ? <ServicesTable rows={rows} all={all} rels={rels} /> : <DatabasesTable rows={rows} all={all} rels={rels} />)
           : <section className="card card-pad"><p className="none" style={{ margin: 0 }}>None yet — connect and sync {sp.type === "service" ? "Vercel" : "Supabase"} on <Link className="link" href="/integrations">Integrations</Link>.</p></section>}
       </>
@@ -74,12 +73,15 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const scores = new Map<string, { check_id: string; verdict: string; summary: string; created_at: string }[]>();
   for (const r of catalog.scores) scores.set(r.entity_id, [...(scores.get(r.entity_id) ?? []), r]);
   const canScore = ctx.role === "admin" || ctx.role === "author";
-  const titleOf = (id: string) => CHECKS.find((c) => c.id === id)?.title ?? id;
   const insts = catalog.installations;
   const all: Entity[] = catalog.entities;
   const active = all.filter((e) => !e.archived);
   const stackFilter = sp.stack ?? null;
-  const rows = stackFilter ? active.filter((e) => e.properties.stack?.some((s) => s.id === stackFilter)) : active;
+  const applies = (e: Entity) => (e.properties.applicable ?? []).length > 0;
+  const withSkills = active.filter(applies).length;
+  const noOwner = active.filter((e) => !e.owner).length;
+  const rows = (sp.apply ? active.filter(applies) : stackFilter ? active.filter((e) => e.properties.stack?.some((s) => s.id === stackFilter)) : active)
+    .slice().sort((a, b) => Number(applies(b)) - Number(applies(a)) || (b.last_activity_at ?? "").localeCompare(a.last_activity_at ?? ""));
   const last = catalog.lastSync;
   const stackCounts = new Map<string, { label: string; n: number }>();
   for (const e of active) for (const s of e.properties.stack ?? []) stackCounts.set(s.id, { label: s.label, n: (stackCounts.get(s.id)?.n ?? 0) + 1 });
@@ -93,8 +95,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHead eyebrow="Context Lake" title="What you" em="run" after="."
-        lead="Your repositories, read from GitHub: what each one is built with, who owns it, and which skills apply — with the files that prove it." />
+      <PageHead eyebrow="Platform · Repositories" title="Where skills" em="apply" after="."
+        lead="Your GitHub repositories, read-only. For each one: which skills apply to it, with the files that prove it, and whether it passes the engineering checks you enforce." />
 
       {sp.connected && <p className="notice notice-ok mb-4" role="status">Connected <b>{sp.connected}</b> — {sp.synced ?? 0} repositories synced.</p>}
       {sp.error && <p className="notice notice-err mb-4" role="alert">{ERRORS[sp.error] ?? "GitHub returned an error."}{sp.detail ? ` (${sp.detail})` : ""}</p>}
@@ -142,14 +144,13 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
       {active.length > 0 && (<>
         <div className="cat-tiles mb-4">
-          <div className="cat-tile"><b>{active.length}</b><span>repositories</span></div>
-          <div className="cat-tile"><b>{withMig}</b><span>with database migrations</span></div>
-          <div className="cat-tile"><b>{noCi}</b><span>without CI</span></div>
-          <div className="cat-tile"><b>{noTests}</b><span>without tests</span></div>
-          <div className="cat-tile"><b>{scoredRepos.length ? `${passingRepos}/${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "scored repositories passing every check" : "not scored yet"}
-            {scoredRepos.length > passingRepos && <> · <a className="link" href="#repos">each level below links to what fails</a>; <Link className="link" href="/initiatives">set an initiative</Link> to fix it by a date</>}</span></div>
+          <Link href="/catalog?apply=1" className="cat-tile"><b>{withSkills} of {active.length}</b><span>repositories have skills that apply — run them from each row</span></Link>
+          <a href="#checks" className="cat-tile"><b>{scoredRepos.length ? `${passingRepos} of ${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "checked repositories pass every check" : "not checked yet — run the checks below"}</span></a>
+          <div className="cat-tile"><b>{noOwner}</b><span>without an owner (no CODEOWNERS file)</span></div>
         </div>
-        <div className="card card-pad mb-4 level-strip">
+        <p className="caption mb-4">Gaps found in the files: {noCi} without CI, {noTests} without tests, {withMig} with database migrations (the database skills apply to these).</p>
+        <div className="card card-pad mb-4 level-strip" id="checks">
+          <div className="h3" style={{ marginTop: 0 }}>Engineering checks</div>
           <div className="flex flex-wrap items-center gap-3">
             {(["gold", "silver", "bronze", "none", "n/a"] as LevelOrNone[]).map((l) => <span key={l} className="level-count"><LevelBadge level={l} /> <b>{levelCount(l)}</b></span>)}
           </div>
@@ -158,35 +159,32 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         {canScore && <div className="mb-4 flex flex-wrap items-center gap-3"><ScoreAll entities={active.map((e) => ({ id: e.id, key: e.key }))} label={scoredRepos.length ? "Re-run scorecards" : "Run scorecards"} />
           <span className="caption">Runs {CHECKS.length} checks where they apply ({CHECKS.map((c) => c.title.split(" (")[0]).join(", ")}) on each repository&apos;s current default branch. Read-only.</span></div>}
         <div className="flex flex-wrap gap-2 mb-4" aria-label="Filter by stack">
-          <Link href="/catalog" className={`chip${!stackFilter ? " chip-on" : ""}`}>All · {active.length}</Link>
+          <Link href="/catalog" className={`chip${!stackFilter && !sp.apply ? " chip-on" : ""}`}>All · {active.length}</Link>
+          <Link href="/catalog?apply=1" className={`chip${sp.apply ? " chip-on" : ""}`}>Skills apply · {withSkills}</Link>
           {[...stackCounts.entries()].sort((a, b) => b[1].n - a[1].n).map(([id, s]) => (
             <Link key={id} href={`/catalog?stack=${id}`} className={`chip${stackFilter === id ? " chip-on" : ""}`}>{s.label} · {s.n}</Link>
           ))}
         </div>
         <div className="card">
           <div className="tablewrap" id="repos"><table className="mini cat-table">
-            <thead><tr><th>Repository</th><th>Built with</th><th>Level</th><th>Scorecard</th><th>Owner</th><th>Last change</th><th>Skills that apply</th></tr></thead>
+            <thead><tr><th>Repository</th><th>Skills that apply</th><th>Checks</th><th>Owner</th><th>Last change</th></tr></thead>
             <tbody>{rows.map((e) => {
               const ap = e.properties.applicable ?? [];
               return (
                 <tr key={e.id}>
                   <td><a className="link" href={e.url} target="_blank" rel="noreferrer"><b>{e.key}</b></a>{e.properties.visibility === "private" && <span className="caption"> · private</span>}
-                    {e.properties.description && <div className="caption">{e.properties.description}</div>}</td>
-                  <td>{(e.properties.stack ?? []).filter((s) => s.id !== "tests").map((s) => <span key={s.id} className="chip chip-sm" title={s.evidence.join("\n")}>{s.label}</span>)}
-                    {e.properties.tree_truncated && <div className="caption">very large repository: partial file list</div>}</td>
-                  <td><Link href={`/catalog/${e.id}`} title={levels.get(e.id)?.blockers.map((b) => `${b.title}: ${b.reason}`).join("\n") || LEVEL_LABEL[levels.get(e.id)?.level ?? "n/a"]}><LevelBadge level={levels.get(e.id)?.level ?? "n/a"} /></Link></td>
-                  <td>{(scores.get(e.id) ?? []).length === 0 ? <span className="caption">not scored</span> : (
-                    <Link href={`/catalog/${e.id}`} className="cat-score">{(scores.get(e.id) ?? []).sort((a, b) => a.check_id.localeCompare(b.check_id)).map((r) => (
-                      <span key={r.check_id} className={`pill pill-sm ${VERDICT_CLASS[r.verdict] ?? ""}`} title={`${titleOf(r.check_id)}: ${r.summary}`}>{titleOf(r.check_id).split(" (")[0]}: {r.verdict}</span>
-                    ))}</Link>)}</td>
-                  <td>{e.owner ? <code>{e.owner}</code> : <span className="caption" title="No CODEOWNERS file assigns an owner. Add one (e.g. .github/CODEOWNERS with “* @team”) and sync.">Unassigned</span>}</td>
-                  <td className="caption">{ago(e.last_activity_at)}</td>
-                  <td>{ap.length === 0 ? <span className="caption">—</span> : (
+                    {e.properties.description && <div className="caption">{e.properties.description}</div>}
+                    <div className="mt-1">{(e.properties.stack ?? []).filter((s) => s.id !== "tests").map((s) => <span key={s.id} className="chip chip-sm" title={s.evidence.join("\n")}>{s.label}</span>)}
+                    {e.properties.tree_truncated && <div className="caption">very large repository: partial file list</div>}</div></td>
+                  <td>{ap.length === 0 ? <span className="caption" title="No library skill matches the files in this repository">none found</span> : (
                     <details><summary className="caption">{ap.length} skill{ap.length === 1 ? "" : "s"}: {ap.slice(0, 2).map((a) => humanName(a.skill.split("/")[1])).join(", ")}{ap.length > 2 ? "…" : ""}</summary>
                       <ul className="cat-why">{ap.map((a) => (
                         <li key={a.skill}><Link className="link" href={`/repo/${a.skill}/test?mode=existing`}>{humanName(a.skill.split("/")[1])}</Link> — {a.why}
                           <div className="caption">evidence: {a.evidence.map((x) => <code key={x} style={{ marginRight: 6 }}>{x}</code>)}</div></li>
                       ))}</ul></details>)}</td>
+                  <td><Link href={`/catalog/${e.id}`} title={levels.get(e.id)?.blockers.map((b) => `${b.title}: ${b.reason}`).join("\n") || LEVEL_LABEL[levels.get(e.id)?.level ?? "n/a"]}><LevelBadge level={levels.get(e.id)?.level ?? "n/a"} /></Link></td>
+                  <td>{e.owner ? <code>{e.owner}</code> : <span className="caption" title="No CODEOWNERS file assigns an owner. Add one (e.g. .github/CODEOWNERS with “* @team”) and sync.">Unassigned</span>}</td>
+                  <td className="caption">{ago(e.last_activity_at)}</td>
                 </tr>
               );
             })}</tbody>
