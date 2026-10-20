@@ -40,3 +40,11 @@ export function parseHolder(v: string): { kind: "user" | "key"; id: string } | n
   const m = /^(user|key):([0-9a-f-]{36})$/i.exec(v.trim());
   return m ? { kind: m[1].toLowerCase() as "user" | "key", id: m[2].toLowerCase() } : null;
 }
+
+/** Skill keys (library ids and workspace slugs) the given user may run through their job roles. */
+export function allowedKeysFor(userId: string, roles: JobRole[], assignments: Assignment[]): Set<string> {
+  const mine = new Set(assignments.filter((a) => a.user_id === userId).map((a) => a.talent_id));
+  return new Set(roles.filter((r) => mine.has(r.id)).flatMap((r) => r.skills));
+}
+/** Published job roles that list this skill (library id or slug): what a person can ask for. */
+export const rolesCovering = (roles: JobRole[], keys: string[]) => roles.filter((r) => keys.some((k) => r.skills.includes(k)));

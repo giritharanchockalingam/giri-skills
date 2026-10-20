@@ -235,6 +235,8 @@ select test_expect_error($$insert into sf_runs (workspace_id, version_id, invoke
 -- key with no role: refused and audited
 select test_as_anon();
 select test_assert((sf_record_run(repeat('3', 64), 'invoice-check', '[]'::jsonb)->>'error') = 'not_in_role', 'key without a role is refused');
+select test_assert((sf_api_catalog(repeat('3', 64))->0->>'allowed')::boolean = false, 'MCP catalog marks the skill not allowed for this key');
+select test_assert((sf_api_skills(repeat('3', 64))->0->>'allowed')::boolean = false, 'API list marks it too');
 -- authors are not restricted (they test before release)
 select test_as('00000000-0000-0000-0000-000000000002');
 select test_assert((sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'run_id') is not null, 'author unrestricted');
@@ -261,6 +263,9 @@ select test_as_anon();
 select (sf_record_run(repeat('3', 64), 'invoice-check', '[]'::jsonb)->>'run_id') as keyrun \gset
 select test_as('00000000-0000-0000-0000-000000000001');
 select test_assert((select count(*) from sf_runs where id = :'keyrun' and granted_by_role = :'role1') = 1, 'key runs through its role');
+select test_as_anon();
+select test_assert((sf_api_catalog(repeat('3', 64))->0->>'allowed')::boolean, 'MCP catalog: allowed through the role');
+select test_as('00000000-0000-0000-0000-000000000001');
 -- only admins assign; assignments stay in the workspace; the rule function is not callable
 select test_as('00000000-0000-0000-0000-000000000004');
 select test_expect_error($$insert into sf_role_assignments (workspace_id, talent_id, user_id, granted_by) values ('$$ || :'ws' || $$', '$$ || :'role1' || $$', '00000000-0000-0000-0000-000000000003', auth.uid())$$, 'row-level security');
@@ -269,6 +274,24 @@ select test_as('00000000-0000-0000-0000-000000000001');
 select test_expect_error($$insert into sf_role_assignments (workspace_id, talent_id, user_id, granted_by) values ('$$ || :'ws' || $$', '$$ || :'role1' || $$', '00000000-0000-0000-0000-000000000005', auth.uid())$$, 'member of this workspace');
 -- policy off again: everything as before
 update sf_policies set skills_by_role = false where workspace_id = :'ws';
+delete from sf_role_assignments where workspace_id = :'ws';
+-- access requests (0020): a member asks, any admin decides (never their own), approval assigns the role
+select test_as('00000000-0000-0000-0000-000000000004');
+select (sf_access_request(:'ws', :'role1', 'invoice-check', 'month-end close')->>'id') as areq \gset
+select test_assert((sf_access_request(:'ws', :'role1', 'invoice-check', 'again')->>'existing')::boolean, 'one pending request per role and person');
+select test_expect_error($$select sf_access_decide('$$ || :'areq' || $$', true, '')$$, 'only admins');
+select test_assert((select count(*) from sf_access_requests) = 1, 'requester sees their own request');
+select test_expect_error($$insert into sf_access_requests (workspace_id, talent_id, requested_by) values ('$$ || :'ws' || $$', '$$ || :'role1' || $$', auth.uid())$$, 'permission denied');
+select test_as('00000000-0000-0000-0000-000000000003');
+select test_assert((select count(*) from sf_access_requests) = 0, 'a reviewer does not see others'' requests');
+select test_expect_error($$select sf_access_decide('$$ || :'areq' || $$', true, '')$$, 'only admins');
+select test_as('00000000-0000-0000-0000-000000000001');
+select test_assert(sf_access_decide(:'areq', true, 'ok') = 'approved', 'admin approves');
+select test_assert((select count(*) from sf_role_assignments where talent_id = :'role1' and user_id = '00000000-0000-0000-0000-000000000004') = 1, 'approval assigns the role');
+select test_expect_error($$select sf_access_decide('$$ || :'areq' || $$', false, '')$$, 'already approved');
+select (sf_access_request(:'ws', :'role1', null, 'me too')->>'id') as ownreq \gset
+select test_expect_error($$select sf_access_decide('$$ || :'ownreq' || $$', true, '')$$, 'your own request');
+select test_assert((select count(*) from sf_audit_events where action in ('access.request', 'access.approve')) = 3, 'requests and decisions audited');
 delete from sf_role_assignments where workspace_id = :'ws';
 select test_as('00000000-0000-0000-0000-000000000004');
 select test_assert((sf_run_insert(:'v3', 'ui', '[]'::jsonb)->>'run_id') is not null, 'policy off: consumer runs without a role');

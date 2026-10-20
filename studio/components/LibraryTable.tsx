@@ -18,7 +18,9 @@ export function LibraryTable({ rows, stages, workspace }: { rows: LibraryRow[]; 
     return rows.filter((r) => matchesLibraryFilter(show, r) && (stage === "all" || r.stage === stage) && matches(n, r.title, r.outcome));
   }, [rows, q, show, stage]);
   const Approved = ({ r }: { r: LibraryRow }) => r.published != null
-    ? <span className="pill pill-sage pill-sm" title={`Version ${r.published} passed its tests and was approved in ${workspace}. Usable from Claude, Cursor or any app.`}>Approved · v{r.published}</span>
+    ? r.mine === false
+      ? <span><span className="pill pill-none pill-sm" title={`Approved in ${workspace}, but not in your job roles`}>Approved · v{r.published}</span> <Link className="link caption" href={`/inbox/request?skill=${encodeURIComponent(r.id)}`}>Request access</Link></span>
+      : <span className="pill pill-sage pill-sm" title={`Version ${r.published} passed its tests and was approved in ${workspace}. Usable from Claude, Cursor or any app.`}>Approved · v{r.published}</span>
     : <span className="muted" title={`Not approved in ${workspace} yet. You can still try it on its example.`}>Not yet</span>;
   const Evidence = ({ r }: { r: LibraryRow }) => <span className={`pill pill-${TONE[r.evidence]} pill-sm`} title={r.evidenceNote}>{r.evidenceLabel}</span>;
 

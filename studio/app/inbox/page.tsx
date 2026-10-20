@@ -6,6 +6,9 @@ import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { loadInbox, listActions } from "@/lib/db/actions";
 import { Decide } from "@/components/inbox/Decide";
+import { loadAccessRequests } from "@/lib/db/accessRequests";
+import { ActionForm } from "@/components/factory/ActionForm";
+import { decideAccess } from "@/app/accessActions";
 
 export const metadata = { title: "Inbox · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -16,16 +19,35 @@ const CLS: Record<string, string> = { succeeded: "pill-sage", failed: "pill-rust
 /** Human in the loop: everything waiting on a person, in one place. */
 export default async function InboxPage() {
   const ctx = await requireWorkspace();
-  const [d, recent] = await Promise.all([loadInbox(ctx.supabase, ctx.workspace.id), listActions(ctx.supabase, ctx.workspace.id, { limit: 20 })]);
+  const [d, recent, requests] = await Promise.all([loadInbox(ctx.supabase, ctx.workspace.id), listActions(ctx.supabase, ctx.workspace.id, { limit: 20 }), loadAccessRequests(ctx.supabase, ctx.workspace.id)]);
   const canDecide = ctx.role === "reviewer" || ctx.role === "admin";
-  const total = d.actions.length + d.agentRuns.length + d.reviews.length + d.overdue.length;
+  const isAdmin = ctx.role === "admin";
+  const pendingAccess = requests.filter((r) => r.status === "pending" && isAdmin);
+  const myRequests = requests.filter((r) => r.requested_by === ctx.user.id).slice(0, 10);
+  const total = d.actions.length + d.agentRuns.length + d.reviews.length + d.overdue.length + pendingAccess.length;
   const decided = recent.filter((a) => a.status !== "pending_approval");
 
   return (
     <>
       <PageHead eyebrow="Human in the loop" title="Waiting on" em="you" after="."
-        lead="Approvals and decisions that agents, actions and skills are waiting for — one place, newest first. Every decision is recorded in the audit log." />
+        lead="Approvals, access requests and decisions that playbooks, actions and skills are waiting for: one place, newest first. Every decision is recorded in the audit log." />
       {total === 0 && <section className="card card-pad mb-6"><p className="none" style={{ margin: 0 }}>Nothing is waiting on a person.</p></section>}
+
+      {pendingAccess.length > 0 && (
+        <section className="section">
+          <div className="h3">Access requests <span className="pill pill-sm pill-hold">{pendingAccess.length}</span></div>
+          <div className="stack">{pendingAccess.map((r) => (
+            <div key={r.id} className="card card-pad">
+              <div><b>{r.requested_by_email ?? "A member"}</b> asks for the job role <b>{r.role_name}</b>{r.skill && <> to run <Link className="link" href={`/repo/${r.skill}/`}>{humanName(r.skill.split("/").pop() ?? r.skill)}</Link></>}
+                <div className="caption"><LocalTime iso={r.created_at} /></div></div>
+              {r.note && <p style={{ margin: "6px 0" }}>“{r.note}”</p>}
+              {r.requested_by === ctx.user.id ? <p className="caption">Your request — another admin decides.</p> : (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ActionForm action={decideAccess} hidden={{ id: r.id, decision: "approve", note: "" }} submit="Approve and assign" submitClass="btn btn-primary btn-sm" />
+                  <ActionForm action={decideAccess} hidden={{ id: r.id, decision: "decline", note: "" }} submit="Decline" submitClass="btn btn-secondary btn-sm" confirm={`Decline ${r.requested_by_email ?? "this"} request for ${r.role_name}?`} />
+                </div>)}
+            </div>))}</div>
+        </section>)}
 
       {d.actions.length > 0 && (
         <section className="section">
@@ -58,6 +80,13 @@ export default async function InboxPage() {
         <section className="section">
           <div className="h3">Initiatives past their deadline <span className="pill pill-sm pill-rust">{d.overdue.length}</span></div>
           <ul className="ini-repos">{d.overdue.map((i) => <li key={i.id}><Link className="link" href="/initiatives">{i.title}</Link> <span className="caption">owner {i.owner} · was due {fmt(i.due_on)}</span></li>)}</ul>
+        </section>)}
+
+      {myRequests.length > 0 && (
+        <section className="section">
+          <div className="h3">Your access requests</div>
+          <ul className="ini-repos">{myRequests.map((r) => <li key={r.id}>{r.role_name}{r.skill ? ` (for ${humanName(r.skill.split("/").pop() ?? r.skill)})` : ""}: <span className={`pill pill-sm ${r.status === "approved" ? "pill-sage" : r.status === "declined" ? "pill-rust" : "pill-hold"}`}>{r.status}</span>
+            <span className="caption"> · <LocalTime iso={r.decided_at ?? r.created_at} />{r.decided_by_email ? ` · by ${r.decided_by_email}` : ""}{r.decision_note ? ` · “${r.decision_note}”` : ""}</span></li>)}</ul>
         </section>)}
 
       {decided.length > 0 && (

@@ -1,5 +1,6 @@
 /* Data access for self-service actions and the Inbox (everything waiting on a person). Queries run as the signed-in
  * user (RLS); emails come from the workspace member directory, never from auth tables directly. */
+import { pendingAccessCount } from "@/lib/db/accessRequests";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface ActionRow { id: string; entity_id: string | null; repo: string; skill: string; inputs: Record<string, unknown>; uses_model: boolean; reason: string;
@@ -49,7 +50,7 @@ export async function loadInbox(sb: SupabaseClient, ws: string): Promise<InboxDa
   };
 }
 
-export async function inboxCount(sb: SupabaseClient, ws: string): Promise<number> {
-  const d = await loadInbox(sb, ws);
-  return d.actions.length + d.agentRuns.length + d.reviews.length + d.overdue.length;
+export async function inboxCount(sb: SupabaseClient, ws: string, includeAccess = false): Promise<number> {
+  const [d, access] = await Promise.all([loadInbox(sb, ws), includeAccess ? pendingAccessCount(sb, ws) : Promise.resolve(0)]);
+  return d.actions.length + d.agentRuns.length + d.reviews.length + d.overdue.length + access;
 }
