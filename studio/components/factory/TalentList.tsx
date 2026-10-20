@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 /* Server component: the list + "new" form shared by /roles and /pools. */
 import Link from "next/link";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -22,17 +23,21 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
     <div className="stack">
       <div className="card">
         <div className="tbl-scroll"><div className="tablewrap"><table className="tbl"><thead><tr>
-          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Members"}</th><th>{kind === "role" ? "Stages" : "Playbooks"}</th><th>Version</th><th>Based on</th>
+          <th>{kind === "role" ? "Role" : "Team"}</th><th>{kind === "role" ? "Skills" : "Members"}</th><th title={kind === "role" ? "AI development lifecycle stages this role\u2019s skills cover" : undefined}>{kind === "role" ? "Lifecycle stages covered" : "Playbooks"}</th><th>Version</th><th>Based on</th>
         </tr></thead><tbody>
           {rows.map((r) => {
             const v = versions.find((x) => x.talent_id === r.id);
             const spec = v?.spec;
-            const stages = kind === "role" ? new Set((spec?.skills ?? []).map((s) => sm.get(s)?.stage).filter(Boolean)).size : 0;
+            // the lifecycle stages this role's skills belong to, named in lifecycle order
+            const have = kind === "role" ? new Set((spec?.skills ?? []).map((s) => sm.get(s)?.stage).filter(Boolean)) : new Set();
+            const stageNames = STAGES.filter((st) => have.has(st.id)).map((st) => st.name);
             return (
               <tr key={r.id}>
                 <td><Link href={`${base}/${r.slug}`} className="link"><b>{r.name}</b></Link><div className="caption">{r.description}</div></td>
                 <td>{kind === "role" ? spec?.skills?.length ?? 0 : `${spec?.members?.length ?? 0} roles`}</td>
-                <td>{kind === "role" ? `${stages} of ${STAGES.length}` : (spec?.playbooks ?? []).join(", ") || "—"}</td>
+                <td>{kind === "role"
+                  ? (stageNames.length ? <><span>{stageNames.join(", ")}</span><div className="caption">{stageNames.length} of the {STAGES.length} lifecycle stages</div></> : <span className="muted">—</span>)
+                  : (spec?.playbooks ?? []).map(skillTitle).join(", ") || "—"}</td>
                 <td>{v ? <>v{v.version} <span className="caption">{v.status}</span></> : "—"}</td>
                 <td className="caption">{r.based_on ?? "blank"}</td>
               </tr>
