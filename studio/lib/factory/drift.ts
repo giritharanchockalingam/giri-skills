@@ -37,6 +37,8 @@ export function skillDrift(versions: { id?: string; source: VersionSource; statu
     return ownShaOf(live.source.repo_skill) === frozenSha ? "current" : "library_updated";
   }
   if (live && driftOf(live.source, live.status, pinOf(live.source.repo_skill)) === "blocked") return frozenSha ? "library_updated" : "blocked";
+  // a live library version published before pinning runs whatever the deployment holds: offer a reviewed, frozen version
+  if (live && newestV === live && live.source.kind === "repo" && !live.source.content_sha && !frozenSha && pinOf(live.source.repo_skill)) return "library_updated";
   const newest = [...versions].sort((a, b) => b.version - a.version)[0];
   if (!newest) return "n/a";
   const d0 = driftOf(newest.source, newest.status, pinOf(newest.source.repo_skill));
