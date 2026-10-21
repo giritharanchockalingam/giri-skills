@@ -28,8 +28,11 @@ metadata:
 
 # discovery-interview
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/discovery-interview --input <name>=<value> … --out <dir>` (see `--explain presales/discovery-interview`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: produce the pack now
+- **The request names the vertical and the call** (who attends, how long, the trigger): write the prep pack **in this reply** — do not ask for files first. 3–5 hypotheses in a table (each with what would confirm or kill it and the questions that test it); 12–18 questions from the vertical's question bank ordered situation → pain → impact → urgency → decision → constraints, each tagged with persona and hypothesis ID; the five closes (decision owner, budget state, timeline driver, incumbents, success measure); a time budget that leaves about 20% to the client's questions. No question opens with a technology or vendor comparison.
+- **The request gives call notes**: synthesize them now. Line 1 is the qualification call. Pains scored with verbatim evidence; impact without a stated figure scores 2 or lower and shows `[TO BE BASELINED — owner: ___]`; a gaps list names who at the client likely holds each missing fact and our owner; forcing events are named without inventing dates.
+- **The request lacks the vertical or the mode (prep vs synthesize)**: ask once for mode, vertical and opportunity context, and stop — no question list before the vertical; never invent attendees, triggers or pains.
+- **Asked to fill numbers, budgets or decision owners "from what clients usually do"**: say in one line that it was not in the notes and must be baselined; mark it `[TO BE BASELINED — owner: ___]`.
 
 ## Starting points
 - **New** — before the call: a timed question plan for the attendees' personas from the vertical's question bank, with the five closes all open and an empty pain matrix.
@@ -97,3 +100,7 @@ Template: `assets/discovery-pack-template.md`.
 - `references/hypothesis-and-synthesis.md` — hypothesis writing, listening-for-absence, synthesis patterns
 - `references/question-banks/edtech.md`, `references/question-banks/retail.md`, `references/question-banks/manufacturing.md`, `references/question-banks/travel.md` — vertical banks
 - `assets/discovery-pack-template.md` — output template
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/discovery-interview --input <name>=<value> … --out <dir>` (see `--explain presales/discovery-interview`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
