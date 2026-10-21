@@ -1,6 +1,6 @@
 ---
 name: nextjs-enterprise-conventions
-description: Use whenever writing or reviewing Next.js (App Router) / React / TypeScript code in this stack. Enforces server/client component rules, data-access layering (lib/db, server/services, server/actions), zod at boundaries, the typed Result<T,E> error pattern, structured logging, folder and naming conventions from shared/stack-conventions.md, and Vercel's react/next best-practice skills when installed. Produces compliant code plus a conventions checklist result. Not for schema (use supabase-schema-rls) or security audits (use security-review).
+description: Use whenever writing, adding or reviewing Next.js (App Router) / React / TypeScript code in this stack — "add a form page under app/… with a server action", "build this page/component/route handler", "review this component", "make this follow our conventions", or a component that queries Supabase inside useEffect or console.logs data. Enforces server/client component rules, data-access layering (lib/db, server/services, server/actions), zod at boundaries, the typed Result<T,E> error pattern, structured logging, folder and naming conventions from shared/stack-conventions.md, and Vercel's react/next best-practice skills when installed. Produces compliant code plus a conventions checklist result (rule → pass/fail → file:line). Do not use for planning a multi-file feature before coding (spec-to-plan), fixing a reported bug with a repro (safe-fix), schema (supabase-schema-rls) or security audits (security-review).
 license: MIT
 metadata:
   domain: build

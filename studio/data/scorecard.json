@@ -1007,9 +1007,9 @@
   "triggerAcc": 1,
   "fpRate": 0,
   "without": 0.29,
-  "with": 0.34,
-  "lift": 0.05,
-  "verdict": "BODY",
+  "with": 0.58,
+  "lift": 0.29,
+  "verdict": "OK",
   "agentPass": 1,
   "agentVerdict": "Works"
  }

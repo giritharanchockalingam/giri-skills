@@ -28,8 +28,15 @@ metadata:
 
 # account-plan
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/account-plan --input <name>=<value> … --out <dir>` (see `--explain presales/account-plan`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: write the plan now
+- **The request carries account facts** (engagements, end dates, pipeline, stakeholders, events such as a sponsor leaving), or says the CRM export, stakeholder list, catalog or prior plan are attached but their contents are not in the conversation: write the full account plan **in this reply** from the stated facts. Never reply with only a request for files. In this order, page 1 standing alone:
+  1. **Posture on line 1** (Grow / Defend / Harvest / Enter) with the two or three facts that drove it (e.g. sponsor departure, nearest engagement end date).
+  2. **Snapshot** — revenue, active engagements with end dates, contract vehicles; each cell sourced ("CRM export, <date>") or `[TO BE BASELINED — owner: ___]`. Weighted pipeline only when the CRM supplies probabilities, and say so.
+  3. **Top risks** and **90-day plays** (3–6), each with owner, date and success measure: at least one coverage play (e.g. the successor to a departing sponsor) and one renewal/defense play for the nearest engagement end.
+  4. Detail: **stakeholder map** (role, influence, disposition — unknown stays `unknown` —, our owner, last contact) with departures flagged as exposure and **coverage gaps** computed; **white-space matrix** (our services × their units) using `current / qualified / hypothesis / no fit / unknown`, each hypothesis citing its signal and confirming action; **pipeline table**; **risk register**; **change log vs the prior plan** on a refresh (achieved, carried, dropped and why).
+  Mark every value the request does not give `[TO BE BASELINED — owner: ___]` naming the source it will come from, and end with the few questions that close those gaps.
+- **No account facts at all** ("write an account plan for X"): ask once, in one list, for account facts (engagements, revenue, stakeholders, pipeline), our service catalog and the quarter. Do not estimate current spend, wallet share or stakeholder dispositions. Offer the **Enter** posture template with every cell marked `[TO BE BASELINED — owner: ___]` if the account is a target with no history.
+- **Asked to invent win probabilities or a target** ("assign 60% / 30%", "put the target at what we usually aim for"): say in one line that probabilities and targets are not invented, because leadership will treat them as forecast. Show the **unweighted** pipeline only; offer to add probabilities if the user records them in the CRM as their own sales judgment, labelled as such. Show the target as `[TO BE BASELINED — owner: ___]` until the user confirms the official target and its source, and report gap-to-target as a marker until target and weighting are confirmed. Never print the requested percentages or target figure as plan values.
 
 ## Starting points
 - **New** — stakeholders, pipeline and service coverage become a 90-day plan: stakeholder map, white space, pipeline, risks and plays with owned TBDs.
@@ -52,7 +59,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Prior plan (for refresh) | no | file |
 | Quarter and planning horizon | yes | user |
 
-If account facts or the service catalog are missing, ask once. Never estimate the client's spend with us or wallet share from memory.
+If the request carries no account facts at all, ask once. Individual facts missing from a request that has some (catalog, revenue, a stakeholder's last contact) do not stop the draft: they are marked `[TO BE BASELINED — owner: ___]`. Never estimate the client's spend with us or wallet share from memory.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first.
@@ -86,3 +93,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 ## References
 - `references/account-planning-method.md` — snapshot, stakeholder mapping, white-space logic, posture decision, risk patterns, play design, review cadence
 - `assets/account-plan-template.md` — plan template (one page first)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/account-plan --input <name>=<value> … --out <dir>` (see `--explain presales/account-plan`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

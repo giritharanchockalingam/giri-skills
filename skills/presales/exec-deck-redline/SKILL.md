@@ -1,6 +1,6 @@
 ---
 name: exec-deck-redline
-description: Use when the user asks to rework, redline, sharpen, or review an executive deck, steering-committee pack, board slide set, or pitch deck. Produces a slide-by-slide redline ([KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD]) that keeps the original storyline and sharpens it, rewritten slide titles as assertions, speaker notes, and [TO BE BASELINED — owner: ___] markers for every unsourced number, role, or date. Never replaces the narrative with a new one and never invents figures. Do not use for building a deck from scratch (use proposal-writer or the relevant domain skill first) or for document redlines (proposal-writer / sow-drafter redline modes).
+description: Use when the user asks to rework, redline, sharpen, tidy, or review an executive deck, steering-committee pack, board slide set, or pitch deck, or to change what a slide says (put a savings number, go-live date, or sponsor name on a slide, rewrite slide titles). Produces a slide-by-slide redline ([KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD]) that keeps the original storyline and sharpens it, rewritten slide titles as assertions, speaker notes, and [TO BE BASELINED — owner: ___] markers for every unsourced number, role, or date. Never replaces the narrative with a new one and never invents figures. Do not use for building the business case, savings or ROI model itself (value-case-builder), for building a deck from scratch (proposal-writer or the relevant domain skill first), or for document redlines (proposal-writer / sow-drafter redline modes).
 license: MIT
 metadata:
   domain: presales
@@ -25,8 +25,18 @@ metadata:
 
 # exec-deck-redline
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/exec-deck-redline --input <name>=<value> … --out <dir>` (see `--explain presales/exec-deck-redline`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: redline now
+- **The request carries the audience, the decision and the slot** — including when the deck and source documents are said to be attached but their contents are not in the conversation: produce the redline **in this reply**. Never reply with only a request for the file. In this order:
+  1. **Storyline as found** in ≤6 bullets, preserved; no new narrative (where slide text is not in the conversation, mark each bullet `[confirm against slide n]` rather than inventing content).
+  2. **Decision test** — what the audience must believe after slide 1 and approve by the last slide.
+  3. **Rubric score before and after** (`assets/redline-rubric.md`).
+  4. **Redline table** — every slide gets a verdict `[KEEP] [SHARPEN] [CUT] [ADD] [TBD]`; each `[SHARPEN]` row has the full rewritten title (an assertion, ≤12 words) and body.
+  5. **Numbers check** against the named sources (e.g. the estimate memo, the discovery synthesis); every unsourced number, role or date becomes `[TO BE BASELINED — owner: ___]`.
+  6. **Time fit** — about one body slide per 2 minutes for a decision deck (30 minutes → ~15 body slides); overflow to the appendix and a **parked list** with destinations.
+  7. **Executive summary slide** — the decision, three reasons (numbers or markers), next steps with owners and dates.
+  8. **Speaker notes** ≤60 words per kept or sharpened slide, aligned to slide content · **Open items** with owners.
+- **No decision, audience or slot** ("tidy up these slides"): ask once, in one list, for the audience, the decision the deck must obtain and the time slot. Do not begin slide rewrites without the decision test. Offer a **density-only pass** (titles, one point per slide, tables for lists) as the fallback if the user has no decision in mind, labelled "density-only — not a decision redline".
+- **Asked to put an invented savings figure, go-live date or assumed sponsor on a slide**: say in one line that the redline marks unknowns rather than inventing figures, roles or dates, because the CFO will hold the team to them. Keep the slide (e.g. the business-case slide stays in the storyline as `[SHARPEN]`/`[TBD]`, not cut) and show: savings `[TO BE BASELINED — owner: ___]` with a note naming the source that would confirm it (the value case); go-live `[TO BE BASELINED — owner: ___]` tied to the estimate's critical path, not a chosen quarter; sponsor `[TO BE BASELINED — owner: ___]`, no assumed name or role. Never print the requested figure, quarter or person anywhere.
 
 ## Starting points
 - **Existing** — your deck is read slide by slide into a ledger with every unsourced figure listed; the model step writes the redline (storyline kept, [KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD]), or with `draft_only` a mechanical redline flags unsourced figures, label titles and dense slides; the verdicts are applied back to the ledger.
@@ -47,7 +57,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Source documents behind the numbers (if any) | no | files |
 | Constraints: template, slide limit, mandated sections | no | user |
 
-If the audience or the decision is missing, ask once; a deck without a decision cannot be sharpened, only tidied.
+If the audience or the decision is missing, ask once; a deck without a decision cannot be sharpened, only tidied. Missing source documents or slot constraints do not stop the redline: unsourced numbers are marked `[TO BE BASELINED — owner: ___]`.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` (redline convention) and `../../../shared/writing-style.md` first. The user's standing instruction applies: stay close to the original storyline and sharpen it; do not replace the narrative; no invented dollar figures, roles, or dates.
@@ -85,3 +95,6 @@ Read `../../../shared/quality-bar.md` (redline convention) and `../../../shared/
 - `references/redline-method.md` — storyline preservation, title assertions, slide patterns, density rules, time fit, speaker-note rules
 - `assets/redline-rubric.md` — scoring rubric and redline table layout
 - `assets/storyline-checklist.md` — storyline integrity checklist by deck type
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/exec-deck-redline --input <name>=<value> … --out <dir>` (see `--explain presales/exec-deck-redline`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

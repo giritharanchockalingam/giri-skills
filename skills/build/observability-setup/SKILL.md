@@ -26,8 +26,11 @@ metadata:
 
 # observability-setup
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten: a differing file gets a `.proposed` twin listed in the report for a manual merge.
+## In a conversation: plan the setup now
+- **The request asks for observability on this stack**: answer **in this reply**, in order: (1) one list of questions, asked once — critical user journeys (≤5), error-tracking vendor (Sentry default) and DSN availability, notification channel — each with your default, then carry on with the defaults; (2) the plan table — component → file → add/change → why — covering logger, request context, error tracking, health endpoints, alert rules, SLOs, dashboard, with a line that nothing changes until "go"; (3) logging: `lib/logger.ts` + `lib/logger/context.ts` (JSON fields `ts, level, msg, service, env, requestId`; redaction of email, token, password, authorization, cookie, key; `requestId` set in `middleware.ts`), `console.*` replaced in minimal diffs, ESLint `no-console: error`; (4) health: `app/api/health/route.ts` (liveness, no dependencies) and `app/api/health/deep/route.ts` (bearer-protected, ≤ 3 s timeout per dependency, 503 when one is down), with tests for both; (5) an alert table — alert → threshold → window → severity tier → runbook → owner → channel — and an SLO table per journey with an error-budget policy; (6) verification on preview: force a synthetic failure (deep health 503) and confirm the alert fires end to end, and confirm a test error reaches the tracker tagged with `requestId`. Thresholds and SLO targets the user has not given are `[TO BE BASELINED — owner: ___]`. Never reply with only a request for the repo.
+- **Part of it already exists** (e.g. "we already have Sentry"): open with an inventory of what is there (Sentry server/client/edge configs, `global-error.tsx`, tags, source maps) and state that it is kept as is; add only what was asked (e.g. health routes and alert rules); add `requestId` as a Sentry tag only if it is missing, as a minimal diff; touch the logger only if `console.*` calls are found.
+- **Bare "add observability"**: ask once, in one list, for the critical journeys and the alert channel; meanwhile show the plan skeleton with every SLO target and alert threshold as `[TO BE BASELINED — owner: ___]`. Never invent SLO numbers.
+- **Asked to replace an existing logger or config outright**: decline the overwrite in one line (it loses the team's wiring) and propose the standard file beside it as a `.proposed` twin for a manual merge.
 
 ## Starting points
 - **New** — point `target` at an empty folder: logger, health routes, alert rules, SLO doc and `.env.example` are written.
@@ -47,7 +50,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | On-call / notification channel | yes | user — ask once |
 | Existing `lib/logger.ts`, health routes | yes | repo |
 
-If a required input is missing, ask for it once; do not guess.
+Missing facts do not stop the plan: use the stated defaults, mark thresholds and SLO targets `[TO BE BASELINED — owner: ___]` and ask once at the start. Never invent SLO numbers.
 
 ## Procedure
 1. Read `../../../shared/stack-conventions.md` (Logging, Errors rows) and `../../../shared/token-efficiency.md`. Inventory what exists: logger, Sentry, health routes, Vercel integrations.
@@ -85,3 +88,6 @@ If a required input is missing, ask for it once; do not guess.
 - `references/alerts-and-slos.md` — alert catalogue, SLO starter, error-budget policy, dashboard panels
 - `assets/logger.ts`, `assets/logger-context.ts`, `assets/health-route.ts`, `assets/health-deep-route.ts`, `assets/alert-rules.yaml`
 - `scripts/install.py` — installs the assets into a repo without overwriting (`.proposed` twins), appends env vars to `.env.example`
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten: a differing file gets a `.proposed` twin listed in the report for a manual merge.

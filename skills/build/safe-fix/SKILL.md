@@ -23,8 +23,11 @@ metadata:
 
 # safe-fix
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/safe-fix --input <name>=<value> … --out <dir>` (see `--explain build/safe-fix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Typical flow: run once before the fix (writes `baseline.json`), apply the fix, run again with `--input baseline=<dir>/baseline.json`; any newly failing test is collateral and the run exits 1.
+## In a conversation: work the fix now
+- **The bug report carries a symptom and evidence** (environment, `requestId`, error text, "after yesterday's release"): answer **in this reply** with the fix plan, in order: (1) evidence — what to pull by `requestId` (Vercel logs, Supabase logs, Sentry event) and what each would confirm, plus the release diff to read if it followed a release; (2) the failing reproduction written before any change — the exact test (e.g. an integration test with the affected persona) and why it fails today; (3) the root cause in one sentence with file:line and its evidence, or, until the evidence is in, the ranked hypotheses (e.g. RLS policy predicate, missing JWT claim) and the evidence that settles each; (4) the minimal diff to the failing path only — no renames, no reformatting; (5) the regression test named after the bug (`it('does not <bug> when <condition>')`), seen red on the pre-fix code by stashing the fix; (6) verification — lint, typecheck, full unit suite, affected integration/e2e, build, and a grep of every caller of the changed code; (7) blast radius and rollback (revert the commit or Vercel Instant Rollback; a down-migration if schema changed). Facts you cannot see (paths, log lines) are `[TO BE BASELINED — owner: ___]`, never invented. Never reply with only a request for logs.
+- **Asked to change shared code the quick way** (e.g. "just change formatMoney"): grep the callers first and list them; when other callers (e.g. UI) rely on the current behaviour, decline the shared change in one line, fix the failing path instead (a dedicated formatter or a parser option on the export), add a regression test for that path, run the tests that cover the shared function, and state the blast radius explicitly.
+- **Too little to reproduce** ("sometimes the save button does nothing"): ask once, in one list, for environment, exact steps, browser, a `requestId` or logs; do not guess-fix. Say what follows if the evidence still gives no repro: targeted, `requestId`-tagged logging at the suspected hops ships first, then the repro and the fix. Never weaken, skip or delete a test to get green.
+- **Asked to ship because the one target test passes**: decline in one line — the full suite decides, and any test that was green and is now red is collateral that blocks the fix.
 
 ## Starting points
 - **Existing** — the test suite is snapshotted before the fix (or your recorded baseline is used), re-run after it, and any test that was green and is now red is reported as collateral damage.
@@ -42,7 +45,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Environment where it happens (local / preview / prod) and version/sha | yes | user — ask once |
 | Repo access | yes | repo |
 
-If a required input is missing, ask for it once; do not guess.
+Missing facts do not stop the fix plan: mark them `[TO BE BASELINED — owner: ___]` and ask at the end. Only when there is no evidence at all to reproduce from, ask once for it and do not guess-fix.
 
 ## Procedure
 1. Read `../../../shared/token-efficiency.md` (rules 2, 8, 9, 10 govern this skill) and `references/never-collateral.md`.
@@ -79,3 +82,6 @@ If a required input is missing, ask for it once; do not guess.
 - `references/common-bugs-stack.md` — recurring causes in Next.js/Supabase/Vercel apps
 - `assets/fix-report.md` — report template
 - `scripts/safefix.py` — `baseline` / `verify`: snapshots the test suite before a fix and fails (exit 1) on any newly failing test
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/safe-fix --input <name>=<value> … --out <dir>` (see `--explain build/safe-fix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Typical flow: run once before the fix (writes `baseline.json`), apply the fix, run again with `--input baseline=<dir>/baseline.json`; any newly failing test is collateral and the run exits 1.

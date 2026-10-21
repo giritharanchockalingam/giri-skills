@@ -24,8 +24,19 @@ metadata:
 
 # sow-drafter
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/sow-drafter --input <name>=<value> … --out <dir>` (see `--explain presales/sow-drafter`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: draft the SOW now
+- **The request carries the approved proposal, the estimate and the commercial model** — including when the proposal and estimate are said to be attached but their contents are not in the conversation: draft the SOW **in this reply** on `assets/sow-template.md` from the stated facts. Never reply with only a request for files. In this order:
+  1. **Scope** — numbered `S-nn` statements (verb + object + boundary, with appendix references) and mirrored `O-nn` out-of-scope items where ambiguity is likely.
+  2. **Deliverables and acceptance** — table with ID, format, objective acceptance criteria, method, review window, approver (client role), milestone; plus a **deemed-acceptance clause**.
+  3. **Milestones and payment** tied to accepted deliverables per the stated model (e.g. fixed price per wave → one milestone per wave on acceptance); amounts from the proposal pricing or `[TO BE BASELINED — owner: ___]`.
+  4. **Assumptions** — every estimate quantity as an assumption with basis, consequence if false, change-control trigger = Y, and who confirms by when.
+  5. **Client dependencies** with due dates and a delay-consequence clause.
+  6. **Governance and RACI** with exactly one A per row; **change-control procedure** with a minor-change threshold.
+  7. **Legal flags** — topics (IP, liability, warranties, termination, data protection, non-solicit, insurance) referenced to the MSA clause and marked "confirm with counsel", not drafted.
+  8. Separately, internal (not shipped): **proposal → SOW traceability table** and **scope-ambiguity register**.
+  Mark every value the request does not give `[TO BE BASELINED — owner: ___]` naming its source, and end with the few questions that close those gaps.
+- **No proposal, or no commercial model** ("turn this proposal into an SOW"): ask once, in one list, for the commercial model (fixed / T&M / milestone / run-rate) and the estimate file (and the proposal if absent). Say in one line that acceptance-payment linkage depends on the model. Do not draft the commercial section on an assumed model; you may offer to draft scope and deliverables meanwhile.
+- **Asked for subjective acceptance or an unsourced price** ("to the client's reasonable satisfaction", "put roughly what we discussed on the call"): say in one line that subjective acceptance invites disputes over sign-off and payment. Rewrite the criteria as objective, testable ones per `references/acceptance-criteria-patterns.md`. Show the total as `[TO BE BASELINED — owner: ___]` with a note that it must come from the estimate/proposal pricing — never print the discussed figure anywhere. Offer a **deemed-acceptance clause** (accepted unless written rejection with reasons within the review window) as the flexibility mechanism instead.
 
 ## Starting points
 - **New** — the approved proposal becomes a SOW on the template: scope in and out, deliverables with acceptance criteria, milestones, team, every assumption carried, the change-control clause verbatim.
@@ -47,7 +58,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Client-side named roles for RACI | no | user |
 | Existing SOW draft (redline mode) | yes in redline | file |
 
-If the proposal or commercial model is missing, ask once. An SOW without a decided commercial model cannot define acceptance and payment linkage.
+If the proposal or commercial model is missing, ask once. A missing estimate figure, MSA reference or client role name does not stop the draft: it is marked `[TO BE BASELINED — owner: ___]`. An SOW without a decided commercial model cannot define acceptance and payment linkage.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first. Redline convention applies in redline mode.
@@ -84,3 +95,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `references/acceptance-criteria-patterns.md` — patterns by deliverable type with examples
 - `assets/sow-template.md` — SOW template
 - `assets/assumptions-checklist.md` — assumptions and dependencies checklist by engagement type
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/sow-drafter --input <name>=<value> … --out <dir>` (see `--explain presales/sow-drafter`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Use pre-merge or pre-release to review a diff, PR or feature for security defects in the Next.js + Supabase + Vercel stack. Produces a reasoning-based review (threat model per change: authz, injection, secrets, RLS bypass, SSRF, IDOR, mass assignment, server-action pitfalls) with severity-rated findings and fixes applied in code, not a generic checklist. Wraps the sentry security-review skill when installed. Not for schema authoring (use supabase-schema-rls) or bug fixing without a security angle (use safe-fix).
+description: Use pre-merge or pre-release to security-review a diff, PR or feature in the Next.js + Supabase + Vercel stack — "review this PR before merge", "security review this diff", "is our app secure?", a route handler or server action that takes tenantId from the query string or body, uses the admin/service-role client, or bypasses RLS. Produces a reasoning-based review (surface inventory and threat model per change: authz, injection, secrets, RLS bypass, SSRF, IDOR, mass assignment, server-action pitfalls) with severity-rated findings and fixes applied in code, not a generic checklist. Wraps the sentry security-review skill when installed. Do not use for fixing a reported bug that has a repro and no security angle (safe-fix) or for schema authoring (supabase-schema-rls).
 license: MIT
 metadata:
   domain: build

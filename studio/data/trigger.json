@@ -350,6 +350,76 @@
   "correct": null
  },
  {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
   "skill": "ai-platform/ab-test-analysis",
   "caseId": "prompt-should-we-ship",
   "run": 1,

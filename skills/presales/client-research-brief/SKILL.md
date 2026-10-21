@@ -27,8 +27,17 @@ metadata:
 
 # client-research-brief
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/client-research-brief --input <name>=<value> … --out <dir>` (see `--explain presales/client-research-brief`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: write the brief now
+- **The request names the company, purpose and angle** (with or without a notes file — if the notes are said to be attached but their contents are not in the conversation, work from what the request states): write the brief **in this reply**, applying the skeleton script's classification by hand (sort each note item — filing link, job posting, announcement — into its section and number it as a source `[S1]…`). Never reply with only a request for the file. In template order (`assets/brief-template.md`):
+  1. **Bottom line** — three facts the reader must walk in knowing, each with its source.
+  2. **Snapshot** — each cell sourced or `[TO BE BASELINED — owner: ___]`.
+  3. **Financial signals** — each number cites the filing and its section/page (e.g. "10-K, Item 7, p. __"); figures not quoted in the request stay `[TO BE BASELINED — owner: ___]` naming the filing section to read.
+  4. **Technology signals table** — signal, source and tier, confidence (High / Med / Low per the playbook), and the confirming question for the call.
+  5. **Leadership** — public-record facts only (title, since, prior employer, quoted priorities); no personality inference.
+  6. **Recent news** (≤6, dated) · **Likely initiatives** labelled *Hypothesis*, each with the signal and its tier and the confirming question · **Risks and landmines** · **Questions for the call**.
+  7. **Sources** — every URL or document with date accessed and tier.
+- **Company or purpose missing or ambiguous** ("a brief on Apex"): ask once which company (legal name, HQ country, ticker if listed) and the purpose and date of the meeting. Do not produce a brief for a guessed company and do not invent a notes file or sources.
+- **Asked to fill revenue, IT spend or other figures that no source gives** (private company, "use what you think it is"): say in one line that private-company figures are not estimated without a cited public source. Show those cells as `[TO BE BASELINED — owner: ___]` — never print an estimate anywhere, and never cite aggregator revenue estimates. Use only the user's notes as sources, rate a fact resting on a single signal **Low**, and give the specific discovery question that would baseline each figure (e.g. "What is the annual run cost of your WMS and integration estate?").
 
 ## Starting points
 - **New** — your notes and links are sorted into the brief's sections with every source numbered; the model step writes the brief, or with `draft_only` the brief is your notes verbatim, each item cited, the so-what left as owned markers.
@@ -50,7 +59,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Named stakeholders to profile | no | user |
 | Network access available? (yes/no) | yes | environment |
 
-If company name or purpose is missing, ask once. Never guess which company is meant when names collide (ask "Acme Corp (NYSE: ACM) or Acme Ltd (UK)?").
+If company name or purpose is missing, ask once. A missing notes file or angle does not stop the brief: unsourced cells are marked `[TO BE BASELINED — owner: ___]`. Never guess which company is meant when names collide (ask "Acme Corp (NYSE: ACM) or Acme Ltd (UK)?").
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first.
@@ -84,3 +93,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `references/tech-signal-playbook.md` — where tech-stack signals live and how to rate confidence
 - `assets/brief-template.md` — one-page brief template
 - `scripts/brief_skeleton.py` — notes/links file → brief skeleton with empty-section report (no network)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/client-research-brief --input <name>=<value> … --out <dir>` (see `--explain presales/client-research-brief`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
