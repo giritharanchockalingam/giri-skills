@@ -1,6 +1,6 @@
 ---
 name: ci-cd-vercel-github
-description: Use for any pipeline work on a Next.js + Supabase app deployed to Vercel via GitHub Actions — "set up CI", "add preview deploys", "deploy to prod", "pipeline is failing", "rollback". Produces ci.yml (lint→typecheck→unit→build), preview.yml (Vercel preview + Playwright), prod.yml (tag-triggered: migrate staging→prod, deploy, smoke, release), environment/secret matrix, promotion flow and a rollback runbook. Not for test authoring (use test-strategy-tdd) or alerting (use observability-setup).
+description: Use for any pipeline work on a Next.js + Supabase app deployed to Vercel via GitHub Actions — "set up CI", "PR checks", "add preview deploys", "tag-based prod releases with migrations", "deploy to prod", "pipeline is failing", a failed workflow run or step in ci.yml/preview.yml/prod.yml (e.g. supabase db push failing on a migration checksum), "rollback". Produces ci.yml (lint→typecheck→unit→build), preview.yml (Vercel preview + Playwright), prod.yml (tag-triggered: migrate staging→prod, deploy, smoke, release), environment/secret matrix, promotion flow and a rollback runbook. Do not use for application bugs outside the pipeline (safe-fix), test authoring (test-strategy-tdd) or alerting (observability-setup).
 license: MIT
 metadata:
   domain: build
@@ -27,8 +27,11 @@ metadata:
 
 # ci-cd-vercel-github
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The install step exits 1 when a kept (customised) workflow lacks a required job, because branch protection depends on those check names; merge the missing stage from `assets/workflows/` and re-run.
+## In a conversation: design the pipeline now
+- **The request names the goal** (new pipeline, add a stage, tag-based prod releases): answer **in this reply** with, in order: (1) the stage table — stage → trigger → job → required check name (`ci / lint-typecheck-test`, `ci / rls-lint`, `preview / e2e`) → secrets → timeout — and a line that no file is written until you reply "go"; (2) the three workflows `.github/workflows/ci.yml`, `preview.yml`, `prod.yml` with their jobs, and every `npm run <script>` they call listed for checking against `package.json`; (3) the env/secret matrix — each secret → GitHub secret, Vercel env or GitHub Environment (`staging`, `production`) — names only, never values, with the `gh secret set` commands; (4) the prod path in `prod.yml`: tag on `main` verified by `git merge-base`, migrate staging → migrate prod behind the `production` Environment reviewer gate, deploy, smoke `/api/health` and `/api/health/deep`, release; (5) the rollback runbook installed at `docs/runbooks/rollback.md` (Vercel Instant Rollback plus the migration revert path); (6) the branch-protection commands. Repo facts not in the request (project refs, existing scripts) are `[TO BE BASELINED — owner: ___]`, asked at the end. Never reply with only a request for the workflow files.
+- **A run failed and the log line is given**: name the cause from the log, give the minimal fix, and say which steps stay untouched. For `supabase db push` "migration … applied with different checksum": an already-applied migration file was edited; restore the original file from git history and move the change into a new, later-numbered migration — never `supabase migration repair`, never delete or rewrite migration history to make the run pass. Change no unrelated workflow step.
+- **"Deploy to production" with no environment facts**: ask once, in one list, for the Vercel project, the Supabase project refs for staging and prod, and whether the GitHub Environments `staging`/`production` exist. Do not deploy, tag or promote anything until they arrive and you say "go".
+- **Asked to drop a required check or mark CI done while a stage is missing**: decline in one line (branch protection depends on those check names), list what is missing, and offer the merge from `assets/workflows/`.
 
 ## Starting points
 - **New** — point `target` at an empty folder: all three workflows are written from `assets/workflows/` and validated.
@@ -46,7 +49,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Environments: Vercel project, Supabase project refs (staging, prod) | yes for prod work | user — ask once |
 | Failing run URL / logs | yes for fixes | user |
 
-If a required input is missing, ask for it once; do not guess.
+Missing repo facts do not stop the design: mark them `[TO BE BASELINED — owner: ___]` and ask at the end. Only when the goal is absent, or prod work is asked without the Vercel and Supabase project refs, ask once and do not deploy or tag.
 
 ## Procedure
 1. Read `../../../shared/stack-conventions.md` (CI row), `../../../shared/token-efficiency.md`. Read existing workflows and `package.json` scripts; map what runs where today.
@@ -83,3 +86,6 @@ If a required input is missing, ask for it once; do not guess.
 - `references/troubleshooting.md` — common failures and fixes
 - `assets/workflows/ci.yml`, `assets/workflows/preview.yml`, `assets/workflows/prod.yml`
 - `scripts/install_ci.py` — writes absent workflows, keeps existing ones, validates `on:`/`jobs:` and required job names
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The install step exits 1 when a kept (customised) workflow lacks a required job, because branch protection depends on those check names; merge the missing stage from `assets/workflows/` and re-run.
