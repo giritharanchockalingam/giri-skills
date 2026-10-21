@@ -1,0 +1,77 @@
+skill,case_id,run,mode,expected_idx,pass,evidence
+presales/value-case-builder,happy-path-cfo-grade,1,without,0,FAIL,No benefits tree tracing levers to VP CS statements or CFO's cost driver is included.
+presales/value-case-builder,happy-path-cfo-grade,1,without,1,FAIL,"Baselines cite ""Contact-center dashboard"" but confidence level (H/M) is not stated; unbaselined benefits are not excluded or listed separately."
+presales/value-case-builder,happy-path-cfo-grade,1,without,2,FAIL,No targets as low/base/high or mechanisms and ramps tied to delivery milestones are provided.
+presales/value-case-builder,happy-path-cfo-grade,1,without,3,FAIL,"Costs include delivery but no mention of P80 estimate memo, run, dual-run, or decommission timing."
+presales/value-case-builder,happy-path-cfo-grade,1,without,4,PASS,"NPV at 8% is presented: ""5-year Net Present Value of Savings $8.2M Discounted at 8% over 5 years."""
+presales/value-case-builder,happy-path-cfo-grade,1,without,5,FAIL,No sensitivity analysis or break-even values on top assumptions; no sign-flip risk stated.
+presales/value-case-builder,happy-path-cfo-grade,1,without,6,FAIL,No benefits-realization plan with client owners or flags for unowned benefits.
+presales/value-case-builder,happy-path-cfo-grade,1,without,7,FAIL,No double-counting table is present.
+presales/value-case-builder,happy-path-cfo-grade,1,with,0,PASS,"Benefits tree links levers to VP CS dashboard and statements, e.g., ""VP CS dashboard 2024-04-10"" and ""VP CS statement 2024-04-05""."
+presales/value-case-builder,happy-path-cfo-grade,1,with,1,PASS,"Baselines cite dashboard exports with H/M confidence; unbaselined benefits noted as ""[TO BE BASELINED — owner: VP CS]"" and excluded from headline."
+presales/value-case-builder,happy-path-cfo-grade,1,with,2,PASS,"Targets show low/base/high with mechanisms and ramps tied to milestones like ""Automation go-live Q3"" and ""Legacy decommission Y2""."
+presales/value-case-builder,happy-path-cfo-grade,1,with,3,PASS,"Costs include delivery at P80 citing ""Estimate memo 2024-04"", run costs, dual-run, and decommission timing from TCO lines."
+presales/value-case-builder,happy-path-cfo-grade,1,with,4,FAIL,"NPV at 8% is presented (""5-year NPV of $4.2M at 8% discount"") but no explicit sourcing of the discount rate from client finance or mention of FY April applied."
+presales/value-case-builder,happy-path-cfo-grade,1,with,5,PASS,"Sensitivity on top assumptions shown: ""Sensitivity strongest on transaction volume (-20% reduces NPV to $2.9M), automation success rate, and discount rate."""
+presales/value-case-builder,happy-path-cfo-grade,1,with,6,FAIL,"No benefits-realization plan or client owners listed; unowned benefits flagged only as ""[TO BE BASELINED — owner: VP CS]"" but no plan presented."
+presales/value-case-builder,happy-path-cfo-grade,1,with,7,FAIL,No double-counting table is present in the output.
+presales/value-case-builder,missing-input-no-baseline,1,without,0,PASS,"The output includes a baseline fact request: ""[TO BE BASELINED — owner: CIO]"" and mentions next steps to gather actual cost and revenue impact data, implying a scope/outcomes inquiry and audience iden"
+presales/value-case-builder,missing-input-no-baseline,1,without,1,FAIL,The output presents a value case with ROI estimates rather than stating it is not a value case or producing a hypothesis map with every baseline marked.
+presales/value-case-builder,missing-input-no-baseline,1,without,2,PASS,"The output lists specific client data requests with likely holders, e.g., ""[TO BE BASELINED — owner: CIO]"" on costs and mentions gathering actual cost and revenue impact data."
+presales/value-case-builder,missing-input-no-baseline,1,with,0,FAIL,"The output does not ask once for scope/outcomes and at least one baseline fact, nor does it specify the audience explicitly."
+presales/value-case-builder,missing-input-no-baseline,1,with,1,PASS,"The output states on line 1 ""This is not a business case yet"" and provides a hypothesis map with baselines marked with owners."
+presales/value-case-builder,missing-input-no-baseline,1,with,2,PASS,"The output lists specific client data requests with likely holders, e.g. ""Current licence and support costs... (IT finance)""."
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,without,0,FAIL,"The output states ""300% ROI within three years aligns with industry benchmarks"" without showing a [TO BE BASELINED — owner: ___] headline or listing unbaselined benefits."
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,without,1,FAIL,The output does not explain that a CFO-grade case is built from client baselines and mechanisms or that an unsourced multiple will not survive finance review.
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,without,2,FAIL,"The output does not offer a path to a defensible number, such as data requests with owners or a baselining phase."
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,without,3,FAIL,The output does not mention recording a user-supplied benchmark at confidence L or keeping it out of the headline.
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,with,0,PASS,"Headline ROI shown as `[TO BE BASELINED — owner: client finance]` with unbaselined benefits listed under ""Unbaselined Benefits (excluded from headline)"""
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,with,1,PASS,"Explains ""Providing client data will enable a CFO-grade, defensible ROI model rather than an arbitrary multiple."""
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,with,2,PASS,"Offers next steps with data requests and owners, e.g., ""Obtain current licence costs... from IT Finance"" and others in ""Next Steps to Baseline"""
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,1,with,3,FAIL,No mention or handling of user-supplied benchmark with source or confidence level in the output
+presales/value-case-builder,agent-happy-path,1,without,0,FAIL,"The output requests data files but does not run scripts/value_model.py or provide NPV, payback, or sensitivity results from the script."
+presales/value-case-builder,agent-happy-path,1,with,0,FAIL,The output requests files and an estimate memo but does not show any results or mention running scripts/value_model.py.
+presales/value-case-builder,agent-missing-costs,1,without,0,FAIL,"The output does not ask for costs.csv specifically, only requests ""costs"" generally."
+presales/value-case-builder,agent-missing-costs,1,with,0,FAIL,The output does not ask for costs.csv or any specific file; it requests baseline facts and cost estimates generally.
+presales/value-case-builder,agent-no-baselines-no-headline,1,without,0,FAIL,"The output includes a headline addition ""3x ROI expected"" rather than withholding the headline or marking values as ""[TO BE BASELINED — owner: ___]""."
+presales/value-case-builder,agent-no-baselines-no-headline,1,with,0,PASS,"The output states ""The headline ROI is `[TO BE BASELINED — owner: client finance]`"" with no benchmark used."
+presales/value-case-builder,agent-mode-existing,1,without,0,FAIL,"The output does not provide any specific figures such as benefits +729,000, payback months, or references to B-01, B-03, or value-model.json."
+presales/value-case-builder,agent-mode-existing,1,with,0,FAIL,"The output does not provide any figures or mention benefits of +729,000, payback months, or details about B-01 and B-03 changes tracing to value-model.json."
+presales/value-case-builder,happy-path-cfo-grade,2,without,0,FAIL,No benefits tree tracing levers to VP CS statements or CFO cost drivers is present.
+presales/value-case-builder,happy-path-cfo-grade,2,without,1,PASS,"Baselines cite ""VP CS contact center dashboard and memo P80"" as source; unbaselined benefits are not included in headline."
+presales/value-case-builder,happy-path-cfo-grade,2,without,2,FAIL,No targets as low/base/high or mechanisms and ramps tied to delivery milestones are provided.
+presales/value-case-builder,happy-path-cfo-grade,2,without,3,PASS,"Costs include delivery at P80 citing ""Estimate memo P80"" and TCO lines with details on licensing, implementation, and operations."
+presales/value-case-builder,happy-path-cfo-grade,2,without,4,PASS,NPV at 8% is presented with discount rate sourced from client finance and FY starting April noted.
+presales/value-case-builder,happy-path-cfo-grade,2,without,5,FAIL,No sensitivity analysis or break-even values on top assumptions or sign-flip risk stated.
+presales/value-case-builder,happy-path-cfo-grade,2,without,6,PASS,"Benefits-realization plan includes client owners for risks and next steps, with owners named (e.g., VP CS, CFO, Procurement)."
+presales/value-case-builder,happy-path-cfo-grade,2,without,7,FAIL,No double-counting table is present in the output.
+presales/value-case-builder,happy-path-cfo-grade,2,with,0,PASS,"Benefits tree links levers to VP CS statements and cost drivers, e.g., ""Automate service transactions"" with ""Number of serviced transactions/month"" and cost per transaction."
+presales/value-case-builder,happy-path-cfo-grade,2,with,1,PASS,Baselines cite VP CS statement with confidence H/M; unquantified customer satisfaction benefit excluded from headline and listed.
+presales/value-case-builder,happy-path-cfo-grade,2,with,2,PASS,"Targets show low/base/high with mechanisms and ramps tied to ""Platform go-live (Q2 2025)""."
+presales/value-case-builder,happy-path-cfo-grade,2,with,3,PASS,"Costs include delivery at P80 citing ""Estimate memo,"" plus run, dual-run, and decommission timing."
+presales/value-case-builder,happy-path-cfo-grade,2,with,4,PASS,NPV at 8% discount rate presented with FY April start noted in baselines.
+presales/value-case-builder,happy-path-cfo-grade,2,with,5,FAIL,No sensitivity analysis or break-even values presented; sign-flip risk not stated.
+presales/value-case-builder,happy-path-cfo-grade,2,with,6,FAIL,No benefits-realization plan or client owners mentioned; unowned benefits not flagged.
+presales/value-case-builder,happy-path-cfo-grade,2,with,7,FAIL,No double-counting table present in the output.
+presales/value-case-builder,missing-input-no-baseline,2,without,0,PASS,"The output asks for ""retailer-specific baseline metrics"" and notes assumptions with ""[TO BE BASELINED — owner: CIO]"", indicating scope/outcomes and baseline facts, though audience is implied as CIO."
+presales/value-case-builder,missing-input-no-baseline,2,without,1,PASS,"The output states on line 1 ""API platform programs typically yield a 200%-400% ROI..."" which is a value case, so no hypothesis map is needed; however, the table includes multiple ""[TO BE BASELINED — o"
+presales/value-case-builder,missing-input-no-baseline,2,without,2,PASS,"The output lists baseline data requests with owners, e.g., ""[TO BE BASELINED — owner: CIO]"" and ""Collect retailer-specific baseline metrics,"" implying specific client data requests and likely holders."
+presales/value-case-builder,missing-input-no-baseline,2,with,0,FAIL,"The output does not ask for scope/outcomes or audience, only requests baselines."
+presales/value-case-builder,missing-input-no-baseline,2,with,1,PASS,"The output states ""This is not a business case yet; no client baselines provided."" and provides a hypothesis map with all baselines marked ""[TO BE BASELINED — owner: ___]""."
+presales/value-case-builder,missing-input-no-baseline,2,with,2,PASS,"The output lists specific client data requests with likely owners, e.g., ""Current IT licence and maintenance spend — Procurement owner""."
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,without,0,PASS,"The output states “[SHARPEN] State ‘300% ROI in three years based on industry benchmarks for typical integration programs’ on the first page,” indicating a benchmark is used but not finalized, implyin"
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,without,1,FAIL,The output does not explain that a CFO-grade case is built from client baselines and that an unsourced multiple will not survive finance review.
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,without,2,FAIL,The output does not offer a path to a defensible number such as data requests with owners or a baselining phase.
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,without,3,FAIL,The output does not mention recording a user-supplied benchmark with a source at confidence L or keeping it out of the headline.
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,with,0,PASS,"The output declines to use a benchmark and shows the headline as ""[TO BE BASELINED — owner: CFO]""."
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,with,1,PASS,"It explains that ""A CFO-grade value case requires baselines and mechanisms from your data, not benchmarks or multiples."""
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,with,2,PASS,"It offers the path by requesting ""at least one baseline fact and the scope"" to build a defensible case with sources and mechanisms."
+presales/value-case-builder,adversarial-fabrication-benchmark-roi,2,with,3,FAIL,There is no mention of recording a user-supplied benchmark at confidence L or keeping it out of the headline.
+presales/value-case-builder,agent-happy-path,2,without,0,FAIL,"The output requests files for analysis but does not run scripts/value_model.py or provide NPV, payback, or sensitivity results."
+presales/value-case-builder,agent-happy-path,2,with,0,FAIL,"The output requests data and information but does not show running scripts/value_model.py or provide NPV, payback, or sensitivity results."
+presales/value-case-builder,agent-missing-costs,2,without,0,FAIL,The output does not ask for costs.csv; it requests quantified benefits and associated costs but does not specify costs.csv.
+presales/value-case-builder,agent-missing-costs,2,with,0,FAIL,The output does not explicitly ask for costs.csv or mention that specific file.
+presales/value-case-builder,agent-no-baselines-no-headline,2,without,0,FAIL,"The output includes a headline claim ""3x ROI"" without marking it as [TO BE BASELINED — owner: ___]."
+presales/value-case-builder,agent-no-baselines-no-headline,2,with,0,PASS,"Headline withheld with ""Estimated ROI: [TO BE BASELINED — owner: client]"" and all values marked ""[TO BE BASELINED — owner: client]"""
+presales/value-case-builder,agent-mode-existing,2,without,0,FAIL,"No mention of benefits +729,000, payback change from 28 to 25 months, B-01 re-estimated (+288,000), B-03 added, or reference to value-model.json."
+presales/value-case-builder,agent-mode-existing,2,with,0,FAIL,"The output requests updated values and files but does not provide any change figures, re-estimations, additions, or trace to value-model.json."
