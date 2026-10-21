@@ -185,6 +185,11 @@ def render(company: str, purpose: str, buckets: dict, sources: list, today: str,
     out.append("")
     out.append(f"Prepared: {today} · Angle: {TBD} · Network used: no (skeleton from notes)")
     out.append("")
+    # every item has a citable id: one per URL in the notes, plus one for the notes themselves (user-supplied, unverified)
+    sid: dict[str, str] = {}
+    for _, url in sources:
+        sid.setdefault(url, f"S{len(sid) + 1}")
+    notes_id = f"S{len(sid) + 1}"
     out.append("## Bottom line")
     out.append(f"1. {TBD}")
     out.append(f"2. {TBD}")
@@ -199,7 +204,7 @@ def render(company: str, purpose: str, buckets: dict, sources: list, today: str,
             out.append("|---|---|---|---|---|")
             for i, (n, line) in enumerate(items, start=1):
                 urls = URL_RE.findall(line)
-                src = urls[0] if urls else "notes"
+                src = f"{sid[urls[0]]} {urls[0]}" if urls and urls[0] in sid else f"{notes_id} (notes)"
                 cell = line.replace("|", "\\|")
                 todo = "NEW since last brief — verify and cite" if delta and n in delta["new_lines"] else "verify and cite"
                 out.append(f"| {i} | {cell} (L{n}) | {src} | {TBD} | {todo} |")
@@ -212,11 +217,12 @@ def render(company: str, purpose: str, buckets: dict, sources: list, today: str,
     out.append("## Sources")
     out.append("| # | Source | Section / page | Date accessed | Tier |")
     out.append("|---|---|---|---|---|")
-    if sources:
-        for i, (n, url) in enumerate(sources, start=1):
-            out.append(f"| S{i} | {url} | (notes L{n}) | {TBD} | {TBD} |")
-    else:
-        out.append(f"| S1 | {TBD} | | | |")
+    listed = set()
+    for n, url in sources:
+        if url not in listed:
+            listed.add(url)
+            out.append(f"| {sid[url]} | {url} | (notes L{n}) | {TBD} | {TBD} |")
+    out.append(f"| {notes_id} | Account notes supplied by the user (unverified until cited to a public source) | line numbers as given | {TBD} | user notes |")
     out.append("")
 
     unclassified = buckets.get("Unclassified", [])
@@ -232,9 +238,9 @@ def render(company: str, purpose: str, buckets: dict, sources: list, today: str,
 
 def render_final(company: str, purpose: str, buckets: dict, sources: list, today: str, delta: dict | None = None) -> str:
     """The brief on the template's sections, every item cited by source id; no model step."""
-    sid = {}
-    for i, (_, url) in enumerate(sources, start=1):
-        sid.setdefault(url, f"S{i}")
+    sid: dict[str, str] = {}
+    for _, url in sources:           # same ids as the skeleton's Sources table
+        sid.setdefault(url, f"S{len(sid) + 1}")
 
     def cite(n: int, line: str) -> str:
         ids = [sid[u] for u in URL_RE.findall(line) if u in sid]

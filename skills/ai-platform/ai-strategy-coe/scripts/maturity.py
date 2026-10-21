@@ -8,7 +8,7 @@ Input columns: dimension, score_1_to_5|score, evidence, gap_to_next_level, owner
 The `overall_min` row in the asset layout is ignored and recomputed.
 
 Rules (references/maturity-model.md): a score without an evidence line is NOT a score — the
-dimension is reported as `[TO BE BASELINED — owner: <owner or ___>]`. Overall level = the
+dimension is reported as `[TO BE BASELINED — owner: <owner, else --default-owner>]`. Overall level = the
 minimum of the evidenced scores; the constraining dimension is named. A gap = any dimension
 below --target (default 3) or unevidenced. Each gap becomes one roadmap item citing the next
 level's criteria from the maturity model.
@@ -36,8 +36,16 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
+# who owns a gap the scorecard leaves unassigned (--default-owner); never a blank owner
+FALLBACK = {"owner": "AI CoE lead"}
+
+
+def own(owner: str) -> str:
+    return owner or FALLBACK["owner"]
+
+
 def tbd(owner: str) -> str:
-    return f"[TO BE BASELINED — owner: {owner or '___'}]"
+    return f"[TO BE BASELINED — owner: {own(owner)}]"
 
 
 def read_scorecard(path: str) -> list[dict]:
@@ -91,9 +99,11 @@ def main() -> int:
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--target", type=int, default=3, help="target level; dimensions below it are gaps")
     ap.add_argument("--org", default="<Organization>")
+    ap.add_argument("--default-owner", default="AI CoE lead", help="owner of gaps the scorecard leaves unassigned")
     ap.add_argument("--model", default=str(SKILL / "references" / "maturity-model.md"))
     ap.add_argument("--template", default=str(SKILL / "assets" / "roadmap.md"))
     a = ap.parse_args()
+    FALLBACK["owner"] = a.default_owner.strip() or FALLBACK["owner"]
     if not 1 <= a.target <= 5:
         die("--target must be 1-5")
     rows = read_scorecard(a.scorecard)
@@ -121,7 +131,7 @@ def main() -> int:
         if unscored:
             overall += f" — provisional: {len(unscored)} dimension(s) unscored"
     else:
-        overall = f"Overall level {tbd('___')} — no evidenced score"
+        overall = f"Overall level {tbd('')} — no evidenced score"
     gaps = [r for r in rows if r["is_gap"]]
 
     L = [f"# AI maturity assessment — {a.org}", "", f"**{overall}.** Target level: {a.target}. "
@@ -129,11 +139,11 @@ def main() -> int:
          "## Level per dimension", "| Dimension | Level | Evidence | Gap to next level | Owner | Note |",
          "|---|---|---|---|---|---|"]
     L += [f"| {r['dimension']} | {r['level']} | {r['evidence'] or tbd(r['owner'])} | "
-          f"{r['gap'] or r['next_criteria'] or tbd(r['owner'])} | {r['owner'] or '___'} | {r['note']} |" for r in rows]
-    L += [f"| {d} | {tbd('___')} | not in scorecard | | ___ | missing row |" for d in missing_dims]
+          f"{r['gap'] or r['next_criteria'] or tbd(r['owner'])} | {own(r['owner'])} | {r['note']} |" for r in rows]
+    L += [f"| {d} | {tbd('')} | not in scorecard | | {own('')} | missing row |" for d in missing_dims]
     L += ["", f"## Gaps (dimensions below target {a.target} or unscored)", "| Dimension | Current | Target | Next-level criteria | Owner |",
           "|---|---|---|---|---|"]
-    L += [f"| {r['dimension']} | {r['level']} | {a.target} | {r['next_criteria'] or tbd(r['owner'])} | {r['owner'] or '___'} |"
+    L += [f"| {r['dimension']} | {r['level']} | {a.target} | {r['next_criteria'] or tbd(r['owner'])} | {own(r['owner'])} |"
           for r in gaps] or ["| none | | | | |"]
     L += ["", "Scores and evidence are taken from the scorecard as supplied; plans score at the current level (rule 2). "
           "Unevidenced scores are not counted toward the overall level."]
@@ -149,8 +159,8 @@ def main() -> int:
     for d in DIMS:
         r = by_dim.get(d)
         cell = (f"| {d.capitalize()} | {r['level']} | {r['evidence'] or tbd(r['owner'])} | "
-                f"{r['gap'] or r['next_criteria'] or tbd(r['owner'])} | {r['owner'] or '___'} |") if r else \
-            f"| {d.capitalize()} | {tbd('___')} | not in scorecard | | ___ |"
+                f"{r['gap'] or r['next_criteria'] or tbd(r['owner'])} | {own(r['owner'])} |") if r else \
+            f"| {d.capitalize()} | {tbd('')} | not in scorecard | | {own('')} |"
         tpl = re.sub(rf"^\| {d.capitalize()} \|.*$", cell.replace("\\", "\\\\"), tpl, count=1, flags=re.M)
     tpl = tpl.replace("- Maturity: Level <n> overall; constraining dimension: <dimension> (evidence: <line>)",
                       f"- Maturity: {overall}")
@@ -159,7 +169,7 @@ def main() -> int:
     for k, r in enumerate(gaps, 1):
         to = (r["score"] + 1) if r["evidenced"] else a.target
         exit_c = r["next_criteria"] or ("baseline the dimension with evidence" if not r["evidenced"] else tbd(r["owner"]))
-        items.append(f"| {k} | {r['dimension']} | {r['level']} | {to} | {exit_c} | {r['owner'] or '___'} | {tbd(r['owner'])} |")
+        items.append(f"| {k} | {r['dimension']} | {r['level']} | {to} | {exit_c} | {own(r['owner'])} | {tbd(r['owner'])} |")
     if not gaps:
         items.append("| — | none | | | | | |")
     tpl = tpl.replace("\n## Assumptions", "\n".join(items) + "\n\n## Assumptions", 1)

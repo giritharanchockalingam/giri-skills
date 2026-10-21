@@ -45,7 +45,7 @@ export function validateJson(schema: JsonSchema, value: unknown, path = "$"): Pr
 /** What a caller may send per input: file-content text for text types, a value for the rest. */
 export interface InputFile { path: string; content: string }
 /** "files" is a folder (e.g. an existing repo's migrations) for brownfield runs; the runtime writes it under the run. */
-export type RunInput = { kind: "text"; content: string; ext?: string } | { kind: "value"; value: string } | { kind: "fixture"; path: string } | { kind: "files"; files: InputFile[] };
+export type RunInput = { kind: "text"; content: string; ext?: string } | { kind: "value"; value: string } | { kind: "fixture"; path: string; into_out?: boolean } | { kind: "files"; files: InputFile[] };
 export const MAX_FOLDER_FILES = 200;
 export const MAX_FOLDER_BYTES = 2 * 1024 * 1024;
 // path segments as real repos use them, incl. Next.js route groups and dynamic segments: app/(auth)/[slug]/page.tsx

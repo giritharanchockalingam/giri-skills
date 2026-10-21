@@ -41,9 +41,9 @@ def test_verify_detects_collateral_exits_1(tmp_path):
     r = run_script(SCRIPT, "verify", "--target", str(FX / "repo-collateral"), "--cmd", CMD,
                    "--baseline", str(FX / "baseline-green.json"), "--out", str(v))
     assert r.returncode == 1
-    assert "COLLATERAL" in r.stderr and "test_calc.py::test_multiply" in r.stderr
+    assert "COLLATERAL" in r.stderr and "test_calc.py::TestCalc::test_multiply" in r.stderr
     data = json.loads(v.read_text(encoding="utf-8"))
-    assert data["ok"] is False and data["collateral"] == ["test_calc.py::test_multiply"]
+    assert data["ok"] is False and data["collateral"] == ["test_calc.py::TestCalc::test_multiply"]
 
 
 def test_verify_reports_fixed_tests(tmp_path):
@@ -54,7 +54,7 @@ def test_verify_reports_fixed_tests(tmp_path):
     r = run_script(SCRIPT, "verify", "--target", str(FX / "repo-green"), "--cmd", CMD, "--baseline", str(b), "--out", str(v))
     assert r.returncode == 0, r.stderr
     data = json.loads(v.read_text(encoding="utf-8"))
-    assert data["fixed"] == ["test_calc.py::test_multiply"] and data["collateral"] == []
+    assert data["fixed"] == ["test_calc.py::TestCalc::test_multiply"] and data["collateral"] == []
 
 
 def test_verbose_pytest_names_every_test(tmp_path):
@@ -63,7 +63,7 @@ def test_verbose_pytest_names_every_test(tmp_path):
     assert r.returncode == 0, r.stderr
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["parser"] == "pytest"
-    assert set(data["tests"]) == {"test_calc.py::test_add", "test_calc.py::test_multiply"}
+    assert set(data["tests"]) == {"test_calc.py::TestCalc::test_add", "test_calc.py::TestCalc::test_multiply"}
 
 
 def test_generic_count_drop_is_collateral(tmp_path):
@@ -84,3 +84,15 @@ def test_bad_input_exits_1(tmp_path):
                       "--baseline", str(tmp_path / "missing.json"), "--out", str(tmp_path / "v.json")).returncode == 1
     r = run_script(SCRIPT, "baseline", "--target", str(FX / "repo-green"), "--cmd", "no-such-runner-xyz", "--out", str(tmp_path / "b.json"))
     assert r.returncode == 1 and "cannot run" in r.stderr
+
+
+def test_unittest_verbose_names_every_test_and_finds_collateral(tmp_path):
+    # stdlib runner (no pytest needed): the hosted runtime evaluates this skill with it
+    b, v = tmp_path / "b.json", tmp_path / "v.json"
+    r = run_script(SCRIPT, "baseline", "--target", str(FX / "repo-green"), "--cmd", "python3 -m unittest -v", "--out", str(b))
+    assert r.returncode == 0, r.stderr
+    data = json.loads(b.read_text(encoding="utf-8"))
+    assert data["parser"] == "unittest" and set(data["tests"]) == {"test_calc.py::TestCalc::test_add", "test_calc.py::TestCalc::test_multiply"}
+    r = run_script(SCRIPT, "verify", "--target", str(FX / "repo-collateral"), "--cmd", "python3 -m unittest -v", "--baseline", str(b), "--out", str(v))
+    assert r.returncode == 1
+    assert json.loads(v.read_text(encoding="utf-8"))["collateral"] == ["test_calc.py::TestCalc::test_multiply"]

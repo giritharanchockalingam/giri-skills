@@ -17,9 +17,10 @@ metadata:
       - {name: org, type: string, required: false, default: "<Organization>"}
       - {name: previous_portfolio, type: csv, required: false, from: "portfolio.csv from the last portfolio review; adds rank and band movement, new and dropped use cases"}
       - {name: target_level, type: string, required: false, default: "3", from: "target maturity level 1-5; dimensions below it are gaps"}
+      - {name: default_owner, type: string, required: false, default: "AI CoE lead", from: "who owns a gap the scorecard leaves without an owner"}
     run:
       - {step: portfolio, kind: script, cmd: "python3 -I scripts/score_portfolio.py {use_cases} --out-dir {out} --org {org} [--previous {previous_portfolio}]"}
-      - {step: maturity, kind: script, cmd: "python3 -I scripts/maturity.py {scorecard} --out-dir {out} --org {org} --target {target_level}"}
+      - {step: maturity, kind: script, cmd: "python3 -I scripts/maturity.py {scorecard} --out-dir {out} --org {org} --target {target_level} --default-owner {default_owner}"}
     outputs:
       - {path: "{out}/portfolio.csv", checks: [exists, csv:[rank,id,use_case,score,band], csv_rows:score!empty, csv_rows:band!empty]}
       - {path: "{out}/unscored.csv", checks: [exists, csv:[id,use_case,reason]]}

@@ -475,6 +475,14 @@ def execute(req: dict) -> dict:
                 p = skill_dir / rel
                 if not p.exists():
                     raise ValueError(f"fixture not found: {rel}")
+                if v.get("into_out"):       # a path input (the skill writes there): work on a copy under the run folder
+                    dest = out / name
+                    if p.is_dir():
+                        shutil.copytree(p, dest, dirs_exist_ok=True)
+                    else:
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(p, dest)
+                    p = dest
                 argv += ["--input", f"{name}={p}"]
             elif kind == "value":
                 val = str(v.get("value", ""))

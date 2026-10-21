@@ -762,7 +762,7 @@
  "build/safe-fix": {
   "cmd": {
    "kind": "value",
-   "value": "python3 -m pytest -q -p no:cacheprovider"
+   "value": "python3 -m unittest -v"
   }
  },
  "build/security-review": {

@@ -13,7 +13,7 @@ diffs against the baseline:
                   passed count when the runner names only failures)   -> exit 1, list printed
   * fixed       — tests failing in the baseline that no longer fail
   * still_failing — failing in both
-Recognised output: pytest (-q, -v, -rA), vitest / jest text (✓ ✗ × ✕), jest/vitest --reporter=json
+Recognised output: pytest (-q, -v, -rA), unittest (-v), vitest / jest text (✓ ✗ × ✕), jest/vitest --reporter=json
 (testResults[].assertionResults[]), and a generic "N passed, M failed" summary. A leading `python3`
 in --cmd is replaced by this interpreter. Exit 1 on bad input or collateral, 2 never. Stdlib, offline.
 """
@@ -30,6 +30,10 @@ from pathlib import Path
 MAX_CAPTURE = 200_000
 PYTEST_VERBOSE = re.compile(r"^(\S+::\S+)\s+(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)\b", re.M)
 PYTEST_SUMMARY = re.compile(r"^(PASSED|FAILED|ERROR)\s+(\S+::\S+)", re.M)
+# unittest -v: "test_multiply (test_calc.TestCalc.test_multiply) ... FAIL" (3.11+) or "(test_calc.TestCalc)"
+UNITTEST_LINE = re.compile(r"^(test\w*) \(([\w.]+)\)(?:\n[^\n]*?)?\s*\.\.\.\s*(ok|FAIL|ERROR|skipped|expected failure|unexpected success)\b", re.M)
+UNITTEST_STATUS = {"ok": "passed", "FAIL": "failed", "ERROR": "failed", "skipped": "skipped",
+                   "expected failure": "skipped", "unexpected success": "failed"}
 VITEST_LINE = re.compile(r"^\s*([✓✔✗✘×✕])\s+(.+?)(?:\s+\(?\d+\s*ms\)?)?\s*$", re.M)
 COUNTS = re.compile(r"(\d+)\s+(passed|failed|errors?|skipped)\b")
 STATUS = {"PASSED": "passed", "FAILED": "failed", "ERROR": "failed", "SKIPPED": "skipped",
@@ -97,6 +101,15 @@ def parse_output(text: str):
     for m in PYTEST_SUMMARY.finditer(text):
         tests[m.group(2)] = STATUS[m.group(1)]
         parser = "pytest"
+    if parser == "generic":
+        for m in UNITTEST_LINE.finditer(text):
+            name, parts = m.group(1), m.group(2).split(".")
+            if parts and parts[-1] == name:
+                parts = parts[:-1]
+            module, cls = parts[:-1], parts[-1:] if len(parts) > 1 else []
+            test_id = "::".join([f"{'/'.join(module or parts)}.py", *cls, name])
+            tests[test_id] = UNITTEST_STATUS[m.group(3)]
+            parser = "unittest"
     if parser == "generic":
         for m in VITEST_LINE.finditer(text):
             tests[m.group(2).strip()] = STATUS[m.group(1)]
