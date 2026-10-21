@@ -27,8 +27,12 @@ metadata:
 
 Wraps `webapp-testing` from anthropics/skills (pinned in vendor/pins.json). Upstream drives a live browser with native Python Playwright; the portal cannot launch one, so this skill turns the same method (headless Chromium, wait for `networkidle`, descriptive selectors) into a generator plus static checks, and passes the upstream instructions to the optional review step by path (`../../../vendor/webapp-testing/SKILL.md`), never by copy.
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/webapp-testing-runner --input <name>=<value> … --out <dir>` (see `--explain build/webapp-testing-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Say plainly that the tests were generated and compiled, not executed; results exist only after the user runs them.
+## In a conversation: write the tests now
+- **The flows are stated in the conversation** (flows JSON or plain steps): write both outputs **in this reply** — `test_flows.py` with one `test_<flow>` per flow using the pytest-playwright `page` fixture, `page.wait_for_load_state("networkidle")` after every `goto`, `role=`/`text=`/`label=`/`placeholder=`/`testid=` mapped to `get_by_role`/`get_by_text`/`get_by_label`/`get_by_placeholder`/`get_by_test_id`, the base URL read from the `BASE_URL` environment variable, and `GENERATED, NOT EXECUTED` in the module docstring; then `flows-report.md` — Flows (coverage matrix: steps per action, assertions, selector kinds), Generated tests, Warnings (nth-child/nth-of-type, XPath, generated class names, long CSS chains, each with a better selector kind; flows not starting with `goto` or without an `expect_*` step), How to run (`pip install pytest-playwright && playwright install chromium`, then `BASE_URL=… pytest test_flows.py`). State plainly that the tests were generated and compile-checked, not executed; claim no pass/fail.
+- **Validate first**: known actions only (`goto`, `click`, `fill`, `expect_text`, `expect_url` — `hover` is not one), required fields per action, unique flow names, non-empty steps, base_url present. Any error: report every error, write no test file, and say the run failed.
+- **Existing e2e tests supplied**: match each flow to the existing test that covers it, list it with the covering test and do not regenerate it; generate only the gaps, and still report selector warnings for every flow.
+- **The request says a flows file or test folder is here but its contents are not in the conversation**: still write the skeleton now — one test function per flow the request names, the report sections above, and every selector, value or URL not given as `[TO BE BASELINED — owner: ___]` naming the flows file. With a review request, also lay out the test-plan review per `assets/test-plan-review-template.md` (Reconnaissance plan, Selector review, Gaps, How to run) per the upstream method. Never reply with only a request for files.
+- **No flows at all** ("write e2e tests for my app"): ask once for the flows JSON (`assets/flows-template.json`) — pages, selectors and URLs are never invented.
 
 ## Starting points
 - **New** — every flow is validated and turned into a pytest-playwright test (generated and compile-checked, never executed here).
@@ -73,3 +77,6 @@ The base URL is never guessed: the generated file reads `BASE_URL` from the envi
 - `assets/test-plan-review-template.md` — narrative template for the optional LLM step
 - `scripts/gen_tests.py` — validator, generator and compile check (argparse; stdlib)
 - Upstream method: `vendor/webapp-testing/SKILL.md` (and its server-lifecycle helper, vendor/webapp-testing/scripts/with_server.py)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/webapp-testing-runner --input <name>=<value> … --out <dir>` (see `--explain build/webapp-testing-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Say plainly that the tests were generated and compiled, not executed; results exist only after the user runs them.

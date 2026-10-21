@@ -27,8 +27,11 @@ metadata:
 
 Wraps `systematic-debugging` from obra/superpowers (pinned in vendor/pins.json). The upstream skill is the method; this skill makes its first three phases (read the error, check recent changes, form testable hypotheses) a deterministic run, and passes the upstream instructions to the optional narrative step by path (`../../../vendor/systematic-debugging/SKILL.md`), never by copy.
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/systematic-debugging-runner --input <name>=<value> … --out <dir>` (see `--explain build/systematic-debugging-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. A log with no parsable exception stops the run (script exit 2) instead of inventing a symptom.
+## In a conversation: organise the evidence now
+- **The failure log is in the conversation**: write the debug log **in this reply** in this order — Symptom (error type and message quoted from the log: the last Python exception, the deepest Java `Caused by:`), Evidence (stack frames innermost first with file:line and function; the innermost in-repo frame named; site-packages, node_modules, runtime and JDK/JUnit frames excluded), classification (`regression-likely` only when a frame's file and line fall inside a hunk the diff changed; `no-diff` when no diff was given), Hypotheses (a table ranked by evidence score — changed line in the stack 3, changed file or error-type signal at an in-repo frame 2, weak 1 — each with one falsifying test and status `untested`), Next experiment (establish a repro if none was given, then the top hypothesis's falsifying test), Fix gate: **closed** — it opens only when an experiment confirms a hypothesis and a failing test reproduces the defect. Missing repro steps are `[TO BE BASELINED — owner: Reporting engineer]` and become experiment 1.
+- **The request says a log, diff or repro is here but its text is not in the conversation**: still write all five sections now from what the request states (test framework, error type, whether a diff exists), with each value not given — error message, frames, innermost in-repo frame, overlapping hunk — shown as `[TO BE BASELINED — owner: ___]` naming the input it comes from. With a write-up request, also lay out the investigation per `assets/investigation-template.md` (Symptom, Evidence, Hypotheses, Next experiment, Open questions) following the upstream method. Never reply with only a request for the log.
+- **No log at all** ("my build is broken"): ask once for the failure output (and the diff since the last green build and repro steps if available). Do not guess the error.
+- **Log with no exception, or asked to "just tell me the bug"**: say on line 1 that no parsable exception was found, so the run stops (exit 2) rather than inventing a symptom; name no bug and propose no fix. Ask for the output that contains the error or stack trace. No output ever proposes a fix while the gate is closed.
 
 ## Starting points
 - **Existing** — the failure log (with the recent diff and repro steps when you have them) becomes an evidence-first debug log: symptom, evidence, ranked hypotheses, the next experiment, and a fix gate that stays closed until the root cause is proven.
@@ -74,3 +77,6 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 - `assets/investigation-template.md` — narrative template for the optional LLM step
 - `scripts/debug_log.py` — parser, correlator and contract validator (argparse; stdlib)
 - Upstream method: `vendor/systematic-debugging/` (SKILL.md, root-cause-tracing.md)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/systematic-debugging-runner --input <name>=<value> … --out <dir>` (see `--explain build/systematic-debugging-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. A log with no parsable exception stops the run (script exit 2) instead of inventing a symptom.

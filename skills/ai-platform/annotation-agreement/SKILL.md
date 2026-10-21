@@ -27,8 +27,17 @@ metadata:
 
 # Annotation Agreement (inter-annotator reliability)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/annotation-agreement --input <name>=<value> … --out <dir>` (see `--explain ai-platform/annotation-agreement`). Report the `run.json` results; do not hand-write the deliverables the script produces (`agreement.json`, `disputed-items.csv`, `label-agreement.csv`, `agreement-report.md`). Alpha below `min_agreement` fails the run (exit 1) with every output written. If no item has two or more ratings the run exits 1 and reports no score. Each output passes `--verify`, which re-derives it from the labels and the settings recorded in `agreement.json`.
+## In a conversation: write the agreement assessment now
+The reply **is the agreement assessment draft**, never only a request for the CSV. No label rows are in the conversation, so no alpha, kappa or count is printed; each is a marker until the run.
+- **The request describes a labelling round** (annotators, items, label set, purpose) but the labels are not in the conversation: write the report skeleton **in this reply**, in the order of `agreement-report.md`:
+  1. **Summary** — gate verdict first: `Gate: not set — the minimum alpha is the data owner's decision` (ask them for it; never choose one), or the stated minimum against `alpha [TO BE BASELINED — computed by the run]`. Line 2: how it is computed — export one row per rating as `item_id, annotator, label` and run `scripts/agreement.py` (`python3 scripts/run_skill.py ai-platform/annotation-agreement --input labels=<labels.csv> [--input guidelines=<guidelines.md>] [--input min_agreement=<alpha>] --out <dir>`).
+  2. **Agreement** — Krippendorff's alpha (nominal) is the headline; then percent agreement, pairwise Cohen's kappa per annotator pair and Fleiss' kappa (n/a with the reason when items have different numbers of ratings). State the interpretation bands as **conventions, not tests**: Krippendorff ≥ 0.800 commonly relied on, 0.667–0.800 tentative conclusions only, < 0.667 discard; Landis & Koch for kappa (< 0 poor, 0.00–0.20 slight, 0.21–0.40 fair, 0.41–0.60 moderate, 0.61–0.80 substantial, 0.81–1.00 almost perfect).
+  3. **Disputed items** — table `item_id | labels (label:count) | majority (or tie) | agreement`, lowest first, to send to an adjudicator.
+  4. **Guideline gaps** — per-label agreement (`label | n | agreement | defined_in_guidelines`); a low-agreement label is one below overall percent agreement; a gap is such a label the guidelines do not define, plus boundary rules for the top confusion pairs. Without guidelines: `[TO BE BASELINED — owner: Annotation lead]`.
+  5. **Method & limits** — ratings must be independent; items with one rating are excluded and counted; nominal labels only; no confidence intervals; agreement measures consistency, not correctness.
+- **Each item has only one annotator**: say agreement cannot be computed without two or more independent ratings per item, report no score, and recommend double-labelling a sample.
+- **No labelling round described at all**: ask once for the labels export, the guidelines and the data owner's minimum alpha.
+- **Asked to pick the threshold, declare labels defined without guidelines, or report a score anyway**: decline in one line (the threshold is the data owner's; definitions come from written guidelines; no score without paired ratings) and show the marker.
 
 ## Starting points
 - **New:** labels from a pilot round (and draft guidelines) give alpha, disputed items and the label boundaries to sharpen before labelling at scale.
@@ -76,3 +85,6 @@ A blank `label` means "not rated" and is skipped. Two ratings of the same item b
 - `references/sources.md` — Cohen 1960, Fleiss 1971, Krippendorff 2011, Landis & Koch 1977; verified URLs and dates
 - `assets/labels-template.csv`, `assets/guidelines-template.md` — input layouts
 - `scripts/agreement.py` — statistics and `--verify` (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/annotation-agreement --input <name>=<value> … --out <dir>` (see `--explain ai-platform/annotation-agreement`). Report the `run.json` results; do not hand-write the deliverables the script produces (`agreement.json`, `disputed-items.csv`, `label-agreement.csv`, `agreement-report.md`). Alpha below `min_agreement` fails the run (exit 1) with every output written. If no item has two or more ratings the run exits 1 and reports no score. Each output passes `--verify`, which re-derives it from the labels and the settings recorded in `agreement.json`.

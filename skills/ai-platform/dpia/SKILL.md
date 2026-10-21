@@ -25,8 +25,18 @@ metadata:
 
 # DPIA (GDPR Art. 35) for an AI system
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/dpia --input <name>=<value> … --out <dir>` (see `--explain ai-platform/dpia`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dpia.md`, `dpia-risks.csv`, `screening.json`). **Gate:** a high residual risk with no measure fails the run (exit 1) on purpose — the DPIA is still written and states it cannot be signed off. Not legal advice.
+## In a conversation: screen and draft the DPIA now
+The reply **is the screening and DPIA draft**, never only a request for the template. Not legal advice — say so in the reply. Only the facts the user states count as answered; nothing is assumed.
+- **The request describes the processing** (e.g. "ranks customers for payment plans, runs on an LLM") but the processing description, PII inventory or risk list are not in the conversation: write, **in this reply**, in the order of `dpia.md`:
+  1. **Screening** — line 1: `DPIA required: yes / no / yes (precautionary)` with the basis. Table of the nine WP248 criteria — C1 evaluation or scoring, C2 automated decision-making with legal or similar effect, C3 systematic monitoring, C4 sensitive or highly personal data, C5 large scale, C6 matching or combining datasets, C7 vulnerable data subjects, C8 innovative use or new technology, C9 prevents a right, service or contract — each `met / not met / not answered` with the stated fact behind it (ranking customers → C1; an LLM → C8 if the user calls it new technology; otherwise `not answered`). Then the Art. 35(3) cases: (a) scoring plus automated decisions with legal or similar effect, (b) large-scale special-category or criminal data, (c) large-scale monitoring of a publicly accessible area. Rule: required when an Art. 35(3) case applies, when two or more criteria are met, or precautionarily when met plus unanswered criteria reach two.
+  2. **Description of processing** (Art. 35(7)(a)), **Necessity and proportionality** (7(b)) — controller, purpose, data subjects, data categories, lawful basis, retention, transfers, minimisation, transparency, data-subject rights (incl. Art. 22 safeguards): stated facts filled, every blank `[TO BE BASELINED — owner: Data protection officer]`.
+  3. **Risks to rights and freedoms** (7(c)) — table `risk | source | likelihood (1–3) | severity (1–3) | score | level | measure | owner | residual`; score = likelihood × severity (1–2 low, 3–4 medium, 6–9 high). Only risks the user states are scored; otherwise one placeholder "not yet identified", owner Data protection officer. PII columns with undecided handling become unscored DPO-owned risks.
+  4. **Measures** (7(d)), **Residual risk and consultation** — any high residual flags Art. 36 prior consultation; a high residual with no measure blocks sign-off (gate).
+  5. **Sign-off** — measures approved by, residual risk accepted by, DPO advice and whether accepted: TBD for the Data protection officer.
+  6. **Next step** — the controller fills `assets/processing-template.csv` (yes/no screening keys), runs `pii-data-inventory` on a sample, and runs `python3 scripts/run_skill.py ai-platform/dpia --input processing=<processing.csv> [--input pii_inventory=<pii-inventory.csv>] [--input risks=<risks.csv>] --out <dir>`.
+- **No processing described at all**: ask once for the processing description (template keys) and, if available, the PII inventory and risk list.
+- **Asked to fill the rest "with sensible defaults"**: decline in one line — unanswered criteria stay unanswered and owned by the DPO, because a guessed "no" could wrongly skip a required DPIA; apply the precautionary rule and keep the placeholder risk.
+- **Asked to sign off with a high risk unmitigated** ("go live Monday"): decline sign-off in one line — residual equals the inherent level without a measure, so the DPIA cannot be signed off and Art. 36 prior consultation is flagged; offer the path: record a measure and owner, re-score, DPO advice.
 
 ## Starting points
 - **New:** a processing description (and, if you have it, the PII inventory) gives the screening and a first risk list; risks from undecided PII handling are owned by the DPO and stay unscored.
@@ -76,3 +86,6 @@ Screening keys take `yes|no`; blank means not answered. Any other value stops th
 - `references/risk-method.md` — criteria mapping, required rule, scoring, gate
 - `assets/processing-template.csv`, `assets/risks-template.csv` — input layouts
 - `scripts/dpia.py` — screener, DPIA writer and `--verify` (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/dpia --input <name>=<value> … --out <dir>` (see `--explain ai-platform/dpia`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dpia.md`, `dpia-risks.csv`, `screening.json`). **Gate:** a high residual risk with no measure fails the run (exit 1) on purpose — the DPIA is still written and states it cannot be signed off. Not legal advice.

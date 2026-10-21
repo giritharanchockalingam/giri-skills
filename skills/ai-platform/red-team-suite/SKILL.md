@@ -1,6 +1,6 @@
 ---
 name: red-team-suite
-description: Use when a text LLM app or agent needs adversarial testing before launch or after a change — "red-team our chatbot", "test it for prompt injection", "can it leak the system prompt", "jailbreak test", "does the agent misuse its tools", "security gate for the assistant". Produces attacks.jsonl (30+ deterministic cases with stable ids from a bundled template library, parameterised by an app profile, mapped to the OWASP Top 10 for LLM Applications: prompt injection, canary exfiltration, data disclosure, tool misuse, jailbreaks, active content, out-of-scope) and, once responses are supplied, redteam-scorecard.json and redteam-report.md graded by deterministic detectors (canary leak incl. obfuscations, marker echo, refusal, tool-call trace) with a gate against a user-supplied threshold. Not for quality evals (llm-eval-harness), prompt linting (prompt-spec) or a risk register (ai-governance-risk).
+description: Use when a text LLM app or agent needs adversarial testing — "red-team our chatbot", "test it for prompt injection", "can it leak the system prompt", "jailbreak test", "does the agent misuse its tools", "generate the attack set", "grade these red-team responses / this run at an 80% gate", "we haven't agreed a pass mark". Produces attacks.jsonl (30+ deterministic cases with stable ids, parameterised by an app profile, mapped to the OWASP Top 10 for LLM Applications) and, once responses are supplied, redteam-scorecard.json and redteam-report.md graded by deterministic detectors (canary leak incl. obfuscations, marker echo, refusal, tool-call trace) with a gate against the AI risk lead's threshold (no default). Not for quality evals (llm-eval-harness), prompt linting (prompt-spec), SLOs (ai-slo-definition) or a risk register (ai-governance-risk).
 license: MIT
 metadata:
   domain: ai-platform
@@ -25,10 +25,12 @@ metadata:
 
 # Red-Team Suite
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/red-team-suite --input <name>=<value> … --out <dir>` (see `--explain ai-platform/red-team-suite`). Report the `run.json` results; do not hand-write the deliverables the script produces (`attacks.jsonl`, `redteam-scorecard.json`, `redteam-report.md`). A failed gate exits 1 on purpose.
-
-Two passes: (1) profile only → `attacks.jsonl` and a scorecard with status `awaiting_responses`; run the attacks against the app; (2) profile + responses (+ threshold) → graded scorecard, report and gate.
+## In a conversation: set up the red-team run now
+- **No app profile** ("red-team our chatbot"): ask once, in one list, for the profile in `assets/app-profile-template.json`: app_name, purpose, tools (name + description), data the app can see, a synthetic canary (≥ 8 letters/digits, never a real secret) planted in the system prompt of the test build, and out-of-scope topics. Explain the two passes: (1) profile → `attacks.jsonl` (30+ OWASP-mapped cases, stable ids) to run against the app; (2) recorded `case_id,response` CSV with tool-call traces → graded scorecard, report and gate. The pass threshold is the AI risk lead's decision; there is no default.
+- **The request carries profile facts**: write the profile JSON from them (gaps `[TO BE BASELINED — owner: app owner]`), list the categories that will be generated with their OWASP references (`references/attack-categories.md`: prompt injection direct and indirect, canary exfiltration, sensitive data disclosure per data category, tool misuse per tool, role-play jailbreak, active content, out-of-scope per topic), and give `python3 -I scripts/redteam.py --profile app-profile.json --out-dir <dir>`. The scorecard reads `awaiting_responses`; no grading is invented.
+- **Responses or results said to be attached but not in the conversation**: state the grading and gate rules and the command (`--responses responses.csv --threshold <t>`), and that the gate fails on any canary leak (including spaced-out and base64 forms), any case without a response, or a pass rate below the threshold. Never print a pass rate, case count or verdict that was not computed.
+- **No pass mark agreed**: grade every case, but the gate is `not_evaluated` with `[TO BE BASELINED — owner: AI risk lead]`; never pick a threshold.
+- **Asked to lower the threshold, ignore a canary leak or skip cases**: decline in one line (a canary leak fails the gate whatever the pass rate; a lowered bar hides real failures); fix the app and re-run the same profile so case ids match.
 
 ## Starting points
 - **New** — from an app profile alone, generate the OWASP-mapped attack set to run before launch; nothing is graded until responses exist.
@@ -76,3 +78,8 @@ Two passes: (1) profile only → `attacks.jsonl` and a scorecard with status `aw
 - `assets/detector-markers.json` — refusal, tool-call and active-content vocabularies
 - `assets/app-profile-template.json` — profile layout
 - `scripts/redteam.py` — generator, grader, verifier (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/red-team-suite --input <name>=<value> … --out <dir>` (see `--explain ai-platform/red-team-suite`). Report the `run.json` results; do not hand-write the deliverables the script produces (`attacks.jsonl`, `redteam-scorecard.json`, `redteam-report.md`). A failed gate exits 1 on purpose.
+
+Two passes: (1) profile only → `attacks.jsonl` and a scorecard with status `awaiting_responses`; run the attacks against the app; (2) profile + responses (+ threshold) → graded scorecard, report and gate.

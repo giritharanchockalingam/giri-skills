@@ -1,6 +1,6 @@
 ---
 name: ai-threat-model
-description: Use when an LLM app, RAG system or agent needs a security threat model before build or release — "threat model our agent", "STRIDE this architecture", "map our chatbot to the OWASP LLM Top 10", "what are the open high threats", "security architecture review for the AI assistant". Produces threats.csv (stable threat ids, STRIDE-per-element plus OWASP Top 10 for LLM Applications 2025 items per component, likelihood × impact severity, mitigation ids, residual status and owner), dfd.md (mermaid data-flow diagram with trust zones and boundary-crossing flows) and threat-report.md (Summary, Data flow, Threats by severity, Open high threats, Method & limits) from a components CSV, a flows CSV and an optional controls register; an optional max_open_high gate fails the run. Open threats with no owner name the Security architect. Not for adversarial testing of a running app (red-team-suite), runtime guardrail rules (guardrails-config) or regulatory risk tiering (ai-governance-risk).
+description: Use when an LLM app, RAG system or agent needs a security threat model before build or release — "threat model our agent", "STRIDE this architecture", "map our chatbot to the OWASP LLM Top 10", "what are the open high threats", "security architecture review for the AI assistant", "no control register yet — what is open?". Produces threats.csv (stable threat ids, STRIDE-per-element plus OWASP Top 10 for LLM Applications 2025 items per component, likelihood × impact severity, mitigation ids, residual status and owner), dfd.md (mermaid DFD with trust zones and boundary-crossing flows) and threat-report.md (Summary, Data flow, Threats by severity, Open high threats, Method & limits) from a components CSV, a flows CSV and an optional controls register; an optional max_open_high gate fails the run. Open threats with no owner name the Security architect. Not for adversarial testing of a running app (red-team-suite), runtime guardrail rules (guardrails-config) or regulatory risk tiering (ai-governance-risk).
 license: MIT
 metadata:
   domain: ai-platform
@@ -26,8 +26,19 @@ metadata:
 
 # AI Threat Model (STRIDE + OWASP LLM Top 10 2025)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-threat-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-threat-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`threats.csv`, `dfd.md`, `threat-report.md`). With `max_open_high` set, the run is a gate: more open high threats than the limit fails the run (exit 1) and all outputs are still written.
+## In a conversation: write the threat model now
+- **The request names the architecture** (components such as web app, orchestrator, hosted LLM, vector store, refund API), even when the CSVs are not in the conversation: build the threat model **in this reply**, in this order. Never reply with only a request for the CSVs.
+  1. **Components table** in the `assets/components-template.csv` columns: `id, name, kind, trust_zone, handles_pii, write_actions, internet_facing` (kinds: user, external_api, app, llm, retriever, tool, agent, vector_store, data_store). **Flows table**: `from, to, data, crosses_trust_boundary`. Attributes the user did not state are `[TO BE BASELINED — owner: Solution architect]`; ask the user to confirm the two tables in one list.
+  2. The command that produces the files: `python3 -I scripts/threat_model.py` via the runner (see "How to run" below), giving `threats.csv`, `dfd.md`, `threat-report.md`.
+  3. **Threats by severity** (high first), one row each: `threat_id` (stable: `<component>:<category>` or `<from>><to>:<category>`) | element | category (STRIDE letter or OWASP 2025 id LLM01–LLM10) | threat | likelihood | impact | severity | mitigation ids | status | owner. Apply `references/method.md`: STRIDE per element (external entity S, R; process S, T, R, I, D, E; data store T, I, D; flow T, I, D); OWASP rules (LLM01 on llm/agent reachable from an untrusted origin; LLM02 where PII is handled; LLM05 on anything receiving model output; LLM06 where write_actions = yes; LLM07, LLM09, LLM10 on the llm; LLM08 on vector store and retriever). Likelihood = 1 + exposed + boundary; impact = 1 + PII + write (cap 3; D and LLM10 fixed at 2); severity high ≥ 6, medium 3–4, low ≤ 2.
+  4. **Mitigation ids** only from `assets/mitigations.csv`: S M01; T M02, M07; R M03; I M04; D M05 (stores also M08); E M06, M07; LLM01 M20–M23; LLM02 M24, M25; LLM03 M26, M27; LLM04 M28, M27; LLM05 M29, M30; LLM06 M31–M33; LLM07 M34, M35; LLM08 M36, M28; LLM09 M37, M38; LLM10 M39, M40.
+  5. **Open high threats** with owner: status comes only from a control register; with none, every threat is `open` and owned by `[TO BE BASELINED — owner: Security architect]`.
+  6. **Data flow**: a mermaid flowchart, one subgraph per trust zone, boundary-crossing flows labelled.
+  7. **Method & limits**: rule-based enumeration of the declared design; misses business-logic abuse and attack chains; not a penetration test or a security sign-off.
+- **Components given, flows missing**: still show the components table and the threats the components alone imply, and ask once for the flows CSV; do not guess flows.
+- **No control register, or asked to "assume the usual controls are in place"**: decline in one line (a control counts only with a register row and evidence); no threat is marked mitigated or planned; every threat is open, owner `[TO BE BASELINED — owner: Security architect]`; offer `assets/controls-template.csv` for control owners to fill, then re-run.
+- **Release gate** ("fail if more than N high threats remain open"): report open high vs the limit — more than N fails (exit 1), equal passes; all outputs are still written.
+- **Live jailbreak or prompt-leak testing of a running app**: route to `red-team-suite`; offer this skill for the design-level threat model.
 
 ## Starting points
 - **New:** components and flows of a design not yet built give every threat, all open and owned by the Security architect until controls exist.
@@ -69,6 +80,9 @@ Component ids are letters, digits and `_`. A flow whose ends sit in different tr
 - [ ] Status comes only from the control register; no control is assumed
 - [ ] Every owner is a named role or `[TO BE BASELINED — owner: Security architect]`
 - [ ] Limits stated: rule-based enumeration, not a penetration test or sign-off
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-threat-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-threat-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`threats.csv`, `dfd.md`, `threat-report.md`). With `max_open_high` set, the run is a gate: more open high threats than the limit fails the run (exit 1) and all outputs are still written.
 
 ## References
 - `references/method.md` — element mapping, OWASP rules, likelihood/impact/severity, status rules, limits

@@ -28,8 +28,12 @@ metadata:
 
 # Program RAID Status
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/program-raid-status --input <name>=<value> … --out <dir>` (see `--explain ai-platform/program-raid-status`). Report the `run.json` results; do not hand-write the deliverables the script produces (`status.csv`, `raid-actions.csv`, `status-report.md`, `status.json`). `--verify` re-derives slip, RAG bounds and overdue days from the CSVs.
+## In a conversation: write the status now
+- **The request carries the program facts** (RAID items, milestones, dates — or says the RAID log and plan are attached but their contents are not in the conversation): write the status **in this reply** in the `status-report.md` order. First line: the as-of date — if none is given, ask for it and do not assume today (the skill never uses the system date); show `as of [TO BE BASELINED — owner: Program manager]` until supplied. Then **Summary** with the overall RAG and the **Overall RAG rule** from `references/method.md` (RED if an open critical-path milestone is red, or an open RAID item with exposure ≥ 20 is overdue; AMBER if any open milestone is amber/red, any open item is overdue or unowned; else GREEN) and thresholds (green ≤ 0, amber ≤ 10 days slip, red exposure ≥ 20 unless the PMO supplies others); **Milestones** (baseline, forecast, slip_days, RAG, on_critical_path); **Critical path** (mermaid flowchart through `depends_on`); **Top risks** (top 5 by exposure = likelihood × impact); **Overdue items** (overdue days, ageing); **Decisions needed** (each with an owner); **Method**. State that the run is `python3 -I scripts/raid_status.py --raid … --milestones … --as-of <YYYY-MM-DD> --out-dir <dir>` and `--verify` re-derives slip, RAG and overdue days. Values not stated are `[TO BE BASELINED — owner: Program manager]`; unowned items show `[TO BE BASELINED — owner: Program manager]`. Never reply with only a request for files.
+- **Required facts entirely missing** ("status as of today"): ask once, in one list, for the as-of date (YYYY-MM-DD), the RAID log (`assets/raid-template.csv`) and the milestone plan (`assets/milestones-template.csv`); say the system date will not be used and no slip or owner will be invented.
+- **Asked to assign an owner or skip a control** ("just put the platform lead on R3"): decline in one line — owners come from the Program manager, not the report; keep the owner as `[TO BE BASELINED — owner: Program manager]` and add a Decision needed to name the owner.
+- **Gate requested** (`strict`): overall RED exits 1 with every output still written; AMBER or GREEN passes. A dependency cycle stops the run (exit 1) naming the milestones.
+- **Last report given**: add "Since last report" — RAG then and now, forecast moves and RAG changes per milestone, completions, RAID opened/closed, end-date movement.
 
 ## Starting points
 - **New** — the first status report for a program: RAG, critical path, top risks, overdue items and decisions from the RAID log and milestone plan.
@@ -77,3 +81,6 @@ Blank RAID or milestone owners become `[TO BE BASELINED — owner: Program manag
 - `references/method.md` — RAG thresholds, critical-path method, exposure, overall RAG rule
 - `assets/raid-template.csv`, `assets/milestones-template.csv`, `assets/thresholds.csv` — input layouts and default thresholds
 - `scripts/raid_status.py` — status builder and `--verify` (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/program-raid-status --input <name>=<value> … --out <dir>` (see `--explain ai-platform/program-raid-status`). Report the `run.json` results; do not hand-write the deliverables the script produces (`status.csv`, `raid-actions.csv`, `status-report.md`, `status.json`). `--verify` re-derives slip, RAG bounds and overdue days from the CSVs.

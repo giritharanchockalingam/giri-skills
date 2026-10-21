@@ -23,8 +23,19 @@ metadata:
 
 # AI Release Plan (staged rollout)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-release-plan --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-release-plan`). Report the `run.json` results; do not hand-write the deliverables the script produces (`release-plan.md`, `gates.json`). A first-stage gate that is not met fails the run (exit 1) on purpose; the plan is still written so the blockers are visible.
+## In a conversation: write the release plan now
+The reply **is the release plan**: its first line is `Readiness: READY / NOT READY / PENDING GATES — <the gates or facts that decided it>`, never only a request for CSVs.
+- **The request gives release facts** (scores, risk tier, traffic — e.g. "offline evals 93%, red-team 98%, medium risk, ~48k requests a day"), or says facts and gates are attached but they are not in the conversation: write the plan **in this reply**, in this order:
+  1. **Readiness** — gates come only from the owner; with none supplied, measured values are listed as "measured, gate threshold `[TO BE BASELINED — owner: Release manager]`" and readiness is PENDING GATES. Never propose default thresholds.
+  2. **Stages** — offline eval → shadow (100 % mirrored, not served) → canary steps → GA. Canary steps by risk tier are **the skill's policy** (`references/rollout-policy.md`), say so: low 10, 50 %; **medium 5, 25, 50 %**; high 1, 5, 10, 25, 50 % (owner may override with `canary_steps`). Table: `stage | traffic % | served | min hours | owner`.
+  3. **Minimum durations** — `hours = ceil(min_observed_requests ÷ (daily_requests × traffic% ÷ 100 ÷ 24))`, using the stated daily_requests; `min_observed_requests` is the owner's confidence choice, so show the formula and per-stage requests/hour (48,000/day at 5 % = 100/hour) and keep hours `[TO BE BASELINED — owner: Release manager]` until the owner sets it. Offline eval and GA have no duration.
+  4. **Gates** — `stage | metric | min | max | actual now | status (met / NOT MET / not measured)`; not measured never counts as met.
+  5. **Rollback** — every shadow/canary/GA gate becomes a trigger; owner SRE on-call; rollback time as stated or TBD.
+  6. **Owners** — Eval lead (offline eval), SRE on-call (shadow, rollback), Release manager (canary), Product owner (GA); any not named is `[TO BE BASELINED — owner: Release manager]`.
+  7. **What I need to finish** — ask once for the gates (`stage,metric,min,max` for offline_eval, shadow, canary, ga), `min_observed_requests`, `rollback_time_min` and owner names.
+- **A rollout under way** (current stage plus live readings): decide the current stage — ROLL BACK if a gate is not met now, HOLD if a gate is not measured or too few requests were observed, else PROMOTE to the next step — with the Release manager as decision owner and the remaining rollback triggers kept.
+- **No facts at all**: ask once for system name, risk tier, measured metrics, daily requests and the gates; do not invent any.
+- **Asked to use "standard" gates or mark ready despite a failed gate** ("eval came in at 82% but mark us ready"): decline in one line — thresholds come only from the owner and a blocked first stage is NOT READY. Write the plan with the blocker (e.g. eval_pass_rate NOT MET) shown; never print the requested READY status or a made-up threshold.
 
 ## Starting points
 - **New** — first rollout of a release: bring the release facts and the owner's gate thresholds; the skill builds offline eval → shadow → canary → GA, checks the first-stage gates now and sizes each stage.
@@ -75,3 +86,6 @@ If `facts` or `gates` is missing the runner exits 2 and asks once. Missing optio
 - `references/gate-method.md` — gate statuses, duration formula, rollback triggers
 - `assets/release-facts.csv`, `assets/release-gates.csv` — input layouts
 - `scripts/release_plan.py` — the planner (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-release-plan --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-release-plan`). Report the `run.json` results; do not hand-write the deliverables the script produces (`release-plan.md`, `gates.json`). A first-stage gate that is not met fails the run (exit 1) on purpose; the plan is still written so the blockers are visible.

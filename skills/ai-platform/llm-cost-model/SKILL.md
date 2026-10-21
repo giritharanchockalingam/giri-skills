@@ -1,6 +1,6 @@
 ---
 name: llm-cost-model
-description: Use when the user asks what an LLM API workload will cost per month or how to cut it — "what will these features cost on model X", "cost per request", "does prompt caching pay off", "what if we move feature Y to a cheaper model", "are we within the AI budget". Produces cost-model.json and cost-model.md from a workload CSV, a dated price sheet and a feature-to-model assignment - monthly cost by feature and by model, totals, cost per request, the prompt-caching saving, a what-if swap to the cheapest model the user marked eligible, and budget headroom with 50/80/100% alerts. No price is built in. Exit 1 when the total exceeds the supplied budget. Not for GPU or self-hosting capacity (infra-gpu-sizing), model quality selection (llm-eval-harness) or a full business case (value-case-builder).
+description: Use when the user asks what an LLM API workload will cost per month or how to cut it — "what will these features cost on model X", "cost per request", "does prompt caching pay off", "what if we move feature Y to a cheaper model", "are we within the AI budget", "here is our cost model plus last month's invoice by feature — where is the model wrong and what are we not modelling". Produces cost-model.json and cost-model.md from a workload CSV, a dated price sheet and a feature-to-model assignment - monthly cost by feature and by model, totals, cost per request, the prompt-caching saving, a what-if swap to the cheapest model the user marked eligible, and budget headroom with 50/80/100% alerts. No price is built in. Exit 1 when the total exceeds the supplied budget. Not for GPU or self-hosting capacity (infra-gpu-sizing), model quality selection (llm-eval-harness) or a full business case (value-case-builder).
 license: MIT
 metadata:
   domain: ai-platform
@@ -26,8 +26,18 @@ metadata:
 
 # LLM Cost Model (API token economics)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-cost-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-cost-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`cost-model.json`, `cost-model.md`). A total above the supplied budget fails the run (exit 1) on purpose; with no budget, the Budget section reads `[TO BE BASELINED — owner: FinOps lead]`.
+## In a conversation: build the cost model now
+- **The request carries the workload** (features, requests per month, average input/output tokens, cache share, the models picked), with or without a price sheet in the conversation: write the cost model **in this reply**, in the `cost-model.md` order. Never reply with only a request for files.
+  1. **Prices first**: if no dated price sheet is in the conversation, say in one line that no vendor price is quoted from memory and ask once for `model, price_in_per_1m, price_out_per_1m[, cached_in_per_1m], source, as_of` for every assigned and eligible model. Each missing price reads `[TO BE BASELINED — owner: FinOps lead]`.
+  2. **Monthly total** and **cost per request** (total ÷ requests).
+  3. **By feature** (largest line first): feature | model | requests | input tokens | cached input tokens | output tokens | cost | cost per request — using the `references/cost-method.md` formulas: input cost = (input − cached) ÷ 1M × price_in; cached cost = cached ÷ 1M × cached_in (full input price when no cached price is given, noted); output cost = output ÷ 1M × price_out. Token volumes are computed from the stated figures; costs without a price stay as the marker.
+  4. **Caching saving** per feature: cost with every input token at full price − modelled cost.
+  5. **What-if**: only models the user marked eligible for that feature (eligibility is a quality decision from `llm-eval-harness`; this skill never treats two models as interchangeable), with that quality caveat; no eligible list → say none is modelled and ask which models passed the quality bar.
+  6. **Budget**: utilisation, headroom, alert amounts at 50/80/100%; over budget is flagged OVER BUDGET and the run exits 1; no budget → `[TO BE BASELINED — owner: FinOps lead]`.
+  7. **Sources**: each price's source and as-of date; the command that produces the files: `python3 -I scripts/cost_model.py --workload w.csv --prices p.csv --assignment a.csv [--budget N] --out <dir>`; then the cost levers from `references/cost-method.md` (cache, trim tokens, route to an eligible cheaper model, batch, volume caps).
+- **Last month's bill per feature given with the model** ("where is the model wrong, what are we not modelling?"): add Actuals vs model — per feature modelled cost, billed cost, variance and variance %, actual cost per request, billed features the model does not cover (unmodelled total), and billed spend against the budget.
+- **Asked to use "typical" prices or estimate a model's price**: decline in one line (a price recalled from memory is unsourced and goes stale); never print an estimated price anywhere; the unpriced model's cost reads `[TO BE BASELINED — owner: FinOps lead]` and the run stops naming that model until a dated price row is supplied.
+- **Self-hosting or GPU question**: route to `infra-gpu-sizing`; offer this skill for the API side of the comparison.
 
 ## Starting points
 - **New** — forecast monthly cost from planned volumes, your dated price sheet and the model assignment.
@@ -68,6 +78,9 @@ Missing a required file: the runner exits 2 and asks once. An assigned model wit
 - [ ] Caching saving shown, and cached tokens without a cached price are charged at full input price (noted)
 - [ ] Budget alerts at the stated levels; over budget exits 1
 - [ ] No fixture or fictional price presented as a real vendor price
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-cost-model --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-cost-model`). Report the `run.json` results; do not hand-write the deliverables the script produces (`cost-model.json`, `cost-model.md`). A total above the supplied budget fails the run (exit 1) on purpose; with no budget, the Budget section reads `[TO BE BASELINED — owner: FinOps lead]`.
 
 ## References
 - `references/cost-method.md` — formulas, worked example (the eval fixture, hand-checked), cost levers, how this differs from infra-gpu-sizing

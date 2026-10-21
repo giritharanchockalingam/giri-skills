@@ -25,8 +25,12 @@ metadata:
 
 # PII Data Inventory
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/pii-data-inventory --input <name>=<value> … --out <dir>` (see `--explain ai-platform/pii-data-inventory`). Report the `run.json` results; do not hand-write the deliverables the script produces (`pii-inventory.csv`, `pii-report.md`). Both outputs pass a leak check: the script re-scans the source and fails if any raw matched value appears in them.
+## In a conversation: build the inventory now
+- **The request carries the data description** (column names, sample shape, the policy — or says an extract/policy is attached but their contents are not in the conversation): give the inventory **in this reply**. State that the run is `python3 -I scripts/scan_pii.py --data <sample.csv> --policy <policy.csv> --out-dir <dir>` with the policy file, then lay out `pii-inventory.csv` as a table — `column, pii_types, match_rate, rows_scanned, handling, matches, basis` — with one row per stated column: likely types from the column name (email, phone, ssn, payment_card, ipv4/ipv6, dob, name, address) marked as name hints, and match rate / match count `[TO BE BASELINED — owner: data owner, from the scan]` (never estimated). Handling is the strictest policy handling for the column's types (drop > tokenize > mask > allow); a type the policy omits is `[TO BE BASELINED — owner: Privacy officer]`. Then the `pii-report.md` sections: **Summary**, **Column inventory** (masked examples only — never a raw value), **Handling gaps** (owner: Privacy officer), **Method** (detectors in `references/detectors.md`). Flag name/address hint columns and free-text columns for human confirmation; list columns the policy allows in clear for a lawful-basis check; state limits: sample-based, pattern-based, **not a legal determination**. Never reply with only a request for files.
+- **Nothing about the data given** ("scan our customer table"): ask once for the sample CSV with header row (and the policy, `pii_type,handling` per `assets/pii-policy.csv`); say no columns or handling will be assumed.
+- **Asked to invent handling** ("no policy yet, just recommend masking for everything"): decline in one line — handling comes from the owner's policy, not from this skill — show every PII column's handling as `[TO BE BASELINED — owner: Privacy officer]`, and offer `assets/pii-policy.csv` for the Privacy officer to fill. Without `strict` the run still exits 0.
+- **Gate requested** (`strict`): any PII column the policy does not cover fails the run (exit 1); list the uncovered types.
+- **Previous inventory given**: add "Changes since last inventory" per column (new, removed, pii-added, pii-removed, handling-changed) and call out new PII for the Privacy officer.
 
 ## Starting points
 - **New** — first inventory of a table: scan a sample, map each PII column to your policy's handling.
@@ -72,3 +76,6 @@ Policy `pii_type` values: `email, phone, ssn, payment_card, ipv4, ipv6, dob, nam
 - `references/handling-policy.md` — what mask / tokenize / drop / allow mean and how the strictest wins
 - `assets/pii-policy.csv` — policy template for the Privacy officer
 - `scripts/scan_pii.py` — scanner, masker and leak check (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/pii-data-inventory --input <name>=<value> … --out <dir>` (see `--explain ai-platform/pii-data-inventory`). Report the `run.json` results; do not hand-write the deliverables the script produces (`pii-inventory.csv`, `pii-report.md`). Both outputs pass a leak check: the script re-scans the source and fails if any raw matched value appears in them.

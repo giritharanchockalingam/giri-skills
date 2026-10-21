@@ -1,6 +1,6 @@
 ---
 name: eval-engineering-runner
-description: Use when the user has an eval dataset and wants to know whether it is fit to score with — "audit our eval set", "do we have enough cases per category", "find duplicates and leakage in the golden set", "clean this eval file". Produces eval-audit.json and eval-audit.md (verdict, per-category coverage vs targets, duplicates and near-duplicates, empty references, conflicting references, split leakage, grader coverage, balance, recommendations per category) and a cleaned eval-clean.jsonl; optional LLM review against the upstream eval-engineering guidance. Not for running evals or LLM-as-judge scoring (llm-eval-harness) or retrieval metrics (rag-pipeline-design).
+description: Use when the user has an eval dataset (or SME-written test cases in a spreadsheet) and wants to know whether it is fit to score with — "audit our eval set", "do we have enough cases per category", "we need N safety and M refund cases — are we covered?", "turn our SMEs' test cases into a clean eval set and check them against first-cut targets", "find duplicates and leakage in the golden set", "clean this eval file". Produces eval-audit.json and eval-audit.md (verdict, per-category coverage vs targets, duplicates and near-duplicates, empty references, conflicting references, split leakage, grader coverage, balance, recommendations per category) and a cleaned eval-clean.jsonl; optional LLM review against the upstream eval-engineering guidance. Not for running evals or LLM-as-judge scoring (llm-eval-harness) or retrieval metrics (rag-pipeline-design).
 license: MIT
 metadata:
   domain: ai-platform
@@ -29,8 +29,17 @@ metadata:
 
 Wraps eval-engineering from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill designs Harbor tasks and verifiers by interview; this skill applies its dataset-level concerns (leakage, coverage, independent verifier evidence, fairness of the case mix) as a deterministic audit of a flat eval set. Upstream text is not copied: the optional review step reads `vendor/eval-engineering/SKILL.md` and two of its references directly.
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/eval-engineering-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/eval-engineering-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`eval-audit.json`, `eval-audit.md`, `eval-clean.jsonl`). A FAIL (exit 1) means a category is below its target: add cases and re-run.
+## In a conversation: audit the set now
+- **The request carries the set or the targets** (cases pasted, counts per category, or "here is our golden set and the minimum cases per category" with the file contents not in the conversation): write the audit **in this reply**, in this order. Never reply with only a request for the file.
+  1. **Verdict** from the targets: PASS, FAIL (any category BELOW its `min_cases`, exit 1) or NOT GATED (no targets). Name the command that produces it: `python3 -I scripts/audit_evals.py` via the runner (see "How to run" below).
+  2. **Coverage table per category**: category | min_cases | clean cases | gap | status (OK / BELOW). Counts on the cleaned set; a category with a target but no cases is BELOW. Counts not visible read `[TO BE BASELINED — owner: Eval owner]`.
+  3. **Quality issues** by the `references/audit-method.md` rules with severity and action: empty input (high, dropped), empty reference for a reference-based grader (high, dropped), conflicting reference (high, later row dropped, domain owner resolves), split leakage (high, re-split), exact duplicate (medium, dropped), near-duplicate at token Jaccard ≥ 0.9 (medium, kept for review), missing grader (medium), missing category, duplicate id. Apply them to any cases shown; for an unseen file, list each check with its result `[TO BE BASELINED — owner: Eval owner, from the audit run]`.
+  4. **eval-clean.jsonl**: the cleaned cases, one JSON object per line with `id, input, expected, category, tags, grader, split` (written from the cases shown; for an unseen file, state it is written by the run). The original is kept for provenance.
+  5. **Recommendations with exact counts**: "add 3 safety cases (3 of 6)", "replace 2 near-duplicates", "assign a grader to 4 cases" — counts, not adjectives.
+  6. One line: this audits the dataset only; it does not run the evals or judge outputs (`llm-eval-harness` does that on `eval-clean.jsonl`).
+- **Targets stated, counts stated** ("we need 6 safety, 5 refund, 2 escalation cases — are we covered?"): give the coverage table with the exact gap per category and the verdict; never write new cases to close a gap, name how many to add.
+- **No targets agreed**: verdict NOT GATED; each category's `min_cases` is `[TO BE BASELINED — owner: Eval owner]`; still report counts, issues and balance (largest/smallest category ratio).
+- **Nothing to audit** (no set, no counts): ask once for the dataset (JSONL or CSV with id, input, expected/reference, category; optional grader, split) and the per-category targets; say no cases or targets will be invented.
 
 ## Starting points
 - **New:** a spreadsheet of first cases from subject experts becomes a clean JSONL eval set, with duplicates dropped and coverage measured against first-cut targets.
@@ -75,6 +84,9 @@ Targets are never invented: without a targets file each category's `min_cases` i
 - [ ] Near-duplicates reviewed: kept only where they test something different
 - [ ] Recommendations name counts, not adjectives
 - [ ] The scored set is `eval-clean.jsonl`, regenerated after every change
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/eval-engineering-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/eval-engineering-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`eval-audit.json`, `eval-audit.md`, `eval-clean.jsonl`). A FAIL (exit 1) means a category is below its target: add cases and re-run.
 
 ## References
 - `references/audit-method.md` — rules, severities, normalisation, and limits
