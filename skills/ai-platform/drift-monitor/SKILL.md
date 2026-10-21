@@ -1,6 +1,6 @@
 ---
 name: drift-monitor
-description: Use when the user asks whether an AI system's inputs, outputs or scores have shifted — "has our data drifted", "compare this week's traffic to the launch baseline", "PSI and KS for these features", "did the model's confidence distribution move", "drift check before retraining". Produces drift.csv, drift-report.md (Summary, Features, Alerts, Method & limits) and drift.json from a baseline CSV and a current CSV - per feature PSI, two-sample Kolmogorov-Smirnov D and p-value (numeric), chi-square p-value (categorical), missing-value rate change and an ok/warn/alert/insufficient-data status. Default PSI thresholds are the cited 0.1/0.25 rule of thumb, labelled a convention. Exit 1 on any alert. Not for live dashboards and latency/cost SLOs (llm-observability, ai-slo-definition), offline quality evals (llm-eval-harness) or fairness across groups (bias-fairness-check).
+description: Use when the user asks whether an AI system's inputs, outputs or scores have shifted — "has our data drifted", "compare this week's traffic to the launch baseline", "PSI and KS for these features", "did the model's confidence distribution move", "drift check before retraining", "compare last week's features to the baseline using our agreed thresholds", "gate this week's window on drift". Produces drift.csv, drift-report.md (Summary, Features, Alerts, Method & limits) and drift.json from a baseline CSV and a current CSV - per feature PSI, two-sample Kolmogorov-Smirnov D and p-value (numeric), chi-square p-value (categorical), missing-value rate change and an ok/warn/alert/insufficient-data status. Default PSI thresholds are the cited 0.1/0.25 rule of thumb, labelled a convention. Exit 1 on any alert. Not for live dashboards and latency/cost SLOs (llm-observability, ai-slo-definition), offline quality evals (llm-eval-harness) or fairness across groups (bias-fairness-check).
 license: MIT
 metadata:
   domain: ai-platform
@@ -26,8 +26,14 @@ metadata:
 
 # Drift Monitor
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/drift-monitor --input <name>=<value> … --out <dir>` (see `--explain ai-platform/drift-monitor`). Report the `run.json` results; do not hand-write the deliverables the script produces (`drift.csv`, `drift-report.md`, `drift.json`). Any feature in alert fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which re-derives each status from `drift.json`.
+## In a conversation: check the drift now
+The reply **is the drift report** (or its skeleton): line 1 is `Verdict: no feature in alert | ALERT — <features> | pending — <reason>`, never only a request for files. Drift is a reason to investigate, not proof that quality fell — say so and recommend a quality check (`llm-eval-harness`) on the current window before retraining.
+- **The request carries the two windows (or their numbers)**: write the report **in this reply** in the script's order — **Summary** (verdict, counts by status, thresholds used and whether they were agreed); **Features** table `feature, type, n_baseline, n_current, psi, ks_d, p_value, null_rate_baseline, null_rate_current, status` (numeric: PSI + two-sample KS D and p-value; categorical: PSI + chi-square p-value; status per `references/method.md`: insufficient-data when either window has < 30 non-missing values, else alert / warn / ok); **Alerts** (reason, unseen categories, owner); **Method & limits** (univariate; p-values shrink as samples grow). Name the run that produces the files: `python3 -I scripts/drift.py --baseline … --current … [--thresholds …] [--features …] --out-dir …`.
+- **Files said to be attached, or windows named but not shown** (e.g. "launch-week extract and last week's extract — has the request mix drifted?"): lay out all four sections now, one Features row per known feature (or `<feature>`) with values `[TO BE BASELINED — owner: ML engineer]`, state that `scripts/drift.py` reports PSI, KS or chi-square p-value and missing-rate change per feature, then ask once, in one list, for the baseline CSV, the current CSV (same columns) and the agreed thresholds file, and ask who owns agreed thresholds (ML engineering lead).
+- **No agreed thresholds / "use whatever is standard"**: use the cited defaults — PSI warn 0.1 / alert 0.25, p-value alert 0.01 — and say they are a rule-of-thumb convention (source in `references/sources.md`), not a law; write `Agreed thresholds for this system: [TO BE BASELINED — owner: ML engineering lead]` and `Missing-rate change threshold: [TO BE BASELINED — owner: Data owner]` (reported, not gated).
+- **Small window** (e.g. 20 requests since release): every feature is `insufficient-data`, never alert; exit 0; say how many more values are needed (30 per window).
+- **Gate this week's window**: any feature in alert → `ALERT — drift beyond the alert threshold`, run exits 1 with full outputs; list new categories unseen in the baseline; name an owner per alerted feature and check upstream changes.
+- **Latency, availability, error or cost targets ("are we meeting p95?")**: line 1 routes it to `ai-slo-definition` or `llm-observability`; this skill compares distributions only.
 
 ## Starting points
 - **Existing:** a baseline window and a recent window from the running system; each feature's PSI, KS or chi-square result is judged against your thresholds.
@@ -76,3 +82,6 @@ Lines starting with `#` are comments. A feature named in `features` that is not 
 - `references/sources.md` — source of the PSI rule of thumb (checked 2026-10-18)
 - `assets/thresholds-template.csv` — thresholds layout for the ML engineering lead
 - `scripts/drift.py` — calculator and `--verify` (argparse; stdlib; exit 0 / 1 alert / 2 input)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/drift-monitor --input <name>=<value> … --out <dir>` (see `--explain ai-platform/drift-monitor`). Report the `run.json` results; do not hand-write the deliverables the script produces (`drift.csv`, `drift-report.md`, `drift.json`). Any feature in alert fails the run (exit 1) on purpose, with every output still written. Both tabular outputs pass `--verify`, which re-derives each status from `drift.json`.

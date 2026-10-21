@@ -1,6 +1,6 @@
 ---
 name: effort-estimator
-description: Use when the user asks to size, estimate, or price a services engagement, build a WBS, produce P50/P80/P90 effort (duration from the critical path and staffing plan, else marked TBD), design a staffing pyramid or onshore/offshore mix, or sanity-check margin. Produces a WBS with 3-point estimates, a Monte Carlo (PERT) distribution with confidence levels, a staffing table by role and phase, and a cost roll-up against a rate card the user supplies (never invented rates). Includes a script that runs PERT + Monte Carlo over a WBS CSV. Do not use for business-case benefits (value-case-builder) or for the proposal narrative (proposal-writer).
+description: Use when the user asks to size, estimate, or price a services engagement — including sizing a platform migration (e.g. MuleSoft to Apigee) from interface counts by complexity band that an assessment already produced, or "give me P50/P80/P90, staffing and price" — build a WBS, produce P50/P80/P90 effort (duration from the critical path and staffing plan, else marked TBD), design a staffing pyramid or onshore/offshore mix, or sanity-check margin. Produces a WBS with 3-point estimates, a Monte Carlo (PERT) distribution with confidence levels, a staffing table by role and phase, and a cost roll-up against a rate card the user supplies (never invented rates). Includes a script that runs PERT + Monte Carlo over a WBS CSV. Do not use for business-case benefits (value-case-builder) or for the proposal narrative (proposal-writer).
 license: MIT
 metadata:
   domain: presales
@@ -32,8 +32,18 @@ metadata:
 
 # effort-estimator
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/effort-estimator --input <name>=<value> … --out <dir>` (see `--explain presales/effort-estimator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: build the estimate now
+- **The request carries scope counts** (e.g. "118 interfaces: 60 simple, 40 medium, 18 complex"), even when it says the actuals, WBS or rate card are attached but their contents are not in the conversation: write the estimate **in this reply**, in this order. Never reply with only a request for files.
+  1. **WBS** in the `assets/wbs-template.csv` columns (`task_id, phase, work_package, task, role, driver_group, count, unit_o, unit_m, unit_p, …, basis, predecessors, notes`): parametric rows per band (count × unit effort, basis `PAR`, citing the prior actuals as the unit source), plus explicit PM, QA, environments, cutover, hypercare and KT packages. Unit efforts not in the conversation are `[TO BE BASELINED — owner: ___]` naming the attached actuals as source.
+  2. **Model**: the exact command — `python3 -I scripts/estimate.py wbs.csv --rates rate-card.csv --iterations 20000 --out estimate.md` — and a results table P50 / P80 / P90 effort and cost with **contingency = P80 − P50** as its own column; figures not yet computed read `[TO BE BASELINED — owner: Estimation lead, from the estimate.py run]`.
+  3. **Confidence quoted** per `references/estimation-method.md` §4, and why: fixed price, inventory known → P80; fixed price, inventory unconfirmed → P90 or assessment first; T&M → P50 with P80 as NTE.
+  4. **Staffing table** by role and phase with onshore/offshore split, allocations between 20% and 100%, leverage ratio.
+  5. **Price and margin**: price only from the supplied rate card (effort × bill rate), margin at P50 and at P80; rates not visible are `[TO BE BASELINED — owner: ___]`, never typical rates.
+  6. **Assumptions**: every count and unit effort as a row with its source.
+  7. **Memo** in the `assets/estimate-summary-template.md` sections: Bottom line, Basis of estimate (basis mix ANA/PAR/JUD %), Assumptions, Exclusions, Risks to the estimate and de-risking, Sensitivity, Staffing, Price-to-win.
+- **WBS given, no rate card** ("give me the price"): ask once for the rate card with its columns (`role, grade, location, cost_rate, bill_rate, currency, valid_until`); in the same reply produce the effort-only output (P50/P80/P90, contingency, staffing) and show price as `[TO BE BASELINED — owner: ___]`. No rates assumed.
+- **No scope or WBS at all**: ask once, in one list, for the scope counts, phases, commercial model and rate card; say no counts, unit efforts or rates will be invented.
+- **Asked to use an "industry-standard" unit effort or quote fixed price at P50**: decline in one line (there is no sourced industry standard; a P50 fixed price carries no contingency, so it loses money half the time). Do not supply an industry figure. Use the user's own figure (e.g. 3 days per interface) only if they confirm it as their assumption, labelled `JUD`, with the anchor source `[TO BE BASELINED — owner: ___]`. Flag that `JUD` > 30% of effort makes the estimate low-confidence and recommend an assessment phase or per-unit pricing with a count band. Show P50 and P80 side by side with contingency (P80 − P50) explicit, and recommend P80/P90 fixed or T&M with a P80 NTE.
 
 ## Starting points
 - **New** — your WBS (and rate card) is modelled: P10–P90 effort, phases, variance contributors, staffing, cost and price; the model step writes the memo, or with `draft_only` the memo is written from the run's figures, every number traceable.
@@ -85,6 +95,9 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - [ ] Every count is an assumption row with `[TO BE BASELINED — owner: ___]` where unconfirmed
 - [ ] Staffing allocations between 20% and 100%; leverage ratio stated
 - [ ] Totals reconcile across WBS, model output, and memo
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/effort-estimator --input <name>=<value> … --out <dir>` (see `--explain presales/effort-estimator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
 
 ## References
 - `references/estimation-method.md` — WBS rules, 3-point calibration, PERT/Monte Carlo, confidence selection, sensitivity

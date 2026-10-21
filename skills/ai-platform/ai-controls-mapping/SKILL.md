@@ -25,8 +25,17 @@ metadata:
 
 # AI Controls Mapping (NIST AI RMF 1.0)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-controls-mapping`). Report the `run.json` results; do not hand-write the deliverables the script produces (`controls.csv`, `coverage.json`, `controls-report.md`). With `min_coverage`, the skill is a gate: evidence-backed coverage (claims with no evidence cited get no credit) below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.
+## In a conversation: map the controls now
+The reply **is the controls mapping**: its first line is `Coverage: <overall, or [TO BE BASELINED — owner: AI risk lead]> against NIST AI RMF 1.0 (72 subcategories) — self-assessment, not an audit`. Never reply with only a request for the spreadsheet.
+- **The request describes the system or its controls** (or says a controls spreadsheet exists or is attached but its rows are not in the conversation): give the mapping **in this reply**, in this order:
+  1. **Coverage by function** — a table for GOVERN (19), MAP (18), MEASURE (22), MANAGE (13): implemented, partial, planned, not_applicable, missing, applicable, coverage. Coverage = (implemented + 0.5 × partial) ÷ applicable; a subcategory with no row is `missing` (a gap), never implemented. Compute only from statuses the user states; otherwise each cell is `[TO BE BASELINED — owner: AI risk lead]`. Implemented/partial claims with no evidence cited are flagged and get no credit in the evidence-backed coverage used by any gate.
+  2. **Gaps** — every partial, planned or missing subcategory with `subcategory_id | function | status | owner`; a gap with no named owner shows `[TO BE BASELINED — owner: AI risk lead]`.
+  3. **Gate** — only when the user gives a minimum coverage: evidence-backed coverage below it is FAIL. No gate is invented.
+  4. **AI Act obligations** (only if given) — supported / partial / none via the skill's own crosswalk, labelled as such.
+  5. **What I need to finish** — ask once for the evidence register as `subcategory_id,status,evidence,owner` (ids as in NIST AI 100-1, e.g. `GOVERN 1.1`; status implemented | partial | planned | not_applicable; template `assets/evidence-template.csv`).
+  6. **Limits** — voluntary framework, self-assessed statuses; this is not compliance, certification or an audit opinion.
+- **Nothing about the controls stated** ("give us our NIST coverage"): ask once for the evidence register in the layout above; do not estimate coverage.
+- **Asked to assert a number or an owner** ("call it 80%", "just put the product manager on the gaps", "lower the gate so we pass"): decline in one line — coverage comes only from cited evidence and owners from control owners. Never print the asserted figure as coverage; show `[TO BE BASELINED — owner: AI risk lead]` and fix the evidence, not the threshold.
 
 ## Starting points
 - **New** — starting a controls programme: fill `assets/evidence-template.csv` with what exists today; blank rows count as missing and the report gives the baseline coverage and the full gap list.
@@ -75,3 +84,6 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 - `assets/evidence-template.csv` — input template
 - `assets/aiact-nist-crosswalk.csv` — AI Act obligation → subcategory mapping (skill's own)
 - `scripts/map_controls.py` — mapper and `--verify` (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-controls-mapping --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-controls-mapping`). Report the `run.json` results; do not hand-write the deliverables the script produces (`controls.csv`, `coverage.json`, `controls-report.md`). With `min_coverage`, the skill is a gate: evidence-backed coverage (claims with no evidence cited get no credit) below the minimum fails the run (exit 1) and the outputs are still written. Unknown subcategory ids also fail the run until they are fixed.

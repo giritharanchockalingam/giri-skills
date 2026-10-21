@@ -23,8 +23,18 @@ metadata:
 
 # AI Incident Runbook
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-incident-runbook --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-incident-runbook`). Report the `run.json` results; do not hand-write the deliverables the script produces (`runbook.md`, `incident.json`). A severity matrix in which no row fires fails the run (exit 1) on purpose.
+## In a conversation: write the runbook now
+The reply **is the runbook**: its first line is `Severity: SEV<n> (provisional) — <rule ids that fired> — <the facts and unknowns that drove it>`, never only a request for a CSV. Contain first; questions go after the actions.
+- **The request describes the incident** ("our assistant showed one member another member's claim details; started about an hour ago"), or says facts are attached but they are not in the conversation: write the runbook **in this reply** from the stated facts, in this order:
+  1. **Severity** — classify with the skill's default matrix (`references/severity-matrix.md`) and say so; list every fired row. Missing `users_affected`, `data_exposed`, `regulated_data` are **unknown, and unknown escalates** (D02: exposure confirmed, regulated status unknown → SEV1; D03: exposure not ruled out, regulated data possible → SEV2; D12: users unknown → SEV3). Severity goes down only with evidence.
+  2. **Immediate actions** — contain first, from `assets/playbooks/<category>.md`. For a data leak: disable the leaking path now (feature flag off, tool or connector revoked, retrieval source detached), preserve evidence (traces, logs, outputs) while restricting access to them, revoke and rotate any credentials that appeared. **Timeline** holds only the times the user gave (e.g. "started ~1 hour ago" as stated); every other time is `[TO BE BASELINED — owner: Incident commander]`.
+  3. **Containment** and **Recovery** — the playbook's contain, eradicate, recover and verify steps.
+  4. **Communications** — internal always; customer unless users_affected = 0; **regulator track** when regulated data is yes or unknown, flagged for Legal / privacy to confirm obligations and deadlines — no deadline is set or invented.
+  5. **Postmortem** skeleton — fields and action items, including a regression eval case and the missing alert.
+  6. **Owners** — incident commander, engineering lead, comms lead, legal/privacy, security lead: named only if the user named them, else `[TO BE BASELINED — owner: <role>]`.
+  7. **Facts I need** — ask once, in one list: users affected, whether data was exposed and whether it is regulated, exact start and detection times, system name; until answered they stay unknown and escalate.
+- **No incident facts at all** ("we had an AI incident, give me the runbook"): ask once for category, start time, users affected, data exposed, regulated data (yes/no/unknown) and owners; do not guess a severity.
+- **Asked to assume it's fine or keep severity low**: decline in one line — unknown regulated status or exposure escalates. Show the severity the matrix gives (e.g. prompt injection with regulated status unknown → SEV2 via D03), keep the regulator track, and leave users, detection time and owners as TBD markers. A supplied matrix in which no row fires is rejected; ask for a baseline row rather than guessing a severity.
 
 ## Starting points
 - **New** — no runbook or severity policy yet: bring the incident facts; the skill classifies with its documented default matrix (and says so) and assembles the runbook.
@@ -74,3 +84,6 @@ If `incident` is missing the runner exits 2 and asks once. No time, name or coun
 - `assets/playbooks/` — per-category playbooks (contain, eradicate, recover, verify)
 - `assets/incident-template.csv` — input layout
 - `scripts/runbook.py` — the classifier and runbook builder (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-incident-runbook --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-incident-runbook`). Report the `run.json` results; do not hand-write the deliverables the script produces (`runbook.md`, `incident.json`). A severity matrix in which no row fires fails the run (exit 1) on purpose.

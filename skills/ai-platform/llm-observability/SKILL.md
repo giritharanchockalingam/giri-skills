@@ -1,6 +1,6 @@
 ---
 name: llm-observability
-description: Use when an LLM feature is live and the user needs to know how it is behaving — "set up LLM monitoring", "are we meeting our SLOs", "p95 latency and cost per request by feature", "has quality drifted since last week", "what should our trace schema be". Produces dashboard.json and alerts.md (Status, SLO breaches, Drift, By feature) from trace spans (JSONL) and an SLO CSV - request count, error rate, nearest-rank p50/p95/p99 latency, tokens and cost per request (cost only from spans that carry it), eval score mean, drift against a baseline window - plus the recommended trace schema. Not for app logging/Sentry setup (observability-setup), offline evals (llm-eval-harness) or incident handling (ai-incident-runbook).
+description: Use when an LLM feature is live and the user needs to know how it is behaving from its traces — "monitor our LLM traces", "set up LLM monitoring", "are we meeting our SLOs", "check the last 24h p95 for a feature", "p95 latency and cost per request by feature", "has quality drifted since last week", "what should our trace schema be". Produces dashboard.json and alerts.md (Status, SLO breaches, Drift, By feature) from trace spans (JSONL) and the owner's SLO CSV - request count, error rate, nearest-rank p50/p95/p99 latency, tokens and cost per request (only from spans that carry cost_usd, never estimated from token prices), eval score mean, drift against a baseline window - plus the recommended trace schema. Never picks SLO thresholds. Not for app logging/Sentry setup (observability-setup), offline evals (llm-eval-harness), incident handling (ai-incident-runbook), SLO design from a request log (ai-slo-definition) or team spend showback (ai-finops-chargeback).
 license: MIT
 metadata:
   domain: ai-platform
@@ -25,8 +25,16 @@ metadata:
 
 # LLM Observability (traces → SLOs → alerts)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-observability --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-observability`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dashboard.json`, `alerts.md`, `trace-schema.json`). Any SLO breach fails the run (exit 1) on purpose; the outputs are still written.
+## In a conversation: set up the roll-up now
+The reply gives the monitoring setup and the exact inputs it needs; numbers appear only from real spans.
+- **The feature is live but traces and SLOs are not in the conversation** ("are we meeting SLOs, has latency drifted", or files said to be attached): in this reply give
+  1. **What to send**: the trace export as JSONL and the SLO thresholds from the service owner. Never propose thresholds as the SLO; show the SLO CSV skeleton (`metric,threshold,window,feature,comparator`, rows for error_rate, latency_p95_ms, eval_score_mean, cost_per_request_usd, drift_*_pct) with each threshold `[TO BE BASELINED — owner: service owner]`.
+  2. **Trace fields** per `assets/trace-schema.json`: required `trace_id, ts, feature, model, latency_ms, input_tokens, output_tokens, status`; optional `cost_usd, eval_score, user_feedback`. Spans missing required fields are rejected and counted, never repaired. Cost per request is reported only from spans that carry `cost_usd`, with coverage; without it the cost SLO reads NO DATA.
+  3. **Drift**: against a baseline window once both dates are given (convert "first week of September" to `baseline_start`/`baseline_end` and confirm the year); drift = (current − baseline) ÷ baseline × 100 for tokens per request, p95 latency and eval score mean.
+  4. **The run**: `python3 -I scripts/observe.py --traces spans.jsonl --slo slo.csv --out-dir <dir> [--baseline-start …] [--baseline-end …]` → `dashboard.json`, `alerts.md` (Status, SLO breaches, Drift, By feature), `trace-schema.json`; percentiles nearest-rank; any BREACH exits 1. Do not print metric values that were not computed.
+- **Asked to pick sensible SLOs**: decline in one line (a threshold is the service owner's commitment, not this skill's); show the skeleton with markers and ask for the values.
+- **Asked to estimate cost from token prices** (cost not logged): decline in one line; the cost SLO for that feature is NO DATA, reported and never counted as met; the fix is to instrument `cost_usd` on spans. Still report the other SLOs, e.g. a p95 above its threshold in its window is a BREACH and exits 1.
+- **Nothing about the app**: ask once for the feature names, the trace source (OpenTelemetry, Langfuse, provider logs) and the SLO owner.
 
 ## Starting points
 - **Existing** — rolls up spans your running application already emitted against the owner's SLOs, with drift against a baseline window.
@@ -74,3 +82,6 @@ If `traces` or `slo` is missing the runner exits 2 and asks once. Spans missing 
 - `assets/trace-schema.json` — recommended span schema
 - `assets/slo-template.csv` — SLO input layout
 - `scripts/observe.py` — the roll-up (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/llm-observability --input <name>=<value> … --out <dir>` (see `--explain ai-platform/llm-observability`). Report the `run.json` results; do not hand-write the deliverables the script produces (`dashboard.json`, `alerts.md`, `trace-schema.json`). Any SLO breach fails the run (exit 1) on purpose; the outputs are still written.

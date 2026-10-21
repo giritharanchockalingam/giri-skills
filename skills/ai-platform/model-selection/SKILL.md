@@ -25,8 +25,12 @@ metadata:
 
 # Model Selection
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/model-selection --input <name>=<value> … --out <dir>` (see `--explain ai-platform/model-selection`). Report the `run.json` results; do not hand-write the deliverables the script produces (`ranking.json`, `decision.md`). When no candidate survives the hard constraints the run exits 1 on purpose and `decision.md` says so.
+## In a conversation: rank the models now
+- **The request carries model facts** (candidates with prices, latency, context, the team's eval scores, plus weights and constraints — or says they are attached but their contents are not in the conversation): give the decision **in this reply**, in the `decision.md` order: **Recommendation** (winner, runner-up, robustness verdict), **Criteria** (weight, direction, hard constraints), **Eliminated** (each candidate with the hard constraint it fails), **Scores** (min-max normalised per criterion over survivors, weighted sum, rank, monthly cost when a workload is given), **Sensitivity** (each weight ±20%: does the winner change), **Sources** (source and as-of per row), **Gaps**. Use only stated facts; every missing value is `[TO BE BASELINED — owner: ___]` naming who holds it (eval owner, vendor price sheet, product owner for volumes). State that the run is `python3 -I scripts/select_model.py --candidates … --criteria … [--workload …] --out-dir <dir>` and that `--verify` recomputes the ranking. Never reply with only a request for files.
+- **No candidate facts** ("which LLM should we use for X?"): ask once, in one list, for (1) the shortlist with the team's own eval scores, prices in/out per 1M tokens, p95 latency and context — each with `source` and `as_of` — using `assets/candidates-template.csv`; (2) criteria with weights, direction and hard constraints (self-host, data residency, latency SLO, minimum accuracy) using `assets/criteria-template.csv`; (3) optional workload via `assets/workload-template.csv`. Say plainly that you will not quote any model price, benchmark score or capability from memory.
+- **No candidate meets the hard constraints**: list every candidate eliminated with its reasons and say no candidate meets them (the run exits 1); do not recommend one anyway — offer the constraint to revisit and its owner.
+- **Cost criterion without a workload**: do not assume volumes; monthly cost is `[TO BE BASELINED — owner: product owner]` and the run stops with an input error until the workload is given.
+- **An incumbent is named**: add "Incumbent" — whether it still passes the hard constraints, its rank, switch or stay, score gap, monthly-cost delta, and the criteria where the incumbent is better.
 
 ## Starting points
 - **New** — rank candidate models on your criteria, hard constraints and workload.
@@ -73,3 +77,6 @@ If a candidate fact is missing, ask once; the script never fills it. A blank on 
 - `references/criteria-design.md` — choosing criteria, weights and hard constraints; provenance rules
 - `assets/candidates-template.csv`, `assets/criteria-template.csv`, `assets/workload-template.csv` — input layouts
 - `scripts/select_model.py` — scorer and verifier (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/model-selection --input <name>=<value> … --out <dir>` (see `--explain ai-platform/model-selection`). Report the `run.json` results; do not hand-write the deliverables the script produces (`ranking.json`, `decision.md`). When no candidate survives the hard constraints the run exits 1 on purpose and `decision.md` says so.

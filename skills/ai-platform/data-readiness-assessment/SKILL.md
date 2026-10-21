@@ -1,6 +1,6 @@
 ---
 name: data-readiness-assessment
-description: Use when the user asks whether a dataset is ready for an AI or analytics use case — "is our data ready", "profile this sample", "data readiness check", "does this extract meet the data requirements", "how fresh / complete / unique is this data". Produces a column profile (rows, null %, inferred types, distinct counts, duplicate rows and keys, freshness against an as_of date) scored pass/fail/TBD per readiness dimension against owner-supplied thresholds, with a Ready / Ready-with-gaps / Not ready verdict and a gaps-and-owners table; thresholds are never defaulted. Not for PII discovery (pii-data-inventory), fine-tune dataset preparation (finetune-dataset-builder), or data pipeline design.
+description: Use when the user asks whether a dataset is ready for an AI or analytics use case — "is our data ready", "profile this sample", "data readiness check", "does this extract meet the data requirements", "how fresh / complete / unique is this data", "assess this sample (or older extract) against the owner's requirements", "re-assess after the data fix". Produces a column profile (rows, null %, inferred types, distinct counts, duplicate rows and keys, freshness against an as_of date) scored pass/fail/TBD per readiness dimension against owner-supplied thresholds, with a Ready / Ready-with-gaps / Not ready verdict and a gaps-and-owners table; thresholds are never defaulted. Not for PII discovery (pii-data-inventory), fine-tune dataset preparation (finetune-dataset-builder), data pipeline design, or rule-by-rule validation against a data contract (data-contract-validator).
 license: MIT
 metadata:
   domain: ai-platform
@@ -25,8 +25,15 @@ metadata:
 
 # Data Readiness Assessment
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-readiness-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-readiness-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`readiness.json`, `readiness.md`). A "Not ready" verdict exits 1 on purpose: the run is telling you the data fails an owner threshold.
+## In a conversation: assess readiness now
+The reply **is the readiness report** (or its skeleton): line 1 is `Verdict: Ready | Ready-with-gaps | Not ready | pending — <reason>`, never only a request for files. Thresholds come only from the data owner's requirements; none are defaulted.
+- **The request carries the sample and the owner's thresholds** (or describes them): write the report **in this reply** in the script's order — **Verdict** (any fail → Not ready; else any TBD → Ready-with-gaps; else Ready) with the sample's provenance (source system, extract date, filter; unknown = `[TO BE BASELINED — owner: Data owner]`) and the caveat that a sample is not the full population; **Dimensions** table `dimension | status | threshold | observed | owner` for the six dimensions in `references/readiness-dimensions.md` — volume (`min_rows`), completeness (`max_null_pct`), schema (`required_columns`), uniqueness (`unique_key`), duplicates (`max_duplicate_rows`), freshness (`date_column` + `max_age_days` + as_of); **Column profile** (rows, null %, inferred type, distinct per column); **Gaps and owners** (fail owners per that file: Data owner, Data steward, Data engineer). Name the run that produces the files: `python3 -I scripts/assess.py --data … --requirements … [--as-of …] [--previous …] --out-dir …`.
+- **Files said to be attached, or an extract and signed-off thresholds mentioned but not shown** (e.g. "a 20-row orders extract and the thresholds our data owner signed off — ready for the pilot?"): lay out all four sections now, every observed value and threshold `[TO BE BASELINED — owner: Data owner]`, state that `scripts/assess.py` scores each dimension pass/fail/TBD only against the owner's thresholds, then ask once, in one list, for the extract CSV, the requirements file (`key,value` per `assets/readiness-requirements.csv`) and the as-of date.
+- **"Use whatever thresholds are standard" / no requirements**: decline in one line (readiness is judged against the accountable owner's thresholds, not this skill's); ask once for the requirements file; propose no numbers.
+- **Owner has not set some thresholds ("just pass those")**: those dimensions are `TBD [TO BE BASELINED — owner: Data owner]`, never pass; the verdict is **Ready-with-gaps**, never Ready. Freshness without as_of is TBD.
+- **A dimension fails**: report **Not ready** (exit 1) with each failing dimension and its owner; do not soften it.
+- **Re-assess after a fix**: add **Change since last assessment** — verdict then → now, and per dimension status then/now, observed then/now, `fixed` / `regressed` / unchanged, and a `Regressed:` line.
+- **Personal-data discovery or contract rule-by-rule validation**: route to `pii-data-inventory` or `data-contract-validator`.
 
 ## Starting points
 - **New:** a sample extract and the owner's requirements give a verdict per dimension before you commit to a use case.
@@ -71,3 +78,6 @@ Requirement keys: `min_rows`, `max_null_pct`, `required_columns` (`a;b;c`), `uni
 - `references/method-notes.md` — sampling caveats and how this maps to public data-quality frameworks
 - `assets/readiness-requirements.csv` — requirements template for the data owner
 - `scripts/assess.py` — profiler and scorer (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/data-readiness-assessment --input <name>=<value> … --out <dir>` (see `--explain ai-platform/data-readiness-assessment`). Report the `run.json` results; do not hand-write the deliverables the script produces (`readiness.json`, `readiness.md`). A "Not ready" verdict exits 1 on purpose: the run is telling you the data fails an owner threshold.

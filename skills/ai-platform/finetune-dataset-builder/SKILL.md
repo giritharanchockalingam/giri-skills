@@ -30,8 +30,12 @@ metadata:
 
 # Fine-tune Dataset Builder
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/finetune-dataset-builder --input <name>=<value> … --out <dir>` (see `--explain ai-platform/finetune-dataset-builder`). Report the `run.json` results; do not hand-write the deliverables the script produces (`train.jsonl`, `val.jsonl`, `test.jsonl`, `dataset-stats.json`, `data-card.md`). Fewer usable examples than `min_rows` fails the run (exit 1) on purpose.
+## In a conversation: build the dataset now
+- **The request says the examples are here or attached but their rows are not in the conversation**: give the build plan and run report **in this reply**, in this order. (1) The run: `python3 -I scripts/build_dataset.py --examples <file> --out-dir <dir>` — validate, normalise whitespace, remove exact then normalised duplicates, prompt-grouped seeded split (`references/pipeline.md`). (2) A run-report table with rows: usable examples, rejected by reason (unparseable, no assistant turn, empty prompt or completion, over `max_chars`), exact duplicates removed, normalised duplicates removed, train / val / test sizes, `leakage_prompts_across_splits` (must be 0, or the run fails) — each count `[TO BE BASELINED — owner: ML engineer]` from `dataset-stats.json`; never a made-up count. (3) Parameters, each labelled: split 0.8/0.1/0.1 (default), seed 42 (default), min_rows 10 (default), max_chars none (default); a value the user states is labelled (supplied). (4) The output shape: one `{"messages":[{"role":"user",…},{"role":"assistant",…}]}` per line (system turn kept when given) in `train.jsonl`, `val.jsonl`, `test.jsonl`. (5) Token lengths are an **estimate** (characters ÷ 4); check against the target model's context window with its real tokenizer. (6) Before training: run `pii-data-inventory` on the examples and confirm owner, licence and consent — `[TO BE BASELINED — owner: Data owner]` until confirmed. (7) The data card sections: Source, Cleaning, Splits, Length stats, Known limits.
+- **The rows are pasted in the conversation**: apply the same rules to them in this reply — list rejected rows with the reason, removed duplicates, and the cleaned records as chat-messages JSONL; give split targets (val = round(n × 0.1), test = round(n × 0.1), train = the rest) and say the seeded assignment comes from the script run, so it is reproducible.
+- **No examples at all**: ask once for the file (CSV `prompt,completion[,system]` or JSONL with `messages` or `prompt`/`completion`; layout `assets/examples-template.csv`) and any non-default split, seed or length cap. Do not write example pairs yourself.
+- **Fewer than `min_rows` usable examples**: say the run stops (exit 1) by design; report the usable count and the rejections by reason; do not pad, duplicate or invent rows.
+- **Asked to generate synthetic examples, skip the leakage check or let one prompt sit in two splits**: decline in one line (synthetic data is out of scope; leakage inflates eval scores), and offer the defensible path: more real examples from the use-case owner, or a lower `min_rows` stated in the data card.
 
 ## Starting points
 - **New:** raw examples become cleaned, de-duplicated, leak-free train/val/test files with a data card.
@@ -79,3 +83,6 @@ Accepted shapes: CSV `prompt,completion[,system]`; JSONL `{"messages":[…]}` en
 - `references/dataset-card-notes.md` — why each card section exists; links to public documentation practices
 - `assets/examples-template.csv` — input layout
 - `scripts/build_dataset.py` — builder and JSONL validator (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/finetune-dataset-builder --input <name>=<value> … --out <dir>` (see `--explain ai-platform/finetune-dataset-builder`). Report the `run.json` results; do not hand-write the deliverables the script produces (`train.jsonl`, `val.jsonl`, `test.jsonl`, `dataset-stats.json`, `data-card.md`). Fewer usable examples than `min_rows` fails the run (exit 1) on purpose.

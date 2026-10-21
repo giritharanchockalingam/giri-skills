@@ -28,8 +28,11 @@ metadata:
 
 Wraps `code-review` from mattpocock/skills (pinned in vendor/pins.json). Upstream reviews a change on two separate axes — Standards and Spec — with a Fowler smell baseline as judgement calls. This skill makes the deterministic part of the Standards axis executable and hands the upstream instructions to the optional narrative step by path (`../../../vendor/code-review/SKILL.md`), never by copy.
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/code-review-runner --input <name>=<value> … --out <dir>` (see `--explain build/code-review-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The script always writes both outputs; the gate check on `review.json` then fails the run (exit 1) when any blocking finding remains, so a blocking diff is reported, never waved through.
+## In a conversation: review the change now
+- **The diff text is in the conversation**: review it **in this reply** in the `review.md` order — `Verdict: PASS` or `Verdict: BLOCK` on the first line, then Summary (files, +/- lines, size, source vs test files, risky paths), Blocking, Non-blocking, Tests, Files. Every finding is a row: id (F01…), rule, severity, file:line, evidence, fix. Scan added (`+`) lines only. Blocking: CR-SECRET (evidence redacted, never the full value), CR-EVAL, CR-TLS, CR-SQL-CONCAT. Warning: CR-SWALLOW, CR-DEBUG (e.g. `console.log`), CR-NO-TESTS. Info: CR-TODO without an owner, CR-DUP. Any blocking finding means BLOCK and the gate check fails the run; all findings are still listed so the author sees them. Tests says whether a test file changed alongside the source.
+- **The request says a diff, PR, team rules or spec is here but its text is not in the conversation**: still write the review skeleton now — the five sections with their headings, the detector checklist above that will run on the added lines, the Tests line, and `Verdict: [TO BE BASELINED — owner: author, from the diff]`. With team rules: state they are applied after the built-ins (custom regex rules; a built-in id with empty pattern overrides its severity, e.g. CR-TODO raised to warning or CR-NO-TESTS made blocking) and record each override. With a narrative request: lay out the two-axis review (Standards from the findings, Spec from the issue/spec, kept separate, then Summary) per `assets/two-axis-review-template.md` and the upstream method. End with one line asking for the unified diff (`git diff <base>...HEAD > change.patch`). Never print a PASS verdict or invent findings for code you have not seen.
+- **Nothing to review** ("review my PR" with no diff): ask once for the unified diff (and, optionally, the team rules CSV and the spec). Do not review an imagined change.
+- **Asked to "just approve it" or skip the review to merge today**: decline in one line — approval without the review is not given, and a blocking finding (secret, eval, disabled TLS, SQL built by concatenation) fails the gate regardless of deadline. Run or lay out the review as above; offer the fastest defensible path: fix the blocking rows, re-run, merge on PASS.
 
 ## Starting points
 - **New** — a diff that adds new files is reviewed on its added lines: standards findings, test verdict, verdict.
@@ -75,3 +78,6 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 - `assets/two-axis-review-template.md` — narrative template for the optional LLM step
 - `scripts/review.py` — parser, detectors, renderer and gate (argparse; stdlib)
 - Upstream method: `vendor/code-review/SKILL.md`
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/code-review-runner --input <name>=<value> … --out <dir>` (see `--explain build/code-review-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The script always writes both outputs; the gate check on `review.json` then fails the run (exit 1) when any blocking finding remains, so a blocking diff is reported, never waved through.

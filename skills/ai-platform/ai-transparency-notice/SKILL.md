@@ -28,8 +28,18 @@ metadata:
 
 # AI Transparency Notice (user notice, system card, Art. 50 checklist)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-transparency-notice --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-transparency-notice`). Report the `run.json` results; do not hand-write the deliverables the script produces (`notice.md`, `system-card.md`, `disclosure-checklist.csv`, `transparency.json`). A notice above the reading-grade ceiling fails the run (exit 1) on purpose; every output is still written so the facts can be rewritten in plainer words.
+## In a conversation: write the notice and checklist now
+The reply **is the transparency pack draft**, never only a request for the facts CSV. Facts the user states fill the templates; every other fact is a marker, never typical wording.
+- **The request names the system and its situation** (e.g. "billing chatbot launching in the EU") but the facts CSV and `classification.json` are not in the conversation: write, **in this reply**, in this order:
+  1. **How it is produced** — one line: the Product owner fills `assets/facts-template.csv` (each row with a source); optionally pass `classification.json` from `eu-ai-act-classifier`; run `python3 scripts/run_skill.py ai-platform/ai-transparency-notice --input facts=<facts.csv> [--input classification=<classification.json>] --out <dir>`.
+  2. **User notice** — the sentences from `assets/notice-sentences.csv`, one per line, each tagged with the fact it traces to: "You are chatting with {system_name}. It is an AI system, not a person." / "{provider} runs it." / "It is here to {purpose}." / "It uses {data_sources}." / "It is not for {not_intended_for}." / "Keep in mind that it {known_limitations}." / "People stay in charge: {human_oversight}." / "Questions? Contact {contact}." / "Last updated: {last_updated}." — plus the `synthetic`, `deep_fake`, `emotion`, `biometric` sentences only when that yes/no fact is yes. Fill a placeholder only from a stated fact; otherwise `[TO BE BASELINED — owner: Product owner]`.
+  3. **Reading grade** — Flesch-Kincaid grade against the ceiling (`max_grade`, default 8). Report it as `[TO BE BASELINED — computed by the run]` while placeholders remain; above the ceiling the run exits 1 and the long facts are rewritten, not the notice.
+  4. **Art. 50 disclosure checklist** — table `duty | article | addressee | applies | provided | status | owner` with the seven rows from `assets/art50-duties.csv`: interaction (Art. 50(1), Product owner), synthetic-content marking (Art. 50(2), Engineering lead), emotion recognition and biometric categorisation (Art. 50(3), Privacy officer), deep fake and public-interest text (Art. 50(4), Content lead), timing and accessibility (Art. 50(5), Product owner). `applies` follows the yes/no fact (unknown → `to confirm`); status is provided / partial / missing / to confirm / not applicable; Art. 50(5) is at most `partial` (placement and grade only).
+  5. **System card outline** — Overview (with classification, else `[TO BE BASELINED — owner: Compliance lead]`), Intended use, Not intended for, Data, Model, Human oversight, Limitations, Contact, Change log.
+  6. **Limits** — this is not a legal determination and claims no compliance; exemptions are not assessed; counsel reviews the checklist before launch.
+- **Only some facts are known** ("we only know the name, provider and purpose — fill the rest with typical wording"): fill those three, mark every other fact `[TO BE BASELINED — owner: Product owner]` and the classification for the Compliance lead; say in one line that wording is not invented because each notice sentence must trace to a fact.
+- **No system named at all**: ask once, in one list, for the facts in `assets/facts-template.csv` (name, provider, purpose, data sources, oversight, limitations, not-intended-for, contact, the yes/no flags, notice placement) and the classifier output.
+- **Asked to state that the system is compliant** or to drop a checklist row: decline in one line — the checklist records evidence and owners, and compliance is a legal determination for counsel.
 
 ## Starting points
 - **New:** the system's facts (and the classifier output) give the user notice, the system card and the Art. 50 checklist.
@@ -79,3 +89,6 @@ Each missing fact is `[TO BE BASELINED — owner: Product owner]` in the card an
 - `references/method.md` — notice assembly, card rules, checklist rules
 - `assets/facts-template.csv`, `assets/notice-sentences.csv`, `assets/art50-duties.csv` — input layout, templates, duty catalog
 - `scripts/transparency_notice.py` — builder and `--verify` (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-transparency-notice --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-transparency-notice`). Report the `run.json` results; do not hand-write the deliverables the script produces (`notice.md`, `system-card.md`, `disclosure-checklist.csv`, `transparency.json`). A notice above the reading-grade ceiling fails the run (exit 1) on purpose; every output is still written so the facts can be rewritten in plainer words.

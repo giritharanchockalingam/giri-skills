@@ -25,8 +25,17 @@ metadata:
 
 # AI-BOM Licence Check
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-bom-license-check --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-bom-license-check`). Report the `run.json` results; do not hand-write the deliverables the script produces (`aibom.csv`, `aibom.json`, `license-report.md`). **Gate:** any denied component fails the run (exit 1) on purpose; all three outputs are still written. Not legal advice.
+## In a conversation: check the licences now
+The reply **is the licence check**: its first line is `Gate: FAIL / PASS / PENDING — <the component(s) that decided it>`, never only a request for files. It is not legal advice; say so and name Legal counsel for every review and unknown.
+- **The request names components** ("we fine-tuned Llama 3.1 and trained on a CC BY-NC dataset — can we ship commercially?"), or says a BOM or policy is attached but its contents are not in the conversation: give the check **in this reply** from the stated facts, in this order:
+  1. **Gate line** — any deny, or commercial/redistribution use of a non-commercial licence, is `FAIL`; otherwise `PENDING` until the BOM and policy are complete.
+  2. **Components table** — `component | type (model/dataset/library/service) | licence as stated | spdx_id | use | decision | reason | flags`. Normalise only to ids in `assets/license-catalog.csv` (e.g. `CC-BY-NC-4.0`, `LicenseRef-Llama-3.1-Community`); an unrecognised string stays `unknown` and goes to Legal counsel. Use rules decide what policy cannot override: a **CC BY-NC** dataset in commercial use is **deny** (non-commercial licence, commercial use). **Llama 3.1** is **review / conditional**, never a plain allow: licence from Meta needed above 700M monthly active users, display "Built with Llama", Acceptable Use Policy, ship the agreement and Notice file, derived model names begin with "Llama".
+  3. **Blocked** — each deny with the fix: replace the component, relicense it, or change the use.
+  4. **Needs review** — conditional and unknown licences, routed to Legal counsel.
+  5. **Obligations** — notices, attribution and flow-down terms to ship with the release.
+  6. **What I need to finish** — ask once for the full BOM (`component,type,version,license,source_url,use`, every model, dataset, library and hosted service) and the organisation's licence policy (`license,decision,notes`). Without a policy, every other decision is `[TO BE BASELINED — owner: Legal counsel]`; blank versions or licences are `[TO BE BASELINED — owner: Engineering lead]`.
+- **No components named** ("check our AI licences"): ask once for the BOM in the CSV layout above and the licence policy; do not decide any licence from memory.
+- **Asked to approve without a policy or skip the gate** ("just approve the usual permissive ones", "it's only NC, ship it"): decline in one line — decisions come only from Legal counsel's policy and the documented use rules. Still normalise each licence, show every decision as `[TO BE BASELINED — owner: Legal counsel]`, and keep a non-commercial licence in commercial use as deny / gate FAIL.
 
 ## Starting points
 - **New** — a system heading to its first release: list the components in the CSV layout; the skill normalises each licence, applies your policy and writes the AI-BOM.
@@ -74,3 +83,6 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 - `assets/license-catalog.csv` — SPDX/LicenseRef catalog with flags, obligations and source URL per row
 - `assets/license-policy.example.csv` — example policy for Legal counsel to replace
 - `scripts/aibom.py` — checker, CycloneDX writer and `--verify` (argparse; stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-bom-license-check --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-bom-license-check`). Report the `run.json` results; do not hand-write the deliverables the script produces (`aibom.csv`, `aibom.json`, `license-report.md`). **Gate:** any denied component fails the run (exit 1) on purpose; all three outputs are still written. Not legal advice.

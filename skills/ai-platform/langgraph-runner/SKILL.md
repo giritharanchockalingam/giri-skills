@@ -28,8 +28,11 @@ metadata:
 
 Wraps langgraph-fundamentals from langchain-ai/langchain-skills (pinned in vendor/pins.json). The upstream skill is instructions only; this skill turns its graph rules into deterministic checks and a generated scaffold. Upstream text is not copied here: the optional review step reads `vendor/langgraph-fundamentals/SKILL.md` and its Python reference directly.
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langgraph-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langgraph-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`graph.py`, `graph.md`, `validation.json`). A failed validation (exit 1) is the gate working: fix the spec and re-run.
+## In a conversation: validate the graph now
+- **The request carries the graph** (nodes, state, routing described in the message, or a spec said to be attached whose contents are not in the conversation): reply **in this reply** with the deliverable in the order the run produces it, from the facts stated. (1) **Validation** — state the run is `python3 -I scripts/build_graph.py --spec <spec.json> --out-dir <dir>` and that `validation.json` reports `valid`, errors and warnings; apply the rules in `references/graph-validation-rules.md` to what was stated (reachability from entry, END reachable from every node, a conditional exit on every cycle, no dangling edges, routers with at least two routes, declared state references, reducer warnings for multi-writer list fields) and list each result; anything the message does not settle is `[TO BE BASELINED — owner: graph author]`. (2) **graph.md** — Diagram (Mermaid flowchart of the stated nodes and edges), Validation table, Nodes table (name, kind llm|tool|router|function, reads, writes) plus state table (field, type, reducer), How to run. (3) **graph.py** — the StateGraph scaffold shape (TypedDict state, one stub per node, one `route_<node>` per conditional block, edge wiring, `builder.compile()`), and say plainly that the scaffold is generated and syntax-checked (`compile()` + `ast.parse`), not executed, and that no `graph.py` is written for an invalid spec. Never reply with only a request for the spec file.
+- **No graph described** ("generate a LangGraph for my support bot"): ask once, in one list, for the spec per `assets/graph-spec.example.json` — state fields with type and reducer, nodes with kind/reads/writes, static and conditional edges, entry, finish nodes. Do not invent nodes, fields or routes.
+- **Asked to scaffold a graph that fails a rule** (a loop with no conditional exit, an orphan node, a dangling edge, a one-route router, an undeclared field): do not write the scaffold; list each error with the fix, and say the run exits 1 until the spec is fixed.
+- **Existing graph plus a new version**: also give "Changes vs current graph" (nodes, edges/routes, state fields added, removed or changed) and flag any state-field type or reducer change as breaking resume of threads already checkpointed.
 
 ## Starting points
 - **New** — validate a graph spec written from `assets/graph-spec.example.json` and generate the StateGraph scaffold.
@@ -80,3 +83,6 @@ Nothing is inferred: a node, field, or route absent from the spec is an error, n
 - `assets/graph-spec.example.json` — spec layout to copy
 - `assets/graph-review-template.md` — template for the optional review
 - Upstream: `vendor/langgraph-fundamentals/SKILL.md` (langchain-ai/langchain-skills, MIT, pinned in vendor/pins.json)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/langgraph-runner --input <name>=<value> … --out <dir>` (see `--explain ai-platform/langgraph-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`graph.py`, `graph.md`, `validation.json`). A failed validation (exit 1) is the gate working: fix the spec and re-run.
