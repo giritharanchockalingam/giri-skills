@@ -360,3 +360,29 @@ def test_files_input_accepts_real_nextjs_paths(rt):
     assert "bad file path" not in (res["error"] or ""), res["error"]
     report = next(o for o in res["outputs"] if o["path"] == "report.md")["content_text"]
     assert "in 3 file(s)" in report, report
+
+
+VENDORED_GIT_SHA256 = "74ea93260192ffae64e47c70c9fc54c8ca3609fcc746dc6518e1d92a54951fd4"  # api/py/bin/README.md
+
+
+def test_vendored_git_is_the_pinned_binary():
+    import hashlib
+    data = (STUDIO / "api" / "py" / "bin" / "git").read_bytes()
+    assert hashlib.sha256(data).hexdigest() == VENDORED_GIT_SHA256
+
+
+def test_git_skill_runs_with_only_the_vendored_git(rt, monkeypatch, tmp_path):
+    # the hosted runtime has no git: PATH holds only python3, so every git call must reach api/py/bin/git
+    only_python = tmp_path / "pathbin"
+    only_python.mkdir()
+    (only_python / "python3").symlink_to(sys.executable)
+    monkeypatch.setenv("PATH", str(only_python))
+    res = rt.execute({
+        "run_id": "t-git-1", "skill": {"kind": "repo", "repo_skill": "build/handoff-and-thread-close"},
+        "inputs": {"target": {"kind": "value", "value": "{out}/repo"}, "seed": {"kind": "fixture", "path": "evals/fixtures/repo-files"},
+                   "state": {"kind": "value", "value": "partial — export shipped, e2e pending"}, "project": {"kind": "value", "value": "demo-app"}},
+        "provider": "none", "timeout_s": 50,
+        "checks": ["exit:0", {"file": "HANDOFF.md", "check": "contains:\"server/services/export-service.ts\""}, {"file": "HANDOFF.md", "check": "contains:\"uncommitted\""}],
+    })
+    assert res["status"] == "succeeded", res["error"]
+    assert all(c["pass"] for c in res["case_checks"]), res["case_checks"]

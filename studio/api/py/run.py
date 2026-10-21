@@ -316,6 +316,22 @@ class SfTimeout(BaseException):
     """BaseException so the runner's own `except Exception` blocks cannot swallow the deadline."""
 
 
+def vendored_git_dir() -> Path | None:
+    """bin/git (vendored, see bin/README.md) as an executable directory, or None when it is not shipped.
+    A deployment may drop the executable bit, so a copy is made executable under /tmp once per instance."""
+    src = HERE / "bin" / "git"
+    if not src.is_file():
+        return None
+    if os.access(src, os.X_OK):
+        return src.parent
+    dest = WORK_ROOT.parent / "sf-bin" / "git"
+    if not (dest.is_file() and os.access(dest, os.X_OK)):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        dest.chmod(0o755)
+    return dest.parent
+
+
 @contextlib.contextmanager
 def scrubbed_env(work: Path):
     saved = dict(os.environ)
@@ -327,6 +343,12 @@ def scrubbed_env(work: Path):
         os.environ["HOME"] = str(work)
         os.environ["TMPDIR"] = str(work / "tmp")
         os.environ["RUN_SKILL_INPROC"] = "1"
+        git_dir = vendored_git_dir()
+        if git_dir:                     # skills that read git facts run here as they do locally (bin/README.md)
+            os.environ["PATH"] = f"{git_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+            os.environ["GIT_EXEC_PATH"] = str(git_dir)
+            os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
+            os.environ["GIT_TERMINAL_PROMPT"] = "0"
         yield
     finally:
         os.environ.clear()
