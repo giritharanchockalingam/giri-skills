@@ -4,6 +4,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfigured } from "@/lib/supabase/env";
+import { classifyAuthError } from "@/lib/authError";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,12 @@ function safeNext(raw: string | null): string {
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const next = safeNext(searchParams.get("next"));
-  const fail = (reason: string) => NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}&auth_error=${encodeURIComponent(reason)}`, request.url));
+  // the raw provider message is logged here and never shown; the sign-in page shows a friendly message for the class
+  const fail = (reason: string) => {
+    const kind = classifyAuthError(reason);
+    log.warn({ action: "auth.callback_failed", kind, reason: reason.slice(0, 500) }, "sign-in link did not complete");
+    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}&auth_error=${kind}`, request.url));
+  };
   if (!supabaseConfigured()) return fail("Supabase is not configured.");
 
   const response = NextResponse.redirect(new URL(next, request.url));

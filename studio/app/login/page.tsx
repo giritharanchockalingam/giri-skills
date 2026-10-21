@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/factory/LoginForm";
 import { supabaseConfigured } from "@/lib/supabase/env";
+import { authMessage } from "@/lib/authError";
 
 export const metadata = { title: "Sign in · Skills Factory" };
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <p className="lead">Skills, versions, evaluations and runs live in your workspace. Sign in with the account your administrator added, or create one.</p>
         <p className="caption"><a className="link-flame" href="/start">New to the portal? How it fits together →</a></p>
       </div>
-      {sp.auth_error && <div className="notice notice-err" role="alert" style={{ marginBottom: 16 }}>Sign-in link failed: {sp.auth_error}. Request a new link and open it once, in this browser.</div>}
+      {sp.auth_error && <div className="notice notice-hold" role="alert" style={{ marginBottom: 16 }}>{authMessage(sp.auth_error)}</div>}
       {configured ? (
         <LoginForm next={sp.next && sp.next.startsWith("/") ? sp.next : "/"} />
       ) : (
