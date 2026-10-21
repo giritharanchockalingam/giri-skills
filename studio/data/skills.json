@@ -19783,7 +19783,7 @@
   "cases": [
    {
     "id": "happy-path-score",
-    "prompt": "Here is a JD for Senior Director, Enterprise Applications at a mid-size retailer (full text pasted) and my profile keyword file. Should I apply?",
+    "prompt": "Here is a JD (full text below) and my profile keyword file. Should I apply?\n\nJD:\nSenior Director, Enterprise Applications — Harbor Freight Logistics (fictional)\nLocation: Columbus OH (hybrid). Travel up to 20%.\n\nRequirements:\n- 10+ years leading enterprise application teams; must have ERP consolidation experience (SAP S/4HANA preferred)\n- Must have owned a budget of $25M or more\n- Experience with API gateway and partner integration programs is required\n- Cloud cost management (FinOps) experience required\n- Nice to have: healthcare payer or insurance domain\n- Nice to have: Snowflake or Informatica data platform exposure\n- MBA preferred\nWe value ownership, candor and a bias for action.\n\nProfile keyword file:\n# fictional profile for eval fixtures — \"Morgan Adeyemi-Park\"\n!location: Remote, Columbus OH, Chicago IL\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise application development leadership | 2025\nERP consolidation (SAP S/4HANA) | 2024\ncloud cost management (FinOps, Azure) | 2025\nbudget ownership $38M | 2025\nAPI gateway and partner program | 2018\nhealthcare payer systems | 2025\ndata platform (Snowflake, Informatica) | 2024\nMBA | 2016",
     "expected": [
      "First line is the verdict with score /100",
      "Bucket table shows must 60 / nice 25 / culture 15 and the math",
