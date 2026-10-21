@@ -62,6 +62,23 @@ export async function callRuntime(url: string, body: Record<string, unknown>, ti
   }
 }
 
+/** Path inputs always live under the run folder (outputs are collected from there; scripts never write elsewhere).
+ *  An example folder given for one (an evaluation case's fixture) is copied there first, so the example is never written to.
+ *  A case that checks the skill asks for a missing path input (needs_input:<name>) gets no default for it. */
+export function pathInputs(manifest: Manifest, given: Record<string, RunInput>, checks?: unknown[]): Record<string, RunInput> {
+  const inputs: Record<string, RunInput> = { ...given };
+  const asked = new Set((checks ?? []).filter((c): c is string => typeof c === "string" && c.startsWith("needs_input:")).map((c) => c.slice("needs_input:".length).trim()));
+  for (const spec of manifest.inputs) {
+    if (spec.type !== "path") continue;
+    const g = inputs[spec.name];
+    if (g?.kind === "fixture") inputs[spec.name] = { kind: "fixture", path: g.path, into_out: true };
+    else if (g?.kind === "value" && g.value.startsWith("{out}/")) continue;
+    else if (!g && asked.has(spec.name)) delete inputs[spec.name];
+    else inputs[spec.name] = { kind: "value", value: `{out}/${spec.name}` };
+  }
+  return inputs;
+}
+
 export interface ExecuteOptions {
   runId: string;
   manifest: Manifest;
@@ -109,14 +126,7 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
   const cfg = runtimeConfig();
   if (!cfg.ok || !cfg.url) return base("failed", `runtime not configured — ${cfg.reason}`);
 
-  // path inputs always live under the run folder (outputs are collected from there; scripts never write elsewhere)
-  const inputs: Record<string, RunInput> = { ...o.inputs };
-  for (const spec of o.manifest.inputs) {
-    if (spec.type === "path") {
-      const given = inputs[spec.name];
-      inputs[spec.name] = { kind: "value", value: given?.kind === "value" && given.value.startsWith("{out}/") ? given.value : `{out}/${spec.name}` };
-    }
-  }
+  const inputs = pathInputs(o.manifest, o.inputs, o.checks);
 
   const body = {
     run_id: o.runId,

@@ -17,7 +17,7 @@ metadata:
       - {step: scaffold, kind: script, cmd: "python3 -I scripts/scaffold_mcp.py {tools} --target {target} --lang python [--name {name}] [--from-existing {existing_server}] --report {out}/scaffold-report.json"}
     outputs:
       - {path: "{out}/scaffold-report.json", checks: [exists, json]}
-      - {path: "{target}/server.py", checks: [exists, contains:"tools/list", cmd:"python3 -m pytest -q -p no:cacheprovider {target}/tests"]}
+      - {path: "{target}/server.py", checks: [exists, contains:"tools/list", cmd:"python3 -I scripts/run_contract_tests.py {target}/tests"]}
       - {path: "{target}/README.md", checks: [exists, sections:["Tools","Run","Test"]]}
     modes:
       new:      {case: agent-happy-path, bring: "the tool contracts you want to expose"}
@@ -27,7 +27,7 @@ metadata:
 # MCP Server Builder
 
 ## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/mcp-server-builder --input <name>=<value> … --out <dir>` (see `--explain ai-platform/mcp-server-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`server.py`, `tools/*.json`, `tests/test_tools.py`, `README.md`). The runner then runs the scaffold's own pytest suite as a check; implement the stubs afterwards, following the Procedure.
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/mcp-server-builder --input <name>=<value> … --out <dir>` (see `--explain ai-platform/mcp-server-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`server.py`, `tools/*.json`, `tests/test_tools.py`, `README.md`). The runner then runs the scaffold's own contract tests as a check (stdlib runner `scripts/run_contract_tests.py`; the same files run under pytest); implement the stubs afterwards, following the Procedure.
 
 ## Starting points
 - **New** — scaffold a stdlib MCP server, contracts, tests and README from `tools.json`.

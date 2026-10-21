@@ -21,13 +21,14 @@ const VERDICTS = ["OK", "DESC", "BODY", "BOTH"];
 
 // ---------- helpers ----------
 
-function listFiles(dir) {
+// dot: keep dotfiles (an example repo's .github/ or .env.example is part of the example); never .git or .DS_Store
+function listFiles(dir, dot = false) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((f) => !f.startsWith(".") && f !== "__pycache__" && !f.endsWith(".pyc"))
+    .filter((f) => (dot ? f !== ".git" && f !== ".DS_Store" : !f.startsWith(".")) && f !== "__pycache__" && !f.endsWith(".pyc"))
     .flatMap((f) => {
       const p = join(dir, f);
-      return statSync(p).isDirectory() ? listFiles(p).map((x) => `${f}/${x}`) : [f];
+      return statSync(p).isDirectory() ? listFiles(p, dot).map((x) => `${f}/${x}`) : [f];
     })
     .sort();
 }
@@ -440,7 +441,7 @@ const ignored = (rel) => ignoreGlobs.some((g) => (g.includes("/") ? globRe(g).te
 const copyRel = (rel) => {
   const src = join(ROOT, rel);
   if (!existsSync(src) || ignored(rel)) return;
-  if (statSync(src).isDirectory()) { for (const f of listFiles(src)) copyRel(`${rel}/${f}`); return; }
+  if (statSync(src).isDirectory()) { for (const f of listFiles(src, /\/evals\/fixtures(\/|$)/.test(rel))) copyRel(`${rel}/${f}`); return; }
   const dest = join(RUNTIME, "repo", rel);
   mkdirSync(dirname(dest), { recursive: true });
   copyFileSync(src, dest);

@@ -211,13 +211,21 @@ async function syncFromLibrary(ctx: WsCtx, skillId: string): Promise<ActionResul
     const m = manifestFromRepoSkill(lib);
     if (!m.ok) return fail(`The library version has problems: ${m.problems.map((p) => `${p.path} ${p.message}`).join("; ")}`);
     if (working) {
-      // a draft is still being worked on: bring it to the library's files in place, and add library cases it lacks (cases added here are kept)
+      // a draft is still being worked on: bring it to the library's files in place. Library cases are brought to the
+      // library's current inputs and checks (a stale check would grade the new files against the old contract);
+      // cases added here, with names the library does not use, are kept as they are.
       const { error } = await ctx.supabase.from("sf_skill_versions").update({ manifest: m.manifest, manifest_hash: manifestHash(m.manifest), source: { kind: "repo", repo_skill: lib.id, content_sha: pin ?? undefined } }).eq("id", working.id).eq("status", "draft");
       if (error) return fail(error.message);
-      const have = new Set(((await ctx.supabase.from("sf_eval_cases").select("name").eq("version_id", working.id)).data ?? []).map((c: { name: string }) => c.name));
-      const add = casesFromRepoSkill(lib).filter((c) => !have.has(c.name));
+      const have = new Map(((await ctx.supabase.from("sf_eval_cases").select("id, name").eq("version_id", working.id)).data ?? []).map((c: { id: string; name: string }) => [c.name, c.id]));
+      const libCases = casesFromRepoSkill(lib);
+      const add = libCases.filter((c) => !have.has(c.name));
+      const refresh = libCases.filter((c) => have.has(c.name));
       if (add.length) { const { error: ce } = await ctx.supabase.from("sf_eval_cases").insert(add.map((c) => ({ ...c, version_id: working.id }))); if (ce) return fail(ce.message); }
-      await audit(ctx, "version.update_from_library", "skill_version", working.id, { skill_id: skill.id, version: working.version, repo_skill: lib.id, content_sha: pin, cases_added: add.length, in_place: true });
+      for (const c of refresh) {
+        const { error: ue } = await ctx.supabase.from("sf_eval_cases").update({ inputs: c.inputs, checks: c.checks, expected: c.expected, notes: c.notes }).eq("id", have.get(c.name)!);
+        if (ue) return fail(ue.message);
+      }
+      await audit(ctx, "version.update_from_library", "skill_version", working.id, { skill_id: skill.id, version: working.version, repo_skill: lib.id, content_sha: pin, cases_added: add.length, cases_refreshed: refresh.length, in_place: true });
       newVersion = working.version;
       return okay(`v${working.version} updated to the library's current files.`);
     }

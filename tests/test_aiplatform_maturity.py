@@ -32,7 +32,7 @@ def test_unevidenced_scores_are_tbd_with_owner(tmp_path):
     assert r.returncode == 0, r.stderr
     md = (tmp_path / "maturity.md").read_text(encoding="utf-8")
     assert "| data | [TO BE BASELINED — owner: CDO] |" in md and "score given without evidence" in md
-    assert "| value | [TO BE BASELINED — owner: ___] |" in md
+    assert "| value | [TO BE BASELINED — owner: AI CoE lead] |" in md
     assert "Level 2 (Emerging) overall; constraining dimension: governance — provisional: 3 dimension(s) unscored" in md
 
 

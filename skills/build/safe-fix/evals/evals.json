@@ -40,7 +40,7 @@
       ],
       "inputs": {
         "target": "evals/fixtures/repo-green",
-        "cmd": "python3 -m pytest -q -p no:cacheprovider"
+        "cmd": "python3 -m unittest -v"
       },
       "checks": [
         "exit:0",
@@ -77,7 +77,7 @@
       ],
       "inputs": {
         "target": "evals/fixtures/repo-collateral",
-        "cmd": "python3 -m pytest -q -p no:cacheprovider",
+        "cmd": "python3 -m unittest -v",
         "baseline": "evals/fixtures/baseline-green.json"
       },
       "checks": [
@@ -88,7 +88,7 @@
         },
         {
           "file": "verify.json",
-          "check": "contains:\"test_calc.py::test_multiply\""
+          "check": "contains:\"test_calc.py::TestCalc::test_multiply\""
         }
       ]
     }
