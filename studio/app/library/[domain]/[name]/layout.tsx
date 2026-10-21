@@ -39,6 +39,7 @@ export default async function RepoSkillLayout({ children, params }: { children: 
         ]}
         primary={skill.agent ? <Link href={`${d.base}/test/`} className="btn btn-primary">Test skill</Link> : <Link href={`${d.base}/instructions/`} className="btn btn-secondary">Read instructions</Link>}
       />
+      <p className="caption metric-defs-line"><b>Trigger</b> — when someone asks for this job, does the right skill get picked? · <b>Lift</b> — do the skill&apos;s instructions actually make the answer better than the model would do alone? · <b>FP rate</b> — how often it was picked for a request it should not handle. · <b>Without / With</b> — share of expected items the answer got right without and with the skill.</p>
       <TabBar base={d.base} tabs={tabs} keep={[]} label="Skill views" />
       {children}
     </>

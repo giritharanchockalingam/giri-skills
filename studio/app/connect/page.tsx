@@ -77,7 +77,7 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
     <>
       <PageHead eyebrow="Connect" title="Use these skills from" em="your tools" after="."
         note={<Link href="/connect/api" className="link-flame">HTTP API reference →</Link>}
-        lead="Every workspace, role, team and lifecycle stage is an MCP server. Connect it to Claude Code, Claude Desktop, Cursor or VS Code and its skills become tools — running the published, tested version, within your workspace's limits, with every run recorded." />
+        lead="Every workspace, role, team and lifecycle stage is an MCP server — MCP is the standard connection that lets an AI tool call published skills. Connect it to Claude Code, Claude Desktop, Cursor or VS Code and its published skills can be called from there — running the tested version, within your workspace's limits, with every run recorded." />
 
       <section className="card card-pad mb-6">
         <div className="h3" style={{ marginTop: 0 }}>1 · What to connect</div>

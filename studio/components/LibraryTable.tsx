@@ -36,6 +36,7 @@ export function LibraryTable({ rows, stages, workspace }: { rows: LibraryRow[]; 
           {stages.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <span className="toolbar-count">{list.length} of {rows.length} skills</span>
+        <p className="caption" style={{ flexBasis: "100%", margin: 0 }}><b>Approved for use</b> — tested and signed off in {workspace}; runs from your tools. <b>Proven</b> — its evaluation shows it is picked for the right requests and clearly improves the answer. A skill can be one without the other.</p>
       </div>
 
       <div className="card">

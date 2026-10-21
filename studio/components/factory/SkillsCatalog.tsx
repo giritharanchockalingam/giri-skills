@@ -61,9 +61,10 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
         <ChoiceFilter id="f-source" label="Source" options={SOURCE_OPTS} value={source as "all"} onChange={setSource} />
         <span className="toolbar-count">{filtered.length} of {items.length}</span>
       </div>
+      <p className="caption" style={{ margin: "0 0 8px" }}><b>Evidence</b>: the latest evaluation&apos;s pass rate and how many cases it covered. <b>Approval</b>: valid — approved for this exact version · stale — the version changed after approval, so it needs a new review · none — not reviewed yet.</p>
       <div className="card">
         <div className="tablewrap"><table className="tbl only-desktop">
-          <thead><tr><th>Skill</th><th>Status</th><th>Live version</th><th title="The version being worked on; its stage is the Status">Working version</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th>Next step</th><th style={{ width: "28%" }}>Purpose</th></tr></thead>
+          <thead><tr><th>Skill</th><th>Status</th><th>Published version</th><th title="The version being worked on; its stage is the Status">Working version</th><th title="Latest evaluation on the working version (or the published one): pass rate across its cases">Evidence</th><th title="Reviewer approval on the exact manifest of the working version">Approval</th><th>Next step</th><th style={{ width: "28%" }}>Purpose</th></tr></thead>
           <tbody>
             {filtered.map((i) => (
               <tr key={i.id} className="clickable" tabIndex={0} onClick={() => go(i.slug)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(i.slug); } }}>
@@ -72,7 +73,7 @@ export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all
                 <td className="muted">{i.publishedVersion != null ? `v${i.publishedVersion}` : "—"}</td>
                 <td className="muted">{i.workingVersion != null ? `v${i.workingVersion}` : "—"}</td>
                 <td className="ink-2">{evidence(i)}</td>
-                <td>{i.approval === "valid" ? <span className="pass">valid</span> : i.approval === "stale" ? <span className="fail">stale</span> : <span className="muted">none</span>}</td>
+                <td>{i.approval === "valid" ? <span className="pass" title="Approved for this exact version">valid</span> : i.approval === "stale" ? <span className="fail" title="Approved, but the version changed after approval: needs a new review">stale</span> : <span className="muted" title="Not reviewed yet">none</span>}</td>
                 <td>{i.drift === "blocked" || i.drift === "library_updated" ? <Link href={`/skills/${i.slug}`} className="link" onClick={(e) => e.stopPropagation()}>Update from library</Link> : i.gate && NEXT[i.gate] ? <Link href={`/skills/${i.slug}/${NEXT[i.gate]!.tab}`} className="link" onClick={(e) => e.stopPropagation()}>{NEXT[i.gate]!.label}</Link> : <span className="muted">—</span>}</td>
                 <td className="desc" title={i.purpose}><span>{i.purpose || <span className="none">No purpose written yet</span>}</span></td>
               </tr>
