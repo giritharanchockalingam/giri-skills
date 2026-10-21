@@ -17,7 +17,7 @@ import { specificMatches } from "@/lib/github/detect";
 import { listEntities, allRelations, type EntityRow } from "@/lib/db/entities";
 import { ServicesTable, DatabasesTable, ComponentsTable } from "@/components/catalog/EntityViews";
 
-export const metadata = { title: "Catalog · Skills Factory" };
+export const metadata = { title: "Repositories · Skills Factory" };
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 

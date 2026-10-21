@@ -19,7 +19,7 @@ import { EntityDetail, RelatedList } from "@/components/catalog/EntityDetail";
 import { DeliveryTable } from "@/components/insights/DeliveryTable";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Catalog · Skills Factory" };
+export const metadata = { title: "Repositories · Skills Factory" };
 export const maxDuration = 60;
 const CLS: Record<string, string> = { pass: "pill-sage", warn: "pill-hold", fail: "pill-rust", error: "pill-rust", skipped: "" };
 type Res = ScorecardResultRow;
