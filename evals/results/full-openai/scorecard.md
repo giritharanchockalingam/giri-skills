@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17–2026-10-20_
-_estimated spend: $38.13_
+_estimated spend: $39.86_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict |
 |---|---|---|---|---|---|---|
@@ -72,13 +72,13 @@ _estimated spend: $38.13_
 | presales/account-plan | 1.00 | 0.00 | 0.08 | 0.15 | 0.08 | BODY |
 | presales/client-research-brief | 1.00 | 0.00 | 0.33 | 0.43 | 0.10 | BODY |
 | presales/competitive-positioning | 1.00 | 0.00 | 0.35 | 0.38 | 0.04 | BODY |
-| presales/discovery-interview | 0.67 | 0.00 | 0.44 | 0.62 | 0.19 | BOTH |
+| presales/discovery-interview | 1.00 | 0.00 | 0.40 | 0.80 | 0.40 | OK |
 | presales/effort-estimator | 0.67 | 0.00 | 0.04 | 0.04 | 0.00 | BOTH |
 | presales/exec-deck-redline | 0.67 | 0.00 | 0.20 | 0.13 | -0.07 | BOTH |
-| presales/integration-migration-assessor | 1.00 | 0.00 | 0.35 | 0.23 | -0.12 | BODY |
+| presales/integration-migration-assessor | 0.86 | 0.00 | 0.14 | 0.39 | 0.25 | OK |
 | presales/orals-prep | 0.67 | 0.00 | 0.08 | 0.38 | 0.31 | DESC |
 | presales/proposal-writer | 1.00 | 0.00 | 0.50 | 0.71 | 0.21 | OK |
 | presales/rfp-compliance-matrix | 1.00 | 0.00 | 0.11 | 0.18 | 0.07 | BODY |
 | presales/solution-architecture-doc | 1.00 | 0.00 | 0.22 | 0.50 | 0.28 | OK |
 | presales/sow-drafter | 1.00 | 0.00 | 0.11 | 0.25 | 0.14 | BODY |
-| presales/value-case-builder | 1.00 | 0.00 | 0.33 | 0.23 | -0.10 | BODY |
+| presales/value-case-builder | 1.00 | 0.00 | 0.29 | 0.34 | 0.05 | BODY |
