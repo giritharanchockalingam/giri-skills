@@ -420,6 +420,216 @@
   "correct": null
  },
  {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
   "skill": "ai-platform/ab-test-analysis",
   "caseId": "prompt-should-we-ship",
   "run": 1,
@@ -1515,8 +1725,36 @@
   "skill": "ai-platform/ai-use-case-canvas",
   "caseId": "disqualifier-rule-not-ai",
   "run": 1,
-  "selected": "agent-architecture",
-  "correct": 0
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-missing-answers",
+  "run": 1,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-no-data-readiness-means-wait",
+  "run": 1,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-use-case-canvas",
@@ -1536,8 +1774,36 @@
   "skill": "ai-platform/ai-use-case-canvas",
   "caseId": "disqualifier-rule-not-ai",
   "run": 2,
-  "selected": "agent-architecture",
-  "correct": 0
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-missing-answers",
+  "run": 2,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-no-data-readiness-means-wait",
+  "run": 2,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/ai-use-case-canvas",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "ai-use-case-canvas",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -3846,12 +4112,40 @@
   "skill": "build/ci-cd-vercel-github",
   "caseId": "failing-run",
   "run": 1,
-  "selected": "safe-fix",
-  "correct": 0
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
  },
  {
   "skill": "build/ci-cd-vercel-github",
   "caseId": "missing-input",
+  "run": 1,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-missing-target",
+  "run": 1,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-custom-ci-missing-jobs-fails",
+  "run": 1,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-mode-existing",
   "run": 1,
   "selected": "ci-cd-vercel-github",
   "correct": 1
@@ -3867,12 +4161,40 @@
   "skill": "build/ci-cd-vercel-github",
   "caseId": "failing-run",
   "run": 2,
-  "selected": "safe-fix",
-  "correct": 0
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
  },
  {
   "skill": "build/ci-cd-vercel-github",
   "caseId": "missing-input",
+  "run": 2,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-missing-target",
+  "run": 2,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-custom-ci-missing-jobs-fails",
+  "run": 2,
+  "selected": "ci-cd-vercel-github",
+  "correct": 1
+ },
+ {
+  "skill": "build/ci-cd-vercel-github",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "ci-cd-vercel-github",
   "correct": 1
@@ -4119,15 +4441,15 @@
   "skill": "build/nextjs-enterprise-conventions",
   "caseId": "happy-path",
   "run": 1,
-  "selected": "spec-to-plan",
-  "correct": 0
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
   "caseId": "review-violation",
   "run": 1,
-  "selected": "safe-fix",
-  "correct": 0
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
@@ -4138,21 +4460,77 @@
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-missing-target",
+  "run": 1,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "run": 1,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
   "caseId": "happy-path",
   "run": 2,
-  "selected": "spec-to-plan",
-  "correct": 0
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
   "caseId": "review-violation",
   "run": 2,
-  "selected": "safe-fix",
-  "correct": 0
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
   "caseId": "missing-input",
+  "run": 2,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-missing-target",
+  "run": 2,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-violations-fail-gate",
+  "run": 2,
+  "selected": "nextjs-enterprise-conventions",
+  "correct": 1
+ },
+ {
+  "skill": "build/nextjs-enterprise-conventions",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "nextjs-enterprise-conventions",
   "correct": 1
@@ -4180,6 +4558,34 @@
  },
  {
   "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-missing-target",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-never-overwrites",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
   "caseId": "happy-path",
   "run": 2,
   "selected": "observability-setup",
@@ -4195,6 +4601,34 @@
  {
   "skill": "build/observability-setup",
   "caseId": "missing-input",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-missing-target",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-never-overwrites",
+  "run": 2,
+  "selected": "observability-setup",
+  "correct": 1
+ },
+ {
+  "skill": "build/observability-setup",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "observability-setup",
   "correct": 1
@@ -4306,6 +4740,27 @@
  },
  {
   "skill": "build/safe-fix",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-missing-cmd",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-collateral-fails",
+  "run": 1,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
   "caseId": "happy-path",
   "run": 2,
   "selected": "safe-fix",
@@ -4326,11 +4781,32 @@
   "correct": 1
  },
  {
+  "skill": "build/safe-fix",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-missing-cmd",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
+  "skill": "build/safe-fix",
+  "caseId": "agent-collateral-fails",
+  "run": 2,
+  "selected": "safe-fix",
+  "correct": 1
+ },
+ {
   "skill": "build/security-review",
   "caseId": "happy-path",
   "run": 1,
-  "selected": "safe-fix",
-  "correct": 0
+  "selected": "security-review",
+  "correct": 1
  },
  {
   "skill": "build/security-review",
@@ -4348,10 +4824,45 @@
  },
  {
   "skill": "build/security-review",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-missing-diff",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
   "caseId": "happy-path",
   "run": 2,
-  "selected": "safe-fix",
-  "correct": 0
+  "selected": "security-review",
+  "correct": 1
  },
  {
   "skill": "build/security-review",
@@ -4368,6 +4879,41 @@
   "correct": 1
  },
  {
+  "skill": "build/security-review",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-missing-diff",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-risky-diff-blocks",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
+  "skill": "build/security-review",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "security-review",
+  "correct": 1
+ },
+ {
   "skill": "build/spec-to-plan",
   "caseId": "happy-path",
   "run": 1,
@@ -4378,12 +4924,40 @@
   "skill": "build/spec-to-plan",
   "caseId": "too-big",
   "run": 1,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 0
+  "selected": "spec-to-plan",
+  "correct": 1
  },
  {
   "skill": "build/spec-to-plan",
   "caseId": "missing-input",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-missing-section",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-thin-section-not-invented",
+  "run": 1,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-mode-existing",
   "run": 1,
   "selected": "spec-to-plan",
   "correct": 1
@@ -4399,12 +4973,40 @@
   "skill": "build/spec-to-plan",
   "caseId": "too-big",
   "run": 2,
-  "selected": "multi-tenant-saas-patterns",
-  "correct": 0
+  "selected": "spec-to-plan",
+  "correct": 1
  },
  {
   "skill": "build/spec-to-plan",
   "caseId": "missing-input",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-missing-section",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-thin-section-not-invented",
+  "run": 2,
+  "selected": "spec-to-plan",
+  "correct": 1
+ },
+ {
+  "skill": "build/spec-to-plan",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "spec-to-plan",
   "correct": 1
@@ -4656,6 +5258,34 @@
  },
  {
   "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-missing-tracker",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-report-only",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
   "caseId": "log-event",
   "run": 2,
   "selected": "application-tracker",
@@ -4671,6 +5301,34 @@
  {
   "skill": "career/application-tracker",
   "caseId": "missing-stage",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-happy-path-add",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-missing-tracker",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-report-only",
+  "run": 2,
+  "selected": "application-tracker",
+  "correct": 1
+ },
+ {
+  "skill": "career/application-tracker",
+  "caseId": "agent-mode-new",
   "run": 2,
   "selected": "application-tracker",
   "correct": 1
@@ -4685,307 +5343,699 @@
  {
   "skill": "career/interview-prep",
   "caseId": "truth-lock-no-story",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "cio-round-90-day",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-missing-story-bank",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-competency-without-story-is-gap",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "happy-path-panel",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "truth-lock-no-story",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "cio-round-90-day",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-missing-story-bank",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-competency-without-story-is-gap",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/interview-prep",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "interview-prep",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "happy-path-score",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-missing-profile",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-threshold-override",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "happy-path-score",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-missing-profile",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-threshold-override",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "jd-fit-scorer",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "two-offers-vs-current",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "missing-col-index",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "negotiation-plan-only",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-missing-offers",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-no-col-no-adjustment",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "two-offers-vs-current",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "missing-col-index",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "negotiation-plan-only",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-missing-offers",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-no-col-no-adjustment",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/offer-evaluator",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "offer-evaluator",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "referral-ask-variants",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "status-check-missing-context",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "thank-you-with-repair",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-missing-context",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "referral-ask-variants",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "status-check-missing-context",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "thank-you-with-repair",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-missing-context",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-thin-context-placeholders",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/outreach-and-followup",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "outreach-and-followup",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "happy-path-tailor",
+  "run": 1,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "unsupported-claim-refusal",
+  "run": 1,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "missing-master-resume",
+  "run": 1,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "happy-path-tailor",
+  "run": 2,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "unsupported-claim-refusal",
+  "run": 2,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "career/resume-tailor",
+  "caseId": "missing-master-resume",
+  "run": 2,
+  "selected": "resume-tailor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "happy-path-quarterly-refresh",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "missing-input-no-account-facts",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "adversarial-fabrication-pipeline-probabilities",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-missing-pipeline",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-unvalued-pipeline-not-estimated",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "happy-path-quarterly-refresh",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "missing-input-no-account-facts",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "adversarial-fabrication-pipeline-probabilities",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-missing-pipeline",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-unvalued-pipeline-not-estimated",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/account-plan",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "account-plan",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "happy-path-public-company",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "missing-input-ambiguous-company",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "adversarial-fabrication-private-revenue",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-missing-notes",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-unknowns-marked",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "happy-path-public-company",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "missing-input-ambiguous-company",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "adversarial-fabrication-private-revenue",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-missing-notes",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-unknowns-marked",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/client-research-brief",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "client-research-brief",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "happy-path-incumbent",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "missing-input-unknown-alternative",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "adversarial-fabrication-competitor-weakness",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-missing-concerns",
+  "run": 1,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-unsourced-claims-are-hypotheses",
   "run": 1,
   "selected": "none",
   "correct": 0
  },
  {
-  "skill": "career/interview-prep",
-  "caseId": "cio-round-90-day",
-  "run": 1,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "happy-path-panel",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "truth-lock-no-story",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/interview-prep",
-  "caseId": "cio-round-90-day",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "happy-path-score",
-  "run": 1,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 1,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "happy-path-score",
-  "run": 2,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 2,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 2,
-  "selected": "jd-fit-scorer",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "two-offers-vs-current",
-  "run": 1,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "missing-col-index",
-  "run": 1,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "negotiation-plan-only",
-  "run": 1,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "two-offers-vs-current",
-  "run": 2,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "missing-col-index",
-  "run": 2,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/offer-evaluator",
-  "caseId": "negotiation-plan-only",
-  "run": 2,
-  "selected": "offer-evaluator",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "referral-ask-variants",
-  "run": 1,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "status-check-missing-context",
-  "run": 1,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "thank-you-with-repair",
-  "run": 1,
-  "selected": "interview-prep",
-  "correct": 0
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "referral-ask-variants",
-  "run": 2,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "status-check-missing-context",
-  "run": 2,
-  "selected": "outreach-and-followup",
-  "correct": 1
- },
- {
-  "skill": "career/outreach-and-followup",
-  "caseId": "thank-you-with-repair",
-  "run": 2,
-  "selected": "interview-prep",
-  "correct": 0
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "happy-path-tailor",
-  "run": 1,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "unsupported-claim-refusal",
-  "run": 1,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "missing-master-resume",
-  "run": 1,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "happy-path-tailor",
-  "run": 2,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "unsupported-claim-refusal",
-  "run": 2,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "career/resume-tailor",
-  "caseId": "missing-master-resume",
-  "run": 2,
-  "selected": "resume-tailor",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "happy-path-quarterly-refresh",
-  "run": 1,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "missing-input-no-account-facts",
-  "run": 1,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "adversarial-fabrication-pipeline-probabilities",
-  "run": 1,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "happy-path-quarterly-refresh",
-  "run": 2,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "missing-input-no-account-facts",
-  "run": 2,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/account-plan",
-  "caseId": "adversarial-fabrication-pipeline-probabilities",
-  "run": 2,
-  "selected": "account-plan",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "happy-path-public-company",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "missing-input-ambiguous-company",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "adversarial-fabrication-private-revenue",
-  "run": 1,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "happy-path-public-company",
-  "run": 2,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "missing-input-ambiguous-company",
-  "run": 2,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
-  "skill": "presales/client-research-brief",
-  "caseId": "adversarial-fabrication-private-revenue",
-  "run": 2,
-  "selected": "client-research-brief",
-  "correct": 1
- },
- {
   "skill": "presales/competitive-positioning",
-  "caseId": "happy-path-incumbent",
-  "run": 1,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "missing-input-unknown-alternative",
-  "run": 1,
-  "selected": "competitive-positioning",
-  "correct": 1
- },
- {
-  "skill": "presales/competitive-positioning",
-  "caseId": "adversarial-fabrication-competitor-weakness",
+  "caseId": "agent-mode-existing",
   "run": 1,
   "selected": "competitive-positioning",
   "correct": 1
@@ -5007,6 +6057,34 @@
  {
   "skill": "presales/competitive-positioning",
   "caseId": "adversarial-fabrication-competitor-weakness",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-missing-concerns",
+  "run": 2,
+  "selected": "competitive-positioning",
+  "correct": 1
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-unsourced-claims-are-hypotheses",
+  "run": 2,
+  "selected": "none",
+  "correct": 0
+ },
+ {
+  "skill": "presales/competitive-positioning",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "competitive-positioning",
   "correct": 1
@@ -5169,8 +6247,36 @@
   "skill": "presales/exec-deck-redline",
   "caseId": "adversarial-fabrication-savings-and-dates",
   "run": 1,
-  "selected": "value-case-builder",
-  "correct": 0
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-missing-deck",
+  "run": 1,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-unsourced-numbers-flagged-not-fixed",
+  "run": 1,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "exec-deck-redline",
+  "correct": 1
  },
  {
   "skill": "presales/exec-deck-redline",
@@ -5190,8 +6296,36 @@
   "skill": "presales/exec-deck-redline",
   "caseId": "adversarial-fabrication-savings-and-dates",
   "run": 2,
-  "selected": "value-case-builder",
-  "correct": 0
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-missing-deck",
+  "run": 2,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-unsourced-numbers-flagged-not-fixed",
+  "run": 2,
+  "selected": "exec-deck-redline",
+  "correct": 1
+ },
+ {
+  "skill": "presales/exec-deck-redline",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "exec-deck-redline",
+  "correct": 1
  },
  {
   "skill": "presales/integration-migration-assessor",
@@ -5309,8 +6443,36 @@
   "skill": "presales/orals-prep",
   "caseId": "adversarial-fabrication-answers-with-new-numbers",
   "run": 1,
-  "selected": "competitive-positioning",
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-missing-speakers",
+  "run": 1,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-unbaselined-numbers-become-questions",
+  "run": 1,
+  "selected": "exec-deck-redline",
   "correct": 0
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "orals-prep",
+  "correct": 1
  },
  {
   "skill": "presales/orals-prep",
@@ -5330,10 +6492,38 @@
   "skill": "presales/orals-prep",
   "caseId": "adversarial-fabrication-answers-with-new-numbers",
   "run": 2,
-  "selected": "competitive-positioning",
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-missing-speakers",
+  "run": 2,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-unbaselined-numbers-become-questions",
+  "run": 2,
+  "selected": "exec-deck-redline",
   "correct": 0
  },
  {
+  "skill": "presales/orals-prep",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "selected": "orals-prep",
+  "correct": 1
+ },
+ {
   "skill": "presales/proposal-writer",
   "caseId": "happy-path-write",
   "run": 1,
@@ -5398,6 +6588,34 @@
  },
  {
   "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-missing-capabilities",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-unmatched-becomes-clarify",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
   "caseId": "happy-path-rfp-pdf",
   "run": 2,
   "selected": "rfp-compliance-matrix",
@@ -5413,6 +6631,34 @@
  {
   "skill": "presales/rfp-compliance-matrix",
   "caseId": "adversarial-fabrication-comply-without-evidence",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-missing-capabilities",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-unmatched-becomes-clarify",
+  "run": 2,
+  "selected": "rfp-compliance-matrix",
+  "correct": 1
+ },
+ {
+  "skill": "presales/rfp-compliance-matrix",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "rfp-compliance-matrix",
   "correct": 1
@@ -5538,6 +6784,34 @@
  },
  {
   "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-proposal",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-acceptance-not-invented",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
   "caseId": "happy-path-proposal-to-sow",
   "run": 2,
   "selected": "sow-drafter",
@@ -5553,6 +6827,34 @@
  {
   "skill": "presales/sow-drafter",
   "caseId": "adversarial-fabrication-acceptance-and-price",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-proposal",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-missing-acceptance-not-invented",
+  "run": 2,
+  "selected": "sow-drafter",
+  "correct": 1
+ },
+ {
+  "skill": "presales/sow-drafter",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "sow-drafter",
   "correct": 1
