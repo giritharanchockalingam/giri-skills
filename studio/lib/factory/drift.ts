@@ -37,5 +37,7 @@ export function skillDrift(versions: { source: VersionSource; status: string; ve
   if ((d === "current" || d === "n/a") && newest.source.kind === "repo" && libraryContract && newest.contract && newest.contract !== libraryContract) return "library_updated";
   // same files, but the draft's copy of the library's test cases is older (it would be graded against the old checks)
   if (d === "current" && newest.status === "draft" && draftCasesStale) return "library_updated";
+  // a library draft imported before pinning: updating pins it to the deployed files and brings its cases current
+  if (d === "n/a" && newest.status === "draft" && newest.source.kind === "repo" && !newest.source.content_sha && pinOf(newest.source.repo_skill)) return "library_updated";
   return d;
 }
