@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17–2026-10-21_
-_estimated spend: $104.92_
+_estimated spend: $106.83_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict |
 |---|---|---|---|---|---|---|
@@ -19,12 +19,12 @@ _estimated spend: $104.92_
 | ai-platform/ai-threat-model | 0.83 | 0.00 | 0.12 | 0.44 | 0.31 | OK |
 | ai-platform/ai-transparency-notice | 1.00 | 0.00 | 0.17 | 0.56 | 0.39 | OK |
 | ai-platform/ai-use-case-canvas | 1.00 | 0.00 | 0.25 | 0.64 | 0.39 | OK |
-| ai-platform/ai-vendor-assessment | 0.86 | 0.00 | 0.50 | 0.50 | 0.00 | BODY |
+| ai-platform/ai-vendor-assessment | 0.86 | 0.00 | 0.44 | 0.83 | 0.39 | OK |
 | ai-platform/annotation-agreement | 1.00 | 0.00 | 0.40 | 0.65 | 0.25 | OK |
 | ai-platform/bias-fairness-check | 1.00 | 0.00 | 0.05 | 0.30 | 0.25 | OK |
 | ai-platform/conversation-design | 0.83 | 0.00 | 0.06 | 0.31 | 0.25 | OK |
 | ai-platform/data-contract-validator | 0.88 | 0.00 | 0.25 | 0.50 | 0.25 | OK |
-| ai-platform/data-readiness-assessment | 1.00 | 0.00 | 0.50 | 0.67 | 0.17 | BODY |
+| ai-platform/data-readiness-assessment | 1.00 | 0.00 | 0.50 | 0.83 | 0.33 | OK |
 | ai-platform/dpia | 1.00 | 0.00 | 0.32 | 0.55 | 0.23 | OK |
 | ai-platform/drift-monitor | 0.86 | 0.00 | 0.17 | 0.61 | 0.44 | OK |
 | ai-platform/eu-ai-act-classifier | 1.00 | 0.00 | 0.19 | 0.44 | 0.25 | OK |
@@ -42,7 +42,7 @@ _estimated spend: $104.92_
 | ai-platform/mcp-server-builder | 1.00 | 0.00 | 0.14 | 0.36 | 0.23 | OK |
 | ai-platform/model-selection | 1.00 | 0.00 | 0.21 | 0.57 | 0.36 | OK |
 | ai-platform/pii-data-inventory | 1.00 | 0.00 | 0.38 | 0.62 | 0.25 | OK |
-| ai-platform/program-raid-status | 1.00 | 0.00 | 0.50 | 0.60 | 0.10 | BODY |
+| ai-platform/program-raid-status | 1.00 | 0.00 | 0.50 | 0.55 | 0.05 | BODY |
 | ai-platform/prompt-spec | 1.00 | 0.00 | 0.00 | 0.29 | 0.29 | OK |
 | ai-platform/rag-pipeline-design | 1.00 | 0.00 | 0.27 | 0.91 | 0.64 | OK |
 | ai-platform/red-team-suite | 1.00 | 0.00 | 0.07 | 0.29 | 0.21 | OK |
