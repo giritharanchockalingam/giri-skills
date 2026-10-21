@@ -41,7 +41,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
     <>
       <div className="page-head" style={{ marginBottom: 24 }}>
         <nav className="caption" aria-label="Breadcrumb">
-          {from === "test" ? <Link href={`/skills/${vinfo.sf_skills.slug}/test?v=${vinfo.version}`} className="link">← Back to Test</Link> : <Link href="/activity" className="link">Activity</Link>} <span aria-hidden="true">›</span> run {id.slice(0, 8)}
+          {from === "test" ? <Link href={`/skills/${vinfo.sf_skills.slug}/test?v=${vinfo.version}`} className="link">← Back to Test</Link> : <Link href="/runs" className="link">Runs</Link>} <span aria-hidden="true">›</span> run {id.slice(0, 8)}
         </nav>
         <h1 className="h1" style={{ margin: "8px 0 10px" }}>{skillTitle(vinfo.sf_skills.name)} <span className="muted" style={{ fontSize: "0.6em" }}>v{vinfo.version}</span></h1>
         <div className="flex flex-wrap items-center gap-3"><RunPill status={run.status} /><VersionPill status={vinfo.status} small /><span className="caption">{run.source} · <LocalTime iso={run.created_at} /> · manifest {vinfo.manifest_hash.slice(0, 12)}…</span></div>

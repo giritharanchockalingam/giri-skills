@@ -1,5 +1,5 @@
 import { skillTitle } from "@/lib/names";
-/* Server component: the list + "new" form shared by /roles and /pools. */
+/* Server component: the list + "new" form shared by /roles and /teams. */
 import Link from "next/link";
 import { requireWorkspace } from "@/lib/factory/db";
 import { can } from "@/lib/factory/roles";
@@ -15,7 +15,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
   const rows = await listTalent(ctx.supabase, ctx.workspace.id, kind);
   const versions = await listTalentVersionSummaries(ctx.supabase, rows.map((r) => r.id));
   const sm = skillMap();
-  const base = kind === "role" ? "/roles" : "/pools";
+  const base = kind === "role" ? "/roles" : "/teams";
   const templates = kind === "role" ? ROLE_TEMPLATES : POOL_TEMPLATES;
   const have = new Set(rows.map((r) => r.based_on).filter(Boolean));
   const { data: held } = kind === "role" ? await ctx.supabase.from("sf_role_assignments").select("talent_id, user_id").eq("workspace_id", ctx.workspace.id) : { data: [] };
@@ -54,7 +54,7 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
         <div className="card card-pad" style={{ maxWidth: 720 }}>
           <div className="h3">New {kind === "role" ? "role" : "team"}</div>
           {kind === "pool" && <p className="caption">Starting from a template also adds its roles (and their playbooks) to this workspace if they are not here yet.</p>}
-          <ActionForm action={createTalent} submit={`Create ${kind}`} hidden={{ kind }}>
+          <ActionForm action={createTalent} submit={kind === "role" ? "Create job role" : "Create team"} hidden={{ kind }}>
             <div className="ab-grid">
               <div className="field"><label htmlFor="nt-name">Name</label><input id="nt-name" name="name" className="input" required maxLength={160} placeholder={kind === "role" ? "e.g. Retail AI Architect" : "e.g. Northwind delivery pod"} /></div>
               <div className="field"><label htmlFor="nt-tpl">Start from</label>

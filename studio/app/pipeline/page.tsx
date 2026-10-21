@@ -17,7 +17,7 @@ import { PageHead } from "@/components/PageHead";
 import { SkillsCatalog, type CatalogItem } from "@/components/factory/SkillsCatalog";
 import { ImportDrawer } from "@/components/factory/ImportDrawer";
 
-export const metadata = { title: "Skills · Skills Factory" };
+export const metadata = { title: "Publish pipeline · Skills Factory" };
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ import?: string; stage?: string; gate?: string }> }) {
@@ -68,12 +68,12 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       </div>
       <FunnelStrip items={funnel} active={gate} />
       {blocked.length > 0 && (
-        <div className="notice notice-err mb-4" role="alert"><b>{blocked.length} live tool{blocked.length === 1 ? "" : "s"} can&apos;t run:</b> the library changed {blocked.length === 1 ? "its" : "their"} files after approval ({blocked.map((b, i) => <span key={b.slug}>{i ? ", " : ""}<Link className="link" href={`/skills/${b.slug}`}>{b.name}</Link></span>)}). Open each to create a version from the library.</div>)}
+        <div className="notice notice-err mb-4" role="alert"><b>{blocked.length} published skill{blocked.length === 1 ? "" : "s"} can&apos;t run:</b> the library changed {blocked.length === 1 ? "its" : "their"} files after approval ({blocked.map((b, i) => <span key={b.slug}>{i ? ", " : ""}<Link className="link" href={`/skills/${b.slug}`}>{b.name}</Link></span>)}). Open each to create a version from the library.</div>)}
       {(staleDrafts.length > 0 || staleLive.length > 0) && (
         <div className="notice notice-hold mb-4" role="status">
           <b>The library has moved on for {staleDrafts.length + staleLive.length} skill{staleDrafts.length + staleLive.length === 1 ? "" : "s"}</b> (new inputs such as &ldquo;improve what exists&rdquo;, or changed steps).
           {staleDrafts.length > 0 && <> {staleDrafts.length} draft{staleDrafts.length === 1 ? "" : "s"} can be updated in place; test cases you added are kept.</>}
-          {staleLive.length > 0 && <> {staleLive.length} live tool{staleLive.length === 1 ? " keeps" : "s keep"} running as approved; to offer the new inputs, open each one marked <b>Update from library</b> below.</>}
+          {staleLive.length > 0 && <> {staleLive.length} published skill{staleLive.length === 1 ? " keeps" : "s keep"} running as approved; to offer the new inputs, open each one marked <b>Update from library</b> below.</>}
           {canCreate && staleDrafts.length > 0 && <div className="mt-2"><ActionForm action={updateDraftsFromLibrary} submit={`Update ${staleDrafts.length} draft${staleDrafts.length === 1 ? "" : "s"} from the library`} hidden={{ skill_ids: staleDrafts.map((d) => d.id).join(",") }} confirm={`Update ${staleDrafts.length} drafts to the library's current inputs, steps and test cases? Cases you added are kept.`} /></div>}
         </div>)}
       {!gate && <ClosestList rows={closest} />}

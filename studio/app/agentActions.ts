@@ -50,7 +50,7 @@ export async function createAgent(_: ActionResult | null, fd: FormData): Promise
     await audit(ctx, "agent.create", agent.id, { slug, template: tpl?.name ?? null });
     return ok("Agent created.");
   });
-  if (res.ok) redirect(`/agents/${slug}`);
+  if (res.ok) redirect(`/playbooks/${slug}`);
   return res;
 }
 
@@ -66,7 +66,7 @@ export async function saveAgentDraft(_: ActionResult | null, fd: FormData): Prom
     if (error) return fail(error.message.includes("immutable") ? "This version is published and frozen. Start a new draft to change it." : error.message);
     await ctx.supabase.from("sf_agents").update({ description: spec.description }).eq("id", data.agent_id);
     await audit(ctx, "agent.update", data.agent_id, { version: data.version, spec_hash: specHash(spec), problems: problems.length });
-    revalidatePath("/agents", "layout");
+    revalidatePath("/playbooks", "layout");
     return problems.length ? ok(`Saved with ${problems.length} problem(s) to fix before it can run.`) : ok("Saved. The agent is runnable.");
   });
 }
@@ -83,7 +83,7 @@ export async function newAgentDraft(_: ActionResult | null, fd: FormData): Promi
     const { error: ie } = await ctx.supabase.from("sf_agent_versions")
       .insert({ agent_id: agentId, version: (latest?.version ?? 0) + 1, spec: latest.spec, spec_hash: latest.spec_hash, created_by: ctx.user.id, change_note: `from v${latest.version}` });
     if (ie) return fail(ie.message);
-    revalidatePath("/agents", "layout");
+    revalidatePath("/playbooks", "layout");
     return ok(`Draft v${(latest?.version ?? 0) + 1} created.`);
   });
 }
@@ -97,7 +97,7 @@ export async function publishAgentVersion(_: ActionResult | null, fd: FormData):
     if (problems.length) return fail(`Fix ${problems.length} problem(s) first: ${problems[0]}`);
     const { error } = await ctx.supabase.rpc("sf_publish_agent_version", { p_version: versionId });
     if (error) return fail(error.message);
-    revalidatePath("/agents", "layout");
+    revalidatePath("/playbooks", "layout");
     return ok("Published. This version is now frozen and runnable by every member.");
   });
 }

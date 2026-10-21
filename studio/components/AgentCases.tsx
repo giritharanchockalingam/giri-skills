@@ -2,7 +2,7 @@ import type { AgentCase } from "@/lib/data";
 import { PassPill } from "./Badge";
 
 /** Agent eval cases: one collapsed block per case; open it for every check with pass/fail and the evidence line. */
-export function AgentCases({ cases, emptyText = "No agent cases ran for this skill." }: { cases: AgentCase[]; emptyText?: string }) {
+export function AgentCases({ cases, emptyText = "No end-to-end cases ran for this skill." }: { cases: AgentCase[]; emptyText?: string }) {
   if (cases.length === 0) return <p className="none mt-3">{emptyText}</p>;
   return (
     <div className="agent-cases">

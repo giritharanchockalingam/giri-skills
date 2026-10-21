@@ -24,7 +24,7 @@ export default async function RepoSkillLayout({ children, params }: { children: 
   return (
     <>
       <DetailHead
-        crumbs={<><Link href="/repo/" className="link">Library</Link> <span aria-hidden="true">›</span> {d.domain}</>}
+        crumbs={<><Link href="/library/" className="link">Library</Link> <span aria-hidden="true">›</span> {d.domain}</>}
         title={humanName(skill.name)}
         pills={<><VerdictBadge v={sc?.verdict} small /><AgentBadge v={sc?.agentVerdict} small /></>}
         description={displayDescription(skill.description)}
@@ -35,7 +35,7 @@ export default async function RepoSkillLayout({ children, params }: { children: 
           { label: "Without", value: fmt(sc?.without), title: COL_TIPS.without },
           { label: "With", value: fmt(sc?.with), title: COL_TIPS.with },
           { label: "Lift", value: <Lift n={sc?.lift} />, title: COL_TIPS.lift },
-          { label: "Agent checks", value: sc?.agentPass != null ? `${Math.round(sc.agentPass * 100)}%` : "—", title: "Share of agent output checks passed" },
+          { label: "End-to-end checks", value: sc?.agentPass != null ? `${Math.round(sc.agentPass * 100)}%` : "—", title: "Share of end-to-end output checks passed (the skill run for real on its test inputs)" },
         ]}
         primary={skill.agent ? <Link href={`${d.base}/test/`} className="btn btn-primary">Test skill</Link> : <Link href={`${d.base}/instructions/`} className="btn btn-secondary">Read instructions</Link>}
       />

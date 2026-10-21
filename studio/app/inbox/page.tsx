@@ -38,7 +38,7 @@ export default async function InboxPage() {
           <div className="h3">Access requests <span className="pill pill-sm pill-hold">{pendingAccess.length}</span></div>
           <div className="stack">{pendingAccess.map((r) => (
             <div key={r.id} className="card card-pad">
-              <div><b>{r.requested_by_email ?? "A member"}</b> asks for the job role <b>{r.role_name}</b>{r.skill && <> to run <Link className="link" href={`/repo/${r.skill}/`}>{humanName(r.skill.split("/").pop() ?? r.skill)}</Link></>}
+              <div><b>{r.requested_by_email ?? "A member"}</b> asks for the job role <b>{r.role_name}</b>{r.skill && <> to run <Link className="link" href={`/library/${r.skill}/`}>{humanName(r.skill.split("/").pop() ?? r.skill)}</Link></>}
                 <div className="caption"><LocalTime iso={r.created_at} /></div></div>
               {r.note && <p style={{ margin: "6px 0" }}>“{r.note}”</p>}
               {r.requested_by === ctx.user.id ? <p className="caption">Your request — another admin decides.</p> : (

@@ -65,7 +65,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     const rows = sp.type === "service" ? services : databases;
     return (
       <>
-        <PageHead eyebrow={sp.type === "service" ? "Platform · Services" : "Platform · Databases"} title="What you" em="run" after="." lead={sp.type === "service" ? "Services from Vercel: what each is built from, where it runs in production, how often it ships, and the database it uses." : "Databases from Supabase, and the services that use each."} />
+        <PageHead eyebrow={sp.type === "service" ? "Platform · Services" : "Platform · Databases"} title={sp.type === "service" ? "Services you" : "Databases you"} em="run" after="." lead={sp.type === "service" ? "Services from Vercel: what each is built from, where it runs in production, how often it ships, and the database it uses." : "Databases from Supabase, and the services that use each."} />
         {rows.length ? (sp.type === "service" ? <ServicesTable rows={rows} all={all} rels={rels} /> : <DatabasesTable rows={rows} all={all} rels={rels} />)
           : <section className="card card-pad"><p className="none" style={{ margin: 0 }}>None yet — connect and sync {sp.type === "service" ? "Vercel" : "Supabase"} on <Link className="link" href="/integrations">Integrations</Link>.</p></section>}
       </>
@@ -150,7 +150,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <a href="#checks" className="cat-tile"><b>{scoredRepos.length ? `${passingRepos} of ${scoredRepos.length}` : "—"}</b><span>{scoredRepos.length ? "checked repositories pass every check" : "not checked yet — run the checks below"}</span></a>
           <div className="cat-tile"><b>{noOwner}</b><span>without an owner (no CODEOWNERS file)</span></div>
         </div>
-        {topSkills.length > 0 && <p className="mb-2">Most needed: {topSkills.map(([k, n], i) => <span key={k}>{i ? " · " : ""}<Link className="link" href={`/repo/${k}/`}>{humanName(k.split("/")[1])}</Link> ({n})</span>)}</p>}
+        {topSkills.length > 0 && <p className="mb-2">Most needed: {topSkills.map(([k, n], i) => <span key={k}>{i ? " · " : ""}<Link className="link" href={`/library/${k}/`}>{humanName(k.split("/")[1])}</Link> ({n})</span>)}</p>}
         <p className="caption mb-4">Gaps found in the files: {noCi} without CI, {noTests} without tests, {withMig} with database migrations (the database skills apply to these).</p>
         <div className="card card-pad mb-4 level-strip" id="checks">
           <div className="h3" style={{ marginTop: 0 }}>Engineering checks</div>
@@ -182,7 +182,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   <td>{ap.length === 0 ? <span className="caption" title="No library skill matches the files in this repository">none found</span> : (
                     <details><summary className="caption">{ap.length} skill{ap.length === 1 ? "" : "s"}: {ap.slice(0, 2).map((a) => humanName(a.skill.split("/")[1])).join(", ")}{ap.length > 2 ? "…" : ""}</summary>
                       <ul className="cat-why">{ap.map((a) => (
-                        <li key={a.skill}><Link className="link" href={`/repo/${a.skill}/test?mode=existing`}>{humanName(a.skill.split("/")[1])}</Link> — {a.why}
+                        <li key={a.skill}><Link className="link" href={`/library/${a.skill}/test?mode=existing`}>{humanName(a.skill.split("/")[1])}</Link> — {a.why}
                           <div className="caption">evidence: {a.evidence.map((x) => <code key={x} style={{ marginRight: 6 }}>{x}</code>)}</div></li>
                       ))}</ul></details>)}</td>
                   <td><Link href={`/catalog/${e.id}`} title={levels.get(e.id)?.blockers.map((b) => `${b.title}: ${b.reason}`).join("\n") || LEVEL_LABEL[levels.get(e.id)?.level ?? "n/a"]}><LevelBadge level={levels.get(e.id)?.level ?? "n/a"} /></Link></td>

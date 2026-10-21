@@ -27,7 +27,7 @@ export default async function FilesPage({ params, searchParams }: { params: Prom
       ) : (
         <div className="card card-pad">
           <div className="h3 mb-1">Resources <span className="muted font-normal">({d.version.manifest.resources.length})</span></div>
-          <p className="caption mb-3">From the repository bundle at build time; read-only here. To change them, edit the repository skill (<Link href={`/repo/${d.version.source.repo_skill}/files/`} className="link">{d.version.source.repo_skill}</Link>) and re-import as a new draft.</p>
+          <p className="caption mb-3">From the repository bundle at build time; read-only here. To change them, edit the repository skill (<Link href={`/library/${d.version.source.repo_skill}/files/`} className="link">{d.version.source.repo_skill}</Link>) and re-import as a new draft.</p>
           <ul className="file-list">{d.version.manifest.resources.map((r) => <li key={r}>{r}</li>)}</ul>
         </div>
       )}

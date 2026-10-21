@@ -43,8 +43,8 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
 
       <div className="cat-tiles mb-4">
         {ORDER.map((k) => <Link key={k} href={kind === k ? "/ai-assets" : `/ai-assets?kind=${k}`} className={`cat-tile${kind === k ? " cat-tile-on" : ""}`}><b>{count(k)}</b><span>{count(k) === 1 ? ASSET_LABEL[k] : ASSET_PLURAL[k]} in repositories</span></Link>)}
-        <Link href="/agents" className="cat-tile"><b>{pb.length}</b><span>playbooks defined here</span></Link>
-        <Link href="/connect" className="cat-tile"><b>{published.length}</b><span>skills published as MCP tools here</span></Link>
+        <Link href="/playbooks" className="cat-tile"><b>{pb.length}</b><span>playbooks defined here</span></Link>
+        <Link href="/connect" className="cat-tile"><b>{published.length}</b><span>skills published here, callable over MCP</span></Link>
       </div>
 
       {ORDER.filter((k) => !kind || k === kind).map((k) => {
@@ -72,8 +72,8 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
       <section className="section">
         <div className="h3">Defined and served by this portal</div>
         <ul className="ini-repos">
-          <li><Link className="link" href="/agents">{pb.length} playbook{pb.length === 1 ? "" : "s"}</Link> <span className="caption">— skills chained into agents, with approval gates</span></li>
-          <li><Link className="link" href="/connect">MCP server /api/mcp</Link> <span className="caption">— {published.length} published skill{published.length === 1 ? "" : "s"} as tools, plus per-role, per-team and per-stage scopes</span></li>
+          <li><Link className="link" href="/playbooks">{pb.length} playbook{pb.length === 1 ? "" : "s"}</Link> <span className="caption">— skills chained into playbooks, with approval gates</span></li>
+          <li><Link className="link" href="/connect">MCP server /api/mcp</Link> <span className="caption">— {published.length} published skill{published.length === 1 ? "" : "s"}, plus per-role, per-team and per-stage scopes</span></li>
           <li><Link className="link" href="/pipeline">{sk.length} workspace skill{sk.length === 1 ? "" : "s"}</Link> <span className="caption">— {published.length} published</span></li>
         </ul>
       </section>

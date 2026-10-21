@@ -32,7 +32,7 @@ export default async function UpstreamSkillPage({ params }: { params: Promise<{ 
     <>
       <div className="page-head">
         <nav className="caption" aria-label="Breadcrumb">
-          <Link href="/upstream/" className="link">Reference skills</Link> <span aria-hidden="true">›</span> {u.name}
+          <Link href="/reference/" className="link">Reference skills</Link> <span aria-hidden="true">›</span> {u.name}
         </nav>
         <div className="eyebrow mt-5">{u.name}</div>
         <h1 className="h1" style={{ marginBottom: 12 }}>{u.name.replace(/-/g, " ")}</h1>

@@ -4,7 +4,7 @@ import { GatePill } from "./Pills";
 
 const CLS: Record<Gate, string> = { ready: "pill-sage", needs_approval: "pill-hold", below_bar: "pill-rust", needs_eval: "pill-hold", draft: "", published: "pill-ink" };
 
-/** Where every workspace skill stands on the way to being a live tool — each count links to that list. */
+/** Where every workspace skill stands on the way to being published — each count links to that list. */
 export function FunnelStrip({ items, active }: { items: { gate: Gate }[]; active?: Gate | null }) {
   const n = (g: Gate) => items.filter((i) => i.gate === g).length;
   return (

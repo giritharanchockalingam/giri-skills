@@ -27,9 +27,9 @@ export function exampleFor(id: string): Example | null {
 }
 
 export const tryHref = (skillId: string, task?: string) =>
-  `/repo/${skillId}/test?example=1${task ? `&task=${encodeURIComponent(task.slice(0, 300))}` : ""}`;
+  `/library/${skillId}/test?example=1${task ? `&task=${encodeURIComponent(task.slice(0, 300))}` : ""}`;
 export const ownHref = (skillId: string, task?: string) =>
-  `/repo/${skillId}/test${task ? `?task=${encodeURIComponent(task.slice(0, 300))}` : ""}`;
+  `/library/${skillId}/test${task ? `?task=${encodeURIComponent(task.slice(0, 300))}` : ""}`;
 
 const GROUPS: { title: string; roles: string[] }[] = [
   { title: "Build and ship", roles: ["full-stack-engineer", "llm-agent-engineer", "ai-solution-architect", "ai-data-engineer", "ai-product-manager", "conversation-ux-designer"] },
@@ -111,7 +111,7 @@ export function stageSkills(stage: string, mode: StartMode, role?: string | null
 
 export const roleOptions = () => ROLE_TEMPLATES.map((r) => ({ slug: r.name, title: r.title })).sort((a, b) => a.title.localeCompare(b.title));
 export const modeHref = (skillId: string, mode: StartMode, example: boolean) =>
-  `/repo/${skillId}/test?mode=${mode}${example ? "&example=1" : ""}`;
+  `/library/${skillId}/test?mode=${mode}${example ? "&example=1" : ""}`;
 
 /** How many distinct skills the lifecycle shows for a starting point (a skill can sit in more than one stage, so the
  *  stage counts may add up to more than this), out of how many in scope. */

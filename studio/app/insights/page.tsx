@@ -107,7 +107,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
           <thead><tr><th>Skill</th><th>Runs</th><th>Counted as work</th><th>Baseline (by hand)</th><th>Hours saved</th><th>Value</th>{admin && <th>Actions</th>}</tr></thead>
           <tbody>{ins.skills.length === 0 ? <tr><td colSpan={7} className="none">No runs in this period.</td></tr> : ins.skills.map((s) => (
             <tr key={s.skill}>
-              <td>{s.skill.startsWith("workspace/") ? nameOf(s.skill) : <Link className="link" href={`/repo/${s.skill}`}>{nameOf(s.skill)}</Link>}</td>
+              <td>{s.skill.startsWith("workspace/") ? nameOf(s.skill) : <Link className="link" href={`/library/${s.skill}`}>{nameOf(s.skill)}</Link>}</td>
               <td>{s.runs}</td><td>{s.counted}</td>
               <td>{s.baseline ? <>{s.baseline.manual_minutes} min{s.baseline.hourly_rate_usd != null ? ` · ${usd(s.baseline.hourly_rate_usd)}/h` : ""}<div className="caption">{s.baseline.owner} — {s.baseline.source}</div></>
                 : <span className="caption">not set{admin && !s.skill.startsWith("workspace/") ? <> · <Link className="link" href={`/insights?days=${days}&skill=${encodeURIComponent(s.skill)}#baseline`}>set</Link></> : ""}</span>}</td>

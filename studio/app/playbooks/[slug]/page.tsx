@@ -30,9 +30,9 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
   return (
     <>
       <PageHead eyebrow="Playbook" title={/^[a-z0-9-]+$/.test(agent.name) ? humanName(agent.name) : agent.name} em="" lead={agent.description}
-        caption={<span className="chip-group">{versions.map((x) => <Link key={x.id} href={`/agents/${slug}?v=${x.version}`} className="chip" aria-pressed={x.id === current.id}>v{x.version} · {x.status}</Link>)}</span>} />
+        caption={<span className="chip-group">{versions.map((x) => <Link key={x.id} href={`/playbooks/${slug}?v=${x.version}`} className="chip" aria-pressed={x.id === current.id}>v{x.version} · {x.status}</Link>)}</span>} />
       <div className="action-row mb-6" style={{ marginTop: 0 }}>
-        <Link href={`/agents/${slug}/run?v=${current.version}`} className="btn btn-primary">Run v{current.version}</Link>
+        <Link href={`/playbooks/${slug}/run?v=${current.version}`} className="btn btn-primary">Run v{current.version}</Link>
         {current.status === "draft" && can(ctx.role, "agent.publish") && <ActionForm action={publishAgentVersion} submit="Publish" submitClass="btn btn-secondary" confirm={`Publish v${current.version}? It becomes frozen and runnable by every member.`} hidden={{ version_id: current.id }} />}
         {current.status !== "draft" && !versions.some((x) => x.status === "draft") && can(ctx.role, "agent.edit") && <ActionForm action={newAgentDraft} submit="Edit as new draft" submitClass="btn btn-secondary" hidden={{ agent_id: agent.id }} />}
         {!editable && current.status === "draft" && <span className="caption">Read-only for your role.</span>}

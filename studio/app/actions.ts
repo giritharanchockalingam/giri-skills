@@ -544,7 +544,7 @@ export async function cancelRun(_: ActionResult | null, fd: FormData): Promise<A
     if (error) return fail(error.message);
     if (!data?.length) return fail("Only a queued run can be cancelled; a run that has started executes to completion (synchronous runtime).");
     await audit(ctx, "run.cancel", "run", id);
-    revalidatePath(`/runs/${id}`); revalidatePath("/activity");
+    revalidatePath(`/runs/${id}`); revalidatePath("/runs");
     return okay("Run cancelled.");
   } catch (e) { return fail(errMsg(e)); }
 }

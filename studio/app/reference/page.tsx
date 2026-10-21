@@ -10,11 +10,11 @@ export default function UpstreamPage() {
   return (
     <>
       <PageHead
-        eyebrow="giri-skills · upstream"
+        eyebrow="Build · Reference skills"
         title="Fifty skills,"
         em="borrowed"
         lead={<>The {s.total} most-installed public skills, vendored at pinned commits — {s.vendor} from vendor teams, {s.community} community; {s.oss} open-source, {s.sourceAvailable} Anthropic source-available.</>}
-        caption={<>Ranked by skills.sh installs · pinned {fetched ?? "—"} · <code>vendor/&lt;name&gt;/</code> is verbatim upstream; re-run <code>scripts/vendor_sync.py</code> to move a pin</>}
+        caption={<>Ranked by skills.sh installs · copied unchanged from the original repositories on {fetched ?? "—"}</>}
       />
       <UpstreamTable rows={upstream} categories={UPSTREAM_CATEGORIES} />
     </>

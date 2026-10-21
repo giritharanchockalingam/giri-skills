@@ -75,7 +75,7 @@ export const scoreFor = (id: string) => scoreById.get(id) ?? null;
 export const proposalFor = (id: string) => proposalById.get(id) ?? null;
 export const skillFor = (id: string) => skills.find((s) => s.id === id) ?? null;
 
-export const skillHref = (id: string) => `/repo/${id}/`;
+export const skillHref = (id: string) => `/library/${id}/`;
 
 /** Catalog row: skill + score merged. */
 export interface CatalogRow {
@@ -173,7 +173,7 @@ export interface UpstreamSkill {
 export const upstream = upstreamJson as UpstreamSkill[];
 
 export const upstreamFor = (name: string) => upstream.find((u) => u.name === name) ?? null;
-export const upstreamHref = (name: string) => `/upstream/${name}/`;
+export const upstreamHref = (name: string) => `/reference/${name}/`;
 
 /** Catalog categories in display order (the four buckets of catalog/top-50.json), with human labels. */
 export const UPSTREAM_CATEGORY_LABELS: Record<string, string> = {

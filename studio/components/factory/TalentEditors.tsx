@@ -13,7 +13,7 @@ import { saveTalentDraft, routeTask, type RouteResult } from "@/app/talentAction
 
 interface Stage { id: string; n?: number; name: string }
 export interface PlaybookRow extends PlaybookInfo { status: string; version: number; steps: number }
-const skillHref = (id: string) => `/repo/${id}`;
+const skillHref = (id: string) => `/library/${id}`;
 
 function Problems({ problems, okText }: { problems: string[]; okText: string }) {
   return (
@@ -122,11 +122,11 @@ export function RoleEditor({ initial, template, versionId, catalog, stages, play
                     <b>{p.name}</b> <span className="caption">{p.steps} steps · v{p.version} {p.status}</span>
                   </label>
                   {missing.length > 0 && <div className="caption">needs {missing.map((s) => cat.get(s)?.name ?? s).join(", ")}</div>}
-                  {on && <Link href={`/agents/${p.name}/run?v=${p.version}`} className="link caption">Run this playbook →</Link>}
+                  {on && <Link href={`/playbooks/${p.name}/run?v=${p.version}`} className="link caption">Run this playbook →</Link>}
                 </li>
               );
             })}
-            {playbooks.length === 0 && <li className="none">No agents in this workspace yet.</li>}
+            {playbooks.length === 0 && <li className="none">No playbooks in this workspace yet.</li>}
           </ul>
         </div>
 
@@ -279,13 +279,13 @@ export function PoolEditor({ initial, versionId, roles, catalog, stages, playboo
                     <>
                       <ol className="tl-handoff">{staffing.map((x, k) => (
                         <li key={k}><span>{cat.get(x.skill)?.name ?? x.skill}</span> <span className={x.member ? "caption" : "fail caption"}>→ {x.member ?? "nobody"}</span></li>))}</ol>
-                      <Link href={`/agents/${p.name}/run?v=${p.version}`} className="link caption">Run this playbook →</Link>
+                      <Link href={`/playbooks/${p.name}/run?v=${p.version}`} className="link caption">Run this playbook →</Link>
                     </>
                   )}
                 </li>
               );
             })}
-            {playbooks.length === 0 && <li className="none">No agents in this workspace yet.</li>}
+            {playbooks.length === 0 && <li className="none">No playbooks in this workspace yet.</li>}
           </ul>
         </div>
       </div>

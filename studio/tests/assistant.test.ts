@@ -148,7 +148,7 @@ test("get_scorecard: verdicts with titles for one repository; unknown names retu
 test("find_skill: real matches only (relevance floor), unknown library ids dropped, nothing when nothing matches", async () => {
   const r = await call("find_skill", { task: "run a DPIA for the new feature" });
   assert.deepEqual((r.content as { matches: { skill: string }[] }).matches.map((m) => m.skill), ["govern/dpia", "govern/ai-transparency-notice"]);
-  assert.deepEqual(r.links.map((l) => l.href), ["/repo/govern/dpia", "/repo/govern/ai-transparency-notice"]);
+  assert.deepEqual(r.links.map((l) => l.href), ["/library/govern/dpia", "/library/govern/ai-transparency-notice"]);
   assert.deepEqual((await call("find_skill", { task: "bake a sourdough loaf" })).content, { task: "bake a sourdough loaf", matches: [] });
 });
 

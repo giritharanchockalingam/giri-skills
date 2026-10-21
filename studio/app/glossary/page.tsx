@@ -8,8 +8,8 @@ export const metadata = { title: "Glossary · Skills Factory" };
 export default function GlossaryPage() {
   return (
     <>
-      <PageHead eyebrow="Admin · glossary" title="One name per" em="concept" after="."
-        lead="Every page uses these words, and only these. Older names that still appear in addresses or code are listed so they can be recognised, not used." />
+      <PageHead eyebrow="Start here · Glossary" title="One name per" em="concept" after="."
+        lead="Every page uses these words, and only these. “Not called” lists the older names you may meet in code or old links; old links still work and take you to the new page." />
       <div className="card"><div className="tablewrap"><table className="mini cat-table">
         <thead><tr><th>Term</th><th>Means</th><th>Not called</th></tr></thead>
         <tbody>{GLOSSARY.map((g) => (

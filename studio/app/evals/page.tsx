@@ -24,7 +24,7 @@ export default function EvalsPage() {
     { value: s.healthy, label: <><span className="tone">healthy</span> — no action needed</>, filter: "OK", href: "#scorecard?verdict=OK" },
     { value: s.needsDesc, label: <>need a <span className="tone">better description</span></>, filter: "needs-desc", href: "#scorecard?verdict=needs-desc" },
     { value: s.needsBody, label: <>need <span className="tone">stronger instructions</span></>, filter: "needs-body", href: "#scorecard?verdict=needs-body" },
-    { value: a.works, label: <><span className="tone">run as agents</span> — scripts and checks pass</>, filter: "all", href: "#scorecard?verdict=all&runs=Works" },
+    { value: a.works, label: <><span className="tone">run end to end</span> — scripts and checks pass</>, filter: "all", href: "#scorecard?verdict=all&runs=Works" },
   ];
 
   return (
@@ -34,7 +34,7 @@ export default function EvalsPage() {
         title="What the evals"
         em="found"
         lead={conclusionSentence(s, a)}
-        caption={<>Last evaluation, {meta.date}: judged by {modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} agent checks · {meta.spend} model spend (estimated)</>}
+        caption={<>Last evaluation, {meta.date}: judged by {modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} end-to-end checks · {meta.spend} model spend (estimated)</>}
       />
 
       <div className="summary-grid">
@@ -71,7 +71,7 @@ export default function EvalsPage() {
       </section>
 
       <section className="section" id="scorecard" style={{ scrollMarginTop: 76 }}>
-        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts, the items the judge failed, and the end-to-end agent-case checks." />
+        <SectionHead title="Scorecard" caption="Every skill, worst first. Select a row for the misrouted prompts, the items the judge failed, and the end-to-end checks." />
         <ScorecardTable rows={scorecard} domains={DOMAINS} drill={drill} />
       </section>
     </>

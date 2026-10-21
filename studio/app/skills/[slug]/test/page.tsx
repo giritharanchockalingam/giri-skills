@@ -10,7 +10,7 @@ import { TestForm } from "@/components/factory/TestForm";
 
 export const dynamic = "force-dynamic";
 
-/** Test: the run form only. What the run needs (tools, connections) sits beside it; runs are listed under Activity. */
+/** Test: the run form only. What the run needs (tools, connections) sits beside it; runs are listed under Runs. */
 export default async function TestPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
   const { slug } = await params; const { v } = await searchParams;
   const d = await loadSkillPage(slug, v ?? null);
@@ -48,7 +48,7 @@ export default async function TestPage({ params, searchParams }: { params: Promi
                 const ok = env ? providerKeyPresent(c) : row?.status === "configured";
                 return <div key={c}><code>{c}</code> — {ok ? <span className="pass">configured</span> : <span className="fail">not configured</span>}{env && !ok && <span className="caption"> ({env} missing on the server; llm steps will be skipped)</span>}</div>;
               })}</dd>
-              <dt>Runs</dt><dd>{d.runCount} of v{d.version.version} · <Link href={`/skills/${slug}/activity/${vq}`} className="link">Activity</Link></dd>
+              <dt>Runs</dt><dd>{d.runCount} of v{d.version.version} · <Link href={`/skills/${slug}/activity/${vq}`} className="link">Runs</Link></dd>
             </dl>
             {can(d.ctx.role, "admin.connections") && <Link href="/admin#connections" className="link-flame mt-3 inline-block">Manage connections →</Link>}
           </div>
@@ -56,7 +56,7 @@ export default async function TestPage({ params, searchParams }: { params: Promi
             <div className="card card-pad">
               <div className="h3 mb-1">Run in browser (no server)</div>
               <p className="caption">The repository page runs the same runner in your browser with Pyodide. Nothing is recorded, and an API key you paste there goes from your browser straight to the provider.</p>
-              <Link href={`/repo/${d.version.source.repo_skill}/test/`} className="btn btn-secondary btn-sm mt-3">Open browser runner</Link>
+              <Link href={`/library/${d.version.source.repo_skill}/test/`} className="btn btn-secondary btn-sm mt-3">Open browser runner</Link>
             </div>
           )}
         </aside>

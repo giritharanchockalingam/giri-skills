@@ -113,7 +113,7 @@ export default async function EvaluationsPage({ params, searchParams }: { params
             {d.state && <GateList gates={[evalGate(d.state)]} />}
             <p className="caption mt-2">Required pass rate comes from the manifest&apos;s release criteria (Instructions tab). The gate re-checks against the current case set at publish time, on the server.</p>
           </div>
-          {d.version.source.kind === "repo" && <div className="card card-pad"><div className="h3 mb-1">Repository evals</div><p className="caption">The behavioural eval scorecard (trigger accuracy, judge lift, agent checks) for this repository skill is under <Link href={`/repo/${d.version.source.repo_skill}/evals/`} className="link">its repository page</Link> and <Link href="/evals/" className="link">Repo evals</Link>.</p></div>}
+          {d.version.source.kind === "repo" && <div className="card card-pad"><div className="h3 mb-1">Repository evals</div><p className="caption">The behavioural eval scorecard (trigger accuracy, judge lift, end-to-end checks) for this repository skill is under <Link href={`/library/${d.version.source.repo_skill}/evals/`} className="link">its repository page</Link> and <Link href="/evals/" className="link">Repo evals</Link>.</p></div>}
         </aside>
       </div>
     </>

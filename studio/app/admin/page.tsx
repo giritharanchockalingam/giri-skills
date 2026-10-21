@@ -34,6 +34,7 @@ export default async function AdminPage() {
   return (
     <>
       <PageHead eyebrow={`Administration${ws ? ` · ${ws.name}` : ""}`} title="Access, connections," em="limits" after="."
+        note={<Link className="link-flame" href="/glossary">Glossary: the words this portal uses →</Link>}
         lead={ws ? (admin ? "Members and their access, who can run which skills, API keys for applications, provider connections, spending and concurrency limits, and the audit log." : `You are ${ctx.role} here. Only administrators can change members, keys, connections and policies; you can see the audit log and your account.`) : "You are not in a workspace yet."} />
 
       <section id="account" className="card card-pad mb-6">

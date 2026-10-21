@@ -81,7 +81,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
             <span className="caption"><LocalTime iso={r.created_at} />{r.commit_sha ? <> · commit <a className="link" href={`${e.url}/commit/${r.commit_sha}`} target="_blank" rel="noreferrer"><code>{r.commit_sha.slice(0, 7)}</code></a></> : null} · {r.details.files_used ?? 0} files · {Math.round((r.duration_ms ?? 0) / 100) / 10}s</span>
           </div>
           <p style={{ margin: "6px 0" }}>{r.summary}</p>
-          <p className="caption" style={{ margin: 0 }}>By the <Link className="link" href={`/repo/${r.skill}`}>{humanName(r.skill.split("/")[1])}</Link> skill.{r.details.partial ? " Partial scan: the repository is larger than the scan limit." : ""}</p>
+          <p className="caption" style={{ margin: 0 }}>By the <Link className="link" href={`/library/${r.skill}`}>{humanName(r.skill.split("/")[1])}</Link> skill.{r.details.partial ? " Partial scan: the repository is larger than the scan limit." : ""}</p>
           {r.verdict === "error" && r.details.log_tail && (
             <details className="mt-3"><summary className="caption">What the skill printed</summary><pre className="run-raw">{r.details.log_tail}</pre></details>)}
           {r.details.report && (

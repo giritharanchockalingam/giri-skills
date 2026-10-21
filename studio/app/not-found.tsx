@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const PLACES: [string, string, string][] = [
-  ["/repo/", "Library", "every skill the portal ships"],
+  ["/library/", "Library", "every skill the portal ships"],
   ["/pipeline", "Publish pipeline", "your workspace's skills, by release gate"],
   ["/catalog", "Catalog", "repositories, services and databases"],
   ["/assistant", "Assistant", "ask where something is"],

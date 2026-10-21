@@ -7,8 +7,8 @@ import { useState, useTransition } from "react";
 import { routeAnyTask, type AnyRouteHit } from "@/app/talentActions";
 
 const human = humanName;
-const tryHref = (id: string, task: string) => `/repo/${id}/test?example=1&task=${encodeURIComponent(task.slice(0, 300))}`;
-const ownHref = (id: string, task: string) => `/repo/${id}/test?task=${encodeURIComponent(task.slice(0, 300))}`;
+const tryHref = (id: string, task: string) => `/library/${id}/test?example=1&task=${encodeURIComponent(task.slice(0, 300))}`;
+const ownHref = (id: string, task: string) => `/library/${id}/test?task=${encodeURIComponent(task.slice(0, 300))}`;
 
 export function TaskBox({ suggestions }: { suggestions: string[] }) {
   const [task, setTask] = useState("");
