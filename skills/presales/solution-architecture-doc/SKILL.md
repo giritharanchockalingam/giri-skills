@@ -28,9 +28,22 @@ metadata:
 
 # solution-architecture-doc
 
-## How to run
-This skill is executable. When you can run commands, put the facts into `components.json` (layout: `evals/fixtures/northwind-order-hub.json`) and run `python3 scripts/run_skill.py presales/solution-architecture-doc --input components=<file> --input client=<name> --out <dir>`; report `run.json` and hand over the deliverables it writes (below) instead of re-typing them.
-When you cannot run commands, **write the document yourself** following the Procedure — never answer a request that already carries facts with only a question. Draft from what is given, mark every gap `[TO BE BASELINED — owner: ___]`, and ask for the missing facts at the end.
+## In a conversation: write the document now
+- **The request carries facts** (systems, interfaces, constraints, NFRs, dates, audience): write the architecture document **in this reply**. Do not ask for a file or JSON first, and never answer with only questions. Use what is given; mark each missing fact `[TO BE BASELINED — owner: <role>]`; end with the few questions that would close those gaps.
+- **The request carries no client facts at all**: ask once, in one list, for current-state facts, drivers and constraints, NFR expectations and the audience. Do not draw a current state from assumptions. You may offer a generic pattern catalogue, labelled "not client-specific".
+- **Asked to invent NFR numbers or to "just pick" products**: say in one line why not (unsourced targets and undecided products become contractual and credibility risk). Show each target as `[TO BE BASELINED — owner: ___]` with its measurement method and the discovery question that would set it; show products as role placeholders with `proposed` ADRs naming the client decision owner; offer the scored options table as the way to decide.
+
+The document, in this order (CIO depth: 6–10 pages, the bottom line stands alone; ARB depth adds component, deployment and security views):
+1. **Bottom line** — the target state in one paragraph, the top 3 decisions, the waves, the biggest risk, what is still open.
+2. **Drivers and constraints** — each with its source.
+3. **Current state** (context + container, Mermaid) from evidence only; every box source-tagged; unknown integrations dashed and listed as gaps.
+4. **Options and recommendation** — at least two options scored on weighted criteria (show the arithmetic); the choice is ADR-001.
+5. **Target state** (context + container, Mermaid C4) — undecided products as placeholders.
+6. **Integration map** — interfaces grouped by pattern, with protocol, data, volume/SLA (sourced or marked) and wave.
+7. **NFRs** — target, measurement method, source, design response; constraints such as data residency become NFRs.
+8. **Security and data**, **operability and environments**.
+9. **Migration waves** — goal, scope, entry and exit criteria, rollback, aligned to the stated dates.
+10. **Decision log** (ADRs with owner and status), **risks** (likelihood × impact, owner, mitigation), **open items** with owners, **sources**.
 
 ## Starting points
 - **New** — the target design becomes a decision-ready architecture document: bottom line, drivers, C4 context, container and deployment diagrams, integration map, migration waves (entry, exit, rollback), NFRs, security, scored options with ADRs, risks, decision log, open items and sources.
@@ -52,7 +65,7 @@ When you cannot run commands, **write the document yourself** following the Proc
 | Audience: CIO deck-level vs architecture-review-board level | yes | user |
 | Existing draft (review mode) | yes in review | file |
 
-If current-state facts are missing, ask once. Do not draw a current-state diagram from assumptions; draw only what is evidenced and mark the rest `[TO BE BASELINED — owner: ___]`.
+Missing facts never stop the draft: write what is evidenced, mark the rest `[TO BE BASELINED — owner: ___]`, and ask for it at the end. Never draw a current-state diagram from assumptions.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first.
@@ -93,3 +106,8 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `assets/mermaid-c4-templates.md` — Mermaid C4 context/container/component/deployment templates
 - `assets/nfr-checklist.md` — NFR categories with target patterns and measurement methods
 - `assets/adr-template.md` — ADR template
+
+## How to run (automation, when commands can run)
+This skill is executable. When you can run commands, put the facts into `components.json` (layout: `evals/fixtures/northwind-order-hub.json`) and run `python3 scripts/run_skill.py presales/solution-architecture-doc --input components=<file> --input client=<name> --out <dir>`; report `run.json` and hand over the deliverables it writes (below) instead of re-typing them.
+When you cannot run commands, **write the document yourself** following the Procedure — never answer a request that already carries facts with only a question. Draft from what is given, mark every gap `[TO BE BASELINED — owner: ___]`, and ask for the missing facts at the end.
+
