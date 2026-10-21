@@ -1,6 +1,6 @@
 "use client";
 import { readableError } from "@/lib/runText";
-import { modelLabel } from "@/lib/modelLabel";
+import { modelLabel, NO_MODEL } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -49,7 +49,7 @@ export function RunsTable({ items, caption, showSkill }: { items: RunListItem[];
                   <td><Link href={`/runs/${r.id}`} className="cell-name" onClick={(e) => e.stopPropagation()}><LocalTime iso={r.created_at} /></Link></td>
                   {showSkill && <td>{r.skill} <span className="muted">v{r.version}</span></td>}
                   <td><RunPill status={r.status} small /></td><td className="muted">{SOURCE_LABEL[r.source] ?? r.source}</td>
-                  <td className="ink-2">{r.model ? <span title={`${r.provider ?? ""} · model id: ${r.model}`}>{modelLabel(r.model, {})}</span> : r.provider === "none" || !r.provider ? "no model" : r.provider}</td>
+                  <td className="ink-2">{r.model ? <span title={`provider: ${r.provider ?? "—"}`}>{modelLabel(r.model, {})}</span> : r.provider === "none" || !r.provider ? <span className="muted">{NO_MODEL}</span> : r.provider}</td>
                   <td className="num">{fmtMs(r.duration_ms)}</td><td className="num">{fmtUsd(r.cost_usd, r.cost_is_estimate)}</td>
                   <td className="desc" title={readableError(r.error)}><span>{readableError(r.error)}</span></td>
                 </tr>

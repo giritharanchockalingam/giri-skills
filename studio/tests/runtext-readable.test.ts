@@ -11,5 +11,15 @@ test("legacy generic run errors read plainly, without the contradicting zero; sp
 
 test("legacy failure text keeps its reason in words", async () => {
   const { readableError } = await import("../lib/runText.ts");
-  assert.equal(readableError("1 step(s) not ok, 0 check(s) failed (partial: the folder is larger than the scan limit)"), "1 step failed: the folder is larger than the scan limit.");
+  assert.equal(readableError("1 step(s) not ok, 0 check(s) failed (partial: the folder is larger than the scan limit)"), "Output incomplete: the folder is larger than the scan limit.");
+});
+
+test("engine messages read plainly; the failure class never contradicts the checks", async () => {
+  const { plainError, failureText } = await import("../lib/runText.ts");
+  assert.equal(plainError("model 'fict-medium' has no row in the price sheet"), "the cost model has no price for the model used (fict-medium)");
+  assert.equal(plainError("Traceback (most recent call last):\n  File x"), "the step's program stopped with an error");
+  assert.equal(plainError("something new\nmore"), "something new");
+  const t = failureText({ steps: [{ step: "cost", ok: false, error: "model 'x' has no row in the price sheet" }], checks: [{ pass: true }, { pass: true }] });
+  assert.match(t, /^a step errored, although every check that ran passed — step 'cost' failed: the cost model has no price/);
+  assert.match(failureText({ steps: [{ step: "a", ok: false }], checks: [] }), /^a step errored before any check ran/);
 });

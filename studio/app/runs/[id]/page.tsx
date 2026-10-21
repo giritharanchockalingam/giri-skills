@@ -1,4 +1,5 @@
-import { failureText, readableError } from "@/lib/runText";
+import { failureText, readableError, plainError } from "@/lib/runText";
+import { NO_MODEL } from "@/lib/modelLabel";
 import { skillTitle } from "@/lib/names";
 import { modelLabel } from "@/lib/modelLabel";
 import { LocalTime } from "@/components/LocalTime";
@@ -47,6 +48,9 @@ export default async function RunPage({ params, searchParams }: { params: Promis
         <div className="flex flex-wrap items-center gap-3"><RunPill status={run.status} /><VersionPill status={vinfo.status} small /><span className="caption">{run.source} · <LocalTime iso={run.created_at} /> · manifest {vinfo.manifest_hash.slice(0, 12)}…</span></div>
       </div>
       <div className={`run-banner run-banner-${tone}`} role="status">{headline}</div>
+      {run.status !== "succeeded" && (run.error || rj.steps?.some((s) => !s.ok && s.error)) && (
+        <details className="mt-2 tech-detail"><summary className="caption">Technical detail</summary>
+          <pre className="caption" style={{ whiteSpace: "pre-wrap" }}>{[run.error, ...(rj.steps ?? []).filter((s) => !s.ok && s.error).map((s) => `${s.step}: ${s.error}`)].filter(Boolean).join("\n")}</pre></details>)}
       {run.status === "queued" && <div className="mt-3"><ActionForm action={cancelRun} submit="Cancel run" submitClass="btn btn-danger" hidden={{ run_id: id }} /></div>}
 
       <div className="two-col mt-6">
@@ -58,7 +62,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
             <div className="h3 mb-2">Steps <span className="muted font-normal">({rj.steps?.length ?? 0})</span></div>
             {rj.steps?.length ? (
               <div className="run-tablewrap"><table className="mini run-steps"><thead><tr><th>Step</th><th>Kind</th><th>Status</th><th>Exit</th><th>Duration</th><th>Detail</th></tr></thead>
-                <tbody>{rj.steps.map((s) => <tr key={s.step}><td><code>{s.step}</code></td><td><span className={`agent-kind agent-kind-${s.kind}`}>{s.kind}</span></td><td>{s.skipped ? <span className="na-pill">skipped</span> : <PassPill pass={s.ok} />}</td><td className="muted">{s.exit ?? "—"}</td><td className="muted tnum">{s.duration_s != null ? `${s.duration_s}s` : "—"}</td><td className="ink-2" style={{ whiteSpace: "normal" }}>{s.skipped ? (s.skipped_reason ?? s.reason) : s.ok ? (s.provider ? (s.provider === "dry" ? "no model (scripts only)" : `model provider ${s.provider}`) : "") : s.error}</td></tr>)}</tbody></table></div>
+                <tbody>{rj.steps.map((s) => <tr key={s.step}><td><code>{s.step}</code></td><td><span className={`agent-kind agent-kind-${s.kind}`}>{s.kind}</span></td><td>{s.skipped ? <span className="na-pill">skipped</span> : <PassPill pass={s.ok} />}</td><td className="muted">{s.exit ?? "—"}</td><td className="muted tnum">{s.duration_s != null ? `${s.duration_s}s` : "—"}</td><td className="ink-2" style={{ whiteSpace: "normal" }}>{s.skipped ? (s.skipped_reason ?? s.reason) : s.ok ? (s.provider ? (s.provider === "dry" ? NO_MODEL : `model provider ${s.provider}`) : "") : s.error ? <span title={s.error}>{plainError(s.error)}</span> : ""}</td></tr>)}</tbody></table></div>
             ) : <p className="none">No steps were recorded{run.error ? ` — ${run.error}` : ""}.</p>}
           </div>
           <div className="card card-pad">

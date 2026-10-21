@@ -11,6 +11,8 @@ import { PageHead, SectionHead } from "@/components/PageHead";
 import { RolePill } from "@/components/factory/Pills";
 import { RuntimeStatus } from "@/components/factory/RuntimeStatus";
 import { SkillAccess } from "@/components/admin/SkillAccess";
+import { auditActor, auditEntity, auditDetails } from "@/lib/auditLabel";
+import { auditNames } from "@/lib/db/admin";
 import { loadAccessData } from "@/lib/db/access";
 import type { Access } from "@/lib/access";
 
@@ -28,6 +30,8 @@ export default async function AdminPage() {
   const connRows = data.connections;
   const pol = data.policy;
   const auditRows = data.audit;
+  const names = ws ? await auditNames(ctx.supabase, ws.id) : { skills: new Map<string, string>(), versions: new Map<string, string>() };
+  const look = { me: ctx.user.id, users: new Map(memberRows.map((m) => [m.user_id, m.email])), keys: new Map(keyRows.map((k) => [k.id, k.name])), ...names };
   const anthropicPresent = providerKeyPresent("anthropic");
   const compatPresent = providerKeyPresent("openai_compat");
 
@@ -158,7 +162,7 @@ export default async function AdminPage() {
             <div className="card">
               {auditRows.length === 0 ? <div className="empty"><div className="none">No events yet.</div></div> : (
                 <div className="tablewrap"><table className="tbl"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th className="col-wide">Details</th></tr></thead>
-                  <tbody>{auditRows.map((a) => <tr key={a.id}><td className="muted" style={{ whiteSpace: "nowrap" }}><LocalTime iso={a.created_at} /></td><td className="mono-sm">{a.actor_kind}{a.actor_id ? ` ${a.actor_id === ctx.user.id ? "(you)" : a.actor_id.slice(0, 8)}` : ""}</td><td><code>{a.action}</code></td><td className="mono-sm">{a.entity_type}{a.entity_id ? ` ${a.entity_id.slice(0, 8)}` : ""}</td><td className="col-wide caption" style={{ maxWidth: 420 }}>{Object.entries(a.details ?? {}).filter(([, v]) => v != null && v !== "" && typeof v !== "object").slice(0, 4).map(([k, v]) => <span key={k} className="audit-kv"><b>{k.replace(/_/g, " ")}</b> {String(v).slice(0, 60)}</span>)}</td></tr>)}</tbody></table></div>
+                  <tbody>{auditRows.map((a) => { const actor = auditActor(a, look), ent = auditEntity(a, look); return <tr key={a.id}><td className="muted" style={{ whiteSpace: "nowrap" }}><LocalTime iso={a.created_at} /></td><td title={actor.title}>{actor.text}</td><td>{a.action.replace(/[._]/g, " ")}</td><td title={ent.title}>{ent.href ? <Link className="link" href={ent.href}>{ent.text}</Link> : ent.text}</td><td className="col-wide caption" style={{ maxWidth: 420 }}>{auditDetails(a, look).map((d) => <span key={d.key} className="audit-kv" title={d.cell.title}><b>{d.key}</b> {d.cell.text}</span>)}</td></tr>; })}</tbody></table></div>
               )}
             </div>
           </section>

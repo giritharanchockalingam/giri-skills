@@ -1,5 +1,6 @@
 /* Data access for the Administration page. Queries run as the signed-in user (RLS applies); callers pass ctx.supabase. */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { skillTitle } from "@/lib/names";
 import type { ApiKeyRow, AuditRow, ConnectionRow, PolicyRow } from "@/lib/factory/db";
 
 export interface MemberDirectoryRow { user_id: string; email: string; role: string; created_at: string }
@@ -28,3 +29,13 @@ export async function loadAdminData(sb: SupabaseClient, workspaceId: string, inc
 
 /** What the page shows when the user has no workspace yet. */
 export const EMPTY_ADMIN_DATA: AdminData = { members: [], keys: [], connections: [], policy: null, audit: [], invites: [] };
+
+/** Skill titles and "Skill vN" labels for the audit log (ids people should not have to read). */
+export async function auditNames(sb: SupabaseClient, workspaceId: string): Promise<{ skills: Map<string, string>; versions: Map<string, string> }> {
+  const { data: sk } = await sb.from("sf_skills").select("id, name").eq("workspace_id", workspaceId);
+  const skills = new Map(((sk ?? []) as { id: string; name: string }[]).map((s) => [s.id, skillTitle(s.name)]));
+  const ids = [...skills.keys()];
+  const { data: vs } = ids.length ? await sb.from("sf_skill_versions").select("id, skill_id, version").in("skill_id", ids) : { data: [] };
+  const versions = new Map(((vs ?? []) as { id: string; skill_id: string; version: number }[]).map((v) => [v.id, `${skills.get(v.skill_id) ?? "skill"} v${v.version}`]));
+  return { skills, versions };
+}
