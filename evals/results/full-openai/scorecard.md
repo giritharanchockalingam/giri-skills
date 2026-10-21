@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17–2026-10-21_
-_estimated spend: $65.24_
+_estimated spend: $67.71_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict |
 |---|---|---|---|---|---|---|
@@ -57,7 +57,7 @@ _estimated spend: $65.24_
 | build/product-spec-prd | 1.00 | 0.00 | 0.32 | 0.68 | 0.36 | OK |
 | build/project-bootstrap | 1.00 | 0.00 | 0.05 | 0.27 | 0.23 | OK |
 | build/safe-fix | 1.00 | 0.00 | 0.12 | 0.69 | 0.56 | OK |
-| build/security-review | 0.88 | 0.00 | 0.35 | 0.54 | 0.19 | BODY |
+| build/security-review | 1.00 | 0.00 | 0.31 | 0.50 | 0.19 | BODY |
 | build/spec-to-plan | 1.00 | 0.00 | 0.25 | 0.71 | 0.46 | OK |
 | build/supabase-schema-rls | 1.00 | 0.00 | 0.14 | 0.50 | 0.36 | OK |
 | build/systematic-debugging-runner | 1.00 | 0.00 | 0.31 | 0.12 | -0.19 | BODY |
@@ -65,12 +65,12 @@ _estimated spend: $65.24_
 | build/webapp-testing-runner | 1.00 | 0.00 | 0.17 | 0.25 | 0.08 | BODY |
 | career/application-tracker | 1.00 | 0.00 | 0.30 | 0.50 | 0.20 | OK |
 | career/interview-prep | 1.00 | 0.00 | 0.12 | 0.34 | 0.22 | OK |
-| career/jd-fit-scorer | 0.71 | 0.00 | 0.33 | 0.50 | 0.17 | BOTH |
+| career/jd-fit-scorer | 1.00 | 0.00 | 0.33 | 0.47 | 0.13 | BODY |
 | career/offer-evaluator | 1.00 | 0.00 | 0.19 | 0.62 | 0.44 | OK |
 | career/outreach-and-followup | 1.00 | 0.00 | 0.31 | 0.53 | 0.22 | OK |
 | career/resume-tailor | 1.00 | 0.00 | 0.36 | 0.57 | 0.21 | OK |
-| presales/account-plan | 0.71 | 0.00 | 0.12 | 0.35 | 0.24 | DESC |
-| presales/client-research-brief | 1.00 | 0.00 | 0.38 | 0.53 | 0.15 | BODY |
+| presales/account-plan | 1.00 | 0.00 | 0.32 | 0.82 | 0.50 | OK |
+| presales/client-research-brief | 1.00 | 0.00 | 0.33 | 0.55 | 0.23 | OK |
 | presales/competitive-positioning | 0.86 | 0.00 | 0.35 | 0.82 | 0.47 | OK |
 | presales/discovery-interview | 1.00 | 0.00 | 0.40 | 0.80 | 0.40 | OK |
 | presales/effort-estimator | 0.67 | 0.00 | 0.04 | 0.04 | 0.00 | BOTH |
