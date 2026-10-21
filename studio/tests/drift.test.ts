@@ -42,5 +42,6 @@ test("skill drift: a live version with frozen files is out of date, not blocked,
   const pin = () => "b";
   const live = { id: "v1", source: repo("a"), status: "published", version: 1 };
   assert.equal(skillDrift([live], pin), "blocked", "without frozen files it cannot run");
-  assert.equal(skillDrift([live], pin, null, false, new Set(["v1"])), "library_updated");
+  assert.equal(skillDrift([live], pin, null, false, new Map([["v1", "own-old"]]), () => "own-new"), "library_updated");
+  assert.equal(skillDrift([live], pin, null, false, new Map([["v1", "own-same"]]), () => "own-same"), "current", "a runner-only change is not a skill change");
 });

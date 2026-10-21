@@ -26,10 +26,17 @@ export const contractKey = (m: ContractLike): string | null => !m ? null : JSON.
 });
 
 /** The skill-level answer: a live version that cannot run outranks everything; otherwise the newest version's state. */
-export function skillDrift(versions: { id?: string; source: VersionSource; status: string; version: number; contract?: string | null }[], pinOf: (repoSkill?: string) => string | null, libraryContract?: string | null, draftCasesStale = false, frozen: ReadonlySet<string> = new Set()): Drift {
+export function skillDrift(versions: { id?: string; source: VersionSource; status: string; version: number; contract?: string | null }[], pinOf: (repoSkill?: string) => string | null, libraryContract?: string | null, draftCasesStale = false, frozen: ReadonlyMap<string, string> = new Map(), ownShaOf: (repoSkill?: string) => string | null = () => null): Drift {
   const live = versions.find((v) => v.status === "published");
-  // a live version with frozen files keeps running when the library moves on: it is out of date, not blocked
-  if (live && driftOf(live.source, live.status, pinOf(live.source.repo_skill)) === "blocked") return live.id && frozen.has(live.id) ? "library_updated" : "blocked";
+  // a live version with frozen files keeps running whatever the library does: compare the skill's own files only
+  // (a change to the shared runner is not a change to the skill), so it is current or out of date, never blocked
+  const frozenSha = live?.id ? frozen.get(live.id) : undefined;
+  const newestV = [...versions].sort((a, b) => b.version - a.version)[0];
+  if (live && frozenSha && newestV === live) {
+    if (live.source.kind === "repo" && libraryContract && live.contract && live.contract !== libraryContract) return "library_updated";
+    return ownShaOf(live.source.repo_skill) === frozenSha ? "current" : "library_updated";
+  }
+  if (live && driftOf(live.source, live.status, pinOf(live.source.repo_skill)) === "blocked") return frozenSha ? "library_updated" : "blocked";
   const newest = [...versions].sort((a, b) => b.version - a.version)[0];
   if (!newest) return "n/a";
   const d0 = driftOf(newest.source, newest.status, pinOf(newest.source.repo_skill));

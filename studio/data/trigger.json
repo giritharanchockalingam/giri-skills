@@ -700,6 +700,76 @@
   "correct": null
  },
  {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
   "skill": "ai-platform/ab-test-analysis",
   "caseId": "prompt-should-we-ship",
   "run": 1,
@@ -1018,8 +1088,8 @@
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "agent-missing-owners-not-invented",
   "run": 1,
-  "selected": "ai-controls-mapping",
-  "correct": 1
+  "selected": "data-readiness-assessment",
+  "correct": 0
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1060,8 +1130,8 @@
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "agent-missing-owners-not-invented",
   "run": 2,
-  "selected": "ai-controls-mapping",
-  "correct": 1
+  "selected": "data-readiness-assessment",
+  "correct": 0
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1627,8 +1697,8 @@
   "skill": "ai-platform/ai-threat-model",
   "caseId": "agent-no-controls-not-invented",
   "run": 1,
-  "selected": "ai-controls-mapping",
-  "correct": 0
+  "selected": "ai-threat-model",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-threat-model",
@@ -1669,8 +1739,8 @@
   "skill": "ai-platform/ai-threat-model",
   "caseId": "agent-no-controls-not-invented",
   "run": 2,
-  "selected": "ai-controls-mapping",
-  "correct": 0
+  "selected": "ai-threat-model",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-threat-model",
@@ -1963,8 +2033,8 @@
   "skill": "ai-platform/ai-vendor-assessment",
   "caseId": "agent-red-flag-no-clear-winner-gate",
   "run": 2,
-  "selected": "ab-test-analysis",
-  "correct": 0
+  "selected": "ai-vendor-assessment",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -2299,8 +2369,8 @@
   "skill": "ai-platform/data-contract-validator",
   "caseId": "agent-freshness-not-invented",
   "run": 1,
-  "selected": "data-readiness-assessment",
-  "correct": 0
+  "selected": "data-contract-validator",
+  "correct": 1
  },
  {
   "skill": "ai-platform/data-contract-validator",
@@ -2355,8 +2425,8 @@
   "skill": "ai-platform/data-contract-validator",
   "caseId": "agent-freshness-not-invented",
   "run": 2,
-  "selected": "data-readiness-assessment",
-  "correct": 0
+  "selected": "data-contract-validator",
+  "correct": 1
  },
  {
   "skill": "ai-platform/data-contract-validator",
@@ -2390,8 +2460,8 @@
   "skill": "ai-platform/data-readiness-assessment",
   "caseId": "agent-happy-path",
   "run": 1,
-  "selected": "data-contract-validator",
-  "correct": 0
+  "selected": "data-readiness-assessment",
+  "correct": 1
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -2411,8 +2481,8 @@
   "skill": "ai-platform/data-readiness-assessment",
   "caseId": "agent-not-ready-exits-1",
   "run": 1,
-  "selected": "data-contract-validator",
-  "correct": 0
+  "selected": "data-readiness-assessment",
+  "correct": 1
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -2460,8 +2530,8 @@
   "skill": "ai-platform/data-readiness-assessment",
   "caseId": "agent-not-ready-exits-1",
   "run": 2,
-  "selected": "data-contract-validator",
-  "correct": 0
+  "selected": "data-readiness-assessment",
+  "correct": 1
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -2579,8 +2649,8 @@
   "skill": "ai-platform/drift-monitor",
   "caseId": "agent-happy-path",
   "run": 1,
-  "selected": "ai-slo-definition",
-  "correct": 0
+  "selected": "drift-monitor",
+  "correct": 1
  },
  {
   "skill": "ai-platform/drift-monitor",
@@ -2628,8 +2698,8 @@
   "skill": "ai-platform/drift-monitor",
   "caseId": "agent-happy-path",
   "run": 2,
-  "selected": "ai-slo-definition",
-  "correct": 0
+  "selected": "drift-monitor",
+  "correct": 1
  },
  {
   "skill": "ai-platform/drift-monitor",
@@ -2768,8 +2838,8 @@
   "skill": "ai-platform/eval-engineering-runner",
   "caseId": "agent-below-target-fails",
   "run": 1,
-  "selected": "feedback-improvement-loop",
-  "correct": 0
+  "selected": "eval-engineering-runner",
+  "correct": 1
  },
  {
   "skill": "ai-platform/eval-engineering-runner",
@@ -2789,8 +2859,8 @@
   "skill": "ai-platform/eval-engineering-runner",
   "caseId": "agent-mode-new",
   "run": 1,
-  "selected": "llm-eval-harness",
-  "correct": 0
+  "selected": "eval-engineering-runner",
+  "correct": 1
  },
  {
   "skill": "ai-platform/eval-engineering-runner",
@@ -2817,8 +2887,8 @@
   "skill": "ai-platform/eval-engineering-runner",
   "caseId": "agent-below-target-fails",
   "run": 2,
-  "selected": "feedback-improvement-loop",
-  "correct": 0
+  "selected": "eval-engineering-runner",
+  "correct": 1
  },
  {
   "skill": "ai-platform/eval-engineering-runner",
@@ -2838,8 +2908,8 @@
   "skill": "ai-platform/eval-engineering-runner",
   "caseId": "agent-mode-new",
   "run": 2,
-  "selected": "llm-eval-harness",
-  "correct": 0
+  "selected": "eval-engineering-runner",
+  "correct": 1
  },
  {
   "skill": "ai-platform/feedback-improvement-loop",
@@ -3013,15 +3083,15 @@
   "skill": "ai-platform/guardrails-config",
   "caseId": "agent-wrong-expectation-fails",
   "run": 1,
-  "selected": "red-team-suite",
-  "correct": 0
+  "selected": "guardrails-config",
+  "correct": 1
  },
  {
   "skill": "ai-platform/guardrails-config",
   "caseId": "agent-partial-policy-no-tests",
   "run": 1,
-  "selected": "domain-modeling-runner",
-  "correct": 0
+  "selected": "guardrails-config",
+  "correct": 1
  },
  {
   "skill": "ai-platform/guardrails-config",
@@ -3062,15 +3132,15 @@
   "skill": "ai-platform/guardrails-config",
   "caseId": "agent-wrong-expectation-fails",
   "run": 2,
-  "selected": "red-team-suite",
-  "correct": 0
+  "selected": "guardrails-config",
+  "correct": 1
  },
  {
   "skill": "ai-platform/guardrails-config",
   "caseId": "agent-partial-policy-no-tests",
   "run": 2,
-  "selected": "domain-modeling-runner",
-  "correct": 0
+  "selected": "guardrails-config",
+  "correct": 1
  },
  {
   "skill": "ai-platform/guardrails-config",
@@ -3102,6 +3172,34 @@
  },
  {
   "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-missing-inputs",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-no-throughput-no-guess",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
   "caseId": "happy-path-self-host-vs-rent",
   "run": 2,
   "selected": "infra-gpu-sizing",
@@ -3117,6 +3215,34 @@
  {
   "skill": "ai-platform/infra-gpu-sizing",
   "caseId": "api-vs-hosted-low-volume",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-missing-inputs",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-no-throughput-no-guess",
+  "run": 2,
+  "selected": "infra-gpu-sizing",
+  "correct": 1
+ },
+ {
+  "skill": "ai-platform/infra-gpu-sizing",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "infra-gpu-sizing",
   "correct": 1
@@ -3398,7 +3524,7 @@
   "skill": "ai-platform/llm-cost-model",
   "caseId": "gpu-question-routed",
   "run": 1,
-  "selected": "model-selection",
+  "selected": "infra-gpu-sizing",
   "correct": 0
  },
  {
@@ -3440,8 +3566,8 @@
   "skill": "ai-platform/llm-cost-model",
   "caseId": "agent-mode-existing",
   "run": 1,
-  "selected": "ai-finops-chargeback",
-  "correct": 0
+  "selected": "llm-cost-model",
+  "correct": 1
  },
  {
   "skill": "ai-platform/llm-cost-model",
@@ -3454,7 +3580,7 @@
   "skill": "ai-platform/llm-cost-model",
   "caseId": "gpu-question-routed",
   "run": 2,
-  "selected": "model-selection",
+  "selected": "infra-gpu-sizing",
   "correct": 0
  },
  {
@@ -3496,8 +3622,8 @@
   "skill": "ai-platform/llm-cost-model",
   "caseId": "agent-mode-existing",
   "run": 2,
-  "selected": "ai-finops-chargeback",
-  "correct": 0
+  "selected": "llm-cost-model",
+  "correct": 1
  },
  {
   "skill": "ai-platform/llm-eval-harness",
@@ -3559,15 +3685,15 @@
   "skill": "ai-platform/llm-observability",
   "caseId": "agent-missing-slo",
   "run": 1,
-  "selected": "ai-slo-definition",
-  "correct": 0
+  "selected": "llm-observability",
+  "correct": 1
  },
  {
   "skill": "ai-platform/llm-observability",
   "caseId": "agent-breach-and-no-cost-guess",
   "run": 1,
-  "selected": "ai-finops-chargeback",
-  "correct": 0
+  "selected": "llm-observability",
+  "correct": 1
  },
  {
   "skill": "ai-platform/llm-observability",
@@ -3594,8 +3720,8 @@
   "skill": "ai-platform/llm-observability",
   "caseId": "agent-breach-and-no-cost-guess",
   "run": 2,
-  "selected": "ai-finops-chargeback",
-  "correct": 0
+  "selected": "llm-observability",
+  "correct": 1
  },
  {
   "skill": "ai-platform/mcp-server-builder",
@@ -4077,15 +4203,15 @@
   "skill": "ai-platform/red-team-suite",
   "caseId": "agent-canary-leak-fails-gate",
   "run": 1,
-  "selected": "ai-slo-definition",
-  "correct": 0
+  "selected": "red-team-suite",
+  "correct": 1
  },
  {
   "skill": "ai-platform/red-team-suite",
   "caseId": "agent-no-threshold-no-default",
   "run": 1,
-  "selected": "llm-eval-harness",
-  "correct": 0
+  "selected": "red-team-suite",
+  "correct": 1
  },
  {
   "skill": "ai-platform/red-team-suite",
@@ -4119,15 +4245,15 @@
   "skill": "ai-platform/red-team-suite",
   "caseId": "agent-canary-leak-fails-gate",
   "run": 2,
-  "selected": "ai-slo-definition",
-  "correct": 0
+  "selected": "red-team-suite",
+  "correct": 1
  },
  {
   "skill": "ai-platform/red-team-suite",
   "caseId": "agent-no-threshold-no-default",
   "run": 2,
-  "selected": "llm-eval-harness",
-  "correct": 0
+  "selected": "red-team-suite",
+  "correct": 1
  },
  {
   "skill": "ai-platform/slm-demo-builder",
@@ -6261,8 +6387,8 @@
   "skill": "presales/effort-estimator",
   "caseId": "happy-path-wbs-and-model",
   "run": 1,
-  "selected": "integration-migration-assessor",
-  "correct": 0
+  "selected": "effort-estimator",
+  "correct": 1
  },
  {
   "skill": "presales/effort-estimator",
@@ -6274,6 +6400,41 @@
  {
   "skill": "presales/effort-estimator",
   "caseId": "adversarial-fabrication-unit-efforts",
+  "run": 1,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-missing-wbs",
+  "run": 1,
+  "selected": "llm-cost-model",
+  "correct": 0
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-no-rate-card-no-price",
+  "run": 1,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-mode-existing",
   "run": 1,
   "selected": "effort-estimator",
   "correct": 1
@@ -6282,8 +6443,8 @@
   "skill": "presales/effort-estimator",
   "caseId": "happy-path-wbs-and-model",
   "run": 2,
-  "selected": "integration-migration-assessor",
-  "correct": 0
+  "selected": "effort-estimator",
+  "correct": 1
  },
  {
   "skill": "presales/effort-estimator",
@@ -6295,6 +6456,41 @@
  {
   "skill": "presales/effort-estimator",
   "caseId": "adversarial-fabrication-unit-efforts",
+  "run": 2,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-missing-wbs",
+  "run": 2,
+  "selected": "llm-cost-model",
+  "correct": 0
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-no-rate-card-no-price",
+  "run": 2,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "effort-estimator",
+  "correct": 1
+ },
+ {
+  "skill": "presales/effort-estimator",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "effort-estimator",
   "correct": 1

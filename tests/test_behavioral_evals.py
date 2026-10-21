@@ -160,3 +160,38 @@ def test_agent_mode_merges_into_existing_scorecard(tmp_path):
     cells = [c.strip() for c in line.strip("|").split("|")]
     assert cells[6] == "BOTH" and cells[7] == "1.00" and cells[8] == "Works"  # old verdict kept
     assert (out / "trigger.csv").exists() and (out / "quality.csv").exists()
+
+
+def _module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("behavioral_evals_mod", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(SCRIPT.parent))
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.path.pop(0)
+    return mod
+
+
+def test_case_prompt_carries_the_case_inputs(tmp_path):
+    mod = _module()
+    (tmp_path / "evals" / "fixtures" / "repo").mkdir(parents=True)
+    (tmp_path / "evals" / "fixtures" / "jd.txt").write_text("Senior Director, Apps\nMust: ERP", encoding="utf-8")
+    (tmp_path / "evals" / "fixtures" / "repo" / "a.py").write_text("print(1)\n", encoding="utf-8")
+    skill = {"dir": tmp_path}
+    plain = {"prompt": "Score this.", "expected": ["x"]}
+    assert mod.case_user_prompt(skill, plain) == "Score this."
+    case = {"prompt": "Score this.", "inputs": {"jd": "evals/fixtures/jd.txt", "repo": "evals/fixtures/repo", "client": "Acme", "out": "{out}/x"}}
+    text = mod.case_user_prompt(skill, case)
+    assert text.startswith("Score this.\n\nInputs supplied with this request:")
+    assert "Must: ERP" in text and "evals/fixtures/repo/a.py" in text and "print(1)" in text
+    assert "client: Acme" in text and "out: {out}/x" in text
+
+
+def test_case_prompt_caps_long_files(tmp_path):
+    mod = _module()
+    (tmp_path / "evals" / "fixtures").mkdir(parents=True)
+    (tmp_path / "evals" / "fixtures" / "big.csv").write_text("x" * (mod.ATTACH_FILE_CHARS + 50), encoding="utf-8")
+    text = mod.case_user_prompt({"dir": tmp_path}, {"prompt": "p", "inputs": {"data": "evals/fixtures/big.csv"}})
+    assert "[... 50 more characters not shown]" in text
