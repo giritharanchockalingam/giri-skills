@@ -13,6 +13,7 @@
     {
       "id": "prompt-routes-red-team",
       "prompt": "Our chatbot is live; can you try to jailbreak it and see if it leaks the system prompt?",
+      "routes_to": "red-team-suite",
       "expected": [
         "Routes live adversarial testing to red-team-suite; offers this skill for the design-level threat model"
       ]

@@ -13,6 +13,7 @@
     {
       "id": "prompt-drift-routed",
       "prompt": "Has the distribution of our model's confidence scores shifted since launch?",
+      "routes_to": "drift-monitor",
       "expected": [
         "Routes distribution drift to drift-monitor; this skill measures SLIs against objectives"
       ]

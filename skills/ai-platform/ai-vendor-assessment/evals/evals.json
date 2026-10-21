@@ -13,6 +13,7 @@
     {
       "id": "prompt-routes-model-selection",
       "prompt": "Which LLM should we use for summarisation given these eval scores, token prices and latency numbers?",
+      "routes_to": "model-selection",
       "expected": [
         "Routes model choice on eval, price and latency facts to model-selection; offers this skill for vendor and contract risk comparison"
       ]

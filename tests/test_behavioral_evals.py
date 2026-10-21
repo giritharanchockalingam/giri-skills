@@ -206,3 +206,25 @@ def test_quality_bar_lift_or_normalised_gain_near_a_ceiling():
     assert not mod.quality_ok(0.60, 0.75)                   # gain 0.375
     assert not mod.quality_ok(0.95, 0.90) and not mod.quality_ok(1.0, 1.0)   # never by getting worse or with no gain
     assert mod.skill_verdict(0.79, 0.30, 0.60) == "DESC" and mod.skill_verdict(0.79, 0.5, 0.5) == "BOTH"
+
+
+def test_boundary_case_routes_to_its_target():
+    mod = _module()
+    skill = {"name": "drift-monitor"}
+    assert mod.routing_target(skill, {"id": "x"}) == "drift-monitor"
+    assert mod.routing_target(skill, {"id": "y", "routes_to": "ai-slo-definition"}) == "ai-slo-definition"
+
+
+def test_restate_recomputes_routing_with_routes_to(tmp_path):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("merge_mod", REPO / "scripts" / "merge_eval_results.py")
+    m = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(REPO / "scripts"))
+    try:
+        spec.loader.exec_module(m)
+    finally:
+        sys.path.pop(0)
+    rows = [{"skill": "ai-platform/drift-monitor", "case_id": "prompt-latency-slo-routed", "selected": "ai-slo-definition"},
+            {"skill": "ai-platform/drift-monitor", "case_id": "happy-path", "selected": "drift-monitor"},
+            {"skill": "(negative)", "case_id": "neg-01", "selected": "none"}]
+    assert m.trigger_accuracy(rows) == {"ai-platform/drift-monitor": 1.0}

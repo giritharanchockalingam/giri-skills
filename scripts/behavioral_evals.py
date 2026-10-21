@@ -380,6 +380,12 @@ def with_system(skill) -> str:
     return "\n".join(parts)
 
 
+def routing_target(skill: dict, case: dict) -> str:
+    """The skill a case's prompt should route to: its own skill, or `routes_to` for a boundary case written to check
+    that a neighbouring request goes elsewhere (counting those as misses penalised the skill for routing correctly)."""
+    return str(case.get("routes_to") or skill["name"])
+
+
 def parse_router(output: str, skills) -> str:
     token = output.strip().split()[0].strip("`\"'.,").lower() if output.strip() else "none"
     names = {s["name"].lower(): s["name"] for s in skills}
@@ -685,8 +691,9 @@ def main() -> int:
         if kind in ("router", "neg_router"):
             selected = parse_router(out, skills)
             if kind == "router":
-                skill_name = next(s["name"] for s in skills if s["key"] == call["skill"])
-                correct = "1" if selected == skill_name else "0"
+                owner = next(s for s in skills if s["key"] == call["skill"])
+                case = next((c for c in owner["cases"] if c.get("id") == call["case_id"]), {})
+                correct = "1" if selected == routing_target(owner, case) else "0"
                 trigger_rows.append([call["skill"], call["case_id"], call["run"],
                                      selected, correct])
             else:

@@ -13,6 +13,7 @@
     {
       "id": "prompt-latency-slo-routed",
       "prompt": "Are we meeting our p95 latency target this week?",
+      "routes_to": "ai-slo-definition",
       "expected": [
         "Routes latency and availability objectives to ai-slo-definition or llm-observability; drift-monitor compares distributions only"
       ]
