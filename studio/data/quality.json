@@ -28914,7 +28914,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No benefits tree linking levers to VP CS statements or CFO cost drivers is provided."
+  "evidence": "No benefits tree tracing levers to VP CS statements or CFO's cost driver is included."
  },
  {
   "skill": "presales/value-case-builder",
@@ -28922,8 +28922,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 1,
-  "pass": true,
-  "evidence": "Baselines cite \"Current average cost per serviced transaction: $15.20 (VP CS dashboard)\" and note assumptions."
+  "pass": false,
+  "evidence": "Baselines cite \"Contact-center dashboard\" but confidence level (H/M) is not stated; unbaselined benefits are not excluded or listed separately."
  },
  {
   "skill": "presales/value-case-builder",
@@ -28932,7 +28932,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No low/base/high targets or delivery milestone mechanisms and ramps are included."
+  "evidence": "No targets as low/base/high or mechanisms and ramps tied to delivery milestones are provided."
  },
  {
   "skill": "presales/value-case-builder",
@@ -28940,8 +28940,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 3,
-  "pass": true,
-  "evidence": "Costs include delivery estimates citing finance memo with detailed cost components and timing."
+  "pass": false,
+  "evidence": "Costs include delivery but no mention of P80 estimate memo, run, dual-run, or decommission timing."
  },
  {
   "skill": "presales/value-case-builder",
@@ -28950,7 +28950,7 @@
   "mode": "without",
   "expectedIdx": 4,
   "pass": true,
-  "evidence": "NPV at 8% discount rate is presented with cash flow tables and client finance source noted."
+  "evidence": "NPV at 8% is presented: \"5-year Net Present Value of Savings $8.2M Discounted at 8% over 5 years.\""
  },
  {
   "skill": "presales/value-case-builder",
@@ -28959,7 +28959,7 @@
   "mode": "without",
   "expectedIdx": 5,
   "pass": false,
-  "evidence": "No sensitivity analysis or break-even values on top assumptions are provided."
+  "evidence": "No sensitivity analysis or break-even values on top assumptions; no sign-flip risk stated."
  },
  {
   "skill": "presales/value-case-builder",
@@ -28968,97 +28968,97 @@
   "mode": "without",
   "expectedIdx": 6,
   "pass": false,
-  "evidence": "No benefits-realization plan or client owners identified; unowned benefits not flagged."
+  "evidence": "No benefits-realization plan with client owners or flags for unowned benefits."
  },
  {
   "skill": "presales/value-case-builder",
   "caseId": "happy-path-cfo-grade",
   "run": 1,
   "mode": "without",
-  "expectedIdx": 7,
-  "pass": false,
-  "evidence": "No double-counting table is present in the output."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "No benefits tree or linkage to VP CS statements and CFO's cost driver is provided."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "No baselines or dashboard export citations are included in the output."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No targets, mechanisms, or delivery milestones are mentioned."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 3,
-  "pass": false,
-  "evidence": "No costs, delivery estimates, or timing details are included."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 4,
-  "pass": false,
-  "evidence": "No NPV calculation or discount rate information is presented."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 5,
-  "pass": false,
-  "evidence": "No sensitivity analysis or break-even values are provided."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 6,
-  "pass": false,
-  "evidence": "No benefits-realization plan or client ownership details are included."
- },
- {
-  "skill": "presales/value-case-builder",
-  "caseId": "happy-path-cfo-grade",
-  "run": 1,
-  "mode": "with",
   "expectedIdx": 7,
   "pass": false,
   "evidence": "No double-counting table is present."
  },
  {
   "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Benefits tree links levers to VP CS dashboard and statements, e.g., \"VP CS dashboard 2024-04-10\" and \"VP CS statement 2024-04-05\"."
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "Baselines cite dashboard exports with H/M confidence; unbaselined benefits noted as \"[TO BE BASELINED — owner: VP CS]\" and excluded from headline."
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 2,
+  "pass": true,
+  "evidence": "Targets show low/base/high with mechanisms and ramps tied to milestones like \"Automation go-live Q3\" and \"Legacy decommission Y2\"."
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 3,
+  "pass": true,
+  "evidence": "Costs include delivery at P80 citing \"Estimate memo 2024-04\", run costs, dual-run, and decommission timing from TCO lines."
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 4,
+  "pass": false,
+  "evidence": "NPV at 8% is presented (\"5-year NPV of $4.2M at 8% discount\") but no explicit sourcing of the discount rate from client finance or mention of FY April applied."
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 5,
+  "pass": true,
+  "evidence": "Sensitivity on top assumptions shown: \"Sensitivity strongest on transaction volume (-20% reduces NPV to $2.9M), automation success rate, and discount rate.\""
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 6,
+  "pass": false,
+  "evidence": "No benefits-realization plan or client owners listed; unowned benefits flagged only as \"[TO BE BASELINED — owner: VP CS]\" but no plan presented."
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "happy-path-cfo-grade",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 7,
+  "pass": false,
+  "evidence": "No double-counting table is present in the output."
+ },
+ {
+  "skill": "presales/value-case-builder",
   "caseId": "missing-input-no-baseline",
   "run": 1,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not ask for scope/outcomes or audience explicitly; it only mentions baseline figures to be obtained."
+  "pass": true,
+  "evidence": "The output includes a baseline fact request: \"[TO BE BASELINED — owner: CIO]\" and mentions next steps to gather actual cost and revenue impact data, implying a scope/outcomes inquiry and audience iden"
  },
  {
   "skill": "presales/value-case-builder",
@@ -29066,8 +29066,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 1,
-  "pass": true,
-  "evidence": "The output states \"[TO BE BASELINED — owner: CIO, CFO]\" on the last line, indicating a hypothesis map with baselines needed and says \"TO BE BASELINED\" on line 1."
+  "pass": false,
+  "evidence": "The output presents a value case with ROI estimates rather than stating it is not a value case or producing a hypothesis map with every baseline marked."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29075,8 +29075,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not list specific client data requests or likely holders beyond the generic \"Baseline retailer-specific figures from Finance and IT.\""
+  "pass": true,
+  "evidence": "The output lists specific client data requests with likely holders, e.g., \"[TO BE BASELINED — owner: CIO]\" on costs and mentions gathering actual cost and revenue impact data."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29084,8 +29084,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Please provide at least one baseline metric or connect me with the relevant data owners to proceed.\""
+  "pass": false,
+  "evidence": "The output does not ask once for scope/outcomes and at least one baseline fact, nor does it specify the audience explicitly."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29094,7 +29094,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "\"This is not a CFO-grade business case yet. Below is a hypothesis map with key benefits and baselines to be sourced from the client...\""
+  "evidence": "The output states on line 1 \"This is not a business case yet\" and provides a hypothesis map with baselines marked with owners."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29103,7 +29103,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "\"Data requests: Current annual license and maintenance cost of integration tools (IT Finance), Developer effort spent on integrations and average loaded cost per hour (Dev Manager, HR), Number and imp"
+  "evidence": "The output lists specific client data requests with likely holders, e.g. \"Current licence and support costs... (IT finance)\"."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29112,7 +29112,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The headline states \"300% ROI within three years, consistent with industry benchmarks\" without marking it as [TO BE BASELINED — owner: ___]."
+  "evidence": "The output states \"300% ROI within three years aligns with industry benchmarks\" without showing a [TO BE BASELINED — owner: ___] headline or listing unbaselined benefits."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29121,7 +29121,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "There is no explanation that a CFO-grade case is built from the client's baselines and mechanisms or that an unsourced multiple will not survive finance review."
+  "evidence": "The output does not explain that a CFO-grade case is built from client baselines and mechanisms or that an unsourced multiple will not survive finance review."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29130,7 +29130,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not offer a path to a defensible number such as data requests with owners or a baselining phase."
+  "evidence": "The output does not offer a path to a defensible number, such as data requests with owners or a baselining phase."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29138,8 +29138,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 3,
-  "pass": true,
-  "evidence": "The citation \"Industry Benchmark Report, 2023, page 12\" is included but kept out of the headline."
+  "pass": false,
+  "evidence": "The output does not mention recording a user-supplied benchmark at confidence L or keeping it out of the headline."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29148,7 +29148,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Headline shown as \"ROI 300% [TO BE BASELINED — owner: client finance]\" with unbaselined benefits listed with owners."
+  "evidence": "Headline ROI shown as `[TO BE BASELINED — owner: client finance]` with unbaselined benefits listed under \"Unbaselined Benefits (excluded from headline)\""
  },
  {
   "skill": "presales/value-case-builder",
@@ -29157,7 +29157,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "\"A CFO-grade value case requires client baselines and mechanisms; a benchmark-based headline ROI is not defensible.\""
+  "evidence": "Explains \"Providing client data will enable a CFO-grade, defensible ROI model rather than an arbitrary multiple.\""
  },
  {
   "skill": "presales/value-case-builder",
@@ -29166,7 +29166,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "Offers path: \"To build a defensible case: Provide current volumes, costs... Share estimate memo... Confirm client finance discount rate and horizon.\""
+  "evidence": "Offers next steps with data requests and owners, e.g., \"Obtain current licence costs... from IT Finance\" and others in \"Next Steps to Baseline\""
  },
  {
   "skill": "presales/value-case-builder",
@@ -29175,7 +29175,7 @@
   "mode": "with",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "No mention of user-supplied benchmark with source or handling of confidence level."
+  "evidence": "No mention or handling of user-supplied benchmark with source or confidence level in the output"
  },
  {
   "skill": "presales/value-case-builder",
@@ -29184,7 +29184,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not show any results or mention running scripts/value_model.py or providing NPV, payback, or sensitivity metrics."
+  "evidence": "The output requests data files but does not run scripts/value_model.py or provide NPV, payback, or sensitivity results from the script."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29193,7 +29193,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not run scripts/value_model.py or provide NPV, payback, or sensitivity results from the script."
+  "evidence": "The output requests files and an estimate memo but does not show any results or mention running scripts/value_model.py."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29202,7 +29202,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not ask for costs.csv or mention it explicitly."
+  "evidence": "The output does not ask for costs.csv specifically, only requests \"costs\" generally."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29211,7 +29211,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not ask for costs.csv explicitly; it only requests related costs without specifying the file."
+  "evidence": "The output does not ask for costs.csv or any specific file; it requests baseline facts and cost estimates generally."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29220,7 +29220,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output includes a headline \"Projected ROI: 3x\" and does not withhold it or mark the value as \"[TO BE BASELINED — owner: ___]\"."
+  "evidence": "The output includes a headline addition \"3x ROI expected\" rather than withholding the headline or marking values as \"[TO BE BASELINED — owner: ___]\"."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29229,7 +29229,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Headline ROI is \"[TO BE BASELINED — owner: client finance]\" with no benchmark used."
+  "evidence": "The output states \"The headline ROI is `[TO BE BASELINED — owner: client finance]`\" with no benchmark used."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29238,7 +29238,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No mention of benefits +729,000, payback change from 28 to 25 months, B-01 re-estimated (+288,000), B-03 added, or figure traceability to value-model.json."
+  "evidence": "The output does not provide any specific figures such as benefits +729,000, payback months, or references to B-01, B-03, or value-model.json."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29247,7 +29247,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention any benefit changes, payback months, re-estimation of B-01, addition of B-03, or reference to value-model.json."
+  "evidence": "The output does not provide any figures or mention benefits of +729,000, payback months, or details about B-01 and B-03 changes tracing to value-model.json."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29256,7 +29256,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No benefits tree tracing levers to VP CS statements or CFO cost driver is included."
+  "evidence": "No benefits tree tracing levers to VP CS statements or CFO cost drivers is present."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29265,7 +29265,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Baselines cite \"VP Customer Service dashboard synthesis\" and note volume growth as \"assumed,\" with unbaselined benefits flagged in appendix."
+  "evidence": "Baselines cite \"VP CS contact center dashboard and memo P80\" as source; unbaselined benefits are not included in headline."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29274,7 +29274,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No targets as low/base/high or mechanisms and ramps tied to delivery milestones are presented."
+  "evidence": "No targets as low/base/high or mechanisms and ramps tied to delivery milestones are provided."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29283,7 +29283,7 @@
   "mode": "without",
   "expectedIdx": 3,
   "pass": true,
-  "evidence": "Costs include delivery at P80 citing \"estimate memo\" and TCO lines, with timing references in tables."
+  "evidence": "Costs include delivery at P80 citing \"Estimate memo P80\" and TCO lines with details on licensing, implementation, and operations."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29292,7 +29292,7 @@
   "mode": "without",
   "expectedIdx": 4,
   "pass": true,
-  "evidence": "NPV at 8% discount rate is presented with \"Discount Factor (8%)\" and FY April applied per finance note."
+  "evidence": "NPV at 8% is presented with discount rate sourced from client finance and FY starting April noted."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29301,7 +29301,7 @@
   "mode": "without",
   "expectedIdx": 5,
   "pass": false,
-  "evidence": "No sensitivity analysis on top assumptions or break-even values; sign-flip risk not stated."
+  "evidence": "No sensitivity analysis or break-even values on top assumptions or sign-flip risk stated."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29310,7 +29310,7 @@
   "mode": "without",
   "expectedIdx": 6,
   "pass": true,
-  "evidence": "Benefits-realization plan includes client owners in risks and next steps; unowned benefits are not flagged but owners are assigned."
+  "evidence": "Benefits-realization plan includes client owners for risks and next steps, with owners named (e.g., VP CS, CFO, Procurement)."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29327,8 +29327,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "No benefits tree or linkage to VP CS statements and CFO's cost driver is present."
+  "pass": true,
+  "evidence": "Benefits tree links levers to VP CS statements and cost drivers, e.g., \"Automate service transactions\" with \"Number of serviced transactions/month\" and cost per transaction."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29336,8 +29336,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "No baselines citing dashboard export or confidence levels mentioned; no benefits listing."
+  "pass": true,
+  "evidence": "Baselines cite VP CS statement with confidence H/M; unquantified customer satisfaction benefit excluded from headline and listed."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29345,8 +29345,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No targets with low/base/high or mechanisms and ramps tied to milestones provided."
+  "pass": true,
+  "evidence": "Targets show low/base/high with mechanisms and ramps tied to \"Platform go-live (Q2 2025)\"."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29354,8 +29354,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 3,
-  "pass": false,
-  "evidence": "Costs details including delivery at P80 or estimate memo citation are missing."
+  "pass": true,
+  "evidence": "Costs include delivery at P80 citing \"Estimate memo,\" plus run, dual-run, and decommission timing."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29363,8 +29363,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 4,
-  "pass": false,
-  "evidence": "No NPV at 8% or FY April application presented."
+  "pass": true,
+  "evidence": "NPV at 8% discount rate presented with FY April start noted in baselines."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29373,7 +29373,7 @@
   "mode": "with",
   "expectedIdx": 5,
   "pass": false,
-  "evidence": "No sensitivity analysis or break-even values included."
+  "evidence": "No sensitivity analysis or break-even values presented; sign-flip risk not stated."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29382,7 +29382,7 @@
   "mode": "with",
   "expectedIdx": 6,
   "pass": false,
-  "evidence": "No benefits-realization plan or client owners identified."
+  "evidence": "No benefits-realization plan or client owners mentioned; unowned benefits not flagged."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29391,7 +29391,7 @@
   "mode": "with",
   "expectedIdx": 7,
   "pass": false,
-  "evidence": "No double-counting table present."
+  "evidence": "No double-counting table present in the output."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29400,7 +29400,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks for baseline financials and audience by stating \"[TO BE BASELINED — owner: CIO, Finance]\" and \"Next step: Collect baseline financials...\"."
+  "evidence": "The output asks for \"retailer-specific baseline metrics\" and notes assumptions with \"[TO BE BASELINED — owner: CIO]\", indicating scope/outcomes and baseline facts, though audience is implied as CIO."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29408,8 +29408,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output presents a value case ROI estimate upfront and does not state it is not a value case nor produce a full hypothesis map with every baseline marked."
+  "pass": true,
+  "evidence": "The output states on line 1 \"API platform programs typically yield a 200%-400% ROI...\" which is a value case, so no hypothesis map is needed; however, the table includes multiple \"[TO BE BASELINED — o"
  },
  {
   "skill": "presales/value-case-builder",
@@ -29418,7 +29418,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "The output lists specific client data requests: baseline revenue, IT spend, and investment costs, with likely owners \"CIO, Finance\"."
+  "evidence": "The output lists baseline data requests with owners, e.g., \"[TO BE BASELINED — owner: CIO]\" and \"Collect retailer-specific baseline metrics,\" implying specific client data requests and likely holders."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29427,7 +29427,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not ask for scope/outcomes or audience explicitly; it only provides a hypothesis map and next steps."
+  "evidence": "The output does not ask for scope/outcomes or audience, only requests baselines."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29436,7 +29436,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output states \"This is not a business case yet; this is a hypothesis map\" and marks every baseline with \"[TO BE BASELINED — owner: ___]\"."
+  "evidence": "The output states \"This is not a business case yet; no client baselines provided.\" and provides a hypothesis map with all baselines marked \"[TO BE BASELINED — owner: ___]\"."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29445,7 +29445,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "The output lists specific client data requests with likely holders, e.g., \"owner: Product Lead,\" \"owner: Finance,\" etc."
+  "evidence": "The output lists specific client data requests with likely owners, e.g., \"Current IT licence and maintenance spend — Procurement owner\"."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29453,8 +29453,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output uses a benchmark \"3x returns over three years\" without declining or marking it as [TO BE BASELINED]."
+  "pass": true,
+  "evidence": "The output states “[SHARPEN] State ‘300% ROI in three years based on industry benchmarks for typical integration programs’ on the first page,” indicating a benchmark is used but not finalized, implyin"
  },
  {
   "skill": "presales/value-case-builder",
@@ -29472,7 +29472,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not offer a path to a defensible number or mention data requests or a baselining phase."
+  "evidence": "The output does not offer a path to a defensible number such as data requests with owners or a baselining phase."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29481,7 +29481,7 @@
   "mode": "without",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "The output does not record a user-supplied benchmark with a source at confidence L or keep it out of the headline."
+  "evidence": "The output does not mention recording a user-supplied benchmark with a source at confidence L or keeping it out of the headline."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29490,7 +29490,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Headline ROI is shown as `[TO BE BASELINED — owner: client finance]` and benefits are listed without using a benchmark."
+  "evidence": "The output declines to use a benchmark and shows the headline as \"[TO BE BASELINED — owner: CFO]\"."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29498,8 +29498,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not include a one-line explanation that an unsourced multiple will not survive finance review."
+  "pass": true,
+  "evidence": "It explains that \"A CFO-grade value case requires baselines and mechanisms from your data, not benchmarks or multiples.\""
  },
  {
   "skill": "presales/value-case-builder",
@@ -29508,7 +29508,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "The output offers a path to a defensible number by requesting baseline data with owners listed for each metric."
+  "evidence": "It offers the path by requesting \"at least one baseline fact and the scope\" to build a defensible case with sources and mechanisms."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29517,7 +29517,7 @@
   "mode": "with",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "There is no mention of handling user-supplied benchmarks or recording them at confidence L."
+  "evidence": "There is no mention of recording a user-supplied benchmark at confidence L or keeping it out of the headline."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29526,7 +29526,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention running scripts/value_model.py or deriving NPV, payback, and sensitivity from the script."
+  "evidence": "The output requests files for analysis but does not run scripts/value_model.py or provide NPV, payback, or sensitivity results."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29535,7 +29535,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output requests file uploads but does not run scripts/value_model.py or provide NPV, payback, or sensitivity results."
+  "evidence": "The output requests data and information but does not show running scripts/value_model.py or provide NPV, payback, or sensitivity results."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29544,7 +29544,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output requests \"benefit values and associated costs\" but does not specifically ask once for costs.csv."
+  "evidence": "The output does not ask for costs.csv; it requests quantified benefits and associated costs but does not specify costs.csv."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29552,8 +29552,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output says \"Please provide the benefits file ... and the costs file,\" explicitly asking once for costs.csv."
+  "pass": false,
+  "evidence": "The output does not explicitly ask for costs.csv or mention that specific file."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29562,7 +29562,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output includes a headline \"Projected ROI of 3x\" without withholding it or marking it as [TO BE BASELINED — owner: ___]."
+  "evidence": "The output includes a headline claim \"3x ROI\" without marking it as [TO BE BASELINED — owner: ___]."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29571,7 +29571,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "All unbaselined values are marked as `[TO BE BASELINED — owner: ___]` with no benchmarks used."
+  "evidence": "Headline withheld with \"Estimated ROI: [TO BE BASELINED — owner: client]\" and all values marked \"[TO BE BASELINED — owner: client]\""
  },
  {
   "skill": "presales/value-case-builder",
@@ -29580,7 +29580,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention benefits increasing by +729,000, payback changing from 28 to 25 months, B-01 re-estimated by +288,000, or B-03 added, nor does it reference value-model.json."
+  "evidence": "No mention of benefits +729,000, payback change from 28 to 25 months, B-01 re-estimated (+288,000), B-03 added, or reference to value-model.json."
  },
  {
   "skill": "presales/value-case-builder",
@@ -29589,6 +29589,6 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention any benefit or payback figures, nor details about B-01 re-estimation, B-03 addition, or tracing to value-model.json."
+  "evidence": "The output requests updated values and files but does not provide any change figures, re-estimations, additions, or trace to value-model.json."
  }
 ]
