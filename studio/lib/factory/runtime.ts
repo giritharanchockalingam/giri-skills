@@ -29,6 +29,8 @@ export function runtimeConfig(): RuntimeConfig {
   return { ok: true, url: `${host.replace(/\/$/, "")}/api/py/run`, reason: null };
 }
 
+export const runtimeHeadersForServer = (): Record<string, string> => runtimeHeaders();
+
 function runtimeHeaders(): Record<string, string> {
   const h: Record<string, string> = { "content-type": "application/json", "x-sf-runtime-secret": process.env.SF_RUNTIME_SECRET ?? "" };
   // Vercel deployment protection (preview URLs): pass the bypass secret when the project has one
@@ -94,6 +96,8 @@ export interface ExecuteOptions {
   isCancelled?: () => Promise<boolean>;
   /** Version status; anything past draft must run on its pinned repository files. */
   status?: string;
+  /** The version being run: a repo version past draft runs on its frozen files (lib/factory/snapshot.ts). */
+  versionId?: string;
 }
 
 export interface RunPatch {
@@ -120,7 +124,17 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
   const allowedProviders = o.policy?.allowed_providers ?? ["none", "anthropic", "openai_compat"];
   if (!allowedProviders.includes(provider)) return base("failed", `workspace policy does not allow provider "${provider}"`);
 
-  const pin = checkPin(o.source, o.status);
+  // a library version past draft runs on the files it was reviewed with (frozen copy), so library changes never stop it
+  let frozen: { files: { path: string; content: string }[]; sha256: string } | null = null;
+  if (o.source.kind === "repo" && o.versionId && o.status && o.status !== "draft") {
+    try {
+      const { ensureSnapshot } = await import("./snapshot");
+      frozen = await ensureSnapshot(o.versionId);
+    } catch (e) {
+      return base("failed", `frozen files: ${(e as Error).message}`);
+    }
+  }
+  const pin = frozen ? { ok: true as const, note: null } : checkPin(o.source, o.status);
   if (!pin.ok) return base("failed", pin.reason);
 
   const cfg = runtimeConfig();
@@ -130,7 +144,9 @@ export async function executeRun(o: ExecuteOptions): Promise<RunPatch & { respon
 
   const body = {
     run_id: o.runId,
-    skill: o.source.kind === "repo" ? { kind: "repo", repo_skill: o.source.repo_skill } : { kind: "authored", slug: o.slug, manifest: o.manifest, files: o.files },
+    skill: o.source.kind === "repo"
+      ? { kind: "repo", repo_skill: o.source.repo_skill, ...(frozen ? { snapshot: frozen.files, snapshot_sha: frozen.sha256 } : {}) }
+      : { kind: "authored", slug: o.slug, manifest: o.manifest, files: o.files },
     inputs, assumptions: o.assumptions,
     provider, model: o.manifest.model_config.model, temperature: o.manifest.model_config.temperature, max_tokens: o.manifest.model_config.max_tokens,
     timeout_s: o.manifest.limits.timeout_s, max_retries: o.manifest.limits.max_retries, checks: o.checks ?? null,

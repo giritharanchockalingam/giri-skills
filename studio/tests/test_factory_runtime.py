@@ -386,3 +386,42 @@ def test_git_skill_runs_with_only_the_vendored_git(rt, monkeypatch, tmp_path):
     })
     assert res["status"] == "succeeded", res["error"]
     assert all(c["pass"] for c in res["case_checks"]), res["case_checks"]
+
+
+def test_export_and_snapshot_run_use_the_frozen_files(rt):
+    # a version past draft runs on its frozen files, even when the deployed copy of the skill has changed
+    exp = rt.export_skill("presales/effort-estimator")
+    assert exp["sha256"] == rt.snapshot_sha(exp["files"]) and any(f["path"] == "SKILL.md" for f in exp["files"])
+    frozen = [dict(f) for f in exp["files"]]
+    marker = "frozen-copy-marker-7f3a"
+    for f in frozen:
+        if f["path"] == "SKILL.md":
+            f["content"] += f"\n<!-- {marker} -->\n"
+    sha = rt.snapshot_sha(frozen)
+    wbs = _fixture_text(rt, "presales/effort-estimator", "evals/fixtures/wbs.csv")
+    rates = _fixture_text(rt, "presales/effort-estimator", "evals/fixtures/rates.csv")
+    req = {"run_id": "t-snap-1", "skill": {"kind": "repo", "repo_skill": "presales/effort-estimator", "snapshot": frozen, "snapshot_sha": sha},
+           "inputs": {"wbs": {"kind": "text", "content": wbs, "ext": "csv"}, "rates": {"kind": "text", "content": rates, "ext": "csv"},
+                      "client": {"kind": "value", "value": "Acme"}}, "provider": "none", "timeout_s": 50}
+    seen = {}
+    real_apply = rt.apply_snapshot
+    def spy(skill_dir, files):
+        real_apply(skill_dir, files)
+        seen["skill_md"] = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+    rt.apply_snapshot = spy
+    try:
+        res = rt.execute(req)
+    finally:
+        rt.apply_snapshot = real_apply
+    assert marker in seen["skill_md"], "the run used the frozen SKILL.md"
+    assert any(o["path"] == "estimate.json" for o in res["outputs"]), res["error"]
+    bad = rt.execute({**req, "run_id": "t-snap-2", "skill": {**req["skill"], "snapshot_sha": "0" * 64}})
+    assert bad["status"] == "failed" and "do not match" in bad["error"]
+    evil = rt.execute({**req, "run_id": "t-snap-3", "skill": {**req["skill"], "snapshot": [{"path": "../x", "content": ""}], "snapshot_sha": rt.snapshot_sha([{"path": "../x", "content": ""}])}})
+    assert evil["status"] == "failed" and "bad file path" in evil["error"]
+
+
+def test_snapshot_sha_matches_the_server_algorithm(rt):
+    # lib/factory/snapshot.ts snapshotSha: sha256 over path\0content\0, sorted by path (tests/snapshot.test.ts pins the same value)
+    assert rt.snapshot_sha([{"path": "b.txt", "content": "é"}, {"path": "SKILL.md", "content": "x"}]) == \
+        "5f50a239db8dbb132a45af4d145a3b70272c8762b9675ae530b2733d8209b2c9"

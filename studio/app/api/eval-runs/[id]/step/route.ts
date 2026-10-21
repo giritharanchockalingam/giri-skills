@@ -46,7 +46,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         const runId = String(created.run_id);
         await ctx.supabase.from("sf_runs").update({ status: "running", started_at: new Date().toISOString() }).eq("id", runId);
         const files = version.source.kind === "authored" ? (must(await ctx.supabase.from("sf_files").select("path, content").eq("version_id", version.id), "files") as { path: string; content: string }[]) : [];
-        const patch = await executeRun({ runId, manifest: version.manifest, source: version.source, slug: version.sf_skills.slug, files, inputs: validated.inputs, assumptions, policy: await getPolicy(ctx), checks, status: version.status });
+        const patch = await executeRun({ runId, manifest: version.manifest, source: version.source, slug: version.sf_skills.slug, files, inputs: validated.inputs, assumptions, policy: await getPolicy(ctx), checks, status: version.status, versionId: version.id });
         const { response, ...row } = patch;
         await ctx.supabase.from("sf_runs").update(row).eq("id", runId);
         const cc = response?.case_checks ?? [];

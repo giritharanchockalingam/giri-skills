@@ -139,7 +139,7 @@ export async function runApproved(ctx: WsCtx, actionId: string): Promise<Request
   const runId = String(created.run_id);
   await ctx.supabase.from("sf_runs").update({ status: "running", started_at: new Date().toISOString() }).eq("id", runId);
   const files = sv.version.source.kind === "authored" ? (must(await ctx.supabase.from("sf_files").select("path, content").eq("version_id", sv.version.id), "files") as { path: string; content: string }[]) : [];
-  const patch = await executeRun({ runId, manifest: sv.version.manifest, source: sv.version.source, slug: sv.skill.slug, files, inputs: validated.inputs, assumptions: {}, policy: await getPolicy(ctx), status: sv.version.status });
+  const patch = await executeRun({ runId, manifest: sv.version.manifest, source: sv.version.source, slug: sv.skill.slug, files, inputs: validated.inputs, assumptions: {}, policy: await getPolicy(ctx), status: sv.version.status, versionId: sv.version.id });
   const { response, ...row } = patch;
   void response;
   await ctx.supabase.from("sf_runs").update(row).eq("id", runId);

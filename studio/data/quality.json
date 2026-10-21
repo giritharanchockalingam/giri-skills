@@ -21966,7 +21966,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No verdict line with score /100 is present in the output."
+  "evidence": "No verdict with score /100 is present in the output."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -21975,7 +21975,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "No bucket table with must 60 / nice 25 / culture 15 and math is shown."
+  "evidence": "No bucket table with must, nice, culture, and math is shown."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -21984,7 +21984,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No MATCH or PARTIAL citations of profile lines are included."
+  "evidence": "No MATCH or PARTIAL cites a profile line in the output."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -21993,7 +21993,7 @@
   "mode": "without",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "No gap table or mitigations for gaps are provided."
+  "evidence": "No gap table or mitigations for GAPs are included."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22002,7 +22002,7 @@
   "mode": "without",
   "expectedIdx": 4,
   "pass": false,
-  "evidence": "No red flags or penalties are listed; only a request for files is given."
+  "evidence": "No red flags or penalties are listed; only 'none detected' is missing."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22010,8 +22010,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not include a verdict with a score out of 100."
+  "pass": true,
+  "evidence": "First line is \"GO — 91/100 — Strong matches on all must-haves and nice-to-haves, with location and travel aligned.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22019,8 +22019,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "There is no bucket table showing must 60 / nice 25 / culture 15 or any math."
+  "pass": true,
+  "evidence": "Bucket table shows must 60 / nice 25 / culture 15 and the math with totals."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22028,8 +22028,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No MATCH or PARTIAL citations referencing profile lines are present."
+  "pass": true,
+  "evidence": "Every MATCH cites a profile line, e.g. \"enterprise application development leadership\" for 10+ years."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22037,8 +22037,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 3,
-  "pass": false,
-  "evidence": "There is no gap table or mitigations for any gaps."
+  "pass": true,
+  "evidence": "Gap table has a mitigation \"N/A\" for every GAP (none present)."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22046,89 +22046,89 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 4,
+  "pass": true,
+  "evidence": "Red flags listed as \"none detected.\""
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Provide the JD text and your résumé to receive a scored match\" asks once for the résumé."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "The output states it can only assess JD clarity and completeness without the résumé, indicating no scoring from memory or job title."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 2,
+  "pass": true,
+  "evidence": "The output does not fabricate experience; it requests the résumé to assess."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Please provide your profile keywords file or master résumé so I can score the job description accurately.\""
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "The output explicitly requests the profile keywords file or résumé and does not attempt to score from memory or job title."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "missing-profile",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 2,
+  "pass": true,
+  "evidence": "The output does not provide any fabricated experience; it only requests information."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output states \"This makes you a mismatch on two critical requirements,\" indicating a NO-GO verdict due to hard constraints."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "Both hard constraints \"clearance\" and \"travel availability\" are explicitly named in \"clearance and travel availability.\""
+ },
+ {
+  "skill": "career/jd-fit-scorer",
+  "caseId": "hard-constraint-override",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 2,
   "pass": false,
-  "evidence": "No red flags or penalties are listed; the output only requests files."
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Please provide your résumé to score the JD against your experience accurately.\""
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": true,
-  "evidence": "\"Without it, I can only assess the JD standalone.\""
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 2,
-  "pass": true,
-  "evidence": "The output does not attempt to score or fabricate experience without the résumé."
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Please provide your profile keywords file or master résumé to score this JD accurately.\""
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": true,
-  "evidence": "\"Scoring requires your skills and limits, not just job titles or memory.\""
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "missing-profile",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 2,
-  "pass": true,
-  "evidence": "The output explicitly requests the profile keywords file or résumé and does not attempt to score or fabricate experience."
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output states \"The VP IT JD scores low for your profile fit\" and \"Recommendation: Do not pursue,\" indicating a NO-GO verdict due to hard constraints."
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": true,
-  "evidence": "Both hard constraints are named explicitly: \"Clearance gap is disqualifying for a must-have active TS/SCI\" and \"The travel requirement exceeds your max by 35 percentage points.\""
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "hard-constraint-override",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not suggest logging in a tracker as Passed with reason."
+  "evidence": "The output does not suggest logging in tracker as Passed with reason; it only recommends addressing gaps."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22137,7 +22137,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Verdict stated as \"NO-GO — Hard constraints violated\" despite no matched items in buckets."
+  "evidence": "Verdict is NO-GO due to hard constraints: \"NO-GO — Hard constraints violated: active TS/SCI clearance required and travel 60% exceed profile max 25%.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22146,7 +22146,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Both hard constraints \"requires active TS/SCI clearance\" and \"60% travel\" are explicitly named in the red flags section."
+  "evidence": "Both hard-constraint hits named explicitly: \"Active TS/SCI clearance\" and \"Travel up to 60%\" listed as gaps with \"NO-GO hard constraint.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22155,7 +22155,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "Next action states \"Pass; log as failed due to clearance and travel hard constraints.\""
+  "evidence": "Suggests logging in tracker as Passed with reason: \"Next action: Pass; log role as passed in application tracker due to clearance and travel requirements.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22164,7 +22164,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention running scripts/score.py or producing a weighted score, bucket table, or go/no-go verdict."
+  "evidence": "The output only requests uploading files and does not run scripts or provide scoring results."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22173,7 +22173,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention running scripts/score.py or providing a weighted score, bucket table, or go/no-go verdict."
+  "evidence": "The output requests files but does not mention running scripts/score.py or providing a weighted score, bucket table, or verdict."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22182,7 +22182,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output asks for \"job description (JD) and your relevant experience or resume,\" but does not request the profile keyword file."
+  "evidence": "The output asks for \"job description text or key details,\" not the profile keyword file."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22191,7 +22191,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output explicitly asks for \"your profile keyword file or master résumé.\""
+  "evidence": "The output explicitly asks for \"your profile keyword file or résumé.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22200,7 +22200,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention or use any supplied threshold or reference a script verdict."
+  "evidence": "The output does not mention or use any supplied threshold or reference a script for the verdict."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22209,7 +22209,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention or use any supplied threshold or indicate that the verdict comes from the script."
+  "evidence": "The output does not mention or use any threshold, nor indicate that the verdict comes from the script."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22218,7 +22218,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not match requirements to résumé lines with MR-L ids or compute a verdict; it only requests the résumé content."
+  "evidence": "The output requests files for comparison but does not match requirements to résumé lines with MR-L ids or compute a verdict."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22236,7 +22236,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not contain a verdict with a score /100 as the first line."
+  "evidence": "No verdict with score /100 is present in the first line."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22245,7 +22245,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "There is no bucket table showing must 60 / nice 25 / culture 15 and the math."
+  "evidence": "No bucket table with must/nice/culture scores and math is shown."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22254,7 +22254,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No MATCH or PARTIAL citations referencing a profile line are present."
+  "evidence": "Matches are listed but no profile lines are cited for any MATCH or PARTIAL."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22263,7 +22263,7 @@
   "mode": "without",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "The output does not include a gap table or mitigations for any gaps."
+  "evidence": "No gap table or mitigations for gaps are included."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22271,8 +22271,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 4,
-  "pass": false,
-  "evidence": "There are no red flags listed with penalties or 'none detected'."
+  "pass": true,
+  "evidence": "Red flags are listed as 'none detected' implicitly by absence of any mention."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22280,8 +22280,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "No verdict line with score /100 is present in the output."
+  "pass": true,
+  "evidence": "Verdict line states \"GO — 94/100\" at the top of the output."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22289,8 +22289,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "No bucket table with must 60 / nice 25 / culture 15 or math is shown."
+  "pass": true,
+  "evidence": "Bucket table shows must 60 / nice 25 / culture 15 with correct math totaling 100."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22298,8 +22298,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No MATCH or PARTIAL citations of profile lines are included."
+  "pass": true,
+  "evidence": "Every MATCH cites a profile line, e.g. \"budget ownership $38M\" and \"ERP consolidation (SAP S/4HANA)\"."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22307,8 +22307,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 3,
-  "pass": false,
-  "evidence": "No gap table or mitigations for gaps are provided."
+  "pass": true,
+  "evidence": "Gap table shows mitigations for every GAP; here no gaps so mitigations are blank as expected."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22316,8 +22316,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 4,
-  "pass": false,
-  "evidence": "No red flags or penalties are listed; only a request to upload files is present."
+  "pass": true,
+  "evidence": "Red flags section states \"none detected\" with no penalties listed."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22326,7 +22326,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks once for the résumé: \"Please provide your résumé...\""
+  "evidence": "The output asks once for the résumé or key qualifications: \"Please provide your résumé or key qualifications.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22335,7 +22335,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output does not score from memory or job title; it requests the résumé to score accurately."
+  "evidence": "The output does not score from memory or job title; it requests information first."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22353,7 +22353,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Please provide your profile keyword file or master résumé to score this JD.\""
+  "evidence": "The output asks once for \"your profile keyword file or master résumé.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22362,7 +22362,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output explicitly requests the profile file and does not attempt scoring from memory or job title."
+  "evidence": "The output states \"Scoring requires your skills and limits data for matching,\" indicating it does not score from memory or job title."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22371,7 +22371,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "The output does not fabricate experience; it asks for information to assess the fit accurately."
+  "evidence": "The output does not fabricate experience; it requests data to score accurately."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22379,8 +22379,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not explicitly state a NO-GO verdict, only that the fit is low and clearance mismatch is critical."
+  "pass": true,
+  "evidence": "The output states \"Your profile scores low for this JD\" due to lack of clearance and travel percentage, indicating a NO-GO verdict due to hard constraints."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22389,7 +22389,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Both hard constraints \"Clearance\" and \"Travel\" are named explicitly in the table and discussed."
+  "evidence": "Both hard constraints are explicitly named: \"lack an active TS/SCI clearance\" and \"travel max (25%) is well below the required 60%.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22398,7 +22398,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "There is no suggestion to log in tracker as Passed with reason."
+  "evidence": "The output does not suggest logging in tracker as Passed with reason."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22407,7 +22407,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Verdict is \"NO-GO — Hard constraints breached\" despite zero matches in buckets."
+  "evidence": "Verdict is NO-GO due to hard constraints: \"NO-GO — Hard constraints breached\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22416,7 +22416,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Both hard constraints \"Active TS/SCI clearance\" and \"Travel ≤60%\" are named explicitly with evidence."
+  "evidence": "Both hard-constraint hits named explicitly: \"Active TS/SCI clearance\" and \"Travel up to 60%\" listed with penalties R9 and R8"
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22425,34 +22425,34 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "Suggests \"Pass; log as Passed due to hard clearance and travel constraints.\""
+  "evidence": "Suggests logging in tracker as Passed with reason: \"Next action: Pass; log role as Passed due to clearance and travel constraints.\""
  },
  {
   "skill": "career/jd-fit-scorer",
   "caseId": "agent-happy-path",
   "run": 2,
   "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not mention running scripts/score.py or providing a weighted score, bucket table, or go/no-go verdict."
- },
- {
-  "skill": "career/jd-fit-scorer",
-  "caseId": "agent-happy-path",
-  "run": 2,
-  "mode": "with",
   "expectedIdx": 0,
   "pass": false,
   "evidence": "The output does not mention running scripts/score.py or producing a weighted score, bucket table, or go/no-go verdict."
  },
  {
   "skill": "career/jd-fit-scorer",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not mention running scripts/score.py or providing a weighted score, bucket table, or go/no-go verdict."
+ },
+ {
+  "skill": "career/jd-fit-scorer",
   "caseId": "agent-missing-profile",
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output asks for \"job description (JD) details or key requirements,\" not the profile keyword file."
+  "evidence": "The output asks for \"job description or key details,\" not specifically for the \"profile keyword file.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22461,7 +22461,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks for \"your profile keyword file or résumé\" to score the fit accurately."
+  "evidence": "The output explicitly asks for \"your profile keyword file or résumé.\""
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22470,7 +22470,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"I will count only exact matches with no exceptions,\" indicating use of the supplied threshold and verdict from the script."
+  "evidence": "The output states, \"I will count only exact matches with strict criteria,\" indicating use of a supplied threshold and verdict from the script."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22479,7 +22479,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention or use any supplied threshold or verdict from the script."
+  "evidence": "The output does not mention or use any threshold or verdict from a script."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22488,7 +22488,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not match requirements to résumé lines with MR-L ids or compute a verdict."
+  "evidence": "The output requests the job description and résumé but does not match requirements to résumé lines with MR-L ids or compute a verdict."
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -22497,7 +22497,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output requests résumé and job description files but does not match requirements to résumé lines with MR-L ids or compute a verdict."
+  "evidence": "The output requests files but does not match requirements to résumé lines with MR-L ids or compute a verdict."
  },
  {
   "skill": "career/offer-evaluator",

@@ -15,11 +15,13 @@ Security model
     when the handler is not on the main thread. Retries: bounded by limits.max_retries, only on 429/5xx/network.
 
 Request (JSON):
-  {run_id, skill: {kind:"repo", repo_skill:"domain/name"} | {kind:"authored", slug, manifest, files:[{path,content}]},
+  {run_id, skill: {kind:"repo", repo_skill:"domain/name", snapshot?:[{path,content}], snapshot_sha?} | {kind:"authored", slug, manifest, files:[{path,content}]},
    inputs: {name: {kind:"text",content,ext?} | {kind:"value",value} | {kind:"fixture",path}
                  | {kind:"files", files:[{path,content}]}  (a folder, e.g. an existing repo's migrations)}, assumptions: {name: value},
    provider: "none"|"anthropic", model, temperature, max_tokens, timeout_s, max_retries, checks?: [eval-case checks]}
 Response (JSON): see `execute()`; always HTTP 200 with a `status` field, or 4xx/5xx with {"error": ...}.
+Export (JSON): {export:"domain/name"} -> {repo_skill, files:[{path,content}], sha256}: a repo skill's own files as this
+  deployment holds them, so the server can freeze a version's reviewed files (lib/factory/snapshot.ts).
 """
 from __future__ import annotations
 
@@ -93,6 +95,44 @@ def load_bundle() -> dict:
 
 def sha256_text(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+SNAPSHOT_PATH = re.compile(r"[A-Za-z0-9._ ()\[\]@+,=~-]{1,120}(/[A-Za-z0-9._ ()\[\]@+,=~-]{1,120}){0,11}")
+
+
+def snapshot_sha(files: list) -> str:
+    """sha256 over a skill's own files, sorted by path: the identity of a reviewed version's files (lib/factory/snapshot.ts)."""
+    h = hashlib.sha256()
+    for f in sorted(files, key=lambda x: x["path"]):
+        h.update(f["path"].encode("utf-8") + b"\0" + f["content"].encode("utf-8") + b"\0")
+    return h.hexdigest()
+
+
+def export_skill(repo_skill: str) -> dict:
+    """A repo skill's own files as this deployment holds them (SKILL.md, scripts, assets, references, evals)."""
+    bundle = load_bundle()
+    if not re.fullmatch(r"[a-z0-9-]+/[a-z0-9-]+", repo_skill or "") or f"skills/{repo_skill}/SKILL.md" not in bundle:
+        raise ValueError(f"unknown repo skill: {repo_skill}")
+    prefix = f"skills/{repo_skill}/"
+    files = [{"path": k[len(prefix):], "content": v} for k, v in bundle.items() if k.startswith(prefix)]
+    return {"repo_skill": repo_skill, "files": files, "sha256": snapshot_sha(files)}
+
+
+def apply_snapshot(skill_dir: Path, files: list) -> None:
+    """Replace the deployed copy of a repo skill with the files its version was reviewed on (immutable versions)."""
+    if not isinstance(files, list) or not files:
+        raise ValueError("snapshot: no files")
+    for f in files:
+        rel = str((f or {}).get("path", ""))
+        if not SNAPSHOT_PATH.fullmatch(rel) or any(part in ("", ".", "..") for part in rel.split("/")):
+            raise ValueError(f"snapshot: bad file path: {rel[:80]}")
+    if "SKILL.md" not in {f["path"] for f in files}:
+        raise ValueError("snapshot: SKILL.md missing")
+    shutil.rmtree(skill_dir, ignore_errors=True)
+    for f in files:
+        dest = skill_dir.joinpath(*f["path"].split("/"))
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(str(f.get("content", "")), encoding="utf-8")
 
 
 def compat_price():
@@ -453,6 +493,11 @@ def execute(req: dict) -> dict:
             if not re.fullmatch(r"[a-z0-9-]+/[a-z0-9-]+", repo_skill) or f"skills/{repo_skill}/SKILL.md" not in bundle:
                 raise ValueError(f"unknown repo skill: {repo_skill}")
             skill_arg, skill_dir = repo_skill, repo / "skills" / repo_skill
+            if skill.get("snapshot") is not None:   # a version past draft runs on the files it was reviewed with
+                snap = skill["snapshot"]
+                if snapshot_sha(snap) != str(skill.get("snapshot_sha", "")):
+                    raise ValueError("snapshot: files do not match their recorded sha256")
+                apply_snapshot(skill_dir, snap)
         elif skill.get("kind") == "authored":
             skill_dir = write_authored(repo, str(skill.get("slug") or ""), skill.get("manifest") or {}, skill.get("files") or [])
             skill_arg = f"authored/{skill.get('slug')}"
@@ -674,6 +719,11 @@ class handler(BaseHTTPRequestHandler):  # noqa: N801 (Vercel requires this name)
             return self._json(400, {"error": f"bad JSON body: {e}"})
         if not isinstance(req, dict):
             return self._json(400, {"error": "body must be a JSON object"})
+        if "export" in req:
+            try:
+                return self._json(200, export_skill(str(req["export"])))
+            except Exception as e:  # noqa: BLE001
+                return self._json(400, {"error": str(e)})
         return self._json(200, execute(req))
 
     def log_message(self, *args):  # quiet: Vercel captures stdout anyway

@@ -1,6 +1,7 @@
-/* Service-role Supabase client. SERVER ONLY, and used by exactly one caller: the GitHub webhook processor
- * (lib/automations/process.ts), which has no user session. Every query it makes is explicitly scoped to the
- * workspace that owns the verified GitHub installation. Never import this from a page, component or action. */
+/* Service-role Supabase client. SERVER ONLY. Two callers: the GitHub webhook processor (lib/automations/process.ts),
+ * which has no user session and scopes every query to the workspace that owns the verified installation; and
+ * lib/factory/snapshot.ts, which writes frozen version files (a table users can read but never write). Never import
+ * this from a page or component. */
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "./env";
