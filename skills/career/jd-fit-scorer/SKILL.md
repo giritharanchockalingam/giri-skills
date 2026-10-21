@@ -1,6 +1,6 @@
 ---
 name: jd-fit-scorer
-description: Use when the user pastes a job description (JD) or job link and asks whether to apply, how well they fit, or to score/rank roles. Produces a weighted fit score (must-haves 60%, nice-to-haves 25%, culture/logistics 15%, red flags subtract), a gap table, and a go/no-go call for senior director / VP / executive IT roles. Requires the user's profile keywords or master résumé; never invents experience.
+description: Use when the user pastes a job description (JD) or job link and asks whether to apply, how well they fit, or to score/rank roles — including a scoring request made before the résumé or profile is shared, and how strict the matching should be ("exact matches only", a higher match threshold). Produces a weighted fit score (must-haves 60%, nice-to-haves 25%, culture/logistics 15%, red flags subtract), a gap table, and a go/no-go call for senior director / VP / executive IT roles. Requires the user's profile keywords or master résumé; never invents experience.
 license: MIT
 metadata:
   domain: career
@@ -29,6 +29,7 @@ metadata:
 ## In a conversation: score the role now
 - **The JD and the profile (keyword file or résumé) are both supplied** (even if "pasted" or "attached" and only partly visible): score in this reply, in this order: (1) first line is the verdict — `GO / LEAN GO / LEAN NO / NO-GO — <score>/100 — <reason>`; (2) bucket table with weights must-haves 60 / nice-to-haves 25 / culture-logistics 15, items, MATCH / PARTIAL / GAP counts and the math (`bucket = weight × Σcredit ÷ items`, MATCH 1.0, PARTIAL 0.5, total minus red-flag penalties); (3) gap table — every MATCH or PARTIAL cites the profile line it rests on, every GAP has a mitigation or "accept gap"; (4) red flags with penalties, or "none detected"; (5) next action. Requirements or profile lines not visible in the conversation are `[TO BE BASELINED — owner: ___]`, and the verdict line says which inputs it still depends on. Never reply with only a request for files.
 - **A hard constraint is breached** (active clearance required but the profile says none; travel above the profile's max + 15 points; location, comp floor): check these before any score. The verdict is **NO-GO** regardless of the keyword score; name each constraint hit explicitly with the JD text and the profile line; suggest logging the role in the tracker as Passed with the reason (`application-tracker`).
+- **Asked to change how strict matching is** ("only count exact matches", "be strict"): raise the match threshold (the share of a requirement's words the profile must carry; default 0.5, e.g. 0.9 for near-exact) and rescore — weaker overlaps become GAP, not PARTIAL. The verdict still comes from the same weights and rules; say in the verdict line which threshold was used.
 - **No profile or résumé supplied**: ask once for the profile keyword file or master résumé. Do not score from memory, from the user's job title or from earlier conversation, and do not state any experience the user has not supplied.
 
 ## Starting points

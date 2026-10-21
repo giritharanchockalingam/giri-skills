@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Use pre-merge or pre-release to security-review a diff, PR or feature in the Next.js + Supabase + Vercel stack — "review this PR before merge", "security review this diff", "is our app secure?", a route handler or server action that takes tenantId from the query string or body, uses the admin/service-role client, or bypasses RLS. Produces a reasoning-based review (surface inventory and threat model per change: authz, injection, secrets, RLS bypass, SSRF, IDOR, mass assignment, server-action pitfalls) with severity-rated findings and fixes applied in code, not a generic checklist. Wraps the sentry security-review skill when installed. Do not use for fixing a reported bug that has a repro and no security angle (safe-fix) or for schema authoring (supabase-schema-rls).
+description: Use pre-merge or pre-release to security-review a diff, PR or feature in the Next.js + Supabase + Vercel stack — "review this PR before merge", "security review this diff", "is our app secure?", a route handler or server action that takes tenantId from the query string or body, uses the admin/service-role client, or bypasses RLS, or a diff reviewed together with the repository code around it (callers, handlers, components). Produces a reasoning-based review (surface inventory and threat model per change: authz, injection, secrets, RLS bypass, SSRF, IDOR, mass assignment, server-action pitfalls) with severity-rated findings and fixes applied in code, not a generic checklist. Wraps the sentry security-review skill when installed. Do not use for fixing a reported bug that has a repro and no security angle (safe-fix) or for schema authoring (supabase-schema-rls).
 license: MIT
 metadata:
   domain: build
@@ -26,8 +26,12 @@ metadata:
 
 # security-review
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/security-review --input <name>=<value> … --out <dir>` (see `--explain build/security-review`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The scan always writes its findings and the review step reasons on them; the gate check then fails the run (exit 1) when any critical/high finding remains, so a risky diff is reported, never waved through.
+## In a conversation: review now
+- **The change is described or pasted** (a PR summary, a diff, a route handler, "takes tenantId from the query string and uses the admin client"): write the review **in this reply**. Start with the **surface inventory** (changed files grouped by surface: route handlers, server actions, middleware, policies, client components, env, external calls, and what each trusts), then the **findings table, worst first**: severity (reachability × impact, e.g. Critical = R2 × I3), title, trace entry → sink with file:line at each hop (`route.ts:12 → services/x.ts:30 → admin client → invoices`), impact, fix, test. For each Critical/High add a short exploit sketch and the fix in code: tenant from the session, the cookie-bound (RLS) client instead of the admin client, an authz guard, plus a negative regression test that fails before the fix. Lay the reply out on `assets/review-report.md`'s sections: Findings (worst first) · Threat model record · Surfaces reviewed · Verification · Out of scope / parked.
+- **The diff lands in an existing repo and the user wants the surrounding code checked**: review the diff and, in the same table, the callers, handlers and components it touches — name each file reviewed so the threat-model record shows full coverage; existing issues (e.g. `dangerouslySetInnerHTML` on content from the database) are rated like new ones and marked "existing".
+- **Nothing security-relevant changed** (CSS, README, copy): say so in one line and show the surface inventory that proves it. Do not invent generic findings (rate limiting, headers) the change does not touch.
+- **No diff, PR or scope at all** ("is our app secure?", "review my change"): ask once for the diff or PR and the trust model (roles, tenancy, public endpoints). Do not produce a generic checklist.
+- **Asked to approve with a known secret or bypass left in** ("the token is fine to keep in code"): the finding stays Critical/High and the review is not approved; give the fix (move the secret to server env, rotate it).
 
 ## Starting points
 - **New** — the diff of a new feature is scanned on its added lines; the model step writes the traced review, or with `draft_only` the review record is written from the scan alone, labelled as a draft.
@@ -64,6 +68,9 @@ If a required input is missing, ask for it once; do not guess.
 | Fixes | minimal diffs |
 | Regression tests | `tests/**` |
 | Report | `docs/security/<date>-<scope>.md` from `assets/review-report.md` |
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/security-review --input <name>=<value> … --out <dir>` (see `--explain build/security-review`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The scan always writes its findings and the review step reasons on them; the gate check then fails the run (exit 1) when any critical/high finding remains, so a risky diff is reported, never waved through.
 
 ## Self-check
 - [ ] Every finding has an entry→sink trace with file:line

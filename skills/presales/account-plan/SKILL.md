@@ -1,6 +1,6 @@
 ---
 name: account-plan
-description: Use when the user asks to build or refresh a quarterly or annual account plan, account strategy, or account review for an existing or target client. Produces a one-page-first account plan — account snapshot, relationship and stakeholder map with coverage gaps, white-space map (our services × their business units/platforms), pipeline table, risks to the account, and 90-day plays with owners and dates — with every revenue, pipeline, or stakeholder fact sourced to the user's inputs or marked [TO BE BASELINED — owner: ___]. Do not use for pre-pitch research on a new logo (client-research-brief) or for a single-pursuit battle card (competitive-positioning).
+description: Use when the user asks to build or refresh a quarterly or annual account plan, account strategy, or account review for an existing or target client — including weighting the account's pipeline (win probabilities, deal values the CRM lacks) or setting the account target. Produces a one-page-first account plan — account snapshot, relationship and stakeholder map with coverage gaps, white-space map (our services × their business units/platforms), pipeline table, risks to the account, and 90-day plays with owners and dates — with every revenue, pipeline, or stakeholder fact sourced to the user's inputs or marked [TO BE BASELINED — owner: ___]. Do not use for pre-pitch research on a new logo (client-research-brief) or for a single-pursuit battle card (competitive-positioning).
 license: MIT
 metadata:
   domain: presales
@@ -29,6 +29,7 @@ metadata:
 # account-plan
 
 ## In a conversation: write the plan now
+The reply **is the plan**: its first line is `Posture: <Grow / Defend / Harvest / Enter> — <the facts that drove it>`, never a question or a request for files. Questions for missing facts go at the end.
 - **The request carries account facts** (engagements, end dates, pipeline, stakeholders, events such as a sponsor leaving), or says the CRM export, stakeholder list, catalog or prior plan are attached but their contents are not in the conversation: write the full account plan **in this reply** from the stated facts. Never reply with only a request for files. In this order, page 1 standing alone:
   1. **Posture on line 1** (Grow / Defend / Harvest / Enter) with the two or three facts that drove it (e.g. sponsor departure, nearest engagement end date).
   2. **Snapshot** — revenue, active engagements with end dates, contract vehicles; each cell sourced ("CRM export, <date>") or `[TO BE BASELINED — owner: ___]`. Weighted pipeline only when the CRM supplies probabilities, and say so.
