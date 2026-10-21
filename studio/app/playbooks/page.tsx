@@ -39,7 +39,7 @@ export default async function AgentsPage() {
               const last = runs.find((r) => vs.some((v) => v.id === r.agent_version_id));
               return (
                 <tr key={a.id}>
-                  <td><Link href={`/agents/${a.slug}`} className="link"><b>{/^[a-z0-9-]+$/.test(a.name) ? humanName(a.name) : a.name}</b></Link></td>
+                  <td><Link href={`/playbooks/${a.slug}`} className="link"><b>{/^[a-z0-9-]+$/.test(a.name) ? humanName(a.name) : a.name}</b></Link></td>
                   <td>{latest ? latest.spec.steps.length : 0}</td>
                   <td>{latest ? <span style={{ whiteSpace: "nowrap" }}>v{latest.version} <span className="pill pill-sm">{latest.status}</span></span> : "—"}</td>
                   <td>{last ? <Link href={`/agent-runs/${last.id}`} className="link" title="Open this run">{last.status.replace(/_/g, " ")}</Link> : <span className="none">never</span>} {last && <span className="caption"><LocalTime iso={last.created_at} /></span>}</td>

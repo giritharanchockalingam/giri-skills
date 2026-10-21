@@ -19,7 +19,7 @@ export async function TalentDetail({ kind, slug, v }: { kind: "role" | "pool"; s
   const current = versions.find((x) => String(x.version) === v) ?? versions.find((x) => x.status === "draft") ?? versions[0];
   if (!current) notFound();
   const editable = current.status === "draft" && can(ctx.role, "talent.edit");
-  const base = kind === "role" ? "/roles" : "/pools";
+  const base = kind === "role" ? "/roles" : "/teams";
   const [playbooks, roles] = await Promise.all([workspacePlaybooks(ctx), kind === "pool" ? workspaceRoles(ctx) : Promise.resolve(new Map())]);
   const stages = [...STAGES, ...SHELVES];
   const catalog = skillCatalogLite();

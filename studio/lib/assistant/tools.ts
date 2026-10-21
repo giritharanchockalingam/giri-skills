@@ -46,7 +46,7 @@ export const CHECK_TITLES: Record<string, string> = {
 /** Same relevance floor as the MCP find_skill tool: secondary hits must score ≥ half the best. */
 const RELEVANCE_FLOOR = 0.5;
 const repoHref = (id: string) => `/catalog/${id}`;
-const skillHref = (id: string) => `/repo/${id}`;
+const skillHref = (id: string) => `/library/${id}`;
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 /** A repository named in a question: exact owner/name, then exact name, then a unique partial match. */

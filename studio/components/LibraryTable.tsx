@@ -44,7 +44,7 @@ export function LibraryTable({ rows, stages, workspace }: { rows: LibraryRow[]; 
           <tbody>
             {list.map((r) => (
               <tr key={r.id}>
-                <td><Link href={`/repo/${r.id}/`} className="cell-name">{r.title}</Link><div className="caption">{r.outcome}</div></td>
+                <td><Link href={`/library/${r.id}/`} className="cell-name">{r.title}</Link><div className="caption">{r.outcome}</div></td>
                 <td className="muted">{r.stage}</td>
                 <td><Approved r={r} /></td>
                 <td><Evidence r={r} /></td>
@@ -55,7 +55,7 @@ export function LibraryTable({ rows, stages, workspace }: { rows: LibraryRow[]; 
         </table></div>
         <div className="row-list only-mobile">
           {list.map((r) => (
-            <Link key={r.id} href={`/repo/${r.id}/`} className="row-card">
+            <Link key={r.id} href={`/library/${r.id}/`} className="row-card">
               <div className="row-card-top"><span className="row-card-name">{r.title}</span><Evidence r={r} /></div>
               <div className="row-card-desc">{r.outcome}</div>
               <div className="row-card-meta"><span>{r.stage}</span><Approved r={r} /></div>

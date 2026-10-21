@@ -41,7 +41,7 @@ export default async function AgentRunPage({ params, searchParams }: { params: P
     <>
       <PageHead eyebrow={`Playbook run · v${version.version}`} title={skillTitle(version.sf_agents.name)} em=""
         lead={<><span className={`pill ${TONE[run.status]}`}>{LABEL[run.status]}</span> {run.error && <span className="caption"> {run.error}</span>}</>}
-        caption={<>Started <LocalTime iso={run.created_at} /> · {run.steps.filter((s) => s.status === "ok" || s.status === "approved").length}/{spec.steps.length} steps{run.cost_usd != null ? ` · model cost ≈$${Number(run.cost_usd).toFixed(4)}` : ""} · <Link href={`/agents/${version.sf_agents.slug}?v=${version.version}`} className="link">configuration</Link></>} />
+        caption={<>Started <LocalTime iso={run.created_at} /> · {run.steps.filter((s) => s.status === "ok" || s.status === "approved").length}/{spec.steps.length} steps{run.cost_usd != null ? ` · model cost ≈$${Number(run.cost_usd).toFixed(4)}` : ""} · <Link href={`/playbooks/${version.sf_agents.slug}?v=${version.version}`} className="link">configuration</Link></>} />
       {run.status !== "running" && (() => {
         const lead = deliverables.find((d) => d.f.path.endsWith(".md") && summaryOf(d.f.content_text));
         const blocked = run.steps.find((x) => x.status === "blocked" || x.status === "failed");

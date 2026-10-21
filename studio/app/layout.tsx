@@ -6,7 +6,7 @@ import { SectionTabs } from "@/components/SectionTabs";
 
 export const metadata: Metadata = {
   title: "Skills Factory · giri-skills",
-  description: "Create, test, evaluate, approve, publish and run AI skills — with the giri-skills catalog, evals and upstream library.",
+  description: "Create, test, evaluate, approve, publish and run AI skills — with the giri-skills catalog, evaluations and reference skills.",
 };
 
 const FONTS =

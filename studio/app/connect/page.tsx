@@ -95,12 +95,12 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
             <button type="submit" className="btn btn-secondary btn-sm">Show</button>
           </form>
         )}
-        <p className="mt-4" style={{ marginBottom: 0 }}><b>{live}</b> tool{live === 1 ? "" : "s"} live on this server{rows.length > live ? <span className="caption"> · {rows.length - live} more skill{rows.length - live === 1 ? "" : "s"} in scope become tools once published</span> : null}</p>
+        <p className="mt-4" style={{ marginBottom: 0 }}><b>{live}</b> published skill{live === 1 ? "" : "s"} on this server{rows.length > live ? <span className="caption"> · {rows.length - live} more skill{rows.length - live === 1 ? "" : "s"} in scope join once published</span> : null}</p>
         {rows.length > live && (
           <div className="mt-3">
             <div className="hero-actions">
               {funnel.some((f) => f.gate === "ready") && <Link className="btn btn-primary btn-sm" href="/pipeline?gate=ready">Publish the {funnel.filter((f) => f.gate === "ready").length} ready</Link>}
-              <span className="caption">Only tested, approved versions become tools here. Skill owners publish them in the <Link className="link" href="/pipeline">publish pipeline</Link>.</span>
+              <span className="caption">Only tested, approved versions are offered here. Skill owners publish them in the <Link className="link" href="/pipeline">publish pipeline</Link>.</span>
             </div>
           </div>)}
         <div className="connect-url mt-2"><code>{url}</code> <CopyButton text={url} /></div>
@@ -132,14 +132,14 @@ export default async function ConnectPage({ searchParams }: { searchParams: Prom
           const table = (list: typeof rows, empty: string) => (
             <div className="tablewrap"><table className="mini"><thead><tr><th>Skill</th><th>What you get</th><th>Status here</th></tr></thead>
               <tbody>{list.map((r) => (
-                <tr key={r.id}><td><Link className="link" href={`/repo/${r.id}`}>{r.name}</Link></td><td className="ink-2">{r.card}</td>
-                  <td>{r.status === "published" ? <span className="pill pill-sm pill-sage">live tool</span> : <span className="caption">{r.status === "not added" ? "not in workspace" : "draft, not a tool yet"}</span>}</td></tr>
+                <tr key={r.id}><td><Link className="link" href={`/library/${r.id}`}>{r.name}</Link></td><td className="ink-2">{r.card}</td>
+                  <td>{r.status === "published" ? <span className="pill pill-sm pill-sage">published</span> : <span className="caption">{r.status === "not added" ? "not in workspace" : "draft, not published yet"}</span>}</td></tr>
               ))}{list.length === 0 && <tr><td colSpan={3} className="none">{empty}</td></tr>}</tbody></table></div>);
           return (<>
-            {table(live, "No live tools yet. Publish a skill in the Publish pipeline to make it a tool here.")}
+            {table(live, "No published skills yet. Publish a skill in the Publish pipeline to offer it here.")}
             {rest.length > 0 && (
               <details className="mt-3">
-                <summary className="caption" style={{ cursor: "pointer" }}>{rest.length} more skill{rest.length === 1 ? "" : "s"} become tools once published — <Link className="link" href="/pipeline">open the Publish pipeline</Link></summary>
+                <summary className="caption" style={{ cursor: "pointer" }}>{rest.length} more skill{rest.length === 1 ? "" : "s"} join once published — <Link className="link" href="/pipeline">open the Publish pipeline</Link></summary>
                 {table(rest, "")}
               </details>)}
           </>);

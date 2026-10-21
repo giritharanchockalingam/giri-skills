@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     const first = await Promise.race([work, timer]);
     if (first === "slow") {
       after(async () => { try { await work; } catch (e) { log.error({ action: "port.run.error", port_run: run.portRunId, err: e }, "port run failed"); } });
-      return reply(202, { accepted: true, message: "Still running in Skills Factory; the result will be on the Runs page.", runs: `${base}/activity` });
+      return reply(202, { accepted: true, message: "Still running in Skills Factory; the result will be on the Runs page.", runs: `${base}/runs` });
     }
     const s = summarize(first, base);
     log.info({ action: "port.run.done", port_run: run.portRunId, run: s.b.run_id, status: s.b.status ?? s.b.error?.code }, "port workflow run");

@@ -31,7 +31,7 @@ export default async function RequestAccessPage({ searchParams }: { searchParams
       <PageHead eyebrow="Govern · Request access" title="Ask for" em="access" after="."
         lead={<>Job roles decide which approved skills you can run. Ask for one that includes <b>{title || "this skill"}</b>; any admin decides in the Inbox, and the decision is recorded.</>} />
       <section className="card card-pad" style={{ maxWidth: 640 }}>
-        {already ? <p className="none" style={{ margin: 0 }}>You can already run this skill. <Link className="link" href={id ? `/repo/${id}/` : "/repo/"}>Open it</Link>.</p>
+        {already ? <p className="none" style={{ margin: 0 }}>You can already run this skill. <Link className="link" href={id ? `/library/${id}/` : "/library/"}>Open it</Link>.</p>
           : options.length === 0 ? <p className="none" style={{ margin: 0 }}>No published job role includes this skill yet. Ask an admin to add it to one on <Link className="link" href="/roles">Roles</Link>.</p>
           : <ActionForm action={requestAccess} submit="Send request" hidden={{ skill: id }}>
               <div className="field"><label htmlFor="ra-role">Job role</label>

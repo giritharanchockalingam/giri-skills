@@ -117,7 +117,7 @@ export async function saveTalentDraft(_: ActionResult | null, fd: FormData): Pro
     await ctx.supabase.from("sf_talent").update({ name: spec.title, description: spec.description }).eq("id", data.talent_id);
     const problems = await problemsFor(ctx, kind, spec);
     await audit(ctx, `${kind}.update`, kind, data.talent_id, { version: data.version, spec_hash: hashOf(spec), problems: problems.length });
-    revalidatePath(kind === "role" ? "/roles" : "/pools", "layout");
+    revalidatePath(kind === "role" ? "/roles" : "/teams", "layout");
     return problems.length ? ok(`Saved with ${problems.length} problem(s) to fix before publishing.`) : ok("Saved. No problems.");
   });
 }
@@ -132,7 +132,7 @@ export async function newTalentDraft(_: ActionResult | null, fd: FormData): Prom
     const latest = vs![0];
     const { error: ie } = await ctx.supabase.from("sf_talent_versions").insert({ talent_id: id, version: latest.version + 1, spec: latest.spec, spec_hash: latest.spec_hash, created_by: ctx.user.id, change_note: `from v${latest.version}` });
     if (ie) return fail(ie.message);
-    revalidatePath(input.kind === "role" ? "/roles" : "/pools", "layout");
+    revalidatePath(input.kind === "role" ? "/roles" : "/teams", "layout");
     return ok(`Draft v${latest.version + 1} created.`);
   });
 }
@@ -148,7 +148,7 @@ export async function publishTalentVersion(_: ActionResult | null, fd: FormData)
     if (problems.length) return fail(`Fix ${problems.length} problem(s) first: ${problems[0]}`);
     const { error } = await ctx.supabase.rpc("sf_publish_talent_version", { p_version: versionId });
     if (error) return fail(error.message);
-    revalidatePath(kind === "role" ? "/roles" : "/pools", "layout");
+    revalidatePath(kind === "role" ? "/roles" : "/teams", "layout");
     return ok("Published. This version is frozen.");
   });
 }

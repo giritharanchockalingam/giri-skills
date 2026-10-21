@@ -232,9 +232,9 @@ function DrawerBody({ r, d }: { r: ScoreRow; d: ScorecardDrill }) {
       </section>
 
       <section>
-        <h3 className="h3">Agent cases, run end to end <span className="muted font-normal">({d.agentCases.length} {d.agentCases.length === 1 ? "case" : "cases"})</span></h3>
+        <h3 className="h3">End-to-end cases <span className="muted font-normal">({d.agentCases.length} {d.agentCases.length === 1 ? "case" : "cases"})</span></h3>
         <p className="caption mt-1">{AGENT_COL_TIP}. Open a case for each check and its evidence.</p>
-        <AgentCases cases={d.agentCases} emptyText="Not wired yet — no agent cases ran for this skill." />
+        <AgentCases cases={d.agentCases} emptyText="Not wired yet — no end-to-end cases ran for this skill." />
       </section>
     </>
   );

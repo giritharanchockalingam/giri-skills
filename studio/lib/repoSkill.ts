@@ -1,4 +1,4 @@
-/* Shared loader for the repository skill detail pages (/repo/<domain>/<name>/ and its tabs). Build-time data only. */
+/* Shared loader for the repository skill detail pages (/library/<domain>/<name>/ and its tabs). Build-time data only. */
 import { notFound } from "next/navigation";
 import { skills, scoreFor, proposalFor, agentCasesFor, trigger, quality, type Skill } from "./data";
 
@@ -15,7 +15,7 @@ export async function loadRepoSkill(params: RepoParams) {
     id, domain, name, skill,
     score: scoreFor(id), proposal: proposalFor(id), agentCases: agentCasesFor(id),
     trigger: trigger.filter((t) => t.skill === id), quality: quality.filter((q) => q.skill === id),
-    base: `/repo/${id}`,
+    base: `/library/${id}`,
   };
 }
 

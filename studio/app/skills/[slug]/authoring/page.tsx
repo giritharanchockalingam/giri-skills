@@ -45,7 +45,7 @@ export default async function AuthoringPage({ params, searchParams }: { params: 
         <div className="card card-pad">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div><div className="h3">Contract — v{d.version.version}</div><p className="caption">Inputs, outputs, steps, model, limits and release criteria. Saving re-hashes the manifest; a reviewer&apos;s approval is pinned to that hash.</p></div>
-            {d.version.source.kind === "repo" && <span className="caption">Scripts and assets come from the repository bundle (<Link href={`/repo/${d.version.source.repo_skill}/`} className="link">{d.version.source.repo_skill}</Link>).</span>}
+            {d.version.source.kind === "repo" && <span className="caption">Scripts and assets come from the repository bundle (<Link href={`/library/${d.version.source.repo_skill}/`} className="link">{d.version.source.repo_skill}</Link>).</span>}
           </div>
           <ManifestEditor versionId={d.version.id} slug={slug} manifest={d.version.manifest} editable={editable} />
         </div>

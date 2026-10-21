@@ -8,15 +8,21 @@ const starts = (...p: string[]) => (path: string) => p.some((x) => path === x ||
 const type = (t: string | null) => (path: string, q: URLSearchParams) => path === "/catalog" && (q.get("type") ?? null) === t;
 
 export const SECTIONS: Section[] = [
-  { id: "start", label: "Start here", href: "/start", who: "For first-time visitors: how it fits together", hint: "How it fits together", match: starts("/start"), pages: [] },
+  { id: "start", label: "Start here", href: "/start", who: "For first-time visitors: how it fits together, and the words it uses", hint: "How it fits together",
+    match: starts("/start", "/glossary"),
+    pages: [
+      { href: "/start", label: "How it fits together", match: starts("/start") },
+      { href: "/glossary", label: "Glossary", match: starts("/glossary") },
+    ],
+  },
   {
     id: "use", label: "Use", href: "/", who: "For everyone: find a skill that works and run it, here or from your own tools",
     hint: "Find, run and connect skills",
-    match: (p) => p === "/" || starts("/repo", "/agents", "/agent-runs", "/connect", "/assistant")(p),
+    match: (p) => p === "/" || starts("/library", "/playbooks", "/agent-runs", "/connect", "/assistant")(p),
     pages: [
       { href: "/", label: "Find", match: (p) => p === "/" },
-      { href: "/repo/", label: "Library", match: starts("/repo") },
-      { href: "/agents", label: "Playbooks", match: starts("/agents", "/agent-runs") },
+      { href: "/library/", label: "Library", match: starts("/library") },
+      { href: "/playbooks", label: "Playbooks", match: starts("/playbooks", "/agent-runs") },
       { href: "/connect", label: "Connect your tools", match: starts("/connect") },
       { href: "/assistant", label: "Assistant", match: starts("/assistant") },
     ],
@@ -24,20 +30,20 @@ export const SECTIONS: Section[] = [
   {
     id: "build", label: "Build", href: "/pipeline", who: "For skill owners: build, test and publish skills",
     hint: "Publish pipeline, evaluations, reference skills",
-    match: starts("/pipeline", "/skills", "/evaluations", "/evals", "/findings", "/upstream"),
+    match: starts("/pipeline", "/skills", "/evaluations", "/evals", "/findings", "/reference"),
     pages: [
       { href: "/pipeline", label: "Publish pipeline", match: (p) => starts("/pipeline", "/skills")(p) },
       { href: "/evaluations", label: "Evaluations", match: starts("/evaluations", "/evals", "/findings") },
-      { href: "/upstream", label: "Reference skills", match: starts("/upstream") },
+      { href: "/reference", label: "Reference skills", match: starts("/reference") },
     ],
   },
   {
     id: "govern", label: "Govern", href: "/inbox", who: "For governance and risk: approve releases, audit runs, track spend and value",
     hint: "Approvals, runs, insights",
-    match: starts("/inbox", "/activity", "/runs", "/insights"),
+    match: starts("/inbox", "/runs", "/insights"),
     pages: [
       { href: "/inbox", label: "Inbox", match: starts("/inbox") },
-      { href: "/activity", label: "Runs", match: starts("/activity", "/runs") },
+      { href: "/runs", label: "Runs", match: starts("/runs") },
       { href: "/insights", label: "Insights", match: starts("/insights") },
     ],
   },
@@ -57,13 +63,12 @@ export const SECTIONS: Section[] = [
   {
     id: "admin", label: "Admin", href: "/admin", who: "For administrators: access, keys, integrations and policies",
     hint: "Members, keys, roles, teams, integrations, audit log",
-    match: starts("/admin", "/glossary", "/roles", "/pools", "/integrations"),
+    match: starts("/admin", "/roles", "/teams", "/integrations"),
     pages: [
       { href: "/admin", label: "Administration", match: starts("/admin") },
       { href: "/roles", label: "Roles", match: starts("/roles") },
-      { href: "/pools", label: "Teams", match: starts("/pools") },
+      { href: "/teams", label: "Teams", match: starts("/teams") },
       { href: "/integrations", label: "Integrations", match: starts("/integrations") },
-      { href: "/glossary", label: "Glossary", match: starts("/glossary") },
     ],
   },
 ];
@@ -73,17 +78,18 @@ export const sectionOf = (path: string) => SECTIONS.find((s) => s.match(path)) ?
 /** One name per concept. Code and URLs may use older words (agents, pools, repo); the interface never does. */
 export const GLOSSARY: { term: string; means: string; not: string[]; where: string }[] = [
   { term: "AI development lifecycle (ADLC)", means: "The 11 stages from strategy to improvement that the library is organised by (Home shows them); every skill belongs to one stage.", not: ["SDLC (for AI work)"], where: "/" },
-  { term: "Skill", means: "A packaged capability that does one job: declared inputs, scripts and/or a model step, and an output contract that is checked on every run.", not: ["agent (for a single skill)", "tool"], where: "/repo/" },
-  { term: "Library", means: "Every skill this portal ships (from the giri-skills repository), whether or not your workspace has imported it.", not: ["repository catalog", "repo"], where: "/repo/" },
+  { term: "MCP", means: "The standard connection that lets your AI tools (Claude Code, Cursor, VS Code) call published skills.", not: [], where: "/connect" },
+  { term: "Skill", means: "A packaged capability that does one job: declared inputs, scripts and/or a model step, and an output contract that is checked on every run.", not: ["agent (for a single skill)", "tool"], where: "/library/" },
+  { term: "Library", means: "Every skill this portal ships (from the giri-skills repository), whether or not your workspace has imported it.", not: ["repository catalog", "repo"], where: "/library/" },
   { term: "Workspace skill", means: "A library skill imported into your workspace, with its own versions, evaluations and approvals.", not: [], where: "/pipeline" },
   { term: "Published", means: "A workspace skill version that passed its release gates and was approved; only published versions are exposed over MCP and the API.", not: ["live", "released"], where: "/pipeline" },
-  { term: "Instructions", means: "The SKILL.md text that tells a model how to use a skill.", not: ["authoring"], where: "/repo/" },
-  { term: "Reference skill", means: "A skill vendored from a public GitHub repository, pinned to a commit; read-only.", not: ["upstream skill"], where: "/upstream" },
-  { term: "Playbook", means: "Skills chained in order, with inputs wired between steps and optional approval gates.", not: ["agent", "pipeline"], where: "/agents" },
+  { term: "Instructions", means: "The SKILL.md text that tells a model how to use a skill.", not: ["authoring"], where: "/library/" },
+  { term: "Reference skill", means: "A skill vendored from a public GitHub repository, pinned to a commit; read-only.", not: ["upstream skill"], where: "/reference" },
+  { term: "Playbook", means: "Skills chained in order, with inputs wired between steps and optional approval gates.", not: ["agent", "pipeline"], where: "/playbooks" },
   { term: "Job role", means: "A job (e.g. architect) defined by the skills and playbooks it owns; tailorable. When “Restrict skills by job role” is on, the job roles assigned to a person or API key decide which published skills they may run.", not: ["role (alone, for a job)"], where: "/roles" },
   { term: "Access level", means: "What a member may do in the workspace: run only, author, reviewer or admin. Enforced on the server and in the database.", not: ["role (alone, for permissions)", "consumer (in the interface)"], where: "/admin#members" },
-  { term: "Team", means: "Roles working together on one outcome, with hand-offs between them.", not: ["talent pool", "pool", "squad"], where: "/pools" },
-  { term: "Run", means: "One execution of one skill. Counted on the server (portal, API, MCP, playbook steps) and, separately, in the browser.", not: ["job", "execution"], where: "/activity" },
+  { term: "Team", means: "Roles working together on one outcome, with hand-offs between them.", not: ["talent pool", "pool", "squad"], where: "/teams" },
+  { term: "Run", means: "One execution of one skill. Counted on the server (portal, API, MCP, playbook steps) and, separately, in the browser.", not: ["job", "execution"], where: "/runs" },
   { term: "Evaluation", means: "Running a skill against its test cases to measure trigger accuracy, output quality and lift over no skill.", not: ["eval run (in the interface)"], where: "/evaluations" },
   { term: "Trigger", means: "How often a skill is picked for prompts it should handle (and not for prompts it should not).", not: [], where: "/evaluations" },
   { term: "Lift", means: "How much better the output is with the skill than without it, on the same cases.", not: [], where: "/evaluations" },

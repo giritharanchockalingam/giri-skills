@@ -77,7 +77,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
 
       <TaskBox suggestions={suggestions} />
       <p className="caption home-proof">
-        <Link href="/repo/" className="link"><b>{published.size}</b> skill{published.size === 1 ? "" : "s"} approved for use</Link> in {ctx.workspace.name}, usable here or from <Link href="/connect" className="link">Claude, Cursor or any app</Link>
+        <Link href="/library/" className="link"><b>{published.size}</b> skill{published.size === 1 ? "" : "s"} approved for use</Link> in {ctx.workspace.name}, usable here or from <Link href="/connect" className="link">Claude, Cursor or any app</Link>
         {week.total > 0 && <> · <Link href="/insights?days=7" className="link" title={`${RUN_CLASS_HELP.people} ${RUN_CLASS_HELP.automation}`}>last 7 days: {week.byClass.people.runs} runs by people{week.byClass.people.successRate != null ? ` (${Math.round(week.byClass.people.successRate * 100)}% succeeded)` : ""} · {week.byClass.automation.runs} automation runs</Link></>}
         {waiting > 0 && <> · <Link href="/inbox" className="link-flame">{waiting} decision{waiting === 1 ? "" : "s"} waiting on you →</Link></>}
       </p>
@@ -126,7 +126,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
               {rows.map((r) => (
                 <li key={r.id} className="lc-row">
                   <div className="lc-row-main">
-                    <Link href={`/repo/${r.id}`} className="lc-row-name">{r.name}</Link>
+                    <Link href={`/library/${r.id}`} className="lc-row-name">{r.name}</Link>
                     {published.has(r.id) && <> <span className="pill pill-sage pill-sm" title={`Approved for use in ${ctx.workspace.name}: tested and signed off`}>Approved · v{published.get(r.id)}</span></>}
                     <div className="lc-row-out">{r.outcome}</div>
                     {r.bring && <div className="caption lc-row-bring">You bring: {r.bring}</div>}
@@ -150,7 +150,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
           <div className="h3 mb-2">Playbooks — several skills chained, with approvals</div>
           <ul className="lc-playbooks">
             {recentAgents.map((a) => (
-              <li key={a.slug}><Link href={`/agents/${a.slug}/run`} className="lc-pb"><b>{skillTitle(a.name)}</b>{(() => { const d = (a.description || "").split(/[:.→]/)[0].trim(); const n = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, ""); return d && n(d) !== n(a.name) ? <span className="caption">{d}</span> : null; })()}</Link></li>
+              <li key={a.slug}><Link href={`/playbooks/${a.slug}/run`} className="lc-pb"><b>{skillTitle(a.name)}</b>{(() => { const d = (a.description || "").split(/[:.→]/)[0].trim(); const n = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, ""); return d && n(d) !== n(a.name) ? <span className="caption">{d}</span> : null; })()}</Link></li>
             ))}
           </ul>
         </section>
