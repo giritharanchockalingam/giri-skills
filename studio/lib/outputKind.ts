@@ -16,11 +16,14 @@ export const MIME: Record<OutputKind, string> = {
 };
 /** SVG as an <img> source: images never run scripts, so a skill's SVG is shown safely. */
 export const svgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+/** C4 reading order: context, then container, component, deployment; anything else after, alphabetically. */
+const ORDER = ["context", "container", "component", "deployment"];
+const rank = (p: string) => { const n = (p.split("/").pop() ?? "").toLowerCase(); const i = ORDER.findIndex((o) => n.startsWith(o)); return i < 0 ? ORDER.length : i; };
 /** The deliverables worth a one-click download, in reading order: the document, then diagrams, then the editable file. */
 export function deliverables(paths: string[]): { doc: string | null; diagrams: string[]; drawio: string | null } {
   return {
     doc: paths.find((p) => outputKind(p) === "html") ?? null,
-    diagrams: paths.filter((p) => outputKind(p) === "svg").sort(),
+    diagrams: paths.filter((p) => outputKind(p) === "svg").sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)),
     drawio: paths.find((p) => outputKind(p) === "drawio") ?? null,
   };
 }
