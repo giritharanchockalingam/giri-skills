@@ -42,9 +42,9 @@ export default async function IntegrationsPage() {
   ];
   return (
     <>
-      <PageHead eyebrow="Catalog · integrations" title="Where the catalog" em="comes from" after="."
+      <PageHead eyebrow="Admin · Integrations" title="Where the catalog" em="comes from" after="."
         lead="GitHub, Vercel and Supabase are read-only: each fills the catalog with what it finds, linked to everything else. Port is the one that writes: it publishes your governed skills into a Port.io portal." />
-      <p className="caption mb-4"><Link className="link" href="/catalog">Catalog</Link> · Syncing Vercel also refreshes delivery metrics, so linked repositories count real production deployments.</p>
+      <p className="caption mb-4"><Link className="link" href="/catalog">Repositories</Link> · Syncing Vercel also refreshes delivery metrics, so linked repositories count real production deployments.</p>
       <div className="stack">{cards.map((c) => { const s = syncs[c.id]; return (
         <section key={c.id} className="card card-pad">
           <div className="flex flex-wrap items-start justify-between gap-3">

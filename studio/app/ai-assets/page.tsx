@@ -37,9 +37,9 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHead eyebrow="Catalog · AI assets" title="Every agent, server and" em="skill" after="."
+      <PageHead eyebrow="Platform · AI assets" title="Every agent, server and" em="skill" after="."
         lead="What your repositories contain — agents, MCP servers, skills, MCP configs and agent instructions, each with the file that proves it — next to what this portal defines and serves." />
-      <p className="caption mb-4"><Link className="link" href="/catalog">Catalog</Link> · {scanned} of {repos.length} repositor{repos.length === 1 ? "y" : "ies"} scanned{scanned < repos.length ? " — sync the catalog to scan the rest" : ""}.</p>
+      <p className="caption mb-4"><Link className="link" href="/catalog">Repositories</Link> · {scanned} of {repos.length} repositor{repos.length === 1 ? "y" : "ies"} scanned{scanned < repos.length ? " — sync the catalog to scan the rest" : ""}.</p>
 
       <div className="cat-tiles mb-4">
         {ORDER.map((k) => <Link key={k} href={kind === k ? "/ai-assets" : `/ai-assets?kind=${k}`} className={`cat-tile${kind === k ? " cat-tile-on" : ""}`}><b>{count(k)}</b><span>{count(k) === 1 ? ASSET_LABEL[k] : ASSET_PLURAL[k]} in repositories</span></Link>)}
