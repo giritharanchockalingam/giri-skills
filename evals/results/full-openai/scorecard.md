@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17–2026-10-20_
-_estimated spend: $37.54_
+_estimated spend: $38.13_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict |
 |---|---|---|---|---|---|---|
@@ -79,6 +79,6 @@ _estimated spend: $37.54_
 | presales/orals-prep | 0.67 | 0.00 | 0.08 | 0.38 | 0.31 | DESC |
 | presales/proposal-writer | 1.00 | 0.00 | 0.50 | 0.71 | 0.21 | OK |
 | presales/rfp-compliance-matrix | 1.00 | 0.00 | 0.11 | 0.18 | 0.07 | BODY |
-| presales/solution-architecture-doc | 1.00 | 0.00 | 0.25 | 0.17 | -0.08 | BODY |
+| presales/solution-architecture-doc | 1.00 | 0.00 | 0.22 | 0.50 | 0.28 | OK |
 | presales/sow-drafter | 1.00 | 0.00 | 0.11 | 0.25 | 0.14 | BODY |
 | presales/value-case-builder | 1.00 | 0.00 | 0.33 | 0.23 | -0.10 | BODY |
