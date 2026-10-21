@@ -31,7 +31,7 @@ code,pre{font:12.5px ui-monospace,Menlo,monospace}pre{background:#eef2f5;padding
 <h1>GitHub App “${esc(app.slug)}” created</h1>
 <p class="warn"><b>Shown once.</b> Add these six values to the Vercel project's Environment Variables (Production), then redeploy. They are not saved anywhere else — if you lose this page, generate a new private key in the App's settings on GitHub.</p>
 ${env.map(([k, v]) => `<h3><code>${k}</code> <button onclick="navigator.clipboard.writeText(document.getElementById('${k}').textContent)">Copy</button></h3><pre id="${k}">${esc(v)}</pre>`).join("\n")}
-<p>App settings: <a href="${esc(app.html_url)}" rel="noreferrer">${esc(app.html_url)}</a>. After redeploying, open <a href="/catalog">Catalog</a> and choose <b>Connect GitHub</b>.</p>
+<p>App settings: <a href="${esc(app.html_url)}" rel="noreferrer">${esc(app.html_url)}</a>. After redeploying, open <a href="/catalog">Platform › Repositories</a> and choose <b>Connect GitHub</b>.</p>
 </body></html>`;
   return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store, max-age=0", "X-Robots-Tag": "noindex" } });
 }
