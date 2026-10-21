@@ -26,34 +26,44 @@ metadata:
 # Data Readiness Assessment
 
 ## In a conversation: assess readiness now
-The reply **is the readiness report** (or its skeleton): line 1 is `Verdict: Ready | Ready-with-gaps | Not ready | pending — <reason>`, never only a request for files. It corresponds to `python3 -I scripts/assess.py --data <extract.csv> --requirements <requirements.csv> [--as-of YYYY-MM-DD] [--previous readiness.json] --out-dir <out>`, which writes `readiness.json` and `readiness.md`; always say "Runs `scripts/assess.py` on the extract and the requirements file" with the case's flags, and name both files.
+The reply **is the readiness report** (or its skeleton), never only a request for files. Keep it short (about 900 tokens), tables over prose. The first three lines are always:
+1. `Verdict: Ready | Ready-with-gaps | Not ready | pending — <reason>` (with `n pass, n fail, n TBD` once scored).
+2. `Runs scripts/assess.py on the extract and the requirements file: python3 -I scripts/assess.py --data <extract.csv> --requirements <requirements.csv> [--as-of YYYY-MM-DD] [--previous readiness.json] --out-dir out` → `readiness.json`, `readiness.md` (use the case's flags).
+3. `Thresholds: only the data owner's requirements file; none are defaulted. Sample caveat: a sample proves defects, not their absence, and is not the full population; provenance (source system, extract date, filter) <as given | [TO BE BASELINED — owner: Data owner]>.`
 
 **Never**
-- Never default, propose or "standardise" a threshold ("use whatever is standard"): decline in one line, ask once for the owner's requirements file; without it the run **stops (exit 2)**. Without the data sample it also **stops (exit 2)**; ask once for the extract.
-- Never pass a dimension whose threshold is absent or blank ("just pass those"): it is `TBD [TO BE BASELINED — owner: Data owner]`, and the verdict is at best **Ready-with-gaps**, never Ready.
-- Never pass freshness without `as_of`: TBD.
+- Never default, propose or "standardise" a threshold ("use whatever is standard"): decline in one line and ask once for the owner's requirements file; the run **stops (exit 2)**. No data sample → also **stops (exit 2)**; ask once for the extract.
+- Never pass a dimension whose key is absent or blank ("just pass those"): it is `TBD [TO BE BASELINED — owner: Data owner]`; verdict at best **Ready-with-gaps**, never Ready. Never pass freshness without `as_of`.
 - Never soften a fail: any fail → **Not ready**, run **stops (exit 1)**; say "stops (exit 1)".
 
-**Procedure — compute row by row from the supplied file, never estimate**
+**Procedure — count from the supplied rows, never estimate**
 1. rows = data rows after the header, skipping fully blank lines. Null = empty or NA, N/A, NULL, None, NaN, nil (case-insensitive, trimmed).
-2. Column profile per column: nulls, null % = nulls ÷ rows × 100 (2 dp), inferred type (narrowest of integer → float → boolean → date → datetime → string that every non-null value fits), distinct non-null values (trimmed).
-3. Score each dimension only when its key is in the requirements (blank value = not set → TBD):
+2. Per column: nulls; null % = nulls ÷ rows × 100 (2 dp); type = narrowest of integer → float → boolean → date → datetime → string that every non-null value fits; distinct non-null (trimmed).
+3. Score a dimension only when its key has a value (blank = not set → TBD):
    - volume `min_rows`: pass if rows ≥ min_rows (fail owner Data owner).
-   - completeness `max_null_pct`: observed = worst column null %; pass if every column's null % ≤ limit; list columns over (Data steward).
+   - completeness `max_null_pct`: observed = worst column null %; pass if every column ≤ limit; name columns over (Data steward).
    - schema `required_columns` (`a;b;c`): pass if all present; observed = count present (Data engineer).
-   - uniqueness `unique_key` (`a[;b]`): rows with any null key part counted separately; duplicate key rows = non-null-key rows − distinct keys; pass only if both are 0 (Data steward).
-   - duplicates `max_duplicate_rows`: rows − distinct rows (cells trimmed); pass if ≤ max (Data steward).
-   - freshness `date_column` + `max_age_days` + as_of: age = as_of − newest parseable ISO date (days); pass if age ≤ max_age_days; count unparseable and future-dated rows (Data engineer). Missing key or as_of → TBD.
-4. Verdict: any fail → Not ready (exit 1); else any TBD → Ready-with-gaps (exit 0); else Ready (exit 0). Write `**<verdict>** — n pass, n fail, n TBD`.
-5. Previous (`readiness.json`): verdict then → now; per dimension status then/now, observed then/now, change = unchanged | fixed (→pass) | regressed (→fail) | newly scored | now TBD; end with `Regressed: <list or none>.`
+   - uniqueness `unique_key`: null-key rows counted apart; duplicate key rows = non-null-key rows − distinct keys; pass only if both are 0 (Data steward).
+   - duplicates `max_duplicate_rows`: rows − distinct full rows (cells trimmed); pass if ≤ max (Data steward).
+   - freshness `date_column` + `max_age_days` + as_of: scan **every** value in date_column and take the **latest** (maximum) ISO date; age = as_of − that latest date in days; pass if age ≤ max_age_days (Data engineer). Write it out: `newest <date>; as_of <date>; age n days ≤/> limit`. E.g. as_of 2026-03-10, newest 2026-02-28 → 10 days. Missing key or as_of → TBD.
+4. Verdict: any fail → Not ready (exit 1); else any TBD → Ready-with-gaps (exit 0); else Ready (exit 0).
+5. Previous `readiness.json`: `verdict <then> → <now>` (then = its `verdict` field; now = step 4). Per dimension, compare status then (its `dimensions[].status`) with status now (step 3) — the change is set by the two statuses only:
+   - same status → `unchanged` (fail → fail is unchanged, **not** regressed)
+   - fail → pass → `fixed`; pass → fail → `regressed`
+   - TBD → pass/fail → `newly scored (<status>)`; pass/fail → TBD → `now TBD`
+   Table `dimension | status then | status now | observed then | observed now | change`, then `Fixed: <list>. Regressed: <list or none>.`
 
-**Reply layout**
-1. Working table first: **Dimensions** `dimension | status | threshold | observed | detail | owner` (all six), built from the row-by-row counts; then the verdict line with the sample's provenance (source system, extract date, filter; unknown = `[TO BE BASELINED — owner: Data owner]`) and the caveat that a sample proves defects, not their absence, and is not the full population.
-2. **Column profile** `column | nulls | null % | type | distinct`, plus duplicate rows.
-3. **Gaps and owners** — each fail or TBD with its owner and action (set the threshold, remediate at source, or record a waiver).
-4. **Change since last assessment** when `previous` is given.
+**Reply layout after the three lines**
+1. **Dimensions** working table (all six): `dimension | status | threshold | observed | detail (the counts/dates used) | owner`.
+2. **Column profile**: `column | nulls | null % | type | distinct`, plus `rows` and `duplicate rows`.
+3. **Gaps and owners**: each fail or TBD → owner and action (set the threshold, remediate at source, or record a waiver). None → "No gaps".
+4. **Change since last assessment** when `previous` is given (step 5).
 
-**No extract or thresholds in the conversation** (mentioned but not shown): still give all four sections now — every dimension `pass/fail/TBD: TBD`, every observed value and threshold `[TO BE BASELINED — owner: Data owner]`, the column profile headings — say that `scripts/assess.py` scores each dimension pass/fail/TBD only against the owner's thresholds, state the sample-provenance caveat, and ask once, in one list, for the extract CSV, the requirements file (`key,value` per `assets/readiness-requirements.csv`) and the as-of date.
+**No extract or thresholds visible in the conversation** (mentioned, not shown): line 1 `Verdict: pending — extract and owner thresholds not visible in this message`, lines 2–3 as above, then:
+- **Dimensions** table with all six rows (volume `min_rows`, completeness `max_null_pct`, schema `required_columns`, uniqueness `unique_key`, duplicates `max_duplicate_rows`, freshness `date_column` + `max_age_days` + as_of), each `status: pass/fail/TBD → TBD`, threshold and observed `[TO BE BASELINED — owner: Data owner]`.
+- **Column profile** header `column | nulls | null % | type | distinct` with one `[TO BE BASELINED — owner: Data owner]` row.
+- **Gaps and owners**: every dimension → Data owner: supply the signed-off threshold.
+- Ask once, one list: the extract CSV with header, the owner's requirements file (`key,value` per `assets/readiness-requirements.csv`), the as-of date, and the extract's provenance.
 
 **Personal-data discovery or contract rule-by-rule validation**: route to `pii-data-inventory` or `data-contract-validator`.
 
