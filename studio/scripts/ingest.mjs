@@ -480,6 +480,18 @@ writeFileSync(join(RUNTIME, "bundle.json"), JSON.stringify(bundle));
     pins[s.id] = h.digest("hex");
   }
   writeFileSync(join(OUT, "content-pins.json"), JSON.stringify(pins, null, 1) + "\n");
+  // Skill-own file hash per repo skill (no shared runner): what a frozen version's files are compared with to say
+  // whether the library changed the skill itself (lib/factory/snapshot.ts snapshotSha, api/py/run.py snapshot_sha).
+  const own = {};
+  for (const s of skills) {
+    if (!s.agent) continue;
+    const prefix = `skills/${s.id}/`;
+    const h = createHash("sha256");
+    for (const p of paths.filter((x) => x.startsWith(prefix)).map((x) => x.slice(prefix.length)).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)))
+      h.update(Buffer.concat([Buffer.from(p, "utf8"), Buffer.from([0]), Buffer.from(bundle[prefix + p], "utf8"), Buffer.from([0])]));
+    own[s.id] = h.digest("hex");
+  }
+  writeFileSync(join(OUT, "skill-shas.json"), JSON.stringify(own, null, 1) + "\n");
 }
 // the Vercel Python runtime (api/py/run.py) reads the same bundle from its own folder; committed so the function has it whatever the build order
 writeFileSync(join(STUDIO, "api", "py", "bundle.json"), JSON.stringify(bundle));

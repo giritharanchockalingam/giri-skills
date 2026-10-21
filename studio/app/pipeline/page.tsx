@@ -3,7 +3,7 @@ import { ActionForm } from "@/components/factory/ActionForm";
 import { updateDraftsFromLibrary } from "@/app/actions";
 import { skillDrift, contractKey } from "@/lib/factory/drift";
 import { libraryContract, libraryCasesStale } from "@/lib/factory/libraryContract";
-import { currentPin } from "@/lib/factory/pins";
+import { currentPin, currentSkillSha } from "@/lib/factory/pins";
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
 import { skillCounts, countsBridge } from "@/lib/counts";
@@ -30,8 +30,8 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   const inGate = gate ? new Set(funnel.filter((f) => f.gate === gate).map((f) => f.slug)) : null;
   const stateById = new Map(states.map((s) => [s.version_id, s]));
   // the library's test cases as each repo draft holds them (a draft with old checks is offered the library update)
-  const { data: frozenRows } = await ctx.supabase.from("sf_version_snapshots").select("version_id").eq("workspace_id", ctx.workspace.id);
-  const frozen = new Set(((frozenRows ?? []) as { version_id: string }[]).map((r) => r.version_id));
+  const { data: frozenRows } = await ctx.supabase.from("sf_version_snapshots").select("version_id, sha256").eq("workspace_id", ctx.workspace.id);
+  const frozen = new Map(((frozenRows ?? []) as { version_id: string; sha256: string }[]).map((r) => [r.version_id, r.sha256]));
   const draftIds = versions.filter((v) => v.status === "draft" && v.source.kind === "repo").map((v) => v.id);
   const draftCases = new Map<string, { name: string; inputs: unknown; checks: unknown }[]>();
   if (draftIds.length) {
@@ -53,7 +53,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       gate: gateBySlug.get(s.slug),
       minPassRate: st?.min_eval_pass_rate == null ? null : Number(st.min_eval_pass_rate),
       drift: skillDrift(vs.map((v) => ({ ...v, contract: contractKey(v as never) })), currentPin, libraryContract(vs.find((v) => v.source.kind === "repo")?.source.repo_skill),
-        working?.status === "draft" && working.source.kind === "repo" ? libraryCasesStale(working.source.repo_skill, draftCases.get(working.id) ?? []) : false, frozen),
+        working?.status === "draft" && working.source.kind === "repo" ? libraryCasesStale(working.source.repo_skill, draftCases.get(working.id) ?? []) : false, frozen, currentSkillSha),
     };
   });
   const blocked = items.filter((i) => i.drift === "blocked");

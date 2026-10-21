@@ -262,6 +262,46 @@ def split_cases(skills):
     return ok, broken
 
 
+# ---------------------------------------------------------------- case prompts with their inputs
+
+ATTACH_FILE_CHARS = 6000     # per file
+ATTACH_TOTAL_CHARS = 24000   # per case
+
+
+def case_user_prompt(skill: dict, case: dict) -> str:
+    """The user message for a quality/trigger call: the case prompt plus the inputs the case declares, rendered the
+    way a user would supply them (pasted values; attached files shown in full up to a cap; folders as their files).
+    Without this, a case whose inputs are files is graded on a prompt that never contains them."""
+    inputs = case.get("inputs") or {}
+    if not inputs:
+        return case["prompt"]
+    parts, used = [], 0
+    for name, raw in inputs.items():
+        v = str(raw)
+        p = skill["dir"] / v if ("/" in v and not v.startswith("{")) else None
+        files = []
+        if p is not None and p.is_file():
+            files = [(v, p)]
+        elif p is not None and p.is_dir():
+            files = [(f"{v}/{f.relative_to(p).as_posix()}", f) for f in sorted(p.rglob("*"))
+                     if f.is_file() and "__pycache__" not in f.parts]
+        if not files:
+            parts.append(f"{name}: {v}")
+            continue
+        for label, f in files:
+            try:
+                text = f.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                parts.append(f"{name} ({label}): [binary file, not shown]")
+                continue
+            room = max(0, min(ATTACH_FILE_CHARS, ATTACH_TOTAL_CHARS - used))
+            shown = text[:room]
+            used += len(shown)
+            more = f"\n[... {len(text) - len(shown)} more characters not shown]" if len(shown) < len(text) else ""
+            parts.append(f"{name} — attached file {label}:\n```\n{shown}\n```{more}")
+    return case["prompt"] + "\n\nInputs supplied with this request:\n\n" + "\n\n".join(parts)
+
+
 def load_negative_set():
     data = json.loads(NEGATIVE_SET_PATH.read_text(encoding="utf-8"))
     return data["prompts"]
@@ -532,7 +572,7 @@ def main() -> int:
             for s, c in ok_cases:
                 calls.append({"kind": "router", "skill": s["key"],
                               "case_id": c.get("id", ""), "run": run,
-                              "system": router_sys, "user": c["prompt"],
+                              "system": router_sys, "user": case_user_prompt(s, c),
                               "max_tokens": 30, "temperature": 0})
         for i, prompt in enumerate(load_negative_set()):
             calls.append({"kind": "neg_router", "skill": "", "case_id": f"neg-{i+1:02d}",
@@ -545,7 +585,7 @@ def main() -> int:
                                        ("with", with_sys[s["key"]])):
                     calls.append({"kind": f"gen_{mode}", "skill": s["key"],
                                   "case_id": c.get("id", ""), "run": run,
-                                  "system": sys_text, "user": c["prompt"],
+                                  "system": sys_text, "user": case_user_prompt(s, c),
                                   "max_tokens": 1200, "temperature": 1.0})
                     # judge call follows the generation at runtime; its prompt
                     # depends on the output, so budget it with a typical size

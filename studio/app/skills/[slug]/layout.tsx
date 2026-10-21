@@ -5,7 +5,7 @@ import { evalGate, approvalGate, nextAction, pct, STATUS_LABEL } from "@/lib/fac
 import { gateOf, type GateInput } from "@/lib/factory/funnel";
 import { skillDrift, contractKey } from "@/lib/factory/drift";
 import { libraryContract, libraryCasesStale } from "@/lib/factory/libraryContract";
-import { currentPin } from "@/lib/factory/pins";
+import { currentPin, currentSkillSha } from "@/lib/factory/pins";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { updateFromLibrary } from "@/app/actions";
 import { can } from "@/lib/factory/roles";
@@ -33,9 +33,9 @@ export default async function SkillLayout({ children, params }: { children: Reac
   const casesStale = newest?.status === "draft" && newest.source.kind === "repo"
     ? libraryCasesStale(newest.source.repo_skill, ((await d.ctx.supabase.from("sf_eval_cases").select("name, inputs, checks").eq("version_id", newest.id)).data ?? []) as { name: string; inputs: unknown; checks: unknown }[])
     : false;
-  const { data: frozenRows } = await d.ctx.supabase.from("sf_version_snapshots").select("version_id").in("version_id", d.versions.map((v) => v.id));
-  const frozen = new Set(((frozenRows ?? []) as { version_id: string }[]).map((r) => r.version_id));
-  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill), casesStale, frozen);
+  const { data: frozenRows } = await d.ctx.supabase.from("sf_version_snapshots").select("version_id, sha256").in("version_id", d.versions.map((v) => v.id));
+  const frozen = new Map(((frozenRows ?? []) as { version_id: string; sha256: string }[]).map((r) => [r.version_id, r.sha256]));
+  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill), casesStale, frozen, currentSkillSha);
   const eg = s ? evalGate(s) : null, ag = s ? approvalGate(s) : null;
   return (
     <>
