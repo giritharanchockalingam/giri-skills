@@ -4,7 +4,7 @@ import { loadSkillPage } from "@/lib/factory/skillPage";
 import { evalGate, approvalGate, nextAction, pct, STATUS_LABEL } from "@/lib/factory/release";
 import { gateOf, type GateInput } from "@/lib/factory/funnel";
 import { skillDrift, contractKey } from "@/lib/factory/drift";
-import { libraryContract } from "@/lib/factory/libraryContract";
+import { libraryContract, libraryCasesStale } from "@/lib/factory/libraryContract";
 import { currentPin } from "@/lib/factory/pins";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { updateFromLibrary } from "@/app/actions";
@@ -29,7 +29,11 @@ export default async function SkillLayout({ children, params }: { children: Reac
   // the header's one status is the funnel stage — the same words the pipeline and Home count with
   const working = ["draft", "in_review", "approved"].includes(d.version.status) ? (s as GateInput | null) : null;
   const gate = d.skill.status === "retired" ? null : gateOf(working, !!d.published);
-  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill));
+  const newest = [...d.versions].sort((a, b) => b.version - a.version)[0];
+  const casesStale = newest?.status === "draft" && newest.source.kind === "repo"
+    ? libraryCasesStale(newest.source.repo_skill, ((await d.ctx.supabase.from("sf_eval_cases").select("name, inputs, checks").eq("version_id", newest.id)).data ?? []) as { name: string; inputs: unknown; checks: unknown }[])
+    : false;
+  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill), casesStale);
   const eg = s ? evalGate(s) : null, ag = s ? approvalGate(s) : null;
   return (
     <>

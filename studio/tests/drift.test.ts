@@ -28,3 +28,9 @@ test("contract drift: a new library input flags the skill; instruction edits do 
   assert.equal(skillDrift([{ ...v, contract: lib }], () => "b", lib), "current");
   assert.equal(contractKey({ inputs: [], run: [], outputs: [], ...{ instructions_md: "edited" } } as never), contractKey({ inputs: [], run: [], outputs: [] }));
 });
+test("skill drift: a current draft whose copy of the library's test cases is older is offered the update", () => {
+  const pin = () => "b";
+  assert.equal(skillDrift([{ source: repo("b"), status: "draft", version: 1 }], pin, null, true), "library_updated");
+  assert.equal(skillDrift([{ source: repo("b"), status: "draft", version: 1 }], pin, null, false), "current");
+  assert.equal(skillDrift([{ source: repo("b"), status: "published", version: 1 }], pin, null, true), "current", "only a draft is judged on its cases");
+});

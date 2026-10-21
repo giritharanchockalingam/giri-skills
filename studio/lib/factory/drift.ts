@@ -26,7 +26,7 @@ export const contractKey = (m: ContractLike): string | null => !m ? null : JSON.
 });
 
 /** The skill-level answer: a live version that cannot run outranks everything; otherwise the newest version's state. */
-export function skillDrift(versions: { source: VersionSource; status: string; version: number; contract?: string | null }[], pinOf: (repoSkill?: string) => string | null, libraryContract?: string | null): Drift {
+export function skillDrift(versions: { source: VersionSource; status: string; version: number; contract?: string | null }[], pinOf: (repoSkill?: string) => string | null, libraryContract?: string | null, draftCasesStale = false): Drift {
   const live = versions.find((v) => v.status === "published");
   if (live && driftOf(live.source, live.status, pinOf(live.source.repo_skill)) === "blocked") return "blocked";
   const newest = [...versions].sort((a, b) => b.version - a.version)[0];
@@ -35,5 +35,7 @@ export function skillDrift(versions: { source: VersionSource; status: string; ve
   if (d === "blocked" && newest.status === "superseded") return "current";
   // same files, older contract (e.g. the library added an input after import): callers cannot use what the library offers
   if ((d === "current" || d === "n/a") && newest.source.kind === "repo" && libraryContract && newest.contract && newest.contract !== libraryContract) return "library_updated";
+  // same files, but the draft's copy of the library's test cases is older (it would be graded against the old checks)
+  if (d === "current" && newest.status === "draft" && draftCasesStale) return "library_updated";
   return d;
 }
