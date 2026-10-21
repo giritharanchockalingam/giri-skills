@@ -48,7 +48,7 @@ _estimated spend: $104.92_
 | ai-platform/red-team-suite | 1.00 | 0.00 | 0.07 | 0.29 | 0.21 | OK |
 | ai-platform/slm-demo-builder | 1.00 | 0.10 | 0.33 | 0.78 | 0.44 | OK |
 | build/ci-cd-vercel-github | 1.00 | 0.00 | 0.25 | 0.71 | 0.46 | OK |
-| build/code-review-runner | 1.00 | 0.00 | 0.88 | 1.00 | 0.12 | BODY |
+| build/code-review-runner | 1.00 | 0.00 | 0.88 | 1.00 | 0.12 | OK |
 | build/domain-modeling-runner | 1.00 | 0.00 | 0.71 | 1.00 | 0.29 | OK |
 | build/handoff-and-thread-close | 1.00 | 0.00 | 0.22 | 0.94 | 0.72 | OK |
 | build/multi-tenant-saas-patterns | 0.83 | 0.00 | 0.27 | 0.64 | 0.36 | OK |

@@ -16,6 +16,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from behavioral_evals import skill_verdict  # noqa: E402  (one verdict rule for every scorecard)
+
 HEADER_RE = re.compile(r"_provider=(\S+) model=(\S+) runs=(\d+) seed=(\d+) date=([^_]+)_")
 SPEND_RE = re.compile(r"_estimated spend: \$([0-9.]+)_")
 
@@ -30,6 +33,16 @@ def read_scorecard(p: Path) -> tuple[dict, list[str], dict[str, str]]:
     head = [l for l in lines if l.startswith("| skill") or re.match(r"^\|[-| ]+\|$", l)]
     rows = {l.split("|")[1].strip(): l for l in lines if l.startswith("| ") and not l.startswith("| skill") and not re.match(r"^\|[-| ]+\|$", l)}
     return meta, head, rows
+
+
+def restate(row: str) -> str:
+    """Recompute a scorecard row's verdict from its own numbers with the current rule (behavioral_evals.skill_verdict)."""
+    cells = [c.strip() for c in row.strip().strip("|").split("|")]
+    if len(cells) < 7:
+        return row
+    num = lambda x: float(x) if re.fullmatch(r"-?\d+(\.\d+)?", x) else None
+    cells[6] = skill_verdict(num(cells[1]), num(cells[3]), num(cells[4]))
+    return "| " + " | ".join(cells) + " |"
 
 
 def read_csv(p: Path) -> tuple[list[str], list[dict]]:
@@ -55,7 +68,7 @@ def merge(src: Path, dst: Path) -> dict:
             w = csv.DictWriter(f, fieldnames=df)
             w.writeheader()
             w.writerows(sorted(kept + sr, key=lambda r: r["skill"]))
-    rows = {**drows, **srows}
+    rows = {k: restate(v) for k, v in {**drows, **srows}.items()}
     dates = sorted({d.strip() for d in re.split(r"[,–]", dm["date"] + "," + sm["date"]) if d.strip()})
     span = dates[0] if len(dates) == 1 else f"{dates[0]}–{dates[-1]}"   # no spaces: the portal reads date=<token>
     spend = dm["spend"] + sm["spend"]
@@ -75,6 +88,13 @@ def unevaluated(dst: Path, skills_root: Path) -> list[str]:
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--unevaluated":   # prints --skills args for behavioral_evals.py
         print(" ".join(f"--skills skills/{s}" for s in unevaluated(Path(sys.argv[2]), Path(__file__).parents[1] / "skills")))
+        sys.exit(0)
+    if len(sys.argv) == 3 and sys.argv[1] == "--restate":   # re-apply the current verdict rule to a scorecard in place
+        p = Path(sys.argv[2]) / "scorecard.md"
+        lines = p.read_text(encoding="utf-8").splitlines()
+        out = [restate(l) if l.startswith("| ") and not l.startswith("| skill") and not re.match(r"^\|[-| ]+\|$", l) else l for l in lines]
+        p.write_text("\n".join(out) + "\n", encoding="utf-8")
+        print("restated", sum(1 for a, b in zip(lines, out) if a != b), "row(s)")
         sys.exit(0)
     if len(sys.argv) != 3:
         sys.exit(__doc__)

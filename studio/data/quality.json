@@ -1518,7 +1518,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output asks for \"spreadsheet or key details\" but does not specify the required subcategory_id,status,evidence,owner form."
+  "evidence": "The output asks for \"spreadsheet of controls and any current assessments or documentation\" but does not specify the subcategory_id,status,evidence,owner form or mention the template in assets."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1527,7 +1527,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not report coverage per GOVERN, MAP, MEASURE, and MANAGE or use the specified formula."
+  "evidence": "The output does not report coverage per GOVERN, MAP, MEASURE and MANAGE or use the (implemented + 0.5 x partial) / applicable formula."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1536,7 +1536,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not list gaps with owners or mention it is a self-assessment, not an audit."
+  "evidence": "The output does not list gaps with owners or mention [TO BE BASELINED — owner: AI risk lead] or state that it is a self-assessment, not an audit."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1545,192 +1545,12 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Asks for \"evidence register spreadsheet with columns: subcategory_id, status (implemented|partial|planned|not_applicable), evidence, owner\""
+  "evidence": "Asks for \"evidence register spreadsheet with columns: `subcategory_id,status,evidence,owner` (e.g., GOVERN 1.1), from `assets/evidence-template.csv` format.\""
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "prompt-nist-gap-analysis",
   "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "Does not report coverage per GOVERN, MAP, MEASURE and MANAGE with the specified formula"
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "prompt-nist-gap-analysis",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "Does not list gaps with owners or mention it is a self-assessment, not an audit"
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"The coverage of implemented controls is 55.4%, which passes the 48.6% coverage gate\" and GOVERN 2.3 has no evidence attached, so no credit given."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": true,
-  "evidence": "\"TR-50-1 ... In progress\" and \"TR-50-2 ... Open\" with notes indicating partial and no evidence, consistent with partial mapping to MEASURE 2.8."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall coverage is 0.514, not exactly 0.500, and GOVERN coverage is 0.694, MAP 0.643, MEASURE 0.5, MANAGE 0.563, all higher than expected values."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": true,
-  "evidence": "\"TR-50-1       | partial        | Some mapped NIST subcategories partially implemented or missing\" and \"MEASURE 2.8    | MEASURE  | partial\" indicate mapping to MEASURE 2.8 partial."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-missing-evidence",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output states \"NIST AI RMF coverage is 80%\" instead of asking for the evidence register."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-missing-evidence",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output asks once for the evidence register in the specified format without estimating coverage."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-missing-owners-not-invented",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output assigns gaps without owners to the product manager, contrary to the expected behavior that they carry \"[TO BE BASELINED — owner: AI risk lead]\"."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-missing-owners-not-invented",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "All gaps listed have owners assigned, including Product Manager and AI Risk Lead, so no gaps lack an owner as required."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-below-min-coverage-exits-1",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Output states \"74% implemented or partial, exceeding the 60% threshold,\" indicating a PASS scenario, not a FAIL."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-below-min-coverage-exits-1",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Gate result: FAIL — evidence-backed coverage (0.464) below 0.6 minimum threshold.\""
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-mode-new",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output only references a few subcategories with partial or planned coverage and does not map to all 72 subcategories, nor does it show blank rows for missing ones."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-mode-new",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not report the starting baseline coverage as 0.028 nor assign owners or TBD for every gap; some gaps lack explicit ownership or TBD designation."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-mode-new",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Coverage is 0.079, not mapped to all 72 subcategories; blank rows are missing but coverage is not complete."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "agent-mode-new",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "No starting baseline of 0.028 reported; coverage shown is 0.079 and gaps have owners or TBD but no baseline coverage mentioned."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "prompt-nist-gap-analysis",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output asks for a spreadsheet of controls and AI risk management documentation but does not specify the required subcategory_id,status,evidence,owner form or template."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "prompt-nist-gap-analysis",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not report coverage per GOVERN, MAP, MEASURE, and MANAGE or use the (implemented + 0.5 x partial) / applicable formula."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "prompt-nist-gap-analysis",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not list gaps with owners or mention using [TO BE BASELINED — owner: AI risk lead] where none is named, nor does it state it is a self-assessment, not an audit."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "prompt-nist-gap-analysis",
-  "run": 2,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Asks for evidence register spreadsheet in `subcategory_id,status,evidence,owner` form using the template format `assets/evidence-template.csv`."
- },
- {
-  "skill": "ai-platform/ai-controls-mapping",
-  "caseId": "prompt-nist-gap-analysis",
-  "run": 2,
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
@@ -1739,11 +1559,191 @@
  {
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "prompt-nist-gap-analysis",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 2,
+  "pass": true,
+  "evidence": "Lists gaps with owners using \"[TO BE BASELINED — owner: AI risk lead]\" and states \"self-assessment, not an audit.\""
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Coverage is stated as 48.6%, matching the gate requested and noting GOVERN 2.3 is implemented without evidence, so no credit given, consistent with expected 0.486 gate."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "TR-50-1 and TR-50-2 statuses are listed and linked to AI Act obligations, with TR-50-1 \"in_progress\" and TR-50-2 \"open,\" matching partial mapping to MEASURE 2.8 via the skill's crosswalk."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "Overall coverage is 0.597 evidence-backed, not exactly 0.500; GOVERN 0.806, MAP 0.778, MEASURE 0.5, MANAGE 0.462 differ from expected values."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "\"TR-50-1 | in_progress | partial | Evidence for some mapped subcategories but not all\" and \"TR-50-2 | open | none | No supporting evidence for mapped NIST subcategories\" with MEASURE 2.8 partial evide"
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-evidence",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output states \"NIST AI RMF coverage is currently at 80%\" instead of asking for the evidence register."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-evidence",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output states \"This run stops (exit 2) due to missing evidence register input. Please provide `subcategory_id,status,evidence,owner` in the template `assets/evidence-template.csv` for precise anal"
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-owners-not-invented",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "All gaps have \"Product Manager\" as owner; no gaps carry \"AI risk lead\" and GOVERN 2.3 is marked implemented without evidence."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-missing-owners-not-invented",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Gaps (partial, planned, missing) with owners missing are: ... [TO BE BASELINED — owner: AI risk lead]\" and \"Per policy, 'product manager' is not assigned.\""
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-below-min-coverage-exits-1",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output states \"Coverage meets gate criterion of ≥60% implemented\" with 70% coverage, not below 0.600 or gate FAIL."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-below-min-coverage-exits-1",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "Coverage is 0.618 which is above 0.600, so the gate does not FAIL."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output totals 77 subcategories, not 72, and does not clarify blank rows as missing rather than implemented."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "The output reports coverage as ~2.6% (0.026), not 0.028, and does not assign owners or TBD for gaps consistently."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "Coverage is 0.070, not mapped to all 72 subcategories, and blank rows are not explicitly counted as missing but many subcategories are listed as missing or planned."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "Reports starting baseline coverage 0.070 (close to 0.028) and lists every gap with an owner or \"[TO BE BASELINED — owner: AI risk lead]\", and states \"Gate: no minimum coverage given\"."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output asks for a spreadsheet of controls but does not specify the required subcategory_id,status,evidence,owner format or provide the template."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "The output does not report coverage per GOVERN, MAP, MEASURE, and MANAGE or use the specified formula."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 2,
+  "pass": false,
+  "evidence": "The output does not list gaps with owners or mention a self-assessment versus an audit."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Please provide your billing chatbot’s `subcategory_id,status,evidence,owner` spreadsheet following the template `assets/evidence-template.csv`.\""
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "No coverage reported per GOVERN, MAP, MEASURE, and MANAGE with the specified formula."
+ },
+ {
+  "skill": "ai-platform/ai-controls-mapping",
+  "caseId": "prompt-nist-gap-analysis",
   "run": 2,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "Does not list gaps with owners or state it is a self-assessment, not an audit."
+  "pass": true,
+  "evidence": "\"Controls without this data count as `missing`, with owners `[TO BE BASELINED — owner: AI risk lead]`, and gaps cannot be computed accurately.\" and \"self-assessment, not an audit.\""
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1751,8 +1751,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Per gate at 48.6%, this passes\" with GOVERN 2.3 implemented but no document, so no credit given, matching the 0.486 gate threshold."
+  "pass": false,
+  "evidence": "Overall coverage is stated as 70.7% implemented and 29.3% partial, but no exact coverage of 0.500 or the detailed GOVERN, MAP, MEASURE, MANAGE values are provided or matched."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1760,8 +1760,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 1,
-  "pass": true,
-  "evidence": "\"TR-50-1 is underway; deliverable due by Aug 2026\" and \"TR-50-2 due Dec 2026, not started,\" indicating mapping to MEASURE 2.8 partial via the skill's crosswalk."
+  "pass": false,
+  "evidence": "TR-50-1 and TR-50-2 are listed under EU AI Act Obligations but no explicit mapping to MEASURE 2.8 or mention of the skill's own crosswalk is shown."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1769,8 +1769,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall coverage is 0.528, not exactly 0.500; GOVERN is 0.528, not 0.667; MEASURE is 0.607, not 0.357; MANAGE is 0.571, not 0.385; gate coverage is 0.528, not 0.486."
+  "pass": true,
+  "evidence": "Overall coverage is 0.618 with evidence-backed coverage 0.549, and GOVERN 2.3 is implemented with no evidence cited, so gate passes at 0.486 as stated: \"Gate verdict: Fail; evidence-backed coverage 54"
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1779,7 +1779,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "\"TR-50-1 partial: Some evidence missing for linked NIST subcategories\" and \"TR-50-2 none: No evidence found for mapped NIST subcategories\" map to MEASURE 2.8 (partial)."
+  "evidence": "TR-50-1 is \"in_progress\" with partial support and TR-50-2 is \"open\" with none, both mapped via skill's own crosswalk as noted: \"TR-50-1 ... Some NIST subcategories not fully evidenced\" and \"TR-50-2 .."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1788,7 +1788,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output provides coverage percentages but does not ask for the evidence register."
+  "evidence": "The output estimates coverage percentages (e.g., \"Govern 85%\", \"Measure 75%\") instead of asking once for the evidence register."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1797,7 +1797,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks once for the evidence register with the format `subcategory_id,status,evidence,owner` and does not estimate coverage."
+  "evidence": "The output states \"Request: please provide the full evidence register in `subcategory_id,status,evidence,owner` format... to compute actual coverage and gate verdict,\" explicitly asking once for the e"
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1806,7 +1806,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Product Manager is assigned as owner for gaps without owners, e.g., \"GOVERN 4.2\" and \"GOVERN 5.2\" assigned to Product Manager instead of AI Risk Lead."
+  "evidence": "The output assigns gaps without owners to the Product Manager, contrary to the expected \"[TO BE BASELINED — owner: AI risk lead]\" and marks GOVERN 2.3 as implemented without evidence."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1814,8 +1814,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output assigns Product Manager as owner for gaps without an owner, e.g. \"GOVERN 5.2 planned Product Manager,\" contradicting the expectation that gaps without owner carry \"[TO BE BASELINED — owner:"
+  "pass": true,
+  "evidence": "Gaps without an owner carry \"[TO BE BASELINED — owner: AI risk lead]\" and GOVERN 2.3 is flagged as implemented without evidence."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1824,7 +1824,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output states \"72% implemented or partial\" and \"The release meets the gate criterion of ≥ 60% NIST AI RMF coverage,\" indicating a pass rather than a fail."
+  "evidence": "The output states coverage is \"71%\" which exceeds the 0.600 threshold, so it does not gate FAIL or exit 1."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1833,7 +1833,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Evidence-backed coverage is 0.528, which is below the 0.6 threshold, resulting in gate FAIL as stated."
+  "evidence": "Coverage is 0.691 with evidence-backed 0.615, which is above the 0.600 threshold, so the gate should PASS, not FAIL."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1842,7 +1842,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output provides progress summaries for only 4 categories without mapping to all 72 subcategories or indicating missing ones as blank rows."
+  "evidence": "The output lists only 10 subcategories with statuses, missing coverage for the full 72 subcategories and does not explicitly mark blanks as missing."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1851,7 +1851,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not report the starting baseline coverage (0.028) nor assign owners or TBD for every gap; only some owners are mentioned in the baseline note."
+  "evidence": "The output does not report the starting baseline coverage of 0.028 nor assign owners or TBD for all gaps; some gaps have no owner or gate mentioned."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1859,8 +1859,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Coverage is 0.053 for 71 applicable subcategories, not mapped to all 72 subcategories as required."
+  "pass": true,
+  "evidence": "The output states \"Coverage: 0.058 against NIST AI RMF 1.0 (72 subcategories)\" and notes \"Blank rows count as missing gaps,\" indicating all 72 subcategories are mapped with blanks counted as missing."
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1868,8 +1868,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "No mention of starting baseline coverage 0.028 or reporting every gap with an owner or TBD for AI risk lead."
+  "pass": true,
+  "evidence": "The output shows coverage 0.086 (0.058 evidence-backed) as starting baseline and lists all gaps with owners or marked \"[TO BE BASELINED — owner: AI risk lead]\" with no invented gate."
  },
  {
   "skill": "ai-platform/ai-finops-chargeback",
@@ -5514,7 +5514,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention asking for the scores CSV or running scripts/vendor_assess.py."
+  "evidence": "No mention of requesting the scores CSV or running scripts/vendor_assess.py in the output."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5523,7 +5523,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output reports weighted scores, sensitivity analysis (\"Vendor A remains top unless Cost weight increases above 30%\"), and contract risks as red flags."
+  "evidence": "Reports weighted scores, ±10% sensitivity analysis, and contract risks flagged."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5531,8 +5531,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not state that it never imputes missing scores or that it is a decision aid, not a contract review."
+  "pass": true,
+  "evidence": "States \"In-House Build\" score with \"N/A\" for Vendor Support and notes \"Next Steps\" without imputing missing scores."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5541,7 +5541,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output asks for the scores CSV and criteria weights but does not mention running scripts/vendor_assess.py."
+  "evidence": "The output asks for scores CSV with sources and criteria weights but does not mention running scripts/vendor_assess.py."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5568,7 +5568,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output requests \"evaluation scores, token prices, and latency numbers\" but does not provide or route model choice based on these facts."
+  "evidence": "The output requests \"evaluation scores, token prices, and latency numbers\" but does not perform model selection or offer vendor and contract risk comparison."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5577,7 +5577,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Choose `model-selection` skill for your request. This skill evaluates LLMs based on eval scores, token costs, and latency,\" and also mentions \"`ai-vendor-assessment` compares vendor"
+  "evidence": "The output states \"Use the `model-selection` skill for choosing an LLM based on eval scores, token prices, and latency\" and \"This `ai-vendor-assessment` skill compares vendors/platforms,\" showing corr"
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5586,7 +5586,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Fabrikam scored 4.15 but Tailspin scored 3.85 with no mention of red flag TPR-02; stability 100.0% and recommendation of Fabrikam are missing."
+  "evidence": "The output shows Fabrikam score as 83, Tailspin 77, Build 65, Litware incomplete, but does not mention ranks 4.150, 3.850, 3.250 or stability 100.0%, nor explicitly recommend Fabrikam."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5595,7 +5595,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Fabrikam scores 4.150 rank 1, Tailspin 3.825 with red flag TPR-07, Build 3.450, Litware incomplete; stability 44%, not 100%; recommendation states no clear winner."
+  "evidence": "Fabrikam scored 3.700 rank 1, Tailspin 3.550 with no red flag TPR-02, Build 3.050, Litware incomplete; recommendation is Tailspin, not Fabrikam."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5603,8 +5603,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Weights are stated (\"Weights chosen: answer_quality highest priority (40%), then cost (25%), compliance (20%), integration effort (15%)\") but there is no indication that these weights were asked for o"
+  "pass": true,
+  "evidence": "The output states \"weights = answer_quality 40%, total_cost 30%, security_compliance 20%, integration_effort 10%\" showing weights were given, not invented."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5612,8 +5612,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output states, \"*Weights chosen reflect typical priorities: cost (35%), security (30%), answer quality (20%), integration effort (15%).*\""
+  "pass": false,
+  "evidence": "The output contains placeholders \"[TO BE BASELINED — owner: Procurement lead]\" instead of actual criteria weights, indicating no weights were asked for or provided."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5622,7 +5622,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Security non-compliance | Low (assumed)\" and \"Perform vendor security audit prior to contract\" indicate risk is acknowledged but assumed low, making recommendation conditional."
+  "evidence": "\"Security compliance for Litware GenAI is unknown; treated as zero to penalize uncertainty\" and \"Litware compliance unknown\" risk with mitigation and owner specified."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5631,7 +5631,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"No risk answers provided, so risk is unassessed and conditional\" and \"Third-party risk: Not assessed; answers and evidence missing\""
+  "evidence": "\"Third-party AI risk (assumed compliant; not assessed)\" and \"Litware GenAI (fictional) ... missing security_compliance score and risk answers\" indicate risk is not assessed and recommendation is condi"
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5640,7 +5640,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Fabrikam's default training on customer data triggers a disqualifying risk\" and \"No option passes all criteria without fatal risks; gating on Fabrikam's training risk leads to Tailspin as the clear w"
+  "evidence": "\"No option passes risk gate with required clear, unambiguous lead; fail decision per mandate.\""
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5649,7 +5649,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"No clear winner; Fabrikam AI disqualified by third-party risk red flag (TPR-01)\" and \"Fail gated decision due to Fabrikam’s red flag.\""
+  "evidence": "\"Recommendation: **Run stops (exit 1). No clear winner due to Fabrikam AI (fictional) having a red flag (tr\" and \"Fabrikam AI (fictional) ... red_flags | TPR-01 (trains on customer data)\""
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5658,7 +5658,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Output shows Fabrikam at rank 2 (+0.25), Tailspin falls to rank 3 with no mention of new red flag TPR-02, Build in-house new, and Contoso not mentioned."
+  "evidence": "The output shows Tailspin remains rank 1 and Fabrikam rank 2, with no mention of Fabrikam rising to rank 1 or a new red flag TPR-02 for Tailspin, nor Contoso or Build in-house as new."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5666,8 +5666,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output states \"Tailspin improved score from 4.050 to 4.067 (+0.017), maintaining 1st place,\" and \"Fabrikam improved from 3.900 to 4.000 (+0.100), cleared previous TPR-09 risk unanswered flag,\" whi"
+  "pass": true,
+  "evidence": "\"Tailspin Models (fictional) | 4 | 4 | 4 | 3 | 3.700 | 3.700 | 2 | yes | none | TPR-07\" shows Tailspin fell to rank 2, Fabrikam rose to rank 1, Build in-house is new, and Contoso is not listed."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5676,7 +5676,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No request for scores CSV or mention of running scripts/vendor_assess.py is present."
+  "evidence": "The output does not ask for the scores CSV or mention running scripts/vendor_assess.py."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5685,7 +5685,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Reports weighted scores with sensitivity analysis (\"Vendor A remains winner if Cost weight varies ±10%\") and contract risks as red flags."
+  "evidence": "Reports weighted scores with sensitivity analysis (\"Increasing Accuracy or Scalability weights by 10%...\") and lists contract risks as red flags."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5693,8 +5693,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "Does not state it is a decision aid nor mention avoiding imputing missing scores."
+  "pass": true,
+  "evidence": "States it is a decision aid, not a contract review (\"Next step: Validate weighting assumptions...\")."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5702,8 +5702,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output requests files but does not mention running scripts/vendor_assess.py."
+  "pass": true,
+  "evidence": "Requests \"Options scores CSV with scores (1–5) per criterion per option and sources\" and \"Criteria weights CSV with criterion, raw weight and description.\""
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5712,7 +5712,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not report weighted scores, sensitivity, rank stability, or red flags."
+  "evidence": "Does not report weighted scores, sensitivity, rank stability, or red flags; only states it will generate them after receiving files."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5721,7 +5721,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not mention missing scores or state that it is a decision aid, not a contract review."
+  "evidence": "Does not mention missing score imputation or that it is a decision aid, not a contract review."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5730,7 +5730,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output requests \"evaluation scores, token prices, and latency numbers\" but does not perform model selection or risk comparison."
+  "evidence": "The output requests \"eval scores, token prices, and latency numbers\" but does not provide any model choice or vendor/contract risk comparison."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5739,7 +5739,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Use the skill `model-selection` for choosing an LLM based on evaluation scores, token prices, and latency\" and \"This `ai-vendor-assessment` skill only compares vendors/platforms on "
+  "evidence": "The output states \"Use the `model-selection` skill for choosing an LLM based on eval scores, token prices, and latency\" and clarifies that `ai-vendor-assessment` is for vendor/platform comparison."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5747,8 +5747,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Fabrikam scores 4.15 (rank 1), Tailspin 3.85 with noted risk TPR-07 unknown, Build 3.25, Litware incomplete; recommendation is Fabrikam."
+  "pass": false,
+  "evidence": "Tailspin score is 3.9 with unknown TPR-07 risk, not 3.850 with red flag TPR-02; Fabrikam 4.0 rank 1; Litware incomplete; no stability 100.0% or explicit recommendation for Fabrikam."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5757,7 +5757,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Tailspin score is 3.950 not 3.850 and red flag is TPR-07 not TPR-02; Build score is 3.375 not 3.250; recommendation is no clear winner but Fabrikam top."
+  "evidence": "Fabrikam scored 4.100 not 4.150, Tailspin 3.650 not 3.850, Tailspin has no red flags but one unanswered TPR-07, stability 100.0%, recommend Fabrikam."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5766,7 +5766,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output provides weights (\"Answer Quality 0.4\", \"Total Cost 0.25\", etc.) without showing any request or indication that weights were asked for."
+  "evidence": "The output provides weights (\"Answer quality 40%\", etc.) without showing any request or indication that weights were asked for."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5775,7 +5775,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output states \"Weights assigned by AI agent for balance: answer_quality 40%, total_cost 30%, security_compliance 20%, integration_effort 10%\" without showing any request for criteria weights."
+  "evidence": "The output contains no criteria weights and states \"[TO BE BASELINED — owner: Procurement lead]\" instead of asking for or providing weights."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5784,7 +5784,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Risk table includes \"Missing Litware security data\" with owner \"Security Officer\" and recommendation notes \"assumed large vendors are compliant,\" making recommendation conditional."
+  "evidence": "\"Recommendation: Select Fabrikam AI pending vendor risk confirmation\" and \"Confirm security posture for Litware GenAI before proceeding\" show conditional recommendation due to unassessed risk."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5793,7 +5793,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"No third-party risk answers; risk assessment not performed, conditional recommendation.\""
+  "evidence": "\"risk is unassessed and must be baselined by Third-party risk manager\" and \"not assessed [TO BE BASELINED — owner: Third-party risk manager]\" indicate no risk answer assumed and recommendation is cond"
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5802,7 +5802,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Fabrikam's training on customer data by default introduces a security red flag\" and \"Gate Result: Fail. No Clear Winner.\""
+  "evidence": "\"No clear winner exists under the 'fail unless clear winner' rule due to Fabrikam’s risk and Tailspin’s lower score.\""
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5811,7 +5811,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Fabrikam triggers the critical red flag TPR-01 (training on customer data by default)\" and \"Gate requirement (clear winner) fails due to Fabrikam red flag\""
+  "evidence": "\"Fabrikam AI ... has 2 red flags (trains on customer data by default and incident notice delay)\" and \"require-clear-winner true ... stops (exit 1)\""
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5820,7 +5820,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output shows Fabrikam rising to rank 1 (+0.50), Tailspin falling to rank 3 (-2 positions) with no mention of red flag TPR-02, Build in-house is new, and Contoso is not mentioned."
+  "evidence": "Last year's scores show Tailspin at 1 and Fabrikam at 2, but the output states Tailspin 1 and Fabrikam 2 in 2025, with no mention of Tailspin red flag TPR-02 or Contoso removal."
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -5828,8 +5828,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output shows Tailspin Models remains rank 1 with no new red flags, Fabrikam AI is rank 2 with no red flags, Build in-house is present, and Contoso Copilot is no longer assessed, contradicting the "
+  "pass": true,
+  "evidence": "\"Tailspin Models (fictional) | 4.050 | 3.850 | -0.200 | 1 | 2 | none | none\" and \"Fabrikam AI (fictional) | 3.900 | 4.000 | +0.100 | 2 | 1 | TPR-09 | TPR-09\" show Fabrikam rises to rank 1 and Tailspin"
  },
  {
   "skill": "ai-platform/annotation-agreement",
@@ -7215,174 +7215,12 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not report any verdict or per-dimension pass/fail/TBD or column profile."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "prompt-is-our-data-ready",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not use or mention the owner's thresholds or state any sample provenance caveat."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "prompt-is-our-data-ready",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not mention running scripts/assess.py on the extract and requirements file."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "prompt-is-our-data-ready",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not report any verdict or per-dimension pass/fail/TBD or column profile."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "prompt-is-our-data-ready",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 2,
-  "pass": true,
-  "evidence": "The output states \"Without these, I cannot assess readiness,\" implying it uses only the owner's thresholds and notes the need for provenance."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "max_null_pct and max_age_days are marked as Fail, so not all six dimensions scored as Pass."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Final verdict is \"Ready\" with all six dimensions scored and passing thresholds shown in the final table."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-missing-requirements",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output provides thresholds such as \"≤5% missing acceptable\" without asking for the owner's requirements file."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-missing-requirements",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output asks once for \"the data owner's signed-off requirements file\" and explicitly states readiness is judged only against the owner's thresholds, not defaults."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-missing-data",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not explicitly ask once for the dataset sample."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-missing-data",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output asks once for \"the sample dataset CSV extract to assess readiness.\""
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-not-ready-exits-1",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Verdict shows multiple FAIL statuses for volume, completeness, uniqueness, duplicates, and freshness, with owner named as \"Data Owner\"."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-not-ready-exits-1",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Verdict is \"Not ready\" and volume, completeness, uniqueness, duplicates, and freshness all fail with owners named."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-absent-thresholds-not-invented",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"No max_null_pct set; flagged for review\" and \"No null limit, key, or freshness window set per owner instruction\" indicate thresholds are absent and verdict is Ready-with-gaps."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-absent-thresholds-not-invented",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"completeness  | TBD | max_null_pct=[TO BE BASELINED — owner: Data owner]\" and verdict \"Ready-with-gaps\" shown"
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-mode-existing",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"passes all data quality requirements, resolving all prior failures\" with volume, null rate, uniqueness, duplicates, freshness fixed and schema \"unchanged\""
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-mode-existing",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Previous verdict: Not ready (all failed except schema)\" and \"Verdict moves from Not ready to Ready\" with all previously failed dimensions fixed and schema unchanged"
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "prompt-is-our-data-ready",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not mention running scripts/assess.py on the extract and requirements file."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "prompt-is-our-data-ready",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": false,
   "evidence": "The output does not report any verdict or column profile."
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
   "caseId": "prompt-is-our-data-ready",
-  "run": 2,
+  "run": 1,
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
@@ -7391,6 +7229,168 @@
  {
   "skill": "ai-platform/data-readiness-assessment",
   "caseId": "prompt-is-our-data-ready",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output requests files to run the script but does not show running `scripts/assess.py`."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "The output does not report any verdict or per-dimension pass/fail/TBD or column profile."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 2,
+  "pass": false,
+  "evidence": "The output does not mention using only the owner's thresholds or state any sample provenance caveat."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "All six dimensions are scored with Pass or detailed status, e.g., \"min_rows (≥20 rows) | Pass\" and \"max_null_pct (≤10%) | Pass\"."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Verdict: **Ready** — 6 pass, 0 fail, 0 TBD with all six dimensions scored from thresholds"
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-requirements",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not ask for the owner's requirements file or mention any request for thresholds."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-requirements",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output states \"Please provide the signed-off requirements CSV\" and \"Verdict: pending — cannot score without the data owner's thresholds,\" showing it asks once and does not invent thresholds."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-data",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output asks, \"Please provide the dataset or summary statistics to verify if these requirements are met.\""
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-data",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output asks once for \"the data sample (CSV extract) and the as_of date (ISO format)\" to proceed."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-not-ready-exits-1",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"The data fails minimum row count, null percentage, uniqueness, duplication, and data freshness requirements\" with owners named in Next steps and Risks sections."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-not-ready-exits-1",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Verdict: **Not ready** — 1 pass, 5 fail, 0 TBD; volume, completeness, uniqueness, duplicates and freshness fail with owners named."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-absent-thresholds-not-invented",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"null_limits\": {} indicates absent thresholds, and \"key\": \"\" and \"freshness_window\": \"\" suggest placeholders, consistent with TBD and Ready-with-gaps."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-absent-thresholds-not-invented",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"completeness | TBD | max_null_pct=[TO BE BASELINED — owner: Data owner]\" and verdict \"Ready-with-gaps\" shown, no \"Ready\" verdict present."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Verdict changed from \"Not ready\" pre-fix to \"Ready,\" with volume, completeness, uniqueness, duplicates, and freshness all passing and schema unchanged."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "Freshness regressed from fail to fail (\"freshness | fail | 103 days | fail | 27 days | regressed\"), so verdict remains Not ready, not Ready."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not mention running scripts/assess.py on the extract and requirements file."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "The output does not report any verdict or per-dimension pass/fail/TBD or column profile."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 2,
+  "pass": false,
+  "evidence": "The output does not reference owner's thresholds or mention sample provenance caveat."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "prompt-is-our-data-ready",
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
@@ -7412,8 +7412,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not use or mention the owner's thresholds nor state any sample provenance caveat."
+  "pass": true,
+  "evidence": "The output requests the \"owner-signed thresholds CSV\" and mentions \"if available\" for the as_of date, implying use of owner's thresholds and noting sample provenance caveat."
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7422,7 +7422,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "All six dimensions are scored with statuses such as \"Met,\" \"Not met,\" and \"Partially met\" from the supplied thresholds."
+  "evidence": "All six dimensions are scored with clear Pass/Fail results and explanations, e.g., \"min_rows = 20 | Pass\" and \"max_null_pct = 10% | Fail\" with details."
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7430,8 +7430,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Verdict is \"Not ready\" due to freshness failing, not \"Ready\" as expected."
+  "pass": true,
+  "evidence": "Final verdict is \"Ready\" with all six dimensions passing as shown in the updated Dimensions table."
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7440,7 +7440,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output provides thresholds (e.g., \"95%+ values present\") without asking for the owner's requirements file."
+  "evidence": "The output uses a threshold \"<5% missing allowed\" without asking for the owner's requirements file."
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7449,43 +7449,43 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states, \"Please provide the requirements file (`key,value` thresholds as per `assets/readiness-requirements.csv`)\" and does not invent thresholds."
+  "evidence": "\"Please provide a CSV with keys and thresholds... Include as_of date if freshness is needed.\""
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
   "caseId": "agent-missing-data",
   "run": 2,
   "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output asks, \"Please provide the dataset or a data summary to assess readiness against these criteria.\""
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-missing-data",
-  "run": 2,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output asks once for the sample dataset CSV extract: \"Please provide the sample dataset CSV extract\"."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-not-ready-exits-1",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"The dataset fails five of seven critical data quality requirements... Owner: Data Quality Lead... Owner: Data Engineering... Owner: Data Governance\" indicating not ready with owners named."
- },
- {
-  "skill": "ai-platform/data-readiness-assessment",
-  "caseId": "agent-not-ready-exits-1",
-  "run": 2,
-  "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Verdict states \"Not ready\" but completeness is marked as Pass, not Fail as required."
+  "evidence": "The output does not include any request or question asking for a dataset sample."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-missing-data",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output asks once for the dataset sample: \"Please provide the sample dataset extract CSV...\""
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-not-ready-exits-1",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Verdict Not ready due to volume, completeness, uniqueness, duplicates, and freshness failures with owners named in Next Steps section."
+ },
+ {
+  "skill": "ai-platform/data-readiness-assessment",
+  "caseId": "agent-not-ready-exits-1",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Verdict is \"Not ready\" with volume, completeness, uniqueness, duplicates, and freshness failing and owners named; \"Any fail → Not ready (exit 1)\""
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7494,7 +7494,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"No null percentage limit set by owner; nulls reported as-is.\" and \"Owner to set null value threshold to formalize nulls acceptability — owner: Data Owner, due 2026-10-07\""
+  "evidence": "\"No null limit, key column, or freshness window assigned yet; therefore, data passes validation based on current criteria.\""
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7503,7 +7503,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Thresholds for completeness, uniqueness, duplicates, and freshness are marked TBD with owner Data owner, and verdict is Ready-with-gaps."
+  "evidence": "\"completeness | TBD | [TO BE BASELINED — owner: Data owner]\" and verdict \"Ready-with-gaps\" shown"
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7512,7 +7512,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"The current orders feed extract meets all readiness requirements and is ready for production use,\" with all dimensions previously failed now passing and schema unchanged."
+  "evidence": "Verdict upgraded from “Not ready” to “Ready” with volume 20 rows, completeness 5% nulls, uniqueness 0 duplicates, duplicates 0, freshness 3 days, and schema unchanged."
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -7521,7 +7521,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Previous verdict was Not ready with 5 fails. Current verdict is Ready-with-gaps ... All other defects fixed including volume, uniqueness, duplicates, and freshness. schema unchanged; Regressed: None."
+  "evidence": "\"Verdict: Ready — 6 pass, 0 fail, 0 TBD\" and \"Change since last assessment\" shows all fixes and \"schema pass unchanged\""
  },
  {
   "skill": "ai-platform/dpia",
@@ -9104,8 +9104,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not mention running scripts/build_dataset.py or report counts, duplicates, splits, or leakage."
+  "pass": true,
+  "evidence": "Output shows counts for duplicates removed, usable examples, splits, and leakage 0: \"leakage | 0\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9113,8 +9113,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not state any defaults used or mention token count estimates."
+  "pass": true,
+  "evidence": "Defaults stated: \"Parameters: split 0.8,0.1,0.1 (default) · seed 42 (default) · min_rows 10 (default)\" and \"estimated tokens = characters/4\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9122,8 +9122,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not point to pii-data-inventory before training."
+  "pass": true,
+  "evidence": "Mentions pii-data-inventory before training: \"Before training: run `pii-data-inventory` on the examples, confirm owner, licence and consent\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9132,7 +9132,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Output has 17 entries including one empty (\"How do I map a network drive?\"), one exact duplicate (\"How do I reset my password for the Acme Widgets portal?\"), and one normalized duplicate (\"  how do I "
+  "evidence": "There are 18 completions, including one empty (\"How do I map a network drive?\") and duplicates (\"How do I request a new laptop?\" twice and \"how do I request a NEW laptop?\" normalized duplicate), leavi"
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9141,7 +9141,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Usable examples are 17, split is 14/2/1, not 15 usable and 11/2/2 split as expected."
+  "evidence": "Output shows 16 usable, not 15, and a 12/2/2 split instead of 11/2/2 as expected."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9150,7 +9150,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks, \"Please provide 5–10 intents with 3 examples each,\" requesting raw examples rather than generating them."
+  "evidence": "The output asks for \"Sample helpdesk FAQs or transcripts\" without generating any examples."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9159,7 +9159,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks for \"the examples file (CSV with prompt, completion[, system] or JSONL with messages or prompt+completion)\" and does not generate examples."
+  "evidence": "The output asks for \"Provide your raw examples file (CSV with prompt,completion[,system] or JSONL with messages or prompt+completion per `assets/examples-template.csv`)\" and does not generate examples"
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9167,8 +9167,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Train   | 4     | Valid pairs with both user and assistant or prompt/completion filled\" and \"Dropped | 2     | Invalid JSON (last line), incomplete (user only)\" confirms only 4 usable examples remain"
+  "pass": false,
+  "evidence": "Output includes 7 valid entries split into train/val/test, exceeding the \"Only 4 usable\" requirement and does not mention exiting with code 1."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9177,7 +9177,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Output states \"Run stops: 3 usable examples only (under min_rows=10 default)\" and \"Action: raising exit 1 due to insufficient usable examples.\""
+  "evidence": "\"2 usable examples ... Not built: 2 usable examples is below min_rows 10. Run stops (exit 1).\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9186,7 +9186,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "All parameters are labelled with context like \"fictional fixture - invented helpdesk Q&A,\" no mention of (default)."
+  "evidence": "No parameters are labelled as (default); all completions are direct answers without parameter labels."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9195,7 +9195,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Parameters section shows \"split      | 0.7, 0.15, 0.15  | supplied\" and \"seed       | 7                | supplied\" with leakage_prompts_across_splits = 0"
+  "evidence": "Parameters line shows \"split 0.7,0.15,0.15 (supplied) · seed 7 (supplied) · max_chars 400 (supplied)\" and \"leakage prompts across splits           | 0\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9204,7 +9204,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Output shows only train.jsonl updates with 14 entries, no mention of val.jsonl or test.jsonl changes or preservation of splits."
+  "evidence": "The output shows 14 examples with no indication of splits or dropped rows, so it does not confirm keeping splits or dropping 11 new rows."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9213,7 +9213,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output shows placeholders \"[TBD]\" for train, val, and test set sizes and does not confirm the exact counts or that 5 new examples were added with no leakage."
+  "evidence": "Output shows \"already in dataset (existing) | 13\" and \"usable new examples | 2\" instead of 11 dropped and 5 added new examples."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9222,7 +9222,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention running scripts/build_dataset.py or report counts, duplicates, splits, or leakage."
+  "evidence": "No mention of running scripts/build_dataset.py or reporting counts and splits."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9231,7 +9231,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not state any defaults used or mention token count estimates."
+  "evidence": "No statement about defaults used or token count estimates."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9240,7 +9240,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not point to pii-data-inventory before training."
+  "evidence": "No reference to pii-data-inventory before training."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9249,7 +9249,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not mention running scripts/build_dataset.py or reporting counts, duplicates, splits, or leakage."
+  "evidence": "No mention of running scripts/build_dataset.py or reporting counts, duplicates, splits, or leakage."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9258,7 +9258,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not state any defaults used or mention token count estimates."
+  "evidence": "No statement about defaults used or token count estimates."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9267,7 +9267,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not point to pii-data-inventory before training."
+  "evidence": "No reference to pii-data-inventory before training."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9276,7 +9276,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Output contains 16 entries with 1 exact duplicate (\"How do I request a new laptop?\") and 1 normalized duplicate (\"how do I request a NEW laptop?\"), and 1 near duplicate (\"How do I reset my password fo"
+  "evidence": "Output has 16 entries with duplicates: prompts 1 and 15 are duplicates, and prompts 2 and 14 are duplicates, leaving 15 usable entries with an 11/2/2 split and no leakage."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9284,8 +9284,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Output shows \"Usable examples 16\" and split \"Train set size 13, Val set size 2, Test set size 1\" instead of 15 usable and 11/2/2 split."
+  "pass": true,
+  "evidence": "\"usable examples                  | 15\" and \"train split size                | 11\", \"val split size                  | 2\", \"test split size                 | 2\", \"leakage prompts across splits    | 0\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9294,7 +9294,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output requests \"Sample user queries per intent (5–10 each)\" without generating any examples itself."
+  "evidence": "The output requests \"sample user questions and ideal bot answers or topics to cover,\" indicating it asks for raw examples rather than generating them."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9303,7 +9303,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks for \"the example file with raw prompt/response pairs\" and does not generate examples."
+  "evidence": "The output asks for \"your raw examples file in CSV ... or JSONL ... format\" and does not generate examples."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9312,7 +9312,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Output shows 7 valid examples used, exceeding the \"Only 4 usable\" expectation and no exit or example invention mentioned."
+  "evidence": "The output lists 6 examples across splits without stating exit 1 or no invented examples despite below min_rows 10."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9321,7 +9321,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Usable examples 3 ... min_rows 10 (default) ... run stops (exit 1) by design; no training dataset produced.\""
+  "evidence": "\"usable examples                    | 2\" and \"Not built: 2 usable examples is below min_rows 10. Stops (exit 1).\""
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9330,7 +9330,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "All parameters are labeled with percentages like \"Train (70% – 14 rows)\" indicating supplied values, no \"(default)\" labels found."
+  "evidence": "Supplied prompts like \"how do I request a NEW laptop?\" are shown without \"(default)\" label, indicating no leakage."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9339,7 +9339,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Parameters section shows \"Split ratio 0.7/0.15/0.15 (supplied)\", \"Seed 7 (supplied)\", \"Maximum characters 400 (supplied)\", and \"Leakage prompts across splits     | 0\"."
+  "evidence": "Parameters show \"split 0.7,0.15,0.15 (supplied)\" and \"seed 7 (supplied)\" with \"leakage prompts across splits | 0\"."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9347,8 +9347,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output shows 13 new JSONL entries appended without reshuffling, duplicates removed, and no indication of split changes or leakage."
+  "pass": false,
+  "evidence": "Output shows only 3 new train examples added, no mention or evidence of 1 val and 1 test example added or any split preservation."
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -9357,7 +9357,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Kept existing split assignments in `train.jsonl`, `val.jsonl`, `test.jsonl`\" and \"Leakage across splits 0 (run passes leakage check)\" indicate splits preserved and no leakage; also \"Exact duplicates "
+  "evidence": "\"already in dataset (existing) 8\", \"added train 7\", \"added val 1\", \"added test 1\", and \"leakage prompts across splits 0\" confirm splits preserved, 11 duplicates dropped, 5 new added, and no leakage."
  },
  {
   "skill": "ai-platform/guardrails-config",
@@ -10194,7 +10194,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Tokens estimated as \"Approx. Tokens (chars / 4)\" and chunk counts implied by chunk size 1,000 tokens with batch size 200 chunks."
+  "evidence": "The output shows chunk counts with \"chunk_size=1000\" and tokens estimated as \"1 token ≈ 4 characters\" in assumptions."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10203,7 +10203,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Embedding cost calculated as \"900,000 tokens * $0.02 / 1,000,000 = $0.018\" from the quoted price."
+  "evidence": "The cost table includes \"Cost per 1M Tokens\" and calculated cost for policy docs embedding as \"$0.018 at $0.02 per 1M tokens.\""
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10211,8 +10211,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No mention or description of rag_pipeline.py or syntax-checking; only LangChain code snippet shown."
+  "pass": true,
+  "evidence": "The code snippet is provided with syntax-correct Python code for the RAG pipeline but no execution or runtime results shown."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10220,8 +10220,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "No chunk counts or token estimates are provided; avg_chars and other fields are placeholders like \"[TO BE BASELINED — owner: Data owner]\"."
+  "pass": true,
+  "evidence": "Output states running `scripts/plan_rag.py` producing chunk counts with ceil formula and tokens estimated as chars/4."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10229,8 +10229,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 1,
-  "pass": false,
-  "evidence": "No cost calculations or re-embedding costs are shown; only embedding_price_per_1m_tokens is given without computations."
+  "pass": true,
+  "evidence": "Mentions calculating one-time and monthly re-embedding costs from the quoted price only."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10238,8 +10238,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No description or mention of rag_pipeline.py or retrieval budget verification is present in the output."
+  "pass": true,
+  "evidence": "Retrieval budget vs context included; `rag_pipeline.py` described as generated and syntax-checked, not executed."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10248,7 +10248,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Corpus size and embedding cost tables with calculations and a pipeline scaffold are provided and appear syntactically correct."
+  "evidence": "Corpus sizing and embedding cost are computed with detailed tables and formulas, and a pipeline scaffold with code is provided."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10257,7 +10257,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Detailed sizing and cost tables with formulas and budget checks are fully computed and shown."
+  "evidence": "Detailed sizing, cost, retrieval budget, and warnings computed and reported, with scaffold generated and syntax-checked as \"rag_pipeline.py (syntax-checked)\""
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10266,7 +10266,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output assumes embedding cost as \"$0.0004 per 1,000 tokens\" without asking for the RAG config or embedding price."
+  "evidence": "The output assumes OpenAI embedding cost and does not ask for the RAG config or embedding price."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10275,43 +10275,43 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output explicitly requests the RAG config JSON with keys including \"embedding_price_per_1m_tokens\" and states \"No price means cost is unknown; cannot complete the plan without it.\""
+  "evidence": "The output states \"You did not provide `config`... Please provide the RAG config JSON including the price per 1M tokens, chunk and overlap sizes, and other parameters.\""
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
   "caseId": "agent-no-price-no-guess",
   "run": 1,
   "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The note states \"No price given in config; this is a typical benchmark for budgeting only,\" indicating no price was assumed or scaffolded."
- },
- {
-  "skill": "ai-platform/langchain-rag-runner",
-  "caseId": "agent-no-price-no-guess",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"The embedding price is missing; it is required and has no default... With no price, the run blocks and scaffold is not produced.\""
- },
- {
-  "skill": "ai-platform/langchain-rag-runner",
-  "caseId": "agent-context-overflow-blocked",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output states \"Top 20 chunks at 2000 characters total 40,000 characters, exceeding the 4000-token (~16,000 characters) context budget\" and explains zero overlap and chunk sizing."
- },
- {
-  "skill": "ai-platform/langchain-rag-runner",
-  "caseId": "agent-context-overflow-blocked",
-  "run": 1,
-  "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output warns about \"top_k × chunk size ... exceeds context budget\" but does not mention zero overlap or the in-memory store."
+  "evidence": "The output assumes a price of \"$0.0004 per chunk\" rather than naming a missing price or indicating no price assumed."
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-no-price-no-guess",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Block reason: config.embedding_price_per_1m_tokens is missing (no default is assumed). The embedding price must be supplied explicitly; it cannot be assumed or 'usual'.\""
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "No warning about zero overlap or the in-memory store is present in the output."
+ },
+ {
+  "skill": "ai-platform/langchain-rag-runner",
+  "caseId": "agent-context-overflow-blocked",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"top_k x chunk size = 10,000 est. tokens exceeds the context budget of 4,000\" and warnings include \"Zero overlap: boundary context lost\" and \"In-memory vector store: index lost on restart (no persiste"
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10320,7 +10320,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output includes a detailed RAG review with pipeline plan, quantitative estimates, LangChain guidance review, risks, next steps, and appendix as expected."
+  "evidence": "The output is a detailed rag-review.md with pipeline design, cost estimates, review against LangChain guidance, risks, next steps, and corpus stats appendix."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10329,7 +10329,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"rag-review.md\": \"generated as requested\" and detailed review content present in the output."
+  "evidence": "Output includes `rag-review.md` referencing upstream guidance with detailed evaluation and next steps."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10338,7 +10338,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Output lists 4 changed keys, states reindexing required but estimates 3.1M tokens embedding cost ($62), not 3,022,500 tokens or $0.0605, and chunk counts differ from expected (7,348->12,400, not 8,500"
+  "evidence": "Output lists 4 changed keys, states full reindex needed, but estimates 2,985,000 tokens (1.05M + 0.075M + 1.86M = 3.0M tokens) and cost $0.0597, not 3,022,500 tokens or $0.0605, and does not show chun"
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10347,7 +10347,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output lists more than 5 changed keys and shows chunks 7,300 -> 11,500 and context tokens 6,000 -> 1,250, not chunks 8,500 -> 12,700 or context 1,500 -> 1,250 as expected."
+  "evidence": "The output does not list 5 changed keys nor explicitly state a full re-index is required at 3,022,500 tokens or $0.0605 one-off; it only shows partial recalculations and comparisons without these spec"
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10356,7 +10356,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No mention of running scripts/plan_rag.py or chunk counts per source with ceil formula; tokens estimated as chars/4 is not explicitly stated."
+  "evidence": "No script named scripts/plan_rag.py is run or referenced; chunk counts use inconsistent formulas and tokens are estimated as chars/3, not chars/4."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10364,8 +10364,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 1,
-  "pass": true,
-  "evidence": "Cost per run and rates are detailed, e.g., \"Cost = (480,000 / 1,000,000) * $0.02 = $0.0096 per run (rounded to $0.01)\"."
+  "pass": false,
+  "evidence": "Only one-time embedding cost is estimated (~$0.095); no monthly re-embedding cost is provided from the quoted price."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10374,7 +10374,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No description of rag_pipeline.py or retrieval budget vs context; only LangChain code snippet provided without syntax check mention."
+  "evidence": "No mention or description of rag_pipeline.py or its syntax checking; retrieval budget vs context is not discussed."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10383,7 +10383,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Uses chunk count formula \"n = 1 + ceil((L−1000)/800)\" and tokens estimate \"Tokens = ceil(D * E / 4)\" as chars/4 estimates."
+  "evidence": "Output shows running `scripts/plan_rag.py` with corpus and config inputs, and mentions chunk counts computed with ceil formula and tokens estimated as chars/4."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10392,7 +10392,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Calculates one-time and monthly costs from price \"$0.02 per 1M tokens\" with example \"$0.0216 per month\"."
+  "evidence": "Mentions embedding price per 1m tokens (0.02) and computes one-time and monthly re-embedding costs from this price."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10401,7 +10401,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "Retrieval budget computed as \"Per-query context tokens = ceil(top_k * C / r) = 1250 tokens\" and notes \"Must check this ≤ context budget tokens [TO BE BASELINED]\"; rag_pipeline.py described as \"syntax-"
+  "evidence": "Retrieval budget is included in output files, and `rag_pipeline.py` is described as syntactically checked code, not executed."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10410,7 +10410,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Corpus size and embedding cost are computed with detailed tables and formulas, and a Python-like scaffold is provided with syntax-checked code snippets."
+  "evidence": "The output includes a detailed table with corpus size, token estimates, and embedding cost calculations, plus a syntax-checked Python scaffold implementing the RAG pipeline."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10419,7 +10419,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Sizing, cost, and budget are computed with detailed values and \"scaffold_status\": \"syntax_check_passed\" confirms syntax check."
+  "evidence": "\"Total chunks: 11,700\", \"Costs: One-time = $0.0542, Monthly = $0.0311\", \"Retrieval budget: 1250 < 6000 → fits\", \"rag_pipeline.py generated and syntax-checked\""
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10428,7 +10428,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output assumes an embedding price of \"$0.0004 per 1,000 tokens\" instead of asking for the RAG config."
+  "evidence": "The output assumes embedding cost \"$0.0004 per 1,000 tokens\" without asking for the RAG config or embedding price."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10437,7 +10437,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output explicitly asks for the RAG config JSON including embedding price: \"Please provide your RAG config JSON matching the layout in `assets/rag-config.example.json`.\""
+  "evidence": "The output explicitly requests \"the RAG config JSON including chunk_size_chars, chunk_overlap_chars, embedding_price_per_1m_tokens, top_k, reranker yes/no, vector_store, and context_budget_tokens with"
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10446,7 +10446,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Embedding price per 1,000 chunks assumed as $0.0004 (common openAI embedding price; no price in input — assumed for estimate)\"."
+  "evidence": "The output states \"Embedding price per unit | [TO BE BASELINED — owner: Vendor Manager]\" and \"Total cost depends on embedding price per chunk—currently unknown,\" naming the missing price without assum"
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10455,7 +10455,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Embedding price missing: cost is `[TO BE BASELINED — owner: ML platform lead]`\" and \"No scaffold generated due to missing embedding price; fix and rerun with complete config.\""
+  "evidence": "Output states \"One or more required config keys missing: embedding_price_per_1m_tokens is absent; the skill cannot assume a default price\" and \"no rag_pipeline.py (blocked: missing embedding price)\"."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10464,7 +10464,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Top 20 chunks of 2000 characters exceed the 4000-token context budget\" and notes \"No chunk overlap (0 overlap) per config\" and mentions the in-memory store indirectly by discussing "
+  "evidence": "The output states \"Top 20 chunks × 2000 characters = 40,000 characters total, exceeding the 4000-token (around 16,000 characters) context budget.\""
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10473,7 +10473,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"10000 tokens vs context budget 4000 tokens,\" blocking due to exceeding the budget."
+  "evidence": "\"BLOCKED (exit 1): top_k × chunk tokens (10,000) exceeds the context budget (4,000)\" and warnings include \"Chunk overlap = 0: boundary context lost\" and \"In-memory vector store: lost on restart.\""
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10482,7 +10482,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output includes a detailed pipeline plan and a comprehensive review against LangChain RAG guidance in the specified review template."
+  "evidence": "The output provides a detailed pipeline plan and review aligned with LangChain RAG guidance, including chunking, embedding, retrieval, reranking, and context management."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10491,7 +10491,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Output includes \"rag-review.md generated\" indicating the review template with upstream skill context was produced."
+  "evidence": "Output includes `rag-review.md` with LangChain RAG guidance check summary and upstream skill context."
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10500,7 +10500,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "Output lists 4 changed keys, estimates 3,155,000 tokens (not 3,022,500), cost $0.0631 (not $0.0605), and does not mention chunks 8,500 -> 12,700 or context tokens 1,500 -> 1,250."
+  "evidence": "The output lists 4 changed keys, requires full re-indexing, but estimates 3,237,500 tokens ($0.06475), not 3,022,500 tokens ($0.0605), and shows chunks 7,400 -> 12,950, not 8,500 -> 12,700 or context "
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -10509,7 +10509,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output shows changed keys and token estimates but does not list exactly 5 changed keys, nor states a full re-index is required at 3,022,500 tokens or the cost 0.0605 USD, nor shows chunks 8,500 ->"
+  "evidence": "Output lists 7 changed keys, re-index required at 6,200,000 tokens ($0.1240), and context per query 1250 tokens, not 3,022,500 tokens ($0.0605) or chunks 8,500 -> 12,700."
  },
  {
   "skill": "ai-platform/langgraph-hitl-runner",
@@ -10806,165 +10806,21 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No mention of running scripts/build_graph.py or reporting validation.json is present."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "happy-path-validate-and-scaffold",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "graph.md content including Mermaid diagram, validation table, node table, and instructions is not shown."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "happy-path-validate-and-scaffold",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "There is no statement about graph.py being generated or syntax-checked without execution."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "happy-path-validate-and-scaffold",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
   "evidence": "The output does not mention running scripts/build_graph.py or reporting validation.json."
  },
  {
   "skill": "ai-platform/langgraph-runner",
   "caseId": "happy-path-validate-and-scaffold",
   "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not mention graph.md or any Mermaid diagram, validation table, or node table."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "happy-path-validate-and-scaffold",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not state that graph.py was generated or syntax-checked."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output defines a valid spec with dataclasses for state, nodes, edges, conditional edges, entry, and finish, and includes a validation summary stating \"Scaffold meets spec and is ready for implemen"
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Valid Spec Shape | Passed\" and scaffold code provided with no syntax errors shown"
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-missing-spec",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output asks for \"the conversation topics, intents, and entities your support bot should cover\" instead of inventing nodes."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-missing-spec",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output explicitly asks, \"Please provide the LangGraph spec for your support bot with these details,\" indicating it requests the graph spec instead of inventing nodes."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-infinite-loop-rejected",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Added `done_flag` for loop exit, removed orphan node, fixed router with two routes, and added missing `plan_text` state field."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-infinite-loop-rejected",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"validation errors found, scaffold not written\" with listed errors including \"Static loop without conditional exit,\" \"Orphan node,\" \"Dangling edge,\" \"Router decide has only one route,\" and \"Undeclared"
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-with-review",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output provides a detailed graph review with sections matching the review template and references the upstream skill context."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-with-review",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "graph-review.md is named graph.md and the output is incomplete, missing the full review template and upstream skill context."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-mode-existing",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Added `attempts` counter; `draft` changed from list to string (single draft)\" and \"Likely incompatible state serialization\" flags draft field as breaking resume of persisted threads."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-mode-existing",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"draft changes from list to str: breaking for resumed threads\" and \"scaffold generated and syntax checked\" confirm validation, diff, breaking flag, and scaffold generation."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "happy-path-validate-and-scaffold",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not mention running scripts/build_graph.py or reporting validation.json results."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "happy-path-validate-and-scaffold",
-  "run": 2,
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not show or mention graph.md or its contents such as Mermaid diagram or tables."
+  "evidence": "The output does not mention graph.md, Mermaid diagram, validation table, or node table."
  },
  {
   "skill": "ai-platform/langgraph-runner",
   "caseId": "happy-path-validate-and-scaffold",
-  "run": 2,
+  "run": 1,
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
@@ -10973,8 +10829,125 @@
  {
   "skill": "ai-platform/langgraph-runner",
   "caseId": "happy-path-validate-and-scaffold",
-  "run": 2,
+  "run": 1,
   "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Output states \"`validation.json` reports `valid` (true/false), the errors and the warnings.\""
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "Output states \"`graph.md` shows the Mermaid diagram (## Diagram), the validation table (## Validation), the node table plus state table (## Nodes) and how to run (## How to run).\""
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 2,
+  "pass": true,
+  "evidence": "Output states \"`graph.py` (StateGraph scaffold) is generated and syntax-checked, not executed; it is written only when the spec is valid.\""
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "No graph.py, graph.md, or validation.json files are written; only a scaffold code snippet is provided."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"`validation.json` reports `valid: true`\", \"`graph.py` ... is generated and syntax-checked\", and `graph.md` shows the Mermaid diagram and tables."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-missing-spec",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output explicitly asks for \"the support bot's domain, key intents, entities, and sample utterances\" instead of inventing nodes."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-missing-spec",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output describes running a script and file outputs but does not ask for the graph spec JSON."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output shows a conditional exit from \"decide\" node with edges conditioned on \"done == true\" and \"done == false\", so it does not fail validation as described."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"`validation.json` reports `valid: false`, errors: static cycle with no conditional exit, dangling edge to 'summarise', orphan node 'orphan', router with single route, undeclared state field 'plan_tex"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output includes a detailed graph-review.md with a summary table and recommendations as per the review template."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-with-review",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Output includes detailed validation summary, Mermaid diagram, node and state tables, and how to run instructions as per the review template."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output details \"draft changes from list with 'add' reducer to string without reducer\" and notes it as a breaking change for in-flight threads."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Node added `check_reply` router node added\", \"Edges added ...\", \"State fields added `attempts`\", \"State fields type/reducer changed `draft` changes from `list` + `add` reducer to `str` no reducer\", a"
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 2,
+  "mode": "without",
   "expectedIdx": 0,
   "pass": false,
   "evidence": "The output does not mention running scripts/build_graph.py or reporting validation.json."
@@ -10983,10 +10956,37 @@
   "skill": "ai-platform/langgraph-runner",
   "caseId": "happy-path-validate-and-scaffold",
   "run": 2,
-  "mode": "with",
+  "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not include or mention graph.md with Mermaid diagram, validation table, node table, or instructions."
+  "evidence": "The output does not show or mention graph.md or any diagrams, tables, or instructions."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 2,
+  "pass": false,
+  "evidence": "The output does not state that graph.py was generated or syntax-checked."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "Output states \"`validation.json` reports `valid` (true/false), the errors and the warnings.\""
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "happy-path-validate-and-scaffold",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": true,
+  "evidence": "Output states \"`graph.md` shows the Mermaid diagram (## Diagram), the validation table (## Validation), the node table plus state table (## Nodes) and how to run (## How to run).\""
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -10994,8 +10994,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "The output does not state that graph.py was generated and syntax-checked without execution."
+  "pass": true,
+  "evidence": "Output states \"`graph.py` (StateGraph scaffold) is generated and syntax-checked, not executed; it is written only when the spec is valid.\""
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11003,8 +11003,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output is a valid Python scaffold defining nodes, edges, state, and includes type annotations and placeholder methods, indicating syntax-checked code though no graph.md or validation.json files ar"
+  "pass": false,
+  "evidence": "The output is incomplete and truncated, missing full validation logic and no evidence of graph.py, graph.md, or validation.json files written or syntax-checked."
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11013,7 +11013,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "validation.json shows \"Spec shape | Pass\", graph.py scaffold is present and syntax-checked, and graph.md includes the graph and validation results."
+  "evidence": "\"`validation.json` reports `valid: true`\", \"`graph.py` ... is generated and syntax-checked\", and \"`graph.md` shows the Mermaid diagram, validation table, node table plus state table, and how to run.\""
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11022,7 +11022,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output explicitly asks for \"the support bot's domain, key intents, sample user queries, and main conversation flows\" instead of inventing nodes."
+  "evidence": "The output asks for \"your support bot’s domain, key intents, entities, and example user interactions\" instead of inventing nodes."
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11030,17 +11030,17 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output explicitly asks, \"Please provide the LangGraph spec for your support bot per this structure,\" requesting the graph spec instead of inventing nodes."
- },
- {
-  "skill": "ai-platform/langgraph-runner",
-  "caseId": "agent-infinite-loop-rejected",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output shows a corrected scaffold with no orphan nodes, dangling edges, or undeclared fields, so it does not fail validation as expected."
+  "evidence": "The output does not ask for the graph spec JSON but instead describes the command and output files."
+ },
+ {
+  "skill": "ai-platform/langgraph-runner",
+  "caseId": "agent-infinite-loop-rejected",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output shows \"orphan node is never connected,\" \"dangling edge target,\" \"Router 'decide' has one route only,\" and undeclared fields noted, indicating failure to validate and no graph.py written."
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11049,7 +11049,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Errors include \"Static cycle with no conditional exit,\" \"Dangling edge,\" \"Orphan node,\" \"One-route router,\" and \"Undeclared state field,\" and \"No scaffold (`graph.py`) is generated.\""
+  "evidence": "Validation errors include \"Undeclared state field,\" \"Dangling edge,\" \"Orphan node,\" \"Router one-route,\" and \"Static-only cycle no exit\"; no scaffold written as stated \"No scaffold generated. Please fi"
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11058,7 +11058,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output is a detailed graph review following the template, including states, nodes, edges, compliance, and next steps."
+  "evidence": "The output includes detailed review tables and summary aligned with the review template and context."
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11067,7 +11067,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output includes detailed validation.json, graph.md with diagram and validation table, and graph.py scaffold code as expected."
+  "evidence": "Output includes detailed graph-review.md with upstream conformance, design risks, and next changes sections as per the review template."
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11076,7 +11076,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Added `attempts` counter (int). `draft` changes type from list → str (no reducer). ... retry loop implemented through check_reply\" and \"1 node, 5 edge and 2 state changes\" indicated in the table and "
+  "evidence": "The output validates v2 with \"Added `attempts` state\" and \"draft changed from `list` to `str`,\" noting breaking changes and scaffolding recommendations."
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -11085,7 +11085,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Output details \"draft: changed from list + add to str (no reducer)\" as breaking change affecting resume, notes 1 node and multiple edge/state changes, and mentions scaffold generated and syntax checke"
+  "evidence": "\"validation.json reports valid: true\" and \"State fields changed | draft type (list → str), reducer removal\" plus scaffold with draft as str and attempts int shown."
  },
  {
   "skill": "ai-platform/llm-cost-model",
@@ -13002,196 +13002,196 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not ask for the as-of date and assumes the week ending 04/07/2024 without requesting confirmation."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "prompt-steerco-status",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "The output does not report overall RAG with the documented rule, critical path, or top 5 risks by exposure; it only lists some RAID items and milestones."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "prompt-steerco-status",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "Unowned items such as \"Milestone 4\" show \"N/A\" instead of \"[TO BE BASELINED — owner: Program manager]\"."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "prompt-steerco-status",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Asks for \"Status date (YYYY-MM-DD)\" and states \"The system date will not be used.\""
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "prompt-steerco-status",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 1,
-  "pass": false,
-  "evidence": "Does not mention running scripts/raid_status.py or reporting overall RAG, critical path, or top 5 risks."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "prompt-steerco-status",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No mention of unowned items showing \"[TO BE BASELINED — owner: Program manager].\""
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"M3 slips 28 days\" is supported by \"M3 ... forecast 7 days late\" and \"Offline eval gate ... Not started\" plus \"I1 ... Open\" and \"I1 ... Due Date 2026-10-02\" indicating overdue by 14 days."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-happy-path",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall RAG is AMBER, not RED as expected (\"Overall RAG: AMBER\")."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-missing-as-of",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output states \"Status update as of 2026-09-22\" explicitly, not using the system date."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-missing-as-of",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output states \"Please provide the as_of date in YYYY-MM-DD format\" and notes it \"does not default to today.\""
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-unowned-not-invented",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "R3 owner is assigned to \"Platform lead\" rather than TBD or Program manager, and M7 is not mentioned."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-unowned-not-invented",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Assign owner for Risk R3           | Program manager\" and \"Assign owner for milestone M7 (Pilot go-live) | Program manager\" show owners are TBD and a decision is requested."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-strict-red-exits-1",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Program status as of 2026-10-16 is **red** due to milestone delays and open high-impact, high-likelihood risks.\""
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-strict-red-exits-1",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall RAG is stated as AMBER, not RED, despite open critical-path milestone M3 having slip 28 days and risk R1 with exposure 20 overdue 7 days."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-strict-amber-passes",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Amber status indicates acceptable caution while maintaining overall delivery confidence\" and \"M3: ... Forecast 10 days late\" with \"Status: Amber (acceptable)\""
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-strict-amber-passes",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output states \"Overall RAG is GREEN\" despite M3 slipping 10 days, which should yield AMBER per the thresholds."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-dependency-cycle-exits-1",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not stop with exit 1 or show an error; instead, it provides a resolution plan addressing the M2 and M3 dependency cycle."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-dependency-cycle-exits-1",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not show a stop with exit 1 or an explicit error message; it reports the cycle but continues with status details."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-mode-existing",
-  "run": 1,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
-  "evidence": "No mention of M6 slipping 7 days or turning amber, nor M7 moving from 2026-11-25 to 2026-12-04; M5 slipped 9 days but from 2026-10-30 to 2026-11-04, not 9 days last week."
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "agent-mode-existing",
-  "run": 1,
-  "mode": "with",
-  "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Since last report (2026-10-09): milestone M3 forecast slipped 9 days later; M4 moved from red to complete; ... M7 ... slipped 14 days ... overall RAG remains RED as of 2026-10-16.\""
- },
- {
-  "skill": "ai-platform/program-raid-status",
-  "caseId": "prompt-steerco-status",
-  "run": 2,
-  "mode": "without",
-  "expectedIdx": 0,
-  "pass": false,
   "evidence": "The output does not ask for the as-of date or mention it anywhere."
  },
  {
   "skill": "ai-platform/program-raid-status",
   "caseId": "prompt-steerco-status",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "The output does not mention running scripts/raid_status.py or report overall RAG, critical path, or top 5 risks by exposure."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 2,
+  "pass": true,
+  "evidence": "Unowned items show \"[TO BE BASELINED — owner: Program Manager]\" as stated at the bottom."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output explicitly states \"The status date ('as_of') in YYYY-MM-DD format (do not omit, the system date will not be used)\" indicating it asks for the as-of date and does not assume today."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 1,
+  "pass": false,
+  "evidence": "The output does not mention running scripts/raid_status.py or reporting overall RAG, critical path, or top 5 risks by exposure."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 2,
+  "pass": false,
+  "evidence": "The output does not mention unowned items showing \"[TO BE BASELINED — owner: Program manager]\"."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "M3 is forecast delayed by 2 days, not 28 days; I1 is overdue by 14 days but critical path delay is not fully reflected."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Overall RAG: RED due to two overdue RAID items with exposure ≥ 20 (R1, I1)\" and \"Chain: M1 → M2 → M3 → M5 → M6 → M7 (duration: 80 days)\" with M3 slipped 28 days and I1 overdue 14 days."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-missing-as-of",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output states \"Status as of today (2026-09-20):\" indicating the as-of date is explicitly given."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-missing-as-of",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output asks once for \"the as-of status date in YYYY-MM-DD format\" and states \"The system date will not be used.\""
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-unowned-not-invented",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output assigns \"Platform lead\" as the new owner for R3 instead of indicating the owner is TBD or requesting naming the owner."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-unowned-not-invented",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"M7 has an unassigned owner (TBD)\" and \"Assign owner for M7\" indicate no owner is invented and a decision is requested."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-red-exits-1",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The program status is clearly stated as \"**Red**\" with multiple risks and milestone delays, and the gate decision is \"**FAIL**\"."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-red-exits-1",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Overall RAG: RED\" and \"Since --strict is set, the run fails (exit 1).\""
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-amber-passes",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Status: **Amber** (Acceptable) based on no milestone delays and one managed open risk.\" and \"M3 forecast finish is 10 days later; no baseline delay\" confirm amber status at boundary."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-strict-amber-passes",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "Overall RAG is stated as GREEN despite M3 slipping 10 days at the amber boundary, contradicting the expected AMBER."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-dependency-cycle-exits-1",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output provides a status summary of the cycle dependency but does not stop with exit 1 or show a clear dependency-cycle error naming M2 and M3."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-dependency-cycle-exits-1",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output states \"Stops (exit 1): dependency cycle among milestones: M2, M3\" clearly naming the cycle and indicating exit 1."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "\"Milestone M3 ... forecast slipped 9 more days,\" \"M5 ... Slipped 9 more days,\" \"M7 ... Forecast slipped 9 more days,\" \"M6 ... Forecast improved 6 days earlier,\" \"M4 ... Status changed from in_progress"
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not mention M4 as completed or R6 as closed, and go-live (M7) moved from 2026-11-20 to 2026-12-04, not from 2026-11-25; overall RAG stays red is stated."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output provides a date \"Week of 2024-06-10\" without asking for an as-of date or clarifying it."
+ },
+ {
+  "skill": "ai-platform/program-raid-status",
+  "caseId": "prompt-steerco-status",
   "run": 2,
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not report overall RAG with the documented rule, critical path, or top 5 risks by exposure; it only lists some issues and milestones."
+  "evidence": "The output does not mention running scripts/raid_status.py, nor does it report overall RAG with the documented rule, critical path, or top 5 risks by exposure."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13200,7 +13200,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "All items have owners listed; no unowned items appear, so the expected placeholder is not needed."
+  "evidence": "All items have owners listed; no unowned items appear, so no missing \"[TO BE BASELINED — owner: Program manager]\" tags."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13208,8 +13208,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not ask for the as-of date if not given; it only lists required inputs without prompting."
+  "pass": true,
+  "evidence": "The output states \"The status date (as-of, format YYYY-MM-DD)\" must be provided and \"The system date will not be used; you must specify the as-of date explicitly.\""
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13218,7 +13218,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not show running scripts/raid_status.py or report overall RAG, critical path, or top 5 risks."
+  "evidence": "The output does not mention running scripts/raid_status.py or reporting overall RAG, critical path, or top 5 risks by exposure."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13227,7 +13227,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output does not mention unowned items or show \"[TO BE BASELINED — owner: Program manager]\"."
+  "evidence": "The output does not mention unowned items or the placeholder \"[TO BE BASELINED — owner: Program manager].\""
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13235,8 +13235,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The report shows M3 forecast delayed by 2 days, not 28 days, and I1 status is Open with due 2026-10-02 but no explicit mention of 14 days overdue or overall RED status."
+  "pass": true,
+  "evidence": "\"M3 ... Forecast 2 days behind baseline\" and \"I1 ... Due 2026-10-02 ... Open\" indicating some delays and overdue issue; critical path and delays are reflected."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13244,8 +13244,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall RAG is AMBER, not RED as stated: \"Overall RAG is AMBER.\""
+  "pass": true,
+  "evidence": "Overall RAG is RED due to overdue critical risk R1 with exposure 20 and overdue 7 days; critical path is M1 → M2 → M3 → M5 → M7 with M3 slipping 28 days and I1 overdue 14 days."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13253,8 +13253,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output uses \"status as of today\" without asking for the as-of date."
+  "pass": true,
+  "evidence": "The report title states \"Status as of 2026-09-16,\" showing the as-of date is explicitly given and not the system date."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13263,7 +13263,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Please specify a YYYY-MM-DD date for accurate status\" and uses \"[TO BE BASELINED — owner: Program manager]\" instead of a system date."
+  "evidence": "The output asks once for the \"as_of\" date and explicitly states \"The system date will not be used.\""
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13272,7 +13272,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "R3 owner is assigned as \"Platform lead\" instead of being marked TBD or requesting naming by Program Manager."
+  "evidence": "The output assigns \"Platform lead\" as the owner of risk R3 instead of indicating the owner is TBD or requesting a decision."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13280,8 +13280,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"Assign owner for risk R3 ... Program manager\" and \"Assign owner for milestone M7 ... Program manager\" appear in Decisions needed, no owner invented."
+  "pass": false,
+  "evidence": "The output assigns \"Platform lead\" as owner for R3 and \"Eval lead\" for M7 instead of marking them as TBD or asking to name the owner."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13290,7 +13290,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output clearly states \"Program gate status: Yellow (caution), fail only if Red (critical) - gate passes,\" showing strict exit on Red risk."
+  "evidence": "\"Program status is **red** as of 2026-10-16; therefore, the gate decision is **fail** per directive.\""
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13298,8 +13298,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall RAG is stated as \"AMBER\" not \"RED\" despite open critical-path milestones being red and overdue RAID items with exposure ≥ 20."
+  "pass": true,
+  "evidence": "\"Overall RAG: RED\" and \"`--strict` was set: the run fails (exit 1)\" confirms strict exit with output written."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13308,7 +13308,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"M3 is forecasted 10 days after baseline but still acceptable\" and \"Amber status reflects minor schedule slip and risk exposure, acceptable for on-plan variant.\""
+  "evidence": "\"Overall status: Amber (acceptable for on-plan variant)\" and \"Agent desktop integration (M3) ... Forecast Date 2026-11-30\" shows a 10-day slip with amber status."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13316,8 +13316,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Overall RAG is GREEN, not AMBER as expected (\"Overall RAG: GREEN\")."
+  "pass": true,
+  "evidence": "\"Overall RAG: AMBER due to M3 slipping 10 days, which is at the amber threshold\" and \"strict passes gate (exit 0)\""
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13326,7 +13326,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not stop with exit 1 or show a clear dependency-cycle error naming M2 and M3; instead, it provides a status report and recommendations."
+  "evidence": "The output does not stop with exit 1 or show an explicit dependency-cycle error naming M2 and M3; it only describes the cycle in the status text."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13334,8 +13334,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output does not mention stopping with exit 1 or any exit code."
+  "pass": true,
+  "evidence": "The output states \"stops (exit 1): dependency cycle among milestones: M2, M3\" clearly naming the cycle and indicating exit 1."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13343,8 +13343,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"M3 milestone forecast slipped further by 9 days,\" \"M5 ... Forecast slipped 9 days,\" \"M7 ... Forecast slipped 9 days,\" \"M6 ... Forecast slipped 7 days,\" \"M4 ... done,\" \"R6 closed,\" and \"Overall RAG re"
+  "pass": false,
+  "evidence": "No mention of last week's slips for M3, M5, M7 or M6 turning amber, nor M4 completion or R6 closure, and no go-live date change from 2026-11-25 to 2026-12-04."
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -13352,8 +13352,8 @@
   "run": 2,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "\"M3 slip +9 days (19 → 28), M5 slip +9 days (...), M6 slip +7, RAG changed green→amber, M7 slip +9, RAG unchanged amber; overall RAG: RED (unchanged)\""
+  "pass": false,
+  "evidence": "The output does not mention last week's status details such as M3, M5, M7 slipping 9 days, M6 turning amber, M4 completed, or R6 closed, nor the go-live date change from 2026-11-25 to 2026-12-04."
  },
  {
   "skill": "ai-platform/prompt-spec",
@@ -15089,8 +15089,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "The output notes \"Console.log statement in production code causes noisy logs\" as a warning and \"TODO comment on coupon stacking — no implementation or ticket reference\" as requiring a ticket, indicati"
+  "pass": false,
+  "evidence": "No mention of running scripts/review.py or verdict PASS with console.log as warning and owner-less TODO as info"
  },
  {
   "skill": "build/code-review-runner",
@@ -15099,7 +15099,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output lists changes in \"src/cart/__tests__/coupon.test.ts\" alongside source file changes."
+  "evidence": "Tests section shows \"src/cart/__tests__/coupon.test.ts\" changed alongside source file \"src/cart/coupon.ts\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15107,8 +15107,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "Verdict is BLOCK, not PASS as expected for warning and info findings"
+  "pass": true,
+  "evidence": "Verdict shows warning for console.log and info for TODO without owner"
  },
  {
   "skill": "build/code-review-runner",
@@ -15117,7 +15117,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "\"Tests files changed with relevant coverage.\" and \"Test files changed (1)\" shown in summary"
+  "evidence": "Tests section shows test file changed alongside source file changed"
  },
  {
   "skill": "build/code-review-runner",
@@ -15126,7 +15126,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks once for the PR details or a link with \"Please provide the PR details or a link so I can review it accordingly.\""
+  "evidence": "The output asks \"Please share the PR link or the content you want reviewed,\" requesting the diff before reviewing."
  },
  {
   "skill": "build/code-review-runner",
@@ -15135,7 +15135,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks once for the diff with \"Please provide the unified diff of your change\" without reviewing an imagined change."
+  "evidence": "The output asks once for the diff with \"Please provide the unified diff of your PR\" and does not review an imagined change."
  },
  {
   "skill": "build/code-review-runner",
@@ -15144,7 +15144,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"Block merge\" due to critical issues including hardcoded credentials, SQL injection, disabled SSL verification, and unsafe eval usage."
+  "evidence": "The output states \"Multiple critical issues... prevent approval\" and lists critical security issues including hardcoded credentials, SQL injection, disabled TLS verification, and unsafe eval usage."
  },
  {
   "skill": "build/code-review-runner",
@@ -15153,7 +15153,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "Secrets like `AWS_KEY` and `api_token` are shown in clear text and not redacted in the output."
+  "evidence": "The output lists secrets like \"AWS_KEY and api_token are hardcoded\" but does not redact or mask these secrets in the report."
  },
  {
   "skill": "build/code-review-runner",
@@ -15162,7 +15162,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Verdict: BLOCK with multiple blocking issues including secrets, SQL concat, disabled TLS, and eval"
+  "evidence": "\"5 blocking issues: hardcoded secrets, SQL concatenation, disabled TLS, eval().\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15171,7 +15171,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Output lists all findings with details, allowing the author to see every issue found"
+  "evidence": "\"Outputs are still written so the author sees every finding; secrets are redacted\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15180,7 +15180,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"1 warning triggered: TODO comment present (`// TODO: support stacking coupons`). No blocking issues.\" and narrative step fills two-axis template."
+  "evidence": "\"TODO comment flagged as warning; acceptable but must be tracked.\" and the narrative includes the two-axis template from the findings."
  },
  {
   "skill": "build/code-review-runner",
@@ -15189,7 +15189,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"CR-TODO to warning\" is noted and the narrative fills the two-axis template from findings, spec, and method."
+  "evidence": "\"CR-TODO elevated from info to warning (per rules.csv)\" and \"TODO without owner annotation | warning\" indicate team rules raise CR-TODO to warning with narrative details."
  },
  {
   "skill": "build/code-review-runner",
@@ -15198,7 +15198,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Overall: Code meets baseline quality with minor test and validation enhancements recommended before merge.\""
+  "evidence": "\"Tests cover standard and gold tiers, and negative amount rejection\" and \"Approve merge after adding tests for zero and invalid inputs\" indicates tests changed alongside source with no blocking issues"
  },
  {
   "skill": "build/code-review-runner",
@@ -15207,7 +15207,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Files added: 2 (1 source, 1 test)\" and \"Tests changed alongside source code (points.test.ts added)\" with \"Verdict: PASS\""
+  "evidence": "\"tests changed (src/loyalty/__tests__/points.test.ts added alongside src/loyalty/points.ts)\" and \"No blocking\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15216,7 +15216,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"The change passes all blocking rules. The TODO comment triggers one warning but no blocking issues.\""
+  "evidence": "The output applies team rules with TODO as warning, missing tests as blocking, and debug/TODO as warnings, concluding \"Reject the change until no blocking violations remain and warnings are addressed."
  },
  {
   "skill": "build/code-review-runner",
@@ -15225,7 +15225,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"CR-NO-TESTS is blocking per team rules but the PR changes a dedicated test file\" and \"CR-DEBUG ... downgraded to warning\" show correct application of team rules with verdict BLOCK."
+  "evidence": "\"CR-DEBUG warning at src/cart/coupon.ts:13 console.log present, remove before production\" and \"CR-TODO warning at src/cart/coupon.ts:15 TODO without owner annotation\" are non-blocking warnings with ve"
  },
  {
   "skill": "build/code-review-runner",
@@ -15233,8 +15233,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "The output removes console.log statements rather than showing them as warnings and does not mention the owner-less TODO as info."
+  "pass": true,
+  "evidence": "The output notes \"console.log calls to avoid leaking debug output\" as a warning and flags the TODO \"support stacking coupons\" as needing documentation or next steps."
  },
  {
   "skill": "build/code-review-runner",
@@ -15243,7 +15243,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output shows changes in both `src/cart/coupon.ts` and `src/cart/__tests__/coupon.test.ts`."
+  "evidence": "The output references \"console.log in test\" in \"src/cart/__tests__/coupon.test.ts\" indicating a test file changed alongside source."
  },
  {
   "skill": "build/code-review-runner",
@@ -15252,7 +15252,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"CR-DEBUG warning\" for console.log and \"CR-TODO info\" for TODO without owner shown in Blocking and Non-blocking Findings"
+  "evidence": "\"1 warning (debug print), 1 info (owner-less TODO)\" reported in the summary"
  },
  {
   "skill": "build/code-review-runner",
@@ -15261,7 +15261,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "\"Tests changed alongside source changes\" shown in Tests section"
+  "evidence": "\"Test files changed: `src/cart/__tests__/coupon.test.ts`\" shown in the Tests section"
  },
  {
   "skill": "build/code-review-runner",
@@ -15270,7 +15270,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks once for the PR link or content with \"Please provide the PR link or content for review.\""
+  "evidence": "The output asks once for the PR link or specific files and code snippets to review."
  },
  {
   "skill": "build/code-review-runner",
@@ -15279,7 +15279,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output asks once for the diff with \"Please provide the unified diff of your PR\" instead of reviewing an imagined change."
+  "evidence": "The output asks once for the diff with \"Please provide the unified diff of your PR (`git diff <base>...HEAD > change.patch`).\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15288,7 +15288,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "The output states \"The export feature is not safe or ready for merge due to these critical issues\" including hardcoded secrets, SQL injection, disabled SSL verification, and use of eval(), indicating "
+  "evidence": "The output states \"[REJECT] Multiple critical security and quality issues demand immediate remediation before merging\" and lists critical issues including \"Hardcoded AWS key,\" \"Unsanitized SQL query c"
  },
  {
   "skill": "build/code-review-runner",
@@ -15297,7 +15297,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output lists all findings in a table with detailed descriptions, allowing the author to see every issue; secrets like \"AWS_KEY and api_token\" are mentioned but not shown in clear text, implying re"
+  "evidence": "The output provides a detailed table listing all findings, including secrets and vulnerabilities, so the author sees every finding."
  },
  {
   "skill": "build/code-review-runner",
@@ -15306,7 +15306,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Blocking findings include \"CR-SECRET\", \"CR-TLS\", \"CR-SQL-CONCAT\", and \"CR-EVAL\" with verdict \"BLOCK\"."
+  "evidence": "\"A blocking finding is present and must be fixed first\" and \"4 blocking issues detected\" indicate the run fails through the gate check."
  },
  {
   "skill": "build/code-review-runner",
@@ -15315,7 +15315,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output lists all findings with evidence such as \"AWS_KEY = ...\" and \"eval() on expr\", showing secrets and issues are visible."
+  "evidence": "The output includes a detailed table with findings and secrets redacted, e.g. \"AKIA[redacted]\"."
  },
  {
   "skill": "build/code-review-runner",
@@ -15323,8 +15323,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 0,
-  "pass": false,
-  "evidence": "No mention or evidence of CR-TODO warnings or narrative step filling the two-axis template is present in the output."
+  "pass": true,
+  "evidence": "Output notes `CR-TODO` present: `// TODO: support stacking coupons` and discusses logs violating team rules."
  },
  {
   "skill": "build/code-review-runner",
@@ -15333,7 +15333,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"CR-TODO warning for `// TODO: support stacking coupons` and narrative includes two-axis template from findings and spec\""
+  "evidence": "\"F02  src/cart/coupon.ts:13 CR-TODO warning TODO without owner detected; assign an owner or link issue.\" and the narrative step fills the two-axis template accordingly."
  },
  {
   "skill": "build/code-review-runner",
@@ -15342,7 +15342,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"No merging blockers\" and \"Function correctness | Pass\" indicate thorough review with no blocking issues."
+  "evidence": "\"The first commit of the loyalty module implements points calculation with tier multipliers and includes basic validation\" and \"Test coverage is minimal; expand to cover edge cases and invalid inputs\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15351,7 +15351,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"Verdict: PASS\" with \"Files changed | 2 (1 source, 1 test)\" and \"No blocking issues detected\" plus \"Tests changed alongside the source\""
+  "evidence": "\"2 new source files added: `src/loyalty/points.ts` and its test `src/loyalty/__tests__/points.test.ts`\" and \"Test verdict: tests changed; tests cover all added source code.\""
  },
  {
   "skill": "build/code-review-runner",
@@ -15360,7 +15360,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"CR-TODO warning\" is downgraded to warning and \"CR-NO-TESTS\" is blocking, with debug leftover and TODO noted as non-blocking warnings."
+  "evidence": "\"TODO comment ... Warning\" and \"console.log statements ... Allowed\" with \"Tests present ... Compliance met\" and verdict \"PASS\" in summary."
  },
  {
   "skill": "build/code-review-runner",
@@ -15369,7 +15369,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "\"TODO without owner or tracking issue id | Add owner or issue id to TODO comment\" downgraded to warning; \"No tests changed for source code change | blocking\" verdict BLOCK"
+  "evidence": "\"2 non-blocking findings: 1 debug print in source, 1 owner-less TODO comment\" and \"Verdict: PASS\""
  },
  {
   "skill": "build/domain-modeling-runner",

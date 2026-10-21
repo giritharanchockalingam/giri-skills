@@ -15,9 +15,20 @@
   `quality-bar.md` + `writing-style.md` only) vs with the full `SKILL.md` +
   references — and an LLM judge grades each `expected[]` item PASS/FAIL with
   evidence.
-- **Verdicts**: `OK` = trigger ≥ 0.8 and lift ≥ +0.2 · `DESC` = trigger < 0.8
-  (description problem) · `BODY` = lift < 0.2 (instructions don't change
-  behavior) · `BOTH` = both.
+- **Verdicts**: `OK` = trigger ≥ 0.8 and the quality bar is met · `DESC` =
+  trigger < 0.8 (description problem) · `BODY` = quality bar not met
+  (instructions don't change behavior enough) · `BOTH` = both.
+- **Quality bar** (`scripts/behavioral_evals.py` `quality_ok`, since 21 Oct 2026):
+  lift ≥ +0.2; or, when the model alone already scores high (a ceiling), the
+  with-skill pass rate is ≥ 0.80 and the skill closes at least half of the
+  remaining headroom — normalised gain `lift / (1 − without)` ≥ 0.5 (Hake's
+  normalised gain, the standard pre/post effect measure near a ceiling). A skill
+  never passes with negative lift. Example: without 0.88, with 1.00 → lift 0.12,
+  gain 1.00 → OK. Without 0.50, with 0.67 → lift 0.17, gain 0.34 → BODY.
+  `merge_eval_results.py --restate <dir>` re-applies the rule to a scorecard.
+- **Case inputs** (since 21 Oct 2026): each case's declared inputs are sent with
+  its prompt (values inline, files in full up to 6,000 characters, 24,000 per
+  case), so cases built on files are graded on a reply to the material.
 
 ## Caveats (read before acting on any proposal)
 
