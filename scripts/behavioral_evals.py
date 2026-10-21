@@ -262,6 +262,42 @@ def split_cases(skills):
     return ok, broken
 
 
+# ---------------------------------------------------------------- verdict (docs/EVAL-METHOD.md)
+
+TRIGGER_MIN = 0.8        # routing: share of the skill's prompts the router sends to it
+LIFT_MIN = 0.2           # absolute lift: pass rate with the skill minus without
+GAIN_MIN = 0.5           # normalised gain: lift / (1 - without), the share of the remaining headroom the skill closes
+WITH_MIN_FOR_GAIN = 0.8  # ... counted only when the with-skill pass rate is itself high
+
+
+def quality_ok(without: float | None, with_: float | None) -> bool:
+    """A skill's instructions help when the with-skill pass rate beats the baseline by LIFT_MIN, or, when the baseline
+    is already high (a ceiling), when it closes at least GAIN_MIN of the remaining headroom and reaches WITH_MIN_FOR_GAIN.
+    Normalised gain (Hake 1998) is the standard pre/post effect measure near a ceiling. A skill never passes by
+    making things worse, nor without a measured improvement (with <= without)."""
+    if without is None or with_ is None:
+        return False
+    lift = with_ - without
+    if lift <= 0:            # no measured improvement is no evidence the instructions help, even at a ceiling
+        return False
+    if lift >= LIFT_MIN - 1e-9:
+        return True
+    headroom = 1.0 - without
+    gain = 1.0 if headroom <= 1e-9 else lift / headroom
+    return with_ >= WITH_MIN_FOR_GAIN - 1e-9 and gain >= GAIN_MIN - 1e-9
+
+
+def skill_verdict(trigger_acc: float | None, without: float | None, with_: float | None) -> str:
+    if trigger_acc is None or without is None or with_ is None:
+        return "N/A"
+    ok_t, ok_l = trigger_acc >= TRIGGER_MIN - 1e-9, quality_ok(without, with_)
+    if ok_t and ok_l:
+        return "OK"
+    if not ok_t and not ok_l:
+        return "BOTH"
+    return "DESC" if not ok_t else "BODY"
+
+
 # ---------------------------------------------------------------- case prompts with their inputs
 
 ATTACH_FILE_CHARS = 6000     # per file
@@ -679,15 +715,6 @@ def main() -> int:
         skill, _cid, _run, mode, _idx, passed, _ev = row
         stats[skill][mode].append(passed == "PASS")
 
-    def verdict(trigger_acc, lift):
-        if trigger_acc is None or lift is None:
-            return "N/A"
-        ok_t, ok_l = trigger_acc >= 0.8, lift >= 0.2
-        if ok_t and ok_l:
-            return "OK"
-        if not ok_t and not ok_l:
-            return "BOTH"
-        return "DESC" if not ok_t else "BODY"
 
     with (out_dir / "trigger.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -713,7 +740,7 @@ def main() -> int:
         wo = (sum(st["without"]) / len(st["without"])) if st["without"] else None
         wi = (sum(st["with"]) / len(st["with"])) if st["with"] else None
         lift = (wi - wo) if (wi is not None and wo is not None) else None
-        v = verdict(t_acc, lift)
+        v = skill_verdict(t_acc, wo, wi)
         fmt = lambda x: f"{x:.2f}" if x is not None else "n/a"
         lines.append(f"| {key} | {fmt(t_acc)} | {fmt(fp)} | {fmt(wo)} | "
                      f"{fmt(wi)} | {fmt(lift)} | {v} |")

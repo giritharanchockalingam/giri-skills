@@ -195,3 +195,14 @@ def test_case_prompt_caps_long_files(tmp_path):
     (tmp_path / "evals" / "fixtures" / "big.csv").write_text("x" * (mod.ATTACH_FILE_CHARS + 50), encoding="utf-8")
     text = mod.case_user_prompt({"dir": tmp_path}, {"prompt": "p", "inputs": {"data": "evals/fixtures/big.csv"}})
     assert "[... 50 more characters not shown]" in text
+
+
+def test_quality_bar_lift_or_normalised_gain_near_a_ceiling():
+    mod = _module()
+    assert mod.quality_ok(0.30, 0.50)                       # lift +0.20
+    assert not mod.quality_ok(0.50, 0.67)                   # lift 0.17, gain 0.34
+    assert mod.quality_ok(0.88, 1.00)                       # ceiling: lift 0.12, gain 1.00, with 1.00
+    assert mod.quality_ok(0.80, 0.90)                       # gain 0.50, with 0.90
+    assert not mod.quality_ok(0.60, 0.75)                   # gain 0.375
+    assert not mod.quality_ok(0.95, 0.90) and not mod.quality_ok(1.0, 1.0)   # never by getting worse or with no gain
+    assert mod.skill_verdict(0.79, 0.30, 0.60) == "DESC" and mod.skill_verdict(0.79, 0.5, 0.5) == "BOTH"

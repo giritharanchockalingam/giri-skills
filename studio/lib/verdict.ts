@@ -15,10 +15,10 @@ export interface VerdictInfo {
 }
 
 export const VERDICT_INFO: Record<Verdict, VerdictInfo> = {
-  BOTH: { code: "BOTH", label: "Fix both", tone: "rust", severity: 0, explanation: "Trigger below 0.8 and lift below +0.2 — the description misroutes and the instructions do not help." },
+  BOTH: { code: "BOTH", label: "Fix both", tone: "rust", severity: 0, explanation: "Trigger below 0.8 and the instructions do not clear the quality bar — the description misroutes and the instructions do not help." },
   DESC: { code: "DESC", label: "Fix description", tone: "hold", severity: 1, explanation: "Trigger below 0.8 — the router does not reliably pick this skill for its own prompts." },
-  BODY: { code: "BODY", label: "Fix instructions", tone: "deep", severity: 2, explanation: "Lift below +0.2 — loading the SKILL.md barely changes the output." },
-  OK: { code: "OK", label: "Healthy", tone: "sage", severity: 3, explanation: "Trigger at or above 0.8 and lift at or above +0.2." },
+  BODY: { code: "BODY", label: "Fix instructions", tone: "deep", severity: 2, explanation: "Instructions below the quality bar: lift under +0.2, and (where the model alone already scores high) they close less than half of the remaining headroom or score under 0.80." },
+  OK: { code: "OK", label: "Healthy", tone: "sage", severity: 3, explanation: "Trigger at or above 0.8, and lift at or above +0.2 — or, where the model alone already scores high, the skill scores 0.80+ and closes at least half of the remaining headroom (normalised gain ≥ 0.5)." },
 };
 
 export const NO_VERDICT: VerdictInfo = { code: "OK", label: "Not evaluated", tone: "none", severity: 4, explanation: "No scorecard row for this skill." };
