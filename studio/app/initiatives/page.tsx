@@ -26,9 +26,9 @@ export default async function InitiativesPage() {
 
   return (
     <>
-      <PageHead eyebrow="Catalog · initiatives" title="Raise the" em="bar" after=", on a date."
+      <PageHead eyebrow="Platform · Initiatives" title="Raise the" em="bar" after=", on a date."
         lead="An initiative sets a scorecard level as the goal for some or all repositories, with an owner and a deadline. Progress is read from the live scorecard — it moves when the checks do." />
-      <p className="caption mb-6"><Link className="link" href="/catalog">Catalog</Link> · levels: Bronze — {LEVEL_RULE.bronze} · Silver — {LEVEL_RULE.silver} · Gold — {LEVEL_RULE.gold}.</p>
+      <p className="caption mb-6"><Link className="link" href="/catalog">Repositories</Link> · levels: Bronze — {LEVEL_RULE.bronze} · Silver — {LEVEL_RULE.silver} · Gold — {LEVEL_RULE.gold}.</p>
 
       {initiatives.length === 0 && <section className="card card-pad mb-6"><p className="none" style={{ margin: 0 }}>No initiatives yet.{canWrite ? " Start one below." : ""}</p></section>}
 

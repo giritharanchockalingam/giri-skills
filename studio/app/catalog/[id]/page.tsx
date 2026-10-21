@@ -42,7 +42,7 @@ export default async function EntityPage({ params }: { params: Promise<{ id: str
   const [actions, policy, delivery] = await Promise.all([listActions(ctx.supabase, ctx.workspace.id, { entityId: id, limit: 10 }), getPolicy(ctx), loadDelivery(ctx.supabase, ctx.workspace.id, id)]);
   return (
     <>
-      <PageHead eyebrow="Catalog · scorecard" title="" em={e.key.split("/")[1]} lead={`${e.key} — each check runs a library skill on the repository's real files at the commit shown; the verdict is the skill's own.`} />
+      <PageHead eyebrow="Platform · Repository scorecard" title="" em={e.key.split("/")[1]} lead={`${e.key} — each check runs a library skill on the repository's real files at the commit shown; the verdict is the skill's own.`} />
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <a className="link" href={e.url} target="_blank" rel="noreferrer">Open on GitHub</a>
         <Link className="link" href="/catalog">Back to catalog</Link>

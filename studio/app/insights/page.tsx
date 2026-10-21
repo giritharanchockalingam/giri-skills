@@ -127,7 +127,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
         <div className="card-pad" style={{ paddingBottom: 0 }}><div className="h3" style={{ marginTop: 0 }}>Scorecards across the catalog</div></div>
         <div className="tablewrap"><table className="mini">
           <thead><tr><th>Check</th><th>Pass</th><th>Warn</th><th>Fail</th><th>Error</th></tr></thead>
-          <tbody>{ins.scorecards.byCheck.length === 0 ? <tr><td colSpan={5} className="none">No scorecards yet — run them from the <Link className="link" href="/catalog">Catalog</Link>.</td></tr>
+          <tbody>{ins.scorecards.byCheck.length === 0 ? <tr><td colSpan={5} className="none">No scorecards yet — run them from <Link className="link" href="/catalog">Repositories</Link>.</td></tr>
             : ins.scorecards.byCheck.map((c) => (
               <tr key={c.check}><td><Link className="link" href="/catalog">{CHECKS.find((x) => x.id === c.check)?.title ?? c.check}</Link></td><td>{c.pass}</td><td>{c.warn}</td><td>{c.fail}</td><td>{c.error}</td></tr>))}</tbody>
         </table></div>
