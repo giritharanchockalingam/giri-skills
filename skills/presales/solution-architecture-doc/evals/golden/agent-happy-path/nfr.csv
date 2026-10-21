@@ -1,0 +1,6 @@
+category,requirement,target,measure,source
+Availability,Order API available during peak,99.9% monthly,"synthetic probe, 1-min interval",RFP §4.2
+Scalability,Peak order intake,450 orders/min sustained for 2 h,load test at wave 2 exit,Northwind operations data 2025
+Performance,Order create p95 latency,[TO BE BASELINED — owner: Solution architect],gateway analytics,[TO BE BASELINED — owner: Solution architect]
+Recoverability,Order store RPO/RTO,RPO 5 min / RTO 1 h,DR drill twice a year,CTO statement 2026-09-02
+Security,PCI scope excluded from Order Hub,[TO BE BASELINED — owner: Solution architect],[TO BE BASELINED — owner: Solution architect],[TO BE BASELINED — owner: Solution architect]

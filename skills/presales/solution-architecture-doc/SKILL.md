@@ -5,7 +5,7 @@ license: MIT
 metadata:
   domain: presales
   adlc_stage: architecture
-  version: 0.2.0
+  version: 0.3.0
   author: giri-skills
   agent:
     inputs:
@@ -13,9 +13,13 @@ metadata:
       - {name: client, type: string, required: false, default: "<Client>"}
       - {name: current, type: json, required: false, from: "current-state components.json (same layout); adds the change from current state and transition ADR rows"}
     run:
-      - {step: arch, kind: script, cmd: "python3 -I scripts/arch_doc.py {components} --out {out}/architecture.md --nfr {out}/nfr.csv --client {client} [--current {current}]"}
+      - {step: arch, kind: script, cmd: "python3 -I scripts/arch_doc.py {components} --out {out}/architecture.md --nfr {out}/nfr.csv --client {client} --svg-dir {out}/diagrams --drawio {out}/architecture.drawio --html {out}/architecture.html --adr-dir {out}/adr [--current {current}]"}
     outputs:
-      - {path: "{out}/architecture.md", checks: [exists, mermaid_parses, sections:["System context","Container view","Integration map","Non-functional requirements","Decision log"]]}
+      - {path: "{out}/architecture.md", checks: [exists, mermaid_parses, sections:["Bottom line","System context","Container view","Integration map","Non-functional requirements","Decision log","Open items"]]}
+      - {path: "{out}/architecture.html", checks: [exists, contains:"<figure>"]}
+      - {path: "{out}/diagrams/context.svg", checks: [exists, contains:"<svg"]}
+      - {path: "{out}/diagrams/container.svg", checks: [exists, contains:"<svg"]}
+      - {path: "{out}/architecture.drawio", checks: [exists, contains:"<mxfile"]}
       - {path: "{out}/nfr.csv", checks: [exists, csv:[category,requirement,target,measure], csv_rows:target!empty]}
     modes:
       new: {case: agent-happy-path, bring: "the target components, integrations and NFRs"}
@@ -25,10 +29,11 @@ metadata:
 # solution-architecture-doc
 
 ## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/solution-architecture-doc --input <name>=<value> … --out <dir>` (see `--explain presales/solution-architecture-doc`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+This skill is executable. When you can run commands, put the facts into `components.json` (layout: `evals/fixtures/northwind-order-hub.json`) and run `python3 scripts/run_skill.py presales/solution-architecture-doc --input components=<file> --input client=<name> --out <dir>`; report `run.json` and hand over the deliverables it writes (below) instead of re-typing them.
+When you cannot run commands, **write the document yourself** following the Procedure — never answer a request that already carries facts with only a question. Draft from what is given, mark every gap `[TO BE BASELINED — owner: ___]`, and ask for the missing facts at the end.
 
 ## Starting points
-- **New** — the target components become an architecture document: C4 context and container diagrams, integration map by pattern, waves, NFR table and a decision-log stub.
+- **New** — the target design becomes a decision-ready architecture document: bottom line, drivers, C4 context, container and deployment diagrams, integration map, migration waves (entry, exit, rollback), NFRs, security, scored options with ADRs, risks, decision log, open items and sources.
 - **Existing** — add `current` (the estate as it runs today, same layout): the document gains a change view — containers kept, added, retired or re-platformed, integrations added, retired or re-patterned — and a decision-log row for every retirement and re-platform.
 
 ## When to use
@@ -65,7 +70,9 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 11. Run the self-check.
 
 ## Output
-- File: `architecture-<client>-<initiative>-v0.1.md` (Mermaid blocks inline; export PNG/SVG separately if the client format requires)
+- `architecture.md` (Mermaid blocks inline, for Git and Confluence) and `architecture.html` (the same document, printable, diagrams inline; Print → Save as PDF)
+- `diagrams/context.svg`, `diagrams/container.svg`, `diagrams/deployment.svg` (C4 pictures for slides) and `architecture.drawio` (every view, editable in diagrams.net / Confluence)
+- `adr/ADR-nnn-<slug>.md` per decision, with the weighted option scores; `nfr.csv`
 - Sections: Bottom line (target state in one paragraph + top 3 decisions) · Drivers and constraints · Current state (diagrams + gaps) · Options and recommendation (scored table) · Target state (diagrams) · Integration map · NFRs · Security and data · Operability and environments · Migration waves · Decision log (ADR index) · Risks · Open items with owners
 - Appendices: `adr/ADR-nnn-<slug>.md` per decision (template `assets/adr-template.md`)
 

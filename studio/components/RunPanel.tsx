@@ -1,5 +1,6 @@
 "use client";
 import { failureText, plainError } from "@/lib/runText";
+import { Deliverables } from "@/components/Deliverables";
 /* "Run it" — runs scripts/run_skill.py for this skill in the browser (CPython via Pyodide, in a Web Worker).
  * Nothing on this panel is simulated: the inputs are written into the runner's virtual FS, the real runner and the
  * skill's real scripts execute, and every status shown is read back from the run.json the runner wrote. */
@@ -334,6 +335,8 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
                 <div className="tablewrap"><table className="mini mt-4"><thead><tr><th>Missing input</th><th>Type</th><th>What it is</th></tr></thead>
                   <tbody>{result.needsInput.missing.map((m) => <tr key={m.name}><td><code>{m.name}</code></td><td className="muted">{m.type}</td><td className="ink-2">{m.question}</td></tr>)}</tbody></table></div>
               )}
+
+              <Deliverables files={result.files} />
 
               {primary && (
                 <div className="run-answer" ref={(el) => {
