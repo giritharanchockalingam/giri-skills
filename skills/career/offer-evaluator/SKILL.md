@@ -27,8 +27,11 @@ metadata:
 
 # Offer Evaluator
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/offer-evaluator --input <name>=<value> … --out <dir>` (see `--explain career/offer-evaluator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: evaluate the offer now
+- **The offer figures are in the request**: evaluate in this reply, in this order: (1) recommendation line first (accept / negotiate X then accept / decline) with the deciding number; (2) total-comp table per option — base, target bonus, sign-on, equity per year (grant ÷ vesting years), relocation, year-1 cash, annual recurring, annualized total over the horizon, COL-adjusted recurring; (3) COL basis — the user's indices quoted with their source and date (e.g., "Columbus 100, Austin 108 — user's calculator, Oct 2026"); (4) negotiation plan with 2–3 levers, each with ask, justification, fallback and order; (5) decision matrix with weights summing to 100 and each option's weight × score arithmetic and total shown — score from the stated facts only; a criterion with no facts is scored `[TO BE BASELINED — owner: user]` (never a made-up default), the arithmetic is shown for every scored criterion, and the totals are labelled "partial — N of M criteria scored" until the user supplies the rest; (6) risks and open items with owners. Components not given are `[TO BE BASELINED — owner: user]`.
+- **COL index missing or the user asks you to "figure out" cost of living**: never supply, estimate or recall an index. Still produce the nominal total-comp table from the figures supplied (rows for every component; values not given are `[TO BE BASELINED — owner: user]`), show the COL-adjusted column as `[TO BE BASELINED — owner: user]`, and ask for each location's index with its source and date.
+- **Negotiation plan only**: sequence it per `references/negotiation-levers.md`: thank and ask for a call → lead with the biggest lever stated as a number (base, L1, citing the disclosed band and its midpoint) → hold sign-on (L2, citing the forfeited bonus amount) as the bridge → bundle non-cash items → one justified counter → close with written confirmation and a revised letter. Ask the user for their probability of a yes on each lever rather than assuming it, and point to `outreach-and-followup` (negotiation-open) for the message draft.
+- **No offer details at all** ("is this offer good?"): ask once, in one list, for the offer components, the current package and the locations; do not estimate a bonus, equity value or market rate.
 
 ## Starting points
 - **New** — the offers alone (e.g. between roles, no current package): year-1 cash, recurring and annualized totals, COL-adjusted only with indices you supply.
@@ -43,12 +46,12 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 |---|---|---|
 | Offer components (base, target bonus %, sign-on, equity grant and vesting, benefits, 401k match, PTO, relocation, start date) | yes | offer letter / user |
 | Current package, same components | yes for comparison | user |
-| Cost-of-living index for each location, with source and date | yes if locations differ | user supplies (e.g., a COL calculator result); the skill never assumes one |
-| Role facts: title, reporting line, team size, budget, remote/travel | yes | JD / interviews |
+| Cost-of-living index for each location, with source and date | no — without it the COL-adjusted column is `[TO BE BASELINED — owner: user]` | user supplies (e.g., a COL calculator result); the skill never assumes one |
+| Role facts: title, reporting line, team size, budget, remote/travel | no — unknowns marked `[TO BE BASELINED — owner: user]` | JD / interviews |
 | User's decision weights (or accept defaults in `references/decision-matrix.md`) | no | user |
 | Market comp reference (survey, pay-transparency bands) with source | no | user |
 
-Missing offer numbers → ask once. Never estimate a bonus, equity value, or COL index. Mark unknown components `[TO BE BASELINED — owner: user]`.
+Missing offer components → show them as `[TO BE BASELINED — owner: user]` in the table and ask once at the end; only when no offer details are given at all, ask before drafting. Never estimate a bonus, equity value, or COL index. Mark unknown components `[TO BE BASELINED — owner: user]`.
 
 ## Procedure
 1. Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md`.
@@ -82,3 +85,6 @@ Markdown `offer-eval-<company>.md`:
 - `references/decision-matrix.md` — criteria, default weights, scoring scale
 - `assets/offer-comparison.csv` — input layout
 - `scripts/compare.py` — comparison calculator (stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/offer-evaluator --input <name>=<value> … --out <dir>` (see `--explain career/offer-evaluator`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

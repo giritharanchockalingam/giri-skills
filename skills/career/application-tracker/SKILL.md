@@ -30,8 +30,11 @@ metadata:
 
 # Application Tracker
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/application-tracker --input <name>=<value> … --out <dir>` (see `--explain career/application-tracker`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: update the tracker now
+- **An event is reported with its stage and date** ("HM interview today, 2026-10-16"): apply it in this reply. Show the updated row in tracker column order (`id, company, role, stage, applied_date, last_touch, next_action, next_action_date`): the user's words mapped to the canonical stage (hiring-manager interview → `HM`), `last_touch` = the event date, and a next action with a date (after HM: send thank-you notes within 24 hours and confirm the panel date; if the next step's date is TBD, say so and set the follow-up date). State that the header and all other rows are unchanged. Fields not visible in the conversation (row id, applied date) are `[TO BE BASELINED — owner: ___]`. Reply ≤50 words besides the row; never reply with only a request for the file.
+- **Weekly review or stale check on a tracker the user says is supplied** (attached, pasted or "this tracker.csv"): produce the review in this reply, in this order, per `references/weekly-review.md`: (1) Funnel table by stage; (2) Flags table — ID, company, stage, age, flag (MISSING / OVERDUE / STALE / DUE / WATCH, most severe first) and the aging rule that fired (e.g., "HM, age ≥ 10 days → STALE"); (3) Actions due this week with dates; (4) one decision sentence as the last line. If the tracker rows are not in the conversation, still lay out all four parts with the aging thresholds from `references/aging-rules.md` and row cells as `[TO BE BASELINED — owner: ___]`, then ask for the CSV at the end. Never close, ghost or change a row without the user's confirmation — list proposed closures for confirmation.
+- **Stage or event date missing** ("add Northgate Insurance, Senior Director IT"): ask once, in one list, for the stage, the event date, and the next action with its date. Do not default the stage to Applied, do not assume today's date, and do not show a row until answered.
+- **No tracker mentioned at all for a pipeline question** ("what is stale in my pipeline?"): ask once for the tracker CSV (or the rows pasted); do not reconstruct the pipeline from memory.
 
 ## Starting points
 - **New** — start from the empty tracker layout: your first application is logged and the pipeline and aging reports begin.
@@ -45,7 +48,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 ## Inputs required
 | Input | Required | Source |
 |---|---|---|
-| tracker.csv (existing) | yes | user file; create from `assets/tracker.csv` if none |
+| tracker.csv (existing) | yes for pipeline and review reports; an event can be shown as the updated row without it (unknown fields `[TO BE BASELINED]`) | user file; create from `assets/tracker.csv` if none |
 | Event details: company, role, stage, date, next action, next action date | yes | user |
 | Source (referral, recruiter, board), fit score, comp band | no | user / `jd-fit-scorer` output |
 
@@ -81,3 +84,6 @@ Missing stage or date: ask once. Default the date to today only if the user says
 - `references/weekly-review.md` — review ritual and output format
 - `assets/tracker.csv` — header + EXAMPLE row
 - `scripts/tracker.py` — CLI (stdlib)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/application-tracker --input <name>=<value> … --out <dir>` (see `--explain career/application-tracker`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

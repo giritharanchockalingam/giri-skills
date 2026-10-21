@@ -27,8 +27,10 @@ metadata:
 
 # Interview Prep (truth-locked)
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/interview-prep --input <name>=<value> … --out <dir>` (see `--explain career/interview-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: prepare the candidate now
+- **The request names the round, the interviewers and the JD / story bank** (even if the files are "attached" and their contents are not in the conversation): build the prep pack in this reply, in this order: (1) traceability table — JD competency (C1–C10 from `references/competency-map.md`, ranked by JD emphasis) → story ID → fit STRONG / ADEQUATE / GAP; (2) STAR+R stories, each ≤120 words and citing `[SB-nn]` or `[MR-Lnn]`; (3) likely questions for this round type, each mapped to a story ID or GAP; (4) for hiring-manager, CIO/CEO or executive rounds, a 90-day plan on the Days 1–30 / 31–60 / 61–90 skeleton with an owner per item, built only from JD facts, unknowns `[TO BE BASELINED — owner: ___]`; (5) questions to ask, grouped by interviewer title (e.g., business VP, peer directors, principal architect; CIO-specific questions for a CIO round); (6) gaps and how to handle each honestly. Where story content is not visible, keep the user's SB ids and mark the content `[TO BE BASELINED — owner: user, source SB-nn]`; never invent it. Never reply with only a request for files. Chat reply ≤50 words outside the pack.
+- **Asked to make up a story** ("make up a SOX remediation story"): decline in one line, naming the **TRUTH LOCK** rule — every story must trace to the story bank or résumé, and an invented story fails the first follow-up question. Show the competency (SOX/audit → C7 Risk, security and compliance) as **GAP** in the traceability table, then offer (a) to interview the user for a true adjacent example, or (b) an honest "closest experience and how I would approach it" answer outline.
+- **No story bank and no master résumé**: ask once for the story bank (or the résumé, to build one by interviewing the user). Do not fill stories from memory and do not run a mock round on invented stories.
 
 ## Starting points
 - **New** — the JD's competencies are mapped to your story bank (gaps stay gaps — nothing is invented), with the round's likely questions, questions to ask and a 90-day plan skeleton.
@@ -49,7 +51,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Company context (public: strategy, recent news, tech stack) | no | user or web search, each fact sourced |
 | Interview date and format (virtual/onsite, length, case prompt) | no | user |
 
-Missing story bank: ask once; offer to build it from the master résumé by interviewing the user (one question per bullet). Never fill it from memory.
+Story bank named but its contents not visible: build the pack anyway with the SB ids and `[TO BE BASELINED]` story content. No story bank and no résumé: ask once; offer to build it from the master résumé by interviewing the user (one question per bullet). Never fill it from memory.
 
 ## TRUTH LOCK (hard rule)
 1. Every story, number, title and outcome traces to a story-bank ID `[SB-nn]` or résumé line `[MR-Lnn]`.
@@ -93,3 +95,6 @@ Markdown file `prep-<company>-<round>.md`:
 - `references/questions-to-ask.md` — questions to ask by interviewer
 - `assets/story-bank.example.md` — EXAMPLE story bank (fictional)
 - `assets/90-day-plan.md` — plan skeleton
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/interview-prep --input <name>=<value> … --out <dir>` (see `--explain career/interview-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

@@ -26,8 +26,10 @@ metadata:
 
 # JD Fit Scorer
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/jd-fit-scorer --input <name>=<value> … --out <dir>` (see `--explain career/jd-fit-scorer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: score the role now
+- **The JD and the profile (keyword file or résumé) are both supplied** (even if "pasted" or "attached" and only partly visible): score in this reply, in this order: (1) first line is the verdict — `GO / LEAN GO / LEAN NO / NO-GO — <score>/100 — <reason>`; (2) bucket table with weights must-haves 60 / nice-to-haves 25 / culture-logistics 15, items, MATCH / PARTIAL / GAP counts and the math (`bucket = weight × Σcredit ÷ items`, MATCH 1.0, PARTIAL 0.5, total minus red-flag penalties); (3) gap table — every MATCH or PARTIAL cites the profile line it rests on, every GAP has a mitigation or "accept gap"; (4) red flags with penalties, or "none detected"; (5) next action. Requirements or profile lines not visible in the conversation are `[TO BE BASELINED — owner: ___]`, and the verdict line says which inputs it still depends on. Never reply with only a request for files.
+- **A hard constraint is breached** (active clearance required but the profile says none; travel above the profile's max + 15 points; location, comp floor): check these before any score. The verdict is **NO-GO** regardless of the keyword score; name each constraint hit explicitly with the JD text and the profile line; suggest logging the role in the tracker as Passed with the reason (`application-tracker`).
+- **No profile or résumé supplied**: ask once for the profile keyword file or master résumé. Do not score from memory, from the user's job title or from earlier conversation, and do not state any experience the user has not supplied.
 
 ## Starting points
 - **New** — write a short profile from the template (skills plus your limits: location, travel, comp floor, clearance) and the JD is scored against it: must-have / nice-to-have / culture fit, red flags, a go/no-go verdict.
@@ -86,3 +88,6 @@ Next action: apply via … / tailor résumé / ask recruiter X before applying /
 - `references/go-no-go.md` — thresholds and hard-constraint overrides
 - `scripts/score.py` — offline keyword pass (stdlib only)
 - `assets/profile-keywords.example.txt` — profile file format (EXAMPLE, fictional)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py career/jd-fit-scorer --input <name>=<value> … --out <dir>` (see `--explain career/jd-fit-scorer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

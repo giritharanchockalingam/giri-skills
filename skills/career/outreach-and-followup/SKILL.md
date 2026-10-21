@@ -1,6 +1,6 @@
 ---
 name: outreach-and-followup
-description: Use when the user needs to write or time a job-search message - referral ask, recruiter reply, post-interview thank-you, status check, decline, or negotiation opener - by LinkedIn or email, for senior director / VP / executive IT roles. Produces 2-3 goal-labelled variants per message, a subject line, and the follow-up cadence (what to send, when, and when to stop). Facts come only from the user's inputs; no invented names, dates or claims.
+description: Use when the user needs to write, draft or time a job-search message - referral ask, recruiter reply, post-interview thank-you notes to each interviewer (including a repair note after a fumbled answer, citing a story-bank example), status check or nudge, decline, or negotiation opener - by LinkedIn or email, for senior director / VP / executive IT roles. Use it when the interview has already happened and the ask is "draft thank-yous". Produces 2-3 goal-labelled variants per message, a subject line, and the follow-up cadence (what to send, when, and when to stop). Facts come only from the user's inputs; no invented names, dates or claims. Do not use for preparing for an upcoming interview, STAR stories or questions to ask (interview-prep), or for offer math (offer-evaluator).
 license: MIT
 metadata:
   domain: career

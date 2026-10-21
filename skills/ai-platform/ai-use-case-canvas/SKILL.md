@@ -1,6 +1,6 @@
 ---
 name: ai-use-case-canvas
-description: Use when the user wants to qualify a single AI idea quickly — "is this a good AI use case", "fill the canvas for X", "should we build or buy this", "what would it take". Produces a one-page canvas: problem and user, current process and baseline, proposed AI capability, data readiness, feasibility, value hypothesis, risks and tier, build/buy/partner decision, next 30-day step. Not for portfolio-level strategy (ai-strategy-coe), detailed design (agent-architecture, rag-pipeline-design), or a full risk review (ai-governance-risk).
+description: Use when the user wants to qualify a single AI idea quickly — "is this a good AI use case", "use AI to <do X>", "fill the canvas for X", "should we build or buy this", "what would it take" — including testing whether the idea needs AI at all (a fixed threshold or approval rule such as "does an order over $10k need director approval" is a deterministic rule, verdict Stop or re-scope). Produces a one-page canvas: problem and user, current process and baseline, proposed AI capability, data readiness, feasibility, value hypothesis, risks and tier, build/buy/partner decision, next 30-day step. Do not use for portfolio-level strategy (ai-strategy-coe), designing an agent or its graph and tools once the idea is qualified (agent-architecture), retrieval design (rag-pipeline-design), or a full risk review (ai-governance-risk).
 license: MIT
 metadata:
   domain: ai-platform
