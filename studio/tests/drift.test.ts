@@ -36,7 +36,7 @@ test("skill drift: a current draft whose copy of the library's test cases is old
 });
 test("skill drift: a library draft imported before pinning is offered the update (which pins it)", () => {
   assert.equal(skillDrift([{ source: repo(undefined), status: "draft", version: 1 }], () => "b"), "library_updated");
-  assert.equal(skillDrift([{ source: repo(undefined), status: "published", version: 1 }], () => "b"), "n/a", "a live pre-pinning version is not judged");
+  assert.equal(skillDrift([{ source: repo(undefined), status: "published", version: 1 }], () => "b"), "library_updated", "a live pre-pinning version is offered a reviewed version");
 });
 test("skill drift: a live version with frozen files is out of date, not blocked, when the library moves on", () => {
   const pin = () => "b";
@@ -44,4 +44,7 @@ test("skill drift: a live version with frozen files is out of date, not blocked,
   assert.equal(skillDrift([live], pin), "blocked", "without frozen files it cannot run");
   assert.equal(skillDrift([live], pin, null, false, new Map([["v1", "own-old"]]), () => "own-new"), "library_updated");
   assert.equal(skillDrift([live], pin, null, false, new Map([["v1", "own-same"]]), () => "own-same"), "current", "a runner-only change is not a skill change");
+});
+test("skill drift: a live library version published before pinning is offered a reviewed version", () => {
+  assert.equal(skillDrift([{ id: "v1", source: repo(undefined), status: "published", version: 1 }], () => "b"), "library_updated");
 });
