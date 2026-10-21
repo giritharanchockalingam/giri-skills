@@ -1,0 +1,261 @@
+skill,case_id,run,mode,expected_idx,pass,evidence
+build/security-review,happy-path,1,without,0,FAIL,"No trace entry or mention of service, admin client, or table found in the output."
+build/security-review,happy-path,1,without,1,FAIL,No exploit sketch or related details provided in the output.
+build/security-review,happy-path,1,without,2,FAIL,"No fix involving session tenant, cookie client, or negative regression test mentioned."
+build/security-review,happy-path,1,without,3,FAIL,No findings table or report from assets/review-report.md included in the output.
+build/security-review,happy-path,1,with,0,PASS,"Finding includes full trace ""app/api/export/route.ts:14 ... → lib/supabase/admin.ts (service role client bypasses RLS) → invoices table read"" and rated Critical."
+build/security-review,happy-path,1,with,1,PASS,"Exploit sketch implied by ""Attacker can retrieve invoices belonging to any tenant by specifying tenantId in query, bypassing RLS via admin client."""
+build/security-review,happy-path,1,with,2,PASS,"Fix described as ""Remove tenantId param from query; derive tenantId from authenticated session; use supabase client from cookie context to enforce RLS"" and test ""Negative test: export with tenantId pa"
+build/security-review,happy-path,1,with,3,FAIL,"No mention or inclusion of ""findings table leads with worst; report written from assets/review-report.md"" or similar report file reference."
+build/security-review,no-trace-no-finding,1,without,0,FAIL,The output does not mention any security-relevant surface changes or provide a surface inventory.
+build/security-review,no-trace-no-finding,1,without,1,PASS,The output does not mention any generic findings unrelated to the diff.
+build/security-review,no-trace-no-finding,1,with,0,PASS,"States ""No security-relevant changes detected"" and lists ""CSS class rename"" and ""README update"" as the surface inventory."
+build/security-review,no-trace-no-finding,1,with,1,PASS,No generic findings unrelated to the diff are mentioned; only specific changes are noted.
+build/security-review,missing-input,1,without,0,PASS,"Asks for specifics by requesting ""specify the app and security aspects"" and ""audit results or risk assessments."""
+build/security-review,missing-input,1,without,1,PASS,"Does not provide a generic checklist, instead asks for more information."
+build/security-review,missing-input,1,with,0,PASS,"Asks once for ""latest diff or PR to review and your trust model: user roles, tenancy design, and which endpoints are public or internal."""
+build/security-review,missing-input,1,with,1,PASS,"Does not produce a generic checklist, instead requests specific information for a focused review."
+build/security-review,agent-happy-path,1,without,0,FAIL,"The output states ""Provide the diff text or link for review"" and does not show any scan.py results or review from findings."
+build/security-review,agent-happy-path,1,with,0,FAIL,"The output does not show any script execution or findings review, only a request for code and trust model details."
+build/security-review,agent-missing-diff,1,without,0,PASS,"The output asks once, ""Please provide the change details or code for the security review."""
+build/security-review,agent-missing-diff,1,with,0,PASS,"The output asks for ""the diff or PR of your change"" once."
+build/security-review,agent-risky-diff-blocks,1,without,0,FAIL,The output ignores the token security risk and approves the code instead of exiting with a rejection.
+build/security-review,agent-risky-diff-blocks,1,with,0,FAIL,"The output only mentions a secret literal and does not address service-role client in a route handler, unauthenticated server actions, SSRF, or exiting with code 1."
+build/security-review,agent-mode-new,1,without,0,PASS,"""Security Review Summary of New Invoice Feature Diff"" includes multiple security points and is labelled as a draft with ""[TO BE BASELINED — owner: Security Lead]"""
+build/security-review,agent-mode-new,1,with,0,FAIL,"The output requests a diff file and trust model confirmation but does not provide added lines scanned, scan results, or a draft security-review.md."
+build/security-review,agent-mode-existing,1,without,0,FAIL,"The output requests a diff file and repo link but does not show any scanning, flagging, or threat-model record details."
+build/security-review,agent-mode-existing,1,with,0,FAIL,"The output requests a diff or PR and repository access but does not show any scanning, flagging of ReleaseNotes, gating, or threat-model record details."
+career/jd-fit-scorer,happy-path-score,1,without,0,FAIL,No verdict line with score /100 is present in the output.
+career/jd-fit-scorer,happy-path-score,1,without,1,FAIL,No bucket table with must 60 / nice 25 / culture 15 and math is shown.
+career/jd-fit-scorer,happy-path-score,1,without,2,FAIL,No MATCH or PARTIAL citations of profile lines are included.
+career/jd-fit-scorer,happy-path-score,1,without,3,FAIL,No gap table or mitigations for gaps are provided.
+career/jd-fit-scorer,happy-path-score,1,without,4,FAIL,No red flags or penalties are listed; only a request for files is given.
+career/jd-fit-scorer,happy-path-score,1,with,0,FAIL,The output does not include a verdict with a score out of 100.
+career/jd-fit-scorer,happy-path-score,1,with,1,FAIL,There is no bucket table showing must 60 / nice 25 / culture 15 or any math.
+career/jd-fit-scorer,happy-path-score,1,with,2,FAIL,No MATCH or PARTIAL citations referencing profile lines are present.
+career/jd-fit-scorer,happy-path-score,1,with,3,FAIL,There is no gap table or mitigations for any gaps.
+career/jd-fit-scorer,happy-path-score,1,with,4,FAIL,No red flags or penalties are listed; the output only requests files.
+career/jd-fit-scorer,missing-profile,1,without,0,PASS,"""Please provide your résumé to score the JD against your experience accurately."""
+career/jd-fit-scorer,missing-profile,1,without,1,PASS,"""Without it, I can only assess the JD standalone."""
+career/jd-fit-scorer,missing-profile,1,without,2,PASS,The output does not attempt to score or fabricate experience without the résumé.
+career/jd-fit-scorer,missing-profile,1,with,0,PASS,"""Please provide your profile keywords file or master résumé to score this JD accurately."""
+career/jd-fit-scorer,missing-profile,1,with,1,PASS,"""Scoring requires your skills and limits, not just job titles or memory."""
+career/jd-fit-scorer,missing-profile,1,with,2,PASS,The output explicitly requests the profile keywords file or résumé and does not attempt to score or fabricate experience.
+career/jd-fit-scorer,hard-constraint-override,1,without,0,PASS,"The output states ""The VP IT JD scores low for your profile fit"" and ""Recommendation: Do not pursue,"" indicating a NO-GO verdict due to hard constraints."
+career/jd-fit-scorer,hard-constraint-override,1,without,1,PASS,"Both hard constraints are named explicitly: ""Clearance gap is disqualifying for a must-have active TS/SCI"" and ""The travel requirement exceeds your max by 35 percentage points."""
+career/jd-fit-scorer,hard-constraint-override,1,without,2,FAIL,The output does not suggest logging in a tracker as Passed with reason.
+career/jd-fit-scorer,hard-constraint-override,1,with,0,PASS,"Verdict stated as ""NO-GO — Hard constraints violated"" despite no matched items in buckets."
+career/jd-fit-scorer,hard-constraint-override,1,with,1,PASS,"Both hard constraints ""requires active TS/SCI clearance"" and ""60% travel"" are explicitly named in the red flags section."
+career/jd-fit-scorer,hard-constraint-override,1,with,2,PASS,"Next action states ""Pass; log as failed due to clearance and travel hard constraints."""
+career/jd-fit-scorer,agent-happy-path,1,without,0,FAIL,"The output does not mention running scripts/score.py or producing a weighted score, bucket table, or go/no-go verdict."
+career/jd-fit-scorer,agent-happy-path,1,with,0,FAIL,"The output does not mention running scripts/score.py or providing a weighted score, bucket table, or go/no-go verdict."
+career/jd-fit-scorer,agent-missing-profile,1,without,0,FAIL,"The output asks for ""job description (JD) and your relevant experience or resume,"" but does not request the profile keyword file."
+career/jd-fit-scorer,agent-missing-profile,1,with,0,PASS,"The output explicitly asks for ""your profile keyword file or master résumé."""
+career/jd-fit-scorer,agent-threshold-override,1,without,0,FAIL,The output does not mention or use any supplied threshold or reference a script verdict.
+career/jd-fit-scorer,agent-threshold-override,1,with,0,FAIL,The output does not mention or use any supplied threshold or indicate that the verdict comes from the script.
+career/jd-fit-scorer,agent-mode-existing,1,without,0,FAIL,The output does not match requirements to résumé lines with MR-L ids or compute a verdict; it only requests the résumé content.
+career/jd-fit-scorer,agent-mode-existing,1,with,0,FAIL,The output requests files but does not match requirements to résumé lines with MR-L ids or compute a verdict.
+presales/account-plan,happy-path-quarterly-refresh,1,without,0,PASS,"Executive Summary states ""CIO sponsor leaving March risks relationship continuity; assign new executive sponsor by end Q1"" and notes ""one ends Q2 ($1.5M)""."
+presales/account-plan,happy-path-quarterly-refresh,1,without,1,PASS,"Appendix cites ""CRM export dated 2024-01-20""; weighted pipeline $1.9M is noted in Executive Summary with probabilities >60%."
+presales/account-plan,happy-path-quarterly-refresh,1,without,2,PASS,"Stakeholder Engagement Plan flags ""CIO [Departing]"" and includes a plan for ""Formal transition meeting""; coverage gaps implied by listing successor candidates."
+presales/account-plan,happy-path-quarterly-refresh,1,without,3,FAIL,No white-space matrix with categories current/qualified/hypothesis/no fit/unknown or cited signals is present.
+presales/account-plan,happy-path-quarterly-refresh,1,without,4,PASS,"Next Steps include ""Hold CIO transition meeting by Feb 15, 2024 (Owner: Account Lead)"" and focus on Q2 engagement ""Deliver phase 2 milestones"" with owners and dates."
+presales/account-plan,happy-path-quarterly-refresh,1,without,5,FAIL,No change log or comparison to prior plan is included.
+presales/account-plan,happy-path-quarterly-refresh,1,without,6,PASS,Executive Summary on page 1 provides a standalone overview with key facts and next steps.
+presales/account-plan,happy-path-quarterly-refresh,1,with,0,PASS,"Posture stated as ""Defend — renewal for two active engagements ending Q2/Q4 and CIO sponsor departure in March"" on line 1."
+presales/account-plan,happy-path-quarterly-refresh,1,with,1,PASS,"Snapshot sourced to ""CRM export"" and pipeline includes probabilities for weighted computation."
+presales/account-plan,happy-path-quarterly-refresh,1,with,2,PASS,"Stakeholder map flags ""CIO Jane Smith"" with ""Departure Exposure: Leaving March 2024"" and notes coverage gaps."
+presales/account-plan,happy-path-quarterly-refresh,1,with,3,PASS,"White-space matrix uses terms ""qualified,"" ""current,"" ""hypothesis,"" ""no fit,"" and ""unknown"" with cited signals."
+presales/account-plan,happy-path-quarterly-refresh,1,with,4,PASS,"90-day plays include ""Identify & engage CIO successor"" and ""Renew Engagement A contract,"" each with owner, date, and success measure."
+presales/account-plan,happy-path-quarterly-refresh,1,with,5,FAIL,"Change log is incomplete and cut off after ""CIO Sponsor           | Active,"" with no full entries shown."
+presales/account-plan,happy-path-quarterly-refresh,1,with,6,PASS,Page 1 contains all sections and stands alone with comprehensive data and context.
+presales/account-plan,missing-input-no-account-facts,1,without,0,FAIL,The output does not ask for account facts or the service catalog or the quarter anywhere.
+presales/account-plan,missing-input-no-account-facts,1,without,1,PASS,"The output does not estimate current spend, wallet share, or stakeholder dispositions; revenue is marked as ""[TO BE BASELINED — owner: Sales]"" without estimation."
+presales/account-plan,missing-input-no-account-facts,1,without,2,FAIL,The output does not offer the Enter posture template with every cell marked for a target account with no history.
+presales/account-plan,missing-input-no-account-facts,1,with,0,PASS,"Requests ""Provide current quarterly revenue and pipeline data,"" ""list of internal contacts,"" and ""Confirm client business units,"" covering account facts and service catalog."
+presales/account-plan,missing-input-no-account-facts,1,with,1,PASS,"No estimates of spend, wallet share, or stakeholder dispositions are present; all data marked as unknown or to be baselined."
+presales/account-plan,missing-input-no-account-facts,1,with,2,PASS,"The posture is clearly marked as Enter with all relevant cells marked unknown or to be baselined, consistent with a target account with no history."
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,without,0,FAIL,The output assigns win probabilities but does not state that probabilities are not invented or offer to add them if recorded in CRM as user judgment.
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,without,1,FAIL,"The target is stated as ""$4M"" without labeling it as ""[TO BE BASELINED — owner: ___]"" or requesting user confirmation."
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,without,2,FAIL,The output does not report any gap-to-target as a marker until target and weighting are confirmed.
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,with,0,PASS,"States ""We do not invent win probabilities or targets"" and ""If you record probabilities in the CRM... we can add weighted pipeline labeled accordingly."""
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,with,1,PASS,"Target shown as ""[TO BE BASELINED — owner: sales leadership]"" without confirming $4M or source."
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,with,2,FAIL,No mention or reporting of gap-to-target as a marker until target and weighting are confirmed.
+presales/account-plan,agent-happy-path,1,without,0,FAIL,"The output only requests ""CRM export and stakeholder list"" and does not mention running scripts/account_plan.py or providing stakeholder map, white-space matrix, pipeline total, or 90-day plays."
+presales/account-plan,agent-happy-path,1,with,0,PASS,"Stakeholder Map, White-Space Matrix, Pipeline totals, and 90-Day Plays are all present in the output."
+presales/account-plan,agent-missing-pipeline,1,without,0,FAIL,"The output asks for the ""stakeholder list,"" not the ""pipeline export."""
+presales/account-plan,agent-missing-pipeline,1,with,0,PASS,"The output asks for pipeline data in question 2: ""Share latest pipeline data with stages and values."""
+presales/account-plan,agent-unvalued-pipeline-not-estimated,1,without,0,FAIL,"The output states ""The CRM adds zero value to a $2M deal"" but does not show value as ""[TO BE BASELINED — owner: ___]"" or exclude it from the total."
+presales/account-plan,agent-unvalued-pipeline-not-estimated,1,with,0,PASS,"The output states values are marked ""[TO BE BASELINED — owner: Sales Lead]"" and implies exclusion from totals by calling them placeholders."
+presales/account-plan,agent-mode-existing,1,without,0,FAIL,"The output does not mention any details about last plan progress, plays, or pipeline changes."
+presales/account-plan,agent-mode-existing,1,with,0,FAIL,"The output requests files and confirmation but does not mention any details about plays done, carried over, closed, or pipeline delta changes."
+presales/client-research-brief,happy-path-public-company,1,without,0,FAIL,No indication that scripts/brief_skeleton.py was run or classification applied manually is shown.
+presales/client-research-brief,happy-path-public-company,1,without,1,FAIL,Output does not follow brief-template.md; no Bottom line of three sourced facts first is present.
+presales/client-research-brief,happy-path-public-company,1,without,2,FAIL,"Financial signals cite ""10-K latest filing [link in notes file]"" but no section/page numbers are provided."
+presales/client-research-brief,happy-path-public-company,1,without,3,FAIL,Technology signals table lacks confidence ratings and confirming questions per row.
+presales/client-research-brief,happy-path-public-company,1,without,4,FAIL,"CIO row includes ""CIO announcement"" and ""quoted priorities"" but no public-record facts like title, tenure, or prior roles are given."
+presales/client-research-brief,happy-path-public-company,1,without,5,FAIL,"Likely initiatives are described as ""Opportunities"" but not labeled as hypotheses with signal tiers."
+presales/client-research-brief,happy-path-public-company,1,without,6,FAIL,No sources appendix listing URLs with date accessed and tier is included.
+presales/client-research-brief,happy-path-public-company,1,with,0,FAIL,The output requests the notes file but does not run scripts/brief_skeleton.py or apply classification manually.
+presales/client-research-brief,happy-path-public-company,1,with,1,FAIL,The output does not follow assets/brief-template.md or provide a brief with Bottom line of three sourced facts.
+presales/client-research-brief,happy-path-public-company,1,with,2,FAIL,No financial signals or 10-K section/page citations are present in the output.
+presales/client-research-brief,happy-path-public-company,1,with,3,FAIL,"No technology signals table, confidence ratings, or confirming questions are included."
+presales/client-research-brief,happy-path-public-company,1,with,4,FAIL,No leadership row or CIO public-record facts are provided.
+presales/client-research-brief,happy-path-public-company,1,with,5,FAIL,No likely initiatives labeled as hypotheses with signal tiers are present.
+presales/client-research-brief,happy-path-public-company,1,with,6,FAIL,No sources appendix listing URLs with date accessed and tier is included.
+presales/client-research-brief,missing-input-ambiguous-company,1,without,0,FAIL,"The output does not ask which Apex (legal name, HQ country, ticker) or the purpose of the meeting."
+presales/client-research-brief,missing-input-ambiguous-company,1,without,1,PASS,The output does not produce a brief for a guessed company; it only describes the programming language Apex.
+presales/client-research-brief,missing-input-ambiguous-company,1,without,2,PASS,The output does not invent a notes file or sources; no such elements are present.
+presales/client-research-brief,missing-input-ambiguous-company,1,with,0,PASS,"Asks ""Which Apex company do you mean? Please provide the legal name, HQ country, and ticker if listed"" and ""what is the meeting purpose... and date?"""
+presales/client-research-brief,missing-input-ambiguous-company,1,with,1,PASS,Does not produce a brief for a guessed company; only asks for clarification.
+presales/client-research-brief,missing-input-ambiguous-company,1,with,2,PASS,Does not invent a notes file or sources; only asks questions.
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,0,FAIL,"Revenue and IT spend cells show estimated values ""~$150M - $250M (est.)"" and ""~$1M - $3M (est.)"" instead of ""[TO BE BASELINED — owner: ___]""."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,1,PASS,"States ""Public data on annual revenue and IT spend is limited."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,2,FAIL,"Uses estimated values and external sources like ""industry comparables"" and ""0.5-1.5% of revenue for similar 3PL companies"" rather than only notes; confidence is not labeled Low."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,3,FAIL,Does not suggest a specific discovery question to baseline the figures.
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,without,4,FAIL,"Cites aggregator revenue estimates indirectly via ""industry comparables"" and suggests Dun & Bradstreet as a paid database."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,0,PASS,Revenue and IT spend cells show “[TO BE BASELINED — owner: Sales Lead]” as required.
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,1,PASS,"States “Public financial figures, including annual revenue and IT spend, are not available” in one line."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,2,PASS,"Uses only notes as sources ([S1], [S2]) and labels confidence Low for the single signal in Technology signals."
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,3,PASS,Suggests discovery questions such as “What is Meridian’s current annual IT spend and budget cycle?” to baseline figures.
+presales/client-research-brief,adversarial-fabrication-private-revenue,1,with,4,PASS,Does not cite any aggregator revenue estimates anywhere in the output.
+presales/client-research-brief,agent-happy-path,1,without,0,FAIL,The output is a request for notes rather than an organized brief with sources listed.
+presales/client-research-brief,agent-happy-path,1,with,0,FAIL,The output requests notes and details but does not organize any notes into a brief skeleton or list sources.
+presales/client-research-brief,agent-missing-notes,1,without,0,FAIL,The output provides information about Northwind Pumps without asking for the notes/links file.
+presales/client-research-brief,agent-missing-notes,1,with,0,PASS,"The output asks, ""Do you have any notes or links to include?"" instead of fabricating facts."
+presales/client-research-brief,agent-unknowns-marked,1,without,0,PASS,"The output includes ""[TO BE BASELINED — owner: Client Sales Lead]"" indicating facts absent from the notes are marked with a confirming question."
+presales/client-research-brief,agent-unknowns-marked,1,with,0,PASS,"The output states ""Both cells remain `[TO BE BASELINED — owner: client CFO]` or `[TO BE BASELINED — owner: CIO]` for discovery confirmation,"" indicating facts absent from notes stay marked with confir"
+presales/client-research-brief,agent-mode-new,1,without,0,PASS,"The output includes all template sections with detailed content and ownership markers in ""Next Steps Before Call"" such as ""[owner: COO]"" and ""[owner: CIO]""."
+presales/client-research-brief,agent-mode-new,1,with,0,FAIL,The output is a request for notes or links and does not contain any template sections or citations.
+presales/client-research-brief,agent-mode-existing,1,without,0,FAIL,"The output does not mention any lines from the April brief, ERP news, CIO and quote, or the 2023 CRM news source."
+presales/client-research-brief,agent-mode-existing,1,with,0,FAIL,"The output does not include any lines from the April brief, ERP news, CIO, quote, or mention the 2023 CRM news source."
+build/security-review,happy-path,2,without,0,FAIL,No mention of a full trace entry or detailed path from service to admin client to table in the output.
+build/security-review,happy-path,2,without,1,FAIL,No exploit sketch is provided in the output.
+build/security-review,happy-path,2,without,2,FAIL,"The fix uses admin client and tenantId from query string, not session tenant or cookie client; no negative regression test mentioned."
+build/security-review,happy-path,2,without,3,FAIL,No findings table or report from assets/review-report.md is included or referenced.
+build/security-review,happy-path,2,with,0,FAIL,"No finding with full trace entry including service, admin client, and table is provided."
+build/security-review,happy-path,2,with,1,FAIL,No exploit sketch is provided in the output.
+build/security-review,happy-path,2,with,2,FAIL,No fix using session tenant and cookie client or negative regression test is included.
+build/security-review,happy-path,2,with,3,FAIL,No findings table or report from assets/review-report.md is present.
+build/security-review,no-trace-no-finding,2,without,0,FAIL,The output does not state that no security-relevant surface changed nor show any surface inventory.
+build/security-review,no-trace-no-finding,2,without,1,PASS,The output does not mention any generic findings unrelated to the diff.
+build/security-review,no-trace-no-finding,2,with,0,PASS,"States ""No security-relevant changes detected"" and specifies changes are ""renaming a CSS class and updating the README,"" indicating the surface affected."
+build/security-review,no-trace-no-finding,2,with,1,PASS,Does not mention any generic findings unrelated to the diff such as rate limiting or headers.
+build/security-review,missing-input,2,without,0,FAIL,"The output does not ask for scope or trust model, only requests a security assessment report."
+build/security-review,missing-input,2,without,1,PASS,"The output does not produce a generic checklist, it requests specific security metrics or report."
+build/security-review,missing-input,2,with,0,PASS,"Asks once for ""diff or PR of the change to review"" and ""trust model details: user roles, tenancy approach, and which endpoints are public or restricted."""
+build/security-review,missing-input,2,with,1,PASS,"Does not produce a generic checklist, instead requests specific information to tailor the review."
+build/security-review,agent-happy-path,2,without,0,FAIL,No mention of running scripts/scan.py or scan findings in the output.
+build/security-review,agent-happy-path,2,with,0,FAIL,The output requests code and trust model details but does not run scripts/scan.py or provide findings or a review.
+build/security-review,agent-missing-diff,2,without,0,PASS,"The output asks once, ""Please provide the details or code of your change for a security review."""
+build/security-review,agent-missing-diff,2,with,0,PASS,"The output asks for ""the diff or PR of your change"" once."
+build/security-review,agent-risky-diff-blocks,2,without,0,FAIL,"The output approves the review despite findings of secret literal, service-role client, unauthenticated server actions, and SSRF, and does not mention exiting 1."
+build/security-review,agent-risky-diff-blocks,2,with,0,FAIL,"The output only addresses secret exposure and approval gating, missing findings about service-role client, unauthenticated server actions, SSRF, and gate exit code."
+build/security-review,agent-mode-new,2,without,0,FAIL,No mention of added lines scanned or a security-review.md written and labelled as a draft.
+build/security-review,agent-mode-new,2,with,0,FAIL,"The output does not mention added lines scanned, security scan results, or a security-review.md file."
+build/security-review,agent-mode-existing,2,without,0,FAIL,"The output only requests the diff and relevant files, with no indication of scanning the full repo or flagging components."
+build/security-review,agent-mode-existing,2,with,0,FAIL,"The output requests a diff, repo path, and trust model summary but does not mention scanning the repo, flagging the ReleaseNotes component, or including files in a threat-model record."
+career/jd-fit-scorer,happy-path-score,2,without,0,FAIL,The output does not contain a verdict with a score /100 as the first line.
+career/jd-fit-scorer,happy-path-score,2,without,1,FAIL,There is no bucket table showing must 60 / nice 25 / culture 15 and the math.
+career/jd-fit-scorer,happy-path-score,2,without,2,FAIL,No MATCH or PARTIAL citations referencing a profile line are present.
+career/jd-fit-scorer,happy-path-score,2,without,3,FAIL,The output does not include a gap table or mitigations for any gaps.
+career/jd-fit-scorer,happy-path-score,2,without,4,FAIL,There are no red flags listed with penalties or 'none detected'.
+career/jd-fit-scorer,happy-path-score,2,with,0,FAIL,No verdict line with score /100 is present in the output.
+career/jd-fit-scorer,happy-path-score,2,with,1,FAIL,No bucket table with must 60 / nice 25 / culture 15 or math is shown.
+career/jd-fit-scorer,happy-path-score,2,with,2,FAIL,No MATCH or PARTIAL citations of profile lines are included.
+career/jd-fit-scorer,happy-path-score,2,with,3,FAIL,No gap table or mitigations for gaps are provided.
+career/jd-fit-scorer,happy-path-score,2,with,4,FAIL,No red flags or penalties are listed; only a request to upload files is present.
+career/jd-fit-scorer,missing-profile,2,without,0,PASS,"The output asks once for the résumé: ""Please provide your résumé..."""
+career/jd-fit-scorer,missing-profile,2,without,1,PASS,The output does not score from memory or job title; it requests the résumé to score accurately.
+career/jd-fit-scorer,missing-profile,2,without,2,PASS,The output does not fabricate experience; it only requests information.
+career/jd-fit-scorer,missing-profile,2,with,0,PASS,"""Please provide your profile keyword file or master résumé to score this JD."""
+career/jd-fit-scorer,missing-profile,2,with,1,PASS,The output explicitly requests the profile file and does not attempt scoring from memory or job title.
+career/jd-fit-scorer,missing-profile,2,with,2,PASS,The output does not fabricate experience; it asks for information to assess the fit accurately.
+career/jd-fit-scorer,hard-constraint-override,2,without,0,FAIL,"The output does not explicitly state a NO-GO verdict, only that the fit is low and clearance mismatch is critical."
+career/jd-fit-scorer,hard-constraint-override,2,without,1,PASS,"Both hard constraints ""Clearance"" and ""Travel"" are named explicitly in the table and discussed."
+career/jd-fit-scorer,hard-constraint-override,2,without,2,FAIL,There is no suggestion to log in tracker as Passed with reason.
+career/jd-fit-scorer,hard-constraint-override,2,with,0,PASS,"Verdict is ""NO-GO — Hard constraints breached"" despite zero matches in buckets."
+career/jd-fit-scorer,hard-constraint-override,2,with,1,PASS,"Both hard constraints ""Active TS/SCI clearance"" and ""Travel ≤60%"" are named explicitly with evidence."
+career/jd-fit-scorer,hard-constraint-override,2,with,2,PASS,"Suggests ""Pass; log as Passed due to hard clearance and travel constraints."""
+career/jd-fit-scorer,agent-happy-path,2,without,0,FAIL,"The output does not mention running scripts/score.py or providing a weighted score, bucket table, or go/no-go verdict."
+career/jd-fit-scorer,agent-happy-path,2,with,0,FAIL,"The output does not mention running scripts/score.py or producing a weighted score, bucket table, or go/no-go verdict."
+career/jd-fit-scorer,agent-missing-profile,2,without,0,FAIL,"The output asks for ""job description (JD) details or key requirements,"" not the profile keyword file."
+career/jd-fit-scorer,agent-missing-profile,2,with,0,PASS,"The output asks for ""your profile keyword file or résumé"" to score the fit accurately."
+career/jd-fit-scorer,agent-threshold-override,2,without,0,PASS,"The output states ""I will count only exact matches with no exceptions,"" indicating use of the supplied threshold and verdict from the script."
+career/jd-fit-scorer,agent-threshold-override,2,with,0,FAIL,The output does not mention or use any supplied threshold or verdict from the script.
+career/jd-fit-scorer,agent-mode-existing,2,without,0,FAIL,The output does not match requirements to résumé lines with MR-L ids or compute a verdict.
+career/jd-fit-scorer,agent-mode-existing,2,with,0,FAIL,The output requests résumé and job description files but does not match requirements to résumé lines with MR-L ids or compute a verdict.
+presales/account-plan,happy-path-quarterly-refresh,2,without,0,PASS,"Posture stated as ""CIO sponsor to leave in March; immediate engagement needed with successor"" and mention of Q2 engagement ending."
+presales/account-plan,happy-path-quarterly-refresh,2,without,1,PASS,"Pipeline valued at $3.4M with 40% weighted close probability ""weighted value $1.36M"" sourced from CRM data."
+presales/account-plan,happy-path-quarterly-refresh,2,without,2,PASS,"Stakeholder map flags departing CIO as ""CIO (departing)"" with successor TBD and coverage actions planned."
+presales/account-plan,happy-path-quarterly-refresh,2,without,3,FAIL,No white-space matrix using current/qualified/hypothesis/no fit/unknown categories or cited signals is present.
+presales/account-plan,happy-path-quarterly-refresh,2,without,4,FAIL,"90-day plays lack explicit success measures; coverage play for successor and renewal/defense play for Q2 engagement are implied but no owner, date, and success measure explicitly combined as plays."
+presales/account-plan,happy-path-quarterly-refresh,2,without,5,FAIL,No change log vs prior plan is included in the output.
+presales/account-plan,happy-path-quarterly-refresh,2,without,6,PASS,"Page 1 includes executive summary, financials, risks, stakeholder plan, priorities, next steps, and appendix, standing alone as a summary."
+presales/account-plan,happy-path-quarterly-refresh,2,with,0,PASS,"Posture stated as ""Defend — renewal exposure in Q2, CIO departure announced, pipeline weighted 38% in Q1"" on line 1."
+presales/account-plan,happy-path-quarterly-refresh,2,with,1,PASS,"Snapshot cells sourced to ""CRM export, Q1"" and weighted pipeline total computed as ""$462K (CRM export with probabilities)""."
+presales/account-plan,happy-path-quarterly-refresh,2,with,2,PASS,"Stakeholder map flags ""CIO (departing)"" with ""Departure Risk: High"" and notes coverage gaps including ""Procurement Head has no owner assigned; CIO successor unknown."""
+presales/account-plan,happy-path-quarterly-refresh,2,with,3,PASS,"White-space matrix uses terms like ""current,"" ""qualified,"" ""hypothesis,"" ""no fit,"" and ""unknown"" with signals cited (e.g., ""user demand signal from CIO"")."
+presales/account-plan,happy-path-quarterly-refresh,2,with,4,PASS,"90-day plays include ""Engage CIO successor to secure advocacy"" and ""Submit early renewal proposal for Data Platform,"" each with owner, due date, and success measure."
+presales/account-plan,happy-path-quarterly-refresh,2,with,5,PASS,"Change log present comparing prior plan and now, e.g., ""CIO status"" and ""Renewal timing"" updated with reasons."
+presales/account-plan,happy-path-quarterly-refresh,2,with,6,PASS,"Page 1 stands alone with comprehensive summary, snapshot, risks, plays, stakeholder map, white-space matrix, pipeline, and change log all included."
+presales/account-plan,missing-input-no-account-facts,2,without,0,FAIL,"The output does not ask for account facts, service catalog, or the quarter; it only includes placeholders like ""[TO BE BASELINED — owner: Sales Lead]""."
+presales/account-plan,missing-input-no-account-facts,2,without,1,PASS,"The output explicitly avoids estimating current spend or wallet share, using placeholders instead, e.g., ""Estimated annual spend on relevant services/products: $[TO BE BASELINED — owner: Sales Lead]""."
+presales/account-plan,missing-input-no-account-facts,2,without,2,FAIL,The output does not offer the Enter posture template with every cell marked; it provides a partial account plan without such a template.
+presales/account-plan,missing-input-no-account-facts,2,with,0,PASS,"The output includes multiple ""TO BE BASELINED"" notes requesting revenue, stakeholders, pipeline, and service catalog information."
+presales/account-plan,missing-input-no-account-facts,2,with,1,PASS,"The output explicitly states ""No current engagement or data"" and does not estimate spend, wallet share, or stakeholder dispositions."
+presales/account-plan,missing-input-no-account-facts,2,with,2,PASS,"The posture is clearly marked as ""Enter — no current engagement or pipeline; account is a target with high sales potential but no existing relationship or data,"" and all relevant cells are marked unkn"
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,without,0,FAIL,The output assigns win probabilities (60% and 30%) without stating they are not invented or offering to add them if recorded in CRM as user judgment.
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,without,1,FAIL,"The target is stated as ""$4M"" without labeling it as ""[TO BE BASELINED — owner: ___]"" or requesting confirmation with source."
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,without,2,FAIL,There is no mention or reporting of gap-to-target as a marker until target and weighting are confirmed.
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,with,0,FAIL,"The output states ""no assigned probabilities"" but does not offer to add them if the user records them in CRM as their own judgment."
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,with,1,PASS,"The target is shown as ""`[TO BE BASELINED — owner: Head of Sales]`"" as expected."
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,with,2,FAIL,There is no mention or reporting of gap-to-target as a marker until target and weighting are confirmed.
+presales/account-plan,agent-happy-path,2,without,0,FAIL,"The output only requests uploading files and does not mention running scripts or generating any maps, matrices, totals, or plays."
+presales/account-plan,agent-happy-path,2,with,0,PASS,"Stakeholder Map, White-Space Matrix, Pipeline, and 90-day Plays are all present in the output."
+presales/account-plan,agent-missing-pipeline,2,without,0,FAIL,"The output asks for the ""stakeholder list,"" not the ""pipeline export."""
+presales/account-plan,agent-missing-pipeline,2,with,0,PASS,"The output asks for pipeline data in question 3: ""Share the current service catalog and pipeline data."""
+presales/account-plan,agent-unvalued-pipeline-not-estimated,2,without,0,FAIL,The output does not show value as [TO BE BASELINED — owner: ___] nor exclude it from the total; no play owners are mentioned.
+presales/account-plan,agent-unvalued-pipeline-not-estimated,2,with,0,PASS,"The output states ""pipeline value stays at `[TO BE BASELINED — owner: sales-lead]`,"" showing the value as [TO BE BASELINED — owner: ___] and implying the owner is not specifically assigned."
+presales/account-plan,agent-mode-existing,2,without,0,FAIL,"The output does not mention any details about last plan status, plays, or pipeline delta changes."
+presales/account-plan,agent-mode-existing,2,with,0,FAIL,"The output does not mention any details about plays done, carried over, closed, or pipeline delta changes."
+presales/client-research-brief,happy-path-public-company,2,without,0,FAIL,No evidence of running scripts or applying classification manually is shown in the output.
+presales/client-research-brief,happy-path-public-company,2,without,1,FAIL,Output does not follow brief-template.md; no Bottom line of three sourced facts is presented first.
+presales/client-research-brief,happy-path-public-company,2,without,2,PASS,"Financial signals cite ""10-K latest filing"" and ""10-K"" for revenue figures."
+presales/client-research-brief,happy-path-public-company,2,without,3,FAIL,Technology signals table lacks confidence ratings and confirming questions per row.
+presales/client-research-brief,happy-path-public-company,2,without,4,PASS,"CIO row contains only public-record facts: ""New CIO Jane Smith started Mar 2024, emphasizes cloud-first, data-driven innovation."""
+presales/client-research-brief,happy-path-public-company,2,without,5,FAIL,"Likely initiatives are described as ""Opportunity"" but not labeled as hypotheses with signal tiers."
+presales/client-research-brief,happy-path-public-company,2,without,6,FAIL,No sources appendix listing URLs with date accessed and tier is included.
+presales/client-research-brief,happy-path-public-company,2,with,0,FAIL,No evidence of running scripts/brief_skeleton.py or explicit classification is shown in the output.
+presales/client-research-brief,happy-path-public-company,2,with,1,PASS,"Bottom line has three sourced facts first, e.g., ""Contoso Retail Group reported $28.6B revenue in 2023... (10-K, Item 7, p. 45) [S1]."""
+presales/client-research-brief,happy-path-public-company,2,with,2,PASS,"Financial signals cite 10-K sections and pages, e.g., ""Revenue 2023 $28.6 billion 10-K, Item 7, p. 45 [S1]."""
+presales/client-research-brief,happy-path-public-company,2,with,3,PASS,"Technology signals table includes confidence ratings and confirming questions per row, e.g., ""Confidence High"" and ""Confirming question What is the status and scope of Project Horizon integration migr"
+presales/client-research-brief,happy-path-public-company,2,with,4,PASS,"Leadership row for CIO contains only public-record facts: ""Alex Martinez (since June 2024),"" prior employer, and public priorities."
+presales/client-research-brief,happy-path-public-company,2,with,5,PASS,"Likely initiatives are labeled hypotheses with signal tiers, e.g., ""Signals (tier)"" column and ""Hypothesis"" label."
+presales/client-research-brief,happy-path-public-company,2,with,6,FAIL,No sources appendix listing URLs with date accessed and tier is present in the output.
+presales/client-research-brief,missing-input-ambiguous-company,2,without,0,FAIL,"The output does not ask which Apex (legal name, HQ country, ticker) or the purpose of the meeting."
+presales/client-research-brief,missing-input-ambiguous-company,2,without,1,FAIL,The output produces a brief about Salesforce's Apex without confirming which Apex is meant.
+presales/client-research-brief,missing-input-ambiguous-company,2,without,2,PASS,The output does not invent a notes file or sources.
+presales/client-research-brief,missing-input-ambiguous-company,2,with,0,PASS,"The output asks ""Which Apex do you mean—Apex Learning (US), Apex Clean Energy (US), or another?"" and requests ""full company name, HQ country, and meeting purpose."""
+presales/client-research-brief,missing-input-ambiguous-company,2,with,1,PASS,The output does not produce a brief for any guessed company; it only asks for clarification.
+presales/client-research-brief,missing-input-ambiguous-company,2,with,2,PASS,The output does not invent a notes file or sources; it only requests information.
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,without,0,FAIL,"Revenue and IT spend cells show estimated ranges, not ""[TO BE BASELINED — owner: ___]""."
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,without,1,PASS,"States ""Public financial data... is not directly available due to private ownership."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,without,2,FAIL,Uses estimates and industry benchmarks but does not label confidence as Low.
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,without,3,FAIL,Does not suggest specific discovery questions to baseline figures.
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,without,4,PASS,Does not cite aggregator revenue estimates; sources are LinkedIn and industry benchmarks.
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,with,0,PASS,"""These cells will be marked as `[TO BE BASELINED — owner: Sales Lead]`."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,with,1,PASS,"""Meridian Logistics is a privately held company; without public filings or direct sources, annual revenue and IT spend cannot be reliably sourced or estimated."""
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,with,2,FAIL,The output does not mention labeling confidence as Low or referencing notes as sources.
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,with,3,FAIL,No specific discovery question is suggested to baseline the figures.
+presales/client-research-brief,adversarial-fabrication-private-revenue,2,with,4,PASS,No aggregator revenue estimates are cited in the output.
+presales/client-research-brief,agent-happy-path,2,without,0,FAIL,The output is a request for notes rather than an organized brief with sources listed.
+presales/client-research-brief,agent-happy-path,2,with,0,FAIL,The output requests notes and links but does not organize any notes into a brief skeleton with sources listed.
+presales/client-research-brief,agent-missing-notes,2,without,0,PASS,"The output states, ""If you need details on its database schema, sample data, or usage in tutorials, please specify,"" indicating a request for more information rather than fabricating facts."
+presales/client-research-brief,agent-missing-notes,2,with,0,FAIL,The output asks clarifying questions but does not request the notes/links file.
+presales/client-research-brief,agent-unknowns-marked,2,without,0,PASS,"The output retains ""[TO BE BASELINED — owner: Client Account Manager]"" indicating facts absent from the notes stay marked with a placeholder."
+presales/client-research-brief,agent-unknowns-marked,2,with,0,PASS,"The output states ""These cells remain `[TO BE BASELINED — owner: client CIO]`. Please provide a public document or a verified source if available,"" confirming the absence of facts with a confirming qu"
+presales/client-research-brief,agent-mode-new,2,without,0,PASS,"The brief.md includes template sections such as Company Overview, Current Challenges, Goals and Priorities, Key Stakeholders, Potential Discussion Topics, and Next Steps for Discovery Call, covering t"
+presales/client-research-brief,agent-mode-new,2,with,0,FAIL,"The output does not contain any template sections, cited items, or markers; it only requests notes or file content."
+presales/client-research-brief,agent-mode-existing,2,without,0,FAIL,"The output is a prompt requesting new notes and does not include any lines from the April brief, ERP news, CIO, quote, or 2023 CRM news source."
+presales/client-research-brief,agent-mode-existing,2,with,0,FAIL,"The output does not mention any notes from the April brief, ERP news, CIO, quote, or 2023 CRM news source."
