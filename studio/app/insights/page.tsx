@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { loadActivity } from "@/lib/insights/load";
-import { computeInsights, CHANNEL_LABEL } from "@/lib/insights/compute";
+import { computeInsights, CHANNEL_LABEL, AUTOMATION_CHANNELS, RUN_CLASS_HELP } from "@/lib/insights/compute";
 import { BaselineForm } from "@/components/insights/BaselineForm";
 import { removeBaseline } from "@/app/insightsActions";
 import { loadDelivery } from "@/lib/db/delivery";
@@ -50,9 +50,9 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
       </nav>
 
       <div className="cat-tiles mb-6">
-        <div className="cat-tile"><b>{ins.total}</b><span title="Every run in this period: server (portal, API, MCP, playbook steps) and in the browser">runs (server + browser)</span></div>
-        <div className="cat-tile"><b>{pct(ins.successRate)}</b><span>succeeded ({ins.ok} of {ins.total} runs, server + browser)</span></div>
-        <div className="cat-tile"><b>{ins.people}</b><span>people and keys</span></div>
+        <div className="cat-tile"><b>{ins.byClass.people.runs}</b><span title={RUN_CLASS_HELP.people}>runs by people (and their tools){ins.byClass.people.runs ? <> · {pct(ins.byClass.people.successRate)} succeeded ({ins.byClass.people.ok} of {ins.byClass.people.runs})</> : ""}</span></div>
+        <div className="cat-tile"><b>{ins.byClass.automation.runs}</b><span title={RUN_CLASS_HELP.automation}>automation runs (scorecard checks and evaluations){ins.byClass.automation.runs ? <> · {pct(ins.byClass.automation.successRate)} completed</> : ""}</span></div>
+        <div className="cat-tile"><b>{ins.actors.users}</b><span>{ins.actors.users === 1 ? "person" : "people"}{ins.actors.keys ? ` · ${ins.actors.keys} API key${ins.actors.keys === 1 ? "" : "s"}` : ""}</span></div>
         <div className={`cat-tile${estimated ? " cat-tile-est" : ""}`}><b>{ins.roi.skillsWithBaseline ? ins.roi.hours : "—"}</b><span>{ins.roi.skillsWithBaseline ? <>hours saved{estimated ? <> — <b>estimated</b>: {estimated} of {ins.roi.skillsWithBaseline} baselines are estimates, not timed</> : ` (${ins.roi.skillsWithBaseline} measured baseline${ins.roi.skillsWithBaseline === 1 ? "" : "s"})`}</> : "hours saved: set a baseline below"}</span></div>
         {ins.roi.value != null && <div className="cat-tile"><b>{usd(ins.roi.value)}</b><span>value at your rates</span></div>}
         <div className="cat-tile"><b>{usd(ins.spend.usd)}</b><span>LLM spend ({ins.spend.runsWithCost} costed run{ins.spend.runsWithCost === 1 ? "" : "s"})</span></div>
@@ -73,7 +73,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
 
       <div className="ins-grid mb-6">
         <section className="card card-pad">
-          <div className="h3" style={{ marginTop: 0 }}>Runs per week</div>
+          <div className="h3" style={{ marginTop: 0 }}>Runs per calendar week</div>
+          <p className="caption" style={{ marginTop: 0 }}>People and automation together, Monday to Sunday (UTC); the last bar is this week so far, so it can be lower than “the last 7 days”.</p>
           <div className="ins-cols" role="img" aria-label={`Runs per week: ${ins.weeks.map((w) => `${w.start} ${w.runs}`).join(", ")}`}>
             {ins.weeks.map((w) => (
               <div key={w.start} className="ins-col" title={`Week of ${w.start}: ${w.runs} run${w.runs === 1 ? "" : "s"}`}>
@@ -89,7 +90,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
           <div className="tablewrap"><table className="ins-bars"><tbody>
             {ins.channels.map((c) => (
               <tr key={c.channel} title={`${CHANNEL_LABEL[c.channel]}: ${c.runs}`}>
-                <th scope="row">{CHANNEL_LABEL[c.channel]}</th>
+                <th scope="row">{CHANNEL_LABEL[c.channel]}{AUTOMATION_CHANNELS.has(c.channel) ? <span className="caption"> · automation</span> : null}</th>
                 <td><span className="ins-bar" style={{ width: `${(c.runs / maxChan) * 100}%` }} /></td>
                 <td className="ins-n">{c.runs}</td>
               </tr>))}

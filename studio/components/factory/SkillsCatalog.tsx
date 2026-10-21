@@ -30,7 +30,7 @@ const NEXT: Partial<Record<Gate, { label: string; tab: string }>> = {
   draft: { label: "Add test cases", tab: "evaluations" }, needs_eval: { label: "Run evaluation", tab: "evaluations" },
   below_bar: { label: "Improve, re-evaluate", tab: "evaluations" }, needs_approval: { label: "Request review", tab: "release" }, ready: { label: "Publish", tab: "release" },
 };
-const evidence = (i: CatalogItem) => (i.evalPassRate == null ? (i.cases ? `${i.cases} case${i.cases === 1 ? "" : "s"}, not run` : "no cases") : `${Math.round(i.evalPassRate * 100)}% pass${i.evalCurrent ? "" : " (outdated)"}`);
+const evidence = (i: CatalogItem) => (i.evalPassRate == null ? (i.cases ? `${i.cases} case${i.cases === 1 ? "" : "s"}, not run` : "no cases") : (i.evalCurrent ? `${Math.round(i.evalPassRate * 100)}% pass · ${Math.round(i.evalPassRate * i.cases)} of ${i.cases} cases` : `${Math.round(i.evalPassRate * 100)}% pass (older case set)`));
 
 export function SkillsCatalog({ items, canCreate, stageOpts, initialStage = "all" }: { items: CatalogItem[]; canCreate: boolean; stageOpts: readonly { key: string; label: string }[]; initialStage?: string }) {
   const router = useRouter();

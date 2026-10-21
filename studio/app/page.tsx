@@ -3,7 +3,7 @@ import Link from "next/link";
 import { loadFunnel, loadPipeline } from "@/lib/db/skills";
 import { publishedByLibrarySkill } from "@/lib/library";
 import { loadActivity } from "@/lib/insights/load";
-import { computeInsights } from "@/lib/insights/compute";
+import { computeInsights, RUN_CLASS_HELP } from "@/lib/insights/compute";
 import { inboxCount } from "@/lib/db/actions";
 import { ReadyQueue } from "@/components/factory/Funnel";
 import { getContext, type WsCtx } from "@/lib/factory/db";
@@ -12,7 +12,7 @@ import { createWorkspace, selectWorkspace } from "@/app/actions";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { PageHead } from "@/components/PageHead";
 import { TaskBox } from "@/components/factory/TaskBox";
-import { lifecycle, stageSkills, roleOptions, modeHref, PHASES } from "@/lib/frontdoor";
+import { lifecycle, stageSkills, roleOptions, modeHref, PHASES, modeCoverage } from "@/lib/frontdoor";
 import { LifecycleFilters } from "@/components/factory/LifecycleFilters";
 import { ROLE_TEMPLATES } from "@/lib/factory/talentData";
 import { Suspense } from "react";
@@ -78,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
       <TaskBox suggestions={suggestions} />
       <p className="caption home-proof">
         <Link href="/repo/" className="link"><b>{published.size}</b> skill{published.size === 1 ? "" : "s"} approved for use</Link> in {ctx.workspace.name}, usable here or from <Link href="/connect" className="link">Claude, Cursor or any app</Link>
-        {week.total > 0 && <> · <Link href="/insights?days=7" className="link">{week.total} runs this week{week.successRate != null ? `, ${Math.round(week.successRate * 100)}% succeeded` : ""}</Link></>}
+        {week.total > 0 && <> · <Link href="/insights?days=7" className="link" title={`${RUN_CLASS_HELP.people} ${RUN_CLASS_HELP.automation}`}>last 7 days: {week.byClass.people.runs} runs by people{week.byClass.people.successRate != null ? ` (${Math.round(week.byClass.people.successRate * 100)}% succeeded)` : ""} · {week.byClass.automation.runs} automation runs</Link></>}
         {waiting > 0 && <> · <Link href="/inbox" className="link-flame">{waiting} decision{waiting === 1 ? "" : "s"} waiting on you →</Link></>}
       </p>
       {ctx.role !== "consumer" && <ReadyQueue items={funnel} />}
@@ -86,6 +86,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
       <section className="section lc" aria-label="AI lifecycle">
         <Suspense fallback={null}><LifecycleFilters roles={roleOptions()} /></Suspense>
 
+        {(() => { const cov = modeCoverage(mode, role); const sum = phases.flatMap((p) => p.stages).reduce((n, x) => n + x.count, 0); return (
+          <p className="caption lc-cover">{cov.shown} of {cov.total} {roleTitle ? `${roleTitle} ` : ""}skills apply when {mode === "new" ? "starting new" : "improving what exists"}{cov.total > cov.shown ? `; ${cov.total - cov.shown} only when ${mode === "new" ? "improving what exists" : "starting new"}` : ""}.{sum !== cov.shown ? ` Stage counts add up to ${sum} because a skill can serve more than one stage.` : ""}</p>); })()}
         <nav className="lc-rail" aria-label="Lifecycle stages">
           {phases.map((p) => (
             <div key={p.id} className={`lc-phase lc-phase-${p.id}`}>

@@ -11,6 +11,13 @@ export const CHANNEL_LABEL: Record<Channel, string> = {
   playbook: "Playbook steps", scorecard: "Scorecard checks", eval: "Evaluations",
 };
 
+/** Runs started by the workspace's own automation (scorecard checks, evaluations) vs by people and their tools. */
+export const AUTOMATION_CHANNELS: ReadonlySet<Channel> = new Set<Channel>(["scorecard", "eval"]);
+export const RUN_CLASS_HELP = {
+  people: "Started by a person or their tools: runs in the portal and browser, examples, playbook steps, and API/MCP calls.",
+  automation: "Started by the workspace's own automation: scorecard checks on repositories and skill evaluations.",
+} as const;
+
 export interface Activity { skill: string; channel: Channel; ok: boolean; at: string; user: string | null; cost: number | null }
 export interface Baseline { skill: string; manual_minutes: number; hourly_rate_usd: number | null; owner: string; source: string }
 export interface Score { entity_id: string; check_id: string; verdict: string }
@@ -18,6 +25,10 @@ export interface Score { entity_id: string; check_id: string; verdict: string }
 export interface SkillRoi { skill: string; runs: number; counted: number; baseline: Baseline | null; hours: number | null; exactHours: number | null; value: number | null }
 export interface Insights {
   periodDays: number; total: number; ok: number; successRate: number | null; people: number;
+  /** The headline split: runs by people (and their tools) vs automation runs. Every "runs" headline shows both. */
+  byClass: { people: { runs: number; ok: number; successRate: number | null }; automation: { runs: number; ok: number; successRate: number | null } };
+  /** Distinct actors, by kind: signed-in people and API keys are different units. */
+  actors: { users: number; keys: number };
   channels: { channel: Channel; runs: number }[];
   weeks: { start: string; runs: number }[];
   skills: SkillRoi[];
@@ -69,6 +80,11 @@ export function computeInsights(acts: Activity[], baselines: Baseline[], scores:
   return {
     periodDays, total: inPeriod.length, ok, successRate: inPeriod.length ? ok / inPeriod.length : null,
     people: new Set(inPeriod.map((a) => a.user).filter(Boolean)).size,
+    byClass: (() => {
+      const cls = (auto: boolean) => { const l = inPeriod.filter((a) => AUTOMATION_CHANNELS.has(a.channel) === auto); const k = l.filter((a) => a.ok).length; return { runs: l.length, ok: k, successRate: l.length ? k / l.length : null }; };
+      return { people: cls(false), automation: cls(true) };
+    })(),
+    actors: (() => { const ids = new Set(inPeriod.map((a) => a.user).filter((u): u is string => !!u)); const keys = [...ids].filter((u) => u.startsWith("key:")).length; return { users: ids.size - keys, keys }; })(),
     channels, weeks, skills,
     roi: { hours: round1(withB.reduce((n, s) => n + (s.exactHours ?? 0), 0)), value: values.length ? values.reduce((a, b) => a + b, 0) : null,
       counted: skills.reduce((n, s) => n + s.counted, 0), skillsWithBaseline: withB.length, skillsWithout: skills.filter((s) => !s.baseline && s.counted > 0).length },
