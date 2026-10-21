@@ -15,6 +15,7 @@ import { skills as repoSkills } from "@/lib/data";
 import { providerKeyPresent, DEFAULT_COMPAT_MODEL } from "@/lib/factory/providers";
 import { currentPin } from "@/lib/factory/pins";
 import { contractKey } from "@/lib/factory/drift";
+import { libraryCasesStale } from "@/lib/factory/libraryContract";
 import {
   fromForm, NoFields, EmptyForm, CreateWorkspaceForm, SelectWorkspaceForm, CreateSkillForm, UpdateSkillForm, SaveManifestForm, SaveFileForm, DeleteFileForm,
   CreateDraftForm, UpdateFromLibraryForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
@@ -206,7 +207,8 @@ async function syncFromLibrary(ctx: WsCtx, skillId: string): Promise<ActionResul
     const pin = currentPin(lib.id);
     const fresh = manifestFromRepoSkill(lib);
     const sameContract = fresh.ok && working ? contractKey(((await ctx.supabase.from("sf_skill_versions").select("manifest").eq("id", working.id).single()).data?.manifest ?? null) as never) === contractKey(fresh.manifest) : false;
-    if (working && working.source?.content_sha === pin && sameContract) return fail(`v${working.version} already matches the library — evaluate and publish it.`);
+    const casesStale = working ? libraryCasesStale(lib.id, ((await ctx.supabase.from("sf_eval_cases").select("name, inputs, checks").eq("version_id", working.id)).data ?? []) as { name: string; inputs: unknown; checks: unknown }[]) : false;
+    if (working && working.source?.content_sha === pin && sameContract && !casesStale) return fail(`v${working.version} already matches the library — evaluate and publish it.`);
     if (working && working.status !== "draft") return fail(`v${working.version} is ${working.status.replace("_", " ")}; withdraw it to draft first.`);
     const m = manifestFromRepoSkill(lib);
     if (!m.ok) return fail(`The library version has problems: ${m.problems.map((p) => `${p.path} ${p.message}`).join("; ")}`);
