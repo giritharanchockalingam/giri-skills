@@ -26,8 +26,17 @@ metadata:
 
 # orals-prep
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/orals-prep --input <name>=<value> … --out <dir>` (see `--explain presales/orals-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: prepare the team now
+- **The request carries the format and the team** (duration, presentation vs Q&A split, evaluators, presenters) — including when the proposal, deck, compliance matrix or battle card are said to be attached but their contents are not in the conversation: write the orals pack **in this reply** from the stated facts. Never reply with only a request for files. In this order:
+  1. **Evaluation map** — each stated criterion (or, if criteria are unknown, the proposal's structure) → slide(s) → speaker.
+  2. **Timed script** fitting the presentation slot — segments with start/end minute, speaker, slide, point, proof (number with source or `[TO BE BASELINED — owner: ___]`), transition; **opening ≤90 s and close ≤60 s written verbatim**; scripted handoffs; **airtime check** (every speaker ≥1 segment, none >40%).
+  3. **Likely-questions bank** (table) — one question per compliance partial (e.g. each security partial), per `[TBD]`, per estimate assumption, plus the battle card's objections and the standard evaluator set; each answer ≤75 words with the answerer, evidence pointer and "do not say" line.
+  4. **The hard three** (typically price, the known gaps, incumbent continuity) with honest answers that state the gap and the mitigation.
+  5. **Red-team protocol** and **rehearsal plan** — three dry runs (content and timing, Q&A only, full with red team), each with a date or `[TO BE BASELINED — owner: ___]` and the rubric (`assets/orals-rubric.md`).
+  6. **Number sheet** — every figure the team may say, with its proposal page · **Logistics and risks** · **Open items** with owners.
+  No competitor is named in any answer.
+- **No format or team** ("help us get ready for the pitch"): ask once, in one list, for the format (duration, presentation/Q&A split, attendees, evaluation criteria), the presenting team and the proposal and deck. Do not produce a timed script without the duration and the team. If the proposal is available, offer to generate the question bank from it as a parallel first step.
+- **Asked to script new numbers, uncleared client claims or a competitor attack** ("say we are 30% faster", "our last clients saw 40% savings", "name the incumbent's failed upgrade"): say in one line that new numbers and competitor naming in orals create credibility and compliance risk. Rewrite the answer around the proposal's basis of estimate, P80 contingency and a like-for-like comparison; use cleared references only, in their cleared form, or omit them; replace the competitor mention with a ghost line in consequence language (the risk the client should weigh, and how we remove it). Never print the requested percentages in the answer, unless the user shows they are in the proposal with a source.
 
 ## Starting points
 - **New** — from the submitted proposal: a timed script skeleton with speakers, an airtime check, a number sheet every presenter keeps in front of them, and likely evaluator questions.
@@ -49,7 +58,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Battle card (if a competitive pursuit) | no | competitive-positioning output |
 | Compliance matrix and clarification answers (RFP pursuits) | no | rfp-compliance-matrix output |
 
-If format rules or the team are missing, ask once; a script cannot be timed or assigned without them.
+If format rules or the team are missing, ask once; a script cannot be timed or assigned without them. Missing files (proposal, deck, compliance matrix, battle card) or unknown evaluation criteria do not stop the pack when the format and team are stated: the gaps are marked `[TO BE BASELINED — owner: ___]`.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first.
@@ -84,3 +93,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `references/question-bank-and-red-team.md` — standard evaluator questions by theme, question-generation sources, red-team protocol
 - `assets/script-template.md` — timed script layout
 - `assets/orals-rubric.md` — dry-run scoring rubric
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/orals-prep --input <name>=<value> … --out <dir>` (see `--explain presales/orals-prep`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
