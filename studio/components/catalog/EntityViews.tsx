@@ -29,7 +29,7 @@ export function ServicesTable({ rows, all, rels }: { rows: EntityRow[]; all: Map
             <td><Link className="link" href={`/catalog/${s.id}`}><b>{s.title}</b></Link>{p.framework && <div className="caption">{p.framework}</div>}</td>
             <td>{repo ? <Link className="link" href={`/catalog/${repo.id}`}>{repo.key}</Link> : p.repo ? <span className="caption">{p.repo} (not in the catalog)</span> : <span className="caption">no Git link</span>}</td>
             <td>{p.production_url ? <a className="link caption" href={p.production_url} target="_blank" rel="noreferrer">{p.production_url.replace("https://", "")}</a> : <span className="caption">—</span>}</td>
-            <td>{p.last_deploy ? <><span className={`pill pill-sm ${STATE[p.last_deploy.state ?? ""] ?? ""}`}>{(p.last_deploy.state ?? "?").toLowerCase()}</span> <span className="caption"><LocalTime iso={p.last_deploy.at} />{p.last_deploy.sha ? ` · ${p.last_deploy.sha.slice(0, 7)}` : ""}</span></> : <span className="caption">none in 90 days</span>}</td>
+            <td>{p.last_deploy ? <><span className={`pill pill-sm ${STATE[p.last_deploy.state ?? ""] ?? ""}`}>{(p.last_deploy.state ?? "?").toLowerCase()}</span> <span className="caption"><LocalTime iso={p.last_deploy.at} />{p.last_deploy.sha ? <> · commit <span title={p.last_deploy.sha}>{p.last_deploy.sha.slice(0, 7)}</span></> : ""}</span></> : <span className="caption">none in 90 days</span>}</td>
             <td>{p.deploys_30d ?? 0}{p.failed_30d ? <span className="caption ink-rust"> · {p.failed_30d} failed</span> : null}</td>
             <td>{dbs.length ? dbs.map((d) => <div key={d.id}><Link className="link" href={`/catalog/${d.id}`}>{d.title}</Link></div>) : <span className="caption">—</span>}</td>
           </tr>);

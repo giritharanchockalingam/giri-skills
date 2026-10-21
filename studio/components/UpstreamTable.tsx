@@ -47,7 +47,7 @@ export function UpstreamTable({ rows, categories }: { rows: UpstreamSkill[]; cat
               <th>Source</th>
               <th>Category</th>
               <th>License</th>
-              <th title="Upstream commit the vendored copy was taken from">Pinned</th>
+              <th title="The commit in the original repository this copy was taken from (full value on hover)">Copied from commit</th>
               <th className="col-why">Why</th>
             </tr>
           </thead>
