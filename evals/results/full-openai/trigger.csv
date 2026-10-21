@@ -49,6 +49,16 @@ skill,case_id,run,selected,correct
 (negative),neg-08,1,none,
 (negative),neg-09,1,none,
 (negative),neg-10,1,none,
+(negative),neg-01,1,none,
+(negative),neg-02,1,none,
+(negative),neg-03,1,none,
+(negative),neg-04,1,none,
+(negative),neg-05,1,none,
+(negative),neg-06,1,none,
+(negative),neg-07,1,none,
+(negative),neg-08,1,none,
+(negative),neg-09,1,none,
+(negative),neg-10,1,none,
 ai-platform/ab-test-analysis,prompt-should-we-ship,1,ab-test-analysis,1
 ai-platform/ab-test-analysis,prompt-inconclusive-power,1,ab-test-analysis,1
 ai-platform/ab-test-analysis,agent-happy-path,1,ab-test-analysis,1
