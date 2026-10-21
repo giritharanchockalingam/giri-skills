@@ -16,6 +16,7 @@ import { providerKeyPresent, DEFAULT_COMPAT_MODEL } from "@/lib/factory/provider
 import { currentPin } from "@/lib/factory/pins";
 import { contractKey } from "@/lib/factory/drift";
 import { libraryCasesStale } from "@/lib/factory/libraryContract";
+import { ensureSnapshot } from "@/lib/factory/snapshot";
 import {
   fromForm, NoFields, EmptyForm, CreateWorkspaceForm, SelectWorkspaceForm, CreateSkillForm, UpdateSkillForm, SaveManifestForm, SaveFileForm, DeleteFileForm,
   CreateDraftForm, UpdateFromLibraryForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
@@ -287,8 +288,14 @@ export async function requestReview(_: ActionResult | null, fd: FormData): Promi
     const { error } = await ctx.supabase.from("sf_skill_versions").update(pin ? { status: "in_review", source: { ...src, content_sha: pin } } : { status: "in_review" }).eq("id", id).eq("status", "draft");
     if (error) return fail(error.message);
     await audit(ctx, "version.request_review", "skill_version", id);
+    // freeze the reviewed files now, so later library changes never alter (or stop) this version
+    let frozenNote = "";
+    if (pin) {
+      try { frozenNote = (await ensureSnapshot(id)) ? " Its files are frozen with it." : ""; }
+      catch (e) { frozenNote = ` Its files could not be frozen yet (${(e as Error).message}); they will be on first run.`; }
+    }
     revalidatePath(`/skills/${input.slug}`, "layout"); revalidatePath("/pipeline");
-    return okay("Review requested. A reviewer can now approve or reject this exact version.");
+    return okay(`Review requested. A reviewer can now approve or reject this exact version.${frozenNote}`);
   });
 }
 
