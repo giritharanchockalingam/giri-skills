@@ -11,6 +11,10 @@ export interface Applicable { skill: string; why: string; evidence: string[]; in
 export interface Detection { stack: Signal[]; applicable: Applicable[]; counts: { files: number; tests: number; migrations: number; workflows: number } }
 
 const MAX_EVIDENCE = 3;
+/** An absolute path from someone's own machine (a home directory) committed by accident, e.g. a folder named
+ *  "chmod +x /Users/alex/Desktop/deploy.sh". Never real project structure, and never shown to anyone. */
+export const LOCAL_PATH = /(^|[\s/"'])(\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Za-z]:[\\/]Users[\\/][^\\/\s]+)([\\/]|$)/;
+export const isLocalArtifact = (p: string) => LOCAL_PATH.test(p);
 const has = (paths: string[], re: RegExp) => paths.filter((p) => re.test(p));
 const deps = (pkg: string | null): Record<string, string> => {
   if (!pkg) return {};
@@ -29,7 +33,7 @@ const dirOf = (paths: string[]) => {
 
 export function detect(paths: string[], manifests: { packageJson?: string | null; requirements?: string | null; pyproject?: string | null } = {}): Detection {
   const ignore = /(^|\/)(node_modules|\.next|dist|build|vendor|\.venv|__pycache__)\//;
-  const P = paths.filter((p) => !ignore.test(p));
+  const P = paths.filter((p) => !ignore.test(p) && !isLocalArtifact(p));
   const d = deps(manifests.packageJson ?? null);
   const py = `${manifests.requirements ?? ""}\n${manifests.pyproject ?? ""}`.toLowerCase();
   const stack: Signal[] = [];
