@@ -95,7 +95,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
               <div className="lc-stages">
                 {p.stages.map((s) => (
                   <Link key={s.id} href={link({ stage: s.id })} scroll={false} aria-current={s.id === stage.id ? "page" : undefined}
-                    className={`lc-stage${s.id === stage.id ? " on" : ""}${s.count === 0 ? " empty" : ""}`} aria-label={`${s.n ? `Stage ${s.n}: ` : ""}${s.name}, ${s.count} skill${s.count === 1 ? "" : "s"}`}>
+                    className={`lc-stage${s.id === stage.id ? " on" : ""}${s.count === 0 ? " empty" : ""}`} title={s.count === 0 ? (s.why ?? `No skills here when ${mode === "new" ? "starting new" : "improving what exists"}`) : undefined} aria-label={`${s.n ? `Stage ${s.n}: ` : ""}${s.name}, ${s.count} skill${s.count === 1 ? "" : "s"}`}>
                     <span className="lc-stage-name">{s.n ? <span className="lc-n">{s.n}</span> : null}{s.name}</span>
                     <span className="lc-count" title={`${s.count} skill${s.count === 1 ? "" : "s"}`}>{s.count}</span>
                   </Link>
@@ -121,7 +121,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             <p className="lc-empty">{stage.why ?? <>No skill here for this starting point{roleTitle ? " and role" : ""} yet.</>}{" "}
               {otherMode > 0 && <Link className="link" href={link({ start: mode === "new" ? "existing" : "new" })} scroll={false}>See {otherMode} for {mode === "new" ? "improving what exists" : "starting new"}</Link>}</p>
           ) : (
-            <><p className="caption lc-howto"><b>Try example</b> runs the skill on its own labelled sample inputs, so you see exactly what it produces. <b>Use mine</b> opens it ready for your own files and answers.</p>
+            <><p className="caption lc-howto"><b>Try example</b> — run it on sample inputs (labelled, so you see exactly what it produces). <b>Use mine</b> — run it on your inputs.</p>
             <ul className="lc-rows">
               {rows.map((r) => (
                 <li key={r.id} className="lc-row">

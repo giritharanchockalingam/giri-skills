@@ -32,10 +32,10 @@ export function TaskBox({ suggestions }: { suggestions: string[] }) {
         onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) go(task); }}
         placeholder="e.g. Check the row-level security in my Supabase migration before I merge" />
       <div className="action-row" style={{ marginTop: 10 }}>
-        <button type="button" className="btn btn-primary" disabled={pending || task.trim().length < 8} onClick={() => go(task)} aria-busy={pending} aria-describedby="fd-task-hint">
-          {pending ? "Finding…" : "Find who does this"}
+        <button type="button" className="btn btn-primary" disabled={pending || task.trim().length < 8} title={task.trim().length < 8 ? "Describe the work first" : undefined} onClick={() => go(task)} aria-busy={pending} aria-describedby="fd-task-hint">
+          {pending ? "Finding…" : "Find a skill for this"}
         </button>
-        {task.trim().length < 8 && !pending && <span id="fd-task-hint" className="caption">{task.trim() ? `Say a little more (${8 - task.trim().length} more character${8 - task.trim().length === 1 ? "" : "s"})` : "Describe the work above to search"} · </span>}
+        {task.trim().length < 8 && !pending && <span id="fd-task-hint" className="caption">{task.trim() ? `Say a little more (${8 - task.trim().length} more character${8 - task.trim().length === 1 ? "" : "s"})` : "Describe the work first"} · </span>}
         <span className="caption">or try:</span>
         {suggestions.map((s) => (
           <button key={s} type="button" className="chip fd-suggest" onClick={() => { setTask(s); go(s); }}>{s}</button>
@@ -52,10 +52,10 @@ export function TaskBox({ suggestions }: { suggestions: string[] }) {
                 {i === 0 ? <span className="pill pill-sm pill-sage">best match</span> : <span className="caption">also relevant</span>}
               </div>
               <p className="fd-get"><span className="caption">You get:</span> {h.youGet}</p>
-              {h.owners.length > 0 && <p className="caption">Done by: {h.owners.join(" · ")}</p>}
+              {h.owners.length > 0 && <p className="caption">Usually done by: {h.owners.join(" · ")}</p>}
               <div className="action-row" style={{ marginTop: 8 }}>
-                {h.example && <Link href={tryHref(h.skill, asked)} className="btn btn-primary btn-sm">Try it on an example</Link>}
-                <Link href={ownHref(h.skill, asked)} className="btn btn-secondary btn-sm">Use my own files</Link>
+                {h.example && <Link href={tryHref(h.skill, asked)} className="btn btn-primary btn-sm" title="Run it on sample inputs">Try it on an example</Link>}
+                <Link href={ownHref(h.skill, asked)} className="btn btn-secondary btn-sm" title="Run it on your inputs">Use my own files</Link>
                 <span className="caption">matched: {h.matched.slice(0, 6).join(", ")}</span>
               </div>
             </li>
