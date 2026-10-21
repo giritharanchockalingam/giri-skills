@@ -1,4 +1,4 @@
-/* Session refresh + route protection. Everything except /login, the consumer API (/api/v1) and MCP servers (/api/mcp), both key-authenticated, health checks (/api/health, deep check bearer-protected),
+/* Session refresh + route protection. Everything except /login, /start (public, static copy), the consumer API (/api/v1) and MCP servers (/api/mcp), both key-authenticated, health checks (/api/health, deep check bearer-protected),
  * the Python runtime (/api/py, secret-authenticated) and static assets requires a signed-in user. */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
     },
   });
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user && pathname !== "/login" && pathname !== "/auth/callback") {
+  if (!user && pathname !== "/login" && pathname !== "/auth/callback" && pathname !== "/start") {   // /start: the public "how it fits together" page
     if (pathname.startsWith("/api/")) return NextResponse.json({ error: { code: "unauthenticated", message: "Sign in first." } }, { status: 401 });
     const url = new URL("/login", request.url);
     if (pathname !== "/") url.searchParams.set("next", pathname);

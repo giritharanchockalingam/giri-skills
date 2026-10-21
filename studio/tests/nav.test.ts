@@ -11,8 +11,8 @@ const routes = (dir: string, base = ""): string[] => readdirSync(dir).flatMap((n
   return [r, ...routes(p, r)];
 });
 
-test("five persona sections, admin last", () => {
-  assert.deepEqual(SECTIONS.map((s) => s.id), ["use", "build", "govern", "platform", "admin"]);
+test("Start here first, then the persona sections, admin last", () => {
+  assert.deepEqual(SECTIONS.map((s) => s.id), ["start", "use", "build", "govern", "platform", "admin"]);
   for (const s of SECTIONS) assert.match(s.who, /^For /, `${s.id} says who it is for`);
 });
 

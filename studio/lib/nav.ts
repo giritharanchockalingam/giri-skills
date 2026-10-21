@@ -8,6 +8,7 @@ const starts = (...p: string[]) => (path: string) => p.some((x) => path === x ||
 const type = (t: string | null) => (path: string, q: URLSearchParams) => path === "/catalog" && (q.get("type") ?? null) === t;
 
 export const SECTIONS: Section[] = [
+  { id: "start", label: "Start here", href: "/start", who: "For first-time visitors: how it fits together", hint: "How it fits together", match: starts("/start"), pages: [] },
   {
     id: "use", label: "Use", href: "/", who: "For everyone: find a skill that works and run it, here or from your own tools",
     hint: "Find, run and connect skills",
