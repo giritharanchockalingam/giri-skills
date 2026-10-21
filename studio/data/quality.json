@@ -27447,7 +27447,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "No scoring or comparison of at least two options on weighted criteria or ADR-001 record is included."
+  "evidence": "No scoring of at least two options on weighted criteria or ADR-001 documentation is included."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27455,8 +27455,8 @@
   "run": 1,
   "mode": "without",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No target-state diagrams using assets/mermaid-c4-templates.md or placeholders with [TO BE BASELINED — owner: ___] are shown."
+  "pass": true,
+  "evidence": "Target-state diagrams use placeholders like \"[TO BE BASELINED — owner: CIO]\" indicating undecided products."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27465,7 +27465,7 @@
   "mode": "without",
   "expectedIdx": 3,
   "pass": true,
-  "evidence": "Integration map groups 87 interfaces by pattern with waves detailed in the Migration and Wave Planning table."
+  "evidence": "Integration map groups 87 interfaces by pattern and waves as shown in \"Interface Wave Assignments & Selected Integration Patterns\" table."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27492,7 +27492,7 @@
   "mode": "without",
   "expectedIdx": 6,
   "pass": true,
-  "evidence": "Document length and structure fit CIO depth with 6-10 pages and a standalone executive summary."
+  "evidence": "Document length is about 6-10 pages with an executive summary that stands alone."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27501,7 +27501,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "No current-state context or container diagrams are present in the output."
+  "evidence": "No current-state context or container diagrams are provided or referenced in the output."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27510,7 +27510,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "No options or ADR-001 documentation are mentioned or included."
+  "evidence": "No options or scoring on weighted criteria are mentioned; only a request for inputs is given."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27519,7 +27519,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No target-state diagrams or placeholders with [TO BE BASELINED — owner: ___] are provided."
+  "evidence": "No target-state diagrams or use of mermaid-c4-templates.md are included or referenced."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27528,7 +27528,7 @@
   "mode": "with",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "No integration map grouping the 87 interfaces by pattern or waves is included."
+  "evidence": "No integration map or grouping of interfaces by pattern with waves is present."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27537,7 +27537,7 @@
   "mode": "with",
   "expectedIdx": 4,
   "pass": false,
-  "evidence": "No NFR table with measurable targets or data residency constraints is present."
+  "evidence": "No NFR table or data residency constraints are included or mentioned."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27546,7 +27546,7 @@
   "mode": "with",
   "expectedIdx": 5,
   "pass": false,
-  "evidence": "No wave plan with entry/exit criteria or rollback aligned to the S/4 date is provided."
+  "evidence": "No wave plan with entry/exit criteria or rollback aligned to S/4 date is provided."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27555,7 +27555,7 @@
   "mode": "with",
   "expectedIdx": 6,
   "pass": false,
-  "evidence": "The output is a single request sentence, not a 6-10 page CIO depth document with an executive summary."
+  "evidence": "The output is a single request for inputs, not a 6-10 page document with an executive summary."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27564,7 +27564,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not ask for any current-state facts, drivers/constraints, NFR expectations, or audience information."
+  "evidence": "The output does not ask for current-state facts, drivers/constraints, NFR expectations, or audience."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27573,7 +27573,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output explicitly states \"I can’t draw images directly\" and provides a generic architecture instead of a current-state diagram from assumptions."
+  "evidence": "The output provides a target architecture without drawing a current-state diagram from assumptions."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27582,7 +27582,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": true,
-  "evidence": "The output offers a generic architecture pattern without labeling it as client-specific, consistent with a generic pattern catalogue."
+  "evidence": "The output presents a generic pattern catalogue labeled as \"Target Architecture\" without client-specific details."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27590,8 +27590,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 0,
-  "pass": true,
-  "evidence": "Asks once for \"Current state systems/integrations,\" \"Drivers and constraints,\" \"NFRs,\" and \"Audience\" in the table."
+  "pass": false,
+  "evidence": "The output does not ask for current-state facts, drivers/constraints, NFR expectations, or audience; it only presents a proposed architecture and next steps."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27600,7 +27600,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Does not include or draw any current-state diagram from assumptions."
+  "evidence": "The output explicitly states it does not draw a current-state diagram from assumptions and instead presents a future-state architecture."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27608,8 +27608,8 @@
   "run": 1,
   "mode": "with",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "Does not offer any generic pattern catalogue or mention it explicitly."
+  "pass": true,
+  "evidence": "The output offers a generic pattern catalogue only if explicitly labeled as not client-specific, indicated by the note \"[TO BE BASELINED — owner: Enterprise Architect for exact products, volume, secur"
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27618,7 +27618,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "NFR targets are given as fixed values (e.g., \"99.99% uptime\") without \"[TO BE BASELINED — owner: ___]\" or measurement methods and discovery questions."
+  "evidence": "NFR targets are given as specific values like \"99.99%\" and \"≤ 200 ms\" rather than \"[TO BE BASELINED — owner: ___]\" with measurement methods or discovery questions."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27627,7 +27627,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "Products are listed as specific market leaders (e.g., \"AWS EC2\") rather than role placeholders with ADRs naming client decision owners."
+  "evidence": "Products are listed as decided market leaders (e.g., \"AWS Elastic Load Balancing + Amazon RDS Multi-AZ\") rather than role placeholders or ADRs naming client decision owners."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27636,7 +27636,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "There is no explanation about the contractual and credibility risk of unsourced NFRs and undecided products."
+  "evidence": "There is no explanation about why unsourced NFRs and undecided products create contractual and credibility risk."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27654,7 +27654,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not show NFR targets as [TO BE BASELINED — owner: ___] or include measurement methods or discovery questions."
+  "evidence": "The output does not show NFR targets as \"[TO BE BASELINED — owner: ___]\" or include measurement methods or discovery questions."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27663,7 +27663,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not show products as role placeholders or mention proposed-status ADRs naming client decision owners."
+  "evidence": "Products are not shown as role placeholders with proposed-status ADRs; instead, the output requests a components.json file to assign market-leading products."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27681,7 +27681,79 @@
   "mode": "with",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "The output does not offer the options table as a way to move the product decision forward."
+  "evidence": "The output does not offer an options table as a way to move the product decision forward."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "Output contains only \"[TO BE BASELINED — owner: Solution Architect]\" with no scripts, diagrams, or tables."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output requests the `components.json` file but does not run scripts/arch_doc.py or produce diagrams, integration maps, or NFR tables."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-missing-components",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output asks for \"system, solution, or domain\" but does not ask for components.json specifically."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-missing-components",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output asks for \"Target system components, containers, external systems, integrations, and NFRs (as JSON or detailed descriptions).\""
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not mention missing targets being labeled as \"[TO BE BASELINED — owner: ___]\" or anything about diagrams parsing."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "No missing targets indicated as [TO BE BASELINED — owner: ___]; only baseline targets are added."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not explicitly mention retiring the fax gateway or provide ADR rows for each retirement and re-platform; ERP feed re-patterning is implied but not detailed."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output requests information but does not describe any changes such as gateway re-platforming, event backbone addition, or legacy system retirements."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27699,7 +27771,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "No scoring of at least two options on weighted criteria or ADR-001 record is included."
+  "evidence": "No mention or scoring of at least two options on weighted criteria or an ADR-001 record is included."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27707,8 +27779,8 @@
   "run": 2,
   "mode": "without",
   "expectedIdx": 2,
-  "pass": false,
-  "evidence": "No target-state diagrams using assets/mermaid-c4-templates.md or placeholders with [TO BE BASELINED — owner: ___] are shown."
+  "pass": true,
+  "evidence": "Target-state components include placeholders with “[TO BE BASELINED — owner: ___]” as in the Next Steps section."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27717,7 +27789,7 @@
   "mode": "without",
   "expectedIdx": 3,
   "pass": true,
-  "evidence": "Integration map groups 87 interfaces by pattern with waves, e.g., \"Wave 1: 30 interfaces,\" \"Wave 2: 28 interfaces,\" \"Wave 3: 29 interfaces.\""
+  "evidence": "Wave-Based Migration Approach groups 87 interfaces by wave and pattern from assessor output."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27735,7 +27807,7 @@
   "mode": "without",
   "expectedIdx": 5,
   "pass": false,
-  "evidence": "Wave plan lacks entry/exit criteria and rollback aligned to the S/4 go-live date; only timelines and key actions are shown."
+  "evidence": "Wave plan lacks entry/exit criteria and rollback details aligned to the S/4 date."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27744,7 +27816,7 @@
   "mode": "without",
   "expectedIdx": 6,
   "pass": true,
-  "evidence": "Document is 7 pages long with an executive summary that stands alone."
+  "evidence": "Document length is about 6-10 pages with an executive summary that stands alone."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27753,7 +27825,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output only requests documents and does not provide any current-state context or container diagrams."
+  "evidence": "No current-state context or container diagrams or source-tagged boxes are present in the output."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27762,7 +27834,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "There is no mention of options, scoring, or ADR-001 in the output."
+  "evidence": "No options or weighted criteria scoring or ADR-001 documentation mentioned."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27771,7 +27843,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "No target-state diagrams or placeholders are included in the output."
+  "evidence": "No target-state diagrams or placeholders with [TO BE BASELINED — owner: ___] shown."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27780,7 +27852,7 @@
   "mode": "with",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "The output does not include an integration map or grouping of interfaces."
+  "evidence": "No integration map grouping 87 interfaces by pattern or waves from assessor output included."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27789,7 +27861,7 @@
   "mode": "with",
   "expectedIdx": 4,
   "pass": false,
-  "evidence": "There is no NFR table or mention of data residency constraints."
+  "evidence": "No NFR table with measurable targets, measurement method, source, or data residency NFR mentioned."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27798,7 +27870,7 @@
   "mode": "with",
   "expectedIdx": 5,
   "pass": false,
-  "evidence": "No wave plan or criteria aligned to the S/4 date is provided."
+  "evidence": "No wave plan with entry/exit criteria or rollback aligned to the S/4 date provided."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27807,7 +27879,7 @@
   "mode": "with",
   "expectedIdx": 6,
   "pass": false,
-  "evidence": "The output is a single request sentence, not a 6-10 page CIO depth document with an executive summary."
+  "evidence": "Output is a single request sentence, not a 6-10 page CIO depth document with an executive summary."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27825,7 +27897,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "The output provides a target-state diagram, not a current-state diagram, avoiding assumptions."
+  "evidence": "The output provides a target architecture diagram without drawing a current-state diagram or making assumptions."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27834,7 +27906,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "The output presents a specific target architecture, not a generic pattern catalogue labeled as non-client-specific."
+  "evidence": "The output does not offer a generic pattern catalogue or label the architecture as not client-specific."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27843,7 +27915,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": true,
-  "evidence": "Asks once for \"Current systems and platforms inventory,\" \"Drivers and constraints,\" \"NFR expectations,\" and \"Audience\" in the input table."
+  "evidence": "Asks for \"List of current systems, applications, and external partners,\" \"Integration patterns,\" \"Expected volume, latency, and availability NFRs,\" \"Hosting and technology constraints/preferences,\" an"
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27852,7 +27924,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": true,
-  "evidence": "Does not draw any current-state diagram; instead, requests inputs to draft architecture diagrams."
+  "evidence": "Does not draw any current-state diagram but requests details or a components.json to produce diagrams."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27861,7 +27933,7 @@
   "mode": "with",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "Does not mention or offer any generic pattern catalogue, even labeled as not client-specific."
+  "evidence": "Does not offer any generic pattern catalogue or mention it explicitly as not client-specific."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27870,7 +27942,7 @@
   "mode": "without",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "NFR targets are given as fixed metrics without any [TO BE BASELINED — owner: ___] tags or measurement methods."
+  "evidence": "NFR targets are given as specific numbers (e.g., \"99.99%\") rather than \"[TO BE BASELINED — owner: ___]\" with measurement methods or discovery questions."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27879,7 +27951,7 @@
   "mode": "without",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "Products are named as decided market leaders (e.g., \"AWS Elastic Load Balancer\") rather than role placeholders or ADRs with client decision owners."
+  "evidence": "Products are listed as specific market leaders (e.g., \"AWS EC2 / Azure VMs\") rather than role placeholders with ADRs naming client decision owners."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27888,7 +27960,7 @@
   "mode": "without",
   "expectedIdx": 2,
   "pass": false,
-  "evidence": "There is no explanation about the contractual or credibility risks of unsourced NFRs or undecided products."
+  "evidence": "There is no explanation of why unsourced NFRs and undecided products create contractual and credibility risk."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27906,7 +27978,7 @@
   "mode": "with",
   "expectedIdx": 0,
   "pass": false,
-  "evidence": "The output does not show NFR targets as \"[TO BE BASELINED — owner: ___]\" with measurement methods or discovery questions."
+  "evidence": "The output does not show NFR targets as \"[TO BE BASELINED — owner: ___]\" nor include measurement methods or discovery questions."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27915,7 +27987,7 @@
   "mode": "with",
   "expectedIdx": 1,
   "pass": false,
-  "evidence": "The output does not show products as role placeholders with proposed-status ADRs naming the client decision owner."
+  "evidence": "The output does not show products as role placeholders with proposed-status ADRs naming client decision owners."
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -27933,7 +28005,79 @@
   "mode": "with",
   "expectedIdx": 3,
   "pass": false,
-  "evidence": "The output does not offer the options table as the way to move the product decision forward."
+  "evidence": "The output does not offer the options table as a way to move the product decision forward."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output only requests `components.json` and does not include any scripts, diagrams, integration maps, or NFR tables."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output only requests the `components.json` file and does not run scripts or provide diagrams, integration maps, or NFR tables."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-missing-components",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output asks for \"system or solution scope\" but does not mention or ask for components.json."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-missing-components",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": true,
+  "evidence": "The output requests \"Use the components.json format or equivalent structured data.\""
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not mention missing targets or any baseline owner information."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-nfr-targets-not-invented",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not include \"[TO BE BASELINED — owner: ___]\" or indicate missing targets explicitly."
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "mode": "without",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not explicitly mention re-platforming the gateway and order store, adding an event backbone, retiring the fax gateway, or re-patterning the ERP feed with ADR rows for each retirement a"
+ },
+ {
+  "skill": "presales/solution-architecture-doc",
+  "caseId": "agent-mode-existing",
+  "run": 2,
+  "mode": "with",
+  "expectedIdx": 0,
+  "pass": false,
+  "evidence": "The output does not mention any changes from the current state such as gateway and order store re-platforming, event backbone addition, legacy OMS and fax gateway retirement, ERP feed re-patterning, o"
  },
  {
   "skill": "presales/sow-drafter",
