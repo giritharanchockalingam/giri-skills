@@ -31,11 +31,34 @@ metadata:
 # Fine-tune Dataset Builder
 
 ## In a conversation: build the dataset now
-- **The request says the examples are here or attached but their rows are not in the conversation**: give the build plan and run report **in this reply**, in this order. (1) The run: `python3 -I scripts/build_dataset.py --examples <file> --out-dir <dir>` — validate, normalise whitespace, remove exact then normalised duplicates, prompt-grouped seeded split (`references/pipeline.md`). (2) A run-report table with rows: usable examples, rejected by reason (unparseable, no assistant turn, empty prompt or completion, over `max_chars`), exact duplicates removed, normalised duplicates removed, train / val / test sizes, `leakage_prompts_across_splits` (must be 0, or the run fails) — each count `[TO BE BASELINED — owner: ML engineer]` from `dataset-stats.json`; never a made-up count. (3) Parameters, each labelled: split 0.8/0.1/0.1 (default), seed 42 (default), min_rows 10 (default), max_chars none (default); a value the user states is labelled (supplied). (4) The output shape: one `{"messages":[{"role":"user",…},{"role":"assistant",…}]}` per line (system turn kept when given) in `train.jsonl`, `val.jsonl`, `test.jsonl`. (5) Token lengths are an **estimate** (characters ÷ 4); check against the target model's context window with its real tokenizer. (6) Before training: run `pii-data-inventory` on the examples and confirm owner, licence and consent — `[TO BE BASELINED — owner: Data owner]` until confirmed. (7) The data card sections: Source, Cleaning, Splits, Length stats, Known limits.
-- **The rows are pasted in the conversation**: apply the same rules to them in this reply — list rejected rows with the reason, removed duplicates, and the cleaned records as chat-messages JSONL; give split targets (val = round(n × 0.1), test = round(n × 0.1), train = the rest) and say the seeded assignment comes from the script run, so it is reproducible.
-- **No examples at all**: ask once for the file (CSV `prompt,completion[,system]` or JSONL with `messages` or `prompt`/`completion`; layout `assets/examples-template.csv`) and any non-default split, seed or length cap. Do not write example pairs yourself.
-- **Fewer than `min_rows` usable examples**: say the run stops (exit 1) by design; report the usable count and the rejections by reason; do not pad, duplicate or invent rows.
-- **Asked to generate synthetic examples, skip the leakage check or let one prompt sit in two splits**: decline in one line (synthetic data is out of scope; leakage inflates eval scores), and offer the defensible path: more real examples from the use-case owner, or a lower `min_rows` stated in the data card.
+The reply **is the run report** (or its skeleton), never only a request for files. It corresponds to `python3 -I scripts/build_dataset.py --examples <file> --out-dir <out> [--split …] [--seed …] [--min-rows …] [--max-chars …] [--existing-dir <folder>]`, which writes `train.jsonl`, `val.jsonl`, `test.jsonl`, `dataset-stats.json` and `data-card.md`; always write "Runs `scripts/build_dataset.py`" with the case's flags and name those files.
+
+**Never**
+- Never write, generate, pad or duplicate example pairs (no examples → ask once for the file; the run **stops (exit 2)**).
+- Never put one normalised prompt in two splits or skip the leakage check: leakage must be 0, else the run **stops (exit 1)**.
+- Never reshuffle an existing set: existing records keep their split.
+- Never present token counts as exact: they are an **estimate** (characters ÷ 4, rounded up).
+- Never label a value the user supplied as a default, or a default as supplied.
+
+**Procedure — count row by row from the supplied file, never estimate**
+1. Load: CSV `prompt,completion[,system]` (other columns ignored) or JSONL (`messages`, or `prompt`/`completion`). One row = one record.
+2. Reject, counting by reason: invalid JSON / not an object / neither shape; unknown role or non-text content; no user turn or last turn not assistant ("last turn is not assistant"); any turn blank after trimming ("empty prompt or completion"); total characters > `max_chars` when set ("over max_chars").
+3. Exact duplicates: identical raw record (all roles and contents) after an earlier one → removed. Then normalise whitespace (CRLF → LF, runs of spaces/tabs → one space, trim; case kept). With `existing`: a record equal (casefolded, whitespace collapsed) to an existing record → dropped as "already in dataset". Then normalised duplicates: same roles and contents after casefolding and collapsing whitespace → removed. First occurrence wins. Same prompt with a different completion is **not** a duplicate: it stays and forms one group.
+4. usable = kept new records (+ existing records). usable < `min_rows` → `Not built: <n> usable examples is below min_rows <m>.` and the run **stops (exit 1)**; say "stops (exit 1)".
+5. Targets with Python `round()` (half to even): val = round(n × val_ratio), test = round(n × test_ratio), train = n − val − test (n = usable; with `existing`, n = existing + new). Groups = normalised prompt; groups are shuffled with the seed and each goes to the first split train → val → test with room, so split sizes equal the targets when the groups fit; which prompt lands where comes only from the seeded run. With `existing`: existing counts are the starting fill; new records whose prompt is already in a split join it; new groups fill the remaining room (added per split = target − existing).
+6. Leakage = normalised prompts in more than one split (pairwise sum) = 0.
+7. Parameters labelled: split 0.8,0.1,0.1 (default) · seed 42 (default) · min_rows 10 (default) · max_chars none (default); a user value is "(supplied)".
+
+**Reply layout**
+1. Working table first: `step | count` — rows read, rejected by reason, exact duplicates removed, already in dataset (existing mode), normalised duplicates removed, usable, targets (n × ratio → rounded), train / val / test sizes (existing + added = total in existing mode), leakage 0. Then the verdict (built / not built, exit code).
+2. Parameters line with (default)/(supplied) labels; output shape — one `{"messages":[{"role":"user",…},{"role":"assistant",…}]}` per line, system turn kept when given.
+3. Length stats are an **estimate** (characters ÷ 4); check against the target model's context window with its real tokenizer.
+4. Before training: run `pii-data-inventory` on the examples and confirm owner, licence and consent — `[TO BE BASELINED — owner: Data owner]` until confirmed.
+5. Data card sections: Source, Cleaning, Splits, Length stats, Known limits.
+
+**Rows mentioned but not in the conversation** ("here are our Q&A pairs" with nothing attached): give the same layout now with every count `[TO BE BASELINED — owner: ML engineer]` from `dataset-stats.json`, the defaults line, the estimate note and the `pii-data-inventory` pointer, then ask once for the file (CSV `prompt,completion[,system]` or JSONL; layout `assets/examples-template.csv`) and any non-default split, seed or length cap.
+
+**Asked for synthetic examples, to skip the leakage check or to let one prompt sit in two splits**: decline in one line (synthetic data is out of scope; leakage inflates eval scores) and offer more real examples from the use-case owner, or a lower `min_rows` stated in the data card.
 
 ## Starting points
 - **New:** raw examples become cleaned, de-duplicated, leak-free train/val/test files with a data card.

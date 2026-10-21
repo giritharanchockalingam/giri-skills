@@ -770,6 +770,76 @@
   "correct": null
  },
  {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
   "skill": "ai-platform/ab-test-analysis",
   "caseId": "prompt-should-we-ship",
   "run": 1,
@@ -1088,8 +1158,8 @@
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "agent-missing-owners-not-invented",
   "run": 1,
-  "selected": "data-readiness-assessment",
-  "correct": 0
+  "selected": "ai-controls-mapping",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -1130,8 +1200,8 @@
   "skill": "ai-platform/ai-controls-mapping",
   "caseId": "agent-missing-owners-not-invented",
   "run": 2,
-  "selected": "data-readiness-assessment",
-  "correct": 0
+  "selected": "ai-controls-mapping",
+  "correct": 1
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -3524,7 +3594,7 @@
   "skill": "ai-platform/llm-cost-model",
   "caseId": "gpu-question-routed",
   "run": 1,
-  "selected": "infra-gpu-sizing",
+  "selected": "ai-vendor-assessment",
   "correct": 0
  },
  {
@@ -3580,7 +3650,7 @@
   "skill": "ai-platform/llm-cost-model",
   "caseId": "gpu-question-routed",
   "run": 2,
-  "selected": "infra-gpu-sizing",
+  "selected": "ai-vendor-assessment",
   "correct": 0
  },
  {
@@ -5008,8 +5078,8 @@
   "skill": "build/security-review",
   "caseId": "no-trace-no-finding",
   "run": 1,
-  "selected": "security-review",
-  "correct": 1
+  "selected": "code-review-runner",
+  "correct": 0
  },
  {
   "skill": "build/security-review",
@@ -5064,8 +5134,8 @@
   "skill": "build/security-review",
   "caseId": "no-trace-no-finding",
   "run": 2,
-  "selected": "security-review",
-  "correct": 1
+  "selected": "code-review-runner",
+  "correct": 0
  },
  {
   "skill": "build/security-review",
@@ -5092,8 +5162,8 @@
   "skill": "build/security-review",
   "caseId": "agent-risky-diff-blocks",
   "run": 2,
-  "selected": "security-review",
-  "correct": 1
+  "selected": "code-review-runner",
+  "correct": 0
  },
  {
   "skill": "build/security-review",
@@ -6415,7 +6485,7 @@
   "skill": "presales/effort-estimator",
   "caseId": "agent-missing-wbs",
   "run": 1,
-  "selected": "llm-cost-model",
+  "selected": "none",
   "correct": 0
  },
  {
@@ -6471,7 +6541,7 @@
   "skill": "presales/effort-estimator",
   "caseId": "agent-missing-wbs",
   "run": 2,
-  "selected": "llm-cost-model",
+  "selected": "none",
   "correct": 0
  },
  {
