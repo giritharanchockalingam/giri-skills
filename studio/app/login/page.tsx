@@ -13,6 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="eyebrow">Skills Factory</div>
         <h1 className="h1">Sign <em>in</em>.</h1>
         <p className="lead">Skills, versions, evaluations and runs live in your workspace. Sign in with the account your administrator added, or create one.</p>
+        <p className="caption"><a className="link-flame" href="/start">New to the portal? How it fits together →</a></p>
       </div>
       {sp.auth_error && <div className="notice notice-err" role="alert" style={{ marginBottom: 16 }}>Sign-in link failed: {sp.auth_error}. Request a new link and open it once, in this browser.</div>}
       {configured ? (

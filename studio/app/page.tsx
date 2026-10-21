@@ -65,7 +65,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
   return (
     <>
       <PageHead eyebrow={`Skills Factory · ${ctx.workspace.name}`} title="What do you need" em="done" after="?"
-        lead="Describe the work and get a tested skill for it, or browse by stage of the AI lifecycle below."
+        lead={<>Describe the work and get a tested skill for it, or browse by stage of the AI development lifecycle (ADLC) below. <Link href="/start" className="link-flame">New here? How it fits together →</Link></>}
         caption={ctx.memberships.length > 1 ? (
           <form action={selectWorkspace} className="flex flex-wrap items-center gap-2">
             <span>Workspace</span>
