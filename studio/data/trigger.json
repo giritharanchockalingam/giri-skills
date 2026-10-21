@@ -280,6 +280,76 @@
   "correct": null
  },
  {
+  "skill": "(negative)",
+  "caseId": "neg-01",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-02",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-03",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-04",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-05",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-06",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-07",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-08",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-09",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
+  "skill": "(negative)",
+  "caseId": "neg-10",
+  "run": 1,
+  "selected": "none",
+  "correct": null
+ },
+ {
   "skill": "ai-platform/ab-test-analysis",
   "caseId": "prompt-should-we-ship",
   "run": 1,
@@ -4889,8 +4959,36 @@
   "skill": "presales/discovery-interview",
   "caseId": "adversarial-fabrication",
   "run": 1,
-  "selected": "client-research-brief",
-  "correct": 0
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-missing-vertical",
+  "run": 1,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-thin-notes-closes-marked-tbd",
+  "run": 1,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-mode-new",
+  "run": 1,
+  "selected": "discovery-interview",
+  "correct": 1
  },
  {
   "skill": "presales/discovery-interview",
@@ -4910,8 +5008,36 @@
   "skill": "presales/discovery-interview",
   "caseId": "adversarial-fabrication",
   "run": 2,
-  "selected": "value-case-builder",
-  "correct": 0
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-missing-vertical",
+  "run": 2,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-thin-notes-closes-marked-tbd",
+  "run": 2,
+  "selected": "discovery-interview",
+  "correct": 1
+ },
+ {
+  "skill": "presales/discovery-interview",
+  "caseId": "agent-mode-new",
+  "run": 2,
+  "selected": "discovery-interview",
+  "correct": 1
  },
  {
   "skill": "presales/effort-estimator",
@@ -5015,6 +5141,34 @@
   "skill": "presales/integration-migration-assessor",
   "caseId": "adversarial-fabrication-tco-and-defaults",
   "run": 1,
+  "selected": "value-case-builder",
+  "correct": 0
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-missing-rates",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-no-prices-no-numbers",
+  "run": 1,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-mode-existing",
+  "run": 1,
   "selected": "integration-migration-assessor",
   "correct": 1
  },
@@ -5035,6 +5189,34 @@
  {
   "skill": "presales/integration-migration-assessor",
   "caseId": "adversarial-fabrication-tco-and-defaults",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 0
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-missing-rates",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-no-prices-no-numbers",
+  "run": 2,
+  "selected": "integration-migration-assessor",
+  "correct": 1
+ },
+ {
+  "skill": "presales/integration-migration-assessor",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "integration-migration-assessor",
   "correct": 1
@@ -5328,6 +5510,34 @@
  },
  {
   "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-missing-costs",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-no-baselines-no-headline",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-mode-existing",
+  "run": 1,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
   "caseId": "happy-path-cfo-grade",
   "run": 2,
   "selected": "value-case-builder",
@@ -5343,6 +5553,34 @@
  {
   "skill": "presales/value-case-builder",
   "caseId": "adversarial-fabrication-benchmark-roi",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-happy-path",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-missing-costs",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-no-baselines-no-headline",
+  "run": 2,
+  "selected": "value-case-builder",
+  "correct": 1
+ },
+ {
+  "skill": "presales/value-case-builder",
+  "caseId": "agent-mode-existing",
   "run": 2,
   "selected": "value-case-builder",
   "correct": 1
