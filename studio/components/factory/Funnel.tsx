@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import Link from "next/link";
 import { GATE_LABEL, GATE_HELP, GATE_ORDER, type Gate, type ClosestRow } from "@/lib/factory/funnel";
 import { GatePill } from "./Pills";
@@ -29,7 +30,7 @@ export function ReadyQueue({ items }: { items: { slug: string; name: string; gat
       </div>
       <p className="caption">Published skills become tools on your MCP server and API. These have passed their evaluation gate.</p>
       <ul className="ini-repos">{[...ready, ...approve].slice(0, 6).map((i) => (
-        <li key={i.slug}><Link className="link" href={`/skills/${i.slug}/release`}>{i.name}{i.version ? ` v${i.version}` : ""}</Link> <span className="caption">— {i.gate === "ready" ? "publish" : "approve, then publish"}</span></li>))}</ul>
+        <li key={i.slug}><Link className="link" href={`/skills/${i.slug}/release`}>{skillTitle(i.name)}{i.version ? ` v${i.version}` : ""}</Link> <span className="caption">— {i.gate === "ready" ? "publish" : "approve, then publish"}</span></li>))}</ul>
     </section>
   );
 }

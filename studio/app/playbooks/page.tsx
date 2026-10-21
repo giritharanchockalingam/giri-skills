@@ -1,3 +1,4 @@
+import { skillTitle } from "@/lib/names";
 import { humanName, displayDescription } from "@/lib/names";
 import { LocalTime } from "@/components/LocalTime";
 import Link from "next/link";
@@ -59,7 +60,7 @@ export default async function AgentsPage() {
                 <div className="field"><label htmlFor="na-tpl">Start from</label>
                   <select id="na-tpl" name="template" className="select" defaultValue="">
                     <option value="">Blank — pick skills yourself</option>
-                    {tpls.map((t) => <option key={t.name} value={t.name}>{t.name} ({t.spec.steps.length} steps)</option>)}
+                    {tpls.map((t) => <option key={t.name} value={t.name}>{skillTitle(t.name)} ({t.spec.steps.length} steps)</option>)}
                   </select></div>
               </div>
             </ActionForm>

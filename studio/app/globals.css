@@ -788,7 +788,8 @@ details.disclosure[open] > summary::before { content: "▼"; }
 .lc-stage:hover { border-color: var(--ink-3); }
 .lc-stage.on { border-color: var(--deep); background: var(--deep); color: var(--deep-ink); }
 .lc-stage.on .lc-count, .lc-stage.on .lc-n { color: var(--deep-ink-2); }
-.lc-stage.empty { opacity: .55; }
+.lc-stage.empty { opacity: .45; border-style: dashed; }
+.lc-stage.empty .lc-count { visibility: hidden; }
 .lc-n { font: 500 11px var(--mono); color: var(--ink-3); margin-right: 6px; }
 .lc-count { font: 500 12px var(--mono); color: var(--ink-3); }
 .lc-panel { padding: 18px 20px; }
