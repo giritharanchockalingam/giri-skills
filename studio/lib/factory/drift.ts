@@ -26,12 +26,14 @@ export const contractKey = (m: ContractLike): string | null => !m ? null : JSON.
 });
 
 /** The skill-level answer: a live version that cannot run outranks everything; otherwise the newest version's state. */
-export function skillDrift(versions: { source: VersionSource; status: string; version: number; contract?: string | null }[], pinOf: (repoSkill?: string) => string | null, libraryContract?: string | null, draftCasesStale = false): Drift {
+export function skillDrift(versions: { id?: string; source: VersionSource; status: string; version: number; contract?: string | null }[], pinOf: (repoSkill?: string) => string | null, libraryContract?: string | null, draftCasesStale = false, frozen: ReadonlySet<string> = new Set()): Drift {
   const live = versions.find((v) => v.status === "published");
-  if (live && driftOf(live.source, live.status, pinOf(live.source.repo_skill)) === "blocked") return "blocked";
+  // a live version with frozen files keeps running when the library moves on: it is out of date, not blocked
+  if (live && driftOf(live.source, live.status, pinOf(live.source.repo_skill)) === "blocked") return live.id && frozen.has(live.id) ? "library_updated" : "blocked";
   const newest = [...versions].sort((a, b) => b.version - a.version)[0];
   if (!newest) return "n/a";
-  const d = driftOf(newest.source, newest.status, pinOf(newest.source.repo_skill));
+  const d0 = driftOf(newest.source, newest.status, pinOf(newest.source.repo_skill));
+  const d = d0 === "blocked" && newest.id && frozen.has(newest.id) ? "library_updated" : d0;
   if (d === "blocked" && newest.status === "superseded") return "current";
   // same files, older contract (e.g. the library added an input after import): callers cannot use what the library offers
   if ((d === "current" || d === "n/a") && newest.source.kind === "repo" && libraryContract && newest.contract && newest.contract !== libraryContract) return "library_updated";

@@ -33,7 +33,9 @@ export default async function SkillLayout({ children, params }: { children: Reac
   const casesStale = newest?.status === "draft" && newest.source.kind === "repo"
     ? libraryCasesStale(newest.source.repo_skill, ((await d.ctx.supabase.from("sf_eval_cases").select("name, inputs, checks").eq("version_id", newest.id)).data ?? []) as { name: string; inputs: unknown; checks: unknown }[])
     : false;
-  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill), casesStale);
+  const { data: frozenRows } = await d.ctx.supabase.from("sf_version_snapshots").select("version_id").in("version_id", d.versions.map((v) => v.id));
+  const frozen = new Set(((frozenRows ?? []) as { version_id: string }[]).map((r) => r.version_id));
+  const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill), casesStale, frozen);
   const eg = s ? evalGate(s) : null, ag = s ? approvalGate(s) : null;
   return (
     <>

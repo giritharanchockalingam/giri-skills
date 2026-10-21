@@ -38,3 +38,9 @@ test("skill drift: a library draft imported before pinning is offered the update
   assert.equal(skillDrift([{ source: repo(undefined), status: "draft", version: 1 }], () => "b"), "library_updated");
   assert.equal(skillDrift([{ source: repo(undefined), status: "published", version: 1 }], () => "b"), "n/a", "a live pre-pinning version is not judged");
 });
+test("skill drift: a live version with frozen files is out of date, not blocked, when the library moves on", () => {
+  const pin = () => "b";
+  const live = { id: "v1", source: repo("a"), status: "published", version: 1 };
+  assert.equal(skillDrift([live], pin), "blocked", "without frozen files it cannot run");
+  assert.equal(skillDrift([live], pin, null, false, new Set(["v1"])), "library_updated");
+});
