@@ -26,16 +26,31 @@ metadata:
 # AI Controls Mapping (NIST AI RMF 1.0)
 
 ## In a conversation: map the controls now
-The reply **is the controls mapping**: its first line is `Coverage: <overall, or [TO BE BASELINED — owner: AI risk lead]> against NIST AI RMF 1.0 (72 subcategories) — self-assessment, not an audit`. Never reply with only a request for the spreadsheet.
-- **The request describes the system or its controls** (or says a controls spreadsheet exists or is attached but its rows are not in the conversation): give the mapping **in this reply**, in this order:
-  1. **Coverage by function** — a table for GOVERN (19), MAP (18), MEASURE (22), MANAGE (13): implemented, partial, planned, not_applicable, missing, applicable, coverage. Coverage = (implemented + 0.5 × partial) ÷ applicable; a subcategory with no row is `missing` (a gap), never implemented. Compute only from statuses the user states; otherwise each cell is `[TO BE BASELINED — owner: AI risk lead]`. Implemented/partial claims with no evidence cited are flagged and get no credit in the evidence-backed coverage used by any gate.
-  2. **Gaps** — every partial, planned or missing subcategory with `subcategory_id | function | status | owner`; a gap with no named owner shows `[TO BE BASELINED — owner: AI risk lead]`.
-  3. **Gate** — only when the user gives a minimum coverage: evidence-backed coverage below it is FAIL. No gate is invented.
-  4. **AI Act obligations** (only if given) — supported / partial / none via the skill's own crosswalk, labelled as such.
-  5. **What I need to finish** — ask once for the evidence register as `subcategory_id,status,evidence,owner` (ids as in NIST AI 100-1, e.g. `GOVERN 1.1`; status implemented | partial | planned | not_applicable; template `assets/evidence-template.csv`).
-  6. **Limits** — voluntary framework, self-assessed statuses; this is not compliance, certification or an audit opinion.
-- **Nothing about the controls stated** ("give us our NIST coverage"): ask once for the evidence register in the layout above; do not estimate coverage.
-- **Asked to assert a number or an owner** ("call it 80%", "just put the product manager on the gaps", "lower the gate so we pass"): decline in one line — coverage comes only from cited evidence and owners from control owners. Never print the asserted figure as coverage; show `[TO BE BASELINED — owner: AI risk lead]` and fix the evidence, not the threshold.
+The reply **is the controls mapping**: first line `Coverage: <overall, or [TO BE BASELINED — owner: AI risk lead]> against NIST AI RMF 1.0 (72 subcategories) — self-assessment, not an audit`. It corresponds to `python3 -I scripts/map_controls.py --evidence <file> [--min-coverage <x>] [--obligations <file>] --out-dir <out>`, which writes `controls.csv`, `coverage.json` and `controls-report.md`; name that command (with the case's flags) and those files.
+
+**Never**
+- Never assign an owner the user names for unowned gaps ("put the product manager on them"): every gap with a blank owner shows `[TO BE BASELINED — owner: AI risk lead]`; say how many gaps lack an owner.
+- Never print an asserted figure ("call it 80%") as coverage, never estimate statuses, never lower a gate to pass.
+- Never invent a gate: no `min_coverage` given → `Gate: no minimum coverage given`.
+- Never count a blank or absent row as implemented: it is `missing`.
+
+**Procedure — compute row by row from the supplied file, never estimate**
+1. Catalogue (72): GOVERN 1.1-1.7, 2.1-2.3, 3.1-3.2, 4.1-4.3, 5.1-5.2, 6.1-6.2 (19) · MAP 1.1-1.6, 2.1-2.3, 3.1-3.5, 4.1-4.2, 5.1-5.2 (18) · MEASURE 1.1-1.3, 2.1-2.13, 3.1-3.3, 4.1-4.3 (22) · MANAGE 1.1-1.4, 2.1-2.4, 3.1-3.2, 4.1-4.3 (13). Function = the word before the number.
+2. Read each data row (skip `#` lines). Status blank **and** evidence blank → unfilled template row = `missing`. Status not in implemented|partial|planned|not_applicable, or a duplicate id → **stops (exit 2)**. An id not in the catalogue → `ERROR` row, excluded from coverage, run **stops (exit 1)** after writing outputs.
+3. Per function, count implemented, partial, planned, not_applicable from the rows; missing = function total − rows counted. applicable = total − not_applicable.
+4. coverage = (implemented + 0.5 × partial) ÷ applicable, 3 decimals. Same for ALL (72).
+5. Evidence-backed coverage (gate basis): an implemented/partial row with blank `evidence` gets no credit (counted as missing). Flag those ids ("implemented/partial with no evidence cited: …") and not_applicable rows with blank evidence.
+6. Gate (only with min_coverage): evidence-backed ALL coverage ≥ min → PASS (equality passes); below → FAIL, run **stops (exit 1)** with full outputs written. Say "stops (exit 1)" explicitly.
+7. Gaps = partial, planned, missing. Owner blank → `[TO BE BASELINED — owner: AI risk lead]`. Count gaps without a named owner.
+8. Obligations (only if given): skip status done/not_applicable. Look up `assets/aiact-nist-crosswalk.csv` (trailing `*` = prefix match, e.g. TR-50-* → MEASURE 2.8). supported = every mapped subcategory implemented or not_applicable (≥1 implemented); partial = any implemented/partial; none = only planned/missing; no row → `no crosswalk entry`. Label it "the skill's own crosswalk, not an official NIST or EU mapping".
+
+**Reply layout**
+1. Working table first: `function | total | implemented | partial | planned | not_applicable | missing | applicable | coverage | evidence-backed`, rows GOVERN, MAP, MEASURE, MANAGE, ALL, with the formula `(implemented + 0.5 × partial) ÷ applicable` stated above it. Then the gate verdict.
+2. Gaps — `subcategory_id | function | status | owner` for every gap (or grouped by function with ids listed when long); count without owner.
+3. Flags, AI Act obligations (if given), outputs written.
+4. Limits — voluntary framework, self-assessed statuses; self-assessment, not compliance, certification or an audit.
+
+**No register rows in the conversation** (a spreadsheet is mentioned but not attached, or "call it 80%"): still give the layout — the function table with formula and every cell `[TO BE BASELINED — owner: AI risk lead]`, gaps "all subcategories without a row are missing; owner [TO BE BASELINED — owner: AI risk lead]", the self-assessment line — and ask once for the evidence register as `subcategory_id,status,evidence,owner` (ids as in NIST AI 100-1, e.g. `GOVERN 1.1`; template `assets/evidence-template.csv`). Without evidence the run stops (exit 2). Do not estimate coverage.
 
 ## Starting points
 - **New** — starting a controls programme: fill `assets/evidence-template.csv` with what exists today; blank rows count as missing and the report gives the baseline coverage and the full gap list.
