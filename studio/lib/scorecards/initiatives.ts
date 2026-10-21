@@ -30,3 +30,17 @@ export function progressOf(
   const daysLeft = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
   return { repos: scoped, met, total: scoped.length, pct: scoped.length ? Math.round((met / scoped.length) * 100) : 0, daysLeft, overdue: daysLeft < 0 && met < scoped.length };
 }
+
+export type InitiativeState = "closed" | "met" | "overdue" | "not started" | "behind" | "due soon" | "on track";
+/** The state a reader can check against the numbers beside it: never "on track" with nothing done, and "behind" when
+ *  progress trails the share of time already used (created → due). */
+export function initiativeState(p: Progress, ini: { created_at: string; due_on: string; status?: string }, today: Date = new Date()): InitiativeState {
+  if (ini.status === "closed") return "closed";
+  if (p.total > 0 && p.met === p.total) return "met";
+  if (p.overdue) return "overdue";
+  if (p.met === 0) return "not started";
+  const start = Date.parse(ini.created_at), due = Date.parse(`${ini.due_on}T23:59:59Z`);
+  const elapsed = due > start ? Math.min(1, Math.max(0, (today.getTime() - start) / (due - start))) : 1;
+  if (p.met / p.total < elapsed) return "behind";
+  return p.daysLeft <= 14 ? "due soon" : "on track";
+}

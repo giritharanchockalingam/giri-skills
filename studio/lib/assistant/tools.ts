@@ -7,7 +7,7 @@ import type { ToolSpec } from "./llm";
 import type { Insights } from "@/lib/insights/compute";
 import type { EntityFacts } from "@/lib/scorecards/checks";
 import { levelOf, atLeast, LEVEL_LABEL, LEVEL_RULE, type Level } from "@/lib/scorecards/levels";
-import { progressOf } from "@/lib/scorecards/initiatives";
+import { progressOf, initiativeState } from "@/lib/scorecards/initiatives";
 
 export interface RepoFact { id: string; key: string; title: string; url: string; owner: string | null; archived: boolean; description: string | null;
   stack: string[]; lastActivity: string | null; applicable: { skill: string; why: string }[];
@@ -19,7 +19,7 @@ export interface ScoreFact { entity_id: string; check_id: string; verdict: strin
 export interface RunFact { automation: string; repo: string; entity_id: string | null; event: string; pr_number: number | null; head_sha: string | null; status: string;
   verdicts: Record<string, { verdict: string; summary: string }>; check_run_url: string | null; error: string | null; started_at: string }
 export interface SkillFact { id: string; name: string; stage: string | null; card: string }
-export interface InitiativeFact { id: string; title: string; description: string; target_level: Level; repos: string[]; owner: string; due_on: string; status: string }
+export interface InitiativeFact { id: string; title: string; description: string; target_level: Level; repos: string[]; owner: string; due_on: string; status: string; created_at?: string }
 
 export interface AssistantData {
   repos(): Promise<RepoFact[]>;
@@ -179,7 +179,7 @@ const listInitiatives = tool({
     const ents = repos.filter((r) => !r.archived && r.facts).map((r) => ({ id: r.id, key: r.key, properties: { stack: r.facts!.stackIds.map((id) => ({ id })), counts: r.facts!.counts } }));
     const shown = inis.filter((i) => a.include_closed || i.status === "active");
     const rows = shown.map((i) => { const p = progressOf(i, ents, latest);
-      return { title: i.title, target_level: LEVEL_LABEL[i.target_level], owner: i.owner, due_on: i.due_on, status: i.status, days_left: p.daysLeft, overdue: p.overdue,
+      return { title: i.title, target_level: LEVEL_LABEL[i.target_level], owner: i.owner, due_on: i.due_on, status: i.status, state: i.created_at ? initiativeState(p, { created_at: i.created_at, due_on: i.due_on, status: i.status }) : null, days_left: p.daysLeft, overdue: p.overdue,
         progress: `${p.met} of ${p.total} repositories (${p.pct}%)`,
         repositories: p.repos.map((r) => ({ repository: r.key, link: r.id ? repoHref(r.id) : null, meets_target: r.met, level: r.result ? LEVEL_LABEL[r.result.level] : null,
           blocked_by: r.met ? [] : (r.result?.blockers ?? []).map((b) => `${b.title}: ${b.reason}`), note: r.note ?? null })) }; });

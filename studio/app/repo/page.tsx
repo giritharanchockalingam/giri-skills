@@ -5,6 +5,7 @@ import { libraryRows, librarySummary, publishedByLibrarySkill } from "@/lib/libr
 import { requireWorkspace } from "@/lib/factory/db";
 import { loadPipeline } from "@/lib/db/skills";
 import { LibraryTable } from "@/components/LibraryTable";
+import { skillCounts, countsBridge } from "@/lib/counts";
 import { loadAccessData } from "@/lib/db/access";
 import { allowedKeysFor } from "@/lib/access";
 import { PageHead } from "@/components/PageHead";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
   const ctx = await requireWorkspace();
-  const [{ versions, skills: wsSkills }, access] = await Promise.all([loadPipeline(ctx.supabase, ctx.workspace.id), loadAccessData(ctx.supabase, ctx.workspace.id)]);
+  const [{ versions, skills: wsSkills }, access, counts] = await Promise.all([loadPipeline(ctx.supabase, ctx.workspace.id), loadAccessData(ctx.supabase, ctx.workspace.id), skillCounts(ctx.supabase, ctx.workspace.id)]);
   const restricted = access.enabled && ctx.role === "consumer";
   const mine = restricted ? allowedKeysFor(ctx.user.id, access.roles, access.assignments) : null;
   const slugOf = new Map(versions.filter((v) => v.source.kind === "repo" && v.source.repo_skill).map((v) => [v.source.repo_skill as string, wsSkills.find((w) => w.id === v.skill_id)?.slug ?? ""]));
@@ -39,7 +40,7 @@ export default async function LibraryPage() {
         note={<><Link href="/" className="link-flame">← Describe the work instead</Link> · <Link href="/connect" className="link-flame">Use from your tools →</Link></>}
       />
       <LibraryTable rows={rows} stages={stages} workspace={ctx.workspace.name} />
-      <p className="caption mt-4">Open a skill to run it and see its evidence. Detailed scores for skill owners are in <Link href="/evaluations" className="link">Evaluations</Link>.</p>
+      <p className="caption mt-4">{countsBridge(counts)}. Open a skill to run it and see its evidence. Detailed scores for skill owners are in <Link href="/evaluations" className="link">Evaluations</Link>.</p>
     </>
   );
 }

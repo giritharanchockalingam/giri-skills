@@ -63,3 +63,16 @@ test("initiatives: progress is read from the scorecard, scope defaults to repos 
   ]);
   assert.ok(named.overdue && named.daysLeft < 0);
 });
+
+test("initiative state: never 'on track' at 0%, 'behind' when progress trails elapsed time", async () => {
+  const { initiativeState } = await import("../lib/scorecards/initiatives.ts");
+  const p = (met: number, total: number, daysLeft = 40) => ({ repos: [], met, total, pct: total ? Math.round((met / total) * 100) : 0, daysLeft, overdue: daysLeft < 0 && met < total });
+  const ini = { created_at: "2026-10-01T00:00:00Z", due_on: "2026-12-31" };
+  const today = new Date("2026-11-15T00:00:00Z");   // about half the time used
+  assert.equal(initiativeState(p(0, 35), ini, today), "not started");
+  assert.equal(initiativeState(p(5, 35), ini, today), "behind");
+  assert.equal(initiativeState(p(30, 35), ini, today), "on track");
+  assert.equal(initiativeState(p(35, 35), ini, today), "met");
+  assert.equal(initiativeState(p(5, 35, -2), ini, today), "overdue");
+  assert.equal(initiativeState(p(5, 35), { ...ini, status: "closed" }, today), "closed");
+});

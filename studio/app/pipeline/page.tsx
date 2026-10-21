@@ -6,7 +6,7 @@ import { libraryContract } from "@/lib/factory/libraryContract";
 import { currentPin } from "@/lib/factory/pins";
 import Link from "next/link";
 import { loadFunnel } from "@/lib/db/skills";
-import { skillCounts } from "@/lib/counts";
+import { skillCounts, countsBridge } from "@/lib/counts";
 import { FunnelStrip, ClosestList } from "@/components/factory/Funnel";
 import { GATE_ORDER, GATE_LABEL, GATE_HELP, closestToPublish, type Gate } from "@/lib/factory/funnel";
 import { requireWorkspace } from "@/lib/factory/db";
@@ -57,7 +57,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHead eyebrow={`Build · publish pipeline · ${ctx.workspace.name}`} title="Publish" em="pipeline" after="."
-        lead={items.length ? <>What stands between each skill and release: test it, get it approved, publish it. Only published versions run from Claude, Cursor or any app. This workspace: <b>{counts.published} published</b>, {counts.inProgress} in progress.</> : "No skills in this workspace yet. Import one from the library to start."} />
+        lead={items.length ? <>What stands between each skill and release: test it, get it approved, publish it. Only published versions run from Claude, Cursor or any app. This workspace: <b>{counts.published} published</b>, {counts.inProgress} in progress ({countsBridge(counts)}).</> : "No skills in this workspace yet. Import one from the library to start."} />
       <div className="hero-actions mb-6">
         {can(ctx.role, "skill.create") ? (
           <>

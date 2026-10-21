@@ -46,3 +46,14 @@ test("scorecards: repos passing every check, verdicts per check", () => {
   assert.equal(ins.scorecards.repos, 2); assert.equal(ins.scorecards.passingAll, 1);
   assert.deepEqual(ins.scorecards.byCheck, [{ check: "nextjs", pass: 0, warn: 0, fail: 0, error: 1 }, { check: "rls", pass: 1, warn: 0, fail: 1, error: 0 }]);
 });
+
+test("every runs headline splits people from automation; people and keys are counted apart", () => {
+  const ins = computeInsights([
+    a("x", "portal", true, 1), a("x", "api", false, 1, "key:k1"), a("x", "examples", true, 1, "u2"), a("x", "playbook", true, 1),
+    a("x", "scorecard", true, 1, "u1"), a("x", "scorecard", false, 1, "u1"), a("x", "eval", true, 1, "u1"),
+  ], [], [], 7, NOW);
+  assert.equal(ins.total, ins.byClass.people.runs + ins.byClass.automation.runs, "the two classes add up to the total");
+  assert.deepEqual([ins.byClass.people.runs, ins.byClass.people.ok], [4, 3]);
+  assert.deepEqual([ins.byClass.automation.runs, ins.byClass.automation.ok], [3, 2]);
+  assert.deepEqual(ins.actors, { users: 2, keys: 1 });
+});

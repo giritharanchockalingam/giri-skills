@@ -3,7 +3,7 @@ import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { loadCatalog } from "@/lib/db/catalog";
 import { listInitiatives } from "@/lib/db/initiatives";
-import { progressOf } from "@/lib/scorecards/initiatives";
+import { progressOf, initiativeState } from "@/lib/scorecards/initiatives";
 import { LEVEL_LABEL, LEVEL_RULE } from "@/lib/scorecards/levels";
 import { LevelBadge } from "@/components/catalog/LevelBadge";
 import { InitiativeForm } from "@/components/initiatives/InitiativeForm";
@@ -36,8 +36,8 @@ export default async function InitiativesPage() {
         {initiatives.map((ini) => {
           const p = progressOf(ini, entities, latest);
           const closed = ini.status === "closed";
-          const state = closed ? "closed" : p.total > 0 && p.met === p.total ? "met" : p.overdue ? "overdue" : p.daysLeft <= 14 ? "due soon" : "on track";
-          const pill = state === "met" ? "pill-sage" : state === "overdue" ? "pill-rust" : state === "due soon" ? "pill-hold" : "";
+          const state = initiativeState(p, ini);
+          const pill = state === "met" ? "pill-sage" : state === "overdue" || state === "behind" ? "pill-rust" : state === "due soon" || state === "not started" ? "pill-hold" : "";
           return (
             <section key={ini.id} className={`card card-pad initiative${closed ? " is-closed" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -45,7 +45,7 @@ export default async function InitiativesPage() {
                   <div className="h3" style={{ margin: 0 }}>{ini.title}</div>
                   <div className="caption">Target <LevelBadge level={ini.target_level} /> · owner <b>{ini.owner}</b> · due {fmt(ini.due_on)}{!closed && (p.daysLeft >= 0 ? ` (${p.daysLeft} day${p.daysLeft === 1 ? "" : "s"} left)` : ` (${-p.daysLeft} day${p.daysLeft === -1 ? "" : "s"} late)`)}</div>
                 </div>
-                <span className={`pill pill-sm ${pill}`}>{state}</span>
+                <span className={`pill pill-sm ${pill}`} title={`${p.met} of ${p.total} at target (${p.pct}%)`}>{state}{state !== "closed" && state !== "met" ? ` · ${p.met} of ${p.total}` : ""}</span>
               </div>
               {ini.description && <p className="ink-2" style={{ margin: "8px 0 0" }}>{ini.description}</p>}
               <div className="progress mt-3" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={p.pct} aria-label={`${p.met} of ${p.total} repositories at ${LEVEL_LABEL[ini.target_level]} or above`}>

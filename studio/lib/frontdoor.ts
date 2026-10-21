@@ -112,3 +112,11 @@ export function stageSkills(stage: string, mode: StartMode, role?: string | null
 export const roleOptions = () => ROLE_TEMPLATES.map((r) => ({ slug: r.name, title: r.title })).sort((a, b) => a.title.localeCompare(b.title));
 export const modeHref = (skillId: string, mode: StartMode, example: boolean) =>
   `/repo/${skillId}/test?mode=${mode}${example ? "&example=1" : ""}`;
+
+/** How many distinct skills the lifecycle shows for a starting point (a skill can sit in more than one stage, so the
+ *  stage counts may add up to more than this), out of how many in scope. */
+export function modeCoverage(mode: StartMode, role?: string | null): { shown: number; total: number } {
+  const only = roleSkills(role);
+  const all = LIFE.filter((s) => !only || only.has(s.id));
+  return { shown: all.filter((s) => serves(s, mode)).length, total: all.length };
+}

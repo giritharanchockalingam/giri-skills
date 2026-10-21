@@ -18,11 +18,14 @@ export default async function EvaluationsPage() {
   const rows = states.map((s) => ({ s, skill: skills.find((k) => k.id === s.skill_id)! })).filter((r) => r.skill).sort((a, b) => a.skill.name.localeCompare(b.skill.name) || b.s.version - a.s.version);
   const evaluated = rows.filter((r) => r.s.latest_eval_run_id).length;
   const gated = rows.filter((r) => r.s.eval_gate_met).length;
+  const current = rows.filter((r) => r.s.latest_eval_run_id && r.s.eval_current);
+  const cases = current.reduce((n, r) => n + r.s.eval_case_count, 0);
+  const perfect = current.filter((r) => Number(r.s.latest_eval_pass_rate) === 1).length;
   return (
     <>
       <PageHead eyebrow={`Evaluations · ${ctx.workspace.name}`} title="Quality" em="evidence" after="."
-        lead={rows.length ? `${rows.length} active version${rows.length === 1 ? "" : "s"}: ${evaluated} evaluated, ${gated} meet their release gate.` : "No versions to evaluate yet."}
-        caption="Pass rate = cases whose checks all passed ÷ cases, on the exact version and case set recorded with the run. A completed run proves execution and schema validity; the checks are what assert correctness."
+        lead={rows.length ? `${rows.length} active version${rows.length === 1 ? "" : "s"}: ${evaluated} evaluated, ${gated} meet their release gate. ${perfect} of ${current.length} current evaluations pass every case (${cases} cases in all).` : "No versions to evaluate yet."}
+        caption="Pass rate = cases whose checks all passed ÷ cases, on the exact version and case set recorded with the run. Cases are each skill's own test inputs (typically a few per skill), so 100% means every check passed on those cases — not that the skill is right on every input. Lift and trigger, measured separately, are in the library scorecard."
         note={<><Link href="/evals/" className="link-flame">Repo evals (scorecard of the repository skills) →</Link> · <Link href="/findings/" className="link-flame">Findings →</Link></>} />
       <div className="card">
         {rows.length === 0 ? <div className="empty"><div className="none">Nothing to show yet.</div><p className="caption">Create or import a skill, add evaluation cases and run the evaluation.</p></div> : (
@@ -34,7 +37,7 @@ export default async function EvaluationsPage() {
                   <td><Link href={`/skills/${skill.slug}/evaluations?v=${s.version}`} className="cell-name">{skillTitle(skill.name)}</Link></td>
                   <td><span className="muted">v{s.version}</span> <VersionPill status={s.status} small /></td>
                   <td className="num">{s.eval_case_count}</td>
-                  <td className="ink-2">{s.latest_eval_run_id ? <>{pct(s.latest_eval_pass_rate)} <span className="caption">· <LocalTime iso={s.latest_eval_at} />{s.eval_current ? "" : " · outdated"}</span></> : <span className="muted">not run</span>}</td>
+                  <td className="ink-2">{s.latest_eval_run_id ? <>{pct(s.latest_eval_pass_rate)} <span className="caption">{s.eval_current && s.latest_eval_pass_rate != null ? `· ${Math.round(Number(s.latest_eval_pass_rate) * s.eval_case_count)} of ${s.eval_case_count} cases ` : "· on an older case set "}· <LocalTime iso={s.latest_eval_at} /></span></> : <span className="muted">not run</span>}</td>
                   <td><span className={eg.met ? "pass" : "fail"}>{eg.met ? "met" : "not met"}</span> <span className="caption">{eg.tone === "none" ? "(no gate)" : `(≥ ${pct(s.min_eval_pass_rate)})`}</span></td>
                   <td><span className={ag.met ? "pass" : "fail"}>{ag.met ? (s.require_approval ? "valid" : "not required") : s.approval_stale ? "stale" : s.status === "in_review" ? "pending" : "none"}</span></td>
                   <td>{s.status === "published" ? <span className="muted">published</span> : s.publishable ? <span className="pass">yes</span> : <span className="muted">no</span>}</td>
