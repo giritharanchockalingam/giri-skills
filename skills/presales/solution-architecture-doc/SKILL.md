@@ -107,7 +107,7 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `assets/nfr-checklist.md` — NFR categories with target patterns and measurement methods
 - `assets/adr-template.md` — ADR template
 
-## Automating it (when commands can run)
+## How to run (automation, when commands can run)
 This skill is executable. When you can run commands, put the facts into `components.json` (layout: `evals/fixtures/northwind-order-hub.json`) and run `python3 scripts/run_skill.py presales/solution-architecture-doc --input components=<file> --input client=<name> --out <dir>`; report `run.json` and hand over the deliverables it writes (below) instead of re-typing them.
 When you cannot run commands, **write the document yourself** following the Procedure — never answer a request that already carries facts with only a question. Draft from what is given, mark every gap `[TO BE BASELINED — owner: ___]`, and ask for the missing facts at the end.
 
