@@ -34,3 +34,7 @@ test("skill drift: a current draft whose copy of the library's test cases is old
   assert.equal(skillDrift([{ source: repo("b"), status: "draft", version: 1 }], pin, null, false), "current");
   assert.equal(skillDrift([{ source: repo("b"), status: "published", version: 1 }], pin, null, true), "current", "only a draft is judged on its cases");
 });
+test("skill drift: a library draft imported before pinning is offered the update (which pins it)", () => {
+  assert.equal(skillDrift([{ source: repo(undefined), status: "draft", version: 1 }], () => "b"), "library_updated");
+  assert.equal(skillDrift([{ source: repo(undefined), status: "published", version: 1 }], () => "b"), "n/a", "a live pre-pinning version is not judged");
+});
