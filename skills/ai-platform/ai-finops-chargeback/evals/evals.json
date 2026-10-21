@@ -13,6 +13,7 @@
     {
       "id": "prompt-planned-workload-routed",
       "prompt": "We launch a new summarisation feature next quarter; what will it cost per month on our models?",
+      "routes_to": "llm-cost-model",
       "expected": [
         "Routes pre-launch workload pricing to llm-cost-model; offers this skill once metered usage exists"
       ]

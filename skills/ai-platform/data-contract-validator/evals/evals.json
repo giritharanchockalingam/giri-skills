@@ -13,6 +13,7 @@
     {
       "id": "prompt-pii-routed",
       "prompt": "Which columns in this extract hold personal data and need masking?",
+      "routes_to": "pii-data-inventory",
       "expected": [
         "Routes personal-data discovery to pii-data-inventory; offers this skill for contract conformance afterwards"
       ]

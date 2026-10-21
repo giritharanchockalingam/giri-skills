@@ -13,6 +13,7 @@
     {
       "id": "gpu-question-routed",
       "prompt": "Should we self-host an open model on our own GPUs instead of paying per token?",
+      "routes_to": "infra-gpu-sizing",
       "expected": [
         "Routes GPU capacity and self-host vs rent to infra-gpu-sizing; offers this skill for the API side of the comparison"
       ]
