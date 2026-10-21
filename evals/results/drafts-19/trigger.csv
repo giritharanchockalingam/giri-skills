@@ -40,7 +40,7 @@ build/security-review,agent-happy-path,1,security-review,1
 build/security-review,agent-missing-diff,1,security-review,1
 build/security-review,agent-risky-diff-blocks,1,security-review,1
 build/security-review,agent-mode-new,1,security-review,1
-build/security-review,agent-mode-existing,1,safe-fix,0
+build/security-review,agent-mode-existing,1,nextjs-enterprise-conventions,0
 build/spec-to-plan,happy-path,1,spec-to-plan,1
 build/spec-to-plan,too-big,1,spec-to-plan,1
 build/spec-to-plan,missing-input,1,spec-to-plan,1
@@ -86,10 +86,10 @@ career/outreach-and-followup,agent-mode-new,1,outreach-and-followup,1
 career/outreach-and-followup,agent-mode-existing,1,outreach-and-followup,1
 presales/account-plan,happy-path-quarterly-refresh,1,account-plan,1
 presales/account-plan,missing-input-no-account-facts,1,account-plan,1
-presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,account-plan,1
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,1,application-tracker,0
 presales/account-plan,agent-happy-path,1,account-plan,1
 presales/account-plan,agent-missing-pipeline,1,account-plan,1
-presales/account-plan,agent-unvalued-pipeline-not-estimated,1,account-plan,1
+presales/account-plan,agent-unvalued-pipeline-not-estimated,1,ai-use-case-canvas,0
 presales/account-plan,agent-mode-existing,1,account-plan,1
 presales/client-research-brief,happy-path-public-company,1,client-research-brief,1
 presales/client-research-brief,missing-input-ambiguous-company,1,client-research-brief,1
@@ -118,7 +118,7 @@ presales/orals-prep,missing-input-no-format,1,orals-prep,1
 presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,1,orals-prep,1
 presales/orals-prep,agent-happy-path,1,orals-prep,1
 presales/orals-prep,agent-missing-speakers,1,orals-prep,1
-presales/orals-prep,agent-unbaselined-numbers-become-questions,1,orals-prep,1
+presales/orals-prep,agent-unbaselined-numbers-become-questions,1,exec-deck-redline,0
 presales/orals-prep,agent-mode-existing,1,orals-prep,1
 presales/rfp-compliance-matrix,happy-path-rfp-pdf,1,rfp-compliance-matrix,1
 presales/rfp-compliance-matrix,missing-input-no-capability-source,1,rfp-compliance-matrix,1
@@ -175,7 +175,7 @@ build/security-review,agent-happy-path,2,security-review,1
 build/security-review,agent-missing-diff,2,security-review,1
 build/security-review,agent-risky-diff-blocks,2,security-review,1
 build/security-review,agent-mode-new,2,security-review,1
-build/security-review,agent-mode-existing,2,nextjs-enterprise-conventions,0
+build/security-review,agent-mode-existing,2,safe-fix,0
 build/spec-to-plan,happy-path,2,spec-to-plan,1
 build/spec-to-plan,too-big,2,spec-to-plan,1
 build/spec-to-plan,missing-input,2,spec-to-plan,1
@@ -221,7 +221,7 @@ career/outreach-and-followup,agent-mode-new,2,outreach-and-followup,1
 career/outreach-and-followup,agent-mode-existing,2,outreach-and-followup,1
 presales/account-plan,happy-path-quarterly-refresh,2,account-plan,1
 presales/account-plan,missing-input-no-account-facts,2,account-plan,1
-presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,account-plan,1
+presales/account-plan,adversarial-fabrication-pipeline-probabilities,2,application-tracker,0
 presales/account-plan,agent-happy-path,2,account-plan,1
 presales/account-plan,agent-missing-pipeline,2,account-plan,1
 presales/account-plan,agent-unvalued-pipeline-not-estimated,2,ai-use-case-canvas,0
@@ -253,7 +253,7 @@ presales/orals-prep,missing-input-no-format,2,orals-prep,1
 presales/orals-prep,adversarial-fabrication-answers-with-new-numbers,2,orals-prep,1
 presales/orals-prep,agent-happy-path,2,orals-prep,1
 presales/orals-prep,agent-missing-speakers,2,orals-prep,1
-presales/orals-prep,agent-unbaselined-numbers-become-questions,2,orals-prep,1
+presales/orals-prep,agent-unbaselined-numbers-become-questions,2,exec-deck-redline,0
 presales/orals-prep,agent-mode-existing,2,orals-prep,1
 presales/rfp-compliance-matrix,happy-path-rfp-pdf,2,rfp-compliance-matrix,1
 presales/rfp-compliance-matrix,missing-input-no-capability-source,2,rfp-compliance-matrix,1
@@ -273,7 +273,7 @@ presales/sow-drafter,agent-mode-existing,2,sow-drafter,1
 (negative),neg-02,1,none,
 (negative),neg-03,1,none,
 (negative),neg-04,1,none,
-(negative),neg-05,1,safe-fix,
+(negative),neg-05,1,none,
 (negative),neg-06,1,none,
 (negative),neg-07,1,none,
 (negative),neg-08,1,none,

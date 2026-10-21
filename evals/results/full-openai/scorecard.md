@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17–2026-10-21_
-_estimated spend: $52.83_
+_estimated spend: $65.24_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict |
 |---|---|---|---|---|---|---|
@@ -18,7 +18,7 @@ _estimated spend: $52.83_
 | ai-platform/ai-strategy-coe | 1.00 | 0.00 | 0.35 | 0.62 | 0.27 | OK |
 | ai-platform/ai-threat-model | 0.67 | 0.00 | 0.06 | 0.38 | 0.31 | DESC |
 | ai-platform/ai-transparency-notice | 1.00 | 0.00 | 0.17 | 0.22 | 0.06 | BODY |
-| ai-platform/ai-use-case-canvas | 1.00 | 0.00 | 0.36 | 0.57 | 0.21 | OK |
+| ai-platform/ai-use-case-canvas | 1.00 | 0.00 | 0.25 | 0.64 | 0.39 | OK |
 | ai-platform/ai-vendor-assessment | 0.79 | 0.00 | 0.39 | 0.22 | -0.17 | BOTH |
 | ai-platform/annotation-agreement | 1.00 | 0.00 | 0.35 | 0.45 | 0.10 | BODY |
 | ai-platform/bias-fairness-check | 1.00 | 0.00 | 0.05 | 0.30 | 0.25 | OK |
@@ -47,38 +47,38 @@ _estimated spend: $52.83_
 | ai-platform/rag-pipeline-design | 1.00 | 0.00 | 0.27 | 0.91 | 0.64 | OK |
 | ai-platform/red-team-suite | 0.67 | 0.00 | 0.00 | 0.29 | 0.29 | DESC |
 | ai-platform/slm-demo-builder | 1.00 | 0.10 | 0.33 | 0.78 | 0.44 | OK |
-| build/ci-cd-vercel-github | 1.00 | 0.00 | 0.29 | 0.64 | 0.36 | OK |
+| build/ci-cd-vercel-github | 1.00 | 0.00 | 0.25 | 0.71 | 0.46 | OK |
 | build/code-review-runner | 1.00 | 0.00 | 0.12 | 0.12 | 0.00 | BODY |
 | build/domain-modeling-runner | 1.00 | 0.00 | 0.14 | 0.29 | 0.14 | BODY |
 | build/handoff-and-thread-close | 1.00 | 0.00 | 0.22 | 0.94 | 0.72 | OK |
 | build/multi-tenant-saas-patterns | 0.83 | 0.00 | 0.27 | 0.64 | 0.36 | OK |
-| build/nextjs-enterprise-conventions | 1.00 | 0.00 | 0.32 | 0.64 | 0.32 | OK |
+| build/nextjs-enterprise-conventions | 1.00 | 0.00 | 0.36 | 0.57 | 0.21 | OK |
 | build/observability-setup | 1.00 | 0.00 | 0.17 | 0.63 | 0.47 | OK |
 | build/product-spec-prd | 1.00 | 0.00 | 0.32 | 0.68 | 0.36 | OK |
 | build/project-bootstrap | 1.00 | 0.00 | 0.05 | 0.27 | 0.23 | OK |
-| build/safe-fix | 1.00 | 0.10 | 0.12 | 0.59 | 0.47 | OK |
-| build/security-review | 0.88 | 0.00 | 0.23 | 0.38 | 0.15 | BODY |
-| build/spec-to-plan | 1.00 | 0.00 | 0.32 | 0.64 | 0.32 | OK |
+| build/safe-fix | 1.00 | 0.00 | 0.12 | 0.69 | 0.56 | OK |
+| build/security-review | 0.88 | 0.00 | 0.35 | 0.54 | 0.19 | BODY |
+| build/spec-to-plan | 1.00 | 0.00 | 0.25 | 0.71 | 0.46 | OK |
 | build/supabase-schema-rls | 1.00 | 0.00 | 0.14 | 0.50 | 0.36 | OK |
 | build/systematic-debugging-runner | 1.00 | 0.00 | 0.31 | 0.12 | -0.19 | BODY |
 | build/test-strategy-tdd | 1.00 | 0.00 | 0.25 | 0.45 | 0.20 | OK |
 | build/webapp-testing-runner | 1.00 | 0.00 | 0.17 | 0.25 | 0.08 | BODY |
-| career/application-tracker | 1.00 | 0.00 | 0.20 | 0.47 | 0.27 | OK |
-| career/interview-prep | 1.00 | 0.00 | 0.09 | 0.38 | 0.28 | OK |
+| career/application-tracker | 1.00 | 0.00 | 0.30 | 0.50 | 0.20 | OK |
+| career/interview-prep | 1.00 | 0.00 | 0.12 | 0.34 | 0.22 | OK |
 | career/jd-fit-scorer | 0.71 | 0.00 | 0.33 | 0.50 | 0.17 | BOTH |
-| career/offer-evaluator | 1.00 | 0.00 | 0.25 | 0.62 | 0.38 | OK |
-| career/outreach-and-followup | 1.00 | 0.00 | 0.28 | 0.59 | 0.31 | OK |
+| career/offer-evaluator | 1.00 | 0.00 | 0.19 | 0.62 | 0.44 | OK |
+| career/outreach-and-followup | 1.00 | 0.00 | 0.31 | 0.53 | 0.22 | OK |
 | career/resume-tailor | 1.00 | 0.00 | 0.36 | 0.57 | 0.21 | OK |
-| presales/account-plan | 0.93 | 0.00 | 0.06 | 0.32 | 0.26 | OK |
-| presales/client-research-brief | 1.00 | 0.00 | 0.33 | 0.62 | 0.30 | OK |
-| presales/competitive-positioning | 0.86 | 0.00 | 0.41 | 0.88 | 0.47 | OK |
+| presales/account-plan | 0.71 | 0.00 | 0.12 | 0.35 | 0.24 | DESC |
+| presales/client-research-brief | 1.00 | 0.00 | 0.38 | 0.53 | 0.15 | BODY |
+| presales/competitive-positioning | 0.86 | 0.00 | 0.35 | 0.82 | 0.47 | OK |
 | presales/discovery-interview | 1.00 | 0.00 | 0.40 | 0.80 | 0.40 | OK |
 | presales/effort-estimator | 0.67 | 0.00 | 0.04 | 0.04 | 0.00 | BOTH |
 | presales/exec-deck-redline | 1.00 | 0.00 | 0.21 | 0.45 | 0.24 | OK |
 | presales/integration-migration-assessor | 0.86 | 0.00 | 0.14 | 0.39 | 0.25 | OK |
-| presales/orals-prep | 1.00 | 0.00 | 0.09 | 0.47 | 0.38 | OK |
+| presales/orals-prep | 0.86 | 0.00 | 0.09 | 0.38 | 0.29 | OK |
 | presales/proposal-writer | 1.00 | 0.00 | 0.50 | 0.71 | 0.21 | OK |
-| presales/rfp-compliance-matrix | 1.00 | 0.00 | 0.11 | 0.36 | 0.25 | OK |
+| presales/rfp-compliance-matrix | 1.00 | 0.00 | 0.06 | 0.36 | 0.31 | OK |
 | presales/solution-architecture-doc | 1.00 | 0.00 | 0.22 | 0.50 | 0.28 | OK |
-| presales/sow-drafter | 1.00 | 0.00 | 0.11 | 0.56 | 0.44 | OK |
+| presales/sow-drafter | 1.00 | 0.00 | 0.22 | 0.53 | 0.31 | OK |
 | presales/value-case-builder | 1.00 | 0.00 | 0.29 | 0.58 | 0.29 | OK |
