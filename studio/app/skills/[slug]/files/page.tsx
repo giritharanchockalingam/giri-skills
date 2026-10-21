@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FilePreview } from "@/components/FilePreview";
 import { loadSkillPage } from "@/lib/factory/skillPage";
 import { can } from "@/lib/factory/roles";
 import { type FileRow } from "@/lib/factory/db";
@@ -27,8 +28,8 @@ export default async function FilesPage({ params, searchParams }: { params: Prom
       ) : (
         <div className="card card-pad">
           <div className="h3 mb-1">Resources <span className="muted font-normal">({d.version.manifest.resources.length})</span></div>
-          <p className="caption mb-3">From the repository bundle at build time; read-only here. To change them, edit the repository skill (<Link href={`/library/${d.version.source.repo_skill}/files/`} className="link">{d.version.source.repo_skill}</Link>) and re-import as a new draft.</p>
-          <ul className="file-list">{d.version.manifest.resources.map((r) => <li key={r}>{r}</li>)}</ul>
+          <p className="caption mb-3">From the repository bundle at build time; read-only here. To change them, edit the repository skill (<Link href={`/library/${d.version.source.repo_skill}/files/`} className="link">{d.version.source.repo_skill}</Link>) and re-import as a new draft. Select a file to preview the library&apos;s current copy (if the library has changed since this version, the skill page says so).</p>
+          <ul className="file-list">{d.version.manifest.resources.map((r) => <FilePreview key={r} href={`/runtime/repo/skills/${d.version.source.repo_skill}/${r}`} label={r} />)}</ul>
         </div>
       )}
     </>
