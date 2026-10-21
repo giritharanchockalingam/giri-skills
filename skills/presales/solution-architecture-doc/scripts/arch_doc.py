@@ -34,6 +34,10 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import arch_report as R  # noqa: E402
+import c4_render as C4  # noqa: E402
+
 TBD = "[TO BE BASELINED — owner: Solution architect]"
 
 
@@ -79,10 +83,12 @@ def load(path: Path) -> dict:
         a_.setdefault("id", nid("actor_" + a_["name"]))
         actors.append(a_)
     ext = {}
+    d["_ext_records"] = []
     for e in d.get("external_systems") or []:
         if not isinstance(e, dict) or not e.get("id"):
             die("every external system needs 'id'")
         ext[e["id"]] = e.get("name") or e["id"]
+        d["_ext_records"].append({**e, "name": ext[e["id"]]})
     known = ids | set(ext) | {a_["id"] for a_ in actors}
     ints = d.get("integrations") or []
     for i, it in enumerate(ints, 1):
@@ -151,6 +157,26 @@ def container_diagram(d: dict) -> list[str]:
     return L
 
 
+def deployment_diagram(d: dict) -> list[str]:
+    dep = d.get("deployment") or {}
+    names = {c["id"]: c["name"] for c in d["containers"]}
+    L = ["```mermaid", "flowchart LR"]
+    for z in dep.get("zones") or []:
+        L.append(f'  subgraph {nid("zone_" + str(z.get("id") or z["name"]))}["{label(z["name"])}"]')
+        for n in z.get("nodes") or []:
+            runs = ", ".join(label(names.get(r, r)) for r in n.get("runs") or [])
+            L.append(f'    {nid("node_" + n["id"])}["{label(n["name"])}<br/><i>{label(n.get("tech") or "")}</i><br/>{runs}"]')
+        L.append("  end")
+    links = dep.get("links") or []
+    for e in links:
+        L.append(f'  {nid("node_" + e["from"])} -->|{label(e.get("label") or "link")}| {nid("node_" + e["to"])}')
+    if not links:
+        first = next((n["id"] for z in dep.get("zones") or [] for n in z.get("nodes") or []), "x")
+        L.append(f'  {nid("node_" + first)} --- {nid("node_" + first)}')
+    L.append("```")
+    return L
+
+
 def name_of(d: dict, ref: str) -> str:
     for c in d["containers"]:
         if c["id"] == ref:
@@ -209,12 +235,16 @@ def render_change(ch: dict, cur: dict, d: dict) -> list[str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="components.json -> architecture.md (Mermaid C4) + nfr.csv")
+    ap = argparse.ArgumentParser(description="components.json -> architecture.md (Mermaid C4) + nfr.csv [+ SVG, draw.io, HTML, ADRs]")
     ap.add_argument("components")
     ap.add_argument("--out", required=True)
     ap.add_argument("--nfr", required=True, help="nfr.csv")
     ap.add_argument("--client", default="<Client>")
     ap.add_argument("--current", default="", help="current-state components.json (same layout) for the change view")
+    ap.add_argument("--svg-dir", default="", help="write the diagrams as SVG files here (context.svg, container.svg[, deployment.svg])")
+    ap.add_argument("--drawio", default="", help="write every diagram as one editable draw.io file (one page per view)")
+    ap.add_argument("--html", default="", help="write the whole document as one printable HTML page with the diagrams inline")
+    ap.add_argument("--adr-dir", default="", help="write one ADR markdown file per recorded decision here")
     a = ap.parse_args()
     d = load(Path(a.components))
     cur = load(Path(a.current)) if a.current else None
@@ -229,19 +259,33 @@ def main() -> int:
     for it in d["integrations"]:
         patterns.setdefault(it["pattern"], []).append(it)
     waves = sorted({it["wave"] for it in d["integrations"]}, key=lambda w: (not w.isdigit(), w))
+    decs = R.decisions_with_ids(d)
+    opens = R.open_items(d, nfrs, decs)
+    has_dep = bool((d.get("deployment") or {}).get("zones"))
+    title = f"Solution Architecture — {a.client} — {d['system']}"
+    fig = iter(range(1, 10))
 
-    L = [f"# Solution Architecture — {a.client} — {d['system']}", "",
-         f"Generated from `{Path(a.components).name}`: {len(d['containers'])} containers, "
-         f"{len(d['actors'])} actors, {len(d['external_systems'])} external systems, "
-         f"{len(d['integrations'])} integrations, {len(nfrs)} NFRs.", "",
-         "## Bottom line", f"{TBD} — target state in one sentence and the decision asked.", "",
-         "## System context (C4 level 1)"] + context_diagram(d) + [
-         f"*Figure 1 — System context for {d['system']}; sources: components.json*", "",
-         "## Container view (C4 level 2)"] + container_diagram(d) + [
-         f"*Figure 2 — Containers and integrations; sources: components.json*", "",
-         "| Container | Technology | Responsibility |", "|---|---|---|"]
+    L = [f"# {title}", ""]
+    if d.get("sample"):
+        L += [f"*Sample: {d['sample']}*", ""]
+    meta = " · ".join(x for x in (f"For: {d['audience']}" if d.get("audience") else "", f"As of: {d['as_of']}" if d.get("as_of") else "") if x)
+    L += [f"Generated from `{Path(a.components).name}`: {len(d['containers'])} containers, "
+          f"{len(d['actors'])} actors, {len(d['external_systems'])} external systems, "
+          f"{len(d['integrations'])} integrations, {len(nfrs)} NFRs" + (f", {len(decs)} decisions" if decs else "") + "." + (f" {meta}." if meta else ""), "",
+          "## Bottom line", R.bottom_line(d, decs, len(opens)), ""]
+    drv = R.drivers_section(d)
+    if drv:
+        L += drv + [""]
+    L += ["## System context (C4 level 1)"] + context_diagram(d) + [
+          f"*Figure {next(fig)} — System context for {d['system']}: who uses it and what it exchanges data with; sources: {Path(a.components).name}*", "",
+          "## Container view (C4 level 2)"] + container_diagram(d) + [
+          f"*Figure {next(fig)} — Containers and integrations, with each integration's ID, pattern and protocol; sources: {Path(a.components).name}*", "",
+          "| Container | Technology | Responsibility |", "|---|---|---|"]
     for c in d["containers"]:
         L.append(f"| {c['name']} (`{c['id']}`) | {c.get('tech') or TBD} | {c.get('responsibility') or TBD} |")
+    if has_dep:
+        L += ["", "## Deployment view"] + deployment_diagram(d) + [
+              f"*Figure {next(fig)} — {(d['deployment'].get('caption') or 'Where each container runs, by hosting zone.').rstrip('.')}; sources: {Path(a.components).name}*"]
     if change:
         L += [""] + render_change(change, cur, d)
     L += ["", "## Integration map (grouped by pattern)"]
@@ -251,41 +295,102 @@ def main() -> int:
               for it in items]
     if not patterns:
         L += ["", "| ID | From | To | Protocol | Data | Wave |", "|---|---|---|---|---|---|", f"| — | none declared | | | | {TBD} |"]
-    L += ["", "## Waves", "| Wave | Integrations | Patterns |", "|---|---|---|"]
-    for w in waves:
-        items = [it for it in d["integrations"] if it["wave"] == w]
-        L.append(f"| {w} | {', '.join(it['id'] for it in items)} | {', '.join(sorted({it['pattern'] for it in items}))} |")
-    if not waves:
-        L.append(f"| {TBD} | | |")
+    wv = R.waves_section(d)
+    if wv:
+        L += [""] + wv                       # wave goals, integrations, entry/exit/rollback in one table
+    else:
+        L += ["", "## Waves", "| Wave | Integrations | Patterns |", "|---|---|---|"]
+        for w in waves:
+            items = [it for it in d["integrations"] if it["wave"] == w]
+            L.append(f"| {w} | {', '.join(it['id'] for it in items)} | {', '.join(sorted({it['pattern'] for it in items}))} |")
+        if not waves:
+            L.append(f"| {TBD} | | |")
     L += ["", "## Non-functional requirements", "| Category | Requirement | Target | Measure | Source |", "|---|---|---|---|---|"]
     L += [f"| {n['category']} | {n['requirement']} | {n['target']} | {n['measure']} | {n['source']} |" for n in nfrs] \
         or [f"| {TBD} | | | | |"]
-    L += ["", "## Decision log (stub — one ADR per decision; complete on assets/adr-template.md)",
-          "| ADR | Decision | Options considered | Status | Owner |", "|---|---|---|---|---|"]
-    k = 1
-    for pat in patterns:
-        L.append(f"| ADR-{k:03d} | Integration pattern: {pat} | {TBD} | proposed | {TBD} |"); k += 1
-    for c in d["containers"]:
-        if c.get("tech"):
-            L.append(f"| ADR-{k:03d} | {c['name']} on {c['tech']} | {TBD} | proposed | {TBD} |"); k += 1
+    sec = R.security_section(d)
+    if sec:
+        L += [""] + sec
+    opt = R.options_section(decs)
+    if opt:
+        L += [""] + opt
+    rk = R.risks_section(d)
+    if rk:
+        L += [""] + rk
+    if decs:
+        L += ["", "## Decision log"] + R.adr_log(decs)
+        decided = " ".join(str(x.get("chosen") or "") for x in decs).lower()
+        undecided = [c for c in d["containers"] if c.get("tech") and c["tech"].lower() not in decided]
+        if undecided:
+            L += ["", "Technology choices without a decision record yet (each needs an ADR):"]
+            L += [f"- {c['name']} on {c['tech']}" for c in undecided]
+    else:
+        L += ["", "## Decision log (stub — one ADR per decision; complete on assets/adr-template.md)",
+              "| ADR | Decision | Options considered | Status | Owner |", "|---|---|---|---|---|"]
+        k = 1
+        for pat in patterns:
+            L.append(f"| ADR-{k:03d} | Integration pattern: {pat} | {TBD} | proposed | {TBD} |"); k += 1
+        for c in d["containers"]:
+            if c.get("tech"):
+                L.append(f"| ADR-{k:03d} | {c['name']} on {c['tech']} | {TBD} | proposed | {TBD} |"); k += 1
+        if k == 1:
+            L.append(f"| ADR-001 | {TBD} | | proposed | |")
     if change:
+        k = len(decs) + 1 if decs else None
+        rows = []
         for c in change["retired"]:
-            L.append(f"| ADR-{k:03d} | Retire {c['name']} ({c.get('tech') or TBD}): decommission and data migration | {TBD} | proposed | {TBD} |"); k += 1
+            rows.append(f"Retire {c['name']} ({c.get('tech') or TBD}): decommission and data migration")
         for o, n in change["replatformed"]:
-            L.append(f"| ADR-{k:03d} | Re-platform {n['name']}: {o.get('tech') or TBD} → {n.get('tech') or TBD} | {TBD} | proposed | {TBD} |"); k += 1
-    if k == 1:
-        L.append(f"| ADR-001 | {TBD} | | proposed | |")
-    L += ["", "## Open items", "| Item | Owner | By |", "|---|---|---|",
-          *(f"| NFR target: {n['category']} — {n['requirement']} | {TBD} | |" for n in nfrs if n["target"] == TBD),
-          *(f"| Wave for {it['id']} | {TBD} | |" for it in d["integrations"] if it["wave"] == TBD)]
+            rows.append(f"Re-platform {n['name']}: {o.get('tech') or TBD} → {n.get('tech') or TBD}")
+        if rows and decs:
+            L += ["", "Transition decisions to record:"] + [f"- {r}" for r in rows]
+        elif rows:
+            base = len(patterns) + sum(1 for c in d["containers"] if c.get("tech")) + 1
+            L += [f"| ADR-{base + j:03d} | {r} | {TBD} | proposed | {TBD} |" for j, r in enumerate(rows)]
+        del k
+    L += ["", "## Open items", "| Item | Owner | Section |", "|---|---|---|"]
+    L += [f"| {item} | {TBD} | {where} |" for item, where in opens] or ["| None | | |"]
+    srcs = R.sources(d, nfrs, decs)
+    if srcs:
+        L += ["", "## Sources", "Every statement above is traceable to one of these (as given in the input):"] + [f"- {x}" for x in srcs]
+    md = "\n".join(L) + "\n"
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text("\n".join(L) + "\n", encoding="utf-8")
+    Path(a.out).write_text(md, encoding="utf-8")
     with Path(a.nfr).open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["category", "requirement", "target", "measure", "source"])
         w.writeheader(); w.writerows(nfrs)
+
+    views = []
+    if a.svg_dir or a.drawio or a.html:
+        model = {**{k: v for k, v in d.items() if not k.startswith("_")}, "external_systems": d["_ext_records"], "integrations": d["integrations"]}
+        views = C4.views(model)
+        svgs = [C4.to_svg(lay) for _, lay in views]
+        if a.svg_dir:
+            Path(a.svg_dir).mkdir(parents=True, exist_ok=True)
+            for (name, _), svg in zip(views, svgs):
+                (Path(a.svg_dir) / f"{name}.svg").write_text(svg, encoding="utf-8")
+        if a.drawio:
+            Path(a.drawio).parent.mkdir(parents=True, exist_ok=True)
+            Path(a.drawio).write_text(C4.to_drawio([lay for _, lay in views]), encoding="utf-8")
+        if a.html:
+            Path(a.html).parent.mkdir(parents=True, exist_ok=True)
+            Path(a.html).write_text(R.to_html(md, svgs, title, d.get("sample")), encoding="utf-8")
+    # every diagram file must be well-formed XML before anyone downloads it (the run fails otherwise)
+    import xml.etree.ElementTree as ET
+    for p in ([Path(a.svg_dir) / f"{n}.svg" for n, _ in views] if a.svg_dir else []) + ([Path(a.drawio)] if a.drawio else []):
+        try:
+            ET.parse(p)
+        except ET.ParseError as e:
+            die(f"{p.name} is not well-formed XML: {e}")
+    if a.adr_dir and decs:
+        Path(a.adr_dir).mkdir(parents=True, exist_ok=True)
+        for fname, body in R.adr_files(decs, d["system"]).items():
+            (Path(a.adr_dir) / fname).write_text(body, encoding="utf-8")
+
     n_tbd = sum(1 for n in nfrs if n["target"] == TBD)
     print(f"architecture: {len(d['containers'])} containers, {len(d['integrations'])} integrations in "
-          f"{len(patterns)} patterns, {len(nfrs)} NFRs ({n_tbd} targets to baseline) -> {a.out}")
+          f"{len(patterns)} patterns, {len(nfrs)} NFRs ({n_tbd} targets to baseline), {len(decs)} decisions, "
+          f"{len(opens)} open items -> {a.out}")
     return 0
 
 

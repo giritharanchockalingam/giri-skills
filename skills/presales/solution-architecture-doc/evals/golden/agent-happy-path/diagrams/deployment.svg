@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="968" height="503" viewBox="0 0 968 503" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Deployment — Order Hub">
+<title>Deployment — Order Hub</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5B6B78"/></marker></defs>
+<rect x="0" y="0" width="968" height="503" fill="#FFFFFF"/>
+<text x="40" y="58" font-size="20" font-weight="700" fill="#0F1A21">Deployment — Order Hub</text>
+<text x="40" y="78" font-size="12" fill="#4C5C68">Where each container runs. Google Cloud for Order Hub; SAP and warehouse systems stay in the Northwind data centre.</text>
+<rect x="40.0" y="94.0" width="532.0" height="338.8" rx="10" fill="none" stroke="#7C8A96" stroke-width="1.4" stroke-dasharray="8 5"/>
+<text x="54.0" y="420.8" font-size="12" font-weight="700" fill="#4C5C68">Google Cloud (us-central1) [Deployment zone]</text>
+<rect x="661.6" y="94.0" width="266.0" height="338.8" rx="10" fill="none" stroke="#7C8A96" stroke-width="1.4" stroke-dasharray="8 5"/>
+<text x="675.6" y="420.8" font-size="12" font-weight="700" fill="#4C5C68">Northwind data centre [Deployment zone]</text>
+<line x1="278.0" y1="186.0" x2="334.0" y2="186.0" stroke="#5B6B78" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arrow)"/>
+<line x1="356.5" y1="234.0" x2="255.5" y2="292.8" stroke="#5B6B78" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arrow)"/>
+<line x1="439.0" y1="234.0" x2="439.0" y2="292.8" stroke="#5B6B78" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arrow)"/>
+<line x1="544.0" y1="340.8" x2="689.6" y2="340.8" stroke="#5B6B78" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arrow)"/>
+<line x1="689.6" y1="186.0" x2="544.0" y2="186.0" stroke="#5B6B78" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#arrow)"/>
+<rect x="289.2" y="177.0" width="33.5" height="18.0" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+<text x="306.0" y="190.0" font-size="10.5" fill="#33414C" text-anchor="middle">mTLS</text>
+<rect x="271.6" y="254.4" width="68.8" height="18.0" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+<text x="306.0" y="267.4" font-size="10.5" fill="#33414C" text-anchor="middle">private IP</text>
+<rect x="398.7" y="254.4" width="80.6" height="18.0" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+<text x="439.0" y="267.4" font-size="10.5" fill="#33414C" text-anchor="middle">private link</text>
+<rect x="558.9" y="331.8" width="115.8" height="18.0" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+<text x="616.8" y="344.8" font-size="10.5" fill="#33414C" text-anchor="middle">Cloud Interconnect</text>
+<rect x="547.1" y="177.0" width="139.4" height="18.0" rx="3" fill="#FFFFFF" fill-opacity="0.94"/>
+<text x="616.8" y="190.0" font-size="10.5" fill="#33414C" text-anchor="middle">SFTP over Interconnect</text>
+<rect x="68.0" y="138.0" width="210.0" height="96.0" rx="8" fill="#FFFFFF" stroke="#5B6B78" stroke-width="1.2"/>
+<text x="173.0" y="162.0" font-size="14" font-weight="700" fill="#0F1A21" text-anchor="middle">Apigee X</text>
+<text x="173.0" y="179.0" font-size="10.5" fill="#0F1A21" fill-opacity="0.85" text-anchor="middle">[Node: managed]</text>
+<text x="173.0" y="195.0" font-size="10.5" fill="#0F1A21" text-anchor="middle">API gateway</text>
+<rect x="334.0" y="138.0" width="210.0" height="96.0" rx="8" fill="#FFFFFF" stroke="#5B6B78" stroke-width="1.2"/>
+<text x="439.0" y="162.0" font-size="14" font-weight="700" fill="#0F1A21" text-anchor="middle">orders-gke</text>
+<text x="439.0" y="179.0" font-size="10.5" fill="#0F1A21" fill-opacity="0.85" text-anchor="middle">[Node: GKE Autopilot]</text>
+<text x="439.0" y="195.0" font-size="10.5" fill="#0F1A21" text-anchor="middle">Order service</text>
+<rect x="334.0" y="292.8" width="210.0" height="96.0" rx="8" fill="#FFFFFF" stroke="#5B6B78" stroke-width="1.2"/>
+<text x="439.0" y="316.8" font-size="14" font-weight="700" fill="#0F1A21" text-anchor="middle">Managed Kafka</text>
+<text x="439.0" y="333.8" font-size="10.5" fill="#0F1A21" fill-opacity="0.85" text-anchor="middle">[Node: Confluent Cloud]</text>
+<text x="439.0" y="349.8" font-size="10.5" fill="#0F1A21" text-anchor="middle">Event backbone</text>
+<rect x="68.0" y="292.8" width="210.0" height="96.0" rx="8" fill="#FFFFFF" stroke="#5B6B78" stroke-width="1.2"/>
+<text x="173.0" y="316.8" font-size="14" font-weight="700" fill="#0F1A21" text-anchor="middle">Cloud SQL</text>
+<text x="173.0" y="333.8" font-size="10.5" fill="#0F1A21" fill-opacity="0.85" text-anchor="middle">[Node: PostgreSQL 16, HA]</text>
+<text x="173.0" y="349.8" font-size="10.5" fill="#0F1A21" text-anchor="middle">Order store</text>
+<rect x="689.6" y="138.0" width="210.0" height="96.0" rx="8" fill="#FFFFFF" stroke="#5B6B78" stroke-width="1.2"/>
+<text x="794.6" y="162.0" font-size="14" font-weight="700" fill="#0F1A21" text-anchor="middle">SAP S/4HANA</text>
+<text x="794.6" y="179.0" font-size="10.5" fill="#0F1A21" fill-opacity="0.85" text-anchor="middle">[Node: on-premises]</text>
+<text x="794.6" y="195.0" font-size="10.5" fill="#0F1A21" text-anchor="middle">ERP (SAP S/4)</text>
+<rect x="689.6" y="292.8" width="210.0" height="96.0" rx="8" fill="#FFFFFF" stroke="#5B6B78" stroke-width="1.2"/>
+<text x="794.6" y="316.8" font-size="14" font-weight="700" fill="#0F1A21" text-anchor="middle">Warehouse system</text>
+<text x="794.6" y="333.8" font-size="10.5" fill="#0F1A21" fill-opacity="0.85" text-anchor="middle">[Node: on-premises]</text>
+<text x="794.6" y="349.8" font-size="10.5" fill="#0F1A21" text-anchor="middle">Warehouse management</text>
+</svg>

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { mdToHtml } from "@/lib/markdown.mjs";
 import type { RunOutput } from "@/lib/factory/db";
+import { Deliverables } from "@/components/Deliverables";
 
 function download(name: string, content: string) {
   const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
@@ -14,6 +15,7 @@ export function RunOutputs({ outputs, logs, runJson }: { outputs: RunOutput[]; l
   const cur = viewing ? outputs.find((o) => o.path === viewing.path) : null;
   return (
     <>
+      <Deliverables files={Object.fromEntries(outputs.map((o) => [o.path, o.content_text]))} />
       <div className="card card-pad">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <div className="h3">Output files <span className="muted font-normal">({outputs.length})</span></div>

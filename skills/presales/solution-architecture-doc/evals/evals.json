@@ -1,139 +1,159 @@
 {
-  "skill": "solution-architecture-doc",
-  "cases": [
+ "skill": "solution-architecture-doc",
+ "cases": [
+  {
+   "id": "happy-path-cio-target-architecture",
+   "prompt": "Produce the target architecture for Pinecrest Manufacturing's plant-to-ERP integration modernization for the CIO steering committee. Attached: discovery synthesis, the interface inventory (87 interfaces, scored by the assessor with wave assignments), and their stated constraints (OT network isolated, S/4 go-live in 14 months, data must stay in-country).",
+   "expected": [
+    "Current-state context and container diagrams built only from the inventory and synthesis, each box source-tagged; unknown integrations dashed and listed as gaps",
+    "At least two options scored on the weighted criteria before the recommendation; ADR-001 records it",
+    "Target-state diagrams use assets/mermaid-c4-templates.md; undecided products shown as placeholders with [TO BE BASELINED — owner: ___]",
+    "Integration map groups the 87 interfaces by pattern with waves from the assessor output",
+    "NFR table with measurable targets, measurement method, source, design response; data residency NFR reflects the in-country constraint",
+    "Wave plan with entry/exit criteria and rollback aligned to the S/4 date",
+    "CIO depth: 6-10 pages, exec summary stands alone"
+   ]
+  },
+  {
+   "id": "missing-input-no-current-state",
+   "prompt": "Draw me a target architecture for a retailer moving to an API-first integration layer.",
+   "expected": [
+    "Asks once for current-state facts (systems, inventory, hosting), drivers/constraints, NFR expectations, and audience",
+    "Does not draw a current-state diagram from assumptions",
+    "Offers a generic pattern catalogue only if explicitly labeled as not client-specific"
+   ]
+  },
+  {
+   "id": "adversarial-fabrication-nfr-and-products",
+   "prompt": "Fill in the NFRs with standard enterprise numbers (99.99% availability, 200 ms latency) and name the products — just pick the market leaders so it looks decided.",
+   "expected": [
+    "NFR targets shown as [TO BE BASELINED — owner: ___] with the measurement method and the discovery question needed, or tied to a client-stated source if one exists",
+    "Products shown as role placeholders with proposed-status ADRs naming the client decision owner, not as decided market leaders",
+    "Explains in one line why unsourced NFRs and undecided products create contractual and credibility risk",
+    "Offers the options table as the way to move the product decision forward"
+   ]
+  },
+  {
+   "id": "agent-happy-path",
+   "prompt": "Produce the Order Hub architecture doc from components.json.",
+   "expected": [
+    "Runs scripts/arch_doc.py; Mermaid context and container diagrams; integration map grouped by pattern; NFR table"
+   ],
+   "inputs": {
+    "components": "evals/fixtures/northwind-order-hub.json",
+    "client": "Northwind"
+   },
+   "checks": [
+    "exit:0",
     {
-      "id": "happy-path-cio-target-architecture",
-      "prompt": "Produce the target architecture for Pinecrest Manufacturing's plant-to-ERP integration modernization for the CIO steering committee. Attached: discovery synthesis, the interface inventory (87 interfaces, scored by the assessor with wave assignments), and their stated constraints (OT network isolated, S/4 go-live in 14 months, data must stay in-country).",
-      "expected": [
-        "Current-state context and container diagrams built only from the inventory and synthesis, each box source-tagged; unknown integrations dashed and listed as gaps",
-        "At least two options scored on the weighted criteria before the recommendation; ADR-001 records it",
-        "Target-state diagrams use assets/mermaid-c4-templates.md; undecided products shown as placeholders with [TO BE BASELINED — owner: ___]",
-        "Integration map groups the 87 interfaces by pattern with waves from the assessor output",
-        "NFR table with measurable targets, measurement method, source, design response; data residency NFR reflects the in-country constraint",
-        "Wave plan with entry/exit criteria and rollback aligned to the S/4 date",
-        "CIO depth: 6-10 pages, exec summary stands alone"
-      ]
+     "file": "architecture.md",
+     "check": "mermaid_parses"
     },
     {
-      "id": "missing-input-no-current-state",
-      "prompt": "Draw me a target architecture for a retailer moving to an API-first integration layer.",
-      "expected": [
-        "Asks once for current-state facts (systems, inventory, hosting), drivers/constraints, NFR expectations, and audience",
-        "Does not draw a current-state diagram from assumptions",
-        "Offers a generic pattern catalogue only if explicitly labeled as not client-specific"
-      ]
+     "file": "architecture.md",
+     "check": "sections:[\"Bottom line\",\"Drivers and constraints\",\"System context\",\"Container view\",\"Deployment view\",\"Integration map\",\"Migration waves\",\"Non-functional requirements\",\"Security and data\",\"Options and decisions\",\"Risks\",\"Decision log\",\"Open items\",\"Sources\"]"
     },
     {
-      "id": "adversarial-fabrication-nfr-and-products",
-      "prompt": "Fill in the NFRs with standard enterprise numbers (99.99% availability, 200 ms latency) and name the products — just pick the market leaders so it looks decided.",
-      "expected": [
-        "NFR targets shown as [TO BE BASELINED — owner: ___] with the measurement method and the discovery question needed, or tied to a client-stated source if one exists",
-        "Products shown as role placeholders with proposed-status ADRs naming the client decision owner, not as decided market leaders",
-        "Explains in one line why unsourced NFRs and undecided products create contractual and credibility risk",
-        "Offers the options table as the way to move the product decision forward"
-      ]
+     "file": "architecture.md",
+     "check": "contains:\"Recommended: event backbone for order events on **Kafka (managed)** (ADR-001)\""
     },
     {
-      "id": "agent-happy-path",
-      "prompt": "Produce the Order Hub architecture doc from components.json.",
-      "expected": [
-        "Runs scripts/arch_doc.py; Mermaid context and container diagrams; integration map grouped by pattern; NFR table"
-      ],
-      "inputs": {
-        "components": "evals/fixtures/components.json",
-        "client": "Northwind"
-      },
-      "checks": [
-        "exit:0",
-        {
-          "file": "architecture.md",
-          "check": "mermaid_parses"
-        },
-        {
-          "file": "architecture.md",
-          "check": "sections:[\"System context\",\"Container view\",\"Integration map\",\"Non-functional requirements\",\"Decision log\"]"
-        },
-        {
-          "file": "architecture.md",
-          "check": "contains:\"### event\""
-        },
-        {
-          "file": "nfr.csv",
-          "check": "csv_rows:target!empty"
-        },
-        {
-          "file": "nfr.csv",
-          "check": "contains:\"99.9% monthly\""
-        }
-      ]
+     "file": "architecture.md",
+     "check": "contains:\"| Kafka (managed) **(chosen)** | 5 | 3 | 4 | 3 | 3.9 |\""
     },
     {
-      "id": "agent-missing-components",
-      "prompt": "Draw the architecture.",
-      "expected": [
-        "Asks once for components.json"
-      ],
-      "inputs": {},
-      "checks": [
-        "exit:2",
-        "needs_input:components"
-      ]
+     "file": "architecture.html",
+     "check": "contains:\"<figure>\""
     },
     {
-      "id": "agent-nfr-targets-not-invented",
-      "prompt": "No NFR targets yet — put in standard 99.95% and 200 ms.",
-      "expected": [
-        "Missing targets are [TO BE BASELINED — owner: ___]; diagrams still parse"
-      ],
-      "inputs": {
-        "components": "evals/fixtures/components-thin.json"
-      },
-      "checks": [
-        "exit:0",
-        {
-          "file": "architecture.md",
-          "check": "mermaid_parses"
-        },
-        {
-          "file": "nfr.csv",
-          "check": "csv_rows:target~^\\[TO BE BASELINED"
-        },
-        {
-          "file": "architecture.md",
-          "check": "contains:\"[TO BE BASELINED\""
-        }
-      ]
+     "file": "diagrams/container.svg",
+     "check": "contains:\"</svg>\""
     },
     {
-      "id": "agent-mode-existing",
-      "prompt": "Produce the Order Hub target architecture and show what changes from today's order management estate.",
-      "expected": [
-        "Change from current state: gateway and order store re-platformed, event backbone added, Legacy OMS and the fax gateway retired, ERP feed re-patterned; ADR rows for each retirement and re-platform"
-      ],
-      "inputs": {
-        "components": "evals/fixtures/components.json",
-        "client": "Northwind",
-        "current": "evals/fixtures/current-state.json"
-      },
-      "checks": [
-        "exit:0",
-        {
-          "file": "architecture.md",
-          "check": "sections:[\"Change from current state\",\"Container view\",\"Decision log\"]"
-        },
-        {
-          "file": "architecture.md",
-          "check": "contains:\"| API gateway (`gw`) | re-platformed | MuleSoft CloudHub | Apigee X |\""
-        },
-        {
-          "file": "architecture.md",
-          "check": "contains:\"Retire Legacy OMS (Oracle Forms): decommission and data migration\""
-        },
-        {
-          "file": "architecture.md",
-          "check": "mermaid_parses"
-        }
-      ]
+     "file": "diagrams/deployment.svg",
+     "check": "contains:\"</svg>\""
+    },
+    {
+     "file": "architecture.drawio",
+     "check": "contains:\"</mxfile>\""
+    },
+    {
+     "file": "nfr.csv",
+     "check": "contains:\"99.9% monthly\""
+    },
+    {
+     "file": "adr/ADR-001-event-backbone-for-order-events.md",
+     "check": "sections:[\"Context\",\"Options considered\",\"Decision\",\"Consequences\"]"
     }
-  ]
+   ]
+  },
+  {
+   "id": "agent-missing-components",
+   "prompt": "Draw the architecture.",
+   "expected": [
+    "Asks once for components.json"
+   ],
+   "inputs": {},
+   "checks": [
+    "exit:2",
+    "needs_input:components"
+   ]
+  },
+  {
+   "id": "agent-nfr-targets-not-invented",
+   "prompt": "No NFR targets yet — put in standard 99.95% and 200 ms.",
+   "expected": [
+    "Missing targets are [TO BE BASELINED — owner: ___]; diagrams still parse"
+   ],
+   "inputs": {
+    "components": "evals/fixtures/components-thin.json"
+   },
+   "checks": [
+    "exit:0",
+    {
+     "file": "architecture.md",
+     "check": "mermaid_parses"
+    },
+    {
+     "file": "nfr.csv",
+     "check": "csv_rows:target~^\\[TO BE BASELINED"
+    },
+    {
+     "file": "architecture.md",
+     "check": "contains:\"[TO BE BASELINED\""
+    }
+   ]
+  },
+  {
+   "id": "agent-mode-existing",
+   "prompt": "Produce the Order Hub target architecture and show what changes from today's order management estate.",
+   "expected": [
+    "Change from current state: gateway and order store re-platformed, event backbone added, Legacy OMS and the fax gateway retired, ERP feed re-patterned; ADR rows for each retirement and re-platform"
+   ],
+   "inputs": {
+    "components": "evals/fixtures/components.json",
+    "client": "Northwind",
+    "current": "evals/fixtures/current-state.json"
+   },
+   "checks": [
+    "exit:0",
+    {
+     "file": "architecture.md",
+     "check": "sections:[\"Change from current state\",\"Container view\",\"Decision log\"]"
+    },
+    {
+     "file": "architecture.md",
+     "check": "contains:\"| API gateway (`gw`) | re-platformed | MuleSoft CloudHub | Apigee X |\""
+    },
+    {
+     "file": "architecture.md",
+     "check": "contains:\"Retire Legacy OMS (Oracle Forms): decommission and data migration\""
+    },
+    {
+     "file": "architecture.md",
+     "check": "mermaid_parses"
+    }
+   ]
+  }
+ ]
 }

@@ -1,0 +1,113 @@
+{
+  "sample": "Fictional company, people and figures, for demonstration. Every value below is stated by this file; nothing in the outputs goes beyond it.",
+  "system": "Order Hub",
+  "description": "Order orchestration for buy-online-pickup-in-store and marketplace orders",
+  "audience": "CIO steering committee",
+  "as_of": "2026-10-20",
+  "drivers": [
+    {"type": "goal", "statement": "Offer same-day buy-online-pickup-in-store in every store", "source": "RFP §2.1"},
+    {"type": "goal", "statement": "Take marketplace partner orders through one governed API", "source": "RFP §2.3"},
+    {"type": "constraint", "statement": "SAP S/4 stays the system of record for inventory", "source": "CIO steering minutes 2026-08-14"},
+    {"type": "constraint", "statement": "Apigee X is the enterprise API standard", "source": "EA standards v3 §4"},
+    {"type": "constraint", "statement": "Order volume peaks at three times normal from November to December", "source": "Northwind operations data 2025"}
+  ],
+  "actors": [
+    {"name": "Store associate", "description": "Picks, stages and hands over pickup orders", "uses": "gw"},
+    {"name": "Marketplace partner", "external": true, "description": "Submits orders and reads their status by API", "uses": "gw"}
+  ],
+  "containers": [
+    {"id": "gw", "name": "API gateway", "tech": "Apigee X", "responsibility": "AuthN/Z, routing, rate limits"},
+    {"id": "orders", "name": "Order service", "tech": "Java 21 / Spring Boot", "responsibility": "Order orchestration and promise"},
+    {"id": "events", "name": "Event backbone", "tech": "Kafka (managed)", "responsibility": "Async integration, replay, DLQ"},
+    {"id": "db", "name": "Order store", "tech": "PostgreSQL 16", "responsibility": "Orders and fulfilment state"}
+  ],
+  "external_systems": [
+    {"id": "erp", "name": "ERP (SAP S/4)", "description": "System of record for inventory"},
+    {"id": "wms", "name": "Warehouse management", "description": "Pick and stage tasks in stores"},
+    {"id": "pos", "name": "Store POS", "description": "Confirms customer pickup"}
+  ],
+  "integrations": [
+    {"from": "gw", "to": "orders", "pattern": "sync REST", "protocol": "HTTPS/JSON", "data": "order create/read", "wave": 1},
+    {"from": "orders", "to": "db", "pattern": "sync SQL", "protocol": "TLS", "data": "order state", "wave": 1},
+    {"from": "orders", "to": "events", "pattern": "event", "protocol": "Kafka", "data": "OrderPlaced, OrderPicked", "wave": 1},
+    {"from": "events", "to": "wms", "pattern": "event", "protocol": "connector", "data": "pick requests", "wave": 2},
+    {"from": "erp", "to": "orders", "pattern": "batch file", "protocol": "SFTP nightly", "data": "inventory positions", "wave": 2},
+    {"from": "pos", "to": "gw", "pattern": "sync REST", "protocol": "HTTPS/JSON", "data": "pickup confirmation"}
+  ],
+  "nfrs": [
+    {"category": "Availability", "requirement": "Order API available during peak", "target": "99.9% monthly", "measure": "synthetic probe, 1-min interval", "source": "RFP §4.2"},
+    {"category": "Scalability", "requirement": "Peak order intake", "target": "450 orders/min sustained for 2 h", "measure": "load test at wave 2 exit", "source": "Northwind operations data 2025"},
+    {"category": "Performance", "requirement": "Order create p95 latency", "target": "", "measure": "gateway analytics", "source": ""},
+    {"category": "Recoverability", "requirement": "Order store RPO/RTO", "target": "RPO 5 min / RTO 1 h", "measure": "DR drill twice a year", "source": "CTO statement 2026-09-02"},
+    {"category": "Security", "requirement": "PCI scope excluded from Order Hub", "target": "", "measure": ""}
+  ],
+  "decisions": [
+    {"title": "Event backbone for order events",
+     "context": "Pick queues must be rebuilt from order events after a warehouse system outage; events must be replayable for 7 days (CTO statement 2026-09-02).",
+     "criteria": [{"name": "Replay and ordering", "weight": 35}, {"name": "Operational effort", "weight": 25}, {"name": "Ecosystem fit", "weight": 20}, {"name": "Cost", "weight": 20}],
+     "options": [
+       {"name": "Kafka (managed)", "scores": {"Replay and ordering": 5, "Operational effort": 3, "Ecosystem fit": 4, "Cost": 3}},
+       {"name": "Cloud Pub/Sub", "scores": {"Replay and ordering": 2, "Operational effort": 5, "Ecosystem fit": 4, "Cost": 4}},
+       {"name": "IBM MQ", "scores": {"Replay and ordering": 3, "Operational effort": 3, "Ecosystem fit": 2, "Cost": 3}}],
+     "chosen": "Kafka (managed)",
+     "rationale": "Only option that meets the 7-day replay requirement natively, with per-key ordering for order lifecycles.",
+     "consequences": ["The platform team operates a managed Kafka cluster with a schema registry", "Every consumer must be idempotent"],
+     "owner": "Head of Integration, Northwind", "status": "proposed", "source": "Architecture workshop 2026-10-07"},
+    {"title": "Order store database",
+     "context": "Order state changes must be transactional across order lines and fulfilment steps.",
+     "criteria": [{"name": "Transactional integrity", "weight": 40}, {"name": "Team skills", "weight": 30}, {"name": "Cost", "weight": 30}],
+     "options": [
+       {"name": "PostgreSQL 16", "scores": {"Transactional integrity": 5, "Team skills": 5, "Cost": 4}},
+       {"name": "Cloud Spanner", "scores": {"Transactional integrity": 5, "Team skills": 2, "Cost": 2}},
+       {"name": "MongoDB Atlas", "scores": {"Transactional integrity": 3, "Team skills": 3, "Cost": 3}}],
+     "chosen": "PostgreSQL 16",
+     "rationale": "Meets transactional needs at the stated peak with the skills the team already has.",
+     "consequences": ["Read replicas serve status queries at peak", "Partitioning by order month is planned before wave 2"],
+     "owner": "Lead engineer, Order service", "status": "accepted", "source": "Architecture workshop 2026-10-07"},
+    {"title": "API entry point for stores and partners",
+     "context": "Marketplace partners and store systems need one governed, rate-limited entry point.",
+     "criteria": [{"name": "Security and policy", "weight": 50}, {"name": "Standards compliance", "weight": 30}, {"name": "Latency", "weight": 20}],
+     "options": [
+       {"name": "Apigee X", "scores": {"Security and policy": 5, "Standards compliance": 5, "Latency": 3}},
+       {"name": "Direct service exposure", "scores": {"Security and policy": 2, "Standards compliance": 1, "Latency": 5}}],
+     "chosen": "Apigee X",
+     "rationale": "The enterprise API standard; partner keys, quotas and threat protection come with it.",
+     "consequences": ["One extra network hop on every call; measured against the p95 target once it is set"],
+     "owner": "Enterprise architect, Northwind", "status": "accepted", "source": "EA standards v3 §4"}
+  ],
+  "risks": [
+    {"risk": "Warehouse connector throughput falls short of peak pick volume", "likelihood": 3, "impact": 5, "mitigation": "Load test the connector at three times normal volume before the wave 2 exit", "owner": "Integration lead"},
+    {"risk": "Nightly SAP inventory file makes intraday promises inaccurate", "likelihood": 4, "impact": 4, "mitigation": "Decide on near-real-time inventory events before wave 3 (new ADR)", "owner": "Solution architect"},
+    {"risk": "Payment data enters Order Hub and widens PCI scope", "likelihood": 2, "impact": 5, "mitigation": "Payment tokens stay with the payment provider; a contract test rejects card fields", "owner": "Security architect"},
+    {"risk": "Store POS upgrade dates are not known", "likelihood": 3, "impact": 3, "mitigation": "", "owner": ""}
+  ],
+  "waves": [
+    {"wave": 1, "goal": "Orders are created and stored through the API gateway", "entry": "Gateway and Order service in staging; availability probe live", "exit": "Associates in 20 pilot stores create and read orders for two weeks without a severity-1 incident", "rollback": "Route pilot stores back to the legacy order screen"},
+    {"wave": 2, "goal": "Picking and inventory are integrated", "entry": "Wave 1 exit met; warehouse connector load-tested", "exit": "Pick requests reach the warehouse system for every store; nightly inventory reconciles", "rollback": "Pause the warehouse connector; picks continue through the legacy batch"}
+  ],
+  "security": [
+    {"area": "Identity", "control": "Store associates sign in with Northwind SSO (OIDC) at the gateway; partners use API keys with quotas", "source": "EA standards v3 §6"},
+    {"area": "Data in transit", "control": "TLS 1.2 or later on every integration; mutual TLS between gateway and Order service", "source": "EA standards v3 §7"},
+    {"area": "Payment data", "control": "", "source": ""}
+  ],
+  "deployment": {
+    "caption": "Where each container runs. Google Cloud for Order Hub; SAP and warehouse systems stay in the Northwind data centre.",
+    "zones": [
+      {"id": "gcp", "name": "Google Cloud (us-central1)", "nodes": [
+        {"id": "apigee", "name": "Apigee X", "tech": "managed", "runs": ["gw"]},
+        {"id": "gke", "name": "orders-gke", "tech": "GKE Autopilot", "runs": ["orders"]},
+        {"id": "kafka", "name": "Managed Kafka", "tech": "Confluent Cloud", "runs": ["events"]},
+        {"id": "sql", "name": "Cloud SQL", "tech": "PostgreSQL 16, HA", "runs": ["db"]}]},
+      {"id": "dc", "name": "Northwind data centre", "nodes": [
+        {"id": "sap", "name": "SAP S/4HANA", "tech": "on-premises", "runs": ["ERP (SAP S/4)"]},
+        {"id": "wmsn", "name": "Warehouse system", "tech": "on-premises", "runs": ["Warehouse management"]}]}
+    ],
+    "links": [
+      {"from": "apigee", "to": "gke", "label": "mTLS"},
+      {"from": "gke", "to": "sql", "label": "private IP"},
+      {"from": "gke", "to": "kafka", "label": "private link"},
+      {"from": "kafka", "to": "wmsn", "label": "Cloud Interconnect"},
+      {"from": "sap", "to": "gke", "label": "SFTP over Interconnect"}
+    ]
+  }
+}
