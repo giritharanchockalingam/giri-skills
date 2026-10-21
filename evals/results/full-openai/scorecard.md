@@ -1,6 +1,6 @@
 # Behavioral eval scorecard
 _provider=openai model=gpt-4.1-mini runs=2 seed=42 date=2026-10-17–2026-10-21_
-_estimated spend: $67.71_
+_estimated spend: $68.25_
 
 | skill | trigger acc | FP rate | without | with | lift | verdict |
 |---|---|---|---|---|---|---|
@@ -65,7 +65,7 @@ _estimated spend: $67.71_
 | build/webapp-testing-runner | 1.00 | 0.00 | 0.17 | 0.25 | 0.08 | BODY |
 | career/application-tracker | 1.00 | 0.00 | 0.30 | 0.50 | 0.20 | OK |
 | career/interview-prep | 1.00 | 0.00 | 0.12 | 0.34 | 0.22 | OK |
-| career/jd-fit-scorer | 1.00 | 0.00 | 0.33 | 0.47 | 0.13 | BODY |
+| career/jd-fit-scorer | 1.00 | 0.00 | 0.40 | 0.80 | 0.40 | OK |
 | career/offer-evaluator | 1.00 | 0.00 | 0.19 | 0.62 | 0.44 | OK |
 | career/outreach-and-followup | 1.00 | 0.00 | 0.31 | 0.53 | 0.22 | OK |
 | career/resume-tailor | 1.00 | 0.00 | 0.36 | 0.57 | 0.21 | OK |
