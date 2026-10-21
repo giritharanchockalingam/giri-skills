@@ -26,8 +26,16 @@ metadata:
 
 # competitive-positioning
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/competitive-positioning --input <name>=<value> … --out <dir>` (see `--explain presales/competitive-positioning`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: write the battle card now
+- **The request names the pursuit and the alternative** (incumbent, named competitor, vendor services arm, status quo) — including when the discovery synthesis, RFP or reference list are said to be attached but their contents are not in the conversation: write the battle card **in this reply** from the stated facts. Never reply with only a request for files. Head it `INTERNAL — do not distribute`, then in this order:
+  1. **Bottom line** — win/lose assessment and the wedge in two sentences.
+  2. **Alternative profile** — the class (e.g. incumbent services provider); class patterns labelled `Hypothesis (class pattern)` until evidenced.
+  3. **Evidence table** — claim, source, confidence: a client quote given in the request is High; RFP wording that mirrors the alternative is cited by clause, or `[TO BE BASELINED — owner: ___]` if not quoted.
+  4. **Criteria scorecard** — criteria from the RFP (or `[TO BE BASELINED — owner: ___]`), us vs them, each neutralize / reframe / concede; **at least one criterion conceded**.
+  5. **Wedge** — where we win *and* the client stated a concern (cite the quote); if no intersection, say so.
+  6. **Landmines** · **Objection handling** as acknowledge → reframe → proof (cleared references only) → ask-back · **Ghost lines** that never name the alternative · **Evaluation criteria to seed** · **Intelligence gaps** with owners.
+- **Alternative or pursuit context unknown** ("make a battle card for the Northgate deal"): ask once, in one list, who or what we compete against and the pursuit context (client priorities, decision criteria, decision owner). In the same reply, so it is usable, sketch the card against **status quo** and **an incumbent-type provider**, every row labelled hypothesis, with no competitor facts asserted.
+- **Asked to add unsourced competitor claims** ("they had an outage", "their rates are 30% above market — I heard it somewhere"): say in one line that unsourced competitor claims cannot appear in the scorecard as facts and never in client-facing material. Record each as `Hypothesis — unverified, Low` in the evidence table without the unverified figure, plus an **intelligence-gap row** (what to verify, how, owner); exclude it if the user cannot name any source. Offer the compliant alternative: a neutral discovery or clarification question that surfaces the client's own view of incumbent performance and cost.
 
 ## Starting points
 - **New** — capabilities, their claims and stakeholder concerns become a battle card: wedge, landmines, objection grid, ghost lines and intelligence gaps, evidence-rated.
@@ -48,7 +56,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Our cleared proof points and capability catalog | yes | file / user |
 | Client's stated priorities and pains (from discovery) | yes | discovery synthesis |
 
-If the alternative is unknown, ask once; if still unknown, build the card against "status quo" and "an incumbent-type provider" as labeled hypotheses.
+Missing evidence, proof points or decision criteria do not stop the card: they are marked `[TO BE BASELINED — owner: ___]` or `Hypothesis`. If the alternative is unknown, ask once; if still unknown, build the card against "status quo" and "an incumbent-type provider" as labeled hypotheses.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first.
@@ -80,3 +88,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `references/competitive-method.md` — alternative classes, evidence standards, criteria scoring, wedge logic, win/loss patterns
 - `references/objection-handling.md` — objection patterns by alternative class with response structure
 - `assets/battle-card-template.md` — one-page battle card
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/competitive-positioning --input <name>=<value> … --out <dir>` (see `--explain presales/competitive-positioning`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.

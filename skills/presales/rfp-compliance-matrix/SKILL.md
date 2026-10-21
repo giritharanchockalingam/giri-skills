@@ -28,8 +28,18 @@ metadata:
 
 # rfp-compliance-matrix
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/rfp-compliance-matrix --input <name>=<value> … --out <dir>` (see `--explain presales/rfp-compliance-matrix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: build the matrix now
+- **The request carries the RFP and the capability source** — including when the RFP PDF and catalog are said to be attached but their contents are not in the conversation: produce the bid review **in this reply** from the stated facts. Never reply with only a request for files. In this order:
+  1. **Bid call on line 1** — `BID / BID-WITH-CONDITIONS / NO-BID` (provisional where the gate tests are open) with its three drivers.
+  2. **Requirement inventory** — apply `scripts/extract_requirements.py`'s rules by hand: numbered clauses and shall/must/required sentences, wrapped lines merged, boilerplate moved to Administrative, items from tables and appendices added, client IDs kept with our `REQ-nnn` alongside.
+  3. **Classification** — every requirement by category (`FUN TEC SEC COM DEL ADM`) and `M/D/O` per `references/requirement-taxonomy.md`; hidden mandatories flagged.
+  4. **Compliance matrix** in the column order of `assets/compliance-matrix-columns.md` (`req_id, client_id, section, page, text, category, mdo, weight, flags, compliance, evidence, gap_condition, mitigation, owner, response_section, status, clarification_id`). No `C` without an evidence citation from the capability catalog; no evidence → `P` or `Q`.
+  5. **Gaps and risks** — every `P`/`N` with mitigation, risk if unmitigated and owner.
+  6. **Clarification questions** — one per item, neutral, citing the clause ID, revealing no gap.
+  7. **Deadlines** (Q&A, submission) with the RFP page, or page `[TO BE BASELINED — owner: ___]` · **Response plan** (section, owner, due).
+  Rows the request cannot fill show `[TO BE BASELINED — owner: ___]`; end with the few questions that close them.
+- **No RFP at all**: ask once for the document. **No capability source**: ask once for the capability statement or service catalog, and still produce the requirement inventory and taxonomy classification now; if the user declines, mark every compliance cell `Q` with `owner: ___` rather than guessing `C`.
+- **Asked to mark items Comply without evidence** ("we are basically SOC 2 ready, ISO 27001 next quarter", "no partials in front of the client"): say in one line that `C` requires current, in-scope certification evidence. Score those requirements `P` with mitigation `roadmap` and the expected date `[TO BE BASELINED — owner: ___]` (never the hoped-for date); flag the mandatory items in gaps-and-risks with an owner; offer client-facing wording that presents the roadmap commitment without misrepresenting current status.
 
 ## Starting points
 - **New** — the RFP is split into requirements, each scored against your capability inventory (C/P/Q with evidence and owner), with mandatory gaps, clarification questions and a provisional bid gate.
@@ -51,7 +61,7 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 | Named owners for response sections (or "assign later") | no | user |
 | Known incumbent / competitive context | no | user |
 
-If the RFP file is missing, ask once. If the capability source is missing, mark every compliance cell `Clarify — owner: ___` rather than guessing what we comply with.
+If the RFP file is missing, ask once. If the capability source is missing, ask once and still produce the inventory and classification; if it stays missing, mark every compliance cell `Q` (Clarify) with `owner: ___` rather than guessing what we comply with. Missing deadlines or owners do not stop the matrix: they are marked `[TO BE BASELINED — owner: ___]`.
 
 ## Procedure
 Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` first.
@@ -86,3 +96,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `references/compliance-scoring.md` — C/P/N/Q rules, evidence standard, bid/no-bid gate, clarification-question format
 - `assets/compliance-matrix-columns.md` — column specification for CSV/XLSX
 - `scripts/extract_requirements.py` — .txt/.md/.docx/.pdf → requirements CSV
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/rfp-compliance-matrix --input <name>=<value> … --out <dir>` (see `--explain presales/rfp-compliance-matrix`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
