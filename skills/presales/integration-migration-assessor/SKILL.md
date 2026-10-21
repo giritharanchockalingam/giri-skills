@@ -30,8 +30,10 @@ metadata:
 
 # integration-migration-assessor
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/integration-migration-assessor --input <name>=<value> … --out <dir>` (see `--explain presales/integration-migration-assessor`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: assess now
+- **The request carries the inventory** (or its contents): produce the readout **in this reply**. Report the share of unknown factors and whether the assessment is provisional; list retirement candidates with owners to confirm before effort is discussed; a band distribution table with outliers explained; a wave plan (wave 0 foundation, a representative wave 1, balanced middle waves, dependencies enforced, cutovers outside the client's freeze windows, entry/exit criteria); TCO lines that cite the client's contract for licence cost, with migration cost `[TO BE BASELINED — owner: ___]` until the effort estimate exists; handoffs to effort-estimator and solution-architecture-doc.
+- **No inventory, only a count**: ask once for the inventory and offer the collection template (`assets/inventory-columns.md`) and the minimum viable column set for a provisional assessment. Never synthesize an inventory or a band distribution from a count.
+- **Asked to use list prices, treat blanks as simple, or give a ballpark savings figure**: say in one line why not (blank factors scored simple are the main cause of overrun; vendor list prices from memory are not the client's contract). Score blanks as unknown (mid-band, flagged); show licence cost and savings as `[TO BE BASELINED — owner: ___]` naming the client contract as the source; state the TCO direction qualitatively at most; give next steps with owners.
 
 ## Starting points
 - **Existing** — the inventory of your current estate is scored, banded and planned into waves, the TCO is built only from the rate inputs you supply, and the readout is written by the model step or, with `draft_only`, assembled from the two summaries with every figure copied verbatim.
@@ -92,3 +94,7 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `assets/tco-model.md` — TCO markdown table layout
 - `assets/assessment-readout-template.md` — readout template
 - `scripts/score_inventory.py` — validate, score, band, assign waves
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/integration-migration-assessor --input <name>=<value> … --out <dir>` (see `--explain presales/integration-migration-assessor`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+

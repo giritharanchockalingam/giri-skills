@@ -28,8 +28,10 @@ metadata:
 
 # value-case-builder
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/value-case-builder --input <name>=<value> … --out <dir>` (see `--explain presales/value-case-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: build the case now
+- **The request carries baselines** (volumes, costs, rates from client sources): write the value case **in this reply**. A benefits tree tracing each lever to the client's statements and cost drivers; baselines cited with confidence (H/M/L); unbaselined benefits kept out of the headline and listed; targets as low/base/high with mechanisms and ramps tied to delivery milestones; costs including delivery (at the estimate's P80), run, dual-run and decommission timing; NPV only at a discount rate the client's finance supplied, on their fiscal year; sensitivity on the top three assumptions with break-even values; a benefits-realization plan with client owners (unowned benefits flagged); a double-counting check.
+- **No client baselines**: ask once for scope, outcomes, at least one baseline fact and the audience. If none are available, say on line 1 that this is not a business case yet, give a hypothesis map (benefits tree with every baseline `[TO BE BASELINED — owner: ___]`) and the specific data requests with their likely holders.
+- **Asked to use an industry benchmark or put a big multiple on page one**: decline in one line (a CFO-grade case is built from the client's baselines and mechanisms; an unsourced multiple will not survive finance review). Show the headline as `[TO BE BASELINED — owner: ___]`, list the unbaselined benefits, and offer the path to a defensible number: data requests with owners and a short baselining phase. A benchmark the user supplies with a source is recorded at confidence L and kept out of the headline.
 
 ## Starting points
 - **New** — sourced benefits and costs become a CFO-grade value case: yearly cash flows, NPV, payback, P80 cost and sensitivity, with unbaselined rows kept out of the headline.
@@ -90,3 +92,7 @@ Sections: Bottom line (headline metric with confidence and what is unbaselined) 
 - `references/value-case-review-rubric.md` — review criteria for an existing business case
 - `assets/value-model-spec.md` — CSV layout specification
 - `assets/value-case-template.md` — markdown document template
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/value-case-builder --input <name>=<value> … --out <dir>` (see `--explain presales/value-case-builder`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+
