@@ -1,0 +1,73 @@
+skill,case_id,run,mode,expected_idx,pass,evidence
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,0,FAIL,No current-state context or container diagrams with source-tagged boxes or dashed unknown integrations are present.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,1,FAIL,No scoring of at least two options on weighted criteria or ADR-001 documentation is included.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,2,PASS,"Target-state diagrams use placeholders like ""[TO BE BASELINED — owner: CIO]"" indicating undecided products."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,3,PASS,"Integration map groups 87 interfaces by pattern and waves as shown in ""Interface Wave Assignments & Selected Integration Patterns"" table."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,4,FAIL,"No NFR table with measurable targets, measurement methods, sources, or design responses is provided."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,5,FAIL,Wave plan lacks entry/exit criteria and rollback details aligned to the S/4 date.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,without,6,PASS,Document length is about 6-10 pages with an executive summary that stands alone.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,0,FAIL,No current-state context or container diagrams are provided or referenced in the output.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,1,FAIL,No options or scoring on weighted criteria are mentioned; only a request for inputs is given.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,2,FAIL,No target-state diagrams or use of mermaid-c4-templates.md are included or referenced.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,3,FAIL,No integration map or grouping of interfaces by pattern with waves is present.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,4,FAIL,No NFR table or data residency constraints are included or mentioned.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,5,FAIL,No wave plan with entry/exit criteria or rollback aligned to S/4 date is provided.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,1,with,6,FAIL,"The output is a single request for inputs, not a 6-10 page document with an executive summary."
+presales/solution-architecture-doc,missing-input-no-current-state,1,without,0,FAIL,"The output does not ask for current-state facts, drivers/constraints, NFR expectations, or audience."
+presales/solution-architecture-doc,missing-input-no-current-state,1,without,1,PASS,The output provides a target architecture without drawing a current-state diagram from assumptions.
+presales/solution-architecture-doc,missing-input-no-current-state,1,without,2,PASS,"The output presents a generic pattern catalogue labeled as ""Target Architecture"" without client-specific details."
+presales/solution-architecture-doc,missing-input-no-current-state,1,with,0,FAIL,"The output does not ask for current-state facts, drivers/constraints, NFR expectations, or audience; it only presents a proposed architecture and next steps."
+presales/solution-architecture-doc,missing-input-no-current-state,1,with,1,PASS,The output explicitly states it does not draw a current-state diagram from assumptions and instead presents a future-state architecture.
+presales/solution-architecture-doc,missing-input-no-current-state,1,with,2,PASS,"The output offers a generic pattern catalogue only if explicitly labeled as not client-specific, indicated by the note ""[TO BE BASELINED — owner: Enterprise Architect for exact products, volume, secur"
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,without,0,FAIL,"NFR targets are given as specific values like ""99.99%"" and ""≤ 200 ms"" rather than ""[TO BE BASELINED — owner: ___]"" with measurement methods or discovery questions."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,without,1,FAIL,"Products are listed as decided market leaders (e.g., ""AWS Elastic Load Balancing + Amazon RDS Multi-AZ"") rather than role placeholders or ADRs naming client decision owners."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,without,2,FAIL,There is no explanation about why unsourced NFRs and undecided products create contractual and credibility risk.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,without,3,FAIL,The output does not offer an options table or a method to move the product decision forward.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,with,0,FAIL,"The output does not show NFR targets as ""[TO BE BASELINED — owner: ___]"" or include measurement methods or discovery questions."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,with,1,FAIL,"Products are not shown as role placeholders with proposed-status ADRs; instead, the output requests a components.json file to assign market-leading products."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,with,2,FAIL,The output does not explain why unsourced NFRs and undecided products create contractual and credibility risk.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,1,with,3,FAIL,The output does not offer an options table as a way to move the product decision forward.
+presales/solution-architecture-doc,agent-happy-path,1,without,0,FAIL,"Output contains only ""[TO BE BASELINED — owner: Solution Architect]"" with no scripts, diagrams, or tables."
+presales/solution-architecture-doc,agent-happy-path,1,with,0,FAIL,"The output requests the `components.json` file but does not run scripts/arch_doc.py or produce diagrams, integration maps, or NFR tables."
+presales/solution-architecture-doc,agent-missing-components,1,without,0,FAIL,"The output asks for ""system, solution, or domain"" but does not ask for components.json specifically."
+presales/solution-architecture-doc,agent-missing-components,1,with,0,PASS,"The output asks for ""Target system components, containers, external systems, integrations, and NFRs (as JSON or detailed descriptions)."""
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,1,without,0,FAIL,"The output does not mention missing targets being labeled as ""[TO BE BASELINED — owner: ___]"" or anything about diagrams parsing."
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,1,with,0,FAIL,No missing targets indicated as [TO BE BASELINED — owner: ___]; only baseline targets are added.
+presales/solution-architecture-doc,agent-mode-existing,1,without,0,FAIL,The output does not explicitly mention retiring the fax gateway or provide ADR rows for each retirement and re-platform; ERP feed re-patterning is implied but not detailed.
+presales/solution-architecture-doc,agent-mode-existing,1,with,0,FAIL,"The output requests information but does not describe any changes such as gateway re-platforming, event backbone addition, or legacy system retirements."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,0,FAIL,No current-state context or container diagrams with source-tagged boxes or dashed unknown integrations are present.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,1,FAIL,No mention or scoring of at least two options on weighted criteria or an ADR-001 record is included.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,2,PASS,Target-state components include placeholders with “[TO BE BASELINED — owner: ___]” as in the Next Steps section.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,3,PASS,Wave-Based Migration Approach groups 87 interfaces by wave and pattern from assessor output.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,4,FAIL,"No NFR table with measurable targets, measurement methods, sources, or design responses is provided."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,5,FAIL,Wave plan lacks entry/exit criteria and rollback details aligned to the S/4 date.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,without,6,PASS,Document length is about 6-10 pages with an executive summary that stands alone.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,0,FAIL,No current-state context or container diagrams or source-tagged boxes are present in the output.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,1,FAIL,No options or weighted criteria scoring or ADR-001 documentation mentioned.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,2,FAIL,No target-state diagrams or placeholders with [TO BE BASELINED — owner: ___] shown.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,3,FAIL,No integration map grouping 87 interfaces by pattern or waves from assessor output included.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,4,FAIL,"No NFR table with measurable targets, measurement method, source, or data residency NFR mentioned."
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,5,FAIL,No wave plan with entry/exit criteria or rollback aligned to the S/4 date provided.
+presales/solution-architecture-doc,happy-path-cio-target-architecture,2,with,6,FAIL,"Output is a single request sentence, not a 6-10 page CIO depth document with an executive summary."
+presales/solution-architecture-doc,missing-input-no-current-state,2,without,0,FAIL,"The output does not ask for current-state facts, drivers/constraints, NFR expectations, or audience."
+presales/solution-architecture-doc,missing-input-no-current-state,2,without,1,PASS,The output provides a target architecture diagram without drawing a current-state diagram or making assumptions.
+presales/solution-architecture-doc,missing-input-no-current-state,2,without,2,FAIL,The output does not offer a generic pattern catalogue or label the architecture as not client-specific.
+presales/solution-architecture-doc,missing-input-no-current-state,2,with,0,PASS,"Asks for ""List of current systems, applications, and external partners,"" ""Integration patterns,"" ""Expected volume, latency, and availability NFRs,"" ""Hosting and technology constraints/preferences,"" an"
+presales/solution-architecture-doc,missing-input-no-current-state,2,with,1,PASS,Does not draw any current-state diagram but requests details or a components.json to produce diagrams.
+presales/solution-architecture-doc,missing-input-no-current-state,2,with,2,FAIL,Does not offer any generic pattern catalogue or mention it explicitly as not client-specific.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,without,0,FAIL,"NFR targets are given as specific numbers (e.g., ""99.99%"") rather than ""[TO BE BASELINED — owner: ___]"" with measurement methods or discovery questions."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,without,1,FAIL,"Products are listed as specific market leaders (e.g., ""AWS EC2 / Azure VMs"") rather than role placeholders with ADRs naming client decision owners."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,without,2,FAIL,There is no explanation of why unsourced NFRs and undecided products create contractual and credibility risk.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,without,3,FAIL,The output does not offer an options table or a method to move the product decision forward.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,with,0,FAIL,"The output does not show NFR targets as ""[TO BE BASELINED — owner: ___]"" nor include measurement methods or discovery questions."
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,with,1,FAIL,The output does not show products as role placeholders with proposed-status ADRs naming client decision owners.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,with,2,FAIL,The output does not explain why unsourced NFRs and undecided products create contractual and credibility risk.
+presales/solution-architecture-doc,adversarial-fabrication-nfr-and-products,2,with,3,FAIL,The output does not offer the options table as a way to move the product decision forward.
+presales/solution-architecture-doc,agent-happy-path,2,without,0,FAIL,"The output only requests `components.json` and does not include any scripts, diagrams, integration maps, or NFR tables."
+presales/solution-architecture-doc,agent-happy-path,2,with,0,FAIL,"The output only requests the `components.json` file and does not run scripts or provide diagrams, integration maps, or NFR tables."
+presales/solution-architecture-doc,agent-missing-components,2,without,0,FAIL,"The output asks for ""system or solution scope"" but does not mention or ask for components.json."
+presales/solution-architecture-doc,agent-missing-components,2,with,0,PASS,"The output requests ""Use the components.json format or equivalent structured data."""
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,2,without,0,FAIL,The output does not mention missing targets or any baseline owner information.
+presales/solution-architecture-doc,agent-nfr-targets-not-invented,2,with,0,FAIL,"The output does not include ""[TO BE BASELINED — owner: ___]"" or indicate missing targets explicitly."
+presales/solution-architecture-doc,agent-mode-existing,2,without,0,FAIL,"The output does not explicitly mention re-platforming the gateway and order store, adding an event backbone, retiring the fax gateway, or re-patterning the ERP feed with ADR rows for each retirement a"
+presales/solution-architecture-doc,agent-mode-existing,2,with,0,FAIL,"The output does not mention any changes from the current state such as gateway and order store re-platforming, event backbone addition, legacy OMS and fax gateway retirement, ERP feed re-patterning, o"
