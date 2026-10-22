@@ -1,0 +1,77 @@
+# fictional fixture — a pre-made builder diff for the greenfield-app dry run (new files only; Harbourline is invented)
+diff --git a/lib/orders.js b/lib/orders.js
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/lib/orders.js
+@@ -0,0 +1,20 @@
++// Order queries: a fictional in-memory store so the skeleton needs no database yet.
++const ORDERS = [
++  { id: "ord_1001", customer: "Alder & Co", total: 120.5, status: "paid" },
++  { id: "ord_1002", customer: "Birch Ltd", total: 80.0, status: "open" },
++];
++
++export async function listOrders({ limit = 50 } = {}) {
++  return ORDERS.slice(0, limit);
++}
++
++export function ordersToCsv(orders) {
++  const header = "id,customer,total,status";
++  const rows = orders.map((o) => [o.id, quote(o.customer), o.total.toFixed(2), o.status].join(","));
++  return [header, ...rows].join("\n") + "\n";
++}
++
++function quote(value) {
++  const text = String(value ?? "");
++  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
++}
+diff --git a/app/api/orders/export/route.js b/app/api/orders/export/route.js
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/app/api/orders/export/route.js
+@@ -0,0 +1,10 @@
++import { listOrders, ordersToCsv } from "@/lib/orders";
++
++export async function GET() {
++  const orders = await listOrders({ limit: 500 });
++  return new Response(ordersToCsv(orders), {
++    headers: {
++      "content-type": "text/csv; charset=utf-8",
++      "content-disposition": 'attachment; filename="orders.csv"',
++    },
++  });
++}
+diff --git a/tests/unit/lib/orders.test.js b/tests/unit/lib/orders.test.js
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/tests/unit/lib/orders.test.js
+@@ -0,0 +1,9 @@
++import { describe, it, expect } from "vitest";
++import { ordersToCsv } from "@/lib/orders";
++
++describe("ordersToCsv", () => {
++  it("writes a header and one row per order", () => {
++    const csv = ordersToCsv([{ id: "ord_1", customer: "Alder & Co", total: 1.5, status: "paid" }]);
++    expect(csv).toBe("id,customer,total,status\nord_1,Alder & Co,1.50,paid\n");
++  });
++});
+diff --git a/app/page.js b/app/page.js
+new file mode 100644
+index 0000000..4444444
+--- /dev/null
++++ b/app/page.js
+@@ -0,0 +1,12 @@
++import { listOrders } from "@/lib/orders";
++
++export default async function Home() {
++  const orders = await listOrders({ limit: 50 });
++  return (
++    <main>
++      <h1>Harbourline orders</h1>
++      {orders.length === 0 ? <p role="status">No orders yet.</p> : <p>{orders.length} orders</p>}
++      <a href="/api/orders/export">Download CSV</a>
++    </main>
++  );
++}

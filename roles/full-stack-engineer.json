@@ -19,5 +19,8 @@
     "build/tech-debt-audit-runner",
     "build/ui-component-quality"
   ],
+  "stages": [
+    "build"
+  ],
   "playbooks": []
 }

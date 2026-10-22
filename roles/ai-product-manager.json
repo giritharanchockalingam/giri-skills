@@ -11,5 +11,8 @@
     "ai-platform/ab-test-analysis",
     "ai-platform/feedback-improvement-loop"
   ],
+  "stages": [
+    "requirements"
+  ],
   "playbooks": []
 }

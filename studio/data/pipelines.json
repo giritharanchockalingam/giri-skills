@@ -1,0 +1,434 @@
+[
+ {
+  "name": "feature-delivery",
+  "version": "0.1.0",
+  "title": "Feature delivery on an existing application",
+  "description": "Brownfield: a feature request on a repository the catalog knows, through requirements, architecture, build, evaluate, deploy and operate. Every step runs a published skill with its real input and output names; compose steps derive the files a later skill needs from what earlier steps wrote, deterministically.",
+  "mode": "brownfield",
+  "fits": {
+   "stacks": [
+    "nextjs"
+   ],
+   "request_kinds": [
+    "feature",
+    "fix",
+    "hardening"
+   ]
+  },
+  "inputs": [
+   {
+    "name": "repo",
+    "type": "repo",
+    "required": true,
+    "from": "catalog repository (owner/name) or a local checkout"
+   },
+   {
+    "name": "ref",
+    "type": "string",
+    "required": false,
+    "from": "branch or commit to start from (default: the checkout as it is)"
+   },
+   {
+    "name": "request",
+    "type": "text",
+    "required": true,
+    "from": "the feature request in the requester's words"
+   },
+   {
+    "name": "brief",
+    "type": "json",
+    "required": false,
+    "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json); may carry `files` (repo-relative source files the feature touches) or `tasks` [{task, accept, test, files}]"
+   }
+  ],
+  "stages": [
+   {
+    "id": "requirements",
+    "adlc_stage": "requirements",
+    "role": "ai-product-manager",
+    "steps": [
+     {
+      "id": "brief",
+      "kind": "compose"
+     },
+     {
+      "id": "prd",
+      "kind": "skill",
+      "skill": "build/product-spec-prd"
+     }
+    ],
+    "gate": {
+     "kind": "output",
+     "step": "prd",
+     "file": "prd-final.md",
+     "check": "sections:[\"Acceptance criteria\"]"
+    }
+   },
+   {
+    "id": "architecture",
+    "adlc_stage": "architecture",
+    "role": "ai-solution-architect",
+    "steps": [
+     {
+      "id": "spec",
+      "kind": "compose"
+     },
+     {
+      "id": "plan",
+      "kind": "skill",
+      "skill": "build/spec-to-plan"
+     },
+     {
+      "id": "plan-approval",
+      "kind": "approval"
+     }
+    ],
+    "gate": {
+     "kind": "approval",
+     "step": "plan-approval"
+    }
+   },
+   {
+    "id": "build",
+    "adlc_stage": "build",
+    "role": "full-stack-engineer",
+    "steps": [
+     {
+      "id": "feature",
+      "kind": "compose"
+     },
+     {
+      "id": "tests",
+      "kind": "skill",
+      "skill": "build/test-strategy-tdd"
+     },
+     {
+      "id": "code",
+      "kind": "agent"
+     },
+     {
+      "id": "conventions",
+      "kind": "skill",
+      "skill": "build/nextjs-enterprise-conventions"
+     }
+    ],
+    "gate": {
+     "kind": "exit",
+     "step": "conventions"
+    }
+   },
+   {
+    "id": "evaluate",
+    "adlc_stage": "evaluate",
+    "role": "ai-quality-red-team",
+    "steps": [
+     {
+      "id": "review",
+      "kind": "skill",
+      "skill": "build/code-review-runner"
+     },
+     {
+      "id": "security",
+      "kind": "skill",
+      "skill": "build/security-review"
+     },
+     {
+      "id": "perf",
+      "kind": "skill",
+      "skill": "build/perf-review-runner"
+     },
+     {
+      "id": "ui",
+      "kind": "skill",
+      "skill": "build/ui-component-quality"
+     }
+    ],
+    "gate": {
+     "kind": "all",
+     "of": [
+      {
+       "kind": "output",
+       "step": "review",
+       "file": "review.md",
+       "check": "contains:\"Verdict: **PASS**\""
+      },
+      {
+       "kind": "exit",
+       "step": "security"
+      },
+      {
+       "kind": "exit",
+       "step": "perf"
+      },
+      {
+       "kind": "exit",
+       "step": "ui"
+      }
+     ]
+    }
+   },
+   {
+    "id": "deploy",
+    "adlc_stage": "deploy",
+    "role": "mlops-platform-engineer",
+    "steps": [
+     {
+      "id": "ci",
+      "kind": "skill",
+      "skill": "build/ci-cd-vercel-github"
+     },
+     {
+      "id": "pr",
+      "kind": "pr"
+     }
+    ],
+    "gate": {
+     "kind": "external",
+     "what": "CI green on the pull request"
+    }
+   },
+   {
+    "id": "operate",
+    "adlc_stage": "operate",
+    "role": "ai-ops-sre",
+    "steps": [
+     {
+      "id": "handoff",
+      "kind": "skill",
+      "skill": "build/handoff-and-thread-close"
+     }
+    ],
+    "gate": {
+     "kind": "output",
+     "step": "handoff",
+     "file": "HANDOFF.md",
+     "check": "exists"
+    }
+   }
+  ]
+ },
+ {
+  "name": "greenfield-app",
+  "version": "0.1.0",
+  "title": "New application from a brief",
+  "description": "Greenfield: bootstrap the enterprise skeleton (SPEC, CLAUDE.md, HANDOFF, ADR, CI, .env contract) in an empty directory, then the same requirements, architecture, build, evaluate, deploy and operate stages as feature-delivery. The stack profile is read after bootstrap, because before it there is nothing to read.",
+  "mode": "greenfield",
+  "fits": {
+   "stacks": [
+    "nextjs"
+   ],
+   "request_kinds": [
+    "new-app"
+   ]
+  },
+  "inputs": [
+   {
+    "name": "repo",
+    "type": "repo",
+    "required": true,
+    "from": "directory to create the application in (created if absent)"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "required": true,
+    "from": "project name"
+   },
+   {
+    "name": "request",
+    "type": "text",
+    "required": true,
+    "from": "what the application must do, in the requester's words"
+   },
+   {
+    "name": "brief",
+    "type": "json",
+    "required": false,
+    "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json); may carry `files` or `tasks`"
+   }
+  ],
+  "stages": [
+   {
+    "id": "bootstrap",
+    "adlc_stage": "build",
+    "role": "full-stack-engineer",
+    "steps": [
+     {
+      "id": "scaffold",
+      "kind": "skill",
+      "skill": "build/project-bootstrap"
+     }
+    ],
+    "gate": {
+     "kind": "output",
+     "step": "scaffold",
+     "file": "bootstrap-report.json",
+     "check": "json"
+    }
+   },
+   {
+    "id": "requirements",
+    "adlc_stage": "requirements",
+    "role": "ai-product-manager",
+    "steps": [
+     {
+      "id": "brief",
+      "kind": "compose"
+     },
+     {
+      "id": "prd",
+      "kind": "skill",
+      "skill": "build/product-spec-prd"
+     }
+    ],
+    "gate": {
+     "kind": "output",
+     "step": "prd",
+     "file": "prd-final.md",
+     "check": "sections:[\"Acceptance criteria\"]"
+    }
+   },
+   {
+    "id": "architecture",
+    "adlc_stage": "architecture",
+    "role": "ai-solution-architect",
+    "steps": [
+     {
+      "id": "spec",
+      "kind": "compose"
+     },
+     {
+      "id": "plan",
+      "kind": "skill",
+      "skill": "build/spec-to-plan"
+     },
+     {
+      "id": "plan-approval",
+      "kind": "approval"
+     }
+    ],
+    "gate": {
+     "kind": "approval",
+     "step": "plan-approval"
+    }
+   },
+   {
+    "id": "build",
+    "adlc_stage": "build",
+    "role": "full-stack-engineer",
+    "steps": [
+     {
+      "id": "feature",
+      "kind": "compose"
+     },
+     {
+      "id": "tests",
+      "kind": "skill",
+      "skill": "build/test-strategy-tdd"
+     },
+     {
+      "id": "code",
+      "kind": "agent"
+     },
+     {
+      "id": "conventions",
+      "kind": "skill",
+      "skill": "build/nextjs-enterprise-conventions"
+     }
+    ],
+    "gate": {
+     "kind": "exit",
+     "step": "conventions"
+    }
+   },
+   {
+    "id": "evaluate",
+    "adlc_stage": "evaluate",
+    "role": "ai-quality-red-team",
+    "steps": [
+     {
+      "id": "review",
+      "kind": "skill",
+      "skill": "build/code-review-runner"
+     },
+     {
+      "id": "security",
+      "kind": "skill",
+      "skill": "build/security-review"
+     },
+     {
+      "id": "perf",
+      "kind": "skill",
+      "skill": "build/perf-review-runner"
+     },
+     {
+      "id": "ui",
+      "kind": "skill",
+      "skill": "build/ui-component-quality"
+     }
+    ],
+    "gate": {
+     "kind": "all",
+     "of": [
+      {
+       "kind": "output",
+       "step": "review",
+       "file": "review.md",
+       "check": "contains:\"Verdict: **PASS**\""
+      },
+      {
+       "kind": "exit",
+       "step": "security"
+      },
+      {
+       "kind": "exit",
+       "step": "perf"
+      },
+      {
+       "kind": "exit",
+       "step": "ui"
+      }
+     ]
+    }
+   },
+   {
+    "id": "deploy",
+    "adlc_stage": "deploy",
+    "role": "mlops-platform-engineer",
+    "steps": [
+     {
+      "id": "ci",
+      "kind": "skill",
+      "skill": "build/ci-cd-vercel-github"
+     },
+     {
+      "id": "pr",
+      "kind": "pr"
+     }
+    ],
+    "gate": {
+     "kind": "external",
+     "what": "CI green on the pull request"
+    }
+   },
+   {
+    "id": "operate",
+    "adlc_stage": "operate",
+    "role": "ai-ops-sre",
+    "steps": [
+     {
+      "id": "handoff",
+      "kind": "skill",
+      "skill": "build/handoff-and-thread-close"
+     }
+    ],
+    "gate": {
+     "kind": "output",
+     "step": "handoff",
+     "file": "HANDOFF.md",
+     "check": "exists"
+    }
+   }
+  ]
+ }
+]

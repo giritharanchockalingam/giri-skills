@@ -11,7 +11,7 @@ export interface Scored { verdict: Verdict; summary: string; findings: number | 
 
 export const MAX_FILES = 200;
 export const MAX_BYTES = 2 * 1024 * 1024;
-const SKIP = /(^|\/)(node_modules|\.next|dist|build|vendor|\.venv|__pycache__|coverage)\//;
+const SKIP = /(^|\/)(node_modules|\.next|dist|build|vendor|\.venv|__pycache__|coverage|fixtures|__fixtures__)\//;   // fixtures: sample repos inside a repo
 
 export interface CheckDef {
   id: string;

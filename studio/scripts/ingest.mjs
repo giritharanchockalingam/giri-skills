@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, statSync, mkdirSy
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { esc, mdToHtml } from "../lib/markdown.mjs";
+import { readPipelines } from "../lib/pipelines.mjs";
 
 const STUDIO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = resolve(STUDIO, "..");
@@ -566,6 +567,8 @@ for (const [dir, file] of [["roles", "role-templates.json"], ["pools", "pool-tem
   const d = join(ROOT, dir);
   w(file, existsSync(d) ? readdirSync(d).filter((f) => f.endsWith(".json")).sort().map((f) => JSON.parse(readFileSync(join(d, f), "utf8"))) : []);
 }
+// Delivery pipeline templates (pipelines/*.json; docs/DELIVERY-PIPELINES.md). Missing folder → no templates yet.
+w("pipelines.json", readPipelines(join(ROOT, "pipelines")));
 w("scorecard.json", scorecard);
 w("trigger.json", trigger);
 w("quality.json", quality);

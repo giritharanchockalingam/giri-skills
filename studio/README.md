@@ -22,6 +22,7 @@ Docs: `docs/API.md` (consumer API + manifest format), `docs/VERIFY.md` (verifica
 | | `/skills/<slug>/activity` | Runs of the selected version |
 | | `/repo/`, `/repo/<domain>/<name>/` | Repository catalog and skill pages (scorecard stats, agent block, **Run it** in the browser, SKILL.md, eval cases) |
 | | `/upstream/`, `/upstream/<name>/` | Vendored upstream skills |
+| Deliver | `/deliver`, `/deliver/<id>` | Delivery pipelines (`docs/DELIVERY-PIPELINES.md`): start a run (pipeline, repository, ref, request, executor), watch stages, gate verdicts and evidence hashes, approve the stage a run waits on, download `run.json`. API: `POST /api/delivery-runs`, `GET/POST /api/delivery-runs/<id>[/stage|/approve]`; MCP tools `deliver`, `delivery_status` |
 | Evaluations | `/evaluations` | Readiness across workspace versions; links to `/evals/` (repo scorecard) and `/findings/` |
 | Activity | `/activity`, `/runs/<id>` | Run list (status/source filters) and run detail: steps, checks, output contract, outputs (view/download), logs, provider/model/usage/cost (estimate flag), inputs reference |
 | Administration | `/admin` | Members + roles, API keys (shown once), connections + runtime check, policies (tools, providers, budget, concurrency), audit log, account/sign-out |
@@ -41,6 +42,8 @@ Environment variables (Vercel → Project → Settings → Environment Variables
 | `ANTHROPIC_API_KEY` | server (Python function) | optional | Enables llm steps. Absent → llm steps are skipped and reported, never faked |
 | `SF_RUNTIME_URL` | server | optional | Override the runtime base URL (defaults to the Vercel deployment URL; needed under `vercel dev`: `http://localhost:3000`) |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | server | optional | Lets the server call the Python function on protected preview deployments |
+| `DELIVERY_GITHUB_TOKEN` | server | optional | Token with Actions: write on the library repo; **Deliver** dispatches `.github/workflows/delivery.yml` with it. Unset → GitHub Actions runs stay queued with the notice "no executor configured — run `scripts/deliver.py` from an IDE and post evidence" |
+| `DELIVERY_GITHUB_REPO`, `DELIVERY_GITHUB_REF` | server | optional | Repository (`owner/name`, default `giritharanchockalingam/giri-skills`) and branch (default `main`) that hold `delivery.yml` |
 
 Database: apply `supabase/migrations/0001_sf_schema.sql` then `0002_sf_functions.sql` in the Supabase SQL editor (or `supabase db push`). Every object is prefixed `sf_`; nothing else in the project is touched; re-running is safe. Auth is the project's existing Supabase Auth; the first user to create a workspace becomes its admin and adds members by email.
 

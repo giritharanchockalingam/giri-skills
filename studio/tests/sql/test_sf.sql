@@ -585,6 +585,54 @@ reset role;
 select id as other_ws from sf_workspaces where slug = 'other' \gset
 select test_expect_error($$insert into sf_catalog_relations (workspace_id, from_id, to_id, type, source) values ('$$ || :'other_ws' || $$', '$$ || :'svc' || $$', '$$ || :'db' || $$', 'uses_database', 'vercel')$$, 'workspace');
 
+-- ───────── Delivery runs (0022): access rule, start, executor callback, approvals, immutable evidence ─────────
+select test_as('00000000-0000-0000-0000-000000000004');   -- consumer, no pipeline_access rows → open
+select sf_delivery_run_start(jsonb_build_object('workspace_id', :'ws_acme', 'pipeline', 'feature-delivery', 'pipeline_version', '0.1.0', 'mode', 'brownfield',
+  'repo', 'acme-org/billing', 'ref', 'main', 'request', 'add invoice export', 'executor', 'ide',
+  'stages', '[{"id":"requirements","adlc_stage":"requirements","role":"ai-product-manager","status":"queued"},{"id":"build","adlc_stage":"build","role":"full-stack-engineer","status":"queued"}]'::jsonb)) as drun \gset
+select test_assert((:'drun'::jsonb->>'status') = 'queued' and (:'drun'::jsonb->>'stage') = 'requirements', 'run starts queued at the first stage');
+select (:'drun'::jsonb->>'id') as drun_id \gset
+select test_assert((select count(*) from sf_audit_events where action = 'delivery.start' and entity_id = :'drun_id') = 1, 'delivery.start audited');
+-- an admin restricts the pipeline to a role; the consumer (not assigned) is refused and audited; after assignment, allowed
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_pipeline_access (workspace_id, pipeline, role_slug, created_by) values (:'ws_acme', 'feature-delivery', 'architect', auth.uid());
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((sf_delivery_run_start(jsonb_build_object('workspace_id', :'ws_acme', 'pipeline', 'feature-delivery', 'mode', 'brownfield', 'repo', 'r', 'request', 'x', 'executor', 'ide', 'stages', '[]'::jsonb))->>'error') = 'not_in_role', 'restricted pipeline refuses an unassigned member');
+select test_assert((select count(*) from sf_audit_events where action = 'delivery.denied' and entity_id = 'feature-delivery') = 1, 'delivery.denied audited');
+select test_expect_error($$insert into sf_pipeline_access (workspace_id, pipeline, role_slug, created_by) values ('$$ || :'ws_acme' || $$', 'x', 'y', auth.uid())$$, 'row-level security');
+select test_as('00000000-0000-0000-0000-000000000001');
+insert into sf_role_assignments (workspace_id, talent_id, user_id, granted_by) values (:'ws_acme', :'tr', '00000000-0000-0000-0000-000000000004', auth.uid());
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((sf_delivery_run_start(jsonb_build_object('workspace_id', :'ws_acme', 'pipeline', 'feature-delivery', 'mode', 'brownfield', 'repo', 'r', 'request', 'x', 'executor', 'ide', 'stages', '[]'::jsonb))->>'status') = 'queued', 'assigned role may start');
+-- executor callback with an API key of the workspace: stage merged by id, order kept, patch applied, audited
+select test_as_anon();
+select test_assert((sf_delivery_run_set_stage(:'drun_id', '{"id":"requirements","status":"running","started_at":"2026-10-22T00:00:00Z"}'::jsonb, '{"status":"running","stack_profile":{"framework":"nextjs"}}'::jsonb, repeat('7', 64))->>'status') = 'running', 'callback moves the run');
+select test_as('00000000-0000-0000-0000-000000000004');
+select test_assert((select stages->0->>'status' from sf_delivery_runs where id = :'drun_id') = 'running' and (select stages->0->>'role' from sf_delivery_runs where id = :'drun_id') = 'ai-product-manager', 'stage merged in place');
+select test_assert((select jsonb_array_length(stages) from sf_delivery_runs where id = :'drun_id') = 2, 'order and count kept');
+select test_assert((select count(*) from sf_audit_events where action = 'delivery.stage' and entity_id = :'drun_id') = 1, 'delivery.stage audited');
+select test_as_anon();
+select test_expect_error($$select sf_delivery_run_set_stage('$$ || :'drun_id' || $$', '{"id":"build"}'::jsonb, '{}'::jsonb, repeat('1', 64))$$, 'invalid api key');   -- a revoked key
+select test_expect_error($$select sf_delivery_run_set_stage('$$ || :'drun_id' || $$', '{"status":"running"}'::jsonb, '{}'::jsonb, repeat('7', 64))$$, 'stage.id');
+select test_assert((sf_delivery_run_set_stage(:'drun_id', null, '{"executor_ref":"https://github.com/x/actions"}'::jsonb, repeat('7', 64))->>'executor_ref') = 'https://github.com/x/actions', 'patch-only call keeps the stages');
+select test_assert((sf_api_delivery_get(repeat('7', 64), :'drun_id')->>'id') = :'drun_id', 'API key reads the run');
+select test_expect_error($$select sf_api_delivery_get(repeat('1', 64), '$$ || :'drun_id' || $$')$$, 'invalid api key');
+-- a session member approves: approval row is append-only
+select test_as('00000000-0000-0000-0000-000000000004');
+insert into sf_delivery_approvals (run_id, stage_id, role, approved_by, note) values (:'drun_id', 'requirements', 'ai-product-manager', auth.uid(), 'ok');
+select test_expect_error($$insert into sf_delivery_approvals (run_id, stage_id, role, approved_by) values ('$$ || :'drun_id' || $$', 'build', 'x', '00000000-0000-0000-0000-000000000001')$$, 'row-level security');
+reset role;
+select test_expect_error($$delete from sf_delivery_approvals where run_id = '$$ || :'drun_id' || $$'$$, 'append-only');
+select test_as('00000000-0000-0000-0000-000000000004');
+-- succeeded → immutable: callback refused, direct update of evidence refused
+select sf_delivery_run_set_stage(:'drun_id', '{"id":"build","status":"succeeded","gate":{"kind":"exit","verdict":"pass"}}'::jsonb, '{"status":"succeeded","pr":{"number":7}}'::jsonb);
+select test_expect_error($$select sf_delivery_run_set_stage('$$ || :'drun_id' || $$', '{"id":"build","status":"failed"}'::jsonb)$$, 'immutable');
+reset role;
+select test_expect_error($$update sf_delivery_runs set stages = '[]'::jsonb where id = '$$ || :'drun_id' || $$'$$, 'immutable');
+update sf_delivery_runs set executor_ref = 'note' where id = :'drun_id';   -- non-evidence columns may still change
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_delivery_runs) = 0, 'outsider sees no delivery runs');
+
 -- every key-authenticated function writes last_used_at through sf_resolve_api_key, so none may be STABLE/IMMUTABLE:
 -- PostgREST runs those in a READ ONLY transaction (found live: "cannot execute UPDATE in a read-only transaction")
 select test_assert((select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

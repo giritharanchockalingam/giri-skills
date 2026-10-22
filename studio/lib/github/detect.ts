@@ -32,7 +32,8 @@ const dirOf = (paths: string[]) => {
 };
 
 export function detect(paths: string[], manifests: { packageJson?: string | null; requirements?: string | null; pyproject?: string | null } = {}): Detection {
-  const ignore = /(^|\/)(node_modules|\.next|dist|build|vendor|\.venv|__pycache__)\//;
+  // fixtures and eval corpora are sample repos inside a repo: they must not count as its stack or its migrations
+  const ignore = /(^|\/)(node_modules|\.next|dist|build|vendor|\.venv|__pycache__|fixtures|__fixtures__)\//;
   const P = paths.filter((p) => !ignore.test(p) && !isLocalArtifact(p));
   const d = deps(manifests.packageJson ?? null);
   const py = `${manifests.requirements ?? ""}\n${manifests.pyproject ?? ""}`.toLowerCase();

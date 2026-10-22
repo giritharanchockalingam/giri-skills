@@ -1,0 +1,2 @@
+rule,file,line,snippet,severity,status
+PF3,lib/db.ts,12,select("*"),high,known

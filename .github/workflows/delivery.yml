@@ -1,0 +1,116 @@
+# Delivery executor — docs/DELIVERY-PIPELINES.md → "Where it runs".
+# The portal (studio/lib/delivery/dispatch.ts workflowInputs) dispatches this workflow with one delivery run; the
+# executor (scripts/deliver.py) runs the pipeline on the target repository, posts one stage record per stage back to
+# the portal, opens the pull request on the target repo and uploads the evidence bundle.
+#
+# Secrets (repository → Settings → Secrets and variables → Actions):
+#   DELIVERY_TOKEN     fine-grained PAT or GitHub App token with contents: write + pull-requests: write on the target repos
+#                      (checkout of inputs.repo, push of deliver/<run-id>, gh pr create)
+#   ANTHROPIC_API_KEY  the build step runs Claude Code (`claude -p`) on the checkout; the review/spec skills use it when
+#                      --provider anthropic
+#   SF_API_KEY         a portal API key (sf_live_…) of the workspace, held by a member with the pipeline's role: the
+#                      executor posts stage records with it and polls the run for approvals
+name: delivery
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:   { description: "Portal delivery run id (UUID)", required: true, type: string }
+      pipeline: { description: "Pipeline template name (pipelines/<name>.json)", required: true, type: string }
+      mode:     { description: "brownfield | greenfield", required: false, default: "brownfield", type: string }
+      repo:     { description: "Target repository owner/name", required: true, type: string }
+      ref:      { description: "Branch or commit to start from (empty = default branch)", required: false, default: "", type: string }
+      request:  { description: "The request in the requester's words", required: true, type: string }
+      callback: { description: "Portal base URL (stage records are posted to <callback>/api/delivery-runs/<run_id>/stage)", required: true, type: string }
+
+concurrency:
+  group: delivery-${{ inputs.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    name: "${{ inputs.pipeline }} · ${{ inputs.repo }} · ${{ inputs.run_id }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout giri-skills (the library and the executor)
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+
+      - name: Checkout the target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+          token: ${{ secrets.DELIVERY_TOKEN }}
+          path: target
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install the Claude Code CLI (the build step's agent)
+        run: npm i -g @anthropic-ai/claude-code && claude --version
+
+      - name: Run the pipeline
+        id: run
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SF_API_KEY: ${{ secrets.SF_API_KEY }}
+          GH_TOKEN: ${{ secrets.DELIVERY_TOKEN }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # inputs reach the shell as variables, never as expressions in the script (no injection)
+          RUN_ID: ${{ inputs.run_id }}
+          PIPELINE: ${{ inputs.pipeline }}
+          MODE: ${{ inputs.mode }}
+          REQUEST: ${{ inputs.request }}
+          CALLBACK: ${{ inputs.callback }}
+        run: |
+          set -o pipefail
+          echo "pipeline=$PIPELINE mode=$MODE run=$RUN_ID portal=$CALLBACK"
+          python3 scripts/deliver.py --pipeline "$PIPELINE" --repo target --request "$REQUEST" \
+            --run "$RUN_ID" --portal "$CALLBACK" --run-id "$RUN_ID" \
+            --builder claude-code --provider anthropic --out delivery-out \
+            | tee delivery-out.log
+          code=${PIPESTATUS[0]}
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
+
+      - name: Upload the evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-${{ inputs.run_id }}
+          path: |
+            delivery-out/evidence
+            delivery-out/run.json
+            delivery-out/callback.log
+            delivery-out/needs_approval.json
+            delivery-out/needs_builder.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Job summary (EVIDENCE.md)
+        if: always()
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          PIPELINE: ${{ inputs.pipeline }}
+          REPO: ${{ inputs.repo }}
+          CALLBACK: ${{ inputs.callback }}
+          EXIT: ${{ steps.run.outputs.exit }}
+        run: |
+          {
+            echo "## Delivery run \`$RUN_ID\` — $PIPELINE on $REPO"
+            echo
+            echo "Executor exit: \`${EXIT:-n/a}\` (0 passed · 1 gate failed · 3 approval timed out · 4 builder) · portal: $CALLBACK"
+            echo
+            if [ -f delivery-out/evidence/EVIDENCE.md ]; then cat delivery-out/evidence/EVIDENCE.md; else echo "_no EVIDENCE.md — the run stopped before the first stage; see delivery-out.log in the job log_"; fi
+            if [ -f delivery-out/needs_approval.json ]; then echo; echo '```json'; cat delivery-out/needs_approval.json; echo '```'; fi
+          } >> "$GITHUB_STEP_SUMMARY"

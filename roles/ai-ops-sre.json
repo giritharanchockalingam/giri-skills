@@ -10,7 +10,11 @@
     "ai-platform/ai-incident-runbook",
     "ai-platform/ai-postmortem",
     "ai-platform/feedback-improvement-loop",
-    "ai-platform/ai-finops-chargeback"
+    "ai-platform/ai-finops-chargeback",
+    "build/handoff-and-thread-close"
+  ],
+  "stages": [
+    "operate"
   ],
   "playbooks": [
     "ai-ops-health-check"

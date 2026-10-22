@@ -9,7 +9,11 @@
     "ai-platform/ai-threat-model",
     "build/multi-tenant-saas-patterns",
     "ai-platform/infra-gpu-sizing",
-    "ai-platform/llm-cost-model"
+    "ai-platform/llm-cost-model",
+    "build/spec-to-plan"
+  ],
+  "stages": [
+    "architecture"
   ],
   "playbooks": []
 }

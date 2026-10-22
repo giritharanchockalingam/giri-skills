@@ -5,7 +5,8 @@
  *   /api/mcp/role/<slug>     the skills of one role   (the workspace's published, tailored role; else the template)
  *   /api/mcp/team/<slug>     the skills of one team   (union of its members' roles)
  *   /api/mcp/stage/<id>      the skills of one lifecycle stage
- * Tools: one per published skill in scope (its input contract as JSON Schema) + `find_skill` + `get_run`.
+ * Tools: one per published skill in scope (its input contract as JSON Schema) + `find_skill` + `get_run` +
+ * `deliver` / `delivery_status` (delivery pipelines run from an IDE; docs/DELIVERY-PIPELINES.md).
  * Governance is inherited, not re-implemented: a tool call runs the published version through the same path as the
  * REST API (validation, workspace policy, concurrency and budget limits, idempotency, run record, audit).
  *
@@ -22,6 +23,8 @@ export interface LibraryInfo { id: string; card: string; stage: string | null; m
 export interface McpScope { kind: "workspace" | "role" | "team" | "stage"; slug: string | null; title: string; skills: Set<string> | null /* library ids; null = all */ }
 
 export interface RunReply { http: number; body: Record<string, unknown> }
+export interface PipelineSummary { name: string; title: string; version: string; mode: string; description: string; stages: { id: string; role: string }[] }
+export interface DeliverArgs { pipeline: string; repo: string; ref?: string; request: string }
 export interface McpBackend {
   scope: McpScope;
   catalog(): Promise<CatalogSkill[]>;
@@ -29,6 +32,11 @@ export interface McpBackend {
   route(task: string, k: number): { skill: string; score: number }[];
   run(slug: string, args: { inputs: Record<string, unknown>; assumptions?: Record<string, string> }, idempotencyKey: string | null): Promise<RunReply>;
   getRun(runId: string): Promise<RunReply>;
+  /** Delivery pipelines (DELIVERY-PIPELINES.md). `pipelines` lists the templates; `deliver` starts a run with executor "ide"
+   *  and answers {run_id, status, command}; `deliveryStatus` reads a run. */
+  pipelines(): PipelineSummary[];
+  deliver(args: DeliverArgs): Promise<RunReply>;
+  deliveryStatus(runId: string): Promise<RunReply>;
 }
 
 type Json = Record<string, unknown>;
@@ -45,7 +53,7 @@ export const RELEVANCE_FLOOR = 0.5;
 
 const TEXT_TYPES = new Set(["csv", "json", "md", "txt", "file", "sql"]);
 const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
-const RESERVED = new Set(["find_skill", "get_run"]);
+const RESERVED = new Set(["find_skill", "get_run", "deliver", "delivery_status"]);
 
 /** JSON Schema for one skill's inputs, from its published contract. */
 export function inputSchema(inputs: CatalogInput[]): Json {
@@ -96,6 +104,45 @@ const GET_RUN = {
   annotations: { readOnlyHint: true, openWorldHint: false },
 };
 
+function deliverTool(pipelines: PipelineSummary[]): Json {
+  const names = pipelines.map((p) => p.name);
+  const lines = ["Start a delivery run: a request through a pipeline template on a repository, stage by stage, each owned by a role and gated. ",
+    "Returns the run id and the exact `scripts/deliver.py` command to run from this checkout of the library (it posts evidence back to the portal with SF_API_KEY).",
+    ...pipelines.map((p) => `- ${p.name} v${p.version} (${p.mode}): ${p.title}. Stages: ${p.stages.map((s) => `${s.id}/${s.role}`).join(" → ")}`)];
+  return {
+    name: "deliver", title: "Deliver through a pipeline", description: lines.join("\n"),
+    inputSchema: { type: "object", properties: {
+      pipeline: { type: "string", description: "Pipeline template name.", ...(names.length ? { enum: names } : {}) },
+      repo: { type: "string", description: "Repository as owner/name (catalog) or a local checkout path." },
+      ref: { type: "string", description: "Branch or commit to start from (default: the checkout as it is)." },
+      request: { type: "string", description: "What to deliver, in the requester's words." },
+    }, required: ["pipeline", "repo", "request"], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  };
+}
+const DELIVERY_STATUS = {
+  name: "delivery_status", title: "Delivery run status",
+  description: "Status, current stage, per-stage gate verdicts and evidence hashes, approvals and the pull request of a delivery run (use the run_id `deliver` returned).",
+  inputSchema: { type: "object", properties: { run_id: { type: "string" } }, required: ["run_id"], additionalProperties: false },
+  annotations: { readOnlyHint: true, openWorldHint: false },
+};
+
+/** Human-readable delivery run: status, stages with verdicts, the next action. */
+export function renderDelivery(body: Json): string {
+  const stages = Array.isArray(body.stages) ? (body.stages as { id: string; role?: string; status?: string; gate?: { verdict?: string; detail?: string } | null; evidence?: { path: string }[] }[]) : [];
+  const head = [`Delivery run ${body.run_id ?? body.id ?? "?"} — ${String(body.status ?? "unknown")}${body.stage ? ` · at ${body.stage}` : ""}`];
+  if (body.command) head.push(`Run locally:\n${String(body.command)}`);
+  if (body.notice) head.push(`Note: ${String(body.notice)}`);
+  if (body.error && body.status !== "blocked") head.push(`Error: ${String(body.error)}`);
+  const rows = stages.map((s) => `- ${s.id} (${s.role ?? "?"}): ${s.status ?? "queued"}${s.gate?.verdict ? ` · gate ${s.gate.verdict}` : ""}${s.gate?.detail ? ` — ${s.gate.detail}` : ""}${s.evidence?.length ? ` · ${s.evidence.length} evidence file(s)` : ""}`);
+  const pr = body.pr && typeof body.pr === "object" ? (body.pr as { url?: string }).url : null;
+  const parts = [head.join("\n")];
+  if (rows.length) parts.push(rows.join("\n"));
+  if (pr) parts.push(`Pull request: ${pr}`);
+  if (body.status === "awaiting_approval") parts.push("Waiting for a person holding the stage's role to approve it in the portal (Build → Deliver).");
+  return parts.join("\n\n");
+}
+
 /** Human-readable result of a run, primary report first. */
 export function renderRun(body: Json): string {
   const status = String(body.status ?? "unknown");
@@ -133,7 +180,7 @@ export async function handle(msg: unknown, be: McpBackend): Promise<JsonRpcRespo
       case "ping": return ok(m.id, {});
       case "tools/list": {
         const tools = inScope(await be.catalog(), be.scope).map((s) => toolFor(s, s.repo_skill ? be.library(s.repo_skill) : null));
-        return ok(m.id, { tools: [...tools, FIND_SKILL, GET_RUN] });
+        return ok(m.id, { tools: [...tools, FIND_SKILL, GET_RUN, deliverTool(be.pipelines()), DELIVERY_STATUS] });
       }
       case "tools/call": {
         const name = String(params.name ?? "");
@@ -143,6 +190,19 @@ export async function handle(msg: unknown, be: McpBackend): Promise<JsonRpcRespo
           if (typeof args.run_id !== "string" || !args.run_id) return fail(m.id, RPC.INVALID_PARAMS, "run_id is required");
           const r = await be.getRun(args.run_id);
           return ok(m.id, r.http >= 400 ? toolError(r.body) : { content: [{ type: "text", text: renderRun(r.body) }], structuredContent: r.body });
+        }
+        if (name === "deliver") {
+          const a = { pipeline: str(args.pipeline), repo: str(args.repo), ref: str(args.ref), request: str(args.request) };
+          const missing = (["pipeline", "repo", "request"] as const).filter((k) => !a[k]);
+          if (missing.length) return fail(m.id, RPC.INVALID_PARAMS, `${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} required`);
+          if (!be.pipelines().some((p) => p.name === a.pipeline)) return fail(m.id, RPC.INVALID_PARAMS, `unknown pipeline: ${a.pipeline} (one of ${be.pipelines().map((p) => p.name).join(", ") || "none shipped"})`);
+          const r = await be.deliver(a);
+          return ok(m.id, r.http >= 400 ? toolError(r.body) : { content: [{ type: "text", text: renderDelivery(r.body) }], structuredContent: r.body });
+        }
+        if (name === "delivery_status") {
+          if (typeof args.run_id !== "string" || !args.run_id) return fail(m.id, RPC.INVALID_PARAMS, "run_id is required");
+          const r = await be.deliveryStatus(args.run_id);
+          return ok(m.id, r.http >= 400 ? toolError(r.body) : { content: [{ type: "text", text: renderDelivery(r.body) }], structuredContent: r.body });
         }
         const skill = inScope(await be.catalog(), be.scope).find((s) => s.slug === name);
         if (!skill) return fail(m.id, RPC.INVALID_PARAMS, `unknown tool: ${name}`);
@@ -156,6 +216,8 @@ export async function handle(msg: unknown, be: McpBackend): Promise<JsonRpcRespo
     return fail(m.id, RPC.INTERNAL, e instanceof Error ? e.message : String(e));
   }
 }
+
+const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
 /** A run that failed AND produced no output is a tool error; a run whose checks flagged problems in its outputs
  *  (e.g. a lint gate that found RLS gaps) is a successful tool call reporting a negative verdict. */

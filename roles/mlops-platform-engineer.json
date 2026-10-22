@@ -11,5 +11,8 @@
     "ai-platform/drift-monitor",
     "ai-platform/ai-bom-license-check"
   ],
+  "stages": [
+    "deploy"
+  ],
   "playbooks": []
 }
