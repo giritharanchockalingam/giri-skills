@@ -8,7 +8,7 @@
  "resultsDir": "evals/results/full-openai",
  "agentResultsDir": "evals/results/agent-dry",
  "counts": {
-  "skills": 78,
+  "skills": 81,
   "scorecard": 78,
   "trigger": 1200,
   "quality": 3904,

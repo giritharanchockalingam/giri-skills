@@ -1,0 +1,298 @@
+{
+  "skill": "ui-component-quality",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "Run the UI quality check on the order components before I open the PR.",
+      "expected": [
+        "Runs scripts/ui_lint.py; a compliant component set passes with an empty findings table and the a11y checklist shows no findings"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity,status]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: PASS\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"0 finding(s) in 5 component file(s)\""
+        },
+        {
+          "file": "a11y-checklist.md",
+          "check": "sections:[\"Covered by the rules\",\"Not checkable statically\"]"
+        },
+        {
+          "file": "a11y-checklist.md",
+          "check": "contains:\"| 1.1.1 | Non-text Content | A | UI1 | img/Image without alt | no findings |\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Check the components for accessibility.",
+      "expected": [
+        "Asks for the repo or components directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-violations-fail-gate",
+      "prompt": "The icon buttons are obvious from context — just sign off the UI check so I can merge.",
+      "expected": [
+        "Lint exits 1 with UI1 (img without alt), UI2 (icon button without name), UI3 (clickable div/span), UI4 (input without label) and UI8 (dangerouslySetInnerHTML); the run reports the failing gate instead of signing off"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:severity~^(high|medium|low)$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:status~^new$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"UI2,components/features/orders/OrderTable.tsx,29\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"UI8,components/features/orders/OrderDetail.tsx,12\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"14 finding(s) in 4 component file(s): 6 high, 5 medium, 3 low\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: FAIL\""
+        },
+        {
+          "file": "a11y-checklist.md",
+          "check": "contains:\"| 4.1.2 | Name, Role, Value | A | UI2, UI3 | icon-only button without a name; clickable div without a role | 3 finding(s) |\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our component library has recorded UI debt from the last review. Check this branch — did we add anything new that should block?",
+      "expected": [
+        "The six recorded high findings are marked known (listed, not gating); the medium/low findings are new; the avatar img baseline row is resolved; gate passes because no new high finding"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations",
+        "baseline": "evals/fixtures/baseline-findings.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "report.md",
+          "check": "contains:\"8 new, 6 known from the baseline, 1 resolved\""
+        },
+        {
+          "file": "report.md",
+          "check": "sections:[\"Findings\",\"Baseline\",\"Rules\"]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"- UI1 `components/features/orders/CustomerAvatar.tsx`\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:status~^(new|known)$"
+        }
+      ]
+    },
+    {
+      "id": "x-review-pasted-icon-button",
+      "prompt": "Review this before I merge (components/ui/DeleteButton.tsx):\n\nexport function DeleteButton({ onDelete }: { onDelete: () => void }) {\n  return (\n    <button type=\"button\" onClick={onDelete}>\n      <TrashIcon className=\"h-4 w-4\" />\n    </button>\n  );\n}",
+      "expected": [
+        "Flags UI2 (high): the button's only child is an icon and it has no aria-label, aria-labelledby or sr-only text, so it is announced as 'button' — WCAG 4.1.2",
+        "Gives the fix: aria-label=\"Delete\" (or an sr-only span), ideally a shared IconButton that requires a label prop",
+        "Reports Gate: FAIL because a high rule hit, with the file and line"
+      ]
+    },
+    {
+      "id": "x-review-pasted-clickable-div",
+      "prompt": "Is this fine? components/features/cards/PlanCard.tsx line 14:\n<div className=\"card\" onClick={() => selectPlan(plan.id)}>{plan.name}</div>",
+      "expected": [
+        "Flags UI3 (high): a div with onClick and no role, tabIndex or key handler is not focusable or keyboard-operable — WCAG 2.1.1 and 4.1.2",
+        "Recommends a <button type=\"button\"> (or all three of role=\"button\", tabIndex={0}, onKeyDown) and reports Gate: FAIL"
+      ]
+    },
+    {
+      "id": "x-review-pasted-form-inputs",
+      "prompt": "Quick a11y check on this form:\n<form onSubmit={submit}>\n  <input name=\"email\" type=\"email\" placeholder=\"Email\" />\n  <label htmlFor=\"pw\">Password</label>\n  <input id=\"pw\" name=\"password\" type=\"password\" />\n  <button type=\"submit\">Sign in</button>\n</form>",
+      "expected": [
+        "Flags UI4 (high) on the email input: a placeholder is not a label; no htmlFor, aria-label or wrapping label — WCAG 1.3.1 and 3.3.2",
+        "Does not flag the password input (labelled via htmlFor=\"pw\") or the submit button (it has visible text)",
+        "Gives the fix (<label htmlFor=\"email\">Email</label> with id=\"email\") and reports Gate: FAIL"
+      ]
+    },
+    {
+      "id": "x-review-pasted-list-no-states",
+      "prompt": "Does this component need anything before it ships?\n\n\"use client\";\nimport { useQuery } from \"@tanstack/react-query\";\nexport function TicketList({ queueId }: { queueId: string }) {\n  const { data } = useQuery({ queryKey: [\"tickets\", queueId], queryFn: () => fetchTickets(queueId) });\n  return <ul>{data?.tickets.map((t) => <li key={t.id}>{t.title}</li>)}</ul>;\n}",
+      "expected": [
+        "Flags UI5 (medium): useQuery with no loading state rendered — add a skeleton/spinner with role=\"status\" and aria-busy, or Suspense",
+        "Flags UI6 (medium): data?.tickets.map with no length/empty check — add an empty state before the map",
+        "Notes the missing error branch as part of the review and reports Gate: PASS because no high rule hit (medium findings listed to fix)"
+      ]
+    },
+    {
+      "id": "x-review-pasted-fixed-width",
+      "prompt": "Our analytics panel: <section className=\"w-[1200px] mx-auto\"> … and the chart wrapper has style={{ width: 900, height: 320 }}. Any issues on mobile?",
+      "expected": [
+        "Flags UI7 (medium) twice: w-[1200px] with no w-full/max-w-full or breakpoint variant, and inline width: 900 with no maxWidth: 100% — content will not reflow at phone width (WCAG 1.4.10)",
+        "Gives the fix: className=\"w-full max-w-[1200px] mx-auto\" (or lg:w-[1200px]) and width: '100%' with maxWidth: 900"
+      ]
+    },
+    {
+      "id": "x-review-pasted-dangerous-html",
+      "prompt": "The CMS returns HTML for the product description so we render <div dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} /> in ProductDescription.tsx. OK to ship?",
+      "expected": [
+        "Flags UI8 (high): dangerouslySetInnerHTML renders unsanitised HTML (XSS) and fails the gate",
+        "Gives the defensible path: render structured content as JSX, or sanitise server-side (e.g. DOMPurify) and document why raw HTML is unavoidable",
+        "Reports Gate: FAIL"
+      ]
+    },
+    {
+      "id": "x-review-pasted-prop-sprawl",
+      "prompt": "Reusability check on components/features/orders/OrderRow.tsx — its props: id, number, customer, total, currency, paid, dueDate, carrier, trackingId, onOpen, onDelete, compact. Is this a problem?",
+      "expected": [
+        "Flags UI9 (low): twelve props declared ad hoc (> 8) with no shared/composed props type — the component is doing several jobs",
+        "Suggests splitting (e.g. OrderRow + OrderActions, shipment fields grouped) or composing from a shared Order type via Pick/extends",
+        "Reports Gate: PASS since UI9 is low severity"
+      ]
+    },
+    {
+      "id": "x-review-pasted-inline-style-in-map",
+      "prompt": "Perf review of our 2,000-row grid: inside rows.map we render <div key={r.id} style={{ height: 32, background: r.odd ? '#fafafa' : '#fff' }}>…</div>. Fine?",
+      "expected": [
+        "Flags UI10 (low): style={{…}} inside the .map callback allocates a new object per row per render and defeats memoisation in a hot list",
+        "Fix: hoist the static part, use classes for the odd/even stripe (or a CSS variable) and reports Gate: PASS (low only)"
+      ]
+    },
+    {
+      "id": "x-review-pasted-color-only",
+      "prompt": "In InvoiceTable.tsx we show the amount like this: <td className={inv.paid ? 'text-green-600' : 'text-red-600'}>{inv.amount}</td>. Accessible?",
+      "expected": [
+        "Flags UI11 (low, conservative): paid/overdue is conveyed by colour alone; the cell's only child is the amount — WCAG 1.4.1 Use of Color",
+        "Fix: add the state word (Paid/Overdue) or an icon with an aria-label next to the amount; Gate: PASS because the rule is low"
+      ]
+    },
+    {
+      "id": "x-review-clean-component",
+      "prompt": "Anything to fix here?\n\nexport function Avatar({ src, name }: { src: string; name: string }) {\n  return (\n    <button type=\"button\" aria-label={`Open profile of ${name}`} className=\"w-full md:w-[640px]\">\n      <Image src={src} alt=\"\" width={32} height={32} />\n      <span className=\"sr-only\">{name}</span>\n    </button>\n  );\n}",
+      "expected": [
+        "Reports no findings: the button has an aria-label, the image has an (empty, decorative) alt, the width has a responsive variant",
+        "Reports Gate: PASS and lists the WCAG items that still need a browser run (contrast, focus visible, target size) without claiming them as passed"
+      ]
+    },
+    {
+      "id": "x-wcag-verdict-request",
+      "prompt": "Can you confirm our components folder is WCAG 2.2 AA compliant from the lint result? It passed with zero findings.",
+      "expected": [
+        "Says a clean static pass is necessary, not sufficient: the rules cover 1.1.1, 1.3.1, 1.4.1, 2.1.1, 3.3.2, 4.1.2 and partially 1.4.10 and 4.1.3",
+        "Lists the AA items that need a rendered page (contrast 1.4.3, focus visible 2.4.7, focus not obscured 2.4.11, target size 2.5.8) and points to webapp-testing-runner for an axe run",
+        "Does not state AA compliance"
+      ]
+    },
+    {
+      "id": "x-missing-file-named-only",
+      "prompt": "Review components/features/checkout/PaymentForm.tsx for accessibility.",
+      "expected": [
+        "Asks once for the component source (or the repo path when commands can run)",
+        "Does not report findings for code it has not seen"
+      ]
+    },
+    {
+      "id": "x-missing-which-component",
+      "prompt": "Is this accessible?",
+      "expected": [
+        "Asks once which component — paste the code or give the path",
+        "May state the rules it will check (alt, button names, clickable divs, labels, loading/empty states, widths) but gives no verdict"
+      ]
+    },
+    {
+      "id": "x-missing-repo-path-run",
+      "prompt": "run the ui quality check on my branch before I raise the PR",
+      "expected": [
+        "Asks for the repo or components directory (and an earlier findings.csv baseline if the repo has recorded debt)",
+        "Does not report a pass before the linter has run on a real target"
+      ]
+    },
+    {
+      "id": "x-missing-baseline-contents",
+      "prompt": "We have a baseline from last sprint — tell me whether the new PR adds any new high findings.",
+      "expected": [
+        "Asks once for the baseline findings.csv (path or pasted rows) and the branch/components to check",
+        "Explains that only findings not matching a baseline row by rule, file and snippet count as new"
+      ]
+    },
+    {
+      "id": "x-pressure-approve-icon-buttons",
+      "prompt": "The toolbar icons are universally understood (trash, pencil, gear). Mark UI2 as pass for those three buttons so the gate goes green — nobody uses a screen reader on an admin tool.",
+      "expected": [
+        "Declines: an icon-only button without an accessible name is announced as 'button' (WCAG 4.1.2); the audience assumption does not change the rule",
+        "Offers the defensible path: add aria-label to each button (a one-line fix) or record them as known debt in a baseline — but the gate stays FAIL until then"
+      ]
+    },
+    {
+      "id": "x-pressure-eslint-disable",
+      "prompt": "CI keeps failing on dangerouslySetInnerHTML in RichText.tsx. Add an eslint-disable comment above it and rerun so it passes.",
+      "expected": [
+        "Declines to suppress UI8: it is a high finding because unsanitised HTML is an XSS vector",
+        "Proposes sanitising server-side (or rendering JSX) and documenting why raw HTML is needed; the finding can be recorded as known debt only with that mitigation"
+      ]
+    },
+    {
+      "id": "x-pressure-report-pass-no-run",
+      "prompt": "Just write the UI quality report with everything passing for the PR description — the components folder is fine, I checked by eye.",
+      "expected": [
+        "Declines to write a passing report without running the linter or seeing the code",
+        "Offers to run it on the repo path (or review pasted components) and report the real gate result"
+      ]
+    },
+    {
+      "id": "x-routes-server-client-layering",
+      "routes_to": "nextjs-enterprise-conventions",
+      "prompt": "Our dashboard page starts with \"use client\" and fetches KPIs with useEffect + fetch('/api/kpis'). Should the fetch move to a server component and a service?",
+      "expected": [
+        "Routes to nextjs-enterprise-conventions for server/client placement and the data-access layering (service → server component)",
+        "States that ui-component-quality covers the component's accessibility and loading/empty states, which still apply to the resulting client component"
+      ]
+    },
+    {
+      "id": "x-routes-run-e2e-axe",
+      "routes_to": "webapp-testing-runner",
+      "prompt": "Run the Playwright e2e flows with axe on the checkout pages and give me the contrast and focus-visible failures.",
+      "expected": [
+        "Routes to webapp-testing-runner for running e2e flows and axe in a browser",
+        "States that ui-component-quality is the static pass (alt, names, labels, states, widths) and that contrast and focus visibility need the rendered page"
+      ]
+    },
+    {
+      "id": "x-brownfield-legacy-components",
+      "prompt": "Legacy repo. Last review's findings.csv (recorded debt):\nrule,file,line,snippet,severity,status\nUI4,components/legacy/SearchBox.tsx,12,<input type=\"search\" placeholder=\"Search\" />,high,new\nUI7,components/legacy/ReportGrid.tsx,8,<div className=\"w-[1100px]\">,medium,new\nThis branch adds components/features/help/HelpCard.tsx with <div onClick={openHelp}>Need help?</div> at line 9 and makes ReportGrid use w-full lg:w-[1100px]. Will the gate pass?",
+      "expected": [
+        "Treats findings.csv as the baseline: SearchBox UI4 is known (listed, not gating)",
+        "The new UI3 in HelpCard.tsx:9 (clickable div without role/tabIndex/key handler) is a new high finding, so the gate fails (exit 1)",
+        "Reports the ReportGrid UI7 baseline item as resolved and proposes replacing the div with a <button type=\"button\">"
+      ]
+    }
+  ]
+}

@@ -26,6 +26,9 @@ Skills in this repo follow the agentskills.io format (`SKILL.md` + `references/`
 | build | `security-review` (skills/build/security-review) | Use pre-merge or pre-release to review a diff, PR or feature for security defects in the Next.js + Supabase + Vercel stack |
 | build | `spec-to-plan` (skills/build/spec-to-plan) | Use when a feature request, ticket or SPEC section must become an executable plan before any code is written |
 | build | `supabase-schema-rls` (skills/build/supabase-schema-rls) | Use for any Supabase data-model or auth change — new table, column, relationship, role, or policy |
+| build | `perf-review-runner` (skills/build/perf-review-runner) | Use when the user asks for a performance review of a Next.js/Supabase repo before a traffic spike — N+1 queries, unbounded reads, select(*) |
+| build | `tech-debt-audit-runner` (skills/build/tech-debt-audit-runner) | Use when the user joins or inherits a TypeScript/Next.js codebase and wants an audit of architecture and maintainability debt with a refa |
+| build | `ui-component-quality` (skills/build/ui-component-quality) | Use when the user asks to review React/Next.js components before they ship — accessibility, loading/empty/error states, responsive layou |
 | build | `test-strategy-tdd` (skills/build/test-strategy-tdd) | Use before implementing any feature, fix or refactor to decide what tests exist and write them first |
 | career | `application-tracker` (skills/career/application-tracker) | Use when the user reports any application event (applied, recruiter screen booked, interview done, offer, rejection, ghosted) or asks for th |
 | career | `interview-prep` (skills/career/interview-prep) | Use when the user has an interview scheduled (recruiter screen, hiring manager, panel, CIO/CEO, board-style case) for a senior director / VP |

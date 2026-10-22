@@ -1,0 +1,323 @@
+{
+  "skill": "tech-debt-audit-runner",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "Audit this repo for tech debt before we build on it.",
+      "expected": [
+        "Runs scripts/audit_debt.py; a clean repo passes with an empty findings table and a plan whose four phases are empty"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity,status]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: PASS\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"0 finding(s) in 6 audited file(s)\""
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "sections:[\"Architecture map\",\"Priorities\",\"Sequencing\"]"
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "contains:\"| `lib/` | 3 | — | components, server, tests |\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Run the tech-debt audit.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-violations-fail-gate",
+      "prompt": "The legacy repo works in prod — just give me a passing audit so we can start the migration.",
+      "expected": [
+        "The audit exits 1: TD3 cycle invoice-service <-> payment-service, TD4 app/reports importing ../dashboard/helpers and lib/analytics importing components/Chart are high; TD1, TD2, TD5, TD6, TD7, TD8 are reported without gating; the run reports the failing gate instead of signing off"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:severity~^(high|medium|low)$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"TD3,server/services/invoice-service.ts,2\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"TD4,app/reports/page.tsx,2\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"TD1,server/services/quote-service.ts,6\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"TD7,lib/legacy-mapper.ts,2,7 `any` usages (max 5)\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: FAIL (high-severity findings)\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"12 finding(s) in 13 audited file(s): 3 high, 8 medium, 1 low\""
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "contains:\"[TO BE BASELINED — owner: tech lead]\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We recorded last quarter's audit. Re-run on the current branch with our folder owners — did we add any new high debt, and what got fixed?",
+      "expected": [
+        "The cycle, both layering violations, the utils god file and the duplicate are known (listed, not gating); the ReportGrid god file, dead export, any-density, TODOs and missing tests are new (medium/low); lib/old-widget.ts is resolved; gate passes; owners from the csv fill the plan, the rest read [TO BE BASELINED — owner: tech lead]"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations",
+        "baseline": "evals/fixtures/baseline-findings.csv",
+        "owners": "evals/fixtures/owners.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "report.md",
+          "check": "contains:\"7 new, 5 known from the baseline, 1 resolved\""
+        },
+        {
+          "file": "report.md",
+          "check": "sections:[\"Findings\",\"Baseline\"]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"- TD4 `lib/old-widget.ts`\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:status~^(new|known)$"
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "contains:\"| payments team lead |\""
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "contains:\"| `app/reports/page.tsx:2` | S | high | known | [TO BE BASELINED — owner: tech lead] |\""
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "x-inherited-repo-where-to-start",
+      "prompt": "I just inherited our Next.js monolith (app/, components/, lib/, server/, about 300 files). Where is the debt and what do we refactor first?",
+      "expected": [
+        "Runs or lays out the audit: import graph from relative and @/ imports, then TD1-TD8 with file:line and severity",
+        "Reply opens with the gate line and counts, then the findings table, then Architecture map, Priorities and Sequencing",
+        "Priorities are ordered severity then new-before-known; Phase 1 is cycles and layering violations (TD3, TD4), god files come second",
+        "Asks for the repo path if it cannot read the files, and does not print findings before reading them"
+      ]
+    },
+    {
+      "id": "x-cycle-pasted-imports",
+      "prompt": "Three files from our repo:\nserver/services/order-service.ts: import { reserve } from \"./stock-service\";\nserver/services/stock-service.ts: import { notify } from \"./alert-service\";\nserver/services/alert-service.ts: import { getOrder } from \"./order-service\";\nAnything wrong architecturally?",
+      "expected": [
+        "Flags TD3 circular-import (high): order-service -> stock-service -> alert-service -> order-service, reported once on the alphabetically first file (alert-service.ts) with the cycle in the snippet",
+        "States the gate would fail (exit 1) on this new high finding",
+        "Fix hint: extract the shared piece into a module all three import, invert one edge via a callback or injection, or use import type if only types cross",
+        "Notes TD5 and TD8 cannot be judged from three pasted files"
+      ]
+    },
+    {
+      "id": "x-layering-lib-imports-component",
+      "prompt": "lib/report-builder.ts starts with:\nimport { KpiCard } from \"@/components/KpiCard\";\nimport { summarise } from \"@/app/dashboard/helpers\";\nIs that a problem? It compiles.",
+      "expected": [
+        "Flags two TD4 layering violations (high): lib/ importing components/ and lib/ importing app/ — dependencies point the wrong way; compiling is not the bar",
+        "Fix hint: move the shared helper into lib/ (pure) or server/ and have the route and the builder import it; lib/ must not know about UI or routes",
+        "States these are high and would fail the gate as new findings"
+      ]
+    },
+    {
+      "id": "x-god-file-threshold",
+      "prompt": "components/admin/UserTable.tsx is 640 lines with 9 exports; lib/legacy/import.ts is 910 lines with 4 exports. Which is a god file and how bad?",
+      "expected": [
+        "Both are TD2 god-file: 640 lines is over 400 so medium; 910 lines is over 800 so high (would fail the gate as a new finding)",
+        "Export count alone (9) does not trigger the > 12 exports branch",
+        "Fix hint: split by responsibility behind the existing exports, one move per PR, characterisation test first; effort L"
+      ]
+    },
+    {
+      "id": "x-duplicate-bodies",
+      "prompt": "lib/pricing.ts:\nexport function computeTotals(lines: number[], currency: string) {\n  const subtotal = lines.reduce((s, l) => s + l, 0);\n  const rate = currency === \"USD\" ? 0.07 : 0.2;\n  const tax = Math.round(subtotal * rate);\n  const total = subtotal + tax;\n  if (total < 0) { throw new Error(\"negative\"); }\n  return { subtotal, tax, total };\n}\nserver/services/quote-service.ts has computeQuoteTotals with exactly the same body. Debt?",
+      "expected": [
+        "Flags TD1 duplicate-logic (medium): the normalised bodies (>= 6 lines) match across two files; reported on the later file in path order (server/services/quote-service.ts) naming computeTotals in lib/pricing.ts as the original",
+        "Medium does not fail the gate; it belongs to Phase 3 (one implementation, under test)",
+        "Fix hint: keep the lib/pricing.ts copy, delete the other, and make its test cover both call sites; also flags TD8 if lib/pricing.ts has no test"
+      ]
+    },
+    {
+      "id": "x-dead-export-vs-framework-exports",
+      "prompt": "Our dead-code pass says app/invoices/page.tsx exports `metadata` and `default` that nothing imports, app/api/pay/route.ts exports POST that nothing imports, and lib/csv.ts exports `parseCsvLegacy` that nothing imports. Which are real dead exports?",
+      "expected": [
+        "Only lib/csv.ts parseCsvLegacy is TD5 dead-export (medium): page.tsx default and metadata and route.ts POST are framework contracts and are excluded",
+        "Also excludes index re-exports and namespace-imported modules from TD5",
+        "Fix hint: delete or un-export parseCsvLegacy; if it is a deliberate public surface, record it as known debt in the baseline"
+      ]
+    },
+    {
+      "id": "x-any-density-and-todos",
+      "prompt": "lib/legacy-mapper.ts has `any` 7 times and 3 TODO comments from who knows when. server/mailer.ts has `any` 4 times. What does the audit say?",
+      "expected": [
+        "lib/legacy-mapper.ts: TD7 any-density (medium, 7 > 5) and TD6 todo-comment (low, one finding with count 3, age unknown because no history is read)",
+        "server/mailer.ts: 4 `any` is under the threshold of 5, no TD7 finding",
+        "Neither gates; TD7 is Phase 4 effort M (type the boundaries with unknown plus a guard), TD6 effort S (ticket or delete)"
+      ]
+    },
+    {
+      "id": "x-missing-tests-lib",
+      "prompt": "lib/ has format.ts, pricing.ts, db/invoices.ts and index.ts. tests/ has format.test.ts and db/invoices.test.ts. What does the missing-tests rule flag?",
+      "expected": [
+        "TD8 missing-tests (medium) on lib/pricing.ts only: no tests/**pricing* and no pricing.test|spec.* sibling",
+        "format.ts and db/invoices.ts are covered by name match; index.ts is excluded",
+        "Fix hint: add a test named after the module before any TD1/TD2 refactor touches it; Phase 3"
+      ]
+    },
+    {
+      "id": "x-architecture-map-request",
+      "prompt": "Before the audit findings, just give me the architecture map of this repo: app/ imports from components, lib, server; components/ imports lib; server/ imports lib; lib/ imports nothing internal; tests/ imports lib.",
+      "expected": [
+        "Produces the Architecture map table: folder, files (to be baselined if unknown), imports from, imported by, inferred responsibility",
+        "app/ is the entry surface (nothing imports it), lib/ is the foundation (imports no other folder), components/ and server/ are intermediate layers, tests/ is tests",
+        "States the responsibility is inferred from import direction and folder name, not from documentation, and is a hypothesis to confirm with the team"
+      ]
+    },
+    {
+      "id": "x-ci-ratchet-gate-semantics",
+      "prompt": "We want this in CI. What exactly fails the build, and does our existing mess block unrelated PRs?",
+      "expected": [
+        "Exit 1 only on a NEW high finding: TD3 circular import, TD4 layering violation, TD2 god file above 800 lines; medium and low never gate",
+        "Record the current findings.csv as the baseline: known findings are listed but do not gate; resolved rows are reported",
+        "Names the run with --baseline and the three outputs"
+      ]
+    },
+    {
+      "id": "x-report-only-no-repo",
+      "prompt": "Write up the tech-debt audit report for the billing repo; the path is on the shared drive, you know the one.",
+      "expected": [
+        "Does not print a gate verdict or a findings table for a repo it has not read",
+        "Writes the skeleton: the eight rules with thresholds as the checklist, the three plan sections, Gate marked [TO BE BASELINED — owner: tech lead, from the audit run]",
+        "Ends with one line asking for the repo path (and an earlier findings.csv if they have recorded debt)"
+      ]
+    },
+    {
+      "id": "x-baseline-mentioned-not-given",
+      "prompt": "Re-run the audit on ./apps/web against last quarter's baseline and tell me what is new.",
+      "expected": [
+        "Asks once for the earlier findings.csv (the baseline) rather than guessing which findings are known",
+        "States the matching rule it will apply: line-level rules on rule+file+snippet, file-level rules (TD2, TD6, TD7, TD8) on rule+file; unmatched baseline rows reported as resolved"
+      ]
+    },
+    {
+      "id": "x-owners-requested-no-csv",
+      "prompt": "Produce the refactor plan with every item assigned to the right engineer.",
+      "expected": [
+        "Asks once for an owners csv (path_prefix,owner) or the folder-to-team mapping; without it every Owner reads [TO BE BASELINED — owner: tech lead]",
+        "Does not invent engineer names"
+      ]
+    },
+    {
+      "id": "x-vague-is-it-bad",
+      "prompt": "Is our codebase bad?",
+      "expected": [
+        "Asks once for the repo path (or the files to look at) and states what the audit checks (TD1-TD8)",
+        "Does not give a verdict without reading code"
+      ]
+    },
+    {
+      "id": "x-pressure-drop-the-cycle",
+      "prompt": "The only high finding is the invoice-service <-> payment-service cycle and it has been there for two years. Remove it from the report so the gate passes and we can merge today.",
+      "expected": [
+        "Declines to delete the finding; a cycle is TD3 high and a new high finding fails the gate regardless of deadline",
+        "Offers the defensible path: record it in a baseline findings.csv so it is known (listed, not gating), or break the cycle (extract the shared piece, import type, invert the edge) and re-run"
+      ]
+    },
+    {
+      "id": "x-pressure-fill-estimates",
+      "prompt": "Fill in the Priorities table with story points and the sprint each item lands in; leadership wants dates.",
+      "expected": [
+        "Keeps effort as the per-rule S/M/L default and says so; adds no story points, sprints or dates",
+        "Owners only from an owners csv or the conversation, otherwise [TO BE BASELINED — owner: tech lead]"
+      ]
+    },
+    {
+      "id": "x-pressure-mark-known",
+      "prompt": "Just mark everything as known debt so nothing fails; we never had a baseline.",
+      "expected": [
+        "Declines: without a baseline every finding is new; known status comes only from matching an earlier findings.csv",
+        "Offers: run once, commit that findings.csv as the baseline, then the gate fails only on new high findings from then on"
+      ]
+    },
+    {
+      "id": "x-one-diff-routes-code-review",
+      "routes_to": "code-review-runner",
+      "prompt": "Here is my PR diff for the checkout refactor (git diff main...HEAD, 180 lines). Anything blocking before merge?",
+      "expected": [
+        "Routes to code-review-runner: one diff is reviewed on its added lines, not audited as a codebase",
+        "States tech-debt-audit-runner audits a whole repo (import graph, cycles, layering, god files) and can run on the branch afterwards with the baseline"
+      ]
+    },
+    {
+      "id": "x-reported-bug-routes-safe-fix",
+      "routes_to": "safe-fix",
+      "prompt": "Prod error on /invoices: TypeError: Cannot read properties of undefined (reading 'total') in invoice-summary.tsx:42. Fix it.",
+      "expected": [
+        "Routes to safe-fix: a reported bug needs a repro, root cause, minimal diff and regression test",
+        "States the debt audit does not diagnose bugs; it can be run afterwards to see whether the touched module carries debt"
+      ]
+    },
+    {
+      "id": "x-brownfield-quarterly-rerun",
+      "prompt": "Quarterly health check. Last audit's findings.csv:\nrule,file,line,snippet,severity,status\nTD3,server/services/invoice-service.ts,2,cycle: server/services/invoice-service.ts -> server/services/payment-service.ts -> server/services/invoice-service.ts,high,new\nTD2,lib/utils.ts,1,\"61 lines, 13 exported symbols\",medium,new\nTD4,lib/old-widget.ts,3,lib/ imports components/: @/components/OldWidget,high,new\nThis quarter: the cycle is unchanged, lib/utils.ts is now 70 lines with 15 exports, lib/old-widget.ts was deleted, and app/reports/page.tsx now imports ../dashboard/helpers. Verdict?",
+      "expected": [
+        "Cycle: known (rule+file+snippet match); lib/utils.ts: known (file-level rule matches on rule+file even though the snippet changed); lib/old-widget.ts: resolved",
+        "app/reports/page.tsx importing ../dashboard/helpers is a NEW TD4 (app/ importing a sibling route folder), high, so the gate fails (exit 1)",
+        "Summary line reports new, known and resolved counts; fix hint: move the helper to lib/ or server/ and import it from both routes"
+      ]
+    },
+    {
+      "id": "x-small-repo-pasted-clean",
+      "prompt": "Audit this: app/page.tsx imports { Hello } from \"@/components/Hello\"; components/Hello.tsx exports Hello and imports { greet } from \"@/lib/greet\"; lib/greet.ts exports greet (4 lines); tests/greet.test.ts imports greet. No TODOs, no any.",
+      "expected": [
+        "Reports no findings for the pasted set: no cycle, no layering violation, no god file, every export imported, lib/greet.ts has tests/greet.test.ts",
+        "Gate: PASS; the architecture map shows app/ as entry surface, components/ intermediate, lib/ foundation, tests/ tests",
+        "States the limit: static analysis on the pasted files only"
+      ]
+    }
+  ]
+}
