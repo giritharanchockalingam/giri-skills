@@ -63,15 +63,24 @@ test("router: deterministic, restricted to the role's skills, explains its match
 
 test("router: accuracy on the library's own eval prompts (measured, with a floor so it cannot silently regress)", () => {
   const r = new Router(SKILLS);
-  let n = 0, top1 = 0, inRole = 0, roleN = 0;
+  const byName = new Map(SKILLS.map((s) => [s.name, s.id]));
+  let n = 0, top1 = 0, inRole = 0, roleN = 0, on = 0, otop1 = 0;
   for (const s of SKILLS) for (const c of s.cases ?? []) {
     if (!c.prompt) continue;
-    n++; if (r.route(c.prompt, undefined, 1)[0]?.skill === s.id) top1++;
-    for (const role of ROLES.filter((x) => x.skills.includes(s.id))) { roleN++; if (r.route(c.prompt, role.skills, 1)[0]?.skill === s.id) inRole++; }
+    // a boundary case is graded against the neighbouring skill it belongs to, as scripts/behavioral_evals.py does
+    const target = c.routesTo ? byName.get(c.routesTo) : s.id;
+    assert.ok(target, `${s.id} case ${c.id} routes to unknown skill ${c.routesTo}`);
+    const hit = r.route(c.prompt, undefined, 1)[0]?.skill === target;
+    n++; if (hit) top1++;
+    if (!c.id.startsWith("x-")) { on++; if (hit) otop1++; }
+    for (const role of ROLES.filter((x) => x.skills.includes(target!))) { roleN++; if (r.route(c.prompt, role.skills, 1)[0]?.skill === target) inRole++; }
   }
-  const all = top1 / n, scoped = inRole / roleN;
-  console.log(`router: ${n} prompts · top-1 across all ${SKILLS.length} skills ${(all * 100).toFixed(1)}% · within the owning role ${(scoped * 100).toFixed(1)}%`);
-  assert.ok(n > 300);
-  assert.ok(all >= 0.75, `library-wide top-1 ${all}`);
+  const all = top1 / n, scoped = inRole / roleN, orig = otop1 / on;
+  console.log(`router: ${n} prompts · top-1 across all ${SKILLS.length} skills ${(all * 100).toFixed(1)}% (original ${on} cases ${(orig * 100).toFixed(1)}%) · within the owning role ${(scoped * 100).toFixed(1)}%`);
+  assert.ok(n > 1500);
+  // The original cases keep their floor. The expanded set (x- cases) adds prompts written not to use a skill's keywords
+  // and boundary cases, so its floor is re-baselined at the measured 72% (Oct 2026) minus a small margin.
+  assert.ok(orig >= 0.75, `library-wide top-1 on the original cases ${orig}`);
+  assert.ok(all >= 0.70, `library-wide top-1 ${all}`);
   assert.ok(scoped >= 0.85, `within-role top-1 ${scoped}`);
 });

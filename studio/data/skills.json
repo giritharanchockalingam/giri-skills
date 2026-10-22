@@ -302,7 +302,8 @@
     "expected": [
      "Routes to llm-eval-harness since this is an offline eval set with judge scores, not an online experiment",
      "Says ab-test-analysis is for online experiments with randomised users (SRM, z/Welch tests, ship decision)"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-boundary-rollout-plan",
@@ -310,7 +311,8 @@
     "expected": [
      "Routes to ai-release-plan for staged rollout gates and rollback design",
      "Notes ab-test-analysis analyses results after an experiment has run and returns ship / don't ship / inconclusive"
-    ]
+    ],
+    "routesTo": "ai-release-plan"
    },
    {
     "id": "x-rerun-after-fix",
@@ -799,7 +801,8 @@
     "expected": [
      "Routes to mcp-server-builder for building the server",
      "Explains that agent-architecture covers design-level tool contracts (side-effect class, idempotency, auth scope) and the pattern decision, not server code"
-    ]
+    ],
+    "routesTo": "mcp-server-builder"
    },
    {
     "id": "x-route-agent-eval-harness",
@@ -807,7 +810,8 @@
     "expected": [
      "Routes to llm-eval-harness for the golden set, rubric and regression gate",
      "Explains that agent-architecture only defines the evaluation hooks and observability fields in the design, not the scoring"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-existing-collapse-multi-agent",
@@ -1284,7 +1288,8 @@
     "expected": [
      "Routes the CoE operating model and funding question to ai-strategy-coe",
      "Says this skill covers the literacy curriculum, training load and adoption KPIs for the people affected, and offers it as a follow-on"
-    ]
+    ],
+    "routesTo": "ai-strategy-coe"
    },
    {
     "id": "x-route-system-release",
@@ -1292,7 +1297,8 @@
     "expected": [
      "Routes the staged release of the system to ai-release-plan",
      "Offers this skill for who needs training before each release wave and the adoption KPIs"
-    ]
+    ],
+    "routesTo": "ai-release-plan"
    },
    {
     "id": "x-existing-catalogue-pasted",
@@ -1789,7 +1795,8 @@
     "expected": [
      "Routes vulnerability/CVE scanning to security-review rather than doing it as a licence check",
      "Explains that this skill checks licences of models, datasets, libraries and services against the licence policy, and offers that as a separate step"
-    ]
+    ],
+    "routesTo": "security-review"
    },
    {
     "id": "x-boundary-pick-a-model",
@@ -1797,7 +1804,8 @@
     "expected": [
      "Routes the model choice to model-selection rather than answering it as a licence check",
      "Says this skill can check the shortlisted models' licences (e.g. Llama conditional terms, Gemma flow-down) once a choice is made"
-    ]
+    ],
+    "routesTo": "model-selection"
    },
    {
     "id": "x-existing-upgrade-model",
@@ -2297,7 +2305,8 @@
     "expected": [
      "Routes to eu-ai-act-classifier for the AI Act risk classification and obligations",
      "Explains that ai-controls-mapping maps evidence to NIST AI RMF and can afterwards check the classifier's obligations.csv against that evidence"
-    ]
+    ],
+    "routesTo": "eu-ai-act-classifier"
    },
    {
     "id": "x-boundary-risk-register",
@@ -2305,7 +2314,8 @@
     "expected": [
      "Routes to ai-governance-risk for the risk register and likelihood/impact scoring",
      "Says ai-controls-mapping instead reports NIST AI RMF subcategory coverage and gaps from an evidence register"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-existing-quarterly-refresh",
@@ -2648,7 +2658,8 @@
     "prompt": "We launch a new summarisation feature next quarter; what will it cost per month on our models?",
     "expected": [
      "Routes pre-launch workload pricing to llm-cost-model; offers this skill once metered usage exists"
-    ]
+    ],
+    "routesTo": "llm-cost-model"
    },
    {
     "id": "agent-happy-path",
@@ -2820,7 +2831,8 @@
     "expected": [
      "Routes GPU and self-hosting sizing to infra-gpu-sizing",
      "Says this skill allocates already-metered API spend by team and feature and can supply the current-spend baseline for the comparison"
-    ]
+    ],
+    "routesTo": "infra-gpu-sizing"
    },
    {
     "id": "x-boundary-pick-cheaper-model",
@@ -2828,7 +2840,8 @@
     "expected": [
      "Routes choosing between candidate models to model-selection",
      "Says this skill reports actual spend and cost per 1k requests by feature and model after the switch is metered"
-    ]
+    ],
+    "routesTo": "model-selection"
    },
    {
     "id": "x-rerun-after-price-added",
@@ -3309,7 +3322,8 @@
     "expected": [
      "Routes the operating-model and CoE charter work to ai-strategy-coe",
      "Says this skill does the per-use-case risk register, controls, model card and summary regulatory mapping"
-    ]
+    ],
+    "routesTo": "ai-strategy-coe"
    },
    {
     "id": "x-gov-boundary-dpia",
@@ -3317,7 +3331,8 @@
     "expected": [
      "Routes the GDPR DPIA to dpia",
      "Says this skill covers the AI risk register and controls and that a DPIA or equivalent is expected for High-tier use cases"
-    ]
+    ],
+    "routesTo": "dpia"
    },
    {
     "id": "x-gov-quarterly-refresh-pasted",
@@ -3774,7 +3789,8 @@
     "expected": [
      "Routes to llm-observability for monitoring, SLO alerting and dashboards",
      "Says this skill is for responding to a live AI incident (severity, containment, comms, postmortem skeleton), not for setting up monitoring"
-    ]
+    ],
+    "routesTo": "llm-observability"
    },
    {
     "id": "x-boundary-postmortem",
@@ -3782,7 +3798,8 @@
     "expected": [
      "Routes to ai-postmortem for the full blameless postmortem after containment",
      "Says this skill handles live response and only produces a postmortem skeleton"
-    ]
+    ],
+    "routesTo": "ai-postmortem"
    },
    {
     "id": "x-update-downgrade-with-evidence",
@@ -4274,7 +4291,8 @@
     "expected": [
      "Routes to ai-incident-runbook for severity, containment and comms during the live incident",
      "Explains the postmortem comes after mitigation and needs the timeline captured now (timestamps with timezone for detected, acknowledged, mitigated)"
-    ]
+    ],
+    "routesTo": "ai-incident-runbook"
    },
    {
     "id": "x-alerting-routes-observability",
@@ -4282,7 +4300,8 @@
     "expected": [
      "Routes to llm-observability for alerts, dashboards and SLOs",
      "States that ai-postmortem only records a monitoring-gap factor and an owned detect action, and measures time to detect from the incident timeline"
-    ]
+    ],
+    "routesTo": "llm-observability"
    },
    {
     "id": "x-rerun-after-review-fixes",
@@ -4757,7 +4776,8 @@
     "expected": [
      "Routes building and scoring the eval set to llm-eval-harness",
      "Explains this skill plans the staged rollout and gates once eval results exist, and does not build the dataset itself"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-boundary-risk-tier",
@@ -4765,7 +4785,8 @@
     "expected": [
      "Routes risk tiering to ai-governance-risk",
      "Explains this skill consumes the tier to size canary steps but does not assign it"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-verbose-multi-gate-ga",
@@ -5034,7 +5055,8 @@
     "prompt": "Has the distribution of our model's confidence scores shifted since launch?",
     "expected": [
      "Routes distribution drift to drift-monitor; this skill measures SLIs against objectives"
-    ]
+    ],
+    "routesTo": "drift-monitor"
    },
    {
     "id": "agent-happy-path",
@@ -5212,7 +5234,8 @@
     "expected": [
      "Routes to llm-observability for trace schemas and live dashboards",
      "Notes ai-slo-definition defines SLIs, objectives, error budgets and burn-rate alerts from a request log"
-    ]
+    ],
+    "routesTo": "llm-observability"
    },
    {
     "id": "x-boundary-monthly-cost-forecast",
@@ -5220,7 +5243,8 @@
     "expected": [
      "Routes to llm-cost-model for spend forecasting",
      "Says ai-slo-definition treats cost per request under a threshold as an SLI, not a forecast"
-    ]
+    ],
+    "routesTo": "llm-cost-model"
    },
    {
     "id": "x-existing-retarget-after-launch",
@@ -5789,7 +5813,8 @@
     "expected": [
      "Routes to ai-use-case-canvas to qualify the single idea",
      "Explains that ai-strategy-coe covers enterprise maturity, operating model, a multi-idea portfolio and the roadmap"
-    ]
+    ],
+    "routesTo": "ai-use-case-canvas"
    },
    {
     "id": "x-route-risk-register",
@@ -5797,7 +5822,8 @@
     "expected": [
      "Routes to ai-governance-risk for the risk register and controls",
      "Explains that ai-strategy-coe only sets the governance minimum (intake gate, risk tiers, model inventory, review cadence) within a strategy"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-existing-rerank-movement",
@@ -6087,7 +6113,8 @@
     "prompt": "Our chatbot is live; can you try to jailbreak it and see if it leaks the system prompt?",
     "expected": [
      "Routes live adversarial testing to red-team-suite; offers this skill for the design-level threat model"
-    ]
+    ],
+    "routesTo": "red-team-suite"
    },
    {
     "id": "agent-happy-path",
@@ -6261,7 +6288,8 @@
     "expected": [
      "Routes runtime input/output guardrail rules to guardrails-config",
      "Offers this skill for the design-level threat model whose mitigations those guardrails implement"
-    ]
+    ],
+    "routesTo": "guardrails-config"
    },
    {
     "id": "x-route-risk-register",
@@ -6269,7 +6297,8 @@
     "expected": [
      "Routes regulatory/compliance risk review and NIST AI RMF mapping to ai-governance-risk",
      "Says this skill covers the security threat model (STRIDE + OWASP LLM Top 10) of the architecture and offers it alongside"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-rerun-with-updated-register",
@@ -6768,7 +6797,8 @@
     "expected": [
      "Routes the risk-tier question to eu-ai-act-classifier rather than deciding the tier itself",
      "Explains this skill writes the user notice, system card and Art. 50 checklist and can take that classifier's classification.json as input"
-    ]
+    ],
+    "routesTo": "eu-ai-act-classifier"
    },
    {
     "id": "x-boundary-rollout-gates",
@@ -6776,7 +6806,8 @@
     "expected": [
      "Routes the staged rollout and gates to ai-release-plan",
      "Says this skill supplies the transparency pack (notice, system card, Art. 50 checklist) that the release plan can require before launch"
-    ]
+    ],
+    "routesTo": "ai-release-plan"
    },
    {
     "id": "x-existing-redline-published",
@@ -7284,7 +7315,8 @@
     "expected": [
      "Routes to ai-strategy-coe for portfolio-level ranking and roadmap",
      "Explains ai-use-case-canvas qualifies one idea at a time and can produce an intake canvas per idea"
-    ]
+    ],
+    "routesTo": "ai-strategy-coe"
    },
    {
     "id": "x-boundary-agent-design",
@@ -7292,7 +7324,8 @@
     "expected": [
      "Routes to agent-architecture for designing the agent graph, tools and approval step",
      "Says ai-use-case-canvas covers qualification (canvas, scores, verdict, build/buy), which is already done here"
-    ]
+    ],
+    "routesTo": "agent-architecture"
    },
    {
     "id": "x-existing-rereview-scores",
@@ -7587,7 +7620,8 @@
     "prompt": "Which LLM should we use for summarisation given these eval scores, token prices and latency numbers?",
     "expected": [
      "Routes model choice on eval, price and latency facts to model-selection; offers this skill for vendor and contract risk comparison"
-    ]
+    ],
+    "routesTo": "model-selection"
    },
    {
     "id": "agent-happy-path",
@@ -7759,7 +7793,8 @@
     "expected": [
      "Routes API token-spend forecasting to llm-cost-model",
      "Says this skill compares vendors on weighted criteria, sensitivity and third-party risk red flags"
-    ]
+    ],
+    "routesTo": "llm-cost-model"
    },
    {
     "id": "x-boundary-use-case-risk-register",
@@ -7767,7 +7802,8 @@
     "expected": [
      "Routes the use-case risk register to ai-governance-risk",
      "Says this skill screens vendors against the third-party AI risk questionnaire and scores the shortlist"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-renewal-with-previous",
@@ -8275,7 +8311,8 @@
     "expected": [
      "Routes scoring model outputs to llm-eval-harness",
      "Says this skill measures human-to-human agreement before labels become a gold set"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-aa-boundary-build-training-files",
@@ -8283,7 +8320,8 @@
     "expected": [
      "Routes building the training files to finetune-dataset-builder",
      "Says this skill checks inter-annotator agreement, not dataset building"
-    ]
+    ],
+    "routesTo": "finetune-dataset-builder"
    }
   ],
   "agentCases": [
@@ -8793,7 +8831,8 @@
     "expected": [
      "Routes to llm-eval-harness for LLM answer-quality evaluation",
      "Says this skill checks group fairness of yes/no decisions, not LLM answer quality"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-boundary-model-card",
@@ -8801,7 +8840,8 @@
     "expected": [
      "Routes to ai-governance-risk for the model card and risk register",
      "Says this skill's fairness report can be attached there as bias-risk evidence"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-quarterly-recheck-change",
@@ -9292,7 +9332,8 @@
     "expected": [
      "Routes to prompt-spec for system-prompt wording",
      "States that conversation-design covers the intent catalog, coverage, fallback and human hand-off, not prompt wording"
-    ]
+    ],
+    "routesTo": "prompt-spec"
    },
    {
     "id": "x-multi-agent-routes-architecture",
@@ -9300,7 +9341,8 @@
     "expected": [
      "Routes to agent-architecture for single- vs multi-agent topology",
      "States that conversation-design checks intents against real utterances (coverage, confusable intents, fallback/hand-off), which can follow once the topology is chosen"
-    ]
+    ],
+    "routesTo": "agent-architecture"
    },
    {
     "id": "x-intent-named-fallback",
@@ -9642,7 +9684,8 @@
     "prompt": "Which columns in this extract hold personal data and need masking?",
     "expected": [
      "Routes personal-data discovery to pii-data-inventory; offers this skill for contract conformance afterwards"
-    ]
+    ],
+    "routesTo": "pii-data-inventory"
    },
    {
     "id": "agent-happy-path",
@@ -9819,7 +9862,8 @@
     "expected": [
      "Routes overall readiness scoring to data-readiness-assessment",
      "Explains this skill gates one extract against its data contract and can run afterwards"
-    ]
+    ],
+    "routesTo": "data-readiness-assessment"
    },
    {
     "id": "x-boundary-build-training-set",
@@ -9827,7 +9871,8 @@
     "expected": [
      "Routes building the fine-tune dataset to finetune-dataset-builder",
      "Explains this skill only checks an extract against a contract and never edits or builds data"
-    ]
+    ],
+    "routesTo": "finetune-dataset-builder"
    },
    {
     "id": "x-ragged-and-missing-column",
@@ -10350,7 +10395,8 @@
     "expected": [
      "Routes to pii-data-inventory for personal-data discovery and handling policy",
      "Explains data-readiness-assessment scores volume, completeness, schema, uniqueness, duplicates and freshness against owner thresholds"
-    ]
+    ],
+    "routesTo": "pii-data-inventory"
    },
    {
     "id": "x-boundary-contract-rules",
@@ -10358,7 +10404,8 @@
     "expected": [
      "Routes to data-contract-validator for rule-by-rule contract validation",
      "Says data-readiness-assessment gives a readiness verdict from six dimensions and owner thresholds, not contract rules"
-    ]
+    ],
+    "routesTo": "data-contract-validator"
    },
    {
     "id": "x-reassess-telemetry-unchanged-fails",
@@ -10847,7 +10894,8 @@
     "expected": [
      "Routes to pii-data-inventory to find and classify the personal data",
      "Explains that dpia then turns that inventory's undecided-handling columns into DPO-owned risks"
-    ]
+    ],
+    "routesTo": "pii-data-inventory"
    },
    {
     "id": "x-route-fairness-test",
@@ -10855,7 +10903,8 @@
     "expected": [
      "Routes to bias-fairness-check for the fairness metrics",
      "Explains that dpia covers GDPR Art. 35 screening, risks to rights and freedoms and prior consultation, not fairness testing"
-    ]
+    ],
+    "routesTo": "bias-fairness-check"
    },
    {
     "id": "x-existing-register-biometric-change",
@@ -11180,7 +11229,8 @@
     "prompt": "Are we meeting our p95 latency target this week?",
     "expected": [
      "Routes latency and availability objectives to ai-slo-definition or llm-observability; drift-monitor compares distributions only"
-    ]
+    ],
+    "routesTo": "ai-slo-definition"
    },
    {
     "id": "agent-happy-path",
@@ -11360,7 +11410,8 @@
     "expected": [
      "Routes group fairness and approval-rate parity to bias-fairness-check",
      "Says drift-monitor compares feature distributions between two windows and offers it for the input mix"
-    ]
+    ],
+    "routesTo": "bias-fairness-check"
    },
    {
     "id": "x-route-answer-quality",
@@ -11368,7 +11419,8 @@
     "expected": [
      "Routes answer-quality scoring against a golden set to llm-eval-harness",
      "Offers drift-monitor to check whether the input or score distributions shifted over the same window"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-rerun-after-upstream-fix",
@@ -11835,7 +11887,8 @@
     "expected": [
      "Routes the enterprise risk register to ai-governance-risk",
      "Explains this skill classifies one AI system's EU AI Act tier and obligations, which can feed the register"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-boundary-nist-controls",
@@ -11843,7 +11896,8 @@
     "expected": [
      "Routes NIST AI RMF control mapping to ai-controls-mapping",
      "Says this skill only covers EU AI Act tier and obligations for a single system"
-    ]
+    ],
+    "routesTo": "ai-controls-mapping"
    },
    {
     "id": "x-existing-purpose-change",
@@ -12364,7 +12418,8 @@
     "expected": [
      "Routes to llm-eval-harness for running the evals and LLM-as-judge scoring",
      "Says eval-engineering-runner audits and cleans the dataset first (coverage, duplicates, leakage) and hands eval-clean.jsonl to the harness"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-boundary-retrieval-metrics",
@@ -12372,7 +12427,8 @@
     "expected": [
      "Routes to rag-pipeline-design for retrieval metrics and chunking decisions",
      "Says eval-engineering-runner only audits the eval dataset's fitness, not retrieval quality"
-    ]
+    ],
+    "routesTo": "rag-pipeline-design"
    },
    {
     "id": "x-existing-reaudit-after-additions",
@@ -12847,7 +12903,8 @@
     "expected": [
      "Routes building the eval harness and judges to llm-eval-harness",
      "Says this skill turns live user feedback and eval failures into a ranked backlog and regression cases once the assistant is in use"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-boundary-live-slo",
@@ -12855,7 +12912,8 @@
     "expected": [
      "Routes live SLO checks on traces to llm-observability",
      "Says this skill ranks user feedback (including 'too slow' complaints) into an owned fix backlog"
-    ]
+    ],
+    "routesTo": "llm-observability"
    },
    {
     "id": "x-route-incident",
@@ -12863,7 +12921,8 @@
     "expected": [
      "Treats this as a live incident and routes to ai-incident-runbook for containment first",
      "Offers to turn the feedback into backlog items and regression cases after containment"
-    ]
+    ],
+    "routesTo": "ai-incident-runbook"
    },
    {
     "id": "x-next-cycle-merge",
@@ -13299,7 +13358,8 @@
     "expected": [
      "Routes PII discovery to pii-data-inventory",
      "Says this skill builds the cleaned, leak-free train/val/test files after the PII step"
-    ]
+    ],
+    "routesTo": "pii-data-inventory"
    },
    {
     "id": "x-ft-boundary-tabular-quality",
@@ -13307,7 +13367,8 @@
     "expected": [
      "Routes tabular data-quality gating to data-readiness-assessment",
      "Says this skill turns prompt/response examples into fine-tune files"
-    ]
+    ],
+    "routesTo": "data-readiness-assessment"
    },
    {
     "id": "x-ft-existing-append-pasted",
@@ -13761,7 +13822,8 @@
     "expected": [
      "Routes to red-team-suite for adversarial attack-set generation and grading",
      "Says this skill compiles deterministic guardrail rules and their regression tests, which the red-team results can inform"
-    ]
+    ],
+    "routesTo": "red-team-suite"
    },
    {
     "id": "x-boundary-controls-register",
@@ -13769,7 +13831,8 @@
     "expected": [
      "Routes to ai-governance-risk for the risk register and controls checklist",
      "Says this skill implements some of those controls (injection, PII, tool allowlist) as enforceable rules"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-existing-loosen-phone",
@@ -14246,7 +14309,8 @@
     "expected": [
      "Routes to model-selection to rank the candidate models on evals and cost",
      "States that infra-gpu-sizing sizes the GPUs and monthly cost once a model, precision and measured throughput are chosen"
-    ]
+    ],
+    "routesTo": "model-selection"
    },
    {
     "id": "x-api-feature-cost-routes-cost-model",
@@ -14254,7 +14318,8 @@
     "expected": [
      "Routes to llm-cost-model for per-feature API cost and prompt-caching analysis",
      "States that infra-gpu-sizing is for GPU count and self-host vs rental vs API comparison, not per-feature API cost modelling"
-    ]
+    ],
+    "routesTo": "llm-cost-model"
    },
    {
     "id": "x-existing-fleet-under-provisioned",
@@ -14706,7 +14771,8 @@
     "expected": [
      "Routes chunking-strategy trade-offs and retrieval-quality evaluation to rag-pipeline-design",
      "Explains this skill sizes, costs and scaffolds a chosen configuration instead"
-    ]
+    ],
+    "routesTo": "rag-pipeline-design"
    },
    {
     "id": "x-boundary-gpu-self-host",
@@ -14714,7 +14780,8 @@
     "expected": [
      "Routes serving-capacity and GPU sizing to infra-gpu-sizing",
      "Explains this skill covers corpus chunking, embedding-token cost and the context budget, not serving hardware"
-    ]
+    ],
+    "routesTo": "infra-gpu-sizing"
    }
   ],
   "agentCases": [
@@ -15227,7 +15294,8 @@
     "expected": [
      "Routes to langgraph-runner for the overall graph design",
      "Says langgraph-hitl-runner adds approval gates (interrupt/resume, approvers, timeouts) to specific actions once the graph exists"
-    ]
+    ],
+    "routesTo": "langgraph-runner"
    },
    {
     "id": "x-boundary-risk-register",
@@ -15235,7 +15303,8 @@
     "expected": [
      "Routes to ai-governance-risk for the risk register",
      "Notes langgraph-hitl-runner implements the human-approval control (gates, timeouts, no auto-approve on irreversible actions)"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-existing-graph-fit",
@@ -15725,7 +15794,8 @@
     "expected": [
      "Routes to langgraph-hitl-runner for the approval interrupt, timeout policy and resume code",
      "Explains that langgraph-runner validates graph structure and generates the StateGraph scaffold, not approval gates"
-    ]
+    ],
+    "routesTo": "langgraph-hitl-runner"
    },
    {
     "id": "x-route-workflow-or-agent",
@@ -15733,7 +15803,8 @@
     "expected": [
      "Routes to agent-architecture for the pattern decision",
      "Explains that langgraph-runner starts once a graph spec exists: validation, diagram and scaffold"
-    ]
+    ],
+    "routesTo": "agent-architecture"
    },
    {
     "id": "x-existing-diff-resume-breaking",
@@ -16062,7 +16133,8 @@
     "prompt": "Should we self-host an open model on our own GPUs instead of paying per token?",
     "expected": [
      "Routes GPU capacity and self-host vs rent to infra-gpu-sizing; offers this skill for the API side of the comparison"
-    ]
+    ],
+    "routesTo": "infra-gpu-sizing"
    },
    {
     "id": "agent-happy-path",
@@ -16242,7 +16314,8 @@
     "expected": [
      "Routes the ROI/benefits business case to value-case-builder",
      "Offers this skill to supply the monthly API run cost as one input to that case"
-    ]
+    ],
+    "routesTo": "value-case-builder"
    },
    {
     "id": "x-actuals-variance-inline",
@@ -16811,7 +16884,8 @@
     "expected": [
      "Routes retrieval-only tuning (recall@k, MRR, chunking, embeddings) to rag-pipeline-design",
      "Explains this skill evaluates end-to-end answer quality with a golden set, rubric and CI gate, and can be used once retrieval is chosen"
-    ]
+    ],
+    "routesTo": "rag-pipeline-design"
    },
    {
     "id": "x-boundary-jailbreak-set",
@@ -16819,7 +16893,8 @@
     "expected": [
      "Routes adversarial attack generation to red-team-suite",
      "Says this skill can include safety/injection cases as a zero-tolerance category in the golden set and gate"
-    ]
+    ],
+    "routesTo": "red-team-suite"
    },
    {
     "id": "x-existing-new-model-version",
@@ -17239,7 +17314,8 @@
     "expected": [
      "Routes to observability-setup for app logging, Sentry and health checks",
      "Says llm-observability instead rolls up LLM trace spans against SLOs (latency, errors, tokens, cost, quality, drift)"
-    ]
+    ],
+    "routesTo": "observability-setup"
    },
    {
     "id": "x-boundary-define-slos",
@@ -17247,7 +17323,8 @@
     "expected": [
      "Routes to ai-slo-definition for designing SLO targets from a request log",
      "Says llm-observability never picks thresholds; it evaluates traces against the owner's SLO file once set"
-    ]
+    ],
+    "routesTo": "ai-slo-definition"
    },
    {
     "id": "x-boundary-team-showback",
@@ -17255,7 +17332,8 @@
     "expected": [
      "Routes to ai-finops-chargeback for team spend showback/chargeback",
      "Says llm-observability reports cost per request only from spans carrying cost_usd, per feature, not a finance allocation"
-    ]
+    ],
+    "routesTo": "ai-finops-chargeback"
    },
    {
     "id": "x-new-app-no-traffic",
@@ -17675,7 +17753,8 @@
     "expected": [
      "Routes the agent pattern and HITL design to agent-architecture",
      "Says this skill builds the MCP server once the tool contracts are decided"
-    ]
+    ],
+    "routesTo": "agent-architecture"
    },
    {
     "id": "x-boundary-tool-choice-evals",
@@ -17683,7 +17762,8 @@
     "expected": [
      "Routes the evaluation golden set and scorer to llm-eval-harness",
      "Says this skill builds and tests the MCP server itself (contracts, auth, errors, protocol tests)"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-existing-breaking-change",
@@ -18107,7 +18187,8 @@
     "expected": [
      "Routes producing the eval scores to llm-eval-harness",
      "Says this skill ranks candidates once those scores, prices and constraints exist"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-ms-boundary-gpu-sizing",
@@ -18115,7 +18196,8 @@
     "expected": [
      "Routes GPU capacity and self-host TCO to infra-gpu-sizing",
      "Says its $/1M figure can feed this skill as the self-host price"
-    ]
+    ],
+    "routesTo": "infra-gpu-sizing"
    },
    {
     "id": "x-ms-reprice-rerun",
@@ -18596,7 +18678,8 @@
     "expected": [
      "Routes to data-readiness-assessment for profiling and readiness",
      "Says this skill inventories personal data and its policy handling, not data quality"
-    ]
+    ],
+    "routesTo": "data-readiness-assessment"
    },
    {
     "id": "x-boundary-dpia",
@@ -18604,7 +18687,8 @@
     "expected": [
      "Routes to dpia for the Data Protection Impact Assessment",
      "Says this skill's PII inventory can feed the DPIA as input"
-    ]
+    ],
+    "routesTo": "dpia"
    },
    {
     "id": "x-existing-quarter-changes",
@@ -19109,7 +19193,8 @@
     "expected": [
      "Routes to ai-governance-risk for the AI risk register and control mapping",
      "States that program-raid-status reports delivery status (milestone slip, critical path, RAID exposure and owners), not AI compliance risk"
-    ]
+    ],
+    "routesTo": "ai-governance-risk"
    },
    {
     "id": "x-phase2-estimate-routes-estimator",
@@ -19117,7 +19202,8 @@
     "expected": [
      "Routes to effort-estimator for effort, staffing, P50/P80 and cost",
      "States that program-raid-status tracks slip against an existing milestone plan rather than estimating effort"
-    ]
+    ],
+    "routesTo": "effort-estimator"
    },
    {
     "id": "x-since-last-report-inline",
@@ -19640,7 +19726,8 @@
     "expected": [
      "Routes running the cases and gating on pass rate to llm-eval-harness",
      "Explains this skill produces prompt-tests.jsonl but does not execute the cases against a model"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-boundary-jailbreak",
@@ -19648,7 +19735,8 @@
     "expected": [
      "Routes injection and jailbreak testing to red-team-suite",
      "Explains this skill specifies, lints and versions the prompt rather than attacking it"
-    ]
+    ],
+    "routesTo": "red-team-suite"
    }
   ],
   "agentCases": [
@@ -20145,7 +20233,8 @@
     "expected": [
      "Routes to agent-architecture for agent control flow and pattern choice",
      "Says rag-pipeline-design covers the retrieval design (chunking, embeddings, hybrid retrieval, eval, guardrails, cost)"
-    ]
+    ],
+    "routesTo": "agent-architecture"
    },
    {
     "id": "x-boundary-chunk-count-scaffold",
@@ -20153,7 +20242,8 @@
     "expected": [
      "Routes to langchain-rag-runner for chunk sizing, context-fit numbers and the LangChain scaffold",
      "Notes rag-pipeline-design covers retrieval-quality evaluation and chunking-strategy trade-offs"
-    ]
+    ],
+    "routesTo": "langchain-rag-runner"
    },
    {
     "id": "x-existing-reranker-regression",
@@ -20566,7 +20656,8 @@
     "expected": [
      "Routes to llm-eval-harness for answer quality, golden set and the CI regression gate",
      "Explains that red-team-suite covers adversarial security testing (injection, leakage, tool misuse), not answer accuracy"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-route-prompt-lint",
@@ -20574,7 +20665,8 @@
     "expected": [
      "Routes to prompt-spec for prompt linting and versioning",
      "Explains that red-team-suite attacks the running app and grades its responses rather than linting the prompt"
-    ]
+    ],
+    "routesTo": "prompt-spec"
    },
    {
     "id": "x-existing-retest-after-fix",
@@ -21045,7 +21137,8 @@
     "expected": [
      "Routes GPU and inference capacity sizing to infra-gpu-sizing",
      "Says this skill builds the demo spec, synthetic data, UI stub and talk track, and offers it for the demo itself"
-    ]
+    ],
+    "routesTo": "infra-gpu-sizing"
    },
    {
     "id": "x-route-accuracy-proof",
@@ -21053,7 +21146,8 @@
     "expected": [
      "Routes quality proof on a labelled set to llm-eval-harness",
      "Offers to label any measured result as such in the talk track once it exists, rather than claiming accuracy in the demo"
-    ]
+    ],
+    "routesTo": "llm-eval-harness"
    },
    {
     "id": "x-extend-returns-demo",
@@ -21506,7 +21600,8 @@
     "expected": [
      "Routes test authoring to test-strategy-tdd",
      "Explains this skill wires tests into the pipeline (ci / lint-typecheck-test, preview / e2e) once they exist"
-    ]
+    ],
+    "routesTo": "test-strategy-tdd"
    },
    {
     "id": "x-boundary-alerts",
@@ -21514,7 +21609,8 @@
     "expected": [
      "Routes runtime alerting and error tracking to observability-setup",
      "Says this skill only covers pipeline stages, including the post-deploy smoke on /api/health and /api/health/deep"
-    ]
+    ],
+    "routesTo": "observability-setup"
    },
    {
     "id": "x-existing-add-coverage-gate",
@@ -21964,7 +22060,8 @@
     "expected": [
      "Routes to security-review for auth, tenancy and validation reasoning",
      "Says code-review-runner is the deterministic first pass on added lines (secrets, eval, TLS, SQL concat, debug, TODOs, tests)"
-    ]
+    ],
+    "routesTo": "security-review"
    },
    {
     "id": "x-boundary-apply-fixes",
@@ -21972,7 +22069,8 @@
     "expected": [
      "Routes to safe-fix for applying the fixes",
      "Says code-review-runner only reports findings and the verdict; it can re-run on the fixed diff"
-    ]
+    ],
+    "routesTo": "safe-fix"
    },
    {
     "id": "x-large-change-stats",
@@ -22496,7 +22594,8 @@
     "expected": [
      "Routes migrations and RLS to supabase-schema-rls",
      "Says this skill validates entities, relationships, invariants and the glossary that the schema should follow"
-    ]
+    ],
+    "routesTo": "supabase-schema-rls"
    },
    {
     "id": "x-boundary-define-v1",
@@ -22504,7 +22603,8 @@
     "expected": [
      "Routes defining v1 scope, users and success metrics to product-spec-prd",
      "Says this skill models the returns domain (entities, relationships, glossary) once requirements are set"
-    ]
+    ],
+    "routesTo": "product-spec-prd"
    },
    {
     "id": "x-existing-order-changes",
@@ -22998,7 +23098,8 @@
     "expected": [
      "Routes release notes and tagging to ci-cd-vercel-github",
      "Says this skill writes the end-of-thread HANDOFF and next-thread prompt"
-    ]
+    ],
+    "routesTo": "ci-cd-vercel-github"
    },
    {
     "id": "x-ho-boundary-plan-next-feature",
@@ -23006,7 +23107,8 @@
     "expected": [
      "Routes the implementation plan to spec-to-plan",
      "Says this skill can close the thread with a next-thread prompt that names spec-to-plan"
-    ]
+    ],
+    "routesTo": "spec-to-plan"
    }
   ],
   "agentCases": [
@@ -23441,7 +23543,8 @@
     "expected": [
      "Routes to supabase-schema-rls to write the migration SQL and RLS",
      "Says this skill designs tenancy, RBAC, plans and audit and hands the SQL off"
-    ]
+    ],
+    "routesTo": "supabase-schema-rls"
    },
    {
     "id": "x-boundary-pr-review",
@@ -23449,7 +23552,8 @@
     "expected": [
      "Routes to security-review for the pre-merge security review",
      "Says this skill designs tenant isolation and does not verify diffs"
-    ]
+    ],
+    "routesTo": "security-review"
    },
    {
     "id": "x-existing-add-sub-teams",
@@ -23873,7 +23977,8 @@
     "expected": [
      "Routes to supabase-schema-rls for schema, migrations and RLS policies",
      "States that nextjs-enterprise-conventions covers the app code layering (lib/db, services, actions) that calls those tables, not the policies"
-    ]
+    ],
+    "routesTo": "supabase-schema-rls"
    },
    {
     "id": "x-prod-error-routes-safe-fix",
@@ -23881,7 +23986,8 @@
     "expected": [
      "Routes to safe-fix for reproduction, root cause and a minimal diff with a regression test",
      "States that nextjs-enterprise-conventions applies to the resulting diff (conventions check) rather than to diagnosing the bug"
-    ]
+    ],
+    "routesTo": "safe-fix"
    },
    {
     "id": "x-baseline-new-high-finding",
@@ -24347,7 +24453,8 @@
     "expected": [
      "Routes debugging and fixing this specific failure to safe-fix",
      "Explains this skill sets up logging, error tracking, health checks and alerts rather than fixing a bug"
-    ]
+    ],
+    "routesTo": "safe-fix"
    },
    {
     "id": "x-boundary-ci-pipeline",
@@ -24355,7 +24462,8 @@
     "expected": [
      "Routes the CI/CD pipeline and deploy-failure notifications to ci-cd-vercel-github",
      "Explains this skill covers runtime logging, error tracking, health endpoints and alerts"
-    ]
+    ],
+    "routesTo": "ci-cd-vercel-github"
    }
   ],
   "agentCases": [
@@ -24791,7 +24899,8 @@
     "expected": [
      "Routes to spec-to-plan for the task-gated implementation plan",
      "Notes product-spec-prd's Engineering handoff (acceptance criteria) is the input to that plan"
-    ]
+    ],
+    "routesTo": "spec-to-plan"
    },
    {
     "id": "x-boundary-roi-case",
@@ -24799,7 +24908,8 @@
     "expected": [
      "Routes to value-case-builder for the ROI/payback model",
      "Says product-spec-prd defines goals, non-goals, stories, metrics and phased scope, not financial ROI"
-    ]
+    ],
+    "routesTo": "value-case-builder"
    },
    {
     "id": "x-redline-pasted-prd",
@@ -25321,7 +25431,8 @@
     "expected": [
      "Routes to spec-to-plan for the feature plan",
      "Explains that project-bootstrap only sets up the skeleton (docs, ADRs, CI, env contract, branch rules), not feature work"
-    ]
+    ],
+    "routesTo": "spec-to-plan"
    },
    {
     "id": "x-route-slow-preview-pipeline",
@@ -25329,7 +25440,8 @@
     "expected": [
      "Routes to ci-cd-vercel-github for pipeline tuning",
      "Explains that project-bootstrap only writes the initial workflow skeletons"
-    ]
+    ],
+    "routesTo": "ci-cd-vercel-github"
    },
    {
     "id": "x-existing-partial-repo",
@@ -25736,7 +25848,8 @@
     "expected": [
      "Routes new behaviour to spec-to-plan",
      "Says safe-fix handles bugs with a reproduction, minimal diff and regression test, and offers it if the export later misbehaves"
-    ]
+    ],
+    "routesTo": "spec-to-plan"
    },
    {
     "id": "x-route-security-audit",
@@ -25744,7 +25857,8 @@
     "expected": [
      "Routes vulnerability review without a reproduced bug to security-review",
      "Offers safe-fix for any finding that comes with a reproduction"
-    ]
+    ],
+    "routesTo": "security-review"
    },
    {
     "id": "x-verify-with-recorded-baseline",
@@ -26168,7 +26282,8 @@
     "expected": [
      "Routes schema and policy authoring to supabase-schema-rls",
      "Says this skill reviews the resulting migration and code for RLS bypasses before merge"
-    ]
+    ],
+    "routesTo": "supabase-schema-rls"
    },
    {
     "id": "x-boundary-plain-bug",
@@ -26176,7 +26291,8 @@
     "expected": [
      "Routes a functional bug with no security angle to safe-fix",
      "Explains this skill is for security questions on a diff, PR or release"
-    ]
+    ],
+    "routesTo": "safe-fix"
    },
    {
     "id": "x-existing-repo-callers",
@@ -26646,7 +26762,8 @@
     "expected": [
      "Routes to multi-tenant-saas-patterns for the tenant, roles and entitlement model design",
      "Says spec-to-plan turns a decided feature/SPEC section into a task-gated build plan afterwards"
-    ]
+    ],
+    "routesTo": "multi-tenant-saas-patterns"
    },
    {
     "id": "x-boundary-bug-fix",
@@ -26654,7 +26771,8 @@
     "expected": [
      "Routes to safe-fix for the bug fix",
      "Says spec-to-plan is for planning features from a SPEC/ticket, not fixing bugs"
-    ]
+    ],
+    "routesTo": "safe-fix"
    }
   ],
   "agentCases": [
@@ -27080,7 +27198,8 @@
     "expected": [
      "Routes tenancy, RBAC and plan design to multi-tenant-saas-patterns (design first)",
      "Says this skill then writes the migrations and RLS policies that implement the design"
-    ]
+    ],
+    "routesTo": "multi-tenant-saas-patterns"
    },
    {
     "id": "x-boundary-server-action-authz",
@@ -27088,7 +27207,8 @@
     "expected": [
      "Routes application-level authz in server actions to nextjs-enterprise-conventions",
      "Says this skill covers the database side: schema, RLS policies and the RLS lint"
-    ]
+    ],
+    "routesTo": "nextjs-enterprise-conventions"
    },
    {
     "id": "x-existing-add-tenant-legacy",
@@ -27521,7 +27641,8 @@
     "expected": [
      "Routes applying and verifying the fix to safe-fix",
      "Says this skill organises evidence and keeps the fix gate closed until a hypothesis is confirmed"
-    ]
+    ],
+    "routesTo": "safe-fix"
    },
    {
     "id": "x-dbg-boundary-security-diff",
@@ -27529,7 +27650,8 @@
     "expected": [
      "Routes the diff security review to security-review",
      "Says this skill handles failing tests, broken builds and stack traces"
-    ]
+    ],
+    "routesTo": "security-review"
    }
   ],
   "agentCases": [
@@ -27993,7 +28115,8 @@
     "expected": [
      "Routes to safe-fix for diagnosing and fixing the failing test",
      "Says this skill plans and writes tests before implementation, not debugging"
-    ]
+    ],
+    "routesTo": "safe-fix"
    },
    {
     "id": "x-boundary-pr-pipeline",
@@ -28001,7 +28124,8 @@
     "expected": [
      "Routes to ci-cd-vercel-github for pipeline work",
      "Says this skill provides the tests and test scripts the pipeline runs"
-    ]
+    ],
+    "routesTo": "ci-cd-vercel-github"
    },
    {
     "id": "x-existing-partial-coverage",
@@ -28441,7 +28565,8 @@
     "expected": [
      "Routes to test-strategy-tdd for setting up test tooling and unit tests in a repo that has none",
      "States that webapp-testing-runner generates pytest-playwright e2e tests from a flows list once journeys are defined"
-    ]
+    ],
+    "routesTo": "test-strategy-tdd"
    },
    {
     "id": "x-failing-e2e-routes-debugging",
@@ -28449,7 +28574,8 @@
     "expected": [
      "Routes to systematic-debugging-runner to organise the evidence and hypotheses for the failing test",
      "States webapp-testing-runner generates tests from flows and does not execute or diagnose them"
-    ]
+    ],
+    "routesTo": "systematic-debugging-runner"
    },
    {
     "id": "x-existing-ts-spec-gaps-only",
@@ -28971,7 +29097,8 @@
     "expected": [
      "Routes JD fit scoring to jd-fit-scorer",
      "Offers to log the opportunity in the tracker (Identified or Applied) once the user decides"
-    ]
+    ],
+    "routesTo": "jd-fit-scorer"
    },
    {
     "id": "x-boundary-compare-offers",
@@ -28979,7 +29106,8 @@
     "expected": [
      "Routes offer comparison to offer-evaluator",
      "Explains this skill tracks stages and next actions (e.g. both rows at Offer with a response date) rather than evaluating offers"
-    ]
+    ],
+    "routesTo": "offer-evaluator"
    }
   ],
   "agentCases": [
@@ -29419,7 +29547,8 @@
     "expected": [
      "Routes to outreach-and-followup for post-interview thank-you notes",
      "Says interview-prep covers story mapping, likely questions, 90-day plan and questions to ask before a round"
-    ]
+    ],
+    "routesTo": "outreach-and-followup"
    },
    {
     "id": "x-boundary-offer-received",
@@ -29427,7 +29556,8 @@
     "expected": [
      "Routes to offer-evaluator for total-comp comparison and the decision",
      "Notes interview-prep is for preparing upcoming rounds"
-    ]
+    ],
+    "routesTo": "offer-evaluator"
    },
    {
     "id": "x-debrief-next-round",
@@ -29892,7 +30022,8 @@
     "expected": [
      "Routes to resume-tailor for the rewrite",
      "Explains that jd-fit-scorer scores fit and lists gaps; it does not rewrite the résumé"
-    ]
+    ],
+    "routesTo": "resume-tailor"
    },
    {
     "id": "x-route-offer-decision",
@@ -29900,7 +30031,8 @@
     "expected": [
      "Routes to offer-evaluator for the offer comparison",
      "Explains that jd-fit-scorer scores a JD against the profile before applying, not offers"
-    ]
+    ],
+    "routesTo": "offer-evaluator"
    },
    {
     "id": "x-existing-resume-line-evidence",
@@ -30348,7 +30480,8 @@
     "expected": [
      "Routes drafting the negotiation email to outreach-and-followup (negotiation open)",
      "Offers this skill for the lever plan and the numbers behind the counter"
-    ]
+    ],
+    "routesTo": "outreach-and-followup"
    },
    {
     "id": "x-route-log-offer-stage",
@@ -30356,7 +30489,8 @@
     "expected": [
      "Routes status tracking to application-tracker",
      "Offers this skill to evaluate the Globex offer once the figures are shared"
-    ]
+    ],
+    "routesTo": "application-tracker"
    },
    {
     "id": "x-revised-offer-update",
@@ -30800,7 +30934,8 @@
     "expected": [
      "Routes upcoming-interview preparation (STAR stories, questions to ask) to interview-prep",
      "Says this skill drafts the thank-you notes after the interview"
-    ]
+    ],
+    "routesTo": "interview-prep"
    },
    {
     "id": "x-boundary-offer-math",
@@ -30808,7 +30943,8 @@
     "expected": [
      "Routes offer math and comparison to offer-evaluator",
      "Says this skill writes the negotiation opener once the target lever is chosen"
-    ]
+    ],
+    "routesTo": "offer-evaluator"
    }
   ],
   "agentCases": [
@@ -31338,7 +31474,8 @@
     "expected": [
      "Routes to jd-fit-scorer for the fit score and apply decision",
      "Says resume-tailor rewrites the résumé against the JD after a GO / LEAN GO"
-    ]
+    ],
+    "routesTo": "jd-fit-scorer"
    },
    {
     "id": "x-boundary-cover-letter",
@@ -31346,7 +31483,8 @@
     "expected": [
      "Routes to outreach-and-followup for the cover letter and recruiter/hiring-manager message",
      "Says resume-tailor produces the truth-locked tailored résumé, keyword map and traceability table"
-    ]
+    ],
+    "routesTo": "outreach-and-followup"
    },
    {
     "id": "x-existing-tailored-new-jd",
@@ -31855,7 +31993,8 @@
     "expected": [
      "Routes pre-pitch research on a new logo to client-research-brief",
      "Says this skill builds the account plan (posture, stakeholder map, white space, plays) once there is an account to plan or as an Enter template"
-    ]
+    ],
+    "routesTo": "client-research-brief"
    },
    {
     "id": "x-boundary-battle-card",
@@ -31863,7 +32002,8 @@
     "expected": [
      "Routes a single-pursuit battle card to competitive-positioning",
      "Says this skill covers the whole account: posture, coverage, white space, risks and 90-day plays"
-    ]
+    ],
+    "routesTo": "competitive-positioning"
    },
    {
     "id": "x-refresh-play-statuses",
@@ -32360,7 +32500,8 @@
     "expected": [
      "Routes competitor battle cards to competitive-positioning",
      "Says this skill produces a sourced brief on the client account itself"
-    ]
+    ],
+    "routesTo": "competitive-positioning"
    },
    {
     "id": "x-crb-boundary-call-synthesis",
@@ -32368,7 +32509,8 @@
     "expected": [
      "Routes call synthesis to discovery-interview",
      "Says this skill researches the account before the call"
-    ]
+    ],
+    "routesTo": "discovery-interview"
    }
   ],
   "agentCases": [
@@ -32839,7 +32981,8 @@
     "expected": [
      "Routes to client-research-brief for researching the client",
      "Says this skill builds a battle card against a competitor or alternative, not a client brief"
-    ]
+    ],
+    "routesTo": "client-research-brief"
    },
    {
     "id": "x-boundary-exec-summary",
@@ -32847,7 +32990,8 @@
     "expected": [
      "Routes to proposal-writer for the proposal prose",
      "Says this skill supplies ghost lines and evaluation criteria the proposal can use"
-    ]
+    ],
+    "routesTo": "proposal-writer"
    },
    {
     "id": "x-existing-wedge-closed",
@@ -33333,7 +33477,8 @@
     "expected": [
      "Routes to client-research-brief for sourced company background",
      "States that discovery-interview prepares the question plan for the call and synthesises notes afterwards"
-    ]
+    ],
+    "routesTo": "client-research-brief"
    },
    {
     "id": "x-roi-model-routes-value-case",
@@ -33341,7 +33486,8 @@
     "expected": [
      "Routes to value-case-builder for the benefits tree, cost/savings model and payback",
      "States that discovery-interview supplies the pain matrix and gaps list (with any stated figures) as inputs to that model"
-    ]
+    ],
+    "routesTo": "value-case-builder"
    },
    {
     "id": "x-second-call-update-register",
@@ -33892,7 +34038,8 @@
     "expected": [
      "Routes interface complexity scoring and wave planning to integration-migration-assessor",
      "Explains this skill sizes effort, staffing and price from the band counts the assessor produces"
-    ]
+    ],
+    "routesTo": "integration-migration-assessor"
    },
    {
     "id": "x-boundary-roi",
@@ -33900,7 +34047,8 @@
     "expected": [
      "Routes the ROI/payback business case to value-case-builder",
      "Explains this skill supplies the effort and price (cost side) that the value case can use"
-    ]
+    ],
+    "routesTo": "value-case-builder"
    }
   ],
   "agentCases": [
@@ -34364,7 +34512,8 @@
     "expected": [
      "Routes to value-case-builder for the savings/ROI model",
      "Says exec-deck-redline then marks and sources the slide's numbers against that value case"
-    ]
+    ],
+    "routesTo": "value-case-builder"
    },
    {
     "id": "x-boundary-orals-script",
@@ -34372,7 +34521,8 @@
     "expected": [
      "Routes to orals-prep for the presenter script and speaker assignments",
      "Notes exec-deck-redline sharpens the deck itself slide by slide"
-    ]
+    ],
+    "routesTo": "orals-prep"
    },
    {
     "id": "x-second-pass-after-redline",
@@ -34897,7 +35047,8 @@
     "expected": [
      "Routes to effort-estimator for P50/P80 effort, staffing and price",
      "Explains that integration-migration-assessor produced the band counts and wave plan that feed the estimate"
-    ]
+    ],
+    "routesTo": "effort-estimator"
    },
    {
     "id": "x-route-target-architecture-doc",
@@ -34905,7 +35056,8 @@
     "expected": [
      "Routes to solution-architecture-doc for the architecture document",
      "Explains that integration-migration-assessor supplies the inventory scoring and wave plan that the architecture doc uses"
-    ]
+    ],
+    "routesTo": "solution-architecture-doc"
    },
    {
     "id": "x-existing-reassess-after-discovery",
@@ -35356,7 +35508,8 @@
     "expected": [
      "Routes slide content rework to exec-deck-redline",
      "Says orals-prep scripts what presenters say, the timing, Q&A bank and rehearsal, and offers it once the deck is final"
-    ]
+    ],
+    "routesTo": "exec-deck-redline"
    },
    {
     "id": "x-route-battle-card",
@@ -35364,7 +35517,8 @@
     "expected": [
      "Routes the battle card to competitive-positioning",
      "Notes the battle card feeds orals-prep's question bank and that spoken answers about the incumbent belong to orals-prep"
-    ]
+    ],
+    "routesTo": "competitive-positioning"
    },
    {
     "id": "x-talk-track-check-inline",
@@ -35873,7 +36027,8 @@
     "expected": [
      "Routes the requirement inventory to rfp-compliance-matrix",
      "Explains this skill writes the response narrative and answers each mandatory requirement where the compliance matrix points"
-    ]
+    ],
+    "routesTo": "rfp-compliance-matrix"
    },
    {
     "id": "x-boundary-sow-terms",
@@ -35881,7 +36036,8 @@
     "expected": [
      "Routes contract terms to sow-drafter",
      "Notes the proposal's assumptions become change-control triggers that the SOW should carry over"
-    ]
+    ],
+    "routesTo": "sow-drafter"
    }
   ],
   "agentCases": [
@@ -36369,7 +36525,8 @@
     "expected": [
      "Routes to proposal-writer for the proposal narrative",
      "Says rfp-compliance-matrix builds the requirement inventory, compliance matrix, gaps, clarification questions and bid call that the narrative should follow"
-    ]
+    ],
+    "routesTo": "proposal-writer"
    },
    {
     "id": "x-boundary-pricing",
@@ -36377,7 +36534,8 @@
     "expected": [
      "Routes to effort-estimator for effort and pricing",
      "Says rfp-compliance-matrix handles requirements, compliance scoring and bid/no-bid, not pricing"
-    ]
+    ],
+    "routesTo": "effort-estimator"
    },
    {
     "id": "x-existing-addendum-rescore",
@@ -36832,7 +36990,8 @@
     "expected": [
      "Routes sizing and pricing to effort-estimator",
      "Says this skill supplies the architecture, waves and decisions that the estimate builds on"
-    ]
+    ],
+    "routesTo": "effort-estimator"
    },
    {
     "id": "x-boundary-interface-scoring",
@@ -36840,7 +36999,8 @@
     "expected": [
      "Routes interface complexity scoring and TCO to integration-migration-assessor",
      "Says this skill turns the assessor's output (waves, inventory) into the target architecture document"
-    ]
+    ],
+    "routesTo": "integration-migration-assessor"
    },
    {
     "id": "x-existing-change-view",
@@ -37290,7 +37450,8 @@
     "expected": [
      "Routes proposal narrative to proposal-writer",
      "Says this skill turns the approved proposal into an SOW"
-    ]
+    ],
+    "routesTo": "proposal-writer"
    },
    {
     "id": "x-sow-boundary-estimate",
@@ -37298,7 +37459,8 @@
     "expected": [
      "Routes effort and team sizing to effort-estimator",
      "Says this skill uses that estimate as SOW assumptions"
-    ]
+    ],
+    "routesTo": "effort-estimator"
    },
    {
     "id": "x-sow-reconcile-client-paper",
@@ -37773,7 +37935,8 @@
     "expected": [
      "Routes to effort-estimator for sizing and pricing",
      "Says this skill consumes the P80 delivery cost from the estimate memo for the value case"
-    ]
+    ],
+    "routesTo": "effort-estimator"
    },
    {
     "id": "x-boundary-migration-inventory",
@@ -37781,7 +37944,8 @@
     "expected": [
      "Routes to integration-migration-assessor for the interface inventory, wave plan and platform TCO",
      "Says that TCO can feed this skill's business case"
-    ]
+    ],
+    "routesTo": "integration-migration-assessor"
    },
    {
     "id": "x-existing-rebaselined-volume",
