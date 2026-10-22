@@ -31,8 +31,30 @@ metadata:
 
 # AI Strategy & CoE Design
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-strategy-coe --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-strategy-coe`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`portfolio.csv`, `portfolio.md`, `maturity.md`, `roadmap.md`); fill the operating-model and governance sections of the roadmap by hand from the references.
+## In a conversation: write the strategy now
+The reply **is the deliverable** (or one ask), never only a command. About 1,000 tokens; first line is the answer; tables, not prose.
+
+**Never**
+- Never infer maturity from industry averages or invent benchmark figures; a dimension without evidence is `[TO BE BASELINED — owner: ___]`.
+- Never weight the formula, never rank a row missing any of V, F, D, R, never carry over an earlier score.
+- Never schedule scale before measurement exists.
+
+**Which reply**
+1. **No current-state evidence** (e.g. "write us an AI strategy, we are a retailer"): ask once, then stop — no scores. Offer this table to fill: `| Input | Your answer |` rows: data platforms · cloud · existing AI/ML in production · AI team and skills · AI policy/governance · strategic priorities (12 months) · executive sponsor and budget envelope · candidate use cases.
+2. **Operating-model question only**: answer in tables (≤350 words). Apply `references/operating-models.md`: maturity 1–2 and talent in one team → Central CoE; maturity 2–3, 3+ business units, a platform exists → **Hub-and-spoke**; maturity 4+ with AI engineers in every BU → Federated. Give: `| Model | Verdict | Why |` (chosen + the two rejected); **design decisions** `| Decision | Recommendation |` — reporting line (where the data platform reports, never under one BU), funding (central for platform and lighthouses; chargeback once metered), intake (quarterly review + fast lane), risk gate (tiered: self-certify low, CoE medium, committee high), build vs buy/partner; **precondition: 1–3 AI-capable people per spoke** (talent per spoke) before the hub hands over; **transition triggers** (central → hub-and-spoke: 2+ spokes have trained builders and the platform has self-service onboarding and eval gates; hub-and-spoke → federated: value tracking at level 4, controls tested, spokes pass audits two quarters running).
+3. **Full strategy from a description**, in this order: (a) **maturity table** `| Dimension | Score 1–5 | Evidence (from the user's words) |` for all five — data, platform, talent, governance, value — score only what the user's facts support, else `[TO BE BASELINED — owner: ___]`; (b) **"Overall: Level N (= minimum of the evidenced scores); constraining dimension: X"**; (c) operating model chosen + two rejected with reasons; (d) **portfolio** — one row per idea the user counts (e.g. all 12), columns `V | F | D | R | priority = V×F×D÷R | band`; unnamed or unscored ideas keep their row with axes `[TBD at scoring workshop]` and band "unscored"; (e) governance minimum (intake gate, risk tiers, model inventory, review cadence); (f) **roadmap** `| Quarter | Focus | Exit criterion | Owner |` for Q1–Q4 from `references/roadmap-skeleton.md` (Q1 foundations + 1–2 lighthouses with baselines; Q4 operating-model transition decision); (g) ≤5-bullet executive summary.
+4. **Use-case CSV attached but no maturity scorecard**: first line asks once for the **maturity scorecard** (`dimension, score_1_to_5, evidence, gap_to_next_level, owner`; `assets/maturity-scorecard.csv`) — `maturity.py` cannot run without it; maturity stays "pending", not inferred. The ranked portfolio may follow.
+5. **Files attached**: name the commands — `python3 -I scripts/score_portfolio.py use-cases.csv --out-dir out --org <org> [--previous previous-portfolio.csv]` → `portfolio.csv`, `unscored.csv`, `portfolio.md`; `python3 -I scripts/maturity.py maturity-scorecard.csv --out-dir out --org <org> --target 3 --default-owner "AI CoE lead"` → `maturity.md`, `roadmap.md` — then show the computed result.
+
+**Portfolio procedure — compute row by row from the CSV; show the working table** (`scripts/score_portfolio.py`)
+1. A row with any blank V/F/D/R → **unscored** (`missing score(s): …`), not ranked.
+2. score = V×F×D÷R (2 decimals). Sort by score desc, tie → lower id first. rank k = 1..n (n = ranked rows).
+3. quartile = ceil(k×4÷n) (n = 9: ranks 1–2 → Q1, 3–4 → Q2, 5–6 → Q3, 7–9 → Q4).
+4. Band, first match: **Stop** if V≤2 or F=1 or R=5; **Now** if quartile 1, R≤3, D≥3 and owner and baseline named (else Next, "no owner/baseline"); **Next** if quartile 1 with D≤2 or R>3, or quartile 2; else **Later**. Blank owner/baseline/evidence shows `[TO BE BASELINED — owner: AI CoE lead]`.
+5. With a previous portfolio.csv: movement = previous rank − rank now (`up N` / `down N` / `same`; `new` if absent before); band before → now (e.g. "UC-003 Now → Next"); list ids ranked before that are now unscored or **no longer in the list**. Computed from the two files only.
+Working table: `| rank | id | V | F | D | R | score | quartile | band | reason | prev rank/band | movement |`.
+
+**Maturity procedure** (`scripts/maturity.py`): a score without evidence is not a score → `[TO BE BASELINED — owner: <owner, else AI CoE lead>]`; overall = minimum of the evidenced scores, name the constraining dimension (level names 1 Ad hoc, 2 Emerging, 3 Defined, 4 Managed, 5 Optimizing); gap = below target (default 3) or unevidenced; **one roadmap item per gap**, with owner.
 
 ## Starting points
 - **New:** a first list of scored AI ideas and a maturity self-assessment give a ranked portfolio, maturity gaps and a quarter roadmap.
@@ -85,3 +107,6 @@ If organization context or current-state evidence is missing, ask once. Do not i
 - `references/roadmap-skeleton.md` — 12-month quarter plan with exit criteria
 - `scripts/score_portfolio.py` — scoring CSV → ranked `portfolio.csv` + `unscored.csv` + `portfolio.md`
 - `scripts/maturity.py` — scorecard CSV → `maturity.md` + `roadmap.md` skeleton (one item per gap)
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py ai-platform/ai-strategy-coe --input <name>=<value> … --out <dir>` (see `--explain ai-platform/ai-strategy-coe`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`portfolio.csv`, `portfolio.md`, `maturity.md`, `roadmap.md`); fill the operating-model and governance sections of the roadmap by hand from the references.

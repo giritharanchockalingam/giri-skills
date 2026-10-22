@@ -1,6 +1,6 @@
 ---
 name: proposal-writer
-description: Use when the user asks to write, structure, or redline a client proposal, RFP response narrative, or statement of qualifications. Produces an on-template proposal — executive summary, understanding of needs, approach and methodology, solution, team, timeline, governance, risks, assumptions, pricing placeholders, and why-us — built on win themes and ghosting the competition, with every figure sourced or marked [TO BE BASELINED — owner: ___]. In redline mode it keeps the existing storyline and sharpens it slide/section by section. Do not use for compliance matrices (rfp-compliance-matrix), SOWs (sow-drafter), or pricing math (effort-estimator).
+description: Use when the user asks to write, assemble, structure, or redline a client proposal, RFP response narrative, executive summary, or statement of qualifications — including assembling it from a win-themes.json (themes, proof, so_what) with a discovery pack and estimate memo, wording the outcome claims in a proposal's executive summary, or being asked to "fill in typical numbers so it reads well". Produces an on-template proposal — executive summary, understanding of needs, approach, solution, team, timeline, governance, risks, assumptions, pricing placeholders, why-us — built on win themes and ghosting the competition, with every figure sourced or marked [TO BE BASELINED — owner: ___]. In redline mode it keeps the existing storyline and sharpens it section by section. Do not use for compliance matrices (rfp-compliance-matrix), SOWs (sow-drafter), pricing math (effort-estimator), building the ROI/benefits model itself (value-case-builder) or competitor battle cards (competitive-positioning).
 license: MIT
 metadata:
   domain: presales
@@ -29,8 +29,31 @@ metadata:
 
 # proposal-writer
 
-## How to run
-This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/proposal-writer --input <name>=<value> … --out <dir>` (see `--explain presales/proposal-writer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce.
+## In a conversation: write the proposal now
+The reply **is the proposal (or its redline)**, never only a command or a request for files. About 1,000 tokens: tables, one-line section bodies, no preamble.
+
+**Never**
+- Never state a benefit percentage or outcome number the user "wants because it reads stronger" or calls "typical" (e.g. "reduce run cost by 40%, recovery time by 75%"). Decline in one line: *outcome numbers must come from the value case (value-case-builder) or the client's own baseline*. Show the outcome table with Baseline and Target `[TO BE BASELINED — owner: ___]`, and offer the compliant alternative: **state the outcome as a hypothesis, with baselining as a phase-1 deliverable and the measurement method named**. The numbers appear nowhere else in the reply.
+- Never fill a slot "with typical numbers": every unfilled slot is `[TO BE BASELINED — owner: ___]`.
+- Never write "understanding of needs" from imagination; never name the incumbent or competitor in client text (ghost them).
+- Never keep a figure in a team draft that no input backs (e.g. an unsourced "40% cost cut") — replace it with an owned marker; keep figures an input backs (e.g. a price the estimate memo states).
+
+**Which reply**
+1. **No problem statement / evidence** (e.g. "draft a proposal for a retail client, make it compelling"): ask once, one list — problem statement with evidence (discovery synthesis, RFP or notes), scope/solution outline, estimate output (or confirmation to use pricing placeholders). Write no needs section. Close with: "Once these arrive I start from the win-theme worksheet (`assets/win-theme-worksheet.md`)."
+2. **Win-themes file missing** when assembling ("Write the proposal." with only a discovery pack): ask once for **`win-themes.json`** (`{client, initiative, themes:[{theme, proof, so_what}]}`); `scripts/assemble.py` stops (exit 1) without it.
+3. **Write** (inputs described or attached), in this order:
+   a. **Win-theme worksheet first** (internal): `| # | Client hot button ("quoted" from their evidence, or [quote — discovery §, owner: ___]) | Discriminator | 4 tests: relevance · uniqueness · provability · consequence | Proof (cleared) | Ghost line |`. A theme without proof is cut.
+   b. **Executive summary (≤1 page)**: first sentence = the outcome in the client's KPI terms; 3–5 bullets each tied to a theme; what it takes — duration, team and onshore/offshore split copied exactly from the estimate; price `[TO BE BASELINED — owner: ___]` unless a price is supplied.
+   c. **Sections in `assets/section-library.md` order** (Understanding of your needs · Objectives and success measures · Approach and methodology · Proposed solution · Scope and deliverables · Timeline · Team and governance · Risks and assumptions · Pricing · Why us · Compliance appendix), each heading an assertion, one "so what" line; lists of 3+ items as tables.
+   d. **Ghost** the incumbent (e.g. a vendor's services arm) by the capability it lacks, never by name.
+   e. **Risks** `| Risk | Likelihood | Impact | Mitigation | Owner |`; **Assumptions** `| Assumption | Consequence if false (change-control trigger) |`.
+   f. **Submission checklist — internal, do not ship** (page limit, forms, file naming).
+4. **Assemble from files** (win-themes.json ± discovery pack ± estimate memo): name the command and outputs, then show the result:
+   `python3 -I scripts/assemble.py win-themes.json --library assets/section-library.md [--discovery …] [--estimate …] --out proposal.md --placeholders placeholders.csv --sources sources.md --final proposal-final.md [--draft-only] [--existing draft.md --redline proposal-redline.md]`.
+   - Win themes threaded into the executive summary as T1..Tn and the why-us table; estimate "Bottom line" quoted into Pricing; pain matrix into section 2.
+   - **Every `<slot>` not filled by an input is registered** in `placeholders.csv` (placeholder, section, owner) as `[TO BE BASELINED — owner: Bid manager]`; say so. A thin theme (no proof, no estimate) → its proof, so-what and every number stay markers, listed in placeholders.csv; no numbers invented.
+   - `draft_only` / "no model step": **`proposal-final.md` is the assembled draft, labelled "draft — sharpen step not run"; every number traces to `sources.md`.**
+5. **Redline an existing draft** (keep our storyline): table `| Section | [KEEP]/[SHARPEN]/[ADD]/[TBD] | Note |` — present sections kept (e.g. team), missing library sections [ADD]ed, the executive summary [SHARPEN]ed for each win theme it lacks (name them), every figure in no input [TBD] and replaced by `[TO BE BASELINED — owner: Bid manager]` in proposal-final.md, figures an input backs kept and say which input (e.g. "USD 1,472,000 kept — estimate memo"). Then the sharpened executive summary.
 
 ## Starting points
 - **New** — win themes (and the discovery pack, estimate memo, value case when you have them) are assembled into a proposal on the section library; the model step sharpens it, or with `draft_only` the assembled draft is final. Every number traces to an input.
@@ -100,3 +123,6 @@ Read `../../../shared/quality-bar.md` and `../../../shared/writing-style.md` fir
 - `references/win-themes-and-ghosting.md` — theme construction, discriminator tests, ghosting rules, proof standards
 - `assets/section-library.md` — section-by-section templates with "so what" openers
 - `assets/win-theme-worksheet.md` — worksheet
+
+## How to run (automation, when commands can run)
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py presales/proposal-writer --input <name>=<value> … --out <dir>` (see `--explain presales/proposal-writer`). Report the `run.json` results; do not hand-write the deliverables the scripts produce (`proposal.md`, `placeholders.csv`, `sources.md`, `proposal-final.md`, `proposal-redline.md`).

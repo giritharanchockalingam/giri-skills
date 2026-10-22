@@ -1,6 +1,6 @@
 ---
 name: value-case-builder
-description: Use when the user asks to build, structure, or review a business case, value case, ROI model, benefits case, or cost-benefit analysis for a client initiative or internal investment. Produces a benefits tree (driver → lever → metric → value), a cost and savings model layout (CSV spec plus markdown), payback and multi-year net, sensitivity on the top drivers, and a benefits-realization plan with owners; every number is sourced to a client document or statement or marked [TO BE BASELINED — owner: ___]. Do not use for platform-only TCO (integration-migration-assessor feeds this) or for effort (effort-estimator).
+description: Use when the user asks to build, structure, or review a business case, value case, ROI model, benefits case, or cost-benefit analysis for a client initiative or internal investment. Produces a benefits tree (driver → lever → metric → value), a cost and savings model layout (CSV spec plus markdown), payback and multi-year net, sensitivity on the top drivers, and a benefits-realization plan with owners; every number is sourced to a client document or statement or marked [TO BE BASELINED — owner: ___]. Do not use for platform-only TCO (integration-migration-assessor feeds this) or for effort (effort-estimator). Not for wording outcome claims in a proposal's executive summary (proposal-writer) or synthesizing discovery call notes (discovery-interview).
 license: MIT
 metadata:
   domain: presales
