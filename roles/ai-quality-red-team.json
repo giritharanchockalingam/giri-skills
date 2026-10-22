@@ -7,7 +7,14 @@
     "ai-platform/eval-engineering-runner",
     "ai-platform/red-team-suite",
     "ai-platform/bias-fairness-check",
-    "ai-platform/annotation-agreement"
+    "ai-platform/annotation-agreement",
+    "build/code-review-runner",
+    "build/security-review",
+    "build/perf-review-runner",
+    "build/ui-component-quality"
+  ],
+  "stages": [
+    "evaluate"
   ],
   "playbooks": []
 }

@@ -1,0 +1,15 @@
+{
+  "_note": "FICTIONAL fixture repo for tests — not a real project",
+  "name": "harborline-portal",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": { "next": "14.2.35", "react": "18.3.1", "react-dom": "18.3.1" },
+  "devDependencies": { "vitest": "2.1.8", "@playwright/test": "1.49.1" }
+}

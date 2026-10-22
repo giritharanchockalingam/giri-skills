@@ -175,7 +175,18 @@ def main() -> int:
             errors.append(f"vendor/{md.parent.name}: SKILL.md missing name/description frontmatter")
         if not (md.parent / "UPSTREAM.md").exists():
             errors.append(f"vendor/{md.parent.name}: UPSTREAM.md missing (run scripts/vendor_sync.py)")
-    print(f"Checked {count} skills + {vcount} vendored, {len(errors)} errors")
+    # delivery pipeline templates (docs/DELIVERY-PIPELINES.md): one call, errors counted here
+    pipelines = sorted((ROOT / "pipelines").glob("*.json")) + sorted((ROOT / "pipelines" / "composed").glob("*.json"))
+    if pipelines:
+        import validate_pipelines  # noqa: E402
+        pctx = validate_pipelines.load_context(ROOT)
+        for pf in pipelines:
+            try:
+                pspec = json.loads(pf.read_text(encoding="utf-8"))
+            except Exception as e:
+                errors.append(f"{pf.relative_to(ROOT)}: cannot read JSON: {e}"); continue
+            errors += [f"{pf.relative_to(ROOT)}: {m}" for m in validate_pipelines.validate_pipeline(pspec, pctx, pf.name)]
+    print(f"Checked {count} skills + {vcount} vendored + {len(pipelines)} pipelines, {len(errors)} errors")
     for e in errors: print("  -", e)
     return 1 if errors else 0
 

@@ -1,0 +1,21 @@
+# Production: roll the ECS service to the image built by CI.
+name: Deploy — production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PROD_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: aws ecs update-service --cluster harborline-prod --service web --force-new-deployment

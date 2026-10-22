@@ -1,0 +1,11 @@
+# FICTIONAL fixture for scripts/stack_profile.py tests
+[project]
+name = "harborline-api"
+version = "0.1.0"
+dependencies = ["fastapi>=0.115", "uvicorn"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.poetry]
+name = "harborline-api"

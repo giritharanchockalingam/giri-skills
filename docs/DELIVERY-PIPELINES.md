@@ -30,59 +30,80 @@ request ─► pipeline (template) ─► stages ─► role ─► skills ─�
 
 ## Pipeline file (`pipelines/<name>.json`)
 
-```jsonc
+`pipelines/feature-delivery.json` as shipped (validated by `scripts/validate_pipelines.py`; `pipelines/greenfield-app.json`
+is the same with a `bootstrap` stage in front):
+
+```json
 {
   "name": "feature-delivery",
   "version": "0.1.0",
   "title": "Feature delivery on an existing application",
-  "description": "Brownfield: a feature request on a repository the catalog knows, through requirements, architecture, build, evaluate, deploy and operate.",
-  "mode": "brownfield",                       // brownfield | greenfield
+  "description": "Brownfield: a feature request on a repository the catalog knows, through requirements, architecture, build, evaluate, deploy and operate. Every step runs a published skill with its real input and output names; compose steps derive the files a later skill needs from what earlier steps wrote, deterministically.",
+  "mode": "brownfield",
   "fits": { "stacks": ["nextjs"], "request_kinds": ["feature", "fix", "hardening"] },
   "inputs": [
     { "name": "repo",    "type": "repo",   "required": true,  "from": "catalog repository (owner/name) or a local checkout" },
-    { "name": "ref",     "type": "string", "required": false, "from": "branch or commit to start from (default: default branch)" },
-    { "name": "request", "type": "text",   "required": true,  "from": "the feature request in the requester's words, or a path to a brief" },
-    { "name": "brief",   "type": "json",   "required": false, "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json)" }
+    { "name": "ref",     "type": "string", "required": false, "from": "branch or commit to start from (default: the checkout as it is)" },
+    { "name": "request", "type": "text",   "required": true,  "from": "the feature request in the requester's words" },
+    { "name": "brief",   "type": "json",   "required": false, "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json); may carry `files` (repo-relative source files the feature touches) or `tasks` [{task, accept, test, files}]" }
   ],
   "stack_profile": { "from": "repo", "detect": "scripts/stack_profile.py" },
   "stages": [
     {
       "id": "requirements", "adlc_stage": "requirements", "role": "ai-product-manager",
       "steps": [
-        { "id": "prd", "kind": "skill", "skill": "build/product-spec-prd", "inputs": { "brief": "$in.brief", "request": "$in.request" } }
+        { "id": "brief", "kind": "compose", "derive": "brief-from-request",
+          "inputs": { "request": "$in.request", "brief": "$in.brief" }, "outputs": ["brief.json"] },
+        { "id": "prd", "kind": "skill", "skill": "build/product-spec-prd",
+          "inputs": { "brief": "$steps.brief:brief.json", "draft_only": "$run.draft_only" } }
       ],
-      "gate": { "kind": "output", "step": "prd", "file": "prd.md", "check": "sections:[\"Acceptance criteria\"]" },
-      "evidence": ["$steps.prd:prd.md"]
+      "gate": { "kind": "output", "step": "prd", "file": "prd-final.md", "check": "sections:[\"Acceptance criteria\"]" },
+      "evidence": ["$steps.brief:brief.json", "$steps.prd:prd-final.md"]
     },
     {
       "id": "architecture", "adlc_stage": "architecture", "role": "ai-solution-architect",
       "steps": [
-        { "id": "plan", "kind": "skill", "skill": "build/spec-to-plan", "inputs": { "spec": "$steps.prd:prd.md", "section": "$in.request" } },
-        { "id": "plan-approval", "kind": "approval", "role": "ai-solution-architect", "note": "Approve the plan before any code is written" }
+        { "id": "spec", "kind": "compose", "derive": "spec-from-prd",
+          "inputs": { "brief": "$steps.brief:brief.json", "prd": "$steps.prd:prd-final.md", "request": "$in.request" },
+          "outputs": ["spec.md", "spec.json"] },
+        { "id": "plan", "kind": "skill", "skill": "build/spec-to-plan",
+          "inputs": { "spec": "$steps.spec:spec.md", "section": "$steps.spec:spec.json#section", "repo": "$repo" } },
+        { "id": "plan-approval", "kind": "approval", "role": "ai-solution-architect", "note": "Approve the plan before any code is written; edit plan.md / tasks.csv in the step folder first if files or tests are missing" }
       ],
       "gate": { "kind": "approval", "step": "plan-approval" },
-      "evidence": ["$steps.plan:plan.md"]
+      "evidence": ["$steps.plan:plan.md", "$steps.plan:tasks.csv"]
     },
     {
       "id": "build", "adlc_stage": "build", "role": "full-stack-engineer",
       "steps": [
-        { "id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd", "inputs": { "feature": "$steps.plan:feature.md", "files": "$steps.plan:plan.json#files", "target": "$repo" } },
-        { "id": "code",  "kind": "agent", "agent": "claude-code", "inputs": { "plan": "$steps.plan:plan.md", "tests": "$steps.tests:tests-report.md", "target": "$repo" },
+        { "id": "feature", "kind": "compose", "derive": "feature-from-plan",
+          "inputs": { "plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "brief": "$steps.brief:brief.json" },
+          "outputs": ["feature.md", "feature.json"] },
+        { "id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd",
+          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.feature:feature.json#files", "target": "$repo" } },
+        { "id": "code", "kind": "agent", "agent": "claude-code",
+          "inputs": { "plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "target": "$repo" },
           "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"] },
-        { "id": "conventions", "kind": "skill", "skill": "build/nextjs-enterprise-conventions", "inputs": { "target": "$repo", "baseline": "$profile.baselines.nextjs" }, "gate": true }
+        { "id": "conventions", "kind": "skill", "skill": "build/nextjs-enterprise-conventions",
+          "inputs": { "target": "$repo", "baseline": "$profile.baselines.nextjs" }, "gate": true }
       ],
       "gate": { "kind": "exit", "step": "conventions" },
-      "evidence": ["$steps.tests:tests-report.md", "$steps.code:diff.patch", "$steps.conventions:report.md"]
+      "evidence": ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json", "$steps.code:diff.patch", "$steps.code:agent-summary.md", "$steps.conventions:report.md"]
     },
     {
       "id": "evaluate", "adlc_stage": "evaluate", "role": "ai-quality-red-team",
       "steps": [
-        { "id": "review",   "kind": "skill", "skill": "build/code-review-runner", "inputs": { "diff": "$steps.code:diff.patch", "spec": "$steps.prd:prd.md" } },
-        { "id": "security", "kind": "skill", "skill": "build/security-review",   "inputs": { "diff": "$steps.code:diff.patch" } },
-        { "id": "perf",     "kind": "skill", "skill": "build/perf-review-runner", "inputs": { "target": "$repo", "baseline": "$profile.baselines.perf" } },
+        { "id": "review",   "kind": "skill", "skill": "build/code-review-runner",  "inputs": { "diff": "$steps.code:diff.patch", "spec": "$steps.prd:prd-final.md" } },
+        { "id": "security", "kind": "skill", "skill": "build/security-review",     "inputs": { "diff": "$steps.code:diff.patch", "target": "$repo", "draft_only": "$run.draft_only" } },
+        { "id": "perf",     "kind": "skill", "skill": "build/perf-review-runner",  "inputs": { "target": "$repo", "baseline": "$profile.baselines.perf" } },
         { "id": "ui",       "kind": "skill", "skill": "build/ui-component-quality", "inputs": { "target": "$repo", "baseline": "$profile.baselines.ui" } }
       ],
-      "gate": { "kind": "all", "of": [ { "kind": "output", "step": "review", "file": "review.md", "check": "contains:\"Verdict: **PASS**\"" }, { "kind": "exit", "step": "security" } ] },
+      "gate": { "kind": "all", "of": [
+        { "kind": "output", "step": "review", "file": "review.md", "check": "contains:\"Verdict: **PASS**\"" },
+        { "kind": "exit", "step": "security" },
+        { "kind": "exit", "step": "perf" },
+        { "kind": "exit", "step": "ui" }
+      ] },
       "evidence": ["$steps.review:review.md", "$steps.security:security-review.md", "$steps.perf:report.md", "$steps.ui:report.md"]
     },
     {
@@ -96,14 +117,28 @@ request ─► pipeline (template) ─► stages ─► role ─► skills ─�
     },
     {
       "id": "operate", "adlc_stage": "operate", "role": "ai-ops-sre",
-      "steps": [ { "id": "handoff", "kind": "skill", "skill": "build/handoff-and-thread-close", "inputs": { "target": "$repo", "state": "$run.state" } } ],
-      "gate": { "kind": "output", "step": "handoff", "file": "docs/HANDOFF.md", "check": "exists" },
-      "evidence": ["$steps.handoff:docs/HANDOFF.md"]
+      "steps": [
+        { "id": "handoff", "kind": "skill", "skill": "build/handoff-and-thread-close", "inputs": { "target": "$repo", "state": "$run.state" } }
+      ],
+      "gate": { "kind": "output", "step": "handoff", "file": "HANDOFF.md", "check": "exists" },
+      "evidence": ["$steps.handoff:HANDOFF.md"]
     }
   ],
   "outputs": ["$steps.pr:pr.json", "$evidence"]
 }
 ```
+
+Where the shipped file differs from the first sketch, and why (every name is the skill's real contract — check with
+`python3 scripts/run_skill.py --explain build/<skill>`):
+
+| Sketch | Shipped | Why |
+|---|---|---|
+| `product-spec-prd` took `request` and wrote `prd.md` | a `brief-from-request` **compose** step writes `brief.json` (the brief given, else `{feature, problem}` from the request); the skill takes `brief` and writes `prd-final.md` | the skill's only required input is `brief`; `request` is not an input it declares |
+| `spec-to-plan` took `spec: prd.md, section: $in.request` | a `spec-from-prd` compose step writes `spec.md` (one bullet per v1 scope item / brief task, `files:` when the brief names them) and `spec.json#section` | `spec-to-plan` plans the first heading containing `section` and needs bullets under it; a PRD has neither |
+| `test-strategy-tdd` read `feature.md` and `plan.json#files` from the plan step | a `feature-from-plan` compose step derives `feature.md` (one criterion per task) and `feature.json#files` from `tasks.csv`; output is `test-plan.md`, not `tests-report.md` | `spec-to-plan` writes `plan.md` + `tasks.csv` only |
+| evaluate gate: review PASS + security exit | plus `perf` and `ui` exit gates | each of those skills exits 1 on new high findings — a verdict the stage must honour |
+| handoff gate on `docs/HANDOFF.md` | `HANDOFF.md` in the step folder | the skill writes `{out}/HANDOFF.md`; `--write-to-repo` is not used by the pipeline |
+| `$run.draft_only` did not exist | `product-spec-prd` and `security-review` get `draft_only=true` when the provider is `dry` or `none` | their model step cannot run without a provider; the script draft is then the final, labelled as such |
 
 ### References
 | Reference | Resolves to |
@@ -112,16 +147,20 @@ request ─► pipeline (template) ─► stages ─► role ─► skills ─�
 | `$repo` | the working checkout of the target repository (a `path` input to skills) |
 | `$profile.<key>` | a stack-profile fact (`flavour`, `framework`, `package_manager`, `test_runner`, `deploy_target`, `migrations_dir`, `baselines.<check>`) |
 | `$steps.<id>:<file>[#json.key]` | an output file of an earlier step (same syntax as playbooks) |
-| `$run.id`, `$run.state` | the run id; the run's honest state line for the handoff |
-| `$evidence` | the evidence bundle so far (Markdown) |
+| `$run.id`, `$run.state`, `$run.draft_only` | the run id; the run's honest state line for the handoff; `true` when the provider is `dry` or `none` (skills with a model step take their script draft as final) |
+| `$evidence` | the evidence bundle so far (`evidence/EVIDENCE.md`) |
+
+A plain string that is not a reference is a literal. Only the executor's own values exist: a template cannot name an
+arbitrary `$run.*` or `$profile.*` key (the validator rejects it).
 
 ### Step kinds
 | Kind | Runs | Records |
 |---|---|---|
-| `skill` | a published library skill via `run_skill.py`; `gate: true` means exit 1 blocks the stage | run.json, outputs, checks |
-| `agent` | a coding agent (`claude-code` first) on the checkout, constrained by the listed files and the plan; it may only touch files the plan names | diff.patch, files changed, the agent's own summary |
-| `approval` | waits for a person holding the stage's role (portal) or the requester (IDE) | who, when, note |
-| `pr` | opens the pull request on the target repo with the evidence bundle | pr.json (number, url, head sha) |
+| `skill` | a published library skill via `run_skill.py`; `gate: true` means exit 1 blocks the stage; an optional input that resolves to nothing is omitted; exit 2 (missing input) fails the stage with the input named | run.json, outputs, checks |
+| `compose` | a deterministic derivation of a file a later skill needs from what earlier steps wrote (`brief-from-request`, `spec-from-prd`, `feature-from-plan` — implemented in `scripts/deliver.py`, nothing invented, unknowns left to the skills' TBD markers) | the declared `outputs` |
+| `agent` | a coding agent (`claude-code` first) on the checkout, constrained by the listed files and the plan; it may only touch files the plan names. `--builder none` stops the run (exit 4, `needs_builder.json`) for a person or IDE agent; `--builder manual` records a diff supplied at `<out>/build/diff.patch` | diff.patch, files-changed.json (files outside the plan are flagged), agent-summary.md |
+| `approval` | waits for a person holding the stage's role (portal) or the requester (IDE); on the CLI, `--approve-all` or an `--approvals approvals.json` file (`{"approvals": [{"step", "by", "note"}]}`) satisfies it, otherwise the run stops with exit 3 and `needs_approval.json` | approval.json: who, when, note |
+| `pr` | opens the pull request on the target repo with the evidence bundle (`gh pr create`, branch `deliver/<run-id>`, body `EVIDENCE.md`); `--dry` writes `pr.json` with `{"dry": true}` | pr.json (number, url, head sha) |
 
 ### Gate kinds
 `output` (a check on a step's file, check vocabulary of `scripts/check_output.py`), `exit` (step exit code 0),
@@ -130,12 +169,21 @@ request ─► pipeline (template) ─► stages ─► role ─► skills ─�
 ### Stack profile (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
 Read once, before stage 1, never guessed: `flavour` (ts|js), `framework` (nextjs|…), `package_manager`, `test_runner`
 (vitest|jest|pytest|none), `e2e` (playwright|none), `deploy_target` (vercel|aws|azure|gcp|fly|railway|unknown),
-`migrations_dir` (or null), `monorepo_root`, `baselines` (paths to recorded findings.csv per check when present).
+`migrations_dir` (or null), `monorepo_root`, `baselines` (paths to recorded findings.csv per check when present:
+`docs/baselines/<nextjs|perf|ui>-findings.csv` in the repo, else null). Every fact carries its `evidence` (the file it
+was read from); a missing or empty directory profiles as unknowns. `flavour` is `ts | js | python | unknown`.
 Skills that write files must honour it; skills that lint read it for file selection.
+A greenfield pipeline sets `"stack_profile": {"after": "bootstrap"}`: the profile is read after that stage, because
+before it there is nothing to read.
 
 ## Roles own stages
 `roles/<role>.json` gains `"stages": ["requirements", …]` — the ADLC stages the role may own. A pipeline validates
-that every stage's role lists that stage and that the role's `skills` include every skill the stage runs. At run time
+that every stage's role lists that stage and that the role's `skills` include every skill the stage runs
+(`scripts/validate_pipelines.py`, called from `scripts/validate.py`). Owners today: ai-product-manager (requirements),
+ai-solution-architect (architecture; gained `build/spec-to-plan`), full-stack-engineer (build), ai-quality-red-team
+(evaluate; gained `build/code-review-runner`, `build/security-review`, `build/perf-review-runner`,
+`build/ui-component-quality`), mlops-platform-engineer (deploy), ai-ops-sre (operate; gained
+`build/handoff-and-thread-close`). At run time
 the portal checks `sf_pipeline_access` (who may start the pipeline) and records the owning role per stage in the
 evidence; an approval step is satisfied only by a member assigned to the stage's role.
 
@@ -144,7 +192,29 @@ evidence; an approval step is satisfied only by a member assigned to the stage's
 |---|---|---|
 | Portal → Deliver | GitHub Actions `delivery.yml` in giri-skills, dispatched with repo, ref, request, pipeline | approval in the portal; merge on the PR |
 | IDE (Claude Code, Cursor) → MCP `deliver` | the same `scripts/deliver.py` on the developer's machine; evidence posted to the portal | approval in the terminal; merge on the PR |
-| CI (`deliver.py --dry`) | every pipeline template dry-runs on a fixture repo on each PR to this library | none |
+| CI (`deliver.py --dry`) | `validate.yml` step "Delivery pipelines (dry)" runs feature-delivery on `tests/fixtures/delivery-repo`; `tests/test_deliver.py` dry-runs both templates | none |
+
+## The executor (`scripts/deliver.py`)
+
+```
+python3 scripts/deliver.py <pipeline> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
+    [--input name=value …] --out <dir> --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
+    [--approve-all | --approvals approvals.json] [--patch diff.patch] [--dry] [--resume] [--run-id ID]
+```
+
+| Exit | Meaning |
+|---|---|
+| 0 | every stage passed |
+| 1 | a gate or step failed — the evidence so far is in `<out>/evidence/` |
+| 2 | bad arguments or a missing pipeline input (`needs_input.json`) |
+| 3 | waiting for an approval (`needs_approval.json`); re-run with `--resume` and `--approvals` |
+| 4 | waiting for the builder (`needs_builder.json`); drop the diff at `<out>/build/diff.patch`, re-run with `--resume` |
+
+`--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
+reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).
+Without `--dry` the checkout is used in place and the `pr` step needs `gh`. `--resume` keeps every completed step of
+the first incomplete stage and re-runs the rest. The run id is derived from pipeline + request + repo (plus a time
+suffix outside `--dry`), so a dry run is deterministic apart from the timestamps in `run.json` and `gate.json`.
 
 ## When no template fits
 `scripts/compose_pipeline.py --stack <profile> --request-kind <kind>` assembles a pipeline from the catalog: one
@@ -152,8 +222,10 @@ stage per ADLC stage the request kind needs, the role whose `stages` lists it, t
 matches the stack. The composed file is saved under `pipelines/composed/` and validated like any template.
 
 ## Evidence bundle
-`evidence/` in the run: `stack-profile.json`, one folder per stage with the step outputs and `gate.json`
-(`{verdict, kind, detail, role, approved_by, at}`), and `EVIDENCE.md` — the table that goes into the PR body:
+`evidence/` in the run: `stack-profile.json`, one folder per stage (`<nn>-<stage>/<step>/…` — every step's outputs
+and run_skill log) with `gate.json` (`{verdict, kind, detail, role, approved_by, at}`; verdict `pass | fail |
+recorded | pending`), and `EVIDENCE.md` — the table that goes into the PR body (relative links only, so the bundle
+travels). `<out>/run.json` records the stages, steps, exit codes, durations and the sha256 of every evidence file:
 
 | Stage | Role | Gate | Verdict | Evidence |
 |---|---|---|---|---|
