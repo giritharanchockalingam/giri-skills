@@ -1,0 +1,6 @@
+path_prefix,owner
+# longest matching prefix wins; a finding under no prefix gets "[TO BE BASELINED — owner: tech lead]"
+app/,web team lead
+components/,design-system lead
+lib/,platform team lead
+server/,backend team lead
