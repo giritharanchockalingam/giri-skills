@@ -1,15 +1,15 @@
 ---
 name: tech-debt-audit-runner
-description: Use when joining or inheriting an unfamiliar TypeScript / Next.js codebase and the question is where the architecture and maintainability debt is — "audit this repo for tech debt", "what should we refactor first", "map this codebase before we touch it", "is this safe to build on". Produces findings.csv, report.md and refactor-plan.md (Summary, Architecture map inferred from imports, Priorities with effort/risk/owner, Sequencing) from eight static rules — duplicate function bodies, god files, circular imports, layering violations, dead exports, TODO/FIXME/HACK counts, `any` density, lib/ modules without tests — each with file:line and severity; a baseline findings.csv marks known debt and the gate fails only on new high findings (cycles, layering, files above 800 lines). Not for reviewing one diff or PR (use code-review-runner) or fixing a reported bug (use safe-fix).
+description: Use when joining or inheriting an unfamiliar TypeScript or JavaScript Next.js codebase and the question is where the architecture and maintainability debt is — "audit this repo for tech debt", "what should we refactor first", "map this codebase before we touch it", "is this safe to build on". Produces findings.csv, report.md and refactor-plan.md (Summary, Architecture map inferred from imports, Priorities with effort/risk/owner, Sequencing) from eight static rules — duplicate function bodies, god files, circular imports, layering violations, dead exports, TODO/FIXME/HACK counts, `any` density, lib/ modules without tests — each with file:line and severity; a baseline findings.csv marks known debt and the gate fails only on new high findings (cycles, layering, files above 800 lines). Not for reviewing one diff or PR (use code-review-runner) or fixing a reported bug (use safe-fix).
 license: MIT
 metadata:
   domain: build
   adlc_stage: improve
-  version: 0.2.0
+  version: 0.2.1
   author: giri-skills
   agent:
     inputs:
-      - {name: target, type: dir, required: true, from: "repo root of the TypeScript / Next.js codebase (app/, components/, lib/, server/, tests/)"}
+      - {name: target, type: dir, required: true, from: "repo root of the TypeScript or JavaScript Next.js codebase (app/, components/, lib/, server/, tests/; .js/.jsx audited like .ts/.tsx)"}
       - {name: baseline, type: csv, required: false, from: "findings.csv from an earlier audit — the recorded debt; known findings are listed but only new high-severity ones fail the gate"}
       - {name: owners, type: csv, required: false, from: "owners csv (layout: assets/owners-template.csv): path_prefix,owner for the plan's Owner column; unmatched items read [TO BE BASELINED — owner: tech lead]"}
     run:
@@ -32,9 +32,9 @@ metadata:
 - Never mark recorded debt as new or new debt as known: with a baseline, line-level findings match on rule + file + snippet, file-level ones (TD2, TD6, TD7, TD8) on rule + file; everything else is new; baseline rows not found again are resolved.
 
 **Procedure (from `scripts/audit_debt.py`; work it by hand on the files you are given)**
-1. Inventory: list the `.ts/.tsx/.js/.jsx/.mjs` files, set aside test files (`tests/`, `__tests__/`, `*.test.*`, `*.spec.*`) as importers only.
+1. Inventory: list the `.ts/.tsx/.js/.jsx/.mjs` files — a JavaScript repo (no `tsconfig.json`) is audited exactly like a TypeScript one — and set aside test files (`tests/`, `__tests__/`, `*.test.*`, `*.spec.*`) and `evals/` as importers only (they keep symbols alive; they are never audited).
 2. Import graph: for every file, the relative (`./`, `../`) and `@/` imports it resolves to, with the symbols imported (`*` for namespace / `export *` / dynamic imports).
-3. Rules, each with file:line, severity and a one-line snippet — TD1 duplicate-logic (same normalised body ≥ 6 lines in two files; medium), TD2 god-file (> 400 lines or > 12 exports; high above 800 lines), TD3 circular-import (a cycle; high), TD4 layering-violation (`app/` importing a sibling route folder; `lib/` importing `app/` or `components/`; high), TD5 dead-export (exported, never imported; framework files and `index` re-exports excluded; medium), TD6 todo-comment (count per file; low), TD7 any-density (> 5 `any` in a file; medium), TD8 missing-tests (`lib/` module with no `tests/**<stem>*` or `<stem>.test|spec.*`; medium). Thresholds and fix hints: `references/debt-rules.md`.
+3. Rules, each with file:line, severity and a one-line snippet — TD1 duplicate-logic (same normalised body ≥ 6 lines in two files; medium), TD2 god-file (> 400 lines or > 12 exports; high above 800 lines), TD3 circular-import (a cycle; high), TD4 layering-violation (`app/` importing a sibling route folder; `lib/` importing `app/` or `components/`; high), TD5 dead-export (exported, never imported; excluded: `index` re-exports, root `middleware`/`instrumentation`/`*.config.*`, and the exports Next.js consumes from `app/**` special files — `page layout template loading error global-error not-found default route manifest robots sitemap opengraph-image twitter-image icon apple-icon` — full table in `references/debt-rules.md` § TD5 exclusion list; medium), TD6 todo-comment (count per file; low), TD7 any-density (> 5 `any` in a file; medium), TD8 missing-tests (`lib/` module with no `tests/**<stem>*` or `<stem>.test|spec.*`; medium). Thresholds and fix hints: `references/debt-rules.md`.
 4. Baseline, if given: mark each finding known/new, list resolved rows.
 5. Architecture map: per top-level folder — files, folders it imports, folders that import it, and the inferred responsibility (entry surface / intermediate layer / foundation, plus the Next.js folder meaning).
 6. Plan: Priorities ordered severity → new before known → rule, each row finding → file:line → effort (TD1 S, TD2 L, TD3 M, TD4 S, TD5 S, TD6 S, TD7 M, TD8 M) → risk (= severity) → status → owner; Sequencing in four phases — restore the dependency direction (TD3, TD4), split the god files (TD2), one implementation under test (TD1, TD8), trim the surface (TD5, TD7, TD6).
@@ -50,7 +50,7 @@ metadata:
 - Only for existing: a tech-debt audit always starts from code that already exists; there is nothing to audit from scratch.
 
 ## When to use
-- First week on an inherited or acquired TypeScript / Next.js codebase; before a modernisation estimate; before committing to build on a legacy module.
+- First week on an inherited or acquired TypeScript or JavaScript Next.js codebase; before a modernisation estimate; before committing to build on a legacy module.
 - A recurring health check: run with last quarter's `findings.csv` as the baseline and track new vs resolved.
 - In CI as a ratchet: the gate fails only when a change adds a cycle, a layering violation or a file above 800 lines.
 - NOT for: one diff or PR (`code-review-runner`), a reported bug with a repro (`safe-fix`), stack conventions on new code (`nextjs-enterprise-conventions`), vulnerabilities (`security-review`).

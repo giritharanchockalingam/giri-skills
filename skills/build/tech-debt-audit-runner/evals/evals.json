@@ -92,6 +92,47 @@
       ]
     },
     {
+      "id": "agent-nextjs-special-files-js",
+      "prompt": "Audit our JavaScript Next.js app (App Router, deploys to AWS) for tech debt. It has robots.js, sitemap.js, manifest.js and OG image files under app/.",
+      "expected": [
+        "Runs scripts/audit_debt.py on a JavaScript repo: the Next.js special files (page/layout/template/loading/error/global-error/not-found/default/route/manifest/robots/sitemap/opengraph-image/twitter-image/icon/apple-icon), root middleware/instrumentation/*.config.* and evals/ produce no TD5; the one genuinely dead export in lib/legacy.js still fires; gate passes"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-nextjs-special"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity,status]"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"TD5,lib/legacy.js,6,export oldHelper is never imported,medium,new\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:file~^lib/legacy\\.js$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:rule~^TD5$"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"1 finding(s) in 26 audited file(s): 0 high, 1 medium, 0 low\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: PASS\""
+        },
+        {
+          "file": "refactor-plan.md",
+          "check": "contains:\"| `app/` | 17 | components, lib | — |\""
+        }
+      ]
+    },
+    {
       "id": "agent-mode-existing",
       "prompt": "We recorded last quarter's audit. Re-run on the current branch with our folder owners — did we add any new high debt, and what got fixed?",
       "expected": [

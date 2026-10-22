@@ -188,3 +188,68 @@ def test_plan_sections_and_phase_assignment(tmp_path):
     assert "TD2 `lib/utils.ts:1`" in p2
     assert "TD5 `lib/legacy-mapper.ts:10`" in p4 and "TD7 `lib/legacy-mapper.ts:2`" in p4 and "TD6 `server/services/payment-service.ts:4`" in p4
     assert plan.index("| high | new |") < plan.index("| low | new |")          # severity ordering in Priorities
+
+
+# ---------------------------------------------------------------- brownfield: JavaScript Next.js, special files (TD5 regression)
+
+def test_nextjs_special_files_js_not_dead_exports(tmp_path):
+    """Regression: app/** special files (manifest/robots/sitemap/opengraph-image/twitter-image/icon/apple-icon/…), root
+    middleware/instrumentation/*.config.* and evals/ produced TD5 on a JavaScript repo. Only the genuine dead export fires."""
+    res, rows, md, plan = audit(tmp_path, FX / "repo-nextjs-special")
+    assert res.returncode == 0, res.stderr
+    assert [(r["rule"], r["file"], r["line"], r["snippet"]) for r in rows] == \
+        [("TD5", "lib/legacy.js", "6", "export oldHelper is never imported")]
+    assert "1 finding(s) in 26 audited file(s): 0 high, 1 medium, 0 low" in md and "Gate: PASS." in md
+    assert "| `app/` | 17 | components, lib | — |" in plan                # every special file was scanned, none flagged
+    assert "| `evals/` | 2 |" in plan                                      # evals/ is in the graph but not audited
+
+
+def test_special_file_exclusion_list_is_exhaustive(tmp_path):
+    """Each special-file stem, in .js/.jsx/.ts/.tsx, alone in app/ with a default export and the metadata exports:
+    zero TD5. A non-special sibling with the same exports still fires."""
+    stems = ["page", "layout", "template", "loading", "error", "global-error", "not-found", "default", "route",
+             "manifest", "robots", "sitemap", "opengraph-image", "twitter-image", "icon", "apple-icon"]
+    body = "export const alt = 'x';\nexport const size = { width: 1, height: 1 };\nexport const contentType = 'image/png';\n" \
+           "export const metadata = {};\nexport async function generateStaticParams() { return []; }\n" \
+           "export async function generateSitemaps() { return []; }\nexport default function X() { return null; }\n"
+    repo = tmp_path / "repo"
+    for i, (stem, ext) in enumerate((s, e) for s in stems for e in (".js", ".jsx", ".ts", ".tsx")):
+        write(repo, f"app/r{i}/{stem}{ext}", body if stem != "route" else "export async function GET() { return null; }\n")
+    write(repo, "app/r0/helpers.js", "export default function helper() { return 1; }\nexport const alt = 2;\n")
+    write(repo, "middleware.js", "export function middleware() {}\nexport const config = { matcher: [] };\n")
+    write(repo, "instrumentation.js", "export async function register() {}\nexport function onRequestError() {}\n")
+    write(repo, "instrumentation-client.js", "export const onRouterTransitionStart = () => {};\n")
+    write(repo, "next.config.mjs", "export default { reactStrictMode: true };\n")
+    write(repo, "sentry.edge.config.js", "export const dsn = '';\n")
+    write(repo, "tailwind.config.ts", "export default { content: [] };\n")
+    write(repo, "evals/corpus.mjs", "export const CASES = [];\nexport default CASES;\n")
+    write(repo, "tests/unit/dummy.test.js", "import { CASES } from '../../evals/corpus.mjs';\n")
+    _, rows, _, _ = audit(tmp_path, repo)
+    td5 = [(r["file"], r["snippet"]) for r in rows if r["rule"] == "TD5"]
+    assert td5 == [("app/r0/helpers.js", "export default is never imported"), ("app/r0/helpers.js", "export alt is never imported")]
+
+
+def test_js_and_jsx_audited_like_ts(tmp_path):
+    """TD1/TD2/TD3/TD4/TD5/TD6/TD8 fire on .js/.jsx exactly as on .ts/.tsx; TD7 (`any`) is TypeScript-only by design."""
+    repo = tmp_path / "repo"
+    dup = "export function compute(x) {\n" + "".join(f"  const v{i} = x + {i};\n" for i in range(6)) + "  return v5;\n}\n"
+    write(repo, "lib/pricing.js", dup)
+    write(repo, "server/quote.js", dup.replace("compute", "quote") + 'import { b } from "./billing";\n')
+    write(repo, "server/billing.js", 'import { quote } from "./quote";\nexport const b = 1;\nexport function unused() {}\n')
+    write(repo, "lib/widget.jsx", 'import { Chart } from "@/components/Chart";\n// TODO: remove\nexport function W() { return <Chart />; }\n')
+    write(repo, "components/Chart.jsx", "export function Chart() { return <svg />; }\n")
+    write(repo, "lib/big.js", "export const a = 1;\n" + "// filler\n" * 420 + "const n = 1; /* any any any any any any any */\n")
+    write(repo, "app/page.jsx", 'import { compute } from "@/lib/pricing";\nimport { W } from "@/lib/widget";\nimport { a } from "@/lib/big";\n'
+                                'import { quote } from "@/server/quote";\nexport default function P() { return <W>{compute(a) + quote(1)}</W>; }\n')
+    write(repo, "tests/unit/pricing.test.js", 'import { compute } from "../../lib/pricing";\n')
+    res, rows, _, _ = audit(tmp_path, repo)
+    assert res.returncode == 1
+    r = by_rule(rows)
+    assert r["TD1"][0]["file"] == "server/quote.js" and "compute() in lib/pricing.js" in r["TD1"][0]["snippet"]
+    assert [x["file"] for x in r["TD2"]] == ["lib/big.js"]
+    assert "server/billing.js -> server/quote.js" in r["TD3"][0]["snippet"]
+    assert [(x["file"], x["snippet"]) for x in r["TD4"]] == [("lib/widget.jsx", "lib/ imports components/: @/components/Chart")]
+    assert [(x["file"], x["snippet"]) for x in r["TD5"]] == [("server/billing.js", "export unused is never imported")]
+    assert r["TD6"][0]["file"] == "lib/widget.jsx"
+    assert "TD7" not in r
+    assert {x["file"] for x in r["TD8"]} == {"lib/big.js", "lib/widget.jsx"}       # pricing.js has tests/unit/pricing.test.js
