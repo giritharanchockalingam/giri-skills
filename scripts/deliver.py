@@ -4,7 +4,7 @@
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
         --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
-        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--dry] [--resume] [--run-id ID] \
+        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
 
 `--pipeline <name>` is an alias of the positional. With --run and --portal (API key in env SF_API_KEY) the executor
@@ -34,6 +34,17 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
             (no builder). Otherwise --builder none stops with needs_builder.json (exit 4) naming the path
             <out>/evidence/<nn>-build/files/files.txt (or <out>/build/files.txt, where --files copies to);
             --builder manual expects it there; --builder claude-code prompts `claude -p` to write it.
+            the plan-refine step (`produces: ["plan.md", "tasks.csv"]`, architecture stage): the architect turns the
+            spec-to-plan scaffold into a complete plan — file table filled, every task with acceptance, test,
+            rollback and files (repo-relative, create/modify per the checkout), nothing invented beyond the PRD and
+            the request. A scaffold that is already complete (no TBD in acceptance/test/files, every task names
+            files) is taken as is: the step is skipped deterministically and the scaffold copied into the step
+            folder. Otherwise --builder none|manual stops with needs_builder.json (exit 4) naming both expected
+            paths <out>/evidence/<nn>-architecture/plan-refine/{plan.md,tasks.csv} (or <out>/build/plan/, where
+            --plan DIR copies to); --builder claude-code prompts `claude -p` to write them. The stage gate then
+            checks the refined tasks.csv (files and acceptance non-empty, no [TO BE BASELINED cell in acceptance,
+            test or files) BEFORE anyone is asked to approve: an incomplete plan fails the stage (exit 1), it is
+            never put in front of an approver.
   pr        --dry writes pr.json {"dry": true}; otherwise: branch deliver/<run-id> on the checkout, the checkout's
             changes committed as skills-factory[bot], pushed to origin (`gh auth setup-git` first when GH_TOKEN is
             set), then `gh pr create --title … --body-file EVIDENCE.md` run with cwd = the checkout
@@ -93,6 +104,10 @@ CALLBACK_BACKOFF = float(os.environ.get("SF_CALLBACK_BACKOFF", "1") or 0)   # se
 STAGE_STATUS = {"passed": "succeeded", "failed": "blocked", "awaiting_approval": "awaiting_approval",
                 "awaiting_builder": "blocked", "wiring_error": "blocked", "running": "running"}
 FILES_TXT = "files.txt"
+PLAN_MD, TASKS_CSV = "plan.md", "tasks.csv"
+PLAN_FILES = (PLAN_MD, TASKS_CSV)                   # what the plan-refine step produces (see step_plan_refine)
+PLAN_COLUMNS = ["id", "task", "acceptance", "test", "rollback", "files", "size", "repo_check"]   # spec-to-plan's tasks.csv
+PLAN_FILLED = ("acceptance", "test", "files")       # a scaffold is complete when none of these is TBD or empty in any task
 
 
 class StepError(Exception):
@@ -645,6 +660,124 @@ class Run:
                   "", "When done, reply with the list you wrote."]
         return "\n".join(parts)
 
+    # ---- the plan-refine step (agent step with produces: ["plan.md", "tasks.csv"])
+    @staticmethod
+    def scaffold_gaps(tasks_path: str) -> list[str]:
+        """What keeps the spec-to-plan scaffold from being a plan: one line per task field that is empty or TBD
+        (acceptance, test, files). Empty list = complete, the architect has nothing to add."""
+        if not tasks_path or not Path(tasks_path).is_file():
+            return ["no tasks.csv"]
+        rows = list(csv.DictReader(io.StringIO(Path(tasks_path).read_text(encoding="utf-8"))))
+        if not rows:
+            return ["tasks.csv has no tasks"]
+        gaps = []
+        for r in rows:
+            for col in PLAN_FILLED:
+                v = (r.get(col) or "").strip()
+                if not v:
+                    gaps.append(f"{r.get('id') or '?'}: {col} is empty")
+                elif TBD_RE.search(v):
+                    gaps.append(f"{r.get('id') or '?'}: {col} is {v}")
+        return gaps
+
+    def step_plan_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
+        builder = self.args.builder
+        rec["builder"] = builder
+        scaffold_plan = str(self.resolve(step["inputs"].get("plan"), "plan-refine plan"))
+        scaffold_tasks = str(self.resolve(step["inputs"].get("tasks", ""), "plan-refine tasks") or "")
+        prd = str(self.resolve(step["inputs"].get("prd", ""), "plan-refine prd") or "")
+        request = str(self.resolve(step["inputs"].get("request", ""), "plan-refine request") or self.inputs.get("request", ""))
+        target = Path(str(self.resolve(step["inputs"].get("target", "$repo"), "plan-refine target")))
+        expected = {f: sdir / f for f in PLAN_FILES}
+        dropped = {f: self.out / "build" / "plan" / f for f in PLAN_FILES}   # where --plan DIR copies to
+
+        def record(source: str, note: str, skipped: bool = False) -> bool:
+            rows = list(csv.DictReader(io.StringIO(expected[TASKS_CSV].read_text(encoding="utf-8"))))
+            header = list(rows[0].keys()) if rows else next(csv.reader(io.StringIO(expected[TASKS_CSV].read_text(encoding="utf-8"))), [])
+            missing_cols = [c for c in PLAN_COLUMNS if c not in header]
+            if missing_cols:
+                raise StepError(f"{TASKS_CSV} from {source} lacks the columns {missing_cols} (spec-to-plan's header: {','.join(PLAN_COLUMNS)})")
+            gaps = self.scaffold_gaps(str(expected[TASKS_CSV]))
+            write_json(sdir / "plan-refine.json", {"source": source, "skipped": skipped, "tasks": len(rows), "gaps": gaps,
+                                                   "scaffold": {"plan": scaffold_plan, "tasks": scaffold_tasks}, "note": note})
+            rec.update(exit=0, plan_source=source, skipped=skipped, tasks=len(rows), gaps=len(gaps))
+            return True
+
+        if not all(p.is_file() for p in expected.values()) and all(p.is_file() for p in dropped.values()):
+            for f in PLAN_FILES:
+                shutil.copy(dropped[f], expected[f])
+        if all(p.is_file() for p in expected.values()):
+            source = "claude-code" if builder == "claude-code" and (sdir / "prompt.txt").is_file() else "architect"
+            return record(source, f"refined plan supplied at {sdir.relative_to(self.out)} (builder: {builder})")
+        gaps = self.scaffold_gaps(scaffold_tasks)
+        if not gaps:   # the scaffold is already a plan: take it as is, deterministically — nobody is asked
+            shutil.copy(scaffold_plan, expected[PLAN_MD])
+            shutil.copy(scaffold_tasks, expected[TASKS_CSV])
+            return record("scaffold", "the spec-to-plan scaffold is complete (every task names files, acceptance and test): "
+                          "step skipped, scaffold taken as the plan", skipped=True)
+        if builder in ("none", "manual"):
+            rec["status"] = "awaiting_builder"
+            write_json(self.out / "needs_builder.json", {
+                "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+                "role": "architect", "builder": builder, "target": str(target),
+                "plan": scaffold_plan, "tasks": scaffold_tasks, "prd": prd or None, "request": request,
+                "why": "the scaffold plan is not a plan yet: " + "; ".join(gaps[:8]) + (" …" if len(gaps) > 8 else ""),
+                "produce": list(PLAN_FILES),
+                "expected": {f: str(expected[f]) for f in PLAN_FILES},
+                "alternative": {f: str(dropped[f]) for f in PLAN_FILES},
+                "format": f"{TASKS_CSV}: columns {','.join(PLAN_COLUMNS)}; files repo-relative, comma-separated; repo_check "
+                          f"`<file>: create|modify` per the checkout; {PLAN_MD}: the scaffold with its file table and every task "
+                          "block filled (Files, Acceptance, Tests, Rollback)",
+                "rule": "read the scaffold plan, the PRD and the checkout; fill the file table and every task's acceptance, test, "
+                        "rollback and files; nothing invented beyond what the PRD and the request state; the gate refuses any "
+                        "[TO BE BASELINED cell in acceptance, test or files",
+                "how": f"write both files at the expected paths (or pass --plan <dir> holding {PLAN_MD} and {TASKS_CSV}), then re-run with --resume"})
+            return False
+        if builder == "claude-code":
+            exe = shutil.which("claude")
+            if not exe:
+                raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with --plan <dir>)")
+            prompt = self.plan_prompt(scaffold_plan, scaffold_tasks, prd, request, expected, gaps)
+            (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
+            t0 = time.time()
+            r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
+                               text=True, timeout=1800)
+            rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
+            (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
+            (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
+            if r.returncode != 0:
+                raise StepError(f"claude -p exited {r.returncode}: {r.stderr.strip().splitlines()[-1:] or ''}"[:300])
+            absent = [f for f in PLAN_FILES if not expected[f].is_file()]
+            if absent:
+                raise StepError(f"builder claude-code did not write {', '.join(str(expected[f]) for f in absent)}")
+            if is_git_root(target) and shutil.which("git"):
+                _, dirty = git(target, "status", "--porcelain")
+                if dirty.strip():
+                    rec["warning"] = "the plan-refine step changed the checkout; it should only read it"
+            return record("claude-code", f"written by claude -p at {sdir.relative_to(self.out)}")
+        raise StepError(f"unknown builder {builder!r}")
+
+    def plan_prompt(self, plan: str, tasks: str, prd: str, request: str, expected: dict, gaps: list[str]) -> str:
+        def body(p: str) -> str:
+            t = Path(p).read_text(encoding="utf-8", errors="replace") if p and Path(p).is_file() else "(missing)"
+            return t if len(t) <= CONTEXT_LIMIT else t[:CONTEXT_LIMIT] + "\n[... truncated ...]"
+        parts = ["You are the architect of a delivery pipeline. The plan below is a scaffold spec-to-plan wrote from the spec; "
+                 "it is not a plan yet. Read it, the PRD, the request and this repository, then write the complete plan to:",
+                 f"  {expected[PLAN_MD]}", f"  {expected[TASKS_CSV]}", "",
+                 "Rules: keep the scaffold's structure and task ids; fill the file table and, for every task, Files (repo-relative "
+                 "source files to create or modify, checked against this checkout and marked create/modify under Repo check), "
+                 "Acceptance (observable), Tests (what the red test asserts) and Rollback; nothing invented beyond what the PRD "
+                 f"and the request state — where they are silent, say so in the task text rather than guessing. {TASKS_CSV} keeps "
+                 f"the columns {','.join(PLAN_COLUMNS)}; files comma-separated; repo_check `<file>: create|modify`. Leave no "
+                 "[TO BE BASELINED cell in acceptance, test or files: the stage gate refuses them. Do not change any file in the "
+                 "repository; do not commit.",
+                 "", "## Gaps the gate will refuse", ""] + [f"- {g}" for g in gaps] + [
+                 "", "## Request", "", request or "(none)", "", "## PRD", "", body(prd), "", "## Scaffold plan.md", "", body(plan),
+                 "", f"## Scaffold {TASKS_CSV}", "", body(tasks),
+                 "", "## Stack profile", "", json.dumps(self.record.get("stack_profile", {}), indent=2),
+                 "", "When done, reply with the task table you wrote."]
+        return "\n".join(parts)
+
     def _apply_to_copy(self, patch: Path, target: Path) -> str:
         if not shutil.which("git") or not is_git_root(target):
             return "not applied to the dry copy (no git)."
@@ -664,8 +797,11 @@ class Run:
             clean.unlink(missing_ok=True)
 
     def step_agent(self, step: dict, sdir: Path, rec: dict) -> bool:
-        if FILES_TXT in (step.get("produces") or []):
+        produces = step.get("produces") or []
+        if FILES_TXT in produces:
             return self.step_files(step, sdir, rec)
+        if TASKS_CSV in produces:
+            return self.step_plan_refine(step, sdir, rec)
         builder = self.args.builder
         rec["builder"] = builder
         plan = str(self.resolve(step["inputs"].get("plan"), "agent plan"))
@@ -778,6 +914,19 @@ class Run:
         rec["exit"] = 0
 
     # ---- gates
+    def pre_approval_gate(self, gate: dict, stage_rec: dict) -> tuple[str, str]:
+        """The stage gate with its approval parts left out: what must already hold before a person is asked to
+        approve. A failing output check here fails the stage without writing needs_approval.json."""
+        kind = gate.get("kind")
+        if kind == "approval":
+            return "pass", "approval pending"
+        if kind in ("all", "any"):
+            parts = [g for g in gate.get("of") or [] if g.get("kind") != "approval"]
+            if not parts:
+                return "pass", "approval pending"
+            return self.eval_gate({"kind": kind, "of": parts}, stage_rec)
+        return self.eval_gate(gate, stage_rec)
+
     def eval_gate(self, gate: dict, stage_rec: dict) -> tuple[str, str]:
         kind = gate.get("kind")
         steps = {s["id"]: s for s in stage_rec["steps"]}
@@ -928,6 +1077,11 @@ class Run:
                     rec["derive"] = step.get("derive")
                     self.step_compose(step, sdir, rec)
                 elif step["kind"] == "approval":
+                    # what the gate checks on the stage's outputs must hold BEFORE anyone is asked: a plan the gate
+                    # would refuse (TBD cells, no files) is never put in front of an approver
+                    pre_verdict, pre_detail = self.pre_approval_gate(stage["gate"], {"steps": srec["steps"]})
+                    if pre_verdict == "fail":
+                        raise StepError(f"not submitted for approval — the stage gate refuses the outputs: {pre_detail}")
                     if not self.step_approval(step, sdir, rec, approvals):
                         rec["duration_s"] = round(time.time() - t0, 3)
                         srec["steps"].append(rec)
@@ -942,7 +1096,8 @@ class Run:
                         rec["duration_s"] = round(time.time() - t0, 3)
                         srec["steps"].append(rec)
                         srec.update(status="awaiting_builder", duration_s=round(time.time() - t_stage, 3))
-                        srec["gate"] = {"verdict": "pending", "kind": stage["gate"]["kind"], "detail": f"waiting for the builder at step '{sid}'",
+                        who = "architect (the refined plan.md / tasks.csv)" if TASKS_CSV in (step.get("produces") or []) else "builder"
+                        srec["gate"] = {"verdict": "pending", "kind": stage["gate"]["kind"], "detail": f"waiting for the {who} at step '{sid}'",
                                         "role": stage.get("role"), "approved_by": "", "at": now()}
                         write_json(stage_dir / "gate.json", srec["gate"])
                         self._finish_stage(srec, stage)
@@ -1124,6 +1279,7 @@ def build_args(argv=None):
     ap.add_argument("--approvals", help="JSON file recording approvals: {\"approvals\": [{\"step\": id, \"by\": name, \"note\": ...}]}")
     ap.add_argument("--patch", help="copy this diff to <out>/build/diff.patch before running (manual builder)")
     ap.add_argument("--files", help="copy this files.txt (one repo-relative path per line) to <out>/build/files.txt before running: the files step takes it when tasks.csv does not name every task's files")
+    ap.add_argument("--plan", metavar="DIR", help="copy DIR/plan.md and DIR/tasks.csv (the architect's refined plan) to <out>/build/plan/ before running: the plan-refine step takes them instead of asking")
     ap.add_argument("--dry", action="store_true", help="work on a copy of the repo under <out>/repo; the pr step opens nothing")
     ap.add_argument("--resume", action="store_true", help="continue an existing run from the first incomplete stage")
     ap.add_argument("--run-id", help="run id (default: derived from pipeline + request + repo, with a time suffix outside --dry)")
@@ -1169,6 +1325,8 @@ def main(argv=None) -> int:
     if args.resume and not prev_record:
         print(f"error: --resume but {out / 'run.json'} does not exist", file=sys.stderr)
         return EXIT_ARGS
+    for stale in ("needs_approval.json", "needs_builder.json", "wiring_error.json"):
+        (out / stale).unlink(missing_ok=True)   # a resume answers the last stop; whatever stops this run writes its own
 
     # inputs
     given = {}
@@ -1216,6 +1374,14 @@ def main(argv=None) -> int:
                 return EXIT_ARGS
             (out / "build").mkdir(exist_ok=True)
             shutil.copy(src, out / "build" / name)
+    if args.plan:
+        absent = [f for f in PLAN_FILES if not (Path(args.plan) / f).is_file()]
+        if absent:
+            print(f"error: --plan {args.plan} lacks {', '.join(absent)} (both {' and '.join(PLAN_FILES)} are needed)", file=sys.stderr)
+            return EXIT_ARGS
+        (out / "build" / "plan").mkdir(parents=True, exist_ok=True)
+        for f in PLAN_FILES:
+            shutil.copy(Path(args.plan) / f, out / "build" / "plan" / f)
     approvals = load_approvals(args.approvals)
 
     run.record = {"run_id": run.run_id, "pipeline": spec["name"], "version": spec.get("version", ""), "mode": spec.get("mode", ""),
@@ -1257,8 +1423,9 @@ def main(argv=None) -> int:
         run.save(status, code)
         run.post_stage_result(next(st for st in run.record["stages"] if st["id"] == stage["id"]))
         if code != EXIT_OK:
+            nb = read_json(out / "needs_builder.json") if code == EXIT_BUILDER and (out / "needs_builder.json").is_file() else {}
             where = {EXIT_APPROVAL: f"needs approval — see {out / 'needs_approval.json'}",
-                     EXIT_BUILDER: f"needs the builder — see {out / 'needs_builder.json'}",
+                     EXIT_BUILDER: f"needs the {nb.get('role') or 'builder'} ({nb.get('step', '?')}) — see {out / 'needs_builder.json'}",
                      EXIT_ARGS: f"pipeline wiring error — see {out / 'wiring_error.json'}"}.get(code, "gate failed — see " + str(run.evidence / f"{n:02d}-{stage['id']}" / "gate.json"))
             print(f"{spec['name']} run {run.run_id}: stopped at stage '{stage['id']}' ({status}): {where}")
             if code == EXIT_ARGS:

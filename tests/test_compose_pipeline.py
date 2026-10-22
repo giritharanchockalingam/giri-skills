@@ -146,7 +146,10 @@ def test_hardening_adds_observability_and_carries_the_brief_into_architecture(tm
     r, spec = compose(tmp_path, "--profile", str(profile(TS_REPO, tmp_path)), "--request-kind", "hardening", name="harden-ts")
     assert r.returncode == 0, r.stdout + r.stderr
     assert [s["id"] for s in spec["stages"]] == ["architecture", "build", "evaluate", "deploy", "operate"]
-    assert [t["id"] for t in spec["stages"][0]["steps"]] == ["brief", "spec", "plan", "plan-approval"]
+    assert [t["id"] for t in spec["stages"][0]["steps"]] == ["brief", "spec", "plan", "plan-refine", "plan-approval"]
+    refine = next(t for t in spec["stages"][0]["steps"] if t["id"] == "plan-refine")
+    assert refine["produces"] == ["plan.md", "tasks.csv"] and "prd" not in refine["inputs"]        # prd absent: optional input dropped
+    assert spec["stages"][0]["gate"]["kind"] == "all" and [g["kind"] for g in spec["stages"][0]["gate"]["of"]] == ["output"] * 5 + ["approval"]
     assert [t["id"] for t in spec["stages"][3]["steps"]] == ["observe", "ci", "pr"]
     assert spec["fits"]["stacks"] == ["nextjs", "react", "supabase", "tests", "typescript", "vercel"]
     assert run_script("scripts/validate_pipelines.py", str(tmp_path / "harden-ts.json")).returncode == 0

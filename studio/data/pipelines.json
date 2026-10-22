@@ -79,13 +79,52 @@
       "skill": "build/spec-to-plan"
      },
      {
+      "id": "plan-refine",
+      "kind": "agent"
+     },
+     {
       "id": "plan-approval",
       "kind": "approval"
      }
     ],
     "gate": {
-     "kind": "approval",
-     "step": "plan-approval"
+     "kind": "all",
+     "of": [
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:files!empty"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:acceptance!empty"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:files!tbd"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:acceptance!tbd"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:test!tbd"
+      },
+      {
+       "kind": "approval",
+       "step": "plan-approval"
+      }
+     ]
     }
    },
    {
@@ -307,13 +346,52 @@
       "skill": "build/spec-to-plan"
      },
      {
+      "id": "plan-refine",
+      "kind": "agent"
+     },
+     {
       "id": "plan-approval",
       "kind": "approval"
      }
     ],
     "gate": {
-     "kind": "approval",
-     "step": "plan-approval"
+     "kind": "all",
+     "of": [
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:files!empty"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:acceptance!empty"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:files!tbd"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:acceptance!tbd"
+      },
+      {
+       "kind": "output",
+       "step": "plan-refine",
+       "file": "tasks.csv",
+       "check": "csv_rows:test!tbd"
+      },
+      {
+       "kind": "approval",
+       "step": "plan-approval"
+      }
+     ]
     }
    },
    {

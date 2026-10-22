@@ -15,6 +15,7 @@ REPO = FIX / "delivery-repo"
 BRIEF = FIX / "delivery-build" / "brief.json"
 PATCH = FIX / "delivery-build" / "diff.patch"
 FILES = FIX / "delivery-build" / "files.txt"
+PLAN_DIR = FIX / "delivery-build" / "plan"            # the architect's refined plan.md + tasks.csv (fictional)
 RISKY_PATCH = REPO_ROOT / "skills" / "build" / "code-review-runner" / "evals" / "fixtures" / "change-risky.patch"
 REQUEST = "Export orders as CSV"
 STAGES = ["requirements", "architecture", "build", "evaluate", "deploy", "operate"]
@@ -73,6 +74,129 @@ def test_files_step_is_derived_from_tasks_csv_when_every_task_names_files(happy)
     assert "evidence/03-build/files/files.txt" in run_json(out)["files"]
 
 
+def test_plan_refine_is_skipped_when_the_scaffold_is_already_complete(happy):
+    """The brief's tasks carry accept/test/files: spec-to-plan's scaffold has no TBD cell, so the architect is not
+    asked — the step records `skipped`, copies the scaffold in as the plan, and the gate passes on it."""
+    out, _ = happy
+    ev = out / "evidence"
+    arch = next(s for s in run_json(out)["stages"] if s["id"] == "architecture")
+    steps = {t["id"]: t for t in arch["steps"]}
+    assert list(steps) == ["spec", "plan", "plan-refine", "plan-approval"]
+    assert steps["plan-refine"]["status"] == "ok" and steps["plan-refine"]["skipped"] is True
+    assert steps["plan-refine"]["plan_source"] == "scaffold" and steps["plan-refine"]["tasks"] == 3 and steps["plan-refine"]["gaps"] == 0
+    for f in ("plan.md", "tasks.csv"):
+        assert (ev / "02-architecture" / "plan-refine" / f).read_text() == (ev / "02-architecture" / "plan" / f).read_text()
+    pr = json.loads((ev / "02-architecture" / "plan-refine" / "plan-refine.json").read_text())
+    assert pr["skipped"] is True and pr["source"] == "scaffold" and pr["gaps"] == []
+    gate = json.loads((ev / "02-architecture" / "gate.json").read_text())
+    assert gate["kind"] == "all" and gate["verdict"] == "pass"
+    for check in ("csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"):
+        assert f"[pass] tasks.csv: {check}" in gate["detail"], check
+    assert gate["detail"].endswith("[pass] approved by --approve-all")
+    assert {"02-architecture/plan/tasks.csv", "02-architecture/plan-refine/plan.md", "02-architecture/plan-refine/tasks.csv"} <= set(arch["evidence_files"])
+    build = next(s for s in run_json(out)["stages"] if s["id"] == "build")
+    files = next(t for t in build["steps"] if t["id"] == "files")
+    assert files["files_source"] == "tasks.csv"                                                        # derived from the refined tasks.csv
+    assert not (out / "needs_builder.json").exists()
+
+
+def test_scaffold_with_tbd_cells_stops_at_plan_refine_for_the_architect(tmp_path):
+    """Request only, no brief: spec-to-plan's scaffold is all `[TO BE BASELINED]` — the first real run's plan. The run
+    stops at plan-refine (exit 4) naming both files the architect must write; nothing is put in front of an approver."""
+    out = tmp_path / "tbd"
+    r = deliver(out, "--builder", "none", "--approve-all", brief=None)
+    assert r.returncode == 4, r.stdout + r.stderr
+    assert "stopped at stage 'architecture' (awaiting_builder): needs the architect (plan-refine)" in r.stdout
+    need = json.loads((out / "needs_builder.json").read_text())
+    assert need["stage"] == "architecture" and need["step"] == "plan-refine" and need["role"] == "architect" and need["builder"] == "none"
+    assert need["produce"] == ["plan.md", "tasks.csv"]
+    assert need["expected"] == {"plan.md": str(out / "evidence" / "02-architecture" / "plan-refine" / "plan.md"),
+                                "tasks.csv": str(out / "evidence" / "02-architecture" / "plan-refine" / "tasks.csv")}
+    assert need["alternative"] == {"plan.md": str(out / "build" / "plan" / "plan.md"), "tasks.csv": str(out / "build" / "plan" / "tasks.csv")}
+    assert need["plan"].endswith("02-architecture/plan/plan.md") and need["tasks"].endswith("02-architecture/plan/tasks.csv")
+    assert need["prd"].endswith("01-requirements/prd/prd-final.md") and need["request"] == REQUEST
+    assert need["why"].startswith("the scaffold plan is not a plan yet: T1: acceptance is [TO BE BASELINED")
+    assert "T1: files is [TO BE BASELINED" in need["why"] and "T1: test is [TO BE BASELINED" in need["why"]
+    assert "nothing invented beyond what the PRD and the request state" in need["rule"] and "--plan <dir>" in need["how"]
+    assert "id,task,acceptance,test,rollback,files,size,repo_check" in need["format"]
+    assert stage_status(out) == {"requirements": "passed", "architecture": "awaiting_builder"}
+    steps = {s["id"]: s["status"] for s in run_json(out)["stages"][-1]["steps"]}
+    assert steps == {"spec": "ok", "plan": "ok", "plan-refine": "awaiting_builder"}
+    gate = json.loads((out / "evidence" / "02-architecture" / "gate.json").read_text())
+    assert gate["verdict"] == "pending" and "waiting for the architect" in gate["detail"] and "plan-refine" in gate["detail"]
+    assert not (out / "needs_approval.json").exists() and not (out / "evidence" / "02-architecture" / "plan-approval" / "approval.json").exists()
+    r = deliver(tmp_path / "manual", "--builder", "manual", "--patch", str(PATCH), "--approve-all", brief=None)
+    assert r.returncode == 4 and json.loads((tmp_path / "manual" / "needs_builder.json").read_text())["step"] == "plan-refine"   # manual: same stop
+
+
+def test_resume_after_the_architect_drops_the_refined_plan_continues_to_approval(tmp_path):
+    out = tmp_path / "refined"
+    assert deliver(out, "--builder", "none", brief=None).returncode == 4
+    for f in ("plan.md", "tasks.csv"):                                             # the architect writes both files in place
+        shutil.copy(PLAN_DIR / f, out / "evidence" / "02-architecture" / "plan-refine" / f)
+    r = deliver(out, "--builder", "none", "--resume", brief=None)
+    assert r.returncode == 3, r.stdout + r.stderr                                  # the plan passed the gate checks: now the approval
+    assert not (out / "needs_builder.json").exists()                               # the stop it answered is gone
+    need = json.loads((out / "needs_approval.json").read_text())
+    assert need["step"] == "plan-approval" and "evidence/02-architecture/plan-refine/tasks.csv" in need["review"]
+    arch = next(s for s in run_json(out)["stages"] if s["id"] == "architecture")
+    steps = {t["id"]: t for t in arch["steps"]}
+    assert [(k, v["status"]) for k, v in steps.items()] == [("spec", "ok"), ("plan", "ok"), ("plan-refine", "ok"), ("plan-approval", "awaiting_approval")]
+    assert steps["spec"].get("resumed") is True and steps["plan"].get("resumed") is True and "resumed" not in steps["plan-refine"]
+    assert steps["plan-refine"]["plan_source"] == "architect" and steps["plan-refine"]["skipped"] is False and steps["plan-refine"]["gaps"] == 0
+    (out / "build").mkdir(exist_ok=True)
+    shutil.copy(PATCH, out / "build" / "diff.patch")
+    r = deliver(out, "--builder", "none", "--resume", "--approve-all", brief=None)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    fj = json.loads((out / "evidence" / "03-build" / "files" / "files.json").read_text())
+    assert fj["derived"] is True and fj["files"] == ["lib/orders.js", "app/api/orders/export/route.js"]   # files.txt from the refined tasks.csv
+    assert "Content-Disposition" in (out / "evidence" / "03-build" / "feature" / "feature.md").read_text()
+
+
+def test_gate_refuses_a_refined_tasks_csv_that_still_has_tbd_cells(tmp_path):
+    """The architect hands back the scaffold unchanged: the gate refuses it with the rows and columns named, before
+    anyone is asked to approve — exit 1, no needs_approval.json, no approval.json."""
+    out = tmp_path / "still-tbd"
+    assert deliver(out, "--builder", "none", "--approve-all", brief=None).returncode == 4
+    for f in ("plan.md", "tasks.csv"):
+        shutil.copy(out / "evidence" / "02-architecture" / "plan" / f, out / "evidence" / "02-architecture" / "plan-refine" / f)
+    r = deliver(out, "--builder", "none", "--resume", "--approve-all", brief=None)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "stopped at stage 'architecture' (failed): gate failed" in r.stdout
+    gate = json.loads((out / "evidence" / "02-architecture" / "gate.json").read_text())
+    assert gate["verdict"] == "fail"
+    assert "[fail] tasks.csv: csv_rows:acceptance!tbd — 1 of 1 rows still [TO BE BASELINED] in 'acceptance' (rows ['T1'])" in gate["detail"]
+    assert "[fail] tasks.csv: csv_rows:files!tbd — 1 of 1 rows still [TO BE BASELINED] in 'files' (rows ['T1'])" in gate["detail"]
+    assert "[fail] tasks.csv: csv_rows:test!tbd" in gate["detail"] and "[fail] not approved" in gate["detail"]
+    steps = {t["id"]: t for t in run_json(out)["stages"][-1]["steps"]}
+    assert steps["plan-refine"]["status"] == "ok" and steps["plan-refine"]["gaps"] == 3
+    assert steps["plan-approval"]["status"] == "failed" and steps["plan-approval"]["error"].startswith("not submitted for approval — the stage gate refuses the outputs")
+    assert not (out / "needs_approval.json").exists() and not (out / "needs_builder.json").exists()
+    assert not (out / "evidence" / "02-architecture" / "plan-approval" / "approval.json").exists()
+    assert stage_status(out) == {"requirements": "passed", "architecture": "failed"}
+    assert "| architecture | ai-solution-architect | all | FAIL |" in (out / "evidence" / "EVIDENCE.md").read_text()
+
+
+def test_plan_dir_supplies_the_refined_plan_end_to_end(tmp_path):
+    out = tmp_path / "plan-dir"
+    r = deliver(out, "--builder", "manual", "--plan", str(PLAN_DIR), "--patch", str(PATCH), "--approve-all", brief=None)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    ev = out / "evidence"
+    for f in ("plan.md", "tasks.csv"):
+        assert (out / "build" / "plan" / f).read_text() == (PLAN_DIR / f).read_text()
+        assert (ev / "02-architecture" / "plan-refine" / f).read_text() == (PLAN_DIR / f).read_text()
+    assert "TO BE BASELINED" in (ev / "02-architecture" / "plan" / "tasks.csv").read_text()          # the scaffold stays as evidence of what the skill wrote
+    steps = {t["id"]: t for t in next(s for s in run_json(out)["stages"] if s["id"] == "architecture")["steps"]}
+    assert steps["plan-refine"]["plan_source"] == "architect" and steps["plan-refine"]["skipped"] is False
+    fj = json.loads((ev / "03-build" / "files" / "files.json").read_text())
+    assert fj["derived"] is True and fj["modify"] == ["lib/orders.js"] and fj["create"] == ["app/api/orders/export/route.js"]
+    assert "build/plan/tasks.csv" in run_json(out)["files"]
+    r = deliver(tmp_path / "half", "--builder", "manual", "--plan", str(tmp_path), "--patch", str(PATCH), brief=None)
+    assert r.returncode == 2 and "lacks plan.md, tasks.csv" in r.stderr
+
+
 def test_evidence_md_has_one_row_per_stage(happy):
     out, _ = happy
     md = (out / "evidence" / "EVIDENCE.md").read_text()
@@ -105,12 +229,14 @@ def test_compose_steps_derive_spec_and_feature_from_real_outputs(happy):
     out, _ = happy
     ev = out / "evidence"
     spec = (ev / "02-architecture" / "spec" / "spec.md").read_text()
-    assert "## Order CSV export" in spec and "(files: lib/orders.js,app/api/orders/export/route.js)" in spec
+    assert "## Order CSV export" in spec and "; files: lib/orders.js,app/api/orders/export/route.js)" in spec
+    assert "tasks from brief.tasks" in spec and "(accept: GET /api/orders/export answers 200" in spec   # the brief's tasks carry accept/test/rollback/files
     assert json.loads((ev / "02-architecture" / "spec" / "spec.json").read_text())["section"] == "Order CSV export"
     tasks = (ev / "02-architecture" / "plan" / "tasks.csv").read_text()
-    assert "T1,CSV export of the current order list" in tasks
+    assert "T1,CSV export of the current order list" in tasks and "TO BE BASELINED" not in tasks
     feature = (ev / "03-build" / "feature" / "feature.md").read_text()
     assert feature.startswith("# Order CSV export\n") and feature.count("\n- ") == 3
+    assert "- GET /api/orders/export answers 200 with text/csv" in feature                              # criteria are the acceptance cells, not the task titles
     fj = json.loads((ev / "03-build" / "feature" / "feature.json").read_text())
     assert fj == {"title": "Order CSV export", "files": "lib/orders.js,app/api/orders/export/route.js", "criteria": 3, "files_source": "tasks.csv"}
     report = json.loads((ev / "03-build" / "tests" / "scaffold-report.json").read_text())
@@ -176,7 +302,7 @@ def test_builder_none_blocks_with_exit_4(tmp_path):
     assert r.returncode == 4
     need = json.loads((out / "needs_builder.json").read_text())
     assert need["stage"] == "build" and need["step"] == "code" and need["expected"] == str(out / "build" / "diff.patch")
-    assert need["plan"].endswith("02-architecture/plan/plan.md") and need["tests"].endswith("03-build/tests/test-plan.md")
+    assert need["plan"].endswith("02-architecture/plan-refine/plan.md") and need["tests"].endswith("03-build/tests/test-plan.md")
     assert need["files"].endswith("03-build/files/files.txt") and need["allowed_files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
     assert any(c.endswith("shared/stack-conventions.md") for c in need["constraints"])
     assert stage_status(out)["build"] == "awaiting_builder"
@@ -184,29 +310,41 @@ def test_builder_none_blocks_with_exit_4(tmp_path):
     assert steps == {"feature": "ok", "files": "ok", "tests": "ok", "code": "awaiting_builder"}   # files.txt derived: no stop there
 
 
-def test_builder_none_stops_at_the_files_step_when_the_plan_names_no_files(tmp_path):
-    """No brief, request only: spec-to-plan names no files, so the files step asks the builder (exit 4) — before tests."""
+def files_step_without_tasks(tmp_path: Path) -> Path:
+    """The template with the files step's `tasks` input removed — what a composed `fix` pipeline looks like (no tasks.csv):
+    files.txt cannot be derived, so the builder is asked. The refined plan still comes from --plan (the gate needs it)."""
+    spec = json.loads((REPO_ROOT / "pipelines" / "feature-delivery.json").read_text())
+    build = next(s for s in spec["stages"] if s["id"] == "build")
+    del next(t for t in build["steps"] if t["id"] == "files")["inputs"]["tasks"]
+    spec["name"] = "notasks"
+    (tmp_path / "notasks.json").write_text(json.dumps(spec))
+    return tmp_path / "notasks.json"
+
+
+def test_builder_none_stops_at_the_files_step_when_files_txt_cannot_be_derived(tmp_path):
+    """A pipeline whose files step has no tasks.csv (a composed fix): the files step asks the builder (exit 4) — before tests."""
     out = tmp_path / "nofiles"
-    r = deliver(out, "--builder", "none", "--approve-all", brief=None)
+    r = deliver(out, "--builder", "none", "--approve-all", "--plan", str(PLAN_DIR), pipeline=str(files_step_without_tasks(tmp_path)), brief=None)
     assert r.returncode == 4, r.stdout + r.stderr
     need = json.loads((out / "needs_builder.json").read_text())
     assert need["stage"] == "build" and need["step"] == "files" and need["produce"] == "files.txt"
     assert need["expected"] == str(out / "evidence" / "03-build" / "files" / "files.txt")
     assert need["alternative"] == str(out / "build" / "files.txt")
-    assert need["why"] == "files.txt could not be derived: task T1 names no files in tasks.csv"
-    assert need["plan"].endswith("02-architecture/plan/plan.md") and need["tasks"].endswith("02-architecture/plan/tasks.csv")
+    assert need["why"] == "files.txt could not be derived: no tasks.csv to derive from"
+    assert need["plan"].endswith("02-architecture/plan-refine/plan.md") and need["tasks"] is None
     assert "one repo-relative path per line" in need["format"] and "--resume" in need["how"]
     steps = {s["id"]: s["status"] for s in run_json(out)["stages"][-1]["steps"]}
     assert steps == {"feature": "ok", "files": "awaiting_builder"}
     assert not list((out / "evidence" / "03-build" / "tests").glob("*"))      # tests did not run: nothing to scaffold for yet
-    assert "stopped at stage 'build' (awaiting_builder)" in r.stdout
+    assert "stopped at stage 'build' (awaiting_builder): needs the builder (files)" in r.stdout
 
 
 def test_resume_picks_up_at_the_files_step_after_the_builder_drops_files_txt(tmp_path):
     out = tmp_path / "resume-files"
-    assert deliver(out, "--builder", "none", "--approve-all", brief=None).returncode == 4
+    pipeline = str(files_step_without_tasks(tmp_path))
+    assert deliver(out, "--builder", "none", "--approve-all", "--plan", str(PLAN_DIR), pipeline=pipeline, brief=None).returncode == 4
     shutil.copy(FILES, out / "evidence" / "03-build" / "files" / "files.txt")      # the builder writes it in place
-    r = deliver(out, "--builder", "none", "--approve-all", "--resume", brief=None)
+    r = deliver(out, "--builder", "none", "--approve-all", "--resume", pipeline=pipeline, brief=None)
     assert r.returncode == 4, r.stdout + r.stderr                                  # tests ran; now the code step waits
     need = json.loads((out / "needs_builder.json").read_text())
     assert need["step"] == "code" and need["allowed_files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
@@ -222,14 +360,15 @@ def test_resume_picks_up_at_the_files_step_after_the_builder_drops_files_txt(tmp
     assert "tests/unit/lib-orders.test.js" in report["written"]
     (out / "build").mkdir(exist_ok=True)
     shutil.copy(PATCH, out / "build" / "diff.patch")
-    r = deliver(out, "--builder", "none", "--approve-all", "--resume", brief=None)
+    r = deliver(out, "--builder", "none", "--approve-all", "--resume", pipeline=pipeline, brief=None)
     assert r.returncode == 0, r.stdout + r.stderr
     assert stage_status(out) == {s: "passed" for s in STAGES}
 
 
 def test_manual_builder_with_a_files_txt_fixture_passes_end_to_end_without_a_brief(tmp_path):
+    """--files wins over the derivation: a builder-supplied list is recorded as such even when tasks.csv could derive one."""
     out = tmp_path / "files-fixture"
-    r = deliver(out, "--builder", "manual", "--files", str(FILES), "--patch", str(PATCH), "--approve-all", brief=None)
+    r = deliver(out, "--builder", "manual", "--plan", str(PLAN_DIR), "--files", str(FILES), "--patch", str(PATCH), "--approve-all", brief=None)
     assert r.returncode == 0, r.stdout + r.stderr
     assert stage_status(out) == {s: "passed" for s in STAGES}
     assert (out / "build" / "files.txt").read_text() == FILES.read_text()
@@ -239,29 +378,30 @@ def test_manual_builder_with_a_files_txt_fixture_passes_end_to_end_without_a_bri
     fc = json.loads((out / "evidence" / "03-build" / "code" / "files-changed.json").read_text())
     assert fc["plan_files_source"] == "files.txt" and fc["outside_plan"] == []
     assert "build/files.txt" in run_json(out)["files"]
-    r = deliver(tmp_path / "nofile", "--builder", "manual", "--files", str(tmp_path / "missing.txt"), "--patch", str(PATCH), brief=None)
+    r = deliver(tmp_path / "nofile", "--builder", "manual", "--plan", str(PLAN_DIR), "--files", str(tmp_path / "missing.txt"), "--patch", str(PATCH), brief=None)
     assert r.returncode == 2 and "files.txt not found" in r.stderr
 
 
 def test_a_missing_wire_is_a_pipeline_error_with_exit_2_not_a_gate_failure(tmp_path):
-    """The first real run's failure: tests wired from feature.json#files, empty without a brief. That is a wiring error."""
+    """The first real run's failure: tests wired from a json key that is empty without a brief (spec.json#files here —
+    the refined plan makes feature.json#files whole). That is a wiring error, never a gate verdict."""
     spec = json.loads((REPO_ROOT / "pipelines" / "feature-delivery.json").read_text())
     build = next(s for s in spec["stages"] if s["id"] == "build")
     build["steps"] = [t for t in build["steps"] if t["id"] != "files"]
-    next(t for t in build["steps"] if t["id"] == "tests")["inputs"]["files"] = "$steps.feature:feature.json#files"
+    next(t for t in build["steps"] if t["id"] == "tests")["inputs"]["files"] = "$steps.spec:spec.json#files"
     del next(t for t in build["steps"] if t["id"] == "code")["inputs"]["files"]
     build["evidence"] = [e for e in build["evidence"] if ":files.txt" not in e]
     spec["name"] = "miswired"
     (tmp_path / "miswired.json").write_text(json.dumps(spec))
     out = tmp_path / "wire"
-    r = deliver(out, "--builder", "none", "--approve-all", pipeline=str(tmp_path / "miswired.json"), brief=None)
+    r = deliver(out, "--builder", "none", "--approve-all", "--plan", str(PLAN_DIR), pipeline=str(tmp_path / "miswired.json"), brief=None)
     assert r.returncode == 2, r.stdout + r.stderr
     assert "stopped at stage 'build' (wiring_error)" in r.stdout
     assert r.stderr.strip().endswith("pipeline wiring error: step 'tests' input 'files' resolved to nothing from "
-                                     "'$steps.feature:feature.json#files': no earlier step produced it (skill build/test-strategy-tdd requires it)")
+                                     "'$steps.spec:spec.json#files': no earlier step produced it (skill build/test-strategy-tdd requires it)")
     we = json.loads((out / "wiring_error.json").read_text())
     assert we["step"] == "tests" and we["input"] == "files" and we["skill"] == "build/test-strategy-tdd" and we["stage"] == "build"
-    assert we["reference"] == "$steps.feature:feature.json#files" and "not a gate failure" in we["how"]
+    assert we["reference"] == "$steps.spec:spec.json#files" and "not a gate failure" in we["how"]
     assert not (out / "needs_input.json").exists() and not (out / "needs_builder.json").exists()
     assert stage_status(out) == {"requirements": "passed", "architecture": "passed", "build": "wiring_error"}
     gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
@@ -306,17 +446,16 @@ def test_missing_required_input_exits_2_with_needs_input(tmp_path):
     assert r.returncode != 0 and "pipeline not found" in r.stderr
 
 
-def test_request_only_run_without_a_brief_asks_the_builder_for_the_files_never_fails_a_gate(tmp_path):
+def test_request_only_run_without_a_brief_asks_the_architect_for_the_plan_never_fails_a_gate(tmp_path):
     out = tmp_path / "nobrief"
     r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", brief=None)
-    assert r.returncode == 4, r.stdout + r.stderr                     # manual builder, no files.txt yet: same stop as --builder none
+    assert r.returncode == 4, r.stdout + r.stderr                     # manual builder, no refined plan yet: same stop as --builder none
     brief = json.loads((out / "evidence" / "01-requirements" / "brief" / "brief.json").read_text())
     assert brief["feature"] == REQUEST and brief["problem"] == REQUEST and "_composed" in brief
-    fj = json.loads((out / "evidence" / "03-build" / "feature" / "feature.json").read_text())
-    assert fj["files"] == "" and fj["files_source"].startswith("none")
     need = json.loads((out / "needs_builder.json").read_text())
-    assert need["step"] == "files" and need["builder"] == "manual"
-    assert stage_status(out)["build"] == "awaiting_builder"            # never a gate failure, never a needs_input
+    assert need["step"] == "plan-refine" and need["builder"] == "manual"
+    assert stage_status(out)["architecture"] == "awaiting_builder"     # never a gate failure, never a needs_input
+    assert not (out / "evidence" / "03-build").exists()                 # the build stage never started on an unfilled plan
     assert not (out / "wiring_error.json").exists() and not (out / "needs_input.json").exists()
 
 
@@ -456,10 +595,11 @@ def test_portal_receives_the_profile_then_one_record_per_stage(tmp_path, monkeyp
     assert all(p["executor_ref"] == "https://github.com/acme/giri-skills/actions/runs/4242" for p in portal.posts)
     assert set(portal.auth) == {"Bearer sf_live_test_key"}
     arch = portal.posts[2]
-    assert arch["id"] == "architecture" and arch["gate"] == {"kind": "approval", "verdict": "pass", "detail": "approved by --approve-all"}
+    assert arch["id"] == "architecture" and arch["gate"]["kind"] == "all" and arch["gate"]["verdict"] == "pass"
+    assert arch["gate"]["detail"].startswith("[pass] tasks.csv: csv_rows:files!empty") and arch["gate"]["detail"].endswith("[pass] approved by --approve-all")
     assert arch["role"] == "ai-solution-architect" and arch["adlc_stage"] == "architecture"
     paths = [e["path"] for e in arch["evidence"]]
-    assert "02-architecture/plan/plan.md" in paths and "02-architecture/gate.json" in paths
+    assert "02-architecture/plan/plan.md" in paths and "02-architecture/plan-refine/tasks.csv" in paths and "02-architecture/gate.json" in paths
     for e in arch["evidence"]:
         assert len(e["sha256"]) == 64 and e["bytes"] > 0
         assert e["sha256"] == run_json(out)["files"]["evidence/" + e["path"]]
@@ -508,7 +648,7 @@ def test_portal_approval_resumes_the_run(tmp_path, monkeypatch):
         assert p.gets >= 1 and "waiting for approval of 'plan-approval' in the portal" in r.stdout
         ap = json.loads((out / "evidence" / "02-architecture" / "plan-approval" / "approval.json").read_text())
         assert ap["by"] == "giri@example.com" and ap["note"] == "plan ok"
-        assert p.posts[3]["gate"]["detail"] == "approved by giri@example.com"
+        assert p.posts[3]["gate"]["detail"].endswith("| [pass] approved by giri@example.com")
         assert not (out / "needs_approval.json").exists()
     finally:
         p.close()
@@ -616,7 +756,7 @@ def test_out_defaults_to_runs_run_id_in_portal_mode_matching_the_portal_command(
     runs = REPO_ROOT / "runs" / RUN_UUID
     shutil.rmtree(runs, ignore_errors=True)
     try:
-        r = run_script(SCRIPT, "--pipeline", "feature-delivery", "--repo", str(REPO), "--request", REQUEST,
+        r = run_script(SCRIPT, "--pipeline", "feature-delivery", "--repo", str(REPO), "--request", REQUEST, "--brief", str(BRIEF),
                        "--run", RUN_UUID, "--portal", "http://127.0.0.1:9", "--dry", "--builder", "none",
                        "--approval-timeout", "0.2", "--poll-interval", "0.05")
         assert r.returncode == 3, r.stdout + r.stderr           # an IDE run with the portal unreachable: stops at the plan approval

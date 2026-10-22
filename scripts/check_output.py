@@ -6,9 +6,10 @@ Check spec syntax (a string):
   json                         file parses as JSON
   csv:[a,b]                    CSV header contains every listed column
   csv_rows:<col>!empty         every row has a non-empty <col>
+  csv_rows:<col>!tbd           no row's <col> carries a `[TO BE BASELINED` marker (a scaffold cell nobody filled)
   csv_rows:<col>~<regex>       every row's <col> matches <regex> (re.search); the column must exist
                                and the CSV must have >= 1 data row. Dry mode: a column that is
-                               blank in every row is an unfilled llm slot and is skipped
+                               blank in every row is an unfilled llm slot and is skipped (!empty, ~regex)
   yaml                       file is non-empty and parses with the repo's YAML subset
   sections:[A,B]               a Markdown heading contains each listed text (case-insensitive)
   no_unowned_tbd               every `[TO BE BASELINED` marker names an owner (real mode);
@@ -232,10 +233,12 @@ def _resolve(ref, cwd):
 
 
 def _csv_rows(spec, arg: str, text: str, mode: str) -> dict:
-    """csv_rows:<col>!empty | csv_rows:<col>~<regex> — a per-row predicate on one column."""
+    """csv_rows:<col>!empty | csv_rows:<col>!tbd | csv_rows:<col>~<regex> — a per-row predicate on one column."""
     arg = arg.strip()
     if arg.endswith("!empty"):
         col, pred, pattern = arg[: -len("!empty")].strip(), "!empty", None
+    elif arg.endswith("!tbd"):
+        col, pred, pattern = arg[: -len("!tbd")].strip(), "!tbd", None
     elif "~" in arg:
         col, _, pattern = arg.partition("~")
         col, pred = col.strip(), "~"
@@ -244,7 +247,7 @@ def _csv_rows(spec, arg: str, text: str, mode: str) -> dict:
         except re.error as e:
             return _result(spec, False, f"bad regex {pattern!r}: {e}")
     else:
-        return _result(spec, False, f"csv_rows needs '<col>!empty' or '<col>~<regex>', got {arg!r}")
+        return _result(spec, False, f"csv_rows needs '<col>!empty', '<col>!tbd' or '<col>~<regex>', got {arg!r}")
     if not col:
         return _result(spec, False, "csv_rows: empty column name")
     rows = list(csv.DictReader(io.StringIO(text)))
@@ -254,6 +257,11 @@ def _csv_rows(spec, arg: str, text: str, mode: str) -> dict:
     if not rows:
         return _result(spec, False, "no data rows")
     values = [(r.get(col) or "").strip() for r in rows]
+    if pred == "!tbd":   # a TBD marker is a cell the scaffold wrote and nobody filled: never skipped, in any mode
+        bad = [i + 2 for i, v in enumerate(values) if TBD_RE.search(v)]
+        ids = [(r.get("id") or str(i + 2)).strip() for i, r in enumerate(rows) if TBD_RE.search((r.get(col) or ""))]
+        return _result(spec, not bad, f"{len(bad)} of {len(rows)} rows still [TO BE BASELINED] in '{col}'"
+                       + (f" (rows {ids[:6]})" if bad else ""))
     if mode == "dry" and all(v == "" for v in values):
         return _result(spec, True, f"skipped in dry mode: '{col}' unfilled in all {len(rows)} rows")
     if pred == "!empty":
