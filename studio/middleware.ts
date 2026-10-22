@@ -1,6 +1,7 @@
 /* Session refresh + route protection. Everything except /login, /start (public, static copy), the consumer API (/api/v1) and MCP servers (/api/mcp), both key-authenticated, health checks (/api/health, deep check bearer-protected),
  * the Python runtime (/api/py, secret-authenticated) and static assets requires a signed-in user. */
 import { createServerClient } from "@supabase/ssr";
+import { isKeyBearingDeliveryRequest } from "@/lib/delivery/auth";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, supabaseConfigured } from "@/lib/supabase/env";
 
@@ -22,7 +23,10 @@ export async function middleware(request: NextRequest) {
     },
   });
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user && pathname !== "/login" && pathname !== "/auth/callback" && pathname !== "/start") {   // /start: the public "how it fits together" page
+  // the delivery executor (scripts/deliver.py, GitHub Actions) calls back with an API key, not a session: those routes
+  // authenticate the key themselves (lib/factory/apikey), so a key-bearing request passes through
+  const keyBearing = isKeyBearingDeliveryRequest(pathname, request.headers.get("authorization"));
+  if (!user && !keyBearing && pathname !== "/login" && pathname !== "/auth/callback" && pathname !== "/start") {   // /start: the public "how it fits together" page
     if (pathname.startsWith("/api/")) return NextResponse.json({ error: { code: "unauthenticated", message: "Sign in first." } }, { status: 401 });
     const url = new URL("/login", request.url);
     if (pathname !== "/") url.searchParams.set("next", pathname);
