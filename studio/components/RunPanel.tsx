@@ -163,7 +163,13 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     return { req, assumptions };
   };
 
+  // the inputs a shown result was produced from: changing a file or value after a run leaves an answer to other inputs on
+  // screen, so it is marked as such until the person runs again
+  const ranWith = useRef("");
+  const inputsKey = JSON.stringify({ drafts, mode });
+
   const run = async () => {
+    ranWith.current = inputsKey;
     setRunning(true); setResult(null); setViewing(null); setLog([]);
     const { req, assumptions } = buildRequest();
     try {
@@ -184,6 +190,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto, runtimeState]);
 
+  const stale = !!result && !running && ranWith.current !== "" && ranWith.current !== inputsKey;
   const rj = result?.runJson ?? null;
   const banner = !result ? null
     : result.needsInput ? { tone: "hold", text: `NEEDS INPUT — missing: ${result.needsInput.missing.map((m) => m.name).join(", ")}` }
@@ -317,7 +324,7 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
 
           <div className="flex flex-wrap items-center gap-3 mt-5">
             <button type="button" className="btn btn-primary" disabled={runtimeState !== "ready" || running} onClick={run}>{running ? "Running…" : "Run"}</button>
-            <span className="caption">{runtimeState !== "ready" ? "Waiting for the runtime" : running ? "Python is running in a worker thread" : "Runs on your machine; nothing is uploaded except LLM prompts when you give a key."}</span>
+            <span className="caption">{runtimeState !== "ready" ? "Waiting for the runtime" : running ? "Python is running in a worker thread" : stale ? <strong className="run-stale-note">Inputs changed — click Run to get results for them.</strong> : "Runs on your machine; nothing is uploaded except LLM prompts when you give a key."}</span>
           </div>
 
           {(log.length > 0 || running) && (
@@ -328,7 +335,8 @@ export function RunPanel({ skillId, agent, defaultOpen = false }: { skillId: str
           )}
 
           {result && banner && (
-            <div className="run-results">
+            <div className="run-results" style={stale ? { opacity: 0.55 } : undefined}>
+              {stale && <div className="run-banner run-banner-hold" role="status" style={{ marginBottom: 8 }}>These results are from the previous inputs. You changed the inputs since — click Run to see results for them.</div>}
               <div className={`run-banner run-banner-${banner.tone}`} role="status">{banner.text}<span className="caption"> · exit {result.exitCode}</span></div>
 
               {result.needsInput && (
