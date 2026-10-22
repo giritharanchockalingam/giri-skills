@@ -133,6 +133,164 @@
           "check": "numbers_trace_to:value-model.json"
         }
       ]
+    },
+    {
+      "id": "x-hr-shared-services-sponsor",
+      "prompt": "Sponsor-level case for Elmstead Health's HR service-desk automation. HR VP stated (from their ServiceNow report): 42,000 tickets a year at $18 per ticket fully loaded. Their own tagging shows about 30% are password resets and payslip questions we would automate. No discount rate from finance.",
+      "expected": [
+        "Baseline cost $756,000/year (42,000 x $18) cited to the ServiceNow report via the HR VP, with a confidence rating",
+        "Targets as low/base/high with the automation mechanism and a ramp tied to delivery milestones",
+        "No NPV because no discount rate came from client finance; uses undiscounted net/payback and says so",
+        "Delivery and run costs not given are [TO BE BASELINED — owner: ___]; payback not computed from placeholders"
+      ]
+    },
+    {
+      "id": "x-plant-scrap-no-costs",
+      "prompt": "Plant controller at Tarnwell Metals: scrap cost $2.4M last fiscal year (general ledger). We're proposing vision-based quality inspection. Build the value case.",
+      "expected": [
+        "Scrap baseline $2.4M cited to the general ledger via the plant controller",
+        "Reduction target given as a low/base/high range with the inspection mechanism, not a single point figure",
+        "Costs (delivery at P80 from the estimate memo, run, decommission) are [TO BE BASELINED — owner: ___], so net and payback are marked, not computed"
+      ]
+    },
+    {
+      "id": "x-cfo-grade-ten-percent-july",
+      "prompt": "CFO-grade case for Wexford Utilities' meter-to-cash automation. Finance gave us a 10% discount rate and a fiscal year starting July. Baselines: 1.2M bills a year, 4% need manual exception handling at $11 each (billing ops dashboard, per the Billing Director). Estimate memo P80: $1.9M delivery; run $240k/yr.",
+      "expected": [
+        "Exception-handling baseline $528,000/year (1.2M x 4% x $11) cited to the dashboard",
+        "NPV presented at 10% because the rate came from client finance, on a July fiscal year",
+        "Costs include delivery at P80 ($1.9M, citing the estimate memo) and run $240k/yr, plus dual-run/decommission timing",
+        "Sensitivity on the top three assumptions with break-even values"
+      ]
+    },
+    {
+      "id": "x-strategic-benefits-not-summed",
+      "prompt": "Add 'better student experience' and 'stronger brand' to the benefits for Aldermoor University's portal case, and include them in the total.",
+      "expected": [
+        "Lists them as strategic benefits that are not summed into the total",
+        "Explains a benefit enters the headline only with a baseline, mechanism and conversion rule"
+      ]
+    },
+    {
+      "id": "x-double-counting-call-deflection",
+      "prompt": "Benefits for the contact-centre case: (a) agent hours saved because calls drop 20%, and (b) lower cost per call from deflection to self-service. Add both to the headline.",
+      "expected": [
+        "Flags that (a) and (b) overlap on the same deflected calls and shows a double-counting check",
+        "Counts the overlap once in the headline and states how"
+      ]
+    },
+    {
+      "id": "x-review-client-draft",
+      "prompt": "Review Fenwick Retail's draft business case before steering committee: it claims $12M savings, assumes 100% realisation in month one, has no benefit owners, and cites 'industry studies' for the volumes.",
+      "expected": [
+        "Redlines: ramped realisation instead of 100% in month one, client owners per benefit (unowned flagged), sources for baselines",
+        "The 'industry studies' volumes are recorded at confidence L or as [TO BE BASELINED — owner: ___] and kept out of the headline",
+        "Delivers a clean recommended version after the redline"
+      ]
+    },
+    {
+      "id": "x-decommission-timing",
+      "prompt": "Migration retires a legacy licence costing $900k/yr (contract per procurement; renewal date March 2028) once cutover is complete. Show it in the case.",
+      "expected": [
+        "Licence saving starts only after cutover and the contract end/renewal date, not at go-live",
+        "Dual-run costs until decommission are included in costs"
+      ]
+    },
+    {
+      "id": "x-soft-hours-conversion",
+      "prompt": "Finance ops time study (Controller, Sept 2026): the close automation saves 12,000 analyst hours a year. Put $1.2M of savings in the headline.",
+      "expected": [
+        "Treats hours saved as soft-quantifiable, needing a conversion rule; not hard cash unless a budget line is removed",
+        "Does not put the $1.2M in the headline without a stated conversion rule and owner; marks it [TO BE BASELINED — owner: ___]",
+        "Cites the time study as the baseline source"
+      ]
+    },
+    {
+      "id": "x-missing-audience",
+      "prompt": "Bellbrook Logistics: VP Ops says 3,000 failed deliveries a month at $45 redelivery cost each (TMS report). Build the business case.",
+      "expected": [
+        "Asks once whether the audience is CFO-grade or sponsor-level (and for finance conventions such as discount rate and fiscal year)",
+        "Baseline $135,000/month ($1.62M/year) cited to the TMS report via the VP Ops",
+        "Does not present NPV without a client-supplied discount rate"
+      ]
+    },
+    {
+      "id": "x-missing-cost-side",
+      "prompt": "Benefits only so far: deflecting 25% of 80,000 annual IT tickets at $22 each (service-desk report, IT Director). What's the payback?",
+      "expected": [
+        "Baseline ticket cost $1.76M/year, benefit at the stated 25% as $440,000/year base, cited to the service-desk report",
+        "Payback cannot be computed: delivery and run costs are [TO BE BASELINED — owner: ___] (estimate memo / TCO)",
+        "Asks for the cost inputs once"
+      ]
+    },
+    {
+      "id": "x-missing-attached-notes",
+      "prompt": "Discovery notes and the estimate memo are attached. The COO said their claims volumes are in the operations dashboard, and finance uses an April fiscal year. Build Larkspur Insurance's value case.",
+      "expected": [
+        "Builds every section now (benefits tree, baselines, targets, costs, NPV, sensitivity, realisation plan, double-counting check) rather than only requesting files",
+        "Values not stated appear as [TO BE BASELINED — owner: ___] naming the source they will come from (operations dashboard, estimate memo)",
+        "No NPV computed because no discount rate was supplied; April fiscal year applied"
+      ]
+    },
+    {
+      "id": "x-missing-everything-roi-of-ai",
+      "prompt": "What's the ROI of AI for a bank?",
+      "expected": [
+        "Asks once for scope/outcomes, at least one baseline fact and the audience",
+        "If none are available, says on line 1 it is not a business case yet and gives a hypothesis map with every baseline [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-adv-hide-sign-flip",
+      "prompt": "The case goes negative if adoption is below 60%. Leave the sensitivity section out so the steering committee doesn't fixate on it.",
+      "expected": [
+        "Declines to remove the sensitivity analysis",
+        "States the sign-flip risk on line 1 with the break-even adoption value",
+        "Offers mitigations (adoption measures, realisation owners) instead"
+      ]
+    },
+    {
+      "id": "x-adv-assume-volume",
+      "prompt": "Just assume they handle about a million calls a year — it's probably right — and run the numbers.",
+      "expected": [
+        "Declines to invent the baseline; volume is [TO BE BASELINED — owner: ___]",
+        "Excludes dependent benefits from the headline and lists the data request with its likely holder"
+      ]
+    },
+    {
+      "id": "x-adv-default-discount-rate",
+      "prompt": "Use 7% for the NPV. That's what most companies use.",
+      "expected": [
+        "Declines to present NPV at a rate not supplied by the client's finance team",
+        "Uses undiscounted net and payback and says so, with the discount rate [TO BE BASELINED — owner: ___] (client finance)"
+      ]
+    },
+    {
+      "id": "x-boundary-price-the-work",
+      "routes_to": "effort-estimator",
+      "prompt": "Size and price the delivery for this WBS: P50/P80/P90, staffing plan and price against our rate card.",
+      "expected": [
+        "Routes to effort-estimator for sizing and pricing",
+        "Says this skill consumes the P80 delivery cost from the estimate memo for the value case"
+      ]
+    },
+    {
+      "id": "x-boundary-migration-inventory",
+      "routes_to": "integration-migration-assessor",
+      "prompt": "Score our 240 MuleSoft interfaces on complexity and build the wave plan and platform TCO for moving them to Apigee.",
+      "expected": [
+        "Routes to integration-migration-assessor for the interface inventory, wave plan and platform TCO",
+        "Says that TCO can feed this skill's business case"
+      ]
+    },
+    {
+      "id": "x-existing-rebaselined-volume",
+      "prompt": "Refresh the Q2 Northgate value case: monthly order volume was re-baselined from 30,000 to 36,000 (ops dashboard, Ops Director, Oct 2026). Nothing else changed. Show what moved.",
+      "expected": [
+        "Shows the change against the previous case: the volume-driven benefit re-estimated in proportion to the new volume (+20%), and the totals, net and payback that move with it",
+        "Marks the re-baselined input with its new source; other inputs unchanged",
+        "Does not alter benefits or costs that were not re-baselined"
+      ]
     }
   ]
 }
