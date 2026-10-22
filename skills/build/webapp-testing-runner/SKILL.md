@@ -7,6 +7,9 @@ metadata:
   adlc_stage: evaluate
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [nextjs, react]
+    request_kinds: [feature, hardening, greenfield]
   agent:
     inputs:
       - {name: flows, type: json, required: true, from: "user flows JSON (layout: assets/flows-template.json): base_url (URL or ${BASE_URL} placeholder) and flows[{name, steps[{action, selector?, value?}]}]"}

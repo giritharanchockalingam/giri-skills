@@ -7,6 +7,9 @@ metadata:
   adlc_stage: evaluate
   version: 0.3.0
   author: giri-skills
+  fits:
+    stacks: [nextjs, react, typescript]
+    request_kinds: [feature, fix, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: feature, type: md, required: true, from: "feature.md: H1 title + one bullet per acceptance criterion (from spec-to-plan or the user)"}

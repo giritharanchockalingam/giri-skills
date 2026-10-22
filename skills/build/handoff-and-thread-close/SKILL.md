@@ -7,6 +7,9 @@ metadata:
   adlc_stage: improve
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [feature, fix, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: target, type: path, required: true, from: "git repository root of the project"}

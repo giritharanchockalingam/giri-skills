@@ -3,6 +3,8 @@ import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead, SectionHead } from "@/components/PageHead";
 import { LocalTime } from "@/components/LocalTime";
 import { DeliverForm, type PipelineOption } from "@/components/factory/DeliverForm";
+import { ComposeDelivery } from "@/components/factory/ComposeDelivery";
+import { REQUEST_KIND_OPTIONS } from "@/lib/delivery/composeData";
 import { DeliveryPill } from "@/components/factory/DeliveryPills";
 import { PIPELINES } from "@/lib/delivery/pipelines";
 import { canStartPipeline } from "@/lib/delivery/core";
@@ -30,6 +32,8 @@ export default async function DeliverPage() {
         lead={<>A request enters a pipeline and leaves it as a pull request carrying gate evidence: stack profile, per-stage verdicts, file hashes, who approved what. {runs.length ? <><b>{runs.length} run{runs.length === 1 ? "" : "s"}</b>, {open} in flight.</> : "No runs yet."}</>}
         caption={<>Templates come from the library (<code>pipelines/*.json</code>); roles own stages; the executor runs on GitHub Actions or your IDE. <Link className="link" href="/glossary#delivery-pipeline">What a delivery pipeline is</Link>.</>} />
       <DeliverForm pipelines={pipelines} repos={repos} githubConfigured={githubDispatchConfigured()} />
+      <SectionHead title="No template fits? Compose one" caption="A pipeline assembled from the catalog for the repository's stack and the kind of request (docs/DELIVERY-PIPELINES.md → When no template fits). The decision table says what was chosen, rejected or dropped, and why." />
+      <ComposeDelivery repos={repos} kinds={REQUEST_KIND_OPTIONS} githubConfigured={githubDispatchConfigured()} />
       <SectionHead title="Runs" caption="Newest first. Open a run for its stages, evidence and approvals." />
       {runs.length === 0 ? <p className="caption">Nothing delivered through a pipeline yet.</p> : (
         <div className="card tablewrap">

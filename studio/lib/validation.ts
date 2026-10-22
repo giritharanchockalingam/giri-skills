@@ -147,4 +147,13 @@ export type DeliveryStageInput = z.infer<typeof DeliveryStageInput>;
 export const DeliveryApproveInput = z.object({ stage_id: z.string().regex(STAGE_ID), note: z.string().trim().max(2000).default("") });
 /** The Deliver page form (app/deliverActions.ts). */
 export const StartDeliveryForm = z.object({ pipeline: text(80), repo: text(300), ref: text(200), request: text(20_000), executor: text(20) });
+/** Deliver page → "No template fits? Compose one": the composition inputs, and the same plus the run inputs to start it. */
+export const ComposeDeliveryForm = z.object({ repo: text(300), request_kind: text(40), mode: text(20) });
+export const StartComposedDeliveryForm = z.object({ repo: text(300), request_kind: text(40), mode: text(20), ref: text(200), request: text(20_000), executor: text(20) });
+export const ComposeInputSchema = z.object({
+  repo: z.string().trim().min(1).max(300).regex(/^[\w.-]+\/[\w.-]+$/, "repo must be owner/name as the catalog lists it"),
+  request_kind: z.string().regex(/^[a-z][a-z-]{0,39}$/, "request_kind must be a kind id"),
+  mode: z.enum(["brownfield", "greenfield"]).optional(),
+});
+export type ComposeInputSchema = z.infer<typeof ComposeInputSchema>;
 export const ApproveDeliveryForm = z.object({ run_id: id64, stage_id: text(80), note: text(2000) });

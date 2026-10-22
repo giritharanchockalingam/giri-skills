@@ -21,7 +21,7 @@ request ─► pipeline (template) ─► stages ─► role ─► skills ─�
 
 | Term | Meaning |
 |---|---|
-| **Pipeline** | A template: ordered stages, the ADLC stages it covers, the kinds of request it fits (`fits`), its inputs |
+| **Pipeline** | A template: ordered stages, the ADLC stages it covers, the kinds of request it fits (`fits`), its inputs — or one composed from the catalog when no template fits |
 | **Stage** | One ADLC stage (`shared/adlc-stages.json`), owned by one **role** (`roles/*.json`), running one or more **steps** |
 | **Step** | A published skill run (`skill`), an agent step that writes code (`agent`), or a human approval (`approval`) |
 | **Gate** | A rule the stage must satisfy before the next stage runs: a check on an output, a skill exit code, or a human approval |
@@ -241,7 +241,9 @@ python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --reques
 ```
 
 `--out` is required unless `--run` is given, when it defaults to `runs/<run id>` under giri-skills — the command the
-portal prints (`deliverCommand`) therefore runs as printed.
+portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a path, a name under `pipelines/` or
+`pipelines/composed/`, or — with `--run`/`--portal` — the composed pipeline the portal stored on the run (see
+"When no template fits").
 
 | Exit | Meaning |
 |---|---|
@@ -258,9 +260,38 @@ the first incomplete stage and re-runs the rest. The run id is derived from pipe
 suffix outside `--dry`), so a dry run is deterministic apart from the timestamps in `run.json` and `gate.json`.
 
 ## When no template fits
-`scripts/compose_pipeline.py --stack <profile> --request-kind <kind>` assembles a pipeline from the catalog: one
-stage per ADLC stage the request kind needs, the role whose `stages` lists it, the role's skills whose `fits`
-matches the stack. The composed file is saved under `pipelines/composed/` and validated like any template.
+A template fits when its `fits.stacks` meets the repository's stack and `fits.request_kinds` names the request. When
+none does, a pipeline is **composed** from the catalog — deterministically, nothing invented:
+
+```
+python3 scripts/stack_profile.py <repo> --json stack-profile.json
+python3 scripts/compose_pipeline.py --profile stack-profile.json --request-kind fix --explain --out pipelines/composed/fix-billing.json
+python3 scripts/deliver.py fix-billing --repo <repo> --request "…" --out runs/x --builder claude-code --provider anthropic
+```
+
+| Rule | What it means |
+|---|---|
+| Request kind | `shared/request-kinds.json`: `feature` → requirements, architecture, build, evaluate, deploy, operate · `fix` → build, evaluate, deploy, operate · `hardening` and `migration` → architecture onwards · `greenfield` (alias `new-app`) → a `bootstrap` stage, then every stage, profile read after bootstrap. `--stages a,b,c` overrides the list; `--mode` overrides the kind's mode |
+| Stack | The signal ids of `studio/lib/github/detect.ts` (`nextjs`, `react`, `typescript`, `supabase`, `python`, `vercel`, `github-actions`, `tests`, …) derived from the stack profile (`--profile`) or given (`--stacks nextjs,supabase` — greenfield names the intended stack) |
+| Role | For each stage, the first role in `roles/` (by file name) whose `stages` lists it; none → error |
+| Skill fits | A skill's `SKILL.md` may declare `metadata.fits: {stacks: [...], request_kinds: [...]}` (ids from `shared/request-kinds.json`; `any` matches every stack; absent = fits anything; `scripts/validate.py` checks it). Every `skills/build/*` skill declares one. A skill is chosen when the stage's role lists it, its fits match the stack and the kind, and every step it needs is in the pipeline |
+| Wiring | The **step library** inside `compose_pipeline.py` (mirrored in `studio/lib/delivery/compose.ts`) is the shipped templates' wiring: the same compose derivations (`brief-from-request`, `spec-from-prd`, `feature-from-plan`), inputs, gates and evidence. A compose step is added to the first stage that needs it (a `fix` carries `brief` and `spec` into build); the agent build step takes `plan.md`, else the composed `spec.md`; an optional input whose step is absent is dropped; a required one that is absent rejects the skill. Role skills the library has no recipe for (inputs not derivable from earlier steps or the profile: `supabase-schema-rls`, `safe-fix`, the ai-platform skills, …) are listed as rejected with that reason |
+| Dropped stages | A stage with no fitting skill is dropped and the pipeline's `description` and `composed.notes` say so (a Python repo keeps requirements, architecture and operate: the library has no Python build, review or deploy skill — that is the honest answer, not a pretended run) |
+| Explain | `--explain` prints the decision table: stage → role → step → skill → chosen / rejected / dropped / note → why |
+
+The composed file validates with `scripts/validate_pipelines.py` (so it is checked by `scripts/validate.py` whenever it
+lives under `pipelines/composed/`) and runs with `scripts/deliver.py <name>` (looked up under `pipelines/`, then
+`pipelines/composed/`) or `<path>`. For the JS/AWS fixture (`tests/fixtures/delivery-repo`) a `feature` composes to
+exactly the `feature-delivery` template, stage for stage (`tests/test_compose_pipeline.py`).
+
+**Portal.** Deliver → "No template fits? Compose one" picks a catalog repository (its synced stack signals) and a
+request kind, shows the stages and the decision table, and starts a run with the composed pipeline. The run stores the
+pipeline's JSON in `sf_delivery_runs.pipeline_spec` (migration 0024, additive); the executor, given the run's pipeline
+name with `--run … --portal …`, finds no template of that name, fetches the run and uses `pipeline_spec` (saved as
+`<out>/pipeline.json` for `--resume`) — so the command the portal prints and the GitHub executor both work unchanged.
+The MCP tool `compose` ({repo | stack_profile, request_kind, mode}) returns the pipeline JSON and the decision table and
+persists nothing. `studio/lib/delivery/compose.ts` is the pure port; `studio/tests/compose.test.ts` proves parity against
+fixtures the Python script produced (`studio/tests/fixtures/compose/`, regenerated as its README says).
 
 ## Evidence bundle
 `evidence/` in the run: `stack-profile.json`, one folder per stage (`<nn>-<stage>/<step>/…` — every step's outputs

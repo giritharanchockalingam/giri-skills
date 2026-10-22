@@ -7,6 +7,9 @@ metadata:
   adlc_stage: architecture
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [supabase]
+    request_kinds: [feature, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: migrations, type: dir, required: true, from: "supabase/migrations directory (or one .sql file) to audit for tenant_id / RLS / tenant-leading index"}

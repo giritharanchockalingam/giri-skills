@@ -9,7 +9,7 @@ import pytest
 from conftest import REPO_ROOT, run_script
 
 SCRIPT = "scripts/validate_pipelines.py"
-PIPELINES = sorted((REPO_ROOT / "pipelines").glob("*.json"))
+PIPELINES = sorted((REPO_ROOT / "pipelines").glob("*.json")) + sorted((REPO_ROOT / "pipelines" / "composed").glob("*.json"))   # composed/ as the validator counts it
 
 
 def load(name: str) -> dict:

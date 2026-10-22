@@ -842,12 +842,28 @@ class Run:
 
 # ------------------------------------------------------------------ main
 
-def load_pipeline(arg: str) -> tuple[dict, Path]:
+def load_pipeline(arg: str, portal: "Portal | None" = None, out: Path | None = None) -> tuple[dict, Path]:
+    """A path, a name under pipelines/ or pipelines/composed/, or — in portal mode — the composed pipeline the
+    portal stored on the run (`pipeline_spec`, docs/DELIVERY-PIPELINES.md → When no template fits), saved to
+    <out>/pipeline.json so --resume finds it again."""
     p = Path(arg)
     if not p.is_file():
         p = ROOT / "pipelines" / f"{arg}.json"
     if not p.is_file():
-        sys.exit(f"error: pipeline not found: {arg} (a name under pipelines/ or a path)")
+        p = ROOT / "pipelines" / "composed" / f"{arg}.json"
+    if not p.is_file() and out is not None and (out / "pipeline.json").is_file():
+        p = out / "pipeline.json"
+    if not p.is_file() and portal is not None:
+        run = portal.get_run()
+        spec = (run or {}).get("pipeline_spec")
+        if isinstance(spec, dict) and spec.get("name") == arg:
+            out.mkdir(parents=True, exist_ok=True)
+            p = out / "pipeline.json"
+            write_json(p, spec)
+            return spec, Path(f"{arg}.json")
+    if not p.is_file():
+        sys.exit(f"error: pipeline not found: {arg} (a name under pipelines/ or pipelines/composed/, a path, or a composed "
+                 "pipeline stored on the portal run)")
     return read_json(p), p
 
 
@@ -945,17 +961,17 @@ def build_args(argv=None):
 
 def main(argv=None) -> int:
     args = build_args(argv)
-    spec, spec_path = load_pipeline(args.pipeline)
+    out = Path(args.out).expanduser().resolve()
+    portal = Portal(args.portal, args.run, os.environ["SF_API_KEY"], out / "callback.log") if args.run else None
+    spec, spec_path = load_pipeline(args.pipeline, portal, out)
     problems = vp.validate_pipeline(spec, vp.load_context(), spec_path.name)
     if problems:
         print(f"error: pipeline {spec_path.name} is invalid:\n  - " + "\n  - ".join(problems), file=sys.stderr)
         return EXIT_ARGS
-    out = Path(args.out).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
     run = Run(spec, args, out)
     run.evidence.mkdir(exist_ok=True)
-    if args.run:
-        run.portal = Portal(args.portal, args.run, os.environ["SF_API_KEY"], out / "callback.log")
+    run.portal = portal
     prev_record = read_json(out / "run.json") if (out / "run.json").is_file() else None
     if prev_record and not args.resume:
         print(f"error: {out / 'run.json'} exists — pass --resume to continue it or use a new --out", file=sys.stderr)

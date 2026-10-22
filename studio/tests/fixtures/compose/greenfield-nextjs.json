@@ -1,0 +1,605 @@
+{
+  "input": {
+    "stacks": [
+      "nextjs",
+      "supabase",
+      "vercel"
+    ],
+    "request_kind": "greenfield",
+    "mode": null,
+    "stages": null,
+    "name": "greenfield-nextjs"
+  },
+  "pipeline": {
+    "name": "greenfield-nextjs",
+    "version": "0.1.0",
+    "title": "Composed greenfield pipeline for nextjs, supabase, vercel",
+    "description": "Composed by scripts/compose_pipeline.py: greenfield request on a greenfield nextjs, supabase, vercel stack \u2014 stages bootstrap, requirements, architecture, build, evaluate, deploy, operate; the step wiring is the shipped templates'.",
+    "mode": "greenfield",
+    "fits": {
+      "stacks": [
+        "nextjs",
+        "supabase",
+        "vercel"
+      ],
+      "request_kinds": [
+        "greenfield"
+      ]
+    },
+    "inputs": [
+      {
+        "name": "repo",
+        "type": "repo",
+        "required": true,
+        "from": "directory to create the application in (created if absent)"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": true,
+        "from": "project name"
+      },
+      {
+        "name": "request",
+        "type": "text",
+        "required": true,
+        "from": "what the application must do, in the requester's words"
+      },
+      {
+        "name": "brief",
+        "type": "json",
+        "required": false,
+        "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json); may carry `files` or `tasks`"
+      }
+    ],
+    "stack_profile": {
+      "from": "repo",
+      "detect": "scripts/stack_profile.py",
+      "after": "bootstrap"
+    },
+    "stages": [
+      {
+        "id": "bootstrap",
+        "adlc_stage": "build",
+        "role": "full-stack-engineer",
+        "steps": [
+          {
+            "id": "scaffold",
+            "kind": "skill",
+            "skill": "build/project-bootstrap",
+            "inputs": {
+              "target": "$repo",
+              "name": "$in.name"
+            }
+          }
+        ],
+        "gate": {
+          "kind": "output",
+          "step": "scaffold",
+          "file": "bootstrap-report.json",
+          "check": "json"
+        },
+        "evidence": [
+          "$steps.scaffold:bootstrap-report.json"
+        ]
+      },
+      {
+        "id": "requirements",
+        "adlc_stage": "requirements",
+        "role": "ai-product-manager",
+        "steps": [
+          {
+            "id": "brief",
+            "kind": "compose",
+            "derive": "brief-from-request",
+            "inputs": {
+              "request": "$in.request",
+              "brief": "$in.brief"
+            },
+            "outputs": [
+              "brief.json"
+            ]
+          },
+          {
+            "id": "prd",
+            "kind": "skill",
+            "skill": "build/product-spec-prd",
+            "inputs": {
+              "brief": "$steps.brief:brief.json",
+              "draft_only": "$run.draft_only"
+            }
+          }
+        ],
+        "gate": {
+          "kind": "output",
+          "step": "prd",
+          "file": "prd-final.md",
+          "check": "sections:[\"Acceptance criteria\"]"
+        },
+        "evidence": [
+          "$steps.brief:brief.json",
+          "$steps.prd:prd-final.md"
+        ]
+      },
+      {
+        "id": "architecture",
+        "adlc_stage": "architecture",
+        "role": "ai-solution-architect",
+        "steps": [
+          {
+            "id": "spec",
+            "kind": "compose",
+            "derive": "spec-from-prd",
+            "inputs": {
+              "brief": "$steps.brief:brief.json",
+              "prd": "$steps.prd:prd-final.md",
+              "request": "$in.request"
+            },
+            "outputs": [
+              "spec.md",
+              "spec.json"
+            ]
+          },
+          {
+            "id": "plan",
+            "kind": "skill",
+            "skill": "build/spec-to-plan",
+            "inputs": {
+              "spec": "$steps.spec:spec.md",
+              "section": "$steps.spec:spec.json#section",
+              "repo": "$repo"
+            }
+          },
+          {
+            "id": "plan-approval",
+            "kind": "approval",
+            "role": "ai-solution-architect",
+            "note": "Approve the plan before any code is written; edit plan.md / tasks.csv in the step folder first if files or tests are missing"
+          }
+        ],
+        "gate": {
+          "kind": "approval",
+          "step": "plan-approval"
+        },
+        "evidence": [
+          "$steps.plan:plan.md",
+          "$steps.plan:tasks.csv"
+        ]
+      },
+      {
+        "id": "build",
+        "adlc_stage": "build",
+        "role": "full-stack-engineer",
+        "steps": [
+          {
+            "id": "feature",
+            "kind": "compose",
+            "derive": "feature-from-plan",
+            "inputs": {
+              "plan": "$steps.plan:plan.md",
+              "tasks": "$steps.plan:tasks.csv",
+              "brief": "$steps.brief:brief.json"
+            },
+            "outputs": [
+              "feature.md",
+              "feature.json"
+            ]
+          },
+          {
+            "id": "tests",
+            "kind": "skill",
+            "skill": "build/test-strategy-tdd",
+            "inputs": {
+              "feature": "$steps.feature:feature.md",
+              "files": "$steps.feature:feature.json#files",
+              "target": "$repo"
+            }
+          },
+          {
+            "id": "code",
+            "kind": "agent",
+            "agent": "claude-code",
+            "inputs": {
+              "plan": "$steps.plan:plan.md",
+              "tests": "$steps.tests:test-plan.md",
+              "target": "$repo"
+            },
+            "constraints": [
+              "skills/build/nextjs-enterprise-conventions/SKILL.md",
+              "shared/stack-conventions.md"
+            ]
+          },
+          {
+            "id": "conventions",
+            "kind": "skill",
+            "skill": "build/nextjs-enterprise-conventions",
+            "inputs": {
+              "target": "$repo",
+              "baseline": "$profile.baselines.nextjs"
+            },
+            "gate": true
+          }
+        ],
+        "gate": {
+          "kind": "exit",
+          "step": "conventions"
+        },
+        "evidence": [
+          "$steps.tests:test-plan.md",
+          "$steps.tests:scaffold-report.json",
+          "$steps.code:diff.patch",
+          "$steps.code:agent-summary.md",
+          "$steps.conventions:report.md"
+        ]
+      },
+      {
+        "id": "evaluate",
+        "adlc_stage": "evaluate",
+        "role": "ai-quality-red-team",
+        "steps": [
+          {
+            "id": "review",
+            "kind": "skill",
+            "skill": "build/code-review-runner",
+            "inputs": {
+              "diff": "$steps.code:diff.patch",
+              "spec": "$steps.prd:prd-final.md"
+            }
+          },
+          {
+            "id": "security",
+            "kind": "skill",
+            "skill": "build/security-review",
+            "inputs": {
+              "diff": "$steps.code:diff.patch",
+              "target": "$repo",
+              "draft_only": "$run.draft_only"
+            }
+          },
+          {
+            "id": "perf",
+            "kind": "skill",
+            "skill": "build/perf-review-runner",
+            "inputs": {
+              "target": "$repo",
+              "baseline": "$profile.baselines.perf"
+            }
+          },
+          {
+            "id": "ui",
+            "kind": "skill",
+            "skill": "build/ui-component-quality",
+            "inputs": {
+              "target": "$repo",
+              "baseline": "$profile.baselines.ui"
+            }
+          }
+        ],
+        "gate": {
+          "kind": "all",
+          "of": [
+            {
+              "kind": "output",
+              "step": "review",
+              "file": "review.md",
+              "check": "contains:\"Verdict: **PASS**\""
+            },
+            {
+              "kind": "exit",
+              "step": "security"
+            },
+            {
+              "kind": "exit",
+              "step": "perf"
+            },
+            {
+              "kind": "exit",
+              "step": "ui"
+            }
+          ]
+        },
+        "evidence": [
+          "$steps.review:review.md",
+          "$steps.security:security-review.md",
+          "$steps.perf:report.md",
+          "$steps.ui:report.md"
+        ]
+      },
+      {
+        "id": "deploy",
+        "adlc_stage": "deploy",
+        "role": "mlops-platform-engineer",
+        "steps": [
+          {
+            "id": "observe",
+            "kind": "skill",
+            "skill": "build/observability-setup",
+            "inputs": {
+              "target": "$repo"
+            }
+          },
+          {
+            "id": "ci",
+            "kind": "skill",
+            "skill": "build/ci-cd-vercel-github",
+            "inputs": {
+              "target": "$repo"
+            }
+          },
+          {
+            "id": "pr",
+            "kind": "pr",
+            "title": "$in.request",
+            "branch": "deliver/$run.id",
+            "body": "$evidence"
+          }
+        ],
+        "gate": {
+          "kind": "external",
+          "what": "CI green on the pull request"
+        },
+        "evidence": [
+          "$steps.observe:install-report.md",
+          "$steps.ci:ci-report.md",
+          "$steps.pr:pr.json"
+        ]
+      },
+      {
+        "id": "operate",
+        "adlc_stage": "operate",
+        "role": "ai-ops-sre",
+        "steps": [
+          {
+            "id": "handoff",
+            "kind": "skill",
+            "skill": "build/handoff-and-thread-close",
+            "inputs": {
+              "target": "$repo",
+              "state": "$run.state"
+            }
+          }
+        ],
+        "gate": {
+          "kind": "output",
+          "step": "handoff",
+          "file": "HANDOFF.md",
+          "check": "exists"
+        },
+        "evidence": [
+          "$steps.handoff:HANDOFF.md"
+        ]
+      }
+    ],
+    "outputs": [
+      "$steps.pr:pr.json",
+      "$evidence"
+    ],
+    "composed": {
+      "request_kind": "greenfield",
+      "stacks": [
+        "nextjs",
+        "supabase",
+        "vercel"
+      ],
+      "notes": []
+    }
+  },
+  "decisions": [
+    {
+      "stage": "bootstrap",
+      "role": "full-stack-engineer",
+      "step": "scaffold",
+      "skill": "build/project-bootstrap",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "bootstrap",
+      "role": "full-stack-engineer",
+      "step": "-",
+      "decision": "rejected",
+      "why": "wired in another stage by the step library: build/ci-cd-vercel-github (deploy), build/code-review-runner (evaluate), build/handoff-and-thread-close (operate), build/nextjs-enterprise-conventions (build), build/perf-review-runner (evaluate), build/security-review (evaluate), build/test-strategy-tdd (build), build/ui-component-quality (evaluate)"
+    },
+    {
+      "stage": "bootstrap",
+      "role": "full-stack-engineer",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): build/multi-tenant-saas-patterns, build/safe-fix, build/supabase-schema-rls, build/systematic-debugging-runner, build/tech-debt-audit-runner, build/webapp-testing-runner"
+    },
+    {
+      "stage": "requirements",
+      "role": "ai-product-manager",
+      "step": "brief",
+      "decision": "chosen",
+      "why": "compose brief-from-request (its home stage): a later step needs brief.json"
+    },
+    {
+      "stage": "requirements",
+      "role": "ai-product-manager",
+      "step": "prd",
+      "skill": "build/product-spec-prd",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "requirements",
+      "role": "ai-product-manager",
+      "step": "-",
+      "decision": "rejected",
+      "why": "wired in another stage by the step library: build/spec-to-plan (architecture)"
+    },
+    {
+      "stage": "requirements",
+      "role": "ai-product-manager",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): ai-platform/ab-test-analysis, ai-platform/ai-slo-definition, ai-platform/ai-use-case-canvas, ai-platform/feedback-improvement-loop, build/domain-modeling-runner"
+    },
+    {
+      "stage": "architecture",
+      "role": "ai-solution-architect",
+      "step": "spec",
+      "decision": "chosen",
+      "why": "compose spec-from-prd (its home stage): a later step needs spec.md"
+    },
+    {
+      "stage": "architecture",
+      "role": "ai-solution-architect",
+      "step": "plan",
+      "skill": "build/spec-to-plan",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "architecture",
+      "role": "ai-solution-architect",
+      "step": "plan-approval",
+      "decision": "chosen",
+      "why": "follows the plan"
+    },
+    {
+      "stage": "architecture",
+      "role": "ai-solution-architect",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): ai-platform/agent-architecture, ai-platform/ai-threat-model, ai-platform/infra-gpu-sizing, ai-platform/llm-cost-model, ai-platform/model-selection, ai-platform/rag-pipeline-design, build/multi-tenant-saas-patterns"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "feature",
+      "decision": "chosen",
+      "why": "compose feature-from-plan (its home stage): a later step needs feature.md"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "tests",
+      "skill": "build/test-strategy-tdd",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "code",
+      "decision": "chosen",
+      "why": "the build step (plan: $steps.plan:plan.md)"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "conventions",
+      "skill": "build/nextjs-enterprise-conventions",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "-",
+      "decision": "rejected",
+      "why": "wired in another stage by the step library: build/ci-cd-vercel-github (deploy), build/code-review-runner (evaluate), build/handoff-and-thread-close (operate), build/perf-review-runner (evaluate), build/project-bootstrap (bootstrap), build/security-review (evaluate), build/ui-component-quality (evaluate)"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): build/multi-tenant-saas-patterns, build/safe-fix, build/supabase-schema-rls, build/systematic-debugging-runner, build/tech-debt-audit-runner, build/webapp-testing-runner"
+    },
+    {
+      "stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "step": "review",
+      "skill": "build/code-review-runner",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "step": "security",
+      "skill": "build/security-review",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "step": "perf",
+      "skill": "build/perf-review-runner",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "step": "ui",
+      "skill": "build/ui-component-quality",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): ai-platform/annotation-agreement, ai-platform/bias-fairness-check, ai-platform/eval-engineering-runner, ai-platform/llm-eval-harness, ai-platform/red-team-suite"
+    },
+    {
+      "stage": "deploy",
+      "role": "mlops-platform-engineer",
+      "step": "observe",
+      "skill": "build/observability-setup",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "deploy",
+      "role": "mlops-platform-engineer",
+      "step": "ci",
+      "skill": "build/ci-cd-vercel-github",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "deploy",
+      "role": "mlops-platform-engineer",
+      "step": "pr",
+      "decision": "chosen",
+      "why": "the pull request carries the evidence"
+    },
+    {
+      "stage": "deploy",
+      "role": "mlops-platform-engineer",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): ai-platform/ai-bom-license-check, ai-platform/ai-slo-definition, ai-platform/drift-monitor, ai-platform/infra-gpu-sizing, ai-platform/llm-observability"
+    },
+    {
+      "stage": "operate",
+      "role": "ai-ops-sre",
+      "step": "handoff",
+      "skill": "build/handoff-and-thread-close",
+      "decision": "chosen",
+      "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "operate",
+      "role": "ai-ops-sre",
+      "step": "-",
+      "decision": "rejected",
+      "why": "wired in another stage by the step library: build/observability-setup (deploy)"
+    },
+    {
+      "stage": "operate",
+      "role": "ai-ops-sre",
+      "step": "-",
+      "decision": "rejected",
+      "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): ai-platform/ai-finops-chargeback, ai-platform/ai-incident-runbook, ai-platform/ai-postmortem, ai-platform/ai-slo-definition, ai-platform/drift-monitor, ai-platform/feedback-improvement-loop, ai-platform/llm-observability"
+    }
+  ],
+  "notes": []
+}

@@ -7,6 +7,9 @@ metadata:
   adlc_stage: improve
   version: 0.2.1
   author: giri-skills
+  fits:
+    stacks: [nextjs]
+    request_kinds: [hardening, migration]
   agent:
     inputs:
       - {name: target, type: dir, required: true, from: "repo root of the TypeScript or JavaScript Next.js codebase (app/, components/, lib/, server/, tests/; .js/.jsx audited like .ts/.tsx)"}

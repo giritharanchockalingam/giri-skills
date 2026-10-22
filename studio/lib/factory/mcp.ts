@@ -6,7 +6,8 @@
  *   /api/mcp/team/<slug>     the skills of one team   (union of its members' roles)
  *   /api/mcp/stage/<id>      the skills of one lifecycle stage
  * Tools: one per published skill in scope (its input contract as JSON Schema) + `find_skill` + `get_run` +
- * `deliver` / `delivery_status` (delivery pipelines run from an IDE; docs/DELIVERY-PIPELINES.md).
+ * `deliver` / `delivery_status` / `compose` (delivery pipelines run from an IDE; docs/DELIVERY-PIPELINES.md — `compose`
+ * assembles a pipeline when no template fits and persists nothing).
  * Governance is inherited, not re-implemented: a tool call runs the published version through the same path as the
  * REST API (validation, workspace policy, concurrency and budget limits, idempotency, run record, audit).
  *
@@ -25,6 +26,7 @@ export interface McpScope { kind: "workspace" | "role" | "team" | "stage"; slug:
 export interface RunReply { http: number; body: Record<string, unknown> }
 export interface PipelineSummary { name: string; title: string; version: string; mode: string; description: string; stages: { id: string; role: string }[] }
 export interface DeliverArgs { pipeline: string; repo: string; ref?: string; request: string }
+export interface ComposeArgs { repo?: string; stack_profile?: Record<string, unknown>; request_kind: string; mode?: string }
 export interface McpBackend {
   scope: McpScope;
   catalog(): Promise<CatalogSkill[]>;
@@ -37,6 +39,9 @@ export interface McpBackend {
   pipelines(): PipelineSummary[];
   deliver(args: DeliverArgs): Promise<RunReply>;
   deliveryStatus(runId: string): Promise<RunReply>;
+  /** The request kinds `compose` accepts and the composition itself ({pipeline, decisions, notes}; nothing persisted). */
+  requestKinds(): { id: string; description: string }[];
+  compose(args: ComposeArgs): Promise<RunReply>;
 }
 
 type Json = Record<string, unknown>;
@@ -53,7 +58,7 @@ export const RELEVANCE_FLOOR = 0.5;
 
 const TEXT_TYPES = new Set(["csv", "json", "md", "txt", "file", "sql"]);
 const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
-const RESERVED = new Set(["find_skill", "get_run", "deliver", "delivery_status"]);
+const RESERVED = new Set(["find_skill", "get_run", "deliver", "delivery_status", "compose"]);
 
 /** JSON Schema for one skill's inputs, from its published contract. */
 export function inputSchema(inputs: CatalogInput[]): Json {
@@ -127,6 +132,37 @@ const DELIVERY_STATUS = {
   annotations: { readOnlyHint: true, openWorldHint: false },
 };
 
+function composeTool(kinds: { id: string; description: string }[]): Json {
+  const lines = ["When no pipeline template fits: compose one from the catalog for a repository's stack and a request kind — one stage per ADLC stage the kind needs, ",
+    "the role that owns it, the role's skills whose `fits` match the stack and the kind, wired as the templates are. Returns the pipeline JSON and the decision table ",
+    "(stage → role → step: chosen / rejected / dropped and why). Nothing is persisted: save the JSON under pipelines/composed/<name>.json and run it with `scripts/deliver.py <path>`, or start it from the portal (Deliver → Compose one).",
+    ...kinds.map((k) => `- ${k.id}: ${k.description}`)];
+  return {
+    name: "compose", title: "Compose a pipeline", description: lines.join("\n"),
+    inputSchema: { type: "object", properties: {
+      repo: { type: "string", description: "A catalog repository (owner/name): its stack signals decide which skills fit. Give this or stack_profile." },
+      stack_profile: { type: "object", description: "A stack profile as `scripts/stack_profile.py <repo>` prints it (flavour, framework, deploy_target, migrations_dir, test_runner, e2e, evidence)." },
+      request_kind: { type: "string", description: "What the request is.", ...(kinds.length ? { enum: kinds.map((k) => k.id) } : {}) },
+      mode: { type: "string", enum: ["brownfield", "greenfield"], description: "Default: the request kind's mode." },
+    }, required: ["request_kind"], additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  };
+}
+
+/** Human-readable composition: the pipeline's stages and steps, the notes, the decision table. */
+export function renderCompose(body: Json): string {
+  const p = body.pipeline as { name: string; stages: { id: string; role: string; steps: { id: string; skill?: string; kind: string }[] }[] } | null;
+  const notes = Array.isArray(body.notes) ? (body.notes as string[]) : [];
+  const decisions = Array.isArray(body.decisions) ? (body.decisions as { stage: string; role: string; step: string; skill?: string; decision: string; why: string }[]) : [];
+  const head = p ? [`Composed pipeline ${p.name} — ${p.stages.length} stage(s)`, ...p.stages.map((s) => `- ${s.id} (${s.role}): ${s.steps.map((t) => t.skill ?? `${t.id} [${t.kind}]`).join(" → ")}`)]
+    : ["Nothing composed."];
+  const parts = [head.join("\n")];
+  if (notes.length) parts.push(notes.map((n) => `Note: ${n}`).join("\n"));
+  if (decisions.length) parts.push(["Decisions:", ...decisions.map((d) => `- ${d.stage} · ${d.step}${d.skill ? ` · ${d.skill}` : ""}: ${d.decision} — ${d.why}`)].join("\n"));
+  if (p) parts.push("Pipeline JSON in structuredContent.pipeline (save it under pipelines/composed/<name>.json and run `scripts/deliver.py <path>`).");
+  return parts.join("\n\n");
+}
+
 /** Human-readable delivery run: status, stages with verdicts, the next action. */
 export function renderDelivery(body: Json): string {
   const stages = Array.isArray(body.stages) ? (body.stages as { id: string; role?: string; status?: string; gate?: { verdict?: string; detail?: string } | null; evidence?: { path: string }[] }[]) : [];
@@ -180,7 +216,7 @@ export async function handle(msg: unknown, be: McpBackend): Promise<JsonRpcRespo
       case "ping": return ok(m.id, {});
       case "tools/list": {
         const tools = inScope(await be.catalog(), be.scope).map((s) => toolFor(s, s.repo_skill ? be.library(s.repo_skill) : null));
-        return ok(m.id, { tools: [...tools, FIND_SKILL, GET_RUN, deliverTool(be.pipelines()), DELIVERY_STATUS] });
+        return ok(m.id, { tools: [...tools, FIND_SKILL, GET_RUN, deliverTool(be.pipelines()), DELIVERY_STATUS, composeTool(be.requestKinds())] });
       }
       case "tools/call": {
         const name = String(params.name ?? "");
@@ -198,6 +234,16 @@ export async function handle(msg: unknown, be: McpBackend): Promise<JsonRpcRespo
           if (!be.pipelines().some((p) => p.name === a.pipeline)) return fail(m.id, RPC.INVALID_PARAMS, `unknown pipeline: ${a.pipeline} (one of ${be.pipelines().map((p) => p.name).join(", ") || "none shipped"})`);
           const r = await be.deliver(a);
           return ok(m.id, r.http >= 400 ? toolError(r.body) : { content: [{ type: "text", text: renderDelivery(r.body) }], structuredContent: r.body });
+        }
+        if (name === "compose") {
+          const a: ComposeArgs = { repo: str(args.repo) || undefined, request_kind: str(args.request_kind), mode: str(args.mode) || undefined,
+            stack_profile: args.stack_profile && typeof args.stack_profile === "object" && !Array.isArray(args.stack_profile) ? (args.stack_profile as Record<string, unknown>) : undefined };
+          if (!a.request_kind) return fail(m.id, RPC.INVALID_PARAMS, "request_kind is required");
+          if (!be.requestKinds().some((k) => k.id === a.request_kind)) return fail(m.id, RPC.INVALID_PARAMS, `unknown request_kind: ${a.request_kind} (one of ${be.requestKinds().map((k) => k.id).join(", ")})`);
+          if (!a.repo && !a.stack_profile) return fail(m.id, RPC.INVALID_PARAMS, "repo or stack_profile is required");
+          if (a.mode && a.mode !== "brownfield" && a.mode !== "greenfield") return fail(m.id, RPC.INVALID_PARAMS, "mode must be brownfield or greenfield");
+          const r = await be.compose(a);
+          return ok(m.id, r.http >= 400 ? toolError(r.body) : { content: [{ type: "text", text: renderCompose(r.body) }], structuredContent: r.body, isError: !r.body.pipeline });
         }
         if (name === "delivery_status") {
           if (typeof args.run_id !== "string" || !args.run_id) return fail(m.id, RPC.INVALID_PARAMS, "run_id is required");

@@ -22,6 +22,8 @@ function backend(skills: Set<string> | null = null, calls: unknown[] = []): McpB
     getRun: async (id) => ({ http: 200, body: { run_id: id, status: "succeeded", checks: [], outputs: [] } }),
     pipelines: () => [{ name: "feature-delivery", title: "Feature delivery", version: "0.1.0", mode: "brownfield", description: "Brownfield.", stages: [{ id: "requirements", role: "ai-product-manager" }, { id: "build", role: "full-stack-engineer" }] }],
     deliver: async (a) => { calls.push({ deliver: a }); return { http: 201, body: { run_id: "d1", status: "queued", stage: "requirements", command: "python3 scripts/deliver.py --pipeline feature-delivery --repo 'acme/billing' --request 'x' --run d1 --portal 'https://p'", stages: [{ id: "requirements", role: "ai-product-manager", status: "queued" }] } }; },
+    requestKinds: () => [{ id: "feature", description: "A new capability." }, { id: "fix", description: "A defect." }],
+    compose: async () => ({ http: 200, body: { pipeline: null, decisions: [], notes: ["nothing composed: no stage kept a fitting skill"] } }),
     deliveryStatus: async (id) => id === "d1"
       ? { http: 200, body: { run_id: id, status: "awaiting_approval", stage: "architecture", stages: [{ id: "requirements", role: "ai-product-manager", status: "succeeded", gate: { kind: "output", verdict: "pass" }, evidence: [{ path: "prd.md" }] }, { id: "architecture", role: "ai-solution-architect", status: "awaiting_approval" }], pr: null } }
       : { http: 404, body: { error: { code: "not_found", message: "No such delivery run for this key's workspace." } } },
@@ -46,9 +48,9 @@ test("notifications get no response; bad messages and unknown methods get JSON-R
   assert.deepEqual(((await handle(rpc("ping"), backend())) as { result: object }).result, {});
 });
 
-test("tools/list: one tool per published skill in scope, plus find_skill, get_run, deliver and delivery_status", async () => {
+test("tools/list: one tool per published skill in scope, plus find_skill, get_run, deliver, delivery_status and compose", async () => {
   const all = ((await handle(rpc("tools/list"), backend())) as { result: { tools: { name: string; inputSchema: { required?: string[]; properties: Record<string, { type: string }> }; description: string }[] } }).result.tools;
-  assert.deepEqual(all.map((t) => t.name), ["supabase-schema-rls", "effort-estimator", "my-authored", "find_skill", "get_run", "deliver", "delivery_status"]);
+  assert.deepEqual(all.map((t) => t.name), ["supabase-schema-rls", "effort-estimator", "my-authored", "find_skill", "get_run", "deliver", "delivery_status", "compose"]);
   const rls = all[0];
   assert.equal(rls.inputSchema.properties.migrations.type, "object");          // a folder
   assert.ok(!("out_dir" in rls.inputSchema.properties));                       // path inputs are runtime-owned
@@ -56,7 +58,7 @@ test("tools/list: one tool per published skill in scope, plus find_skill, get_ru
   const est = all[1];
   assert.deepEqual(est.inputSchema.required, ["wbs", "client"]);               // defaults are not required
   const role = ((await handle(rpc("tools/list"), backend(new Set(["build/supabase-schema-rls"])))) as { result: { tools: { name: string }[] } }).result.tools;
-  assert.deepEqual(role.map((t) => t.name), ["supabase-schema-rls", "find_skill", "get_run", "deliver", "delivery_status"]);   // scoped: authored + other skills hidden
+  assert.deepEqual(role.map((t) => t.name), ["supabase-schema-rls", "find_skill", "get_run", "deliver", "delivery_status", "compose"]);   // scoped: authored + other skills hidden
   const deliver = all.find((t) => t.name === "deliver")!;
   assert.deepEqual(deliver.inputSchema.required, ["pipeline", "repo", "request"]);
   assert.deepEqual((deliver.inputSchema.properties.pipeline as { enum?: string[] }).enum, ["feature-delivery"]);

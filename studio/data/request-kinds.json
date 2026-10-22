@@ -1,0 +1,90 @@
+{
+ "_about": "Request kinds a delivery request can be (docs/DELIVERY-PIPELINES.md → When no template fits). A pipeline template's `fits.request_kinds` and a skill's `metadata.fits.request_kinds` name these ids; `stages` lists the ADLC stages (shared/adlc-stages.json) a composed pipeline runs for the kind, in order. `stacks` lists the stack ids a `fits.stacks` may name: the signal ids of studio/lib/github/detect.ts plus `any`. Shared with the portal at ingest (studio/data/request-kinds.json).",
+ "kinds": [
+  {
+   "id": "feature",
+   "description": "A new capability on an existing application: defined, planned, built, reviewed, shipped.",
+   "stages": [
+    "requirements",
+    "architecture",
+    "build",
+    "evaluate",
+    "deploy",
+    "operate"
+   ],
+   "mode": "brownfield"
+  },
+  {
+   "id": "fix",
+   "description": "A defect on an existing application: built from the request, reviewed, shipped; no product definition or plan approval.",
+   "stages": [
+    "build",
+    "evaluate",
+    "deploy",
+    "operate"
+   ],
+   "mode": "brownfield"
+  },
+  {
+   "id": "hardening",
+   "description": "Quality, security, performance or observability work on an existing application: planned, built, reviewed, shipped.",
+   "stages": [
+    "architecture",
+    "build",
+    "evaluate",
+    "deploy",
+    "operate"
+   ],
+   "mode": "brownfield"
+  },
+  {
+   "id": "migration",
+   "description": "A data-model, platform or dependency migration on an existing application: planned, built, reviewed, shipped.",
+   "stages": [
+    "architecture",
+    "build",
+    "evaluate",
+    "deploy",
+    "operate"
+   ],
+   "mode": "brownfield"
+  },
+  {
+   "id": "greenfield",
+   "description": "A new application from a brief: the enterprise skeleton first, then every stage.",
+   "stages": [
+    "requirements",
+    "architecture",
+    "build",
+    "evaluate",
+    "deploy",
+    "operate"
+   ],
+   "mode": "greenfield"
+  },
+  {
+   "id": "new-app",
+   "description": "Alias of greenfield, as the greenfield-app template names it.",
+   "alias_of": "greenfield"
+  }
+ ],
+ "stacks": {
+  "any": "fits every stack (the skill reads nothing stack-specific)",
+  "nextjs": "Next.js (next.config.* or package.json: next)",
+  "react": "React (package.json: react)",
+  "typescript": "TypeScript (tsconfig.json)",
+  "supabase": "Supabase (supabase/migrations, supabase/config.toml or @supabase/supabase-js)",
+  "python": "Python (requirements*.txt, pyproject.toml, setup.py or .py sources)",
+  "langgraph": "LangGraph (JS or Python dependency)",
+  "langchain": "LangChain (JS or Python dependency)",
+  "mcp": "MCP server (@modelcontextprotocol/sdk, mcp or fastmcp)",
+  "llm": "An LLM SDK (openai, @anthropic-ai/sdk, ai, @ai-sdk/*)",
+  "github-actions": "GitHub Actions workflows (.github/workflows/*.yml)",
+  "vercel": "Vercel (vercel.json or .vercel/project.json)",
+  "docker": "Docker (Dockerfile or compose file)",
+  "terraform": "Terraform (*.tf)",
+  "tests": "A test suite (tests/, __tests__/, e2e/, *.test.*, test_*.py)",
+  "agent-skills": "Agent skills (SKILL.md files)",
+  "prd": "Product docs (prd/spec markdown or docs/prd/)"
+ }
+}

@@ -7,6 +7,9 @@ metadata:
   adlc_stage: build
   version: 0.3.0
   author: giri-skills
+  fits:
+    stacks: [nextjs, react]
+    request_kinds: [feature, fix, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: target, type: dir, required: true, from: "repo root or components directory with React component files: .tsx/.jsx, or .js/.ts files that contain JSX (JavaScript Next.js repos); plain .js utilities, route.js handlers, middleware and configs are not scanned"}
