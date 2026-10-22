@@ -349,3 +349,13 @@ def test_load_recorded_calls_skips_truncated_and_ambiguous(tmp_path):
     got = mod.load_recorded_calls(p)
     assert set(got) == {("router", "s", "c", 1, None), ("gen_without", "s", "c", 1, None), ("judge", "s", "c", 1, "without"), ("judge", "s", "c", 1, "with")}
     assert got[("judge", "s", "c", 1, "without")] == "1. PASS - old log"
+
+
+def test_workers_give_identical_results_to_sequential(tmp_path):
+    """Parallel calls change only the wall clock: rows are recorded in call order, judges wait for generations."""
+    a, out_a = dry_run(tmp_path / "a", "--workers", "6")
+    b, out_b = dry_run(tmp_path / "b")
+    assert a.returncode == 0 and b.returncode == 0
+    assert (out_a / "trigger.csv").read_text() == (out_b / "trigger.csv").read_text()
+    assert (out_a / "quality.csv").read_text() == (out_b / "quality.csv").read_text()
+    assert (out_a / "scorecard.md").read_text().splitlines()[3:] == (out_b / "scorecard.md").read_text().splitlines()[3:]

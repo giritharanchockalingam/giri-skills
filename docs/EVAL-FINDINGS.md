@@ -333,3 +333,7 @@ None. All 120 eval cases have a non-empty `prompt` and a non-empty
 ## Resuming a run that stopped part-way
 
 `--resume` reuses every reply already in `<out>/raw/calls.jsonl` (keyed by mode, skill, case, run and, for judges, which generation they graded) and asks the model only for the rest. A run that stopped on exhausted credits or a network fault continues without paying twice. Replies the log truncated (≥ 8000 characters) and judge replies that cannot be attributed are re-asked.
+
+## Parallel calls
+
+`--workers N` runs independent calls on N threads: routing and generations first, then the judges that grade them. Rows are recorded in the original order, so the results are identical to a sequential run; only the wall clock changes. Use about 8 for OpenAI; for a local Ollama server match `OLLAMA_NUM_PARALLEL` on that machine (1–4).
