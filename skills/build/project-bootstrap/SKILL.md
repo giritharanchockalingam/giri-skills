@@ -7,6 +7,9 @@ metadata:
   adlc_stage: build
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [nextjs]
+    request_kinds: [greenfield]
   agent:
     inputs:
       - {name: target, type: path, required: true, from: "project directory to scaffold (created if absent)"}

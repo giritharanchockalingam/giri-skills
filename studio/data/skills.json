@@ -21274,7 +21274,21 @@
    "domain": "build",
    "adlc_stage": "deploy",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs",
+     "vercel",
+     "github-actions"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -21790,7 +21804,19 @@
    "domain": "build",
    "adlc_stage": "evaluate",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -22302,7 +22328,17 @@
    "domain": "build",
    "adlc_stage": "requirements",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "feature",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -22821,7 +22857,19 @@
    "domain": "build",
    "adlc_stage": "improve",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -23282,7 +23330,18 @@
    "domain": "build",
    "adlc_stage": "architecture",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "supabase"
+    ],
+    "request_kinds": [
+     "feature",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -23743,7 +23802,19 @@
    "domain": "build",
    "adlc_stage": "build",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -24165,7 +24236,16 @@
    "domain": "build",
    "adlc_stage": "operate",
    "version": "0.3.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs"
+    ],
+    "request_kinds": [
+     "hardening",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -24705,7 +24785,19 @@
    "domain": "build",
    "adlc_stage": "build",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -25133,7 +25225,16 @@
    "domain": "build",
    "adlc_stage": "requirements",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "feature",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -25619,7 +25720,15 @@
    "domain": "build",
    "adlc_stage": "build",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs"
+    ],
+    "request_kinds": [
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -26106,7 +26215,15 @@
    "domain": "build",
    "adlc_stage": "improve",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "fix"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -26512,7 +26629,19 @@
    "domain": "build",
    "adlc_stage": "govern",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -26995,7 +27124,18 @@
    "domain": "build",
    "adlc_stage": "requirements",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "feature",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -27450,7 +27590,18 @@
    "domain": "build",
    "adlc_stage": "build",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "supabase"
+    ],
+    "request_kinds": [
+     "feature",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -27860,7 +28011,15 @@
    "domain": "build",
    "adlc_stage": "improve",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "any"
+    ],
+    "request_kinds": [
+     "fix"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -28332,7 +28491,16 @@
    "domain": "build",
    "adlc_stage": "improve",
    "version": "0.2.1",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs"
+    ],
+    "request_kinds": [
+     "hardening",
+     "migration"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -28853,7 +29021,21 @@
    "domain": "build",
    "adlc_stage": "evaluate",
    "version": "0.3.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs",
+     "react",
+     "typescript"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -29393,7 +29575,20 @@
    "domain": "build",
    "adlc_stage": "build",
    "version": "0.3.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs",
+     "react"
+    ],
+    "request_kinds": [
+     "feature",
+     "fix",
+     "hardening",
+     "migration",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [
@@ -29890,7 +30085,18 @@
    "domain": "build",
    "adlc_stage": "evaluate",
    "version": "0.2.0",
-   "author": "giri-skills"
+   "author": "giri-skills",
+   "fits": {
+    "stacks": [
+     "nextjs",
+     "react"
+    ],
+    "request_kinds": [
+     "feature",
+     "hardening",
+     "greenfield"
+    ]
+   }
   },
   "agent": {
    "inputs": [

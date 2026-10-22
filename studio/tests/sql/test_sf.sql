@@ -593,6 +593,14 @@ select sf_delivery_run_start(jsonb_build_object('workspace_id', :'ws_acme', 'pip
 select test_assert((:'drun'::jsonb->>'status') = 'queued' and (:'drun'::jsonb->>'stage') = 'requirements', 'run starts queued at the first stage');
 select (:'drun'::jsonb->>'id') as drun_id \gset
 select test_assert((select count(*) from sf_audit_events where action = 'delivery.start' and entity_id = :'drun_id') = 1, 'delivery.start audited');
+select test_assert((select pipeline_spec from sf_delivery_runs where id = :'drun_id') is null, 'a template run carries no pipeline_spec');
+-- 0024: a composed pipeline travels on the run as pipeline_spec (must be an object named like the run's pipeline)
+select sf_delivery_run_start(jsonb_build_object('workspace_id', :'ws_acme', 'pipeline', 'composed-fix-nextjs', 'pipeline_version', '0.1.0', 'mode', 'brownfield',
+  'repo', 'acme-org/billing', 'request', 'fix the export', 'executor', 'ide', 'stages', '[{"id":"build","adlc_stage":"build","role":"full-stack-engineer","status":"queued"}]'::jsonb,
+  'pipeline_spec', '{"name":"composed-fix-nextjs","version":"0.1.0","mode":"brownfield","stages":[{"id":"build"}]}'::jsonb)) as crun \gset
+select test_assert((:'crun'::jsonb->'pipeline_spec'->>'name') = 'composed-fix-nextjs' and (:'crun'::jsonb->>'status') = 'queued', 'composed run stores its pipeline_spec');
+select test_assert((select details->>'composed' from sf_audit_events where action = 'delivery.start' and entity_id = (:'crun'::jsonb->>'id')) = 'true', 'delivery.start audits composed');
+select test_expect_error($$select sf_delivery_run_start(jsonb_build_object('workspace_id', '$$ || :'ws_acme' || $$', 'pipeline', 'composed-fix-nextjs', 'mode', 'brownfield', 'repo', 'r', 'request', 'x', 'executor', 'ide', 'stages', '[]'::jsonb, 'pipeline_spec', '{"name":"other"}'::jsonb))$$, 'pipeline_spec must be the composed pipeline');
 -- an admin restricts the pipeline to a role; the consumer (not assigned) is refused and audited; after assignment, allowed
 select test_as('00000000-0000-0000-0000-000000000001');
 insert into sf_pipeline_access (workspace_id, pipeline, role_slug, created_by) values (:'ws_acme', 'feature-delivery', 'architect', auth.uid());
@@ -617,6 +625,10 @@ select test_expect_error($$select sf_delivery_run_set_stage('$$ || :'drun_id' ||
 select test_assert((sf_delivery_run_set_stage(:'drun_id', null, '{"executor_ref":"https://github.com/x/actions"}'::jsonb, repeat('7', 64))->>'executor_ref') = 'https://github.com/x/actions', 'patch-only call keeps the stages');
 select test_assert((sf_api_delivery_get(repeat('7', 64), :'drun_id')->>'id') = :'drun_id', 'API key reads the run');
 select test_expect_error($$select sf_api_delivery_get(repeat('1', 64), '$$ || :'drun_id' || $$')$$, 'invalid api key');
+-- 0024: an API key reads one catalog repository's stack (for MCP `compose`); unknown repo → null; other workspace → null
+select test_assert((sf_api_catalog_repo(repeat('7', 64), 'acme-org/billing')->>'key') = 'acme-org/billing' and (sf_api_catalog_repo(repeat('7', 64), 'acme-org/billing')->'stack') = '["supabase"]'::jsonb, 'API key reads a catalog repo stack');
+select test_assert((sf_api_catalog_repo(repeat('7', 64), 'nobody/nothing')) is null, 'API key: unknown repo is null');
+select test_expect_error($$select sf_api_catalog_repo(repeat('1', 64), 'acme-org/billing')$$, 'invalid api key');
 -- a session member approves: approval row is append-only
 select test_as('00000000-0000-0000-0000-000000000004');
 insert into sf_delivery_approvals (run_id, stage_id, role, approved_by, note) values (:'drun_id', 'requirements', 'ai-product-manager', auth.uid(), 'ok');

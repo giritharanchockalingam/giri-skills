@@ -7,6 +7,9 @@ metadata:
   adlc_stage: improve
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [fix]
   agent:
     inputs:
       - {name: log, type: file, required: true, from: "failure log: pytest/unittest output, Jest/Vitest/Node output, or a Java stack trace (paste into a .txt file)"}

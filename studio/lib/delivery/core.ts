@@ -32,6 +32,8 @@ export interface DeliveryRun {
   id: string; workspace_id: string; pipeline: string; pipeline_version: string; mode: PipelineMode; repo: string; ref: string; request: string;
   status: DeliveryStatus; stage: string | null; stages: StageRecord[]; stack_profile: Record<string, unknown> | null;
   pr: { number?: number; url?: string; head_sha?: string } | null; executor: Executor; executor_ref: string | null;
+  /** The composed pipeline's JSON when the run was started from one (DELIVERY-PIPELINES.md → When no template fits); null for a template. */
+  pipeline_spec?: Record<string, unknown> | null;
   created_by: string | null; api_key_id: string | null; created_at: string; updated_at: string; error: string | null;
 }
 export interface DeliveryApproval { id: string; run_id: string; stage_id: string; role: string; approved_by: string; note: string; created_at: string }

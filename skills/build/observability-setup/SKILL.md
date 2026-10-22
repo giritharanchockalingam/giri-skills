@@ -7,6 +7,9 @@ metadata:
   adlc_stage: operate
   version: 0.3.0
   author: giri-skills
+  fits:
+    stacks: [nextjs]
+    request_kinds: [hardening, greenfield]
   agent:
     inputs:
       - {name: target, type: path, required: true, from: "Next.js repo root (created if absent)"}

@@ -7,6 +7,9 @@ metadata:
   adlc_stage: requirements
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [feature, migration, greenfield]
   agent:
     inputs:
       - {name: entities, type: csv, required: true, from: "entities, one row per attribute (layout: assets/entities-template.csv): entity,attribute,type,required,notes"}

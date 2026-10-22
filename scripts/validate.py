@@ -7,6 +7,8 @@ referenced relative files exist; evals/evals.json present and parseable.
 Skills at metadata.version >= 0.2.0 must also declare metadata.agent with >= 1 run
 step and >= 1 output check, every check name in scripts/check_output.py's vocabulary,
 every script/template/context path present, and every eval-case fixture path present.
+An optional metadata.fits ({stacks, request_kinds}; absent = fits anything) names only stack ids and
+request kinds from shared/request-kinds.json (docs/DELIVERY-PIPELINES.md → When no template fits).
 Exit 1 on any failure. Run: python3 scripts/validate.py
 """
 from __future__ import annotations
@@ -25,6 +27,10 @@ _STAGES_FILE = ROOT / "shared" / "adlc-stages.json"
 # the stage taxonomy is enforced wherever the repo defines it (absent in minimal sandbox repos)
 STAGE_IDS = ({x["id"] for x in (lambda d: d["stages"] + d["shelves"])(json.loads(_STAGES_FILE.read_text(encoding="utf-8")))}
              if _STAGES_FILE.exists() else None)
+_KINDS_FILE = ROOT / "shared" / "request-kinds.json"
+_KINDS = json.loads(_KINDS_FILE.read_text(encoding="utf-8")) if _KINDS_FILE.exists() else None
+REQUEST_KINDS = {k["id"] for k in _KINDS["kinds"]} if _KINDS else None
+STACK_IDS = set(_KINDS["stacks"]) if _KINDS else None
 LINK_RE = re.compile(r"`((?:references|assets|scripts|evals)/[^`]+)`|\]\(((?:references|assets|scripts|evals)/[^)]+)\)")
 
 def frontmatter(text: str) -> dict | None:
@@ -44,6 +50,27 @@ def frontmatter(text: str) -> dict | None:
             # multi-line scalar continuation (e.g. a folded description)
             fm[key] = (fm[key] + " " + line.strip()).strip()
     return fm
+
+def check_fits(fits, rel, errors: list[str]) -> None:
+    """metadata.fits: optional; when present an object whose `stacks` / `request_kinds` are lists of known ids."""
+    if fits is None:
+        return
+    if not isinstance(fits, dict):
+        errors.append(f"{rel}: metadata.fits must be a map with `stacks` and/or `request_kinds`"); return
+    for key, known, what in (("stacks", STACK_IDS, "stack id"), ("request_kinds", REQUEST_KINDS, "request kind")):
+        if key not in fits:
+            continue
+        vals = fits[key]
+        if not isinstance(vals, list) or not vals or not all(isinstance(v, str) and v for v in vals):
+            errors.append(f"{rel}: metadata.fits.{key} must be a non-empty list of {what}s"); continue
+        if known is not None:
+            for v in vals:
+                if v not in known:
+                    errors.append(f"{rel}: metadata.fits.{key} '{v}' is not a {what} in shared/request-kinds.json")
+    extra = sorted(set(fits) - {"stacks", "request_kinds"})
+    if extra:
+        errors.append(f"{rel}: metadata.fits has unknown key(s) {extra} (only stacks, request_kinds)")
+
 
 def _rel_paths_in(text: str):
     """Skill-relative paths referenced by a step: scripts/x.py, assets/x, references/x."""
@@ -165,6 +192,7 @@ def main() -> int:
             except Exception as e: errors.append(f"{rel}: evals.json invalid: {e}")
         stage = str(skillmeta.load_skill(d)["metadata"].get("adlc_stage", ""))
         if STAGE_IDS is not None and stage not in STAGE_IDS: errors.append(f"{rel}: metadata.adlc_stage '{stage}' not in shared/adlc-stages.json")
+        check_fits(skillmeta.load_skill(d)["metadata"].get("fits"), rel, errors)
         check_agent(d, rel, errors)
     vendor = ROOT / "vendor"
     vcount = 0

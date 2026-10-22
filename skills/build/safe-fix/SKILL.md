@@ -7,6 +7,9 @@ metadata:
   adlc_stage: improve
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [fix]
   agent:
     inputs:
       - {name: target, type: dir, required: true, from: "repo directory the test command runs in"}

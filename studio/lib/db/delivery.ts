@@ -22,6 +22,8 @@ import type { DeliveryApproval, DeliveryRun, StagePost } from "@/lib/delivery/co
 
 export interface DeliveryRunStartPayload {
   workspace_id?: string; pipeline: string; pipeline_version: string; mode: string; repo: string; ref: string; request: string; executor: string; stages: unknown[];
+  /** A composed pipeline's full JSON (0024 `pipeline_spec`): the executor reads it from the run when no template of that name exists. */
+  pipeline_spec?: object;
 }
 export interface StagePatch { status?: string; stage?: string; stack_profile?: unknown; pr?: unknown; executor_ref?: string; error?: string | null }
 type Rpc = { data: unknown; error: { message: string } | null };

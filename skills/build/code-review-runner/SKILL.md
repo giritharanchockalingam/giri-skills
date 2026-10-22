@@ -7,6 +7,9 @@ metadata:
   adlc_stage: evaluate
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [feature, fix, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: diff, type: file, required: true, from: "unified diff of the change (`git diff <base>...HEAD > change.patch`)"}

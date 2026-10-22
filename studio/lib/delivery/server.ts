@@ -3,7 +3,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WsCtx } from "@/lib/factory/db";
 import type { DeliveryStartInput, DeliveryStageInput } from "@/lib/validation";
-import { applyStage, approvalPost, awaitingStage, canApproveStage, canStartPipeline, deliverCommand, seedStages, type DeliveryRun, type StagePost } from "./core";
+import { applyStage, approvalPost, awaitingStage, canApproveStage, canStartPipeline, deliverCommand, seedStages, type DeliveryRun, type Pipeline, type StagePost } from "./core";
+import type { ComposedPipeline } from "./compose";
 import { dispatch } from "./dispatch";
 import { pipelineByName } from "./pipelines";
 import { getDeliveryRun, insertDeliveryApproval, listPipelineAccess, listUserRoleSlugs, noteDeliveryRun, setDeliveryStage, startDeliveryRun } from "@/lib/db/delivery";
@@ -15,25 +16,35 @@ export const callbackUrl = (portalUrl: string, runId: string) => `${portalUrl.re
 
 /** Starts a run for a session caller (the database re-checks sf_pipeline_access and audits delivery.start), then
  *  hands it to the executor. A missing executor is a recorded notice, never a pretended dispatch. */
-export async function startForSession(ctx: WsCtx, input: DeliveryStartInput, portalUrl: string): Promise<StartResult> {
+/** The pipeline a run starts from: a shipped template by name, or a composed pipeline (DELIVERY-PIPELINES.md → When no
+ *  template fits) whose JSON travels on the run as `pipeline_spec`, where the executor reads it back. */
+function pipelineFor(input: DeliveryStartInput, composed?: ComposedPipeline | null): { p: Pipeline; spec: ComposedPipeline | null } {
+  if (composed) {
+    if (composed.name !== input.pipeline) throw new DeliveryError(400, "pipeline_mismatch", `The composed pipeline is “${composed.name}”, not “${input.pipeline}”.`);
+    return { p: composed, spec: composed };
+  }
   const p = pipelineByName(input.pipeline);
   if (!p) throw new DeliveryError(404, "unknown_pipeline", `No pipeline template named “${input.pipeline}”.`);
+  return { p, spec: null };
+}
+
+export async function startForSession(ctx: WsCtx, input: DeliveryStartInput, portalUrl: string, composed?: ComposedPipeline | null): Promise<StartResult> {
+  const { p, spec } = pipelineFor(input, composed);
   const [access, job] = await Promise.all([listPipelineAccess(ctx.supabase, ctx.workspace.id), listUserRoleSlugs(ctx.supabase, ctx.workspace.id, ctx.user.id)]);
   if (!canStartPipeline({ member: ctx.role, job }, access.get(p.name) ?? [])) throw new DeliveryError(403, "not_in_role", "This pipeline is not open to any role assigned to you. Ask an administrator for access.");
   let run: DeliveryRun;
   try {
-    run = await startDeliveryRun(ctx.supabase, { workspace_id: ctx.workspace.id, pipeline: p.name, pipeline_version: p.version, mode: p.mode, repo: input.repo, ref: input.ref, request: input.request, executor: input.executor, stages: seedStages(p) });
+    run = await startDeliveryRun(ctx.supabase, { workspace_id: ctx.workspace.id, pipeline: p.name, pipeline_version: p.version, mode: p.mode, repo: input.repo, ref: input.ref, request: input.request, executor: input.executor, stages: seedStages(p), ...(spec ? { pipeline_spec: spec } : {}) });
   } catch (e) { throw asDeliveryError(e); }
   return afterStart(ctx.supabase, run, portalUrl);
 }
 
 /** The same for an API-key caller (MCP `deliver`): the key's workspace, the key's job roles, audited as the key. */
-export async function startForKey(sb: SupabaseClient, keyHash: string, input: DeliveryStartInput, portalUrl: string): Promise<StartResult> {
-  const p = pipelineByName(input.pipeline);
-  if (!p) throw new DeliveryError(404, "unknown_pipeline", `No pipeline template named “${input.pipeline}”.`);
+export async function startForKey(sb: SupabaseClient, keyHash: string, input: DeliveryStartInput, portalUrl: string, composed?: ComposedPipeline | null): Promise<StartResult> {
+  const { p, spec } = pipelineFor(input, composed);
   let run: DeliveryRun;
   try {
-    run = await startDeliveryRun(sb, { pipeline: p.name, pipeline_version: p.version, mode: p.mode, repo: input.repo, ref: input.ref, request: input.request, executor: input.executor, stages: seedStages(p) }, keyHash);
+    run = await startDeliveryRun(sb, { pipeline: p.name, pipeline_version: p.version, mode: p.mode, repo: input.repo, ref: input.ref, request: input.request, executor: input.executor, stages: seedStages(p), ...(spec ? { pipeline_spec: spec } : {}) }, keyHash);
   } catch (e) { throw asDeliveryError(e); }
   return afterStart(sb, run, portalUrl, keyHash);
 }

@@ -7,6 +7,9 @@ metadata:
   adlc_stage: requirements
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [feature, greenfield]
   agent:
     inputs:
       - {name: brief, type: json, required: true, from: "brief.json: {feature, problem, users[], goals[], non_goals[], metrics[{name,target,baseline}], phases[{name,scope[]}]} (layout: evals/fixtures/brief.json)"}

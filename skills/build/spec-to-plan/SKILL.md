@@ -7,6 +7,9 @@ metadata:
   adlc_stage: requirements
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [any]
+    request_kinds: [feature, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: spec, type: md, required: true, from: "docs/SPEC.md (or a ticket exported to Markdown)"}

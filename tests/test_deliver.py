@@ -253,7 +253,8 @@ class StubPortal:
     `approve_after_wait` adds an approval for a stage as soon as that stage has posted awaiting_approval, which is
     what a person clicking Approve in the portal looks like to the executor."""
 
-    def __init__(self, approve_after_wait: bool = False, fail_posts: bool = False):
+    def __init__(self, approve_after_wait: bool = False, fail_posts: bool = False, pipeline_spec: dict | None = None):
+        self.pipeline_spec = pipeline_spec      # a composed pipeline stored on the run (0024): served on GET run
         self.posts: list[dict] = []
         self.auth: list[str] = []
         self.gets = 0
@@ -288,7 +289,8 @@ class StubPortal:
             def do_GET(self):
                 stub.gets += 1
                 stub.auth.append(self.headers.get("Authorization", ""))
-                self._send(200, {"id": RUN_UUID, "status": "running", "approvals": stub.approvals})
+                self._send(200, {"id": RUN_UUID, "status": "running", "approvals": stub.approvals,
+                                 **({"pipeline_spec": stub.pipeline_spec} if stub.pipeline_spec else {})})
 
         socket.socket = _REAL_SOCKET   # loopback stub only; conftest's monkeypatch restores the block at teardown
         self.server = HTTPServer(("127.0.0.1", 0), H)

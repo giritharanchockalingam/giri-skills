@@ -79,6 +79,18 @@ function parseFrontmatter(md) {
   return { fm, body: m[2], raw: m[1] };
 }
 
+// ---------- metadata.fits ({stacks, request_kinds} flow lists; docs/DELIVERY-PIPELINES.md → When no template fits) ----------
+function parseFits(raw) {
+  const m = raw.match(/^  fits:\s*\n((?:    [\w-]+:.*\n?)+)/m);
+  if (!m) return null;
+  const fits = {};
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = line.match(/^    (stacks|request_kinds):\s*(\[.*\])\s*$/);
+    if (kv) fits[kv[1]] = parseFlow(kv[2]).map(String);
+  }
+  return Object.keys(fits).length ? fits : null;
+}
+
 // ---------- metadata.agent (inputs / run / outputs as `- {flow maps}`) ----------
 function splitTop(s, sep) {
   const parts = []; let depth = 0, quote = null, buf = "";
@@ -156,6 +168,8 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
       try { evals = JSON.parse(readFileSync(evalPath, "utf8")); } catch (e) { console.warn(`bad evals.json: ${evalPath}: ${e.message}`); }
     }
     const agent = parseAgent(raw || "");
+    const fits = parseFits(raw || "");
+    if (fits && typeof fm.metadata === "object") fm.metadata.fits = fits;
     if (agent) {
       // the happy-path eval case the runner's --demo uses (same pick as run_skill.demo_args): fixture paths kept relative to the skill dir
       const withInputs = (evals.cases || []).filter((c) => c.inputs && Object.keys(c.inputs).length);
@@ -521,6 +535,8 @@ const w = (f, d) => writeFileSync(join(OUT, f), JSON.stringify(d, null, 1) + "\n
 w("upstream.json", upstream);
 w("skills.json", skills);
 w("stages.json", JSON.parse(readFileSync(join(ROOT, "shared", "adlc-stages.json"), "utf8")));
+// Request kinds and stack ids for pipeline composition (shared/request-kinds.json; lib/delivery/compose.ts mirrors scripts/compose_pipeline.py)
+w("request-kinds.json", existsSync(join(ROOT, "shared", "request-kinds.json")) ? JSON.parse(readFileSync(join(ROOT, "shared", "request-kinds.json"), "utf8")) : { kinds: [], stacks: {} });
 // Agent templates for the Builder: spec + demo inputs with file contents embedded (fixtures are labelled fictional)
 {
   const tpl = [];

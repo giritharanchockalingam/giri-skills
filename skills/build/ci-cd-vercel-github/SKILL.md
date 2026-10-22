@@ -7,6 +7,9 @@ metadata:
   adlc_stage: deploy
   version: 0.2.0
   author: giri-skills
+  fits:
+    stacks: [nextjs, vercel, github-actions]
+    request_kinds: [feature, fix, hardening, migration, greenfield]
   agent:
     inputs:
       - {name: target, type: path, required: true, from: "repo root (created if absent); existing workflows are kept, never overwritten"}

@@ -9,6 +9,8 @@ import { handle, SUPPORTED_PROTOCOL_VERSIONS, RPC, type CatalogSkill, type Libra
 import { ROLE_TEMPLATES, POOL_TEMPLATES, getRouter } from "@/lib/factory/talentData";
 import { skills as repoSkills, STAGES } from "@/lib/data";
 import { PIPELINES } from "@/lib/delivery/pipelines";
+import { ComposeError, stacksFromProfile } from "@/lib/delivery/compose";
+import { composeWithData, REQUEST_KIND_OPTIONS } from "@/lib/delivery/composeData";
 import { DeliveryError, startForKey } from "@/lib/delivery/server";
 import { getDeliveryRunByKey } from "@/lib/db/delivery";
 import { DeliveryStartInput, UUID } from "@/lib/validation";
@@ -103,6 +105,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ scope?:
       } catch (e) {
         const d = e instanceof DeliveryError ? e : new DeliveryError(500, "delivery_failed", (e as Error).message);
         return { http: d.status, body: { error: { code: d.code, message: d.message } } };
+      }
+    },
+    requestKinds: () => REQUEST_KIND_OPTIONS.map((k) => ({ id: k.id, description: k.description })),
+    compose: async (a) => {
+      // the stack: from the profile given, else the catalog repository's signals (the key's workspace; sf_api_catalog_repo, 0024)
+      let stacks: string[];
+      if (a.stack_profile) stacks = stacksFromProfile(a.stack_profile);
+      else {
+        if (!/^[\w.-]+\/[\w.-]+$/.test(a.repo ?? "")) return { http: 400, body: { error: { code: "bad_request", message: "repo must be owner/name as the catalog lists it (or give stack_profile)" } } };
+        const { data, error } = await caller.supabase.rpc("sf_api_catalog_repo", { p_key_hash: caller.keyHash, p_repo: a.repo });
+        if (error) return { http: 500, body: { error: { code: "query_failed", message: error.message } } };
+        const row = data as { key: string; stack?: ({ id: string } | string)[] } | null;
+        if (!row) return { http: 404, body: { error: { code: "not_found", message: `${a.repo} is not in this workspace's catalog: sync it under Platform → Repositories, or give stack_profile.` } } };
+        stacks = (row.stack ?? []).map((s) => (typeof s === "string" ? s : s.id)).filter(Boolean);
+      }
+      try {
+        const r = composeWithData({ stacks, requestKind: a.request_kind, mode: a.mode as "brownfield" | "greenfield" | undefined });
+        return { http: 200, body: { pipeline: r.pipeline, decisions: r.decisions, notes: r.notes, stacks } as unknown as Record<string, unknown> };
+      } catch (e) {
+        if (e instanceof ComposeError) return { http: 400, body: { error: { code: "cannot_compose", message: e.message } } };
+        throw e;
       }
     },
     deliveryStatus: async (id) => {
