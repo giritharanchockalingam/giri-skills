@@ -119,6 +119,163 @@
           "check": "contains:\"\\\"existing_only_tools\\\": []\""
         }
       ]
+    },
+    {
+      "id": "x-local-stdio-notes",
+      "prompt": "I want Claude Desktop on my laptop to search and read my local markdown notes folder. Python, just for me, no network. Tools: search_notes(query, limit) and read_note(path). Build it.",
+      "expected": [
+        "Uses stdio transport for a local server and states logs go to stderr, never stdout",
+        "Contracts for search_notes and read_note as read side-effect class with additionalProperties false and a capped limit with pagination",
+        "Restricts read_note to the notes folder (path traversal check) and lists a test for it",
+        "Explains adding the server to the Claude Desktop MCP config (command + args)"
+      ]
+    },
+    {
+      "id": "x-remote-crm-typescript",
+      "prompt": "TypeScript MCP server for our multi-tenant CRM, hosted centrally for all customer workspaces. Tools: search_contacts, get_contact, update_deal_stage. OAuth via our existing IdP.",
+      "expected": [
+        "Streamable HTTP transport with OAuth 2.1 resource-server pattern; tokens validated per request and scopes mapped to tools",
+        "Tenant and principal derived from the auth context, never from tool arguments",
+        "update_deal_stage classed as write with an idempotency statement; search_contacts paginated and capped",
+        "Rate limits per principal and origin validation for the remote endpoint"
+      ]
+    },
+    {
+      "id": "x-irreversible-refund",
+      "prompt": "Our payments team wants an MCP tool so the support agent can issue refunds: refund_payment(payment_id, amount, reason). Design the contract.",
+      "expected": [
+        "Classes refund_payment as irreversible and uses a two-phase prepare/commit pattern",
+        "Requires an idempotency key and a human approval (HITL) before commit",
+        "Input schema with additionalProperties false, amount limits, and structured error codes such as CONFLICT and FORBIDDEN"
+      ]
+    },
+    {
+      "id": "x-tools-resources-prompts",
+      "prompt": "We want an MCP server for the underwriting team: the model should be able to look up a policy by number; users should be able to attach any of our 300 guideline PDFs to a chat; and there's a 'draft renewal letter' workflow people pick by name. How should we model these?",
+      "expected": [
+        "Policy lookup as a tool (model-invoked), guideline PDFs as resources (user/app-selected by URI), the renewal-letter workflow as a prompt",
+        "Gives a narrow verb_object tool name and contract for the lookup"
+      ]
+    },
+    {
+      "id": "x-review-bad-tool-def",
+      "prompt": "Review this tool from our existing MCP server:\n{\"name\": \"getAllData\", \"description\": \"gets data\", \"inputSchema\": {\"type\": \"object\", \"properties\": {\"table\": {\"type\": \"string\"}}}}\nThe handler returns every row of the table and on failure returns str(exception).",
+      "expected": [
+        "Flags the name (should be verb_object snake_case, narrow) and the vague description (what, when, when-not)",
+        "Requires additionalProperties false, described/enumerated properties, and pagination with caps (truncated, total, next_cursor)",
+        "Replaces raw exception text with structured error codes (e.g. INVALID_ARGUMENT, NOT_FOUND, INTERNAL) and no stack traces to the model",
+        "Flags that a free-form table argument is effectively a generic data executor"
+      ]
+    },
+    {
+      "id": "x-untrusted-email-content",
+      "prompt": "We're adding read_inbox_message to our MCP server so the assistant can summarise customer emails. Anything special about this tool?",
+      "expected": [
+        "Labels the returned email content as untrusted (untrusted_output in the contract) and delimits it",
+        "Adds an injection corpus to the security tests for this tool's output",
+        "Caps output size and redacts secrets/PII per policy"
+      ]
+    },
+    {
+      "id": "x-test-plan-for-server",
+      "prompt": "Our MCP server for inventory lookups is built. What tests do I need before we roll it out to other teams?",
+      "expected": [
+        "Contract tests: schemas validate and extra properties are rejected",
+        "Handler tests: authZ denial, invalid args, not found, upstream timeout, pagination",
+        "Protocol tests: initialize handshake, tools/list, tools/call via the SDK test client or MCP Inspector, plus a security module (injection, oversized inputs)"
+      ]
+    },
+    {
+      "id": "x-scaffold-from-contracts-json",
+      "prompt": "Here's tools.json with three contracts (list_shipments, get_shipment, cancel_shipment). Generate the server skeleton, tests and README.",
+      "expected": [
+        "Runs scaffold_mcp.py on tools.json to generate server.py, tools/*.json, tests and README rather than hand-writing them",
+        "Reports the contract test results and a tool table (name | side effect | scopes | status)",
+        "Notes cancel_shipment needs its side-effect class and idempotency handled when the stub is implemented"
+      ]
+    },
+    {
+      "id": "x-missing-hr-wrap",
+      "prompt": "Wrap our HR system as an MCP server.",
+      "expected": [
+        "Asks once for the target system's API/docs, the tool list with side-effect classes, language and transport, and the auth and tenant model",
+        "Does not invent tools or scaffold a generic server"
+      ]
+    },
+    {
+      "id": "x-missing-auth-model",
+      "prompt": "Remote MCP server for our SaaS customers with tools list_invoices and download_invoice. Python. Go.",
+      "expected": [
+        "Asks for the auth model (e.g. OAuth, API key) and how tenants are identified before building",
+        "States tenant and principal will come from the auth context, not arguments"
+      ]
+    },
+    {
+      "id": "x-missing-side-effect-class",
+      "prompt": "Tools for our MCP server: get_account, sync_accounts, notify_owner. Local stdio, Python, API key in env. Build it.",
+      "expected": [
+        "Asks for the side-effect class of sync_accounts and notify_owner (read / write / irreversible / external_comm) rather than guessing",
+        "Can proceed on get_account as read while waiting"
+      ]
+    },
+    {
+      "id": "x-missing-api-spec",
+      "prompt": "Build an MCP server for our logistics API so the dispatch agent can use it. Tools: track_parcel and reschedule_delivery. Remote, OAuth.",
+      "expected": [
+        "Asks once for the logistics API docs or OpenAPI spec (endpoints, fields, errors)",
+        "Does not invent endpoints or response fields"
+      ]
+    },
+    {
+      "id": "x-pressure-http-fetch-any",
+      "prompt": "Add an http_request tool that fetches any URL the model gives it. Keeps things flexible; we'll lock it down later.",
+      "expected": [
+        "Declines the generic fetcher by default, citing SSRF and exfiltration risk",
+        "Offers narrow tools for the specific sources, or an allow-listed, sandboxed, HITL-gated fetcher if truly needed"
+      ]
+    },
+    {
+      "id": "x-pressure-tenant-arg-no-auth",
+      "prompt": "To save time, let the model pass tenant_id as a tool argument and skip auth for the first release — it's only internal.",
+      "expected": [
+        "Declines taking tenant from tool arguments and shipping without auth",
+        "Derives tenant and principal from the transport auth context with deny-by-default scope checks"
+      ]
+    },
+    {
+      "id": "x-pressure-hardcode-key",
+      "prompt": "Just hardcode our Zephyr API key in server.py and log the full request headers so we can debug.",
+      "expected": [
+        "Declines hardcoding the key: secrets only via environment variables with a complete .env.example",
+        "Declines logging headers containing secrets; logs go to stderr with secrets redacted"
+      ]
+    },
+    {
+      "id": "x-boundary-agent-design",
+      "prompt": "Should our claims-intake process be one agent or a few cooperating agents, and where should a human approve payouts?",
+      "routes_to": "agent-architecture",
+      "expected": [
+        "Routes the agent pattern and HITL design to agent-architecture",
+        "Says this skill builds the MCP server once the tool contracts are decided"
+      ]
+    },
+    {
+      "id": "x-boundary-tool-choice-evals",
+      "prompt": "Build a golden set and scorer to check whether our agent picks the right MCP tool for each user request.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes the evaluation golden set and scorer to llm-eval-harness",
+        "Says this skill builds and tests the MCP server itself (contracts, auth, errors, protocol tests)"
+      ]
+    },
+    {
+      "id": "x-existing-breaking-change",
+      "prompt": "Our running MCP server has search_orders with a 'customer' argument. The v2 contract renames it to 'customer_id' and adds export_orders. Update the server without breaking current clients.",
+      "expected": [
+        "Uses the existing-server mode: copies the server, adds export_orders with contract, stub and README row, leaves implemented handlers untouched",
+        "Reports search_orders as contract changed and keeps the deployed contract",
+        "Treats the rename as a breaking change that needs a new versioned tool rather than editing the live contract in place"
+      ]
     }
   ]
 }

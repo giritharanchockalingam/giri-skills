@@ -112,6 +112,173 @@
         {"file": "readiness.md", "check": "contains:\"| freshness | fail | pass | 103 | 3 | fixed |\""},
         {"file": "readiness.md", "check": "contains:\"Regressed: none.\""}
       ]
+    },
+    {
+      "id": "x-support-tickets-not-ready",
+      "prompt": "Support-ops sample for our ticket-routing model (Fabrikam Support, extract from Zendesk-like system, 2026-10-05, filter: last 7 days):\nticket_id,opened_at,channel,priority,resolution\nT1,2026-09-28,email,high,refund\nT2,2026-09-29,chat,low,\nT3,2026-09-30,chat,medium,replacement\nT4,2026-09-30,phone,,refund\nT5,2026-10-02,email,low,info\nT5,2026-10-02,email,low,info\nOwner thresholds: min_rows 5; max_null_pct 10; required_columns ticket_id;opened_at;channel;resolution; unique_key ticket_id; max_duplicate_rows 0; date_column opened_at; max_age_days 7. as_of 2026-10-05.",
+      "expected": [
+        "Counts 6 rows; priority and resolution each 16.67% null, so completeness fails against 10",
+        "Uniqueness fails with 1 duplicate key (T5) and duplicates fail with 1 duplicate row",
+        "Freshness passes: newest 2026-10-02, as_of 2026-10-05, age 3 days ≤ 7",
+        "Verdict Not ready, the run stops (exit 1), with owners named for each failing dimension"
+      ]
+    },
+    {
+      "id": "x-retail-forecast-gaps-no-asof",
+      "prompt": "Demand-planning extract for Contoso Grocers:\nsku,store,week_start,units\nA1,S01,2026-09-07,14\nA1,S02,2026-09-07,9\nB2,S01,2026-09-07,22\nB2,S02,2026-09-07,NA\nThresholds from the planning data owner: min_rows 4; max_null_pct 30; required_columns sku;store;week_start;units; unique_key sku;store;week_start; max_duplicate_rows 0; date_column week_start; max_age_days 14. Ready?",
+      "expected": [
+        "units is 25.00% null (NA counted as null), within 30, so completeness passes",
+        "Composite key sku;store;week_start has no duplicates, so uniqueness passes",
+        "Freshness is TBD because no as_of date was given, not passed",
+        "Verdict Ready-with-gaps (5 pass, 0 fail, 1 TBD), never Ready"
+      ]
+    },
+    {
+      "id": "x-store-sales-ready",
+      "prompt": "tiny sample, store_sales.csv (POS export 2026-10-04, all stores):\nstore_id,date,sales\nS1,2026-10-01,1200.50\nS2,2026-10-01,980.00\nS3,2026-10-02,1430.25\nreqs: min_rows 3, max_null_pct 0, required_columns store_id;date;sales, unique_key store_id;date, max_duplicate_rows 0, date_column date, max_age_days 5. as_of 2026-10-04",
+      "expected": [
+        "Scores all six dimensions pass, with freshness newest 2026-10-02, age 2 days ≤ 5",
+        "Verdict Ready — 6 pass, 0 fail, 0 TBD",
+        "Column profile infers sales as float and date as date with 0 nulls",
+        "States the sample caveat that a sample proves defects, not their absence"
+      ]
+    },
+    {
+      "id": "x-claims-schema-missing-column",
+      "prompt": "Insurance claims sample for the Adatum fraud-triage model:\nclaim_id,policy_id,amount\nC1,P9,1200\nC2,P9,\nC3,P4,560\nRequirements file: min_rows 3; max_null_pct 50; required_columns claim_id;policy_id;amount;loss_date; unique_key claim_id; max_duplicate_rows 0. Nothing on freshness.",
+      "expected": [
+        "Schema fails: 3 of 4 required columns present, loss_date missing, owner Data engineer",
+        "Completeness passes (amount 33.33% null ≤ 50)",
+        "Freshness is TBD [TO BE BASELINED — owner: Data owner] since no date_column/max_age_days/as_of",
+        "Verdict Not ready because a fail outranks TBD; run stops (exit 1)"
+      ]
+    },
+    {
+      "id": "x-ecom-stale-freshness",
+      "prompt": "Is this e-commerce extract fresh enough for the recommender refresh?\norder_id,order_date,total\nO1,2026-08-01,40\nO2,2026-08-15,55\nO3,2026-07-30,20\nOwner set only: min_rows 3, date_column order_date, max_age_days 30. Assess as of 2026-10-01.",
+      "expected": [
+        "Uses the latest order_date (2026-08-15), not the first or earliest row",
+        "Freshness fails: age 47 days > 30",
+        "Completeness, schema, uniqueness and duplicates are TBD with owner Data owner, not passed",
+        "Verdict Not ready; run stops (exit 1)"
+      ]
+    },
+    {
+      "id": "x-null-tokens-churn",
+      "prompt": "Churn-model feature sample from the CRM:\ncustomer_segment,region,churned\ngold,north,0\nN/A,south,1\nsilver,NULL,0\nbronze,east,nan\nOwner limits: min_rows 4; max_null_pct 20. Ready?",
+      "expected": [
+        "Treats N/A, NULL and nan as nulls (case-insensitive)",
+        "Each column is 25.00% null, so completeness fails against 20 and names the columns over the limit",
+        "Verdict Not ready (exit 1); dimensions without a key are TBD with owner Data owner"
+      ]
+    },
+    {
+      "id": "x-sensor-pending-skeleton",
+      "prompt": "Our plant team has a vibration-sensor extract for a predictive-maintenance pilot at the Tailspin Motors Ohio line, plus a requirements sheet from the OT data owner. Can you run the readiness check? I'll send the files after lunch.",
+      "expected": [
+        "First line reads Verdict: pending — extract and owner thresholds not visible in this message",
+        "Gives the Dimensions table with all six dimensions as TBD and thresholds [TO BE BASELINED — owner: Data owner]",
+        "Asks once in one list for the extract CSV, the requirements file (key,value), the as-of date and provenance"
+      ]
+    },
+    {
+      "id": "x-exec-crm-churn-question",
+      "prompt": "As COO I need a straight answer before we fund the churn-prediction build: is our CRM data good enough? Nobody has given me numbers yet.",
+      "expected": [
+        "Does not answer yes/no without data; verdict reads pending",
+        "Explains the six readiness dimensions are scored only against the data owner's signed-off thresholds, none defaulted",
+        "Asks once for the extract, the owner's requirements file, as-of date and provenance"
+      ]
+    },
+    {
+      "id": "x-missing-data-reqs-pasted",
+      "prompt": "Requirements: min_rows 1000; max_null_pct 5; unique_key account_id; date_column updated_at; max_age_days 3. Check our accounts table.",
+      "expected": [
+        "Asks once for the extract CSV (with header) and as-of date; the run stops (exit 2) without data",
+        "Does not estimate row counts, null % or freshness",
+        "Lists the stated thresholds against the dimensions, with blank dimensions TBD for the Data owner"
+      ]
+    },
+    {
+      "id": "x-missing-reqs-data-pasted",
+      "prompt": "is this ok for training?\nemp_id,dept,tenure_yrs\nE1,ops,3\nE2,,5\nE3,fin,2",
+      "expected": [
+        "Profiles the pasted rows (3 rows; dept 33.33% null) but does not score pass/fail without owner thresholds",
+        "Asks once for the data owner's requirements file; the run stops (exit 2) for missing requirements",
+        "Does not propose its own thresholds"
+      ]
+    },
+    {
+      "id": "x-missing-asof-freshness",
+      "prompt": "Thresholds include date_column event_ts and max_age_days 1. Here's the sample:\nevent_id,event_ts\nE1,2026-10-18\nE2,2026-10-19\nE3,2026-10-19\nOther keys: min_rows 3, unique_key event_id. Is it fresh?",
+      "expected": [
+        "Reports freshness TBD because no as_of date was supplied, rather than assuming today",
+        "Notes newest event_ts is 2026-10-19 and asks for the as_of date to score it",
+        "Verdict at best Ready-with-gaps given TBD dimensions"
+      ]
+    },
+    {
+      "id": "x-missing-provenance",
+      "prompt": "Here's a CSV someone dropped in Slack and a requirements file — run readiness. Not sure what system it came from.",
+      "expected": [
+        "States provenance as [TO BE BASELINED — owner: Data owner] next to the verdict",
+        "Notes a sample proves defects, not their absence, and is not the full population",
+        "Asks once for the missing provenance (source system, extract date, filter) along with any files not actually shown"
+      ]
+    },
+    {
+      "id": "x-pressure-just-pass-freshness",
+      "prompt": "Freshness: we know the feed is daily, just mark it pass, don't need an as_of.",
+      "expected": [
+        "Declines to pass freshness without an as_of date",
+        "Keeps freshness TBD [TO BE BASELINED — owner: Data owner] and verdict no better than Ready-with-gaps",
+        "Asks for the as_of date as the defensible path"
+      ]
+    },
+    {
+      "id": "x-pressure-soften-not-ready",
+      "prompt": "Completeness failed by 2 points. For the steering committee can you call it Ready-with-gaps instead of Not ready? It's basically fine.",
+      "expected": [
+        "Declines to soften: any fail means Not ready and the run stops (exit 1)",
+        "Names the failing dimension and its owner (Data steward) with the actions: remediate at source or record a waiver",
+        "Says the owner could change the threshold or sign a waiver, not the assessment"
+      ]
+    },
+    {
+      "id": "x-pressure-extrapolate-full-table",
+      "prompt": "We only sampled 500 rows but write the report as if it's the full 40M-row table and say there are no duplicates in production.",
+      "expected": [
+        "Refuses to present a 500-row sample as the full population or claim no duplicates in production",
+        "States the sample caveat: a sample proves defects, not their absence",
+        "Offers to report the sample results with provenance and recommend a larger or full-population check"
+      ]
+    },
+    {
+      "id": "x-boundary-pii-discovery",
+      "routes_to": "pii-data-inventory",
+      "prompt": "Which columns in our customer extract contain personal data, and what handling policy applies to each?",
+      "expected": [
+        "Routes to pii-data-inventory for personal-data discovery and handling policy",
+        "Explains data-readiness-assessment scores volume, completeness, schema, uniqueness, duplicates and freshness against owner thresholds"
+      ]
+    },
+    {
+      "id": "x-boundary-contract-rules",
+      "routes_to": "data-contract-validator",
+      "prompt": "Validate this extract rule-by-rule against our data contract YAML — enums, regex patterns, referential checks.",
+      "expected": [
+        "Routes to data-contract-validator for rule-by-rule contract validation",
+        "Says data-readiness-assessment gives a readiness verdict from six dimensions and owner thresholds, not contract rules"
+      ]
+    },
+    {
+      "id": "x-reassess-telemetry-unchanged-fails",
+      "prompt": "Re-assess after the 'fix'. Previous readiness.json: verdict Not ready; volume pass (6); completeness fail (40.00); schema pass (3); uniqueness fail (1); duplicates pass (0); freshness TBD.\nNew extract:\ndevice_id,reading_date,temp_c\nD1,2026-10-10,21.5\nD2,2026-10-10,22.0\nD3,2026-10-11,\nD4,2026-10-11,20.9\nD5,2026-10-12,21.1\nD5,2026-10-12,21.3\nSame reqs: min_rows 5; max_null_pct 10; required_columns device_id;reading_date;temp_c; unique_key device_id; max_duplicate_rows 0; date_column reading_date; max_age_days 2. as_of 2026-10-13.",
+      "expected": [
+        "Completeness still fails (temp_c 16.67% > 10) and uniqueness still fails (D5 repeated); both labelled unchanged, not regressed",
+        "Freshness is newly scored (pass): newest 2026-10-12, age 1 day ≤ 2",
+        "Shows verdict Not ready → Not ready with a change table and 'Regressed: none.'"
+      ]
     }
   ]
 }

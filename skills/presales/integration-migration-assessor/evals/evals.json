@@ -125,6 +125,172 @@
           "check": "numbers_trace_to:[\"scoring-summary.md\",\"tco-summary.md\"]"
         }
       ]
+    },
+    {
+      "id": "x-provisional-unknowns-and-retirements",
+      "prompt": "Copperline Foods (fictional) wants to move off MuleSoft to Apigee X. Here's the first inventory extract — assess it.\n\ninterface_id,name,source_system,target_system,pattern,transformation,target_connector,endpoint_count,volume_class,error_handling,security,test_coverage,documentation,criticality,calls_90d,endpoint_status\nINT-001,Customer sync,CRM,ERP,sync,mapping,native,2,low,default,basic,automated,current,medium,52000,active\nINT-002,Price feed,PIM,Web,batch,moderate,native,3,medium,custom,basic,manual,partial,high,9100,active\nINT-003,Invoice export,ERP,Bank,batch,heavy,,2,medium,custom,regulated,,partial,high,4300,active\nINT-004,Stock levels,WMS,Web,async,mapping,native,2,high,default,basic,automated,current,high,880000,active\nINT-005,Legacy fax orders,Fax gateway,OMS,batch,moderate,none,2,low,,basic,none,none,low,0,decommissioning\nINT-006,HR roster,HRIS,Payroll,batch,mapping,partial,2,low,default,oauth-pii,manual,partial,medium,1200,active\nINT-007,Returns,OMS,ERP,sync,,native,2,low,default,basic,manual,partial,medium,15000,active\nINT-008,Old catalog API,PIM,Partner portal,sync,none,native,2,low,default,basic,none,none,low,0,active",
+      "expected": [
+        "Reports 3 of 8 interfaces (37.5%) with at least one unknown factor, so the assessment is provisional (> 25%), stated up front",
+        "Blank factor cells are scored as unknown (3, mid-band, flagged), not as simple",
+        "INT-005 and INT-008 (zero calls in 90 days; INT-005 endpoint decommissioning) are retirement candidates with an owner to confirm, excluded from the waves",
+        "Next step names completing the inventory unknowns with an owner"
+      ]
+    },
+    {
+      "id": "x-three-interfaces-bands-and-approach",
+      "prompt": "Score these three interfaces and tell me how each should be migrated.\n\ninterface_id,name,source_system,target_system,pattern,transformation,target_connector,endpoint_count,volume_class,error_handling,security,test_coverage,documentation,criticality\nINT-A,Store hours sync,POS,Website,sync,none,native,2,low,default,basic,automated,current,low\nINT-B,Order saga,OMS,WMS;ERP;Carrier;Payments;CRM,orchestration,heavy,none,6,high,compensation,regulated,none,none,high\nINT-C,Loyalty events,CRM,Marketing,async,moderate,partial,3,medium,custom,oauth-pii,manual,partial,medium",
+      "expected": [
+        "INT-A scores 20 (Simple), INT-C 60 (Complex), INT-B 100 (Very complex) using weighted score = Σ(factor × weight) ÷ 5",
+        "Approach per band: Simple → automated/tool-assisted conversion with templated tests; Complex → design-led refactor; Very complex → redesign, retire or re-platform outside the factory with a spike first",
+        "No unknown factors are reported for these rows"
+      ]
+    },
+    {
+      "id": "x-esb-kafka-freezes-dependencies",
+      "prompt": "Scored inventory for Halcyon Telecom's (fictional) ESB-to-Kafka move: 140 interfaces — 60 Simple, 50 Medium, 25 Complex, 5 Very complex. 12 interfaces depend on the ERP upgrade going live in June. Freeze windows: last 5 business days of every quarter, and Nov 15–Jan 10. Give me the wave plan.",
+      "expected": [
+        "Wave 0 foundation, wave 1 a representative set of Simple interfaces, balanced middle waves, final wave long tail and decommission",
+        "The 12 ERP-dependent interfaces are scheduled only after the June ERP go-live",
+        "Cutovers avoid the quarter-end freezes and Nov 15–Jan 10",
+        "Each wave has entry/exit criteria and a rollback approach"
+      ]
+    },
+    {
+      "id": "x-tco-savings-after-decommission",
+      "prompt": "TCO for Copperline's MuleSoft-to-Apigee move. From their contract summary: MuleSoft subscription $1.2M per year, renewal date 30 June 2027. Planned decommission of MuleSoft: end of Q3 2027. Apigee pricing not yet quoted; no effort estimate yet. Lay out the 3-year view.",
+      "expected": [
+        "Licence line cites the client contract summary ($1.2M/yr, renewal 30 June 2027)",
+        "Savings start only after the decommission date; dual-run cost is modelled until then",
+        "Target platform cost and one-time migration cost are [TO BE BASELINED — owner: ___], the latter pending effort-estimator",
+        "Sensitivity is shown on the two biggest drivers"
+      ]
+    },
+    {
+      "id": "x-etl-to-cloud-approach-per-band",
+      "prompt": "Different kind of estate: Informatica PowerCenter to Azure Data Factory. Discovery is done and the 300 workflows are scored: 180 Simple, 90 Medium, 25 Complex, 5 Very complex. What's the migration approach?",
+      "expected": [
+        "Applies the approach per band: Simple → automated/tool-assisted conversion with templated tests; Medium → factory with pattern templates; Complex → design-led with refactor; Very complex → redesign, retirement or re-platform outside the factory",
+        "Asks for or applies retirement screening (unused, duplicate, superseded workflows) before effort is discussed",
+        "Hands effort sizing to effort-estimator rather than inventing hours or cost"
+      ]
+    },
+    {
+      "id": "x-unknown-share-at-threshold",
+      "prompt": "Insurance client, Tibco to MuleSoft. Is this inventory good enough for a firm assessment or still provisional?\n\ninterface_id,name,source_system,target_system,pattern,transformation,target_connector,endpoint_count,volume_class,error_handling,security,test_coverage,documentation,criticality\nINT-101,Rates lookup,Core,Web,sync,mapping,native,2,low,default,basic,automated,current,medium\nINT-102,Claims intake,Portal,Claims,async,moderate,partial,3,medium,custom,oauth-pii,manual,partial,high\nINT-103,GL postings,Claims,ERP,batch,heavy,partial,2,medium,custom,regulated,manual,partial,high\nINT-104,Agent sync,CRM,Core,sync,mapping,native,2,low,,basic,manual,current,medium\nINT-105,Doc archive,Claims,ECM,batch,none,native,2,high,default,oauth-pii,automated,current,low\nINT-106,Fraud score,Claims,Fraud,sync,moderate,none,3,medium,custom,regulated,,partial,high\nINT-107,Broker feed,Broker hub,Core,batch,mapping,partial,4,medium,custom,oauth-pii,manual,partial,medium\nINT-108,Payments,Core,Bank,orchestration,heavy,partial,3,medium,compensation,regulated,manual,partial,high",
+      "expected": [
+        "Reports 2 of 8 interfaces (25%) with an unknown factor (INT-104, INT-106), which does not exceed the 25% threshold, so the assessment is not provisional",
+        "The blank cells are still scored as unknown (mid-band) and listed for completion",
+        "Shows a band distribution table and reviews any outlier against discovery"
+      ]
+    },
+    {
+      "id": "x-cio-bottom-line-readout",
+      "prompt": "Bottom line for Northwind's CIO on their Boomi estate, one screen. Assessment results: 120 interfaces — 50 Simple, 40 Medium, 22 Complex, 8 Very complex; 15 retirement candidates not yet confirmed by owners. Boomi licence $900k/yr per their contract, ending March 2028.",
+      "expected": [
+        "Opens with a bottom line: inventory size, band mix, approach, waves, TCO direction with confidence, and the decision asked",
+        "Retirement savings are counted only after owner confirmation of the 15 candidates",
+        "Licence figure cited to the client contract; migration cost [TO BE BASELINED — owner: ___] pending effort-estimator",
+        "Next steps with owners"
+      ]
+    },
+    {
+      "id": "x-migration-risk-register",
+      "prompt": "For the Boomi-to-Apigee readout I need the migration risk section. What goes in it?",
+      "expected": [
+        "Risk table covers dual-run cost, connector gaps on the target, skills, endpoint changes during migration, data drift, cutover windows and vendor cooperation",
+        "Each risk has likelihood, impact, mitigation and owner",
+        "Does not invent client-specific probabilities or dollar impacts; unknowns are [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-missing-inventory-platforms-only",
+      "prompt": "Assess a client's move from TIBCO BusinessWorks to Azure Integration Services and give me waves.",
+      "expected": [
+        "Asks once for the interface inventory and offers assets/inventory-columns.md as the collection template",
+        "Names the minimum viable column set for a provisional assessment (interface_id, name, source_system, target_system, pattern, transformation, target_connector)",
+        "Does not synthesize an inventory, band distribution or waves"
+      ]
+    },
+    {
+      "id": "x-missing-target-platform",
+      "prompt": "Score this inventory for migration — client hasn't said where they're going yet.\n\ninterface_id,name,source_system,target_system,pattern,transformation,endpoint_count\nINT-1,Orders,OMS,ERP,sync,mapping,2\nINT-2,Shipments,WMS,Carrier,batch,moderate,3\nINT-3,Invoices,ERP,Bank,batch,heavy,2",
+      "expected": [
+        "Asks once for the target platform (or confirmation that the target is to be selected)",
+        "Target connector availability (F3) and other missing factor columns are scored as unknown and flagged, not assumed native",
+        "States the assessment is provisional given the unknown share"
+      ]
+    },
+    {
+      "id": "x-missing-cost-facts-tco",
+      "prompt": "Build the stay-versus-migrate TCO for Copperline's integration estate. We don't have any of their cost numbers yet.",
+      "expected": [
+        "Every cost line and derived total (run-rate, migration cost, savings, payback) is [TO BE BASELINED — owner: ___]",
+        "Names the client documents to obtain: licence contract, infrastructure, run/support team, contract end date",
+        "No vendor list prices or ballpark figures are quoted"
+      ]
+    },
+    {
+      "id": "x-missing-columns-minimum-set",
+      "prompt": "Here's what the client sent. Score it.\n\ninterface_id,name,pattern\nAPI-01,Customer lookup,sync\nAPI-02,Order events,async\nAPI-03,Nightly GL,batch",
+      "expected": [
+        "Reports the missing columns (source_system, target_system, transformation, target_connector and the other factor columns)",
+        "Asks once for at least the minimum viable column set, offering the collection template",
+        "Does not fill missing factors as simple; any provisional view flags them as unknown"
+      ]
+    },
+    {
+      "id": "x-pressure-borrow-other-client-bands",
+      "prompt": "We don't have Copperline's inventory yet. Just use the band distribution from the last client's MuleSoft migration — the estates are similar — so I can put waves in the proposal.",
+      "expected": [
+        "Declines to reuse another client's distribution or synthesize one; no other-client specifics in this deliverable",
+        "Offers the defensible path: send the collection template, run a provisional assessment on the minimum viable columns",
+        "Any wave or band content shown is [TO BE BASELINED — owner: ___] until the inventory is scored"
+      ]
+    },
+    {
+      "id": "x-pressure-savings-from-year-one",
+      "prompt": "Show the MuleSoft licence savings starting in year 1 so payback looks better. The source platform actually won't be decommissioned until month 20.",
+      "expected": [
+        "Declines: licence savings are not realised until the source platform is decommissioned (month 20); dual-run cost applies until then",
+        "Models the decommission date explicitly in the TCO",
+        "Offers levers that are legitimate (earlier retirement of confirmed candidates, accelerating decommission) rather than shifting the savings"
+      ]
+    },
+    {
+      "id": "x-pressure-count-retirements-now",
+      "prompt": "40 interfaces had zero traffic in the last 90 days. Count them all as retired and book the savings in the business case now.",
+      "expected": [
+        "Treats the 40 as retirement candidates, not retirements, until each owner confirms",
+        "Savings from retirement are counted only after confirmation; reports them as a separate count with the confirming owner",
+        "Next step: owner confirmation list with dates"
+      ]
+    },
+    {
+      "id": "x-route-size-and-price",
+      "prompt": "The assessment is done: 60 Simple, 30 Medium, 10 Complex interfaces. Give me P50/P80 effort, the staffing plan and the price.",
+      "routes_to": "effort-estimator",
+      "expected": [
+        "Routes to effort-estimator for P50/P80 effort, staffing and price",
+        "Explains that integration-migration-assessor produced the band counts and wave plan that feed the estimate"
+      ]
+    },
+    {
+      "id": "x-route-target-architecture-doc",
+      "prompt": "Write the target-state architecture document for the Apigee X platform: context and container views, environments, security and the decision log.",
+      "routes_to": "solution-architecture-doc",
+      "expected": [
+        "Routes to solution-architecture-doc for the architecture document",
+        "Explains that integration-migration-assessor supplies the inventory scoring and wave plan that the architecture doc uses"
+      ]
+    },
+    {
+      "id": "x-existing-reassess-after-discovery",
+      "prompt": "Last month's Copperline assessment was provisional: 31% of 214 interfaces had unknown factors. The client has now filled in the blanks for 50 of those interfaces. Re-run the assessment — what changes in the readout?",
+      "expected": [
+        "Asks for (or uses) the updated inventory and recomputes the unknown share from it; does not assume the new share",
+        "Removes the provisional flag only if the recomputed unknown share is 25% or less; otherwise keeps it with an owner for the remaining unknowns",
+        "Reports band and wave changes from the re-score, and re-states that TCO figures stay sourced or [TO BE BASELINED — owner: ___]"
+      ]
     }
   ]
 }

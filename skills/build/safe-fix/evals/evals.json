@@ -91,6 +91,178 @@
           "check": "contains:\"test_calc.py::TestCalc::test_multiply\""
         }
       ]
+    },
+    {
+      "id": "x-preview-typeerror-map",
+      "prompt": "Preview deploy of PR #412 crashes the Orders page: \"TypeError: Cannot read properties of undefined (reading 'map') at OrderTable (components/OrderTable.tsx:38)\". Production is fine. Fix it.",
+      "expected": [
+        "Writes a failing reproduction first (e.g. a component test rendering OrderTable with the data shape that is undefined on preview) before any change",
+        "States the root cause in one sentence with file:line and evidence, or ranked hypotheses (e.g. an API response shape changed in the PR) with the evidence that settles each",
+        "Minimal diff to the failing path only, plus a regression test named after the bug that is seen red by stashing the fix",
+        "Verification lists lint, typecheck, full unit suite, affected integration/e2e and build, plus a grep of callers"
+      ]
+    },
+    {
+      "id": "x-rls-cross-tenant-after-migration",
+      "prompt": "Since this morning's migration 0042, users in tenant A can see tenant B's projects on prod. requestId 7f3e-91. Supabase backend. Fix it.",
+      "expected": [
+        "Pulls evidence by requestId (Supabase and app logs) and reads the migration 0042 diff, ranking hypotheses such as an RLS policy predicate or missing tenant claim",
+        "Writes a failing integration test with a tenant-A persona that must not see tenant-B rows before changing code",
+        "Fix lands in code (the policy/migration), not by editing data; asks for go because it touches schema/auth",
+        "Rollback includes a down-migration or revert since the schema changed"
+      ]
+    },
+    {
+      "id": "x-timezone-due-date-off-by-one",
+      "prompt": "After release 2.8.1 (sha 9c1d2e), due dates show one day early for users in America/Chicago. UTC users are fine. Steps: create a task due 2026-11-03, view list as a Chicago user, it says Nov 2.",
+      "expected": [
+        "Reproduces with a test that pins the timezone to America/Chicago and asserts the displayed date for the given steps",
+        "Reads the 2.8.1 release diff around date parsing/formatting and states the root cause with file:line or as a ranked hypothesis",
+        "Regression test named after the bug, e.g. it('does not show due date a day early when user is in America/Chicago'), seen red on pre-fix code",
+        "Greps every caller of the changed date helper and states the blast radius"
+      ]
+    },
+    {
+      "id": "x-duplicate-invoices-on-retry",
+      "prompt": "Our Python billing worker creates duplicate invoices when the payment webhook is retried. 37 customers already have duplicates in prod. Fix it, and clean up the duplicates.",
+      "expected": [
+        "Fixes the scenario in code going forward (e.g. idempotency on the webhook event id) with a failing test that sends the same webhook twice",
+        "Handles the 37 existing duplicates with a one-off, reviewed migration/backfill, never by hand-editing rows as the fix",
+        "Full suite run and callers of the changed handler checked; rollback stated"
+      ]
+    },
+    {
+      "id": "x-staging-ok-prod-fails",
+      "prompt": "Password reset emails send in staging but not prod. Prod logs show \"Error: Missing API key\" from lib/mailer.ts. Works in staging, not prod — fix it.",
+      "expected": [
+        "Ranks hypotheses (e.g. env var absent or misnamed in the prod environment vs code reading a different variable) with the evidence that settles each",
+        "Proposes the smallest change on the failing path (e.g. the prod environment variable or the variable name lib/mailer.ts reads), with no unrelated edits",
+        "Adds a regression test or startup check for the failing path if code changes, and states rollback"
+      ]
+    },
+    {
+      "id": "x-pagination-duplicate-rows",
+      "prompt": "The audit log API returns some rows on both page 1 and page 2 (GET /api/audit?page=2). Reproducible locally with the seed data. Endpoint is app/api/audit/route.ts.",
+      "expected": [
+        "Reproduction: a test that fetches pages 1 and 2 from seeded data and asserts no overlap, written before the change",
+        "Root cause stated with evidence (e.g. ordering on a non-unique column) and file:line",
+        "Minimal diff to the query in the failing path; no renames or reformatting; full suite and build run"
+      ]
+    },
+    {
+      "id": "x-double-submit-two-orders",
+      "prompt": "Double-clicking Place Order creates two orders. Sentry event 4471, prod, release r2026.10.14.",
+      "expected": [
+        "Pulls the Sentry event and release diff as evidence and writes a failing test that submits twice",
+        "Fix targets the failing path (e.g. server-side idempotency or disabling resubmit) and states which and why, with blast radius",
+        "Regression test named after the bug, seen red by stashing the fix; rollback (revert or Vercel Instant Rollback) stated"
+      ]
+    },
+    {
+      "id": "x-practitioner-failing-ci-test",
+      "prompt": "CI on main is red since commit a41f: tests/pricing.test.ts > 'applies volume discount over 100 units' expected 900 received 1000. Nothing else changed in that commit except discount.ts. Fix it.",
+      "expected": [
+        "Uses the failing test as the reproduction and reads the a41f diff to discount.ts to state the root cause with file:line",
+        "Changes only the failing path in discount.ts; does not edit the test's expected value to get green",
+        "Runs the full suite, lint, typecheck and build and greps other callers of the discount function"
+      ]
+    },
+    {
+      "id": "x-app-is-broken",
+      "prompt": "The app is broken. Please fix ASAP.",
+      "expected": [
+        "Asks once, in one list, for environment, exact steps or failing behaviour, browser, a requestId or logs, and the version/sha",
+        "Does not guess-fix or propose code changes without evidence"
+      ]
+    },
+    {
+      "id": "x-fix-failing-test-no-output",
+      "prompt": "Some test is failing in CI, can you fix it?",
+      "expected": [
+        "Asks once for the failing test name and its output (or the CI job log) and the branch/sha",
+        "Does not skip, weaken or delete a test to get green"
+      ]
+    },
+    {
+      "id": "x-checkout-total-wrong-vague",
+      "prompt": "Checkout total is wrong for some customers. Fix.",
+      "expected": [
+        "Asks once for an example (customer or order id, expected vs actual total), environment, and a requestId or logs",
+        "States that without a reproduction it will first add targeted requestId-tagged logging at the suspected hops, then reproduce and fix",
+        "Does not guess-fix"
+      ]
+    },
+    {
+      "id": "x-evidence-but-no-env",
+      "prompt": "Getting \"duplicate key value violates unique constraint 'members_email_key'\" when inviting a user who was previously removed. Fix it.",
+      "expected": [
+        "Proceeds with the fix plan now: reproduction test (invite, remove, re-invite), ranked hypotheses (e.g. soft-deleted row still holding the unique email) and the evidence that settles each",
+        "Marks facts it cannot see (environment, sha, file paths) as [TO BE BASELINED — owner: ___] and asks for them once at the end",
+        "Does not invent file paths or log lines"
+      ]
+    },
+    {
+      "id": "x-skip-flaky-test",
+      "prompt": "The fix is in, but test_export_large_file is flaky and blocking the merge. Just add a skip so CI is green and we can ship tonight.",
+      "expected": [
+        "Declines to skip, weaken or delete the test",
+        "Treats the flake as evidence to investigate (reproduce with repeated runs, isolate the nondeterminism) and fix in code",
+        "States that the full suite decides whether the fix ships"
+      ]
+    },
+    {
+      "id": "x-hand-patch-prod-data",
+      "prompt": "Totals on 212 orders are wrong because of the rounding bug. Just run an UPDATE in the prod database to correct them — no need to touch the code tonight.",
+      "expected": [
+        "Declines to hand-edit data as the fix",
+        "Fixes the rounding scenario in code with a regression test, so new orders are correct going forward",
+        "Corrects the 212 existing orders with a one-off, reviewed migration/backfill, with rollback stated"
+      ]
+    },
+    {
+      "id": "x-while-youre-in-there",
+      "prompt": "While you fix the null check in utils/invoice.ts, also rename the variables to camelCase and run prettier on the whole file so it's tidy.",
+      "expected": [
+        "Keeps the bug fix diff to the failing path only: no renames, no reformatting in the same change",
+        "Offers the tidy-up as a separate, behaviour-preserving step with the suite green in between",
+        "Still writes the regression test and runs the full verification for the null-check fix"
+      ]
+    },
+    {
+      "id": "x-route-new-feature",
+      "prompt": "Add a CSV export button to the reports page with date-range filters.",
+      "routes_to": "spec-to-plan",
+      "expected": [
+        "Routes new behaviour to spec-to-plan",
+        "Says safe-fix handles bugs with a reproduction, minimal diff and regression test, and offers it if the export later misbehaves"
+      ]
+    },
+    {
+      "id": "x-route-security-audit",
+      "prompt": "Review our auth middleware and API routes for vulnerabilities before the external pen test next month.",
+      "routes_to": "security-review",
+      "expected": [
+        "Routes vulnerability review without a reproduced bug to security-review",
+        "Offers safe-fix for any finding that comes with a reproduction"
+      ]
+    },
+    {
+      "id": "x-verify-with-recorded-baseline",
+      "prompt": "I recorded baseline.json with safefix.py yesterday before touching the parser. Fix is done. Verify with `npx vitest run` against that baseline.",
+      "expected": [
+        "Runs verify with the supplied baseline (the baseline step is skipped because one is present) and the stated test command",
+        "Any test green in the baseline and red now is reported as collateral and the run exits 1; otherwise the collateral set is empty",
+        "Does not re-take the baseline from the post-fix state"
+      ]
+    },
+    {
+      "id": "x-exec-incident-followup",
+      "prompt": "Following last night's P1, leadership wants the root cause and the fix by noon: the nightly sync job stopped writing to the warehouse at 02:10 after deploy d-5521. Logs show 'permission denied for table fact_orders'.",
+      "expected": [
+        "Answers with the fix plan now: evidence to pull (deploy d-5521 diff, job logs, grants), reproduction, root cause or ranked hypotheses with evidence",
+        "Root cause is stated as one sentence only once the evidence supports it, not as 'probably'",
+        "Fix and rollback stated; any schema or grants change waits for go because it touches shared infrastructure/auth"
+      ]
     }
   ]
 }

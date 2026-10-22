@@ -132,6 +132,164 @@
           "check": "contains:\"| No certified Apigee engineers | withdrawn (not in the current intel) | 1 → — |\""
         }
       ]
+    },
+    {
+      "id": "x-platform-vendor-services-arm",
+      "prompt": "Larchmont Insurance already bought the API platform; now the platform vendor's own professional-services arm is bidding the implementation against us. Discovery: their CTO said 'we need people who stay after go-live, not a parachute team'. How do we win?",
+      "expected": [
+        "Classifies the alternative as platform vendor services, with class patterns labelled Hypothesis (class pattern) until evidenced",
+        "Wedge cites the CTO quote (High confidence) at the intersection with where we win",
+        "Landmines include not disparaging the platform the client already bought",
+        "Card headed INTERNAL — do not distribute; ghost lines do not name the vendor"
+      ]
+    },
+    {
+      "id": "x-status-quo-in-house-team",
+      "prompt": "Brightwater Retail may just keep doing order-routing changes with their own 6-person in-house team instead of hiring us. Their CIO told us 'my team knows these systems better than anyone'. Battle card please.",
+      "expected": [
+        "Alternative classed as in-house build / status quo; the CIO quote recorded as a High-confidence client statement",
+        "Criteria scorecard concedes at least one criterion (e.g. knowledge of their systems) rather than claiming to win everything",
+        "Objection handling for 'my team knows these systems' follows acknowledge -> reframe -> proof -> ask-back"
+      ]
+    },
+    {
+      "id": "x-global-si-weighted-criteria",
+      "prompt": "Ridgeway Manufacturing MES data platform RFP vs a global SI. RFP weights: technical 30%, price 30%, experience 20%, team 20%. Plant Ops VP in discovery: 'the last SI sent juniors after the orals.' Our cleared reference: Halvorsen Foods plant-data rollout.",
+      "expected": [
+        "Criteria scorecard uses the four RFP criteria and weights, scores us vs them, and concedes at least one (e.g. experience breadth or price)",
+        "Wedge at team continuity, citing the Plant Ops VP quote",
+        "Objection proof uses only the cleared Halvorsen Foods reference",
+        "Evaluation criteria to seed are phrased neutrally (e.g. named team continuity after award)"
+      ]
+    },
+    {
+      "id": "x-specialist-boutique",
+      "prompt": "At Kestrel Credit Union we're up against a 40-person specialist boutique for a core-banking integration. Their COO in discovery: 'we can't afford downtime on weekends; we need 24x7 support'. We run a 24x7 managed service; the boutique, as far as we know, doesn't.",
+      "expected": [
+        "Alternative classed as boutique; the claim that they lack 24x7 support is labelled hypothesis / unverified unless sourced, with an intelligence-gap row to verify it",
+        "Wedge at 24x7 support citing the COO quote",
+        "Ghost lines describe the support-coverage risk without naming the boutique"
+      ]
+    },
+    {
+      "id": "x-ghost-lines-request",
+      "prompt": "Need ghost lines for the Harbor Health proposal against the incumbent integrator. Discovery: the CFO said 'we've never seen a run-cost baseline'.",
+      "expected": [
+        "Ghost lines state the weakness as a general risk the client should evaluate, followed by how we remove it",
+        "No ghost line names the incumbent",
+        "Ties at least one ghost line to the CFO's run-cost concern"
+      ]
+    },
+    {
+      "id": "x-no-wedge-qualify-out",
+      "prompt": "Honest read: vs the incumbent at Corvid Logistics we're weaker on price, references in logistics and platform certifications. The client told us they care most about price and continuity. Where's our wedge?",
+      "expected": [
+        "States there is no intersection of where we win and what the client cares about; does not manufacture a wedge",
+        "Recommends reshaping the opportunity (phase, scope, partner) or qualifying out"
+      ]
+    },
+    {
+      "id": "x-objection-grid-switching-risk",
+      "prompt": "Pinecrest College pursuit vs incumbent. Expected objection: 'switching providers mid-academic-year is too risky.' Build the objection handling. We haven't confirmed which references are cleared yet.",
+      "expected": [
+        "Objection handled as acknowledge -> reframe -> proof -> ask-back",
+        "Proof marked [TO BE BASELINED — owner: ___] (cleared references not yet confirmed) rather than naming clients",
+        "Ask-back is a question that gets the client to state their risk criteria"
+      ]
+    },
+    {
+      "id": "x-exec-one-paragraph-read",
+      "prompt": "Exec ask: one paragraph — can we beat the 8-year incumbent at Coastal Freight, and what do we still need to find out? Facts: COO said 'invoices take 9 days to reconcile'; we have a cleared freight-audit reference.",
+      "expected": [
+        "Bottom line gives a win/lose assessment and the wedge in two sentences, citing the COO quote",
+        "Intelligence gaps listed with owners",
+        "Marked INTERNAL — do not distribute; incumbent strengths labelled hypothesis unless evidenced"
+      ]
+    },
+    {
+      "id": "x-missing-pursuit-context",
+      "prompt": "Build a battle card against a global SI.",
+      "expected": [
+        "Asks once for the pursuit context: client, initiative, priorities, decision criteria and decision owner",
+        "Any class-pattern content is labelled hypothesis, with criteria shown as [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-missing-no-discovery-yet",
+      "prompt": "It's the incumbent at Alder Health, but we haven't done discovery yet. What's our angle?",
+      "expected": [
+        "Says no wedge can be sourced yet because no client concern has been captured; does not assert one",
+        "Lists discovery questions as intelligence gaps with owners",
+        "Incumbent strengths and weaknesses labelled Hypothesis (class pattern)"
+      ]
+    },
+    {
+      "id": "x-missing-rfp-criteria",
+      "prompt": "Battle card for Juniper Water's integration deal vs the incumbent provider. Their IT director said 'we're stuck on version 3 because nobody can upgrade it'. No RFP has been issued, so no evaluation criteria yet.",
+      "expected": [
+        "Criteria scorecard rows marked [TO BE BASELINED — owner: ___] because no RFP criteria exist",
+        "Still writes the card in this reply, citing the IT director quote as High-confidence evidence",
+        "Evaluation criteria to seed proposed for the coming RFP, phrased neutrally"
+      ]
+    },
+    {
+      "id": "x-missing-our-proof-points",
+      "prompt": "We're bidding against the incumbent at Talon Energy; their CIO wants 'faster releases'. I don't have our capability catalogue or cleared references to hand.",
+      "expected": [
+        "Proof points and cleared references marked [TO BE BASELINED — owner: ___]; no client names or case studies invented",
+        "Builds the card anyway with the CIO's stated need as sourced evidence"
+      ]
+    },
+    {
+      "id": "x-adv-name-in-ghost-lines",
+      "prompt": "Put the incumbent's name in the ghost lines so the evaluators get the point.",
+      "expected": [
+        "Declines: ghost lines never name the alternative",
+        "Rewrites them as general risks the client should evaluate, followed by how we remove them"
+      ]
+    },
+    {
+      "id": "x-adv-uncleared-reference",
+      "prompt": "Mention that we replaced them at Riverbend Bank and saved 40%. Riverbend hasn't cleared us as a reference, but everyone knows.",
+      "expected": [
+        "Declines to use the uncleared reference or its figure; proof comes only from cleared references",
+        "Records reference clearance as an intelligence gap / action with an owner"
+      ]
+    },
+    {
+      "id": "x-adv-disparage-client-platform",
+      "prompt": "In our pitch, say that the client's choice of their current integration platform — the one they bought last year — was a mistake. It'll make our approach look smarter.",
+      "expected": [
+        "Declines: disparaging the platform the client already bought is a landmine",
+        "Offers a reframe that positions our approach as maximising the client's existing investment"
+      ]
+    },
+    {
+      "id": "x-boundary-account-research",
+      "routes_to": "client-research-brief",
+      "prompt": "Research Pinecrest Utilities before Thursday's meeting: filings, leadership, tech-stack signals and recent news.",
+      "expected": [
+        "Routes to client-research-brief for researching the client",
+        "Says this skill builds a battle card against a competitor or alternative, not a client brief"
+      ]
+    },
+    {
+      "id": "x-boundary-exec-summary",
+      "routes_to": "proposal-writer",
+      "prompt": "Write the executive summary and approach section for our Pinecrest proposal using our win themes.",
+      "expected": [
+        "Routes to proposal-writer for the proposal prose",
+        "Says this skill supplies ghost lines and evaluation criteria the proposal can use"
+      ]
+    },
+    {
+      "id": "x-existing-wedge-closed",
+      "prompt": "Last month's Northbrook card led with 'the incumbent has no certified engineers on the new platform'. Today the client told us the incumbent has hired four certified engineers. Refresh the card.",
+      "expected": [
+        "Marks that claim as withdrawn / re-rated on the new client-sourced evidence",
+        "States the wedge built on it is closed and the team should stop leading with it",
+        "Recomputes the wedge from remaining evidence, or says there is none"
+      ]
     }
   ]
 }

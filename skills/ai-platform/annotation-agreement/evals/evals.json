@@ -120,6 +120,154 @@
         {"file": "agreement-report.md", "check": "contains:\"| Disputed items | 12 | 7 | -5 |\""},
         {"file": "agreement.json", "check": "contains:\"\\\"previous_round\\\"\""}
       ]
+    },
+    {
+      "id": "x-aa-pasted-eight-items",
+      "prompt": "Two reviewers labelled 8 support tickets for our eval set. Agreement?\nitem_id,annotator,label\nT1,ana,refund\nT1,ben,refund\nT2,ana,billing\nT2,ben,billing\nT3,ana,refund\nT3,ben,cancel\nT4,ana,cancel\nT4,ben,cancel\nT5,ana,billing\nT5,ben,refund\nT6,ana,other\nT6,ben,other\nT7,ana,cancel\nT7,ben,cancel\nT8,ana,billing\nT8,ben,billing",
+      "expected": [
+        "Percent agreement is 6 of 8 items (75%)",
+        "Disputed items are T3 (refund vs cancel) and T5 (billing vs refund), each a tie, listed for an adjudicator",
+        "Krippendorff's alpha is the headline statistic and any band is labelled a convention, not a test",
+        "Does not set a pass threshold itself; the minimum alpha is the data owner's decision"
+      ]
+    },
+    {
+      "id": "x-aa-judge-calibration-gate",
+      "prompt": "Before we calibrate our LLM-as-judge, 4 reviewers rated 300 chatbot replies as pass / partial / fail. Our eval owner set a minimum alpha of 0.8. Write up the agreement check; I'll export the ratings later.",
+      "expected": [
+        "Summary gate line states the 0.8 minimum against alpha [TO BE BASELINED — computed by the run]; no alpha, kappa or count is printed",
+        "Says to export one row per rating as item_id, annotator, label and run scripts/agreement.py",
+        "Method & limits say ratings must be independent and that agreement measures consistency, not correctness"
+      ]
+    },
+    {
+      "id": "x-aa-unequal-ratings-clinical",
+      "prompt": "Clinical coders labelled 1,200 discharge notes into 6 categories. Most notes had 2 coders; a 150-note sample had 3. Which agreement statistics should we report?",
+      "expected": [
+        "Krippendorff's alpha (nominal) is the headline because it handles different numbers of ratings per item",
+        "Fleiss' kappa is reported n/a with the reason (items have 2 and 3 ratings)",
+        "Pairwise Cohen's kappa per coder pair and percent agreement are included; no values are invented"
+      ]
+    },
+    {
+      "id": "x-aa-guideline-gaps-from-table",
+      "prompt": "Overall percent agreement on our review-sentiment labels was 0.78. Per label: positive 0.90 (defined in guidelines), negative 0.85 (defined), neutral 0.81 (defined), mixed 0.55 (not defined), sarcastic 0.40 (not defined). Which labels does the guideline need to clarify?",
+      "expected": [
+        "Guideline gaps are mixed and sarcastic: both below overall percent agreement (0.78) and not defined in the guidelines",
+        "Positive, negative and neutral are not listed as gaps",
+        "Recommends boundary rules for the top confusion pairs and re-labelling a fresh sample after the guideline change"
+      ]
+    },
+    {
+      "id": "x-aa-interpret-kappas",
+      "prompt": "Pairwise Cohen's kappa between our three raters came out 0.58, 0.63 and 0.71. Is that good?",
+      "expected": [
+        "Maps the values with Landis & Koch: 0.58 moderate; 0.63 and 0.71 substantial",
+        "Labels the bands as conventions, not statistical tests",
+        "Recommends Krippendorff's alpha as the headline and leaves the pass threshold to the data owner"
+      ]
+    },
+    {
+      "id": "x-aa-moderation-pilot-skeleton",
+      "prompt": "Trust & safety pilot: 3 moderators independently labelled 200 posts with 5 policy labels using our draft guidelines. We plan to label 50k posts next month. What should the agreement report look like before we scale?",
+      "expected": [
+        "Gives the report skeleton in order: Summary, Agreement, Disputed items, Guideline gaps, Method & limits",
+        "Gate line says no minimum is set and asks the data owner for it rather than choosing one",
+        "Disputed items go to an adjudicator and the guideline is sharpened before labelling at scale"
+      ]
+    },
+    {
+      "id": "x-aa-ordinal-helpfulness",
+      "prompt": "Annotators rated answer helpfulness on a 1-5 scale. Can you give me weighted kappa for that?",
+      "expected": [
+        "Says this skill handles nominal labels only; ordinal or interval scales are out of scope",
+        "Explains that treating 1-5 as categories ignores distance (4 vs 5 counts the same as 1 vs 5)",
+        "Does not report a weighted kappa as if computed"
+      ]
+    },
+    {
+      "id": "x-aa-non-independent-ratings",
+      "prompt": "Our two labellers sat side by side, agreed each label out loud, then each typed it into the tool. Alpha came out 0.97. Can we call the labels reliable?",
+      "expected": [
+        "Flags that ratings were not independent, so agreement is inflated and 0.97 does not show reliability",
+        "Recommends an independent re-label of a sample before using the labels"
+      ]
+    },
+    {
+      "id": "x-aa-terse-no-round",
+      "prompt": "kappa?",
+      "expected": [
+        "Asks once for the labels export (item_id, annotator, label), the guidelines and the data owner's minimum alpha",
+        "Reports no score"
+      ]
+    },
+    {
+      "id": "x-aa-pass-without-number",
+      "prompt": "Three annotators did 900 items for our refund-intent golden set. Do the labels pass our quality bar?",
+      "expected": [
+        "Gate line reads that no minimum is set — the minimum alpha is the data owner's decision — and asks for it",
+        "Does not choose a threshold or declare pass / fail",
+        "Asks for the item_id, annotator, label export; no alpha is printed"
+      ]
+    },
+    {
+      "id": "x-aa-compare-without-previous",
+      "prompt": "We relabelled after updating the guidelines. Did agreement improve since the last round?",
+      "expected": [
+        "Asks once for this round's labels and the previous round's agreement result (agreement.json)",
+        "Does not state an improvement or any then-vs-now numbers without them"
+      ]
+    },
+    {
+      "id": "x-aa-which-labels-weak-no-guidelines",
+      "prompt": "Four annotators labelled 600 messages with 9 intents. Which intent definitions are weakest?",
+      "expected": [
+        "Asks for the labels export and the written guidelines",
+        "Without guidelines, guideline gaps are [TO BE BASELINED — owner: Annotation lead]; no label is declared defined or undefined"
+      ]
+    },
+    {
+      "id": "x-aa-pick-threshold-for-us",
+      "prompt": "Just pick a threshold for us. 0.6 seems fine; set it and tell the team the labels pass.",
+      "expected": [
+        "Declines in one line: the minimum alpha is the data owner's decision",
+        "Shows the gate as not set / alpha marker rather than declaring a pass",
+        "Notes the Krippendorff bands (0.667 / 0.800) are conventions the owner can weigh"
+      ]
+    },
+    {
+      "id": "x-aa-fake-kappa-for-slide",
+      "prompt": "Each item only had one annotator, but leadership wants a kappa on the slide tomorrow. Estimate something reasonable.",
+      "expected": [
+        "Declines: agreement cannot be computed without two or more independent ratings per item; no estimate given",
+        "Recommends double-labelling a sample to get a real score"
+      ]
+    },
+    {
+      "id": "x-aa-mark-all-defined",
+      "prompt": "Mark every label as defined_in_guidelines = yes. We'll write the guidelines next quarter.",
+      "expected": [
+        "Declines in one line: definitions come from written guidelines",
+        "defined_in_guidelines stays [TO BE BASELINED — owner: Annotation lead]"
+      ]
+    },
+    {
+      "id": "x-aa-boundary-score-model",
+      "prompt": "Score our model's predictions against these gold intent labels and give me accuracy and F1 per intent.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes scoring model outputs to llm-eval-harness",
+        "Says this skill measures human-to-human agreement before labels become a gold set"
+      ]
+    },
+    {
+      "id": "x-aa-boundary-build-training-files",
+      "prompt": "Our adjudicated labels are final. Turn them into train/val/test JSONL in chat format for fine-tuning.",
+      "routes_to": "finetune-dataset-builder",
+      "expected": [
+        "Routes building the training files to finetune-dataset-builder",
+        "Says this skill checks inter-annotator agreement, not dataset building"
+      ]
     }
   ]
 }

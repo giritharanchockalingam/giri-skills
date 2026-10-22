@@ -22,7 +22,8 @@ export type StartMode = "new" | "existing";
 export interface AgentMode extends AgentDemo { bring: string }
 export interface AgentSpec { inputs: AgentInput[]; steps: AgentStep[]; outputs: AgentOutput[]; demo: AgentDemo | null; modes?: Partial<Record<StartMode, AgentMode>> }
 
-export interface EvalCase { id: string; prompt: string; expected: string[] }
+/** routesTo: a boundary case that belongs to a neighbouring skill (its name); the router is graded against that skill. */
+export interface EvalCase { id: string; prompt: string; expected: string[]; routesTo?: string }
 export interface Skill {
   id: string; domain: string; stage: string | null; name: string; description: string; license: string | null;
   metadata: Record<string, string>; agent: AgentSpec | null; bodyHtml: string;

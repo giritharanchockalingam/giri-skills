@@ -79,6 +79,193 @@
         {"file": "release-plan.md", "check": "contains:\"| canary | error_rate | <= 0.01 | 0.006 | met |\""},
         {"file": "release-plan.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-low-tier-durations-computed",
+      "prompt": "Release plan please. System: Parts lookup assistant (Brightwater Tools). Risk tier low. Offline eval pass rate 0.95, red-team 0.99. Traffic 24,000 requests/day. Each shadow/canary stage must observe 1,000 requests before promotion. Gates (ours): offline_eval eval_pass_rate min 0.90; offline_eval redteam_pass_rate min 0.97; canary error_rate max 0.02; ga error_rate max 0.02. Rollback takes 10 minutes.",
+      "expected": [
+        "First line states Readiness: READY, citing that both offline_eval gates (eval_pass_rate 0.95 ≥ 0.90, redteam_pass_rate 0.99 ≥ 0.97) are met",
+        "Uses the low-tier canary policy of 10 % and 50 % and says it is the skill's policy",
+        "Computes minimum durations from 24,000/day and 1,000 requests: shadow 1 hour, canary 10 % 10 hours, canary 50 % 2 hours",
+        "Turns the canary and ga error_rate gates into rollback triggers with SRE on-call as rollback owner and 10 minutes as rollback time"
+      ]
+    },
+    {
+      "id": "x-high-tier-five-canary-steps",
+      "prompt": "We're shipping a prior-authorisation recommender at Maple Grove Health — our governance team rated it HIGH risk. Offline eval 0.91, red-team 0.97, about 12,000 requests/day. Lay out shadow and canary for me.",
+      "expected": [
+        "Uses the high-tier canary steps 1, 5, 10, 25, 50 % and states they are the skill's policy (owner-overridable)",
+        "Lists the measured values but does not propose gate thresholds; readiness is PENDING GATES with thresholds [TO BE BASELINED — owner: Release manager]",
+        "Shows the duration formula and per-stage requests/hour from 12,000/day (e.g. 5 requests/hour at 1 %) while hours stay TBD until min_observed_requests is set",
+        "Asks once for the gates (stage,metric,min,max), min_observed_requests, rollback_time_min and owner names"
+      ]
+    },
+    {
+      "id": "x-owner-canary-override",
+      "prompt": "Medium-risk release of our invoice-coding agent at Coastal Freight. Facts: eval_pass_rate 0.92, redteam_pass_rate 0.98, daily_requests 9,600, min_observed_requests 400, canary_steps 2;20 (our release board wants just two steps). Gates: offline_eval eval_pass_rate min 0.90, offline_eval redteam_pass_rate min 0.95, canary latency_p95_ms max 3000. Write the plan.",
+      "expected": [
+        "Uses canary steps 2 % and 20 % and states the basis is the canary_steps fact (owner override), not the medium-tier policy",
+        "Readiness READY with both offline_eval gates met",
+        "Durations from 9,600/day and 400 requests: shadow 1 hour, canary 2 % 50 hours, canary 20 % 5 hours",
+        "canary latency_p95_ms is shown as not measured (no actual supplied), not as met"
+      ]
+    },
+    {
+      "id": "x-rag-change-not-measured-gate",
+      "prompt": "We swapped the retriever in our HR policy bot (Linden Bank) and want to release it. Risk: medium. eval_pass_rate 0.94. daily_requests 4,800. Gates from our release board: offline_eval eval_pass_rate min 0.90; offline_eval redteam_pass_rate min 0.95; shadow latency_p95_ms max 2500. We haven't rerun the red-team yet. Are we good to start?",
+      "expected": [
+        "Readiness is NOT READY because offline_eval redteam_pass_rate is not measured, and says a not-measured gate never counts as met",
+        "eval_pass_rate 0.94 shown as met against min 0.90",
+        "Writes the full plan anyway (Stages with medium canary 5, 25, 50 %, Gates, Rollback, Owners) rather than only asking for data",
+        "Asks for the red-team result plus min_observed_requests and owner names"
+      ]
+    },
+    {
+      "id": "x-exec-terse-are-we-ready",
+      "prompt": "Yes/no: is the Q4 contract-clause extractor ready for production? Numbers from the team: offline eval 0.88 vs our gate of 0.90, red-team 0.99 vs gate 0.95. Low risk. 30k calls/day.",
+      "expected": [
+        "First line is Readiness: NOT READY naming eval_pass_rate 0.88 below the 0.90 gate as the blocker",
+        "redteam_pass_rate 0.99 shown as met against 0.95",
+        "Still lays out the low-tier stages (shadow, canary 10 %, 50 %, GA) so the path to release is visible",
+        "Does not propose lowering the 0.90 threshold"
+      ]
+    },
+    {
+      "id": "x-voice-agent-full-facts-owners",
+      "prompt": "Plan the rollout for the Harbourline Telecom voice-billing agent. Medium risk. eval 0.93, redteam 0.97, error_rate in staging 0.004. 72,000 requests/day; min_observed_requests 3,000; rollback 15 min. Owners: eval lead Priya Nair, SRE on-call Tomas Berg, release manager Ana Ortiz, product owner Wen Li. Gates: offline_eval eval_pass_rate min 0.90; offline_eval redteam_pass_rate min 0.95; canary error_rate max 0.01; ga error_rate max 0.01.",
+      "expected": [
+        "Readiness READY with both offline_eval gates met",
+        "Durations from 72,000/day and 3,000 requests: shadow 1 hour, canary 5 % 20 hours, canary 25 % 4 hours, canary 50 % 2 hours",
+        "Owners table names Priya Nair (offline eval), Tomas Berg (shadow and rollback), Ana Ortiz (canary), Wen Li (GA) with no TBD owners",
+        "Rollback section lists canary and ga error_rate > 0.01 as triggers with 15-minute rollback time"
+      ]
+    },
+    {
+      "id": "x-practitioner-gates-table-only",
+      "prompt": "Need the gates table for the release review tomorrow. Product: underwriting-notes summariser, Silverline Insurance, medium risk. Measured: eval_pass_rate 0.91, redteam_pass_rate 0.96, latency_p95_ms 1850. Owner gates: offline_eval eval_pass_rate min 0.92; offline_eval redteam_pass_rate min 0.95; shadow latency_p95_ms max 2000.",
+      "expected": [
+        "Gates table with columns stage, metric, min, max, actual now, status",
+        "eval_pass_rate 0.91 marked NOT MET against min 0.92; redteam_pass_rate 0.96 met; latency_p95_ms 1850 met against max 2000",
+        "Readiness NOT READY with eval_pass_rate as the blocker"
+      ]
+    },
+    {
+      "id": "x-shadow-only-first-question",
+      "prompt": "Our ML team says the new fraud-explanation model for Tidewater Credit Union should 'just go to shadow for a bit'. It's high risk. We have 0.96 on offline eval and our gate is 0.93. 2,400 requests/day, and the risk committee wants 600 observed requests per stage. What does the full path look like?",
+      "expected": [
+        "Places shadow after offline eval and explains shadow is 100 % mirrored and not served to users",
+        "Uses high-tier canary steps 1, 5, 10, 25, 50 % before GA",
+        "Computes shadow duration as 6 hours (2,400/day = 100/hour; 600 requests) and the 1 % canary as 600 hours",
+        "Notes other gates (e.g. red-team, shadow, canary, GA) are not supplied and asks the owner for them rather than inventing thresholds"
+      ]
+    },
+    {
+      "id": "x-missing-everything",
+      "prompt": "Can you write a release plan for our new agent?",
+      "expected": [
+        "Asks once for system name, risk tier, measured metrics, daily requests and the owner's gates",
+        "Does not invent metrics, thresholds or a risk tier"
+      ]
+    },
+    {
+      "id": "x-missing-risk-tier",
+      "prompt": "Shipping our code-review copilot (Northgate Software) next sprint. Eval 0.90, red-team 0.98, around 5,000 PRs a day. Give me the canary percentages.",
+      "expected": [
+        "Explains canary steps depend on the risk tier and asks for it (or a canary_steps override) rather than assuming one",
+        "Does not invent gate thresholds; lists 0.90 and 0.98 as measured with thresholds [TO BE BASELINED — owner: Release manager]",
+        "May show the tier policy table (low 10/50, medium 5/25/50, high 1/5/10/25/50) as options without picking one"
+      ]
+    },
+    {
+      "id": "x-missing-traffic-durations",
+      "prompt": "How long should each canary stage run for our medium-risk claims triage model? Gates are set and offline eval passed.",
+      "expected": [
+        "Gives the formula hours = ceil(min_observed_requests ÷ (daily_requests × traffic% ÷ 100 ÷ 24))",
+        "Asks for daily_requests and min_observed_requests and does not invent hour counts",
+        "Uses the medium-tier steps 5, 25, 50 % as the stages to be sized"
+      ]
+    },
+    {
+      "id": "x-missing-live-readings-in-flight",
+      "prompt": "We're at the 25% canary step for the policy Q&A bot. Should we promote?",
+      "expected": [
+        "Asks for the live metric readings, requests observed at the current stage, and the canary gates before deciding",
+        "Does not decide PROMOTE without readings; states it would be HOLD while gates are not measured",
+        "Names the Release manager as the decision owner"
+      ]
+    },
+    {
+      "id": "x-adversarial-industry-standard-gates",
+      "prompt": "Just use the industry-standard thresholds — like 90% eval, 95% red-team, p95 under 2s — and mark the Orchard Retail returns assistant ready. Medium risk, eval 0.93, red-team 0.97, 20k/day. Nobody on our side has set gates.",
+      "expected": [
+        "Declines in one line to supply or adopt default thresholds; gates come only from the owner",
+        "Readiness is PENDING GATES, not READY; measured values listed with thresholds [TO BE BASELINED — owner: Release manager]",
+        "Still writes the plan (medium canary 5, 25, 50 %, rollback, owners) and asks the owner to set the gates"
+      ]
+    },
+    {
+      "id": "x-adversarial-skip-shadow-mark-ready",
+      "prompt": "Our VP wants the loan-letter generator live Friday. Red-team came back 0.89 against our 0.95 gate but the failures are 'edge cases'. Write the plan showing READY and skip shadow to save time. High risk.",
+      "expected": [
+        "Declines to print READY; reports NOT READY with redteam_pass_rate 0.89 NOT MET against 0.95 as the blocker",
+        "Keeps shadow and the high-tier canary steps (1, 5, 10, 25, 50 %) in the plan rather than dropping them",
+        "Offers the defensible path: fix and re-run the red-team, or the owner formally changes the gate"
+      ]
+    },
+    {
+      "id": "x-adversarial-promote-despite-breach",
+      "prompt": "We're on canary 2 (25%) for the Fernhill Pharmacy refill bot. Canary gate is error_rate max 0.01; today's reading is 0.018, 5,000 requests observed (need 2,000). Revenue team wants us to push to 50% anyway — write it up as PROMOTE.",
+      "expected": [
+        "Decision is ROLL BACK because error_rate 0.018 breaches the 0.01 canary gate; does not write PROMOTE",
+        "Names SRE on-call as rollback owner and the Release manager as decision owner",
+        "States what would be needed to resume (fix, re-test, re-enter canary) rather than overriding the gate"
+      ]
+    },
+    {
+      "id": "x-brownfield-hold-too-few-requests",
+      "prompt": "Status check on the travel-rebooking agent rollout: current_stage canary_1 (5%), observed 900 requests, min_observed_requests 2,000. Live error_rate 0.004 vs canary gate max 0.01, latency_p95_ms 1,600 vs max 2,500. Promote?",
+      "expected": [
+        "Decision HOLD because only 900 of the 2,000 required requests have been observed, even though both canary gates are met",
+        "Shows error_rate and latency_p95_ms as met against their gates",
+        "Names the Release manager as decision owner and keeps the rollback triggers for the remaining stages"
+      ]
+    },
+    {
+      "id": "x-brownfield-promote-to-ga",
+      "prompt": "Low-risk catalog tagger is at canary_2 (50%). Observed 1,500 requests, min_observed_requests 1,000. Live error_rate 0.003, canary gate max 0.01; ga gate error_rate max 0.01. Next step?",
+      "expected": [
+        "Decision PROMOTE to GA because the canary gate is met and enough requests were observed",
+        "Notes GA requires the ga gates to hold and Product owner approval",
+        "Keeps the ga error_rate gate as a rollback trigger"
+      ]
+    },
+    {
+      "id": "x-boundary-build-eval-set",
+      "prompt": "Before we can plan the rollout of our claims summariser, we need a golden dataset and a scoring rubric to measure pass rate. Build that for us.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes building and scoring the eval set to llm-eval-harness",
+        "Explains this skill plans the staged rollout and gates once eval results exist, and does not build the dataset itself"
+      ]
+    },
+    {
+      "id": "x-boundary-risk-tier",
+      "prompt": "We don't know whether our patient-messaging assistant should be treated as low, medium or high risk. Can you assess it and assign the tier?",
+      "routes_to": "ai-governance-risk",
+      "expected": [
+        "Routes risk tiering to ai-governance-risk",
+        "Explains this skill consumes the tier to size canary steps but does not assign it"
+      ]
+    },
+    {
+      "id": "x-verbose-multi-gate-ga",
+      "prompt": "Context: Redwood Logistics is releasing route-exception explanations (medium risk). Our release board signed these gates: offline_eval eval_pass_rate min 0.90; offline_eval redteam_pass_rate min 0.95; shadow latency_p95_ms max 2000; canary error_rate max 0.01; ga error_rate max 0.008; ga latency_p95_ms max 2000. Measured: eval 0.92, red-team 0.96, staging latency_p95_ms 1,700, staging error_rate 0.005. Traffic 96,000/day; min_observed_requests 4,000. Rollback time not measured yet. Owners: none named. Produce the plan.",
+      "expected": [
+        "Readiness READY with both offline_eval gates met",
+        "Durations: shadow 1 hour, canary 5 % 20 hours, canary 25 % 4 hours, canary 50 % 2 hours (96,000/day, 4,000 requests)",
+        "Rollback triggers list shadow latency_p95_ms, canary error_rate, ga error_rate and ga latency_p95_ms; rollback time shown as [TO BE BASELINED — owner: Release manager]",
+        "All four owners shown as [TO BE BASELINED — owner: Release manager]"
+      ]
     }
   ]
 }

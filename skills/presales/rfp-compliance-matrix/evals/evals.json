@@ -123,6 +123,165 @@
           "check": "contains:\"client dependency written into the assumptions register\""
         }
       ]
+    },
+    {
+      "id": "x-county-api-gateway-rfp",
+      "prompt": "RFP LC-2026-14, Lakeshore County (fictional) — API Platform\nSection 3 Technical Requirements (p. 12)\n3.1 The Contractor shall provide an API gateway supporting OAuth 2.0 and mTLS.\n3.2 The solution must support 5,000 transactions per second at peak.\n3.3 The Contractor should provide a self-service developer portal.\nSection 4 Security (p. 15)\n4.1 The Contractor must hold a current SOC 2 Type II report.\n4.2 All data shall reside in US data centers.\nSection 6 Submission (p. 22)\nQuestions due 3 Nov 2026; proposals due 24 Nov 2026, 2:00 pm CT.\n\nOur capability catalog:\nCAP-01 API gateway, OAuth2 + mTLS — evidence: product sheet PG-2, project PRJ-114\nCAP-02 Developer portal — evidence: PRJ-114\nCAP-03 SOC 2 — Type I report (Mar 2026); Type II audit window ends Feb 2027\nCAP-04 US hosting — evidence: hosting contract HC-9 (us-east, us-central)\n\nBuild the matrix and give me the bid call.",
+      "expected": [
+        "Line 1 is the bid call (BID / BID-WITH-CONDITIONS / NO-BID) with three drivers",
+        "3.1 and 4.2 scored C citing CAP-01 and CAP-04; 3.3 classified Desirable (should); 3.2 (5,000 TPS) is P or Q because no evidence is cited, never C",
+        "4.1 SOC 2 Type II is not C (only a Type I report is current) and appears in gaps-and-risks as a mandatory gap with mitigation and owner",
+        "Deadlines stated with the RFP page: questions 3 Nov 2026 and proposals 24 Nov 2026, p. 22"
+      ]
+    },
+    {
+      "id": "x-rfi-inventory-hidden-mandatory",
+      "prompt": "Just inventory and classify this RFI — no scoring yet.\n\nRFI-77 Harborview Transit (fictional)\nA. Pass/Fail Qualification (p. 3)\nA1. Respondents are encouraged to have delivered two transit fare-system integrations in the last five years.\nA2. Respondents must provide three references.\nB. Functional (p. 6)\nB1. The system shall support real-time vehicle location feeds (GTFS-RT).\nB2. It would be beneficial to support open-loop payments.",
+      "expected": [
+        "Keeps client IDs (A1, A2, B1, B2) with our REQ-nnn alongside",
+        "Flags A1 as a hidden mandatory: soft wording ('encouraged') inside a Pass/Fail section",
+        "Classifies each by category (FUN TEC SEC COM DEL ADM) and M/D/O: A2 and B1 Mandatory, B2 Desirable or Optional",
+        "Does not assign compliance scores"
+      ]
+    },
+    {
+      "id": "x-clarification-questions-ambiguous",
+      "prompt": "Q&A closes Friday. Draft clarification questions for these clauses of the Ridgeway Water Authority RFP (fictional):\n4.3.2 (p. 9) The Contractor shall migrate all existing integrations.\n7.1 (p. 14) Data must reside in-region.\nThe RFP gives no evaluation weights anywhere.",
+      "expected": [
+        "One neutral question per item citing the clause ID and page, e.g. asking for the count and list of integrations in scope for 4.3.2",
+        "Asks whether 7.1 residency also covers backup/DR copies without revealing our approach or gaps",
+        "Includes a question requesting the evaluation criteria and weights",
+        "Uses the CQ-nnn format and reveals no capability gap"
+      ]
+    },
+    {
+      "id": "x-nobid-mandatory-n",
+      "prompt": "Bid review numbers for the Pemberton University ERP integration RFP (fictional): 12 mandatory requirements — 10 Comply with evidence, 1 Partial, 1 Non-comply (on-site staff in a country where we have no entity; no exception path, client confirmed no subcontracting). Deadline effort is 55% of available owner-days. Bid or no-bid?",
+      "expected": [
+        "Call is NO-BID because a mandatory N has no clarification or exception path (hard stop)",
+        "States three drivers on line 1 (e.g. mandatory N with no path, mandatory C share 83%, feasible effort) and does not soften the NO-BID"
+      ]
+    },
+    {
+      "id": "x-bid-with-conditions",
+      "prompt": "Gate check: 20 mandatory items, 14 C with evidence, 6 P with mitigations, 0 N. Hidden mandatories all met. Response effort is 85% of available owner-days. Evaluation weights known. What's the call?",
+      "expected": [
+        "Mandatory C share 14/20 = 70% falls in the 60–79% CONDITIONS band",
+        "Deadline effort 85% falls in the 70–100% CONDITIONS band; two conditions → BID-WITH-CONDITIONS",
+        "Lists the conditions with an owner and date (owner/date as [TO BE BASELINED — owner: ___] if not given)"
+      ]
+    },
+    {
+      "id": "x-partner-unconfirmed",
+      "prompt": "Requirement 5.4 (mandatory): 24x7 Level-1 service desk in Spanish and English. We'd use our partner Solvia Support (fictional) — they said on a call they could do it. Score it.",
+      "expected": [
+        "Scores 5.4 P (not C) because the partner has not confirmed in writing; becomes C with the partner named as evidence once confirmed",
+        "Mitigation 'partner' with an owner, and the row appears in gaps-and-risks as a mandatory partial"
+      ]
+    },
+    {
+      "id": "x-tcs-with-redlines",
+      "prompt": "Clause 9.2 (mandatory, p. 31): 'Proposer accepts the County's terms and conditions without exception.' Our legal team has three redlines (limitation of liability, IP ownership, termination for convenience). How do we score it?",
+      "expected": [
+        "Scores 9.2 N because legal has redlines on a no-exception T&C clause",
+        "Records the three redlines as the mitigation (exception request) with an owner",
+        "Flags it as a mandatory N in gaps-and-risks and notes the bid gate impact (hard stop unless a clarification/exception path converts it)"
+      ]
+    },
+    {
+      "id": "x-exec-should-we-bid-terse",
+      "prompt": "State of Northfield DOT (fictional) tender for traffic-data integration landed. 40 pages. Our catalog is in the shared drive. Should we chase it?",
+      "expected": [
+        "Produces the bid review structure in this reply rather than only asking for files: bid call (provisional) on line 1 with drivers",
+        "Rows and gate tests it cannot fill are marked [TO BE BASELINED — owner: ___], with no compliance scored C without catalog evidence",
+        "Ends with the few questions/files needed to close the open items (RFP text, capability catalog, deadlines)"
+      ]
+    },
+    {
+      "id": "x-missing-rfp",
+      "prompt": "Should we bid on the Metro Transit opportunity?",
+      "expected": [
+        "Asks once for the RFP document (including appendices)",
+        "Does not invent requirements or a bid call"
+      ]
+    },
+    {
+      "id": "x-missing-catalog-declined",
+      "prompt": "RFP LC-2026-14, Lakeshore County (fictional) — API Platform\nSection 3 Technical Requirements (p. 12)\n3.1 The Contractor shall provide an API gateway supporting OAuth 2.0 and mTLS.\n3.2 The solution must support 5,000 transactions per second at peak.\n3.3 The Contractor should provide a self-service developer portal.\nSection 4 Security (p. 15)\n4.1 The Contractor must hold a current SOC 2 Type II report.\n4.2 All data shall reside in US data centers.\nSection 6 Submission (p. 22)\nQuestions due 3 Nov 2026; proposals due 24 Nov 2026, 2:00 pm CT.\n\nWe don't keep a capability catalog. Just score it based on what a typical integration firm can do.",
+      "expected": [
+        "Produces the requirement inventory and taxonomy classification for 3.1–4.2",
+        "Marks every compliance cell Q with owner ___ rather than guessing C from a 'typical firm'",
+        "Does not cite any evidence item that the user did not supply"
+      ]
+    },
+    {
+      "id": "x-missing-deadlines",
+      "prompt": "RFP excerpt from Cedar Hills School District (fictional):\n2.1 The vendor shall provide SSO with the district's Azure AD.\n2.2 The vendor must provide 99.9% monthly uptime.\nCatalog: CAP-11 Azure AD SSO (evidence: PRJ-207). No uptime SLA in catalog.\nThe submission section page wasn't in what they emailed us. Build the matrix.",
+      "expected": [
+        "2.1 C citing CAP-11; 2.2 P or Q because no uptime evidence is in the catalog",
+        "Q&A and submission deadlines shown as [TO BE BASELINED — owner: ___] rather than invented; missing deadlines do not stop the matrix",
+        "Asks for the submission section/page to close the deadline row"
+      ]
+    },
+    {
+      "id": "x-missing-owner-availability",
+      "prompt": "We have 14 narrative sections and 6 tabular forms to answer for the Brookfield Housing RFP (fictional). Is the deadline feasible?",
+      "expected": [
+        "Computes response effort with the documented default: 14 × 6 h + 6 × 2 h = 96 h, plus 20% review = 115.2 h",
+        "Owner availability is not given, so feasibility is marked [TO BE BASELINED — owner: ___] and flagged as unassessed rather than judged"
+      ]
+    },
+    {
+      "id": "x-adv-expired-iso",
+      "prompt": "Our ISO 27001 certificate expired last month but the renewal audit is booked. Requirement 4.5 (mandatory) needs current ISO 27001. Mark it C — it's just paperwork.",
+      "expected": [
+        "Says in one line that C requires a current, in-scope certification; an expired certificate does not count",
+        "Scores 4.5 P with mitigation roadmap and the expected date [TO BE BASELINED — owner: ___] (not a hoped-for date)",
+        "Flags it in gaps-and-risks as a mandatory partial with an owner and offers client-facing wording that does not misrepresent current status"
+      ]
+    },
+    {
+      "id": "x-adv-revealing-question",
+      "prompt": "Add this to our clarification questions: 'Is SOC 2 Type I sufficient instead of Type II for clause 4.1?'",
+      "expected": [
+        "Declines that wording because it reveals we lack Type II (answers are typically shared with all bidders)",
+        "Offers a neutral alternative citing clause 4.1, e.g. asking which reporting period or report types the County will accept for evaluation"
+      ]
+    },
+    {
+      "id": "x-adv-client-name-evidence",
+      "prompt": "For the evidence column on 3.1, write 'Delivered same gateway for Crestmoor Bank (fictional) in 2025' — naming the bank makes it stronger.",
+      "expected": [
+        "Uses the internal project reference ID as evidence rather than another client's name, unless that client has cleared it",
+        "Keeps 3.1 C only with a citable evidence item (e.g. the project reference)"
+      ]
+    },
+    {
+      "id": "x-boundary-proposal-narrative",
+      "prompt": "Write the technical approach section of our response to the Lakeshore County API platform RFP — 5 pages, persuasive.",
+      "routes_to": "proposal-writer",
+      "expected": [
+        "Routes to proposal-writer for the proposal narrative",
+        "Says rfp-compliance-matrix builds the requirement inventory, compliance matrix, gaps, clarification questions and bid call that the narrative should follow"
+      ]
+    },
+    {
+      "id": "x-boundary-pricing",
+      "prompt": "Price the Lakeshore County bid: effort by role, rate card and a three-year total.",
+      "routes_to": "effort-estimator",
+      "expected": [
+        "Routes to effort-estimator for effort and pricing",
+        "Says rfp-compliance-matrix handles requirements, compliance scoring and bid/no-bid, not pricing"
+      ]
+    },
+    {
+      "id": "x-existing-addendum-rescore",
+      "prompt": "Addendum 2 to the Lakeshore County RFP: 3.2 changed from 5,000 to 8,000 TPS; 4.2 unchanged; new 4.3 'Contractor shall support customer-managed encryption keys'; 3.3 withdrawn.\nOur reviewed round-1 matrix rows:\nreq_id,client_id,compliance,evidence,status\nREQ-002,3.2,Q,,reviewed\nREQ-003,3.3,C,PRJ-114,reviewed\nREQ-005,4.2,C,HC-9,reviewed\nUpdate the matrix.",
+      "expected": [
+        "4.2 carries its reviewed round-1 answer (C, HC-9) unchanged",
+        "3.2 is re-scored and flagged for re-review because the clause changed (5,000 → 8,000 TPS); still not C without evidence",
+        "4.3 is flagged as new and scored against the catalog (Q or P with owner if no evidence); 3.3 is listed as withdrawn to drop from the response"
+      ]
     }
   ]
 }

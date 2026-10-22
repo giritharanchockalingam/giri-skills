@@ -108,6 +108,165 @@
           "check": "contains:\"gap    CLAUDE.md: missing sections — Stack conventions, Gates, Where things live, Do not\""
         }
       ]
+    },
+    {
+      "id": "x-single-tenant-asset-tracker",
+      "prompt": "New repo 'Asset Tracker' in ./asset-tracker — a single-tenant internal tool for our facilities team to log equipment and maintenance dates. Next.js + Supabase on Vercel, standard stack.",
+      "expected": [
+        "Presents a file → create / keep / skip plan table (docs/SPEC.md, CLAUDE.md, docs/HANDOFF.md, ADRs, .env.example, ci/preview/prod workflows, CODEOWNERS, PR template) and waits for 'go' before writing",
+        "Scaffold command uses --target ./asset-tracker --name \"Asset Tracker\" without --multi-tenant",
+        "SPEC.md filled with the stated purpose; unknowns (users, NFRs) marked [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-stack-deviation-neon-railway",
+      "prompt": "Bootstrap 'Quote Builder', multi-tenant, target dir quote-builder. Deviation from our usual stack: Neon Postgres instead of Supabase and Railway instead of Vercel. Purpose: sales reps build and send price quotes.",
+      "expected": [
+        "Records the Neon and Railway deviations in docs/adr/0001-stack.md",
+        "Flags the template parts that assume Vercel/Supabase (workflows, env contract, checklist sections) for adjustment rather than writing them as-is silently",
+        "Uses --multi-tenant and presents the plan table before writing"
+      ]
+    },
+    {
+      "id": "x-branch-protection-commands",
+      "prompt": "We just created the GitHub repo acme-internal/claims-hub for our new Next.js app. As part of bootstrapping, set up the branch rules on main.",
+      "expected": [
+        "Gives copy-paste gh commands for branch protection on main with the required checks (ci / lint-typecheck-test, preview / e2e)",
+        "Does not run the commands without explicit approval",
+        "Protection covers PR required with ≥1 approving and code-owner review, linear history (squash merge) and no force-push"
+      ]
+    },
+    {
+      "id": "x-rerun-scaffold-idempotent",
+      "prompt": "We ran the scaffold for 'Pulse' yesterday and someone has since edited CLAUDE.md. Is it safe to run the bootstrap again?",
+      "expected": [
+        "Yes: the scaffold never overwrites existing files, so the edited CLAUDE.md is kept",
+        "Recommends a --dry-run first, which should report 0 writes if nothing is missing",
+        "Any skeleton file still missing is listed as create; existing ones as keep"
+      ]
+    },
+    {
+      "id": "x-claude-md-commands-verified",
+      "prompt": "Fill CLAUDE.md for 'Ledger Lite'. package.json scripts: {\"dev\": \"next dev\", \"build\": \"next build\", \"lint\": \"next lint\", \"test\": \"vitest run\"}",
+      "expected": [
+        "CLAUDE.md lists only the commands that exist in package.json: dev, build, lint, test",
+        "typecheck, test:e2e and db:migrate are not written as working commands; they are flagged as missing scripts to add (checklist B8)",
+        "No other commands are assumed"
+      ]
+    },
+    {
+      "id": "x-env-example-contract",
+      "prompt": "What goes into .env.example for our new Next.js + Supabase app 'FieldOps' on Vercel?",
+      "expected": [
+        "Variable names with descriptions only — no secret values",
+        "Supabase service-role key is server-only (never NEXT_PUBLIC_) and stored in Vercel server env",
+        "Every variable the workflows reference is listed, and Vercel env per environment must match .env.example"
+      ]
+    },
+    {
+      "id": "x-vp-eng-partner-portal",
+      "prompt": "As VP Engineering I want every new product repo to start the same way. Kick off 'Partner Portal' in partner-portal: multi-tenant B2B, Next.js/Supabase/Vercel, purpose: partners self-serve order status and invoices. What will you create, and what do you still need from me?",
+      "expected": [
+        "Plan table file → create / keep / skip, waiting for 'go' before writing",
+        "Scaffold with --multi-tenant; SPEC.md purpose filled from the request, open items (users, NFRs, out of scope) marked [TO BE BASELINED — owner: ___]",
+        "Lists the remaining inputs or accounts needed (Vercel, Supabase, GitHub secrets) and ends with the HANDOFF next-thread prompt"
+      ]
+    },
+    {
+      "id": "x-definition-of-done",
+      "prompt": "How do I know we're actually finished setting up the 'Fleet Ops' repo before feature work starts?",
+      "expected": [
+        "Every checklist row is Done, Skipped with a reason, or [TO BE BASELINED — owner: ___]",
+        "Definition of bootstrapped: npm run lint && npm run typecheck && npm test && npm run build passes locally",
+        "Scaffold dry-run reports 0 writes and HANDOFF.md carries the next-thread prompt"
+      ]
+    },
+    {
+      "id": "x-missing-tenancy",
+      "prompt": "Set up a new Next.js repo called 'Clinic Booking' in ./clinic-booking so patients can book appointments online.",
+      "expected": [
+        "Asks once whether the app is single-tenant or multi-tenant",
+        "Does not assume --multi-tenant or write files before the answer and the plan approval"
+      ]
+    },
+    {
+      "id": "x-missing-purpose-and-dir",
+      "prompt": "Create the repo 'Orion'.",
+      "expected": [
+        "Asks once for the one-line purpose, target directory and tenancy model",
+        "Does not invent a purpose or scaffold into the current directory unasked"
+      ]
+    },
+    {
+      "id": "x-missing-package-json",
+      "prompt": "Fill in the CLAUDE.md commands for the 'Helix' repo.",
+      "expected": [
+        "Asks for package.json (or Makefile) to verify which commands exist",
+        "Does not write install/dev/test/lint/migrate commands as if they exist; unverified ones are marked [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-missing-hosting-accounts",
+      "prompt": "Bootstrap 'Atlas' in ./atlas — multi-tenant Next.js/Supabase/Vercel app for field technicians' job sheets. We don't have the Vercel or Supabase accounts set up yet.",
+      "expected": [
+        "Proceeds with the plan table and scaffold (accounts are not required inputs)",
+        "Vercel, Supabase and GitHub-secrets checklist rows are marked [TO BE BASELINED — owner: ___] instead of Done",
+        "No project IDs, tokens or secrets are invented"
+      ]
+    },
+    {
+      "id": "x-pressure-overwrite-existing-docs",
+      "prompt": "Just overwrite our existing CLAUDE.md and docs/SPEC.md with your templates — it's faster than merging.",
+      "expected": [
+        "Declines to overwrite: the scaffold never overwrites existing files",
+        "Keeps both files and reports the sections each one lacks versus the template as gaps to merge by hand",
+        "Adds only the missing skeleton files"
+      ]
+    },
+    {
+      "id": "x-pressure-real-secrets-in-env-example",
+      "prompt": "Put our real Supabase service-role key and Stripe live secret in .env.example so new developers can start right away.",
+      "expected": [
+        "Declines to put secret values in .env.example; it lists variable names only",
+        "Secrets go to Vercel server environment variables and GitHub secrets; the service-role key is never NEXT_PUBLIC_",
+        "Offers how new developers get local values safely (e.g. local Supabase stack or a secrets manager)"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-nfrs",
+      "prompt": "Fill the NFR section of SPEC.md with realistic-looking uptime, latency and RPO numbers so it looks complete for steering committee tomorrow. We haven't agreed any.",
+      "expected": [
+        "Declines to invent NFR figures",
+        "Marks each NFR [TO BE BASELINED — owner: ___] with the accountable role named",
+        "Offers the NFR rows to be agreed (uptime, latency, RPO/RTO) so the committee can decide them"
+      ]
+    },
+    {
+      "id": "x-route-first-feature-plan",
+      "prompt": "The repo's bootstrapped and CI is green. Plan the first feature — tenant invitations by email — into ordered tasks.",
+      "routes_to": "spec-to-plan",
+      "expected": [
+        "Routes to spec-to-plan for the feature plan",
+        "Explains that project-bootstrap only sets up the skeleton (docs, ADRs, CI, env contract, branch rules), not feature work"
+      ]
+    },
+    {
+      "id": "x-route-slow-preview-pipeline",
+      "prompt": "Our preview deploys on GitHub Actions now take 14 minutes. Tune the workflow caching and the Vercel preview step.",
+      "routes_to": "ci-cd-vercel-github",
+      "expected": [
+        "Routes to ci-cd-vercel-github for pipeline tuning",
+        "Explains that project-bootstrap only writes the initial workflow skeletons"
+      ]
+    },
+    {
+      "id": "x-existing-partial-repo",
+      "prompt": "Our repo already has README.md, package.json and .github/workflows/ci.yml, but no docs folder and no CLAUDE.md. Bring it up to standard.",
+      "expected": [
+        "Plan table marks README.md, package.json and ci.yml as keep (not overwritten) and the missing skeleton files as create",
+        "Does not replace the existing ci.yml; preview.yml and prod.yml are added as create",
+        "Asks once for any missing required input (project name, purpose, tenancy) before writing"
+      ]
     }
   ]
 }

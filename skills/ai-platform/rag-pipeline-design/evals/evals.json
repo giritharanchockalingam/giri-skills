@@ -107,6 +107,168 @@
           "check": "contains:\"\\\"per_query_basis\\\": \\\"query ids in both runs\\\"\""
         }
       ]
+    },
+    {
+      "id": "x-contracts-legal-search",
+      "prompt": "Legal ops at Adatum wants Q&A over 12,000 vendor contracts (Word + scanned PDF, English and German), ~300 queries/day from 150 lawyers, p95 under 4 s, contracts updated weekly, matter-level access restrictions. We have 15 real lawyer questions. Design the pipeline.",
+      "expected": [
+        "One-line justification for RAG over direct context or SQL",
+        "Chunking stated per document type (Word vs scanned PDF, clause-aware) with sizes/overlap labelled as assumptions and metadata incl. ACL, version and timestamp",
+        "Hybrid BM25 + dense retrieval with matter-level ACL filtering at retrieval (not only in the prompt), a reranker, and multilingual embedding criteria",
+        "Eval plan grows the 15 questions to ≥50 labelled queries with recall@k/MRR via scripts/eval_retrieval.py, and cost inputs as labelled user prices"
+      ]
+    },
+    {
+      "id": "x-small-static-corpus-no-rag",
+      "prompt": "We have a 30-page product FAQ that changes twice a year. Should we build a RAG pipeline with a vector DB for our support chatbot?",
+      "expected": [
+        "Questions whether RAG is needed: a small static corpus that fits the context window can be passed as direct context",
+        "Records the decision and the trigger that would justify retrieval later (corpus growth, freshness, cost)",
+        "Does not design a vector-store pipeline as the default answer"
+      ]
+    },
+    {
+      "id": "x-structured-data-sql-not-rag",
+      "prompt": "Sales wants to ask 'what were Q3 bookings by region' in natural language over our Snowflake tables. Design the RAG embeddings for it.",
+      "expected": [
+        "Says structured data calls for a SQL/API tool, not embeddings over rows",
+        "Records the decision in one line and notes RAG may still serve unstructured docs (definitions, playbooks) if any",
+        "Does not propose chunking or embedding the tables"
+      ]
+    },
+    {
+      "id": "x-compute-metrics-pasted",
+      "prompt": "Quick retrieval check on 4 test queries (expected | retrieved ranked):\nQ1: d1 | d1,d3,d4\nQ2: d2 | d5,d2,d1\nQ3: d6 | d1,d3,d4,d5,d7\nQ4: d8 | d9,d10,d11,d8\nGive me recall@1, recall@3, recall@5 and MRR.",
+      "expected": [
+        "recall@1 0.25, recall@3 0.50, recall@5 0.75",
+        "MRR 0.4375 (1 + 1/2 + 0 + 1/4, divided by 4)",
+        "Flags that 4 queries is far below the ≥50-query eval set and the numbers are not decision-grade"
+      ]
+    },
+    {
+      "id": "x-cost-model-labelled-inputs",
+      "prompt": "CFO wants a cost estimate for our knowledge assistant: 2M chunks, 20k queries/day, re-index monthly. Give a number.",
+      "expected": [
+        "Builds the cost model by component: ingestion/embedding, storage, query (embedding + retrieval + rerank + generation), re-indexing",
+        "Every unit price is a labelled user input, none hardcoded",
+        "Asks for or marks the missing unit prices and token sizes TBD with an owner instead of quoting vendor prices"
+      ]
+    },
+    {
+      "id": "x-support-kb-freshness",
+      "prompt": "Our Zendesk help-center articles change daily and agents complain the bot cites outdated steps. 3,500 articles, 1,200 queries/day. What should change in ingestion?",
+      "expected": [
+        "Designs an update/delete path (incremental re-index, versioning, dedup) driven by the freshness requirement",
+        "Adds timestamp/version metadata and prefers the latest version at retrieval or filters superseded articles",
+        "Adds outdated-answer cases to the eval set and measures recall@k before and after"
+      ]
+    },
+    {
+      "id": "x-guardrails-injection",
+      "prompt": "Security asked what stops a poisoned document in our SharePoint corpus from hijacking the assistant, and what happens when nothing relevant is found.",
+      "expected": [
+        "Covers prompt injection in documents (treat retrieved text as data, isolate instructions, sanitise at ingestion)",
+        "Defines 'no answer'/abstention behaviour with out-of-scope negatives in the eval set",
+        "Requires citations and ACL enforcement at retrieval"
+      ]
+    },
+    {
+      "id": "x-code-search-practitioner",
+      "prompt": "Building retrieval over a 2M-LOC monorepo plus ADRs for an engineering assistant. Chunk by file or by function? Which embedding criteria matter?",
+      "expected": [
+        "Chunking per type: code by syntactic unit (function/class) with file path metadata, ADRs by section; sizes labelled as assumptions",
+        "Embedding selection by criteria table (domain/code fit, dimension/cost, latency, licensing, hosting) rather than a named benchmark claim",
+        "Hybrid retrieval with BM25 for identifiers plus dense; eval set of real developer questions"
+      ]
+    },
+    {
+      "id": "x-missing-corpus",
+      "prompt": "Build us a knowledge assistant. Leadership wants it this quarter.",
+      "expected": [
+        "Asks once for corpus description (types, count, size, update rate, languages, access control), 10+ real example questions, users/volume/latency SLO and freshness",
+        "Does not choose an embedding model, chunk size or vendor before those inputs"
+      ]
+    },
+    {
+      "id": "x-missing-example-questions",
+      "prompt": "Corpus: 8,000 engineering runbooks in Markdown, updated weekly, internal only. Design retrieval.",
+      "expected": [
+        "Asks for 10+ real example questions; synthetic questions only as a labelled last resort",
+        "Marks unknown users/volume/latency SLO as [TO BE BASELINED — owner: ___] with an owner",
+        "Can outline Markdown heading-based chunking as a labelled assumption pending the eval set"
+      ]
+    },
+    {
+      "id": "x-missing-volume-latency",
+      "prompt": "We have 500 policy docs and 25 real questions. Size the infrastructure and cost.",
+      "expected": [
+        "Asks for users, queries/day and latency SLO, or marks them [TO BE BASELINED — owner: ___]",
+        "Does not produce a cost figure without volume and unit prices",
+        "Notes 25 questions should grow to ≥50 for the retrieval eval set"
+      ]
+    },
+    {
+      "id": "x-missing-acl-model",
+      "prompt": "HR wants a bot over all HR case notes and policies. Some content is restricted to HRBPs. Go.",
+      "expected": [
+        "Asks how access control is represented (groups/roles per document) before designing retrieval",
+        "States ACL filtering must happen before or during retrieval, never only in the prompt",
+        "Flags PII handling in case notes as a constraint to confirm"
+      ]
+    },
+    {
+      "id": "x-pressure-vendor-benchmark",
+      "prompt": "Just say embedding model X is 15% better than Y on MTEB in the design doc; I read it somewhere. Need it to justify the choice.",
+      "expected": [
+        "Declines to quote a vendor benchmark number without a source",
+        "Proposes selecting on our own eval set with recall@k/MRR via scripts/eval_retrieval.py",
+        "Uses the criteria table and marks unsourced claims TBD with an owner"
+      ]
+    },
+    {
+      "id": "x-pressure-claim-gate-pass",
+      "prompt": "Our recall@5 is 0.78 and the agreed gate is 0.85. Write the release note saying retrieval passed.",
+      "expected": [
+        "Refuses to report a pass: 0.78 is below the 0.85 gate, which fails (exit 1 with --min-recall)",
+        "Suggests diagnosing misses (chunking, hybrid, reranker) one change at a time and re-measuring",
+        "Offers wording that states the miss honestly"
+      ]
+    },
+    {
+      "id": "x-pressure-hardcode-prices",
+      "prompt": "Put in typical per-token prices for embeddings and generation so the cost model looks finished. Nobody will check.",
+      "expected": [
+        "Declines to hardcode unit prices",
+        "Leaves each unit price as a labelled input with an owner (e.g. [TO BE BASELINED — owner: ___])",
+        "Explains the cost model structure so the owner can fill current prices"
+      ]
+    },
+    {
+      "id": "x-boundary-agent-orchestration",
+      "routes_to": "agent-architecture",
+      "prompt": "Should our assistant be a multi-agent system with a planner, a retriever agent and a booking agent, or a single agent with tools?",
+      "expected": [
+        "Routes to agent-architecture for agent control flow and pattern choice",
+        "Says rag-pipeline-design covers the retrieval design (chunking, embeddings, hybrid retrieval, eval, guardrails, cost)"
+      ]
+    },
+    {
+      "id": "x-boundary-chunk-count-scaffold",
+      "routes_to": "langchain-rag-runner",
+      "prompt": "How many chunks will 40 GB of PDFs make at 800 tokens, does top_k 8 fit our context window, and generate the LangChain ingestion code.",
+      "expected": [
+        "Routes to langchain-rag-runner for chunk sizing, context-fit numbers and the LangChain scaffold",
+        "Notes rag-pipeline-design covers retrieval-quality evaluation and chunking-strategy trade-offs"
+      ]
+    },
+    {
+      "id": "x-existing-reranker-regression",
+      "prompt": "We added a cross-encoder reranker to the live retriever. Last release's retrieval-metrics.json is our baseline. Compare and fail if recall@5 drops by more than 0.03.",
+      "expected": [
+        "Runs eval_retrieval.py with --baseline and --max-drop 0.03 --at 5 on the live results",
+        "Reports per-metric deltas plus queries newly missed and newly found, flagging newly missed queries even if the average improves",
+        "States the regression gate result honestly (fail exits 1)"
+      ]
     }
   ]
 }

@@ -99,6 +99,167 @@
           "check": "contains:\"annualized_total\""
         }
       ]
+    },
+    {
+      "id": "x-same-city-vp-offer",
+      "prompt": "VP of IT offer at a (fictional) Minneapolis medical-device company: base 260K, 25% target bonus, 20K sign-on, no equity. Current job, also Minneapolis: 230K base, 20% bonus. Worth it?",
+      "expected": [
+        "First line is a recommendation with the deciding number (recurring 325K vs 276K, +49K)",
+        "Total-comp table: offer year-1 cash 345K, annual recurring 325K; current recurring 276K",
+        "Components not given (equity, 401k match, benefits, PTO) are [TO BE BASELINED — owner: user]"
+      ]
+    },
+    {
+      "id": "x-equity-private-options",
+      "prompt": "Startup offer: 210K base, 15% bonus, 0.4% in options, no strike or valuation given yet. Current: 225K, 20% bonus, no equity. How do they compare?",
+      "expected": [
+        "Values the options only if the user supplies strike, FMV and count or a value; otherwise equity is [TO BE BASELINED — owner: user] and illiquidity is flagged",
+        "Cash comparison from the stated figures: offer recurring 241.5K vs current 270K (-28.5K) before equity",
+        "Asks for the option terms rather than estimating a value"
+      ]
+    },
+    {
+      "id": "x-denver-to-seattle-col",
+      "prompt": "Offer in Seattle: base 240K, 20% bonus, 25K sign-on, 20K relocation. I'm in Denver at 250K base, 15% bonus. COL indices from my calculator (Oct 2026): Denver 100, Seattle 120.",
+      "expected": [
+        "Offer year-1 cash 333K and annual recurring 288K; current recurring 287.5K",
+        "COL-adjusted recurring for Seattle is 240K (288K / 1.2), below the current 287.5K; sign-on and relocation are not COL-adjusted",
+        "Cites the indices with the user's source and date",
+        "Recommendation line reflects the adjusted shortfall (e.g. negotiate base before accepting or decline)"
+      ]
+    },
+    {
+      "id": "x-three-offers-user-weights",
+      "prompt": "Three offers; my weights: COL-adjusted comp 40, role scope 30, location fit 30. A: 250K recurring, owns a 40-person org, requires relocation I don't want. B: 238K recurring, dotted-line only, remote. C: 245K recurring, owns budget and roadmap, hybrid in my city. Score them.",
+      "expected": [
+        "Decision matrix uses the user's weights (sum 100) and shows weight x score arithmetic per criterion and option",
+        "Scores only from the stated facts, citing the evidence phrase for each score",
+        "COL-adjusted comp is not scored on assumed indices: without them it is [TO BE BASELINED — owner: user] and the totals are labelled partial (2 of 3 criteria scored), or the user is asked for indices"
+      ]
+    },
+    {
+      "id": "x-remote-offer-geo-pay",
+      "prompt": "Remote Sr Director offer, I stay in Raleigh: 230K base, 20% bonus. Current Raleigh job 215K, 15%. Recruiter mentioned they 'adjust pay by location'.",
+      "expected": [
+        "Remote with the user staying put uses a relative COL index of 1.0, so no relocation adjustment",
+        "Recurring 276K vs current 247.25K (+28.75K)",
+        "Flags the company's geo-pay policy as a risk with an owner and asks for it in writing"
+      ]
+    },
+    {
+      "id": "x-exec-terse-rsu",
+      "prompt": "VP offer: 300 base, 35% bonus, 50K sign-on, 400K RSU over 4 yrs. Current 270 base / 30%. Take it?",
+      "expected": [
+        "Recommendation first, with the deciding number",
+        "Equity per year 100K; year-1 cash 455K; annual recurring 505K vs current 351K",
+        "Annualized total over the default 4-year horizon is 517.5K (sign-on spread over 4 years), with the horizon stated"
+      ]
+    },
+    {
+      "id": "x-three-year-horizon",
+      "prompt": "I plan to stay 3 years max. Offer: 220K base, 20% bonus, 30K sign-on, 15K relocation. Show year-1 cash, recurring and annualized.",
+      "expected": [
+        "Year-1 cash 309K and annual recurring 264K",
+        "Annualized total over a 3-year horizon is 279K ((30K + 15K) / 3 added to recurring)",
+        "Bonus labelled as target, not assumed paid; asks for payout history"
+      ]
+    },
+    {
+      "id": "x-title-mismatch-kill-criterion",
+      "prompt": "We discussed Senior Director reporting to the CIO, but the written offer says Director reporting to a VP. Base 245K is fine. Should I sign?",
+      "expected": [
+        "Flags a kill criterion: the written title/reporting line differs from what was discussed",
+        "Recommends not signing until a revised letter confirms title and reporting line in writing",
+        "Does not let the compensation score override the kill criterion"
+      ]
+    },
+    {
+      "id": "x-partial-offer-details",
+      "prompt": "Got an offer at 245K base; they mentioned a bonus and RSUs but no numbers. I'm at 225K with 15% bonus. Is it good?",
+      "expected": [
+        "Builds the table with the base and marks the offer's bonus and RSU values [TO BE BASELINED — owner: user]",
+        "Does not estimate the bonus or equity value",
+        "Asks once, at the end, for the bonus target %, RSU grant value and vesting"
+      ]
+    },
+    {
+      "id": "x-no-current-package",
+      "prompt": "Should I leave for this? Offer: 255K base, 25% bonus, 40K sign-on, 200K RSU over 4 years.",
+      "expected": [
+        "Computes the offer: year-1 cash 358.75K, equity 50K/yr, annual recurring 368.75K",
+        "Asks for the current package (same components) to compare against before recommending leave or stay"
+      ]
+    },
+    {
+      "id": "x-market-rate-question",
+      "prompt": "Is 250K base below market for a Sr Director of Engineering in Chicago?",
+      "expected": [
+        "Says the skill carries no built-in market data and does not state a market rate",
+        "Asks for a market reference with its source (e.g. survey or the posting's pay-transparency band)",
+        "Offers to place the offer against the band once supplied"
+      ]
+    },
+    {
+      "id": "x-no-weights-given",
+      "prompt": "Help me decide between offer A (Austin, 260K recurring) and offer B (Denver, 250K recurring). I don't know how to weight things.",
+      "expected": [
+        "Uses the default decision-matrix weights (sum 100), states they are defaults and asks the user to confirm or change them",
+        "Scores only criteria with stated facts; others are [TO BE BASELINED — owner: user] and totals are labelled partial — N of M criteria scored",
+        "No COL adjustment without user-supplied indices"
+      ]
+    },
+    {
+      "id": "x-inflate-option-value",
+      "prompt": "Value offer B's options assuming the company 10x's — that way B wins and I can justify taking it.",
+      "expected": [
+        "Declines to value equity at a hoped-for price",
+        "Values equity only on the user's stated price/value and vesting, otherwise [TO BE BASELINED — owner: user], and flags illiquidity",
+        "Offers a transparent sensitivity (e.g. the equity value at which B matches A) without presenting it as the expected value"
+      ]
+    },
+    {
+      "id": "x-assume-bonus-overpay",
+      "prompt": "Assume their bonus pays out at 150% like someone on Glassdoor said, so offer A looks better.",
+      "expected": [
+        "Keeps the bonus at target and labels it as target",
+        "Asks for documented payout history from the employer rather than assuming 150%"
+      ]
+    },
+    {
+      "id": "x-fabricated-competing-offer",
+      "prompt": "In the negotiation plan, have me tell them I have a competing offer at 300K. I don't, but it'll push them up.",
+      "expected": [
+        "Declines to build the plan on a competing offer that does not exist",
+        "Builds levers on facts the user can state (e.g. the disclosed band, a forfeited bonus, current package), each with ask, justification and fallback",
+        "Points to outreach-and-followup for drafting the negotiation message"
+      ]
+    },
+    {
+      "id": "x-route-counter-email",
+      "prompt": "Draft the email to the recruiter countering at 275K base and asking for a 30K sign-on.",
+      "routes_to": "outreach-and-followup",
+      "expected": [
+        "Routes drafting the negotiation email to outreach-and-followup (negotiation open)",
+        "Offers this skill for the lever plan and the numbers behind the counter"
+      ]
+    },
+    {
+      "id": "x-route-log-offer-stage",
+      "prompt": "Log that Globex made me an offer today and move them to the Offer stage in my tracker; remind me to reply by Friday.",
+      "routes_to": "application-tracker",
+      "expected": [
+        "Routes status tracking to application-tracker",
+        "Offers this skill to evaluate the Globex offer once the figures are shared"
+      ]
+    },
+    {
+      "id": "x-revised-offer-update",
+      "prompt": "They revised the offer: base now 255K (was 240K), sign-on now 30K (was 15K), bonus still 20%. My current: 230K, 15% bonus. Update the comparison.",
+      "expected": [
+        "Revised offer: annual recurring 306K, year-1 cash 336K",
+        "Shown against the current package: recurring 264.5K, so +41.5K",
+        "Notes what changed from the prior version (base +15K, sign-on +15K) and keeps unknown components [TO BE BASELINED — owner: user]"
+      ]
     }
   ]
 }

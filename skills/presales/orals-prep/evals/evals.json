@@ -130,6 +130,168 @@
           "check": "sections:[\"Figures not in the proposal\",\"Airtime vs spoken length\"]"
         }
       ]
+    },
+    {
+      "id": "x-bank-core-orals-90min",
+      "prompt": "Fictional Cedar Federal Bank shortlisted us for core-banking integration. Orals: 90 minutes total, format not split by the client. Evaluators: CIO, CRO, head of payments, procurement. Presenters: our sponsor, engagement lead, solution architect, data migration lead.",
+      "expected": [
+        "Reserves at least 35% of the 90 minutes for Q&A because the client did not fix the split (presentation no more than about 58 minutes)",
+        "Timed script with start/end minutes per segment, speaker, slide, point, proof and transition; opening ≤90 s and close ≤60 s written verbatim",
+        "Airtime check: all four presenters have at least one segment and none exceeds 40%",
+        "Evaluation map uses the proposal's structure as the scoring frame with criteria marked [TO BE BASELINED — owner: ___] since none were stated"
+      ]
+    },
+    {
+      "id": "x-state-agency-fixed-split",
+      "prompt": "State DMV modernisation bid defense, virtual, 60 minutes: the RFP fixes 45 minutes presentation and 15 minutes Q&A. Scored criteria: technical approach 40, management 30, past performance 30. Presenters: capture lead, program manager, technical lead.",
+      "expected": [
+        "Keeps the client-fixed 45/15 split rather than forcing 35% Q&A",
+        "Evaluation map links each scored criterion (technical approach, management, past performance) to slides and a speaker",
+        "Logistics cover the virtual setup, a PDF backup of the deck, and who speaks if someone drops"
+      ]
+    },
+    {
+      "id": "x-steering-committee-readout",
+      "prompt": "Quarterly steering-committee readout for our managed-services client next Tuesday: 30 minutes, 15 talk / 15 questions. Attendees: COO, CFO, IT director. Presenting: account lead and delivery manager. Please prep us, especially for the SLA misses in August.",
+      "expected": [
+        "Timed 15-minute script with handoffs between the account lead and delivery manager and the airtime check",
+        "The SLA misses are one of the hard three, answered honestly with the gap stated and the mitigation, not spun",
+        "Likely-questions bank answers are ≤75 words with the answerer, evidence pointer and a 'do not say' line"
+      ]
+    },
+    {
+      "id": "x-data-platform-shortlist-terse",
+      "prompt": "Shortlist interview, data platform RFP, 45 min: 20 present / 25 Q&A. Panel: CDO, enterprise architect, finance. Us: practice head, lead data engineer, delivery lead. Compliance matrix has two partials in data residency. Go.",
+      "expected": [
+        "Question bank includes one question per data-residency partial with an honest answer stating the gap and mitigation",
+        "Opening ≤90 s and close ≤60 s are written verbatim, with the close stating the ask and next step",
+        "Rehearsal plan with three dry runs (content and timing, Q&A only, full with red team), each dated or [TO BE BASELINED — owner: ___], scored with the rubric"
+      ]
+    },
+    {
+      "id": "x-university-erp-orals",
+      "prompt": "University ERP implementation orals: 60 min, 25/35. Evaluators: provost's office, CFO, registrar, IT security officer. Presenters: sponsor, engagement lead, functional lead (student), technical lead. The proposal has three [TBD] items in the data-conversion estimate.",
+      "expected": [
+        "Each [TBD] in the estimate becomes a likely question, and the script carries [TO BE BASELINED — owner: ___] rather than a number",
+        "Number sheet lists every figure the team may say with its proposal page",
+        "No competitor named in any answer"
+      ]
+    },
+    {
+      "id": "x-red-team-only",
+      "prompt": "Our orals script is done. Run a red-team on our pitch: we present to a health-plan CIO and CFO on Monday, three presenters, 40 minutes of questions.",
+      "expected": [
+        "Red-team protocol assigns a skeptical evaluator and an incumbent-friendly evaluator, runs the bank's objections plus three unscripted questions",
+        "Logs any answer over 90 seconds, any invented number and any contradiction of the proposal, scored with the rubric",
+        "Hard three identified (e.g. price, a known gap, incumbent continuity) and rehearsed first"
+      ]
+    },
+    {
+      "id": "x-exec-sponsor-coaching",
+      "prompt": "I'm the executive sponsor opening and closing our orals for a fictional logistics client next week (60 min, 25 present / 35 Q&A; me, engagement lead, solution architect). Write my opening and close and tell me what I should not say.",
+      "expected": [
+        "Opening written verbatim in ≤90 seconds covering their situation, the outcome and what they will hear",
+        "Close written verbatim in ≤60 seconds with the ask and the next step",
+        "Lists 'do not say' items: no new numbers outside the proposal, no competitor names, no uncleared client references"
+      ]
+    },
+    {
+      "id": "x-presenters-by-credibility",
+      "prompt": "60-minute orals, 25 presenting. Our VP wants to present the technical approach himself even though the lead architect will do the work. Team: VP (sponsor), engagement lead, lead architect. How should we assign segments?",
+      "expected": [
+        "Assigns by credibility: the lead architect speaks to the approach, the engagement lead to governance and commitments, the sponsor opens and closes",
+        "Airtime check keeps every speaker at ≥1 segment and none above 40% of the 25 minutes",
+        "Scripted handoffs between speakers are written out"
+      ]
+    },
+    {
+      "id": "x-no-team-named",
+      "prompt": "Orals for the Riverton Water RFP are 60 minutes, 30 presenting / 30 Q&A, panel of four. Build the timed script.",
+      "expected": [
+        "Asks once for the presenting team (names, roles on the engagement) because the script cannot be assigned without it",
+        "Does not produce a speaker-assigned timed script before the team is known",
+        "May offer the question bank from the proposal as a parallel first step"
+      ]
+    },
+    {
+      "id": "x-no-duration",
+      "prompt": "We present to Harbor Logistics' evaluation panel next week. Team: sponsor, engagement lead, integration architect. Get us ready.",
+      "expected": [
+        "Asks once for the format: duration, presentation vs Q&A split, attendees and evaluation criteria",
+        "Does not produce a timed script without the duration"
+      ]
+    },
+    {
+      "id": "x-criteria-unknown-proceeds",
+      "prompt": "60 min orals, 25/35 split, presenters: sponsor, engagement lead, architect. We don't know how they'll score it and the proposal file isn't handy right now.",
+      "expected": [
+        "Proceeds with the full pack because format and team are stated, using the proposal's structure as the scoring frame",
+        "Marks the evaluation criteria and any proposal figures [TO BE BASELINED — owner: ___] rather than inventing them",
+        "Lists the missing proposal and criteria as open items with owners"
+      ]
+    },
+    {
+      "id": "x-no-proposal-numbers",
+      "prompt": "For our orals on Thursday (45 min, 20/25; sponsor, delivery lead, architect), put the savings and timeline numbers into the script. I don't have the final proposal with me.",
+      "expected": [
+        "Writes the script with proof slots marked [TO BE BASELINED — owner: ___] instead of savings or timeline figures",
+        "States every number must trace to the proposal and asks for it to fill the number sheet",
+        "Each unbaselined number becomes a likely question in the bank"
+      ]
+    },
+    {
+      "id": "x-uncleared-fortune500-claim",
+      "prompt": "Have the engagement lead say 'we've done this for 50 Fortune 500 clients including two of your peers' in the opening. Sounds strong.",
+      "expected": [
+        "Says in one line that uncleared client claims create credibility and compliance risk in orals",
+        "Uses only cleared references in their cleared form, or omits the claim; does not print the '50 Fortune 500' figure unless it is in the proposal with a source",
+        "Rewrites the opening around the client's situation and the proposal's evidence"
+      ]
+    },
+    {
+      "id": "x-promise-new-timeline",
+      "prompt": "The proposal says go-live in 9 months. In Q&A, if they push, have the architect promise 6 months to close the deal.",
+      "expected": [
+        "Declines to script a 6-month commitment that is not in the proposal",
+        "Answers the timeline question from the proposal's basis of estimate and contingency, stating what would have to change to go faster",
+        "Keeps 9 months as the number on the number sheet"
+      ]
+    },
+    {
+      "id": "x-attack-incumbent-close",
+      "prompt": "End the close by naming Vantage Systems and their outage last year so the panel remembers why they should switch.",
+      "expected": [
+        "Removes the competitor name from the close",
+        "Replaces it with a ghost line in consequence language (the risk the client should weigh and how we remove it)",
+        "Explains in one line that competitor naming in orals creates credibility and compliance risk"
+      ]
+    },
+    {
+      "id": "x-route-deck-rework",
+      "prompt": "Slides 4 to 9 of our orals deck have a weak storyline and too much text. Redline them slide by slide.",
+      "routes_to": "exec-deck-redline",
+      "expected": [
+        "Routes slide content rework to exec-deck-redline",
+        "Says orals-prep scripts what presenters say, the timing, Q&A bank and rehearsal, and offers it once the deck is final"
+      ]
+    },
+    {
+      "id": "x-route-battle-card",
+      "prompt": "Build a battle card against the incumbent for this pursuit: their strengths, weaknesses and our win themes.",
+      "routes_to": "competitive-positioning",
+      "expected": [
+        "Routes the battle card to competitive-positioning",
+        "Notes the battle card feeds orals-prep's question bank and that spoken answers about the incumbent belong to orals-prep"
+      ]
+    },
+    {
+      "id": "x-talk-track-check-inline",
+      "prompt": "Proposal figures: 14-week migration, 3 environments, 99.5% availability target, fixed fee 1.8M. Speakers in the slot plan: Ana, Raj, Mei. Our current talk track:\nAna: We migrate in 14 weeks.\nRaj: We hit 99.9% availability from day one.\nMei: Three environments, fixed fee 1.8M.\nTom: And we'll save you 25% on licences.\nCheck it before Thursday.",
+      "expected": [
+        "Flags 99.9% availability and the 25% licence saving as figures not in the proposal; 14 weeks, three environments and 1.8M trace",
+        "Lists Tom as a person with lines but no slot",
+        "Compares each speaker's spoken length with their slot and recommends replacing the untraced figures with proposal figures or [TO BE BASELINED — owner: ___]"
+      ]
     }
   ]
 }

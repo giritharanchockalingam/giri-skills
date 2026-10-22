@@ -103,6 +103,175 @@
         {"file": "routing.csv", "check": "contains:\"when does the 42 bus come,fallback,\""},
         {"file": "conversation-spec.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-hr-assistant-first-draft",
+      "prompt": "First cut of intents for our HR helpdesk assistant plus a handful of messages from the pilot channel (unlabelled). What does it miss?\n\nintents.csv\nintent,description,examples,response_type,handoff,owner\nleave_balance,Tell the employee their remaining vacation days,how many vacation days do I have left|vacation balance|remaining leave days,answer,no,HR systems lead\npayslip,Send the latest payslip,download my payslip|where is my payslip|send last month payslip,action,no,Payroll lead\nbenefits_enrol,Explain dental and medical plan enrolment,enrol in dental plan|change medical plan|benefits enrolment deadline,answer,no,Benefits lead\n\nutterances.csv\nutterance\nhow many vacation days are left for me\nI need my payslip from march\nwhen is the dental enrolment deadline\nIs there bike parking near the office\ncan I change my medical plan mid year\nhow do I book a meeting room",
+      "expected": [
+        "Line 1 gives the conversation_design.py run command; line 2 headline shows coverage 4/6, accuracy not measured — no labels, and no gate (exit 0)",
+        "Lists the bike-parking and meeting-room messages as uncovered (routed to fallback below 0.25) in Gaps",
+        "Flags all three intents as thin (3 examples, fewer than 5) with each intent's owner",
+        "With no persona file, lists name, tone, reading_level, escalation_channel and disallowed_topics as [TO BE BASELINED — owner: Conversation designer]"
+      ]
+    },
+    {
+      "id": "x-telco-labelled-gate-fails",
+      "prompt": "Mobile operator care bot. Labelled sample below; the release rule is 90% routing accuracy. Pass or fail?\n\nintent,description,examples,response_type,handoff,owner\ndata_balance,Show remaining mobile data allowance,how much data left|data balance|remaining data allowance|check my data|data usage this month,answer,no,Digital care lead\nroaming,Explain roaming charges and add a roaming pack,roaming charges abroad|add travel roaming pack|roaming in europe|overseas roaming price|turn on roaming,action,no,Roaming product owner\nsim_replace,Replace a lost or stolen SIM card,replace lost sim card|sim card stolen|new sim card|block my sim|sim swap,action,no,Fraud and SIM lead\n\nutterance,expected_intent\nhow much data have I got left,data_balance\nmy sim card was stolen yesterday,sim_replace\nroaming price for europe,roaming\nI am travelling overseas next week what will my data cost,roaming\nblock my sim now,sim_replace",
+      "expected": [
+        "Headline: accuracy 4/5 = 0.800, below 0.900, so the run exits 1 with all outputs still written",
+        "Identifies the misroute: the overseas travel message labelled roaming is routed to data_balance (shared word 'data')",
+        "Per-intent table shows roaming recall below 1.000 and data_balance precision below 1.000, each gap with the intent's owner",
+        "States the router is lexical TF-IDF and sample-based, and that routing.csv from the run is authoritative over hand-computed scores"
+      ]
+    },
+    {
+      "id": "x-insurance-claim-intents-confusable",
+      "prompt": "Car insurer chatbot. Agents tell us customers asking about an existing claim keep getting the new-claim form. Can you see why?\nIntents:\nfile_claim | Start a new car insurance claim | file a claim for my car|start a car claim|make a claim after an accident|report a car accident claim|new claim for damage | action | no | Claims intake lead\nclaim_status | Tell the customer where their claim is | status of my car claim|where is my claim|claim update|has my claim been approved|check claim progress | answer | no | Claims operations lead\nrenew_policy | Renew a car insurance policy | renew my policy|policy renewal date|renew car insurance|auto renew policy|extend my cover | action | no | Retention lead\nLabelled messages:\nI want to make a claim for my car -> file_claim\nany update on my claim -> claim_status\nwhen does my policy renew -> renew_policy\nmy car claim -> claim_status",
+      "expected": [
+        "Flags file_claim and claim_status as a confusable pair (example-set cosine at or above 0.40, shared words such as car and claim)",
+        "Shows 'my car claim' (labelled claim_status) routed to file_claim; accuracy 3/4 = 0.750",
+        "Recommends owner actions in Gaps: add distinguishing phrasings or split/merge the confusable intents, naming the Claims intake lead and Claims operations lead"
+      ]
+    },
+    {
+      "id": "x-bank-fraud-handoff-flow",
+      "prompt": "Where should fallback and the human hand-off sit for our retail bank helper? Persona: name Harbor Bank Helper; tone Calm and plain; reading_level Grade 7; escalation_channel Fraud desk phone queue; disallowed_topics investment advice;tax advice.\nIntents (intent,description,examples,response_type,handoff,owner):\ncard_freeze,Freeze a debit card in the app,freeze my card|lock my debit card|temporarily block card|pause my card|card misplaced freeze it,action,no,Cards lead\nreport_fraud,Report a transaction the customer did not make,I did not make this payment|fraud on my account|unknown transaction|someone used my card|report fraud,handoff,yes,Fraud operations lead\nstatement,Send an account statement,download statement|send my bank statement|statement for last month|pdf statement|account statement,action,no,Servicing lead\nSample: 'freeze my card please' (card_freeze); 'can I get last month's statement' (statement); 'what's the mortgage rate' (fallback); 'there is a payment I never made on my account' (report_fraud)",
+      "expected": [
+        "Fallback and hand-off: below 0.25 → rephrase prompt → re-route; a second miss goes to the Fraud desk phone queue; report_fraud (handoff=yes) goes straight to the Fraud desk phone queue",
+        "Includes a short mermaid flowchart showing fallback and a path to a person",
+        "Uses the supplied persona values and lists no persona key as TBD; disallowed topics (investment advice, tax advice) route to decline/fallback",
+        "Treats 'what's the mortgage rate' labelled fallback as correctly out of scope rather than as a missing intent"
+      ]
+    },
+    {
+      "id": "x-long-messages-truncated",
+      "prompt": "Check these real messages from our council services bot against the intents (bin_collection: when is my bin collected|missed bin collection|bin day; parking_permit: apply for a parking permit|renew resident permit|permit cost; owner Digital services lead for both, response_type answer, handoff no).\n1. My recycling bin was not collected on Tuesday again and the whole street is overflowing, this is the third time since August and nobody replies to emails\n2. bin day for 14 Elm Road\n3. How much does a resident parking permit cost for a second car in zone C",
+      "expected": [
+        "Echoes no message beyond its first 80 characters; message 1 (longer than 80 characters) is cut at 80 and ends with \"…\"",
+        "Reports coverage 3/3 and states accuracy is not measured because there are no labels",
+        "Flags both intents as thin (3 examples, fewer than 5) with the Digital services lead as owner"
+      ]
+    },
+    {
+      "id": "x-min-accuracy-without-labels",
+      "prompt": "Gate our airline rebooking bot at 0.85 accuracy. Intents: rebook_flight (change my flight|rebook to a later flight|move my booking|switch flight date|next available flight), baggage_allowance (how many bags can I take|baggage allowance|checked bag weight|carry on size|extra bag fee). Owners: Rebooking product owner, Baggage policy owner. Messages (no labels yet): 'can I move my flight to friday', 'what is the carry on size', 'my bag is lost'.",
+      "expected": [
+        "States that with min_accuracy set and no labelled rows accuracy cannot be measured, so the gate fails: the run exits 1 with all outputs still written",
+        "Headline shows accuracy as not measured — no labels, plus the coverage figure",
+        "Asks for expected_intent labels on the sample to measure accuracy, without inventing labels"
+      ]
+    },
+    {
+      "id": "x-exec-how-much-does-it-understand",
+      "prompt": "Our COO asked a simple question: of what customers actually type into the parcel-tracking chat, how much does it understand? I exported the intent list and last week's messages with the agent-assigned labels. Intents: track_parcel (where is my parcel|track my delivery|parcel status|tracking number|delivery update), redeliver (rearrange delivery|missed delivery card|redeliver tomorrow|change delivery day|deliver again); owner Delivery experience lead for both. Messages: 'where is my parcel' -> track_parcel; 'I missed the driver can you deliver again' -> redeliver; 'parcel arrived damaged' -> (blank); 'change delivery day to saturday' -> redeliver.",
+      "expected": [
+        "Answers with coverage 4/4 and accuracy over the labelled rows only (3/3 = 1.000); the blank-label row counts toward coverage only",
+        "Points out that 'parcel arrived damaged' is routed to track_parcel only through the shared word 'parcel', so coverage overstates understanding; recommends labelling it and a damaged-parcel intent decision for the Delivery experience lead",
+        "States plainly the router is lexical and sample-based, not a production NLU benchmark"
+      ]
+    },
+    {
+      "id": "x-utility-autopay-split-regression",
+      "prompt": "We split the old payments intent into pay_bill and autopay. Did the edit break routing? Gate at 0.85.\nintent,description,examples,response_type,handoff,owner\npay_bill,Take a one-off payment,pay my bill|make a payment now|pay the amount due|pay online today|one-off payment,action,no,Payments lead\nautopay,Set up or cancel automatic monthly payments,set up autopay|automatic monthly payment|cancel direct debit|turn off autopay|change autopay date,action,no,Payments lead\nreport_outage,Report a power outage at an address,power is out|report an outage|no electricity at my house|lights went out|outage in my street,action,no,Outage operations lead\nutterance,expected_intent\nI want to pay my bill,pay_bill\nstop the automatic payments,autopay\nmy power is out,report_outage\nchange the date my autopay runs,autopay\npay what I owe today,pay_bill\nthere's no electricity on our street,report_outage\ncan you move my payment date,autopay",
+      "expected": [
+        "Treats this as a regression check of an existing catalog: accuracy 7/7 = 1.000, gate met (exit 0)",
+        "Reports precision and recall per intent and whether pay_bill and autopay are confusable at the 0.40 threshold",
+        "Notes low-margin routes (scores close to 0.25, e.g. 'can you move my payment date') as worth more examples, deferring to routing.csv from the run"
+      ]
+    },
+    {
+      "id": "x-intents-but-no-messages",
+      "prompt": "Here's the intent catalog for our grocery delivery assistant (substitutions, delivery_slot, refund_item, talk_to_agent — 5 examples each, owners set). Design the conversation flow and tell me the coverage.",
+      "expected": [
+        "Asks once for the utterance sample (utterance[,expected_intent], assets/utterances-template.csv) because coverage cannot be computed without it; the run stops (exit 2)",
+        "Does not invent example user messages or a coverage figure"
+      ]
+    },
+    {
+      "id": "x-messages-but-no-catalog",
+      "prompt": "I've got 400 chat messages from our pharmacy refill bot. Can you work out which intents we need and how well they're covered?",
+      "expected": [
+        "Asks once for the intent catalog (intent, description, examples, response_type, handoff, owner per assets/intents-template.csv); the run stops (exit 2) without it",
+        "Does not invent intents or a coverage figure from the description",
+        "Reminds to de-identify the messages before sharing since outputs echo up to 80 characters of each"
+      ]
+    },
+    {
+      "id": "x-invalid-response-type-and-handoff",
+      "prompt": "Run the coverage check. intents.csv:\nintent,description,examples,response_type,handoff,owner\norder_status,Where is my order,where is my order|order status|track order|order update|delivery status,answer,no,Ecommerce lead\ncomplaint,Customer complaint,I want to complain|bad service|complaint about staff|unhappy with order|speak to manager,escalate,maybe,CX lead\nutterances: 'where is my order', 'I want to complain about the driver'",
+      "expected": [
+        "Stops (exit 2) on the complaint row: response_type 'escalate' is not one of answer|action|handoff|clarify and handoff 'maybe' is not yes/no, naming the line",
+        "Does not silently correct the values or produce routing results; asks the owner (CX lead) to fix the row and re-run"
+      ]
+    },
+    {
+      "id": "x-no-files-how-would-you-check",
+      "prompt": "how would you check whether our support bot's intents actually match what people ask?",
+      "expected": [
+        "Gives the run command line and describes coverage, accuracy, precision/recall and confusable pairs with the thresholds (0.25 route, 0.40 confusable)",
+        "Asks once for the intent catalog and an utterance sample, without inventing either"
+      ]
+    },
+    {
+      "id": "x-generate-synthetic-utterances",
+      "prompt": "We don't have chat logs yet. Just make up 50 realistic customer messages for our gym membership bot (freeze, cancel, class booking intents) and run the coverage on those so I can show the board a number.",
+      "expected": [
+        "Declines to invent utterances and to present a coverage figure from them; coverage must come from real or sampled user messages",
+        "Offers the defensible path: collect messages from call-centre notes, emails, search logs or a short rider/member survey into assets/utterances-template.csv (de-identified)",
+        "Asks once for that utterance sample"
+      ]
+    },
+    {
+      "id": "x-pick-persona-values",
+      "prompt": "We haven't decided the bot's voice. Just choose a friendly tone, grade 6 reading level and route escalations to live chat — whatever's standard — and put it in the conversation spec.",
+      "expected": [
+        "Does not choose tone, reading_level or escalation_channel; each is [TO BE BASELINED — owner: Conversation designer] with 'not chosen: the Conversation designer's decision'",
+        "Lists every missing persona key by name (including name and disallowed_topics if not given)",
+        "Shows the hand-off path to the escalation channel as TBD rather than live chat"
+      ]
+    },
+    {
+      "id": "x-quote-vendor-accuracy",
+      "prompt": "Our NLU vendor says the bot is 95% accurate. Put 95% accuracy in the coverage report for the steering group — the sample I gave you has no labels anyway.",
+      "expected": [
+        "Declines to state an accuracy figure that was not counted from labelled rows; reports accuracy as not measured — no labels",
+        "Notes this skill's router is lexical and sample-based, not a production NLU benchmark, so a vendor figure is not interchangeable with it",
+        "Offers the path: label a sample with expected_intent and re-run (optionally with min_accuracy)"
+      ]
+    },
+    {
+      "id": "x-system-prompt-routes-prompt-spec",
+      "routes_to": "prompt-spec",
+      "prompt": "Rewrite the system prompt for our billing assistant so it sounds warmer and refuses to give legal advice. Keep it under 300 words.",
+      "expected": [
+        "Routes to prompt-spec for system-prompt wording",
+        "States that conversation-design covers the intent catalog, coverage, fallback and human hand-off, not prompt wording"
+      ]
+    },
+    {
+      "id": "x-multi-agent-routes-architecture",
+      "routes_to": "agent-architecture",
+      "prompt": "Should our customer assistant be a single agent with tools, or a supervisor that delegates to billing, outages and moving-home sub-agents? What are the trade-offs?",
+      "expected": [
+        "Routes to agent-architecture for single- vs multi-agent topology",
+        "States that conversation-design checks intents against real utterances (coverage, confusable intents, fallback/hand-off), which can follow once the topology is chosen"
+      ]
+    },
+    {
+      "id": "x-intent-named-fallback",
+      "prompt": "Check coverage. Intents: opening_hours (what time do you open|opening hours|are you open sunday|closing time|holiday hours), fallback (anything else|other question|help), store_locator (nearest store|store near me|find a shop|store address|directions to store). Owners: Retail digital lead. Messages: 'are you open on sunday', 'where is the nearest store', 'do you sell gift cards'.",
+      "expected": [
+        "Stops (exit 2) because an intent is named `fallback`, which is reserved for the below-0.25 route; names the row",
+        "Explains that out-of-scope messages are handled by the built-in fallback (label them `fallback`), and asks to remove or rename that intent before re-running"
+      ]
+    },
+    {
+      "id": "x-thin-intents-duplicate",
+      "prompt": "Quick sanity check on the gym app bot before we wire it up:\nintent,description,examples,response_type,handoff,owner\nbook_class,Book a fitness class,book a spin class|reserve yoga,action,no,Member app lead\ncancel_membership,Cancel a membership,cancel my membership|end my contract,handoff,yes,Membership lead\nbook_class,Book a class,book pilates,action,no,Member app lead\nMessages: 'book spin tomorrow', 'I want to cancel'",
+      "expected": [
+        "Stops (exit 2) because book_class is a duplicate intent, naming the line; produces no routing results",
+        "Asks the Member app lead to merge the duplicate rows and notes the intents are thin (fewer than 5 examples) for when the run is repeated"
+      ]
     }
   ]
 }

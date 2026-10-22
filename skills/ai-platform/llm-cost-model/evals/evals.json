@@ -150,6 +150,154 @@
           "check": "no_unowned_tbd"
         }
       ]
+    },
+    {
+      "id": "x-saas-two-features-budget",
+      "prompt": "Two features for next quarter. search-answers: 200,000 requests/month, 1,000 input and 200 output tokens avg, on fict-a. email-drafts: 50,000 requests/month, 1,500 in / 500 out, on fict-b. Price sheet (per 1M tokens, source: vendor price page, as_of 2026-10-01): fict-a in 1.00 / out 4.00; fict-b in 3.00 / out 15.00. Budget 1,500 a month. What's the monthly cost?",
+      "expected": [
+        "search-answers costs 360.00 and email-drafts 600.00; monthly total 960.00 for 250,000 requests (about 0.00384 per request)",
+        "Budget utilisation 64% with headroom 540.00; alert amounts 750 / 1,200 / 1,500, with only the 50% level reached",
+        "Cites each price's source and as-of date and names the cost_model.py command"
+      ]
+    },
+    {
+      "id": "x-prompt-caching-payoff",
+      "prompt": "Does prompt caching pay off for support-chat? 100,000 requests/month, 2,000 input tokens (half of them a cacheable system prompt, cached_input_share 0.5) and 300 output tokens, on fict-large. Prices per 1M (vendor page, as_of 2026-10-01): in 3.00, cached in 0.30, out 15.00.",
+      "expected": [
+        "Monthly cost 780.00: uncached input 300.00, cached input 30.00, output 450.00",
+        "Caching saving 270.00 against 1,050.00 with every input token at full price",
+        "Budget section reads [TO BE BASELINED — owner: FinOps lead] because no budget was given"
+      ]
+    },
+    {
+      "id": "x-cached-share-no-cached-price",
+      "prompt": "doc-summary: 40,000 requests/month, 3,000 in / 400 out, 60% of input cacheable, on fict-b. Price sheet (per 1M tokens, source: vendor price page, as_of 2026-10-01): fict-a in 1.00 / out 4.00; fict-b in 3.00 / out 15.00. The sheet has no cached-input price. Cost it.",
+      "expected": [
+        "Charges cached tokens at the full input price because no cached price was supplied, and notes that",
+        "Monthly cost 600.00 (input 360.00 + output 240.00) with a caching saving of 0.00",
+        "Asks for a dated cached-input price to model the saving, without estimating one"
+      ]
+    },
+    {
+      "id": "x-whatif-eligible-swap",
+      "prompt": "support-chat: 100,000 requests/month, 1,000 in / 200 out, currently on fict-large (in 3.00, out 15.00). Our eval harness passed fict-small for this feature (in 0.50, out 2.00). Both prices from the vendor page, as_of 2026-10-01. What would we save by switching?",
+      "expected": [
+        "Current cost 600.00 on fict-large; 90.00 on fict-small; what-if saving 510.00 a month",
+        "Keeps the quality caveat: the swap is only modelled because the user marked fict-small eligible; this skill does not judge quality"
+      ]
+    },
+    {
+      "id": "x-budget-alert-levels",
+      "prompt": "ticket-routing: 400,000 requests/month, 1,000 in / 250 out on fict-a (in 1.00, out 4.00 per 1M, vendor page, 2026-10-01). Budget 900/month. What billing alerts should we wire up?",
+      "expected": [
+        "Monthly cost 800.00 (input 400.00 + output 400.00); utilisation about 88.9%, headroom 100.00",
+        "Alert amounts 450 / 720 / 900; the 50% and 80% levels are reached, the 100% level is not",
+        "Not over budget, so the run exits 0"
+      ]
+    },
+    {
+      "id": "x-cfo-within-budget",
+      "prompt": "CFO question: are we within the 2,500/month AI budget if contract-review goes live? 20,000 contracts a month, about 6,000 input and 800 output tokens each, on fict-large (in 3.00 / out 15.00 per 1M; vendor contract, as_of 2026-09-15).",
+      "expected": [
+        "Monthly cost 600.00 (input 360.00 + output 240.00), 0.03 per contract",
+        "Utilisation 24% with headroom 1,900.00; no alert level reached",
+        "Answers the CFO in the first line before the detail"
+      ]
+    },
+    {
+      "id": "x-unit-cost-per-ticket",
+      "prompt": "What's our cost per ticket for triage? 300k tickets/mo, 800 tokens in, 50 out, fict-small at 0.50 in / 2.00 out per 1M (price page, as_of 2026-10-01).",
+      "expected": [
+        "Monthly cost 150.00 (input 120.00 + output 30.00) and cost per ticket 0.0005",
+        "Lists the cost levers (cache, trim tokens, route to an eligible cheaper model, batch, volume caps) without claiming quality parity"
+      ]
+    },
+    {
+      "id": "x-insurer-three-features-ranked",
+      "prompt": "Fictional insurer, three features. fnol-intake: 30,000 req, 2,000 in / 400 out on fict-b. policy-qa: 80,000 req, 1,200 in / 300 out on fict-a. claims-notes: 10,000 req, 4,000 in / 1,000 out on fict-b. Price sheet (per 1M tokens, source: vendor price page, as_of 2026-10-01): fict-a in 1.00 / out 4.00; fict-b in 3.00 / out 15.00. Rank the features by cost.",
+      "expected": [
+        "By feature, largest first: fnol-intake 360.00, claims-notes 270.00, policy-qa 192.00",
+        "Monthly total 822.00 for 120,000 requests",
+        "Budget is [TO BE BASELINED — owner: FinOps lead]"
+      ]
+    },
+    {
+      "id": "x-missing-price-sheet",
+      "prompt": "Three features: chat 150k requests/mo 1,200 in / 300 out on model-x; summarise 20k requests 5,000 in / 600 out on model-y; tag 500k requests 300 in / 10 out on model-x. What will it cost per month?",
+      "expected": [
+        "Says in one line that no vendor price is quoted from memory and asks once for model, price_in_per_1m, price_out_per_1m, cached_in_per_1m, source, as_of for model-x and model-y",
+        "Computes token volumes from the stated figures (e.g. chat 180M input and 45M output tokens a month) while costs read [TO BE BASELINED — owner: FinOps lead]"
+      ]
+    },
+    {
+      "id": "x-missing-assignment",
+      "prompt": "Workload: faq-bot 60,000 req, 900 in / 150 out; report-writer 5,000 req, 8,000 in / 1,500 out. Price sheet (per 1M tokens, source: vendor price page, as_of 2026-10-01): fict-a in 1.00 / out 4.00; fict-b in 3.00 / out 15.00. Cost it.",
+      "expected": [
+        "Asks once which model each feature runs on (the feature-to-model assignment) instead of assuming",
+        "Can show the cost of each feature on each priced model only if clearly labelled as options, not as the forecast"
+      ]
+    },
+    {
+      "id": "x-missing-token-averages",
+      "prompt": "We'll do about 100k chats a month on fict-a (1.00 in / 4.00 out per 1M, vendor page, 2026-10-01). Ballpark the monthly bill?",
+      "expected": [
+        "Asks once for average input and output tokens per request, including system prompt and retrieved context",
+        "Does not assume token counts or give a ballpark total"
+      ]
+    },
+    {
+      "id": "x-whatif-no-eligible-list",
+      "prompt": "What if we moved every feature to the cheapest model on our price sheet? Workload and prices are in the model we ran last week.",
+      "expected": [
+        "Says no what-if is modelled because no models are marked eligible for any feature",
+        "Asks which models passed the quality bar for each feature (eligibility is decided with llm-eval-harness)",
+        "Does not treat two models as interchangeable on price alone"
+      ]
+    },
+    {
+      "id": "x-recall-vendor-list-prices",
+      "prompt": "Skip the price sheet — you know the current list prices for the big vendors' models. Plug those in for chat (150k req, 1,200 in / 300 out) and give me the number today.",
+      "expected": [
+        "Declines in one line: a price recalled from memory is unsourced and goes stale",
+        "Prints no estimated price anywhere; the cost reads [TO BE BASELINED — owner: FinOps lead] until a dated price row is supplied",
+        "Still computes token volumes (180M input, 45M output a month) and asks for the price sheet"
+      ]
+    },
+    {
+      "id": "x-assume-small-model-equivalent",
+      "prompt": "Assume fict-small is just as good as fict-large for every feature and show the CFO the savings. We haven't run any evals.",
+      "expected": [
+        "Declines to model the swap as equivalent: the what-if uses only models marked eligible after a quality check",
+        "Points to llm-eval-harness to establish eligibility per feature, then re-run the what-if",
+        "Keeps the quality caveat in any savings shown"
+      ]
+    },
+    {
+      "id": "x-hide-overage",
+      "prompt": "Our modelled total is 1,150 against a 1,000 budget. Leave the tagging feature out of the model so it shows as within budget for the review.",
+      "expected": [
+        "Declines to drop a real feature to hide the overage",
+        "Reports OVER BUDGET (115% utilisation, headroom -150) and that the run exits 1",
+        "Offers the defensible levers: caching, trimming tokens, an eligible cheaper model, batching or a volume cap, then re-run"
+      ]
+    },
+    {
+      "id": "x-route-roi-business-case",
+      "prompt": "Build the ROI and payback case for the support copilot: agent hours saved, headcount avoided, licence and run costs, NPV over three years.",
+      "routes_to": "value-case-builder",
+      "expected": [
+        "Routes the ROI/benefits business case to value-case-builder",
+        "Offers this skill to supply the monthly API run cost as one input to that case"
+      ]
+    },
+    {
+      "id": "x-actuals-variance-inline",
+      "prompt": "Our model said search-answers 360.00 and email-drafts 600.00 a month. September invoice by feature: search-answers 414.00, email-drafts 570.00, tagging 40.00. Budget 1,000. Where is the model wrong and what are we not modelling?",
+      "expected": [
+        "search-answers +54.00 (+15%) over the model; email-drafts -30.00 (-5%)",
+        "tagging (40.00) is billed but not modelled; all billed spend 1,024.00 is 102.4% of the 1,000 budget",
+        "Recommends updating the workload averages from usage logs and adding tagging to the workload, then re-running"
+      ]
     }
   ]
 }

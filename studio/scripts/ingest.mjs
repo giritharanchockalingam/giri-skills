@@ -187,7 +187,7 @@ for (const domain of readdirSync(join(ROOT, "skills")).sort()) {
         assets: listFiles(join(sdir, "assets")),
         scripts: listFiles(join(sdir, "scripts")),
       },
-      cases: (evals.cases || []).map((c) => ({ id: c.id, prompt: c.prompt, expected: c.expected || [] })),
+      cases: (evals.cases || []).map((c) => ({ id: c.id, prompt: c.prompt, expected: c.expected || [], ...(c.routes_to ? { routesTo: c.routes_to } : {}) })),
       // agent cases (inputs + deterministic checks) become evaluation cases when the skill is imported into the factory
       agentCases: (evals.cases || []).filter((c) => c.inputs || c.checks).map((c) => ({
         id: c.id, prompt: c.prompt || "", inputs: Object.fromEntries(Object.entries(c.inputs || {}).map(([k, v]) => [k, String(v)])),

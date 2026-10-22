@@ -129,6 +129,156 @@
           "check": "contains:\"create policy projects_delete_admin_admin on public.projects\""
         }
       ]
+    },
+    {
+      "id": "x-workspace-switching",
+      "prompt": "In our Slack-style app people belong to several workspaces. How should switching between workspaces work so data never bleeds across?",
+      "expected": [
+        "Active tenant comes only from the JWT app_metadata claim, set server-side after verifying membership, never from client input",
+        "Switching forces a token refresh, and the stale-claim window is stated",
+        "Every tenant table has tenant_id with RLS reading the claim"
+      ]
+    },
+    {
+      "id": "x-enterprise-flags-overrides",
+      "prompt": "Enterprise plan gets SSO and a beta reporting module; we also want to switch the beta on for a few specific Pro customers.",
+      "expected": [
+        "Plan/feature model with plans, tenant_subscriptions and tenant_features overrides, and an entitlement resolution order",
+        "Flags named feature.<name>, checked in services rather than only in the UI"
+      ]
+    },
+    {
+      "id": "x-seat-limit-pro",
+      "prompt": "Pro plan allows 10 seats. Enforce it.",
+      "expected": [
+        "Limit checked in the service (invite/accept path) returning a Result error code PLAN_LIMIT_REACHED, not only hidden in the UI",
+        "Handles concurrent invites so the limit cannot be exceeded by a race"
+      ]
+    },
+    {
+      "id": "x-audit-soc2-seven-years",
+      "prompt": "Our SOC 2 auditor wants every role change and every data export logged and kept for 7 years.",
+      "expected": [
+        "Audit log append-only (no update/delete), capturing actor, tenant, entity, action, before/after and requestId",
+        "Row changes via trigger and non-row actions such as exports as application-level events",
+        "Retention set to the stated 7 years, with export"
+      ]
+    },
+    {
+      "id": "x-tenant-deletion-request",
+      "prompt": "A customer cancelled and wants every trace of their organisation deleted. How should tenant deletion work?",
+      "expected": [
+        "States the cascade plan, a data export before deletion, and the retention rule (including what happens to audit records)",
+        "Deletion itself is audited and restricted to the owner role"
+      ]
+    },
+    {
+      "id": "x-unique-invoice-number",
+      "prompt": "Invoice numbers must be unique, so we put a unique index on invoices.invoice_number. Good?",
+      "expected": [
+        "No: a global unique index on invoice_number collides across tenants and leaks that a number exists in another tenant",
+        "Scopes the constraint by tenant: unique (tenant_id, invoice_number)"
+      ]
+    },
+    {
+      "id": "x-org-id-in-request-body",
+      "prompt": "Our API takes orgId in the request body to decide which org's records to return. Any issue?",
+      "expected": [
+        "Yes: the tenant id must come only from the JWT (app_metadata), never from client input",
+        "RLS enforces the tenant predicate at the database so a forged orgId returns nothing"
+      ]
+    },
+    {
+      "id": "x-retrofit-single-to-multi",
+      "prompt": "We run one Supabase project per customer today (single-tenant). We want to host 50 customers on one project. How do we get there?",
+      "expected": [
+        "Proposes shared schema with tenant_id on every business table plus RLS, and states the decision for an ADR",
+        "Posts a one-page design summary and waits for go before detailed artifacts",
+        "Hands the migration task list to supabase-schema-rls rather than writing final SQL itself"
+      ]
+    },
+    {
+      "id": "x-missing-billing-tiers",
+      "prompt": "Add billing tiers.",
+      "expected": [
+        "Asks once for the plans/tiers and the limits and features that differ between them",
+        "Does not invent tiers or limits"
+      ]
+    },
+    {
+      "id": "x-missing-tenant-concept",
+      "prompt": "Make our app multi-tenant.",
+      "expected": [
+        "Asks once for the tenant concept (org / workspace / account), whether users belong to many tenants, the roles and actions that matter, and plans if billing applies",
+        "Does not guess the model before those answers"
+      ]
+    },
+    {
+      "id": "x-missing-existing-schema",
+      "prompt": "We already have about 30 tables in production. Add tenancy to them.",
+      "expected": [
+        "Asks for the existing schema / migrations before designing",
+        "Does not assume which tables are tenant-scoped or global"
+      ]
+    },
+    {
+      "id": "x-missing-actions-for-roles",
+      "prompt": "We need three roles: admin, editor, reader.",
+      "expected": [
+        "Asks once for the actions that matter (up to about 20) so the RBAC matrix can be filled",
+        "Does not invent an action list without saying so"
+      ]
+    },
+    {
+      "id": "x-adv-skip-rls",
+      "prompt": "Skip RLS — we check the tenant in our API layer and it's faster. Just design it that way.",
+      "expected": [
+        "Declines: every tenant table needs tenant_id plus RLS; the service check alone is not the control",
+        "Explains RLS covers paths the API layer does not (direct clients, PostgREST, Realtime)"
+      ]
+    },
+    {
+      "id": "x-adv-hide-button-only",
+      "prompt": "Viewers shouldn't delete projects. Just hide the delete button for them, that's enough.",
+      "expected": [
+        "UI is hide-only, never the control: the delete action needs an RLS policy and a service-level role check",
+        "Adds the action to the RBAC matrix with viewer deny"
+      ]
+    },
+    {
+      "id": "x-adv-skip-design-final-sql",
+      "prompt": "Skip the design summary. Give me the final production migration SQL for tenancy right now.",
+      "expected": [
+        "Keeps the plan-approve gate: posts the one-page design and waits for go",
+        "Says this skill is design-level and hands the migration task list to supabase-schema-rls for the SQL"
+      ]
+    },
+    {
+      "id": "x-boundary-write-migration",
+      "routes_to": "supabase-schema-rls",
+      "prompt": "Write the forward-only migration adding a comments table with tenant RLS policies and a rollback block, and regenerate the typed client.",
+      "expected": [
+        "Routes to supabase-schema-rls to write the migration SQL and RLS",
+        "Says this skill designs tenancy, RBAC, plans and audit and hands the SQL off"
+      ]
+    },
+    {
+      "id": "x-boundary-pr-review",
+      "routes_to": "security-review",
+      "prompt": "Security review this PR before merge — it adds a route handler that uses the service-role client to fetch org reports.",
+      "expected": [
+        "Routes to security-review for the pre-merge security review",
+        "Says this skill designs tenant isolation and does not verify diffs"
+      ]
+    },
+    {
+      "id": "x-existing-add-sub-teams",
+      "prompt": "We already have tenants, tenant_members and an RBAC matrix live. Now orgs want sub-teams with their own permissions inside an org.",
+      "expected": [
+        "Asks for or reads the existing schema and current RBAC matrix before changing anything",
+        "Extends the existing model rather than replacing it, asking which actions differ per team",
+        "Records the decision as an ADR and hands migrations to supabase-schema-rls"
+      ]
     }
   ]
 }

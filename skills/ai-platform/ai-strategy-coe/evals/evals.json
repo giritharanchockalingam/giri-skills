@@ -126,6 +126,176 @@
         {"file": "portfolio.md", "check": "contains:\"| UC-010 | Field service visit summariser | 5 | — | no longer in the list | Later | — |\""},
         {"file": "portfolio.csv", "check": "csv:[rank,id,band,previous_rank,previous_band,movement]"}
       ]
+    },
+    {
+      "id": "x-opmodel-central-early-insurer",
+      "prompt": "We're a 900-person regional insurer. All our AI talent is three data scientists in one analytics team, we have no shared AI platform, and nothing is in production yet. Which AI operating model should we set up?",
+      "expected": [
+        "Recommends a Central CoE (maturity 1–2, talent in one team) in a | Model | Verdict | Why | table with hub-and-spoke and federated rejected with reasons",
+        "Gives design decisions (reporting line, funding, intake, risk gate, build vs buy/partner) as a table",
+        "States the transition trigger to hub-and-spoke (2+ spokes with trained builders, platform self-service onboarding and eval gates)",
+        "Stays concise and table-based rather than a full strategy"
+      ]
+    },
+    {
+      "id": "x-opmodel-federated-mature",
+      "prompt": "Six business units, each with its own embedded AI engineers. We track value per use case monthly against baselines, our AI controls were tested in last year's audit, and every BU passed its AI audit for the last two quarters. We're hub-and-spoke today. Is it time to change?",
+      "expected": [
+        "Recommends moving to federated, citing maturity 4+ with AI engineers in every BU",
+        "Checks the hub-and-spoke → federated transition triggers against the stated facts (value tracking at level 4, controls tested, spokes pass audits two quarters running)",
+        "Shows the chosen model and the two rejected models with reasons in a table"
+      ]
+    },
+    {
+      "id": "x-portfolio-five-scored-rows",
+      "prompt": "Score and band these five ideas for our insurer:\n\nid,use_case,business_owner,V,F,D,R,baseline_metric\nUC-1,Claims triage,VP Claims,5,4,4,2,avg handling 18 min\nUC-2,Agent assist chat,Contact Centre Dir,4,4,3,3,AHT 7.5 min\nUC-3,Fraud narrative summaries,SIU Lead,3,3,2,2,4 h per case file\nUC-4,Auto-underwriting decisions,Chief Underwriter,5,2,3,5,2-day quote turnaround\nUC-5,HR policy bot,HR Ops Manager,2,5,3,1,120 tickets per month",
+      "expected": [
+        "Computes priority = V×F×D÷R per row and shows a working table: UC-1 40.00, UC-5 30.00, UC-2 16.00, UC-3 9.00, UC-4 6.00",
+        "UC-1 ranks first and is banded Now (quartile 1, R ≤ 3, D ≥ 3, owner and baseline named)",
+        "UC-5 is Stop despite ranking second because V ≤ 2, and UC-4 is Stop because R = 5",
+        "UC-2 and UC-3 are banded Later"
+      ]
+    },
+    {
+      "id": "x-full-strategy-manufacturer",
+      "prompt": "Mid-size industrial manufacturer, 4,500 staff, three plants. Azure Data Lake partly populated; a Databricks pilot; two ML models in production (demand forecasting and predictive maintenance) run by a five-person data science team in IT. A GenAI acceptable-use policy is drafted but not approved. Priorities for the next 12 months: OEE and working capital. Seven ideas from the plant managers, not yet scored: maintenance copilot, quality-defect image triage, supplier risk summaries, SOP search, quote drafting, scrap root-cause assistant, inventory rebalancing. Build our AI strategy.",
+      "expected": [
+        "Maturity table covers data, platform, talent, governance and value, scoring only what the stated facts support; dimensions without evidence (e.g. value) are [TO BE BASELINED — owner: ___]",
+        "States 'Overall: Level N' as the minimum of the evidenced scores and names the constraining dimension",
+        "Portfolio keeps one row for each of the seven ideas with axes [TBD at scoring workshop] and band 'unscored' — no invented V/F/D/R scores",
+        "Roadmap table Q1–Q4 with exit criterion and owner per quarter; Q1 foundations plus 1–2 lighthouses with baselines; Q4 operating-model transition decision"
+      ]
+    },
+    {
+      "id": "x-board-strategy-health-system",
+      "prompt": "Regional health system: 12 hospitals grouped in 4 business units, Epic EHR, Azure tenant with a model gateway, a central data team of 20 that includes two AI engineers, an AI governance committee chartered last year, no tracking of value from AI. Sponsor is the CMIO with a $3M FY27 envelope. Priorities: clinician documentation burden and denials. I need the strategy short enough for the board pack.",
+      "expected": [
+        "First line is the answer (maturity headline and model choice), followed by tables",
+        "Operating model chosen from the decision table with the two rejected models and reasons; if hub-and-spoke, flags 1–3 AI-capable people per spoke as a precondition",
+        "Executive summary ≤ 5 bullets that uses the stated $3M envelope and does not invent ROI or industry benchmark figures",
+        "Value dimension is scored low or [TO BE BASELINED — owner: ___] because no value tracking exists"
+      ]
+    },
+    {
+      "id": "x-roadmap-from-given-maturity",
+      "prompt": "Our maturity is already scored with evidence in our deck: data 3, platform 2, talent 2, governance 1, value 1. We picked hub-and-spoke. Just give me the 12-month quarter plan.",
+      "expected": [
+        "States overall Level 1 (minimum of the scores) with governance and/or value as the constraining dimension",
+        "Roadmap table | Quarter | Focus | Exit criterion | Owner | for Q1–Q4",
+        "Q1 is foundations (governance gap closure, measurement) plus 1–2 lighthouse use cases with baselines; scale is not scheduled before measurement exists",
+        "Q4 includes the operating-model transition decision"
+      ]
+    },
+    {
+      "id": "x-portfolio-unscored-and-missing-baseline",
+      "prompt": "Rank these for the CFO.\n\nid,use_case,business_owner,V,F,D,R,baseline_metric\nUC-01,Invoice coding,AP Director,4,4,4,2,6 min per invoice\nUC-02,Sales email drafts,VP Sales,3,5,3,1,\nUC-03,Contract risk flags,General Counsel,5,3,,3,3-day review\nUC-04,Forecast commentary,FP&A Lead,3,4,3,2,5-day close\nUC-05,Meeting notes,IT Ops Manager,2,5,4,1,none tracked",
+      "expected": [
+        "UC-03 goes to the unscored list with reason 'missing score(s): D' and is not ranked",
+        "Working table ranks UC-02 (45.00), UC-05 (40.00), UC-01 (32.00), UC-04 (18.00)",
+        "UC-02 is Next, not Now, because its baseline is blank, shown as [TO BE BASELINED — owner: AI CoE lead]",
+        "UC-05 is Stop because V ≤ 2"
+      ]
+    },
+    {
+      "id": "x-public-sector-dot-strategy",
+      "prompt": "State department of transportation, 2,800 staff. Oracle on-prem ERP, an AWS GovCloud landing zone, no AI in production, a six-person data team in central IT, and an AI use policy issued by the governor's office. Priorities: permit processing time and call-centre wait times. Ideas: permit document intake, 511 call summarisation, bridge-inspection image triage. No sponsor or budget yet. Draft our AI strategy.",
+      "expected": [
+        "Maturity table for all five dimensions with evidence from the stated facts or [TO BE BASELINED — owner: ___]; overall level is the minimum evidenced score with the constraining dimension named",
+        "Recommends a Central CoE (talent in one team, early maturity) with hub-and-spoke and federated rejected with reasons",
+        "The three ideas each keep a row with axes [TBD at scoring workshop] and band 'unscored'",
+        "Executive sponsor and investment envelope marked [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-missing-evidence-bank-charter",
+      "prompt": "Our CEO wants an AI CoE charter and 12-month roadmap for the bank by Friday. Can you put it together?",
+      "expected": [
+        "Asks once for current-state evidence and stops — no maturity scores, model choice or portfolio",
+        "Offers the | Input | Your answer | table with data platforms, cloud, existing AI/ML in production, AI team and skills, AI policy/governance, 12-month priorities, executive sponsor and budget, candidate use cases",
+        "Does not infer the bank's maturity from industry averages"
+      ]
+    },
+    {
+      "id": "x-missing-scorecard-csv-only",
+      "prompt": "Here's our use-case list. Give me the full AI roadmap including where we are on maturity.\n\nid,use_case,business_owner,V,F,D,R,baseline_metric\nUC-A,Service desk summarisation,IT Service Manager,4,4,4,2,12 min per ticket\nUC-B,Marketing copy drafts,CMO,3,3,3,3,2 days per campaign",
+      "expected": [
+        "First line asks once for the maturity scorecard (dimension, score_1_to_5, evidence, gap_to_next_level, owner)",
+        "Maturity is left 'pending', not inferred from the use-case list",
+        "If the portfolio is shown, it ranks UC-A (32.00) above UC-B (9.00) using V×F×D÷R"
+      ]
+    },
+    {
+      "id": "x-missing-evidence-for-scores",
+      "prompt": "Score our AI maturity: data 4, platform 4, talent 3, governance 2, value 3. What's our overall level?",
+      "expected": [
+        "Treats scores without evidence as not scores: each becomes [TO BE BASELINED — owner: ___] or is held pending evidence",
+        "Asks once for the evidence behind each dimension",
+        "Does not report an overall level computed from unevidenced scores, and does not assert one from industry norms"
+      ]
+    },
+    {
+      "id": "x-missing-previous-portfolio",
+      "prompt": "Re-rank this quarter's backlog and show me what moved since last quarter.\n\nid,use_case,business_owner,V,F,D,R,baseline_metric\nUC-11,Returns triage,Ops Director,4,4,3,2,9 min per return\nUC-12,Product Q&A bot,eCom Lead,3,4,4,2,1800 contacts/month",
+      "expected": [
+        "Asks once for last quarter's portfolio.csv because movement needs the previous ranks and bands",
+        "Does not invent previous ranks, bands or movement",
+        "May still rank the current rows (UC-11 24.00, UC-12 24.00, tie broken by lower id first)"
+      ]
+    },
+    {
+      "id": "x-pressure-industry-average-maturity",
+      "prompt": "We don't have time for evidence. Just assume we're at the retail industry average — an analyst report said level 3 — and fill in the maturity scorecard.",
+      "expected": [
+        "Declines to infer maturity from an industry average or quote an unsourced benchmark",
+        "Leaves each dimension as [TO BE BASELINED — owner: ___] until evidence is supplied",
+        "Offers the fastest defensible path (the inputs table or a short evidence workshop per dimension)"
+      ]
+    },
+    {
+      "id": "x-pressure-reweight-pet-project",
+      "prompt": "The CEO's pet project UC-7 (V3, F2, D2, R4) has to land in the Now band. Double the weight on value so it comes out on top.",
+      "expected": [
+        "Declines to weight the formula; priority stays V×F×D÷R, giving UC-7 a score of 3.00",
+        "Explains which band rules keep it out of Now (e.g. data readiness D ≤ 2 or rank outside quartile 1)",
+        "Offers the defensible path: improve the evidence (data readiness, risk mitigation) and re-score at the next scoring workshop"
+      ]
+    },
+    {
+      "id": "x-pressure-scale-in-q1",
+      "prompt": "Skip the lighthouse stuff. We want GenAI copilots rolled out to all 20,000 employees in Q1 and we'll figure out measurement later. Rewrite the roadmap that way.",
+      "expected": [
+        "Declines to schedule scale before measurement exists",
+        "Keeps Q1 as foundations plus 1–2 lighthouses with baselines, and gates broader rollout on a measurable exit criterion",
+        "Each roadmap quarter keeps an exit criterion and an owner"
+      ]
+    },
+    {
+      "id": "x-route-single-idea-canvas",
+      "prompt": "Is an AI assistant that drafts our answers to customers' security questionnaires worth doing? What would it take to build it?",
+      "routes_to": "ai-use-case-canvas",
+      "expected": [
+        "Routes to ai-use-case-canvas to qualify the single idea",
+        "Explains that ai-strategy-coe covers enterprise maturity, operating model, a multi-idea portfolio and the roadmap"
+      ]
+    },
+    {
+      "id": "x-route-risk-register",
+      "prompt": "Build the AI risk register for our six production models — bias, privacy, hallucination, IP, security — with likelihood, impact, controls and owners. Compliance view only.",
+      "routes_to": "ai-governance-risk",
+      "expected": [
+        "Routes to ai-governance-risk for the risk register and controls",
+        "Explains that ai-strategy-coe only sets the governance minimum (intake gate, risk tiers, model inventory, review cadence) within a strategy"
+      ]
+    },
+    {
+      "id": "x-existing-rerank-movement",
+      "prompt": "Last quarter's ranked portfolio:\nrank,id,band\n1,UC-1,Now\n2,UC-2,Next\n3,UC-3,Later\n4,UC-4,Later\n\nThis quarter's re-scored backlog:\nid,use_case,business_owner,V,F,D,R,baseline_metric\nUC-1,Invoice capture,AP Lead,4,4,3,2,6 min per invoice\nUC-2,Claims triage,Claims VP,5,4,4,2,18 min per claim\nUC-4,HR FAQ bot,HR Ops,3,3,3,3,300 tickets/month\nUC-5,Supplier risk digest,Procurement Dir,4,3,3,2,2 days per review\n\nRe-rank and show what moved.",
+      "expected": [
+        "Ranks UC-2 (40.00) first in Now, UC-1 (24.00) Next, UC-5 (18.00) and UC-4 (9.00) Later",
+        "Movement: UC-2 up 1 (Next → Now), UC-1 down 1 (Now → Next), UC-4 same, UC-5 new",
+        "Lists UC-3 as no longer in the list",
+        "Computes from the two tables only; no earlier score is carried over"
+      ]
     }
   ]
 }

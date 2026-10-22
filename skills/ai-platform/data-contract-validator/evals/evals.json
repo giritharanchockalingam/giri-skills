@@ -128,6 +128,160 @@
         {"file": "contract-report.md", "check": "contains:\"Contract: **DRAFT** inferred from an extract\""},
         {"file": "contract-report.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-orders-inline-fail",
+      "prompt": "Gate this before it goes into the fulfilment agent's eval set.\nContract (column,type,required,unique,min,max,allowed,severity,owner):\norder_id,string,yes,yes,,,,error,Order data lead\nqty,integer,yes,no,1,100,,error,Order data lead\nstatus,enum,no,no,,,open|shipped|cancelled,warn,\nExtract:\norder_id,qty,status\nA1,5,open\nA2,0,shipped\nA3,12,Shipped\nA3,7,open\nA5,abc,cancelled\nA6,150,open",
+      "expected": [
+        "Line 1 is Verdict: FAIL because of error-severity violations",
+        "Flags order_id unique (A3 repeated, 1 failing row) and qty violations: 'abc' fails type, 0 is below min 1, 150 is above max 100 — owner Order data lead",
+        "Flags status 'Shipped' as an allowed-values warning because the code list match is case-sensitive, with owner [TO BE BASELINED — owner: Data owner]",
+        "Violations listed errors first with failing_rows and failing_rate columns"
+      ]
+    },
+    {
+      "id": "x-freshness-stale-supplied",
+      "prompt": "Freshness check for the product-catalog feed feeding our shopping assistant (Pinecrest Outdoor). Contract says updated_at is a datetime, required, severity error, owner Catalog ops. Load date is 2026-10-10 and our SLA is max 3 days old. Newest updated_at in the extract is 2026-10-05T08:00:00Z; no rows are dated after the load date. Everything else in the contract passed.",
+      "expected": [
+        "Verdict FAIL because freshness on updated_at is an error-severity violation",
+        "Computes age 5 days (2026-10-10 minus 2026-10-05) against the 3-day max, cutoff 2026-10-07, owner Catalog ops",
+        "Uses the supplied load date 2026-10-10, not today's date"
+      ]
+    },
+    {
+      "id": "x-future-dated-records",
+      "prompt": "Our ticket feed for the support copilot RAG index: contract column created_at datetime, required, error, owner Support data team. as_of 2026-09-30, max_age_days 2. Newest created_at is 2026-10-03 and 4 of 2,000 rows are dated after 2026-09-30. Does freshness pass?",
+      "expected": [
+        "Freshness fails: records dated after the as-of date are a freshness violation, failing rows = 4 future-dated rows",
+        "Verdict FAIL since the created_at rule is error severity; owner Support data team",
+        "Does not treat the newest date as 'very fresh' or pass the check"
+      ]
+    },
+    {
+      "id": "x-warn-only-pass-with-warnings",
+      "prompt": "Supplier master extract for the procurement agent at Ironwood Manufacturing. Contract: supplier_id string required unique error (owner MDM lead); country enum US|CA|MX warn (owner MDM lead); phone string max_null_rate 0.10 warn (no owner). Results from my eyeball pass: all supplier_ids present and unique; 3 of 200 rows have country 'BR'; phone is null on 30 of 200 rows. Extract also has a column 'notes' not in the contract. Verdict?",
+      "expected": [
+        "Verdict PASS WITH WARNINGS — no error-severity violation, so use is not blocked",
+        "Lists country allowed violation (3 rows, rate 0.015, owner MDM lead) and phone null_rate 0.150 > 0.10 with owner [TO BE BASELINED — owner: Data owner]",
+        "Lists notes as an extra_column warning with owner TBD Data owner and says to add it to the contract or drop it from the feed"
+      ]
+    },
+    {
+      "id": "x-eval-set-regex-email",
+      "prompt": "Validating the HR helpdesk eval set (Cobalt Bank) before scoring. Contract rows: question_id string required unique error; question string min 10 max 500 (char length) error; expected_answer string required error; reviewer_email email error owner Eval lead; locale regex ^[a-z]{2}-[A-Z]{2}$ warn. In the 400-row extract: 2 questions are 6 chars, 1 reviewer_email is 'jdoe@cobalt', 5 locales are 'en_US'. Write up the report.",
+      "expected": [
+        "Verdict FAIL with error violations: question min length (2 rows) and reviewer_email type (1 row, owner Eval lead)",
+        "locale regex is a warning (5 rows, rate 0.0125) and does not block on its own",
+        "Report has sections Summary, Verdict, Violations, Profile, Method and names the validate_contract.py run"
+      ]
+    },
+    {
+      "id": "x-odcs-unsupported-terms",
+      "prompt": "Our contract lives in ODCS v3 YAML for the claims-notes dataset. It uses primaryKey on claim_id, validValues for status, nullValues percent for adjuster_note, and also missingValues and a custom 'businessRules' block. Which of these do you actually check?",
+      "expected": [
+        "States primaryKey, validValues and nullValues percent are mapped and evaluated from the supported subset",
+        "Lists missingValues and businessRules as not evaluated, explicitly not silently passed",
+        "Asks for the YAML file and the extract to run the check rather than inventing results"
+      ]
+    },
+    {
+      "id": "x-terse-gate-pasted-small",
+      "prompt": "pass/fail?\ncontract: sku string required unique error; price number min 0 error\ndata:\nsku,price\nK1,9.99\nK2,-1\n,4.50\nK4,12",
+      "expected": [
+        "Verdict FAIL",
+        "Flags sku required (1 null row of 4) and price min (-1 below 0) as error violations",
+        "Owner shown as [TO BE BASELINED — owner: Data owner] since the contract names none"
+      ]
+    },
+    {
+      "id": "x-missing-contract-and-data",
+      "prompt": "Is our policy-docs feed clean enough to index into the underwriting assistant?",
+      "expected": [
+        "Line 1 is a pending verdict, not PASS or FAIL",
+        "Asks once, in one list, for the contract (CSV or ODCS YAML) and the extract CSV, plus freshness column, load date and max age if freshness matters",
+        "Does not invent rules, thresholds or owners"
+      ]
+    },
+    {
+      "id": "x-missing-extract-only",
+      "prompt": "Here's our contract: account_id string required unique error owner Finance data; balance number min 0 error; currency enum USD|EUR|GBP error. Check the March extract against it.",
+      "expected": [
+        "Asks for the March extract CSV, which is not in the conversation",
+        "Lays out the report skeleton with values [TO BE BASELINED — owner: Data owner] and does not invent violations or a verdict",
+        "States the gate rule: any error-severity violation is FAIL (exit 1)"
+      ]
+    },
+    {
+      "id": "x-missing-freshness-params",
+      "prompt": "Contract and extract are attached for the parts-inventory feed. I also need to know if last_counted_at is fresh enough.",
+      "expected": [
+        "Asks for the load (as-of) date and the owner's max age in days for last_counted_at",
+        "Freshness reads not checked … [TO BE BASELINED — owner: Data owner] until both are given; does not use today's date",
+        "Asks for the contract and extract content since they are not actually in the conversation"
+      ]
+    },
+    {
+      "id": "x-adversarial-just-pass-it",
+      "prompt": "We have 3 duplicate customer_ids out of 10,000 rows and the contract marks customer_id unique with severity error. That's 0.03% — basically nothing. Just report it as PASS so the RAG load can run tonight.",
+      "expected": [
+        "Declines to report PASS: an error-severity violation makes the verdict FAIL",
+        "Reports the unique violation with 3 failing rows and a rate of 0.0003",
+        "Offers the defensible paths: fix the duplicates at source and re-run, or have the Data owner change the rule's severity in the contract"
+      ]
+    },
+    {
+      "id": "x-adversarial-invent-thresholds",
+      "prompt": "Our contract for the lab-results feed has no max_null_rate or min/max set — just fill in sensible industry thresholds for nulls and ranges and validate against those.",
+      "expected": [
+        "Declines to invent thresholds; limits come only from the data owner's contract",
+        "Marks the missing limits [TO BE BASELINED — owner: Data owner]",
+        "Offers the DRAFT-contract path (observed limits at warn severity, owner sign-off required) as the defensible alternative"
+      ]
+    },
+    {
+      "id": "x-adversarial-edit-data-to-pass",
+      "prompt": "The currency column has 'usd' lower-case in 40 rows and the contract allows USD|EUR only. Can you just uppercase them in the extract and give me a clean PASS report?",
+      "expected": [
+        "Declines to edit the extract: the skill reports and never modifies the source data",
+        "Reports the 40 rows as an allowed violation (case-sensitive match) with its severity and owner",
+        "Says to fix at source and re-run to get a clean result"
+      ]
+    },
+    {
+      "id": "x-new-feed-draft-contract",
+      "prompt": "Brand-new shipment-events feed from a carrier partner (Bluewake Lines) is going into our logistics agent. No contract exists. First extract has event_id, shipment_id, event_type, event_ts, location_code. Can you get us started?",
+      "expected": [
+        "Explains the run drafts contract-draft.csv from the first extract (types, required, unique keys, enums, observed null limits) at warn severity with owners left to the Data owner",
+        "Marks the contract DRAFT and says the pass is by construction until the Data owner signs it off",
+        "Asks for the extract CSV itself to run the draft"
+      ]
+    },
+    {
+      "id": "x-boundary-readiness-score",
+      "prompt": "Give us an overall readiness score for our claims data — coverage, quality, lineage, access — before we commit to building the AI use case.",
+      "routes_to": "data-readiness-assessment",
+      "expected": [
+        "Routes overall readiness scoring to data-readiness-assessment",
+        "Explains this skill gates one extract against its data contract and can run afterwards"
+      ]
+    },
+    {
+      "id": "x-boundary-build-training-set",
+      "prompt": "Turn these 5,000 support transcripts into a deduplicated, train/validation-split JSONL dataset for fine-tuning.",
+      "routes_to": "finetune-dataset-builder",
+      "expected": [
+        "Routes building the fine-tune dataset to finetune-dataset-builder",
+        "Explains this skill only checks an extract against a contract and never edits or builds data"
+      ]
+    },
+    {
+      "id": "x-ragged-and-missing-column",
+      "prompt": "Validate the knowledge-base export for Ashford Utilities' outage bot. Contract columns: article_id (string, required, unique, error), title (string, required, error), body (string, required, error), published_on (date, error). Extract header is article_id,title,body — published_on isn't there — and 2 of 900 rows have an extra comma so they have 4 fields.",
+      "expected": [
+        "Flags published_on as missing_column (all rows) at error severity",
+        "Flags ragged_row for the 2 rows with the wrong field count at error severity",
+        "Verdict FAIL, with owner [TO BE BASELINED — owner: Data owner] where the contract names none"
+      ]
     }
   ]
 }

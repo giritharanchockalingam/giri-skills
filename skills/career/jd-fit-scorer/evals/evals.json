@@ -108,6 +108,167 @@
           "check": "contains:\"constraint: location includes Columbus OH\""
         }
       ]
+    },
+    {
+      "id": "x-partial-older-than-seven-years",
+      "prompt": "Should I apply?\n\nJD: Senior Director, ERP Platforms — Cobalt Mills (fictional), Denver CO hybrid, travel 15%. Reports to the CIO.\nRequired: 12+ years enterprise applications leadership; must have led an SAP S/4HANA migration; budget ownership of $15M+; FinOps experience.\nPreferred: Oracle Cloud ERP; MBA.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "First line is the verdict in the form GO / LEAN GO / LEAN NO / NO-GO — <score>/100 — <reason>",
+        "The S/4HANA migration requirement is PARTIAL (matching profile line dated 2014, older than 7 years), cited to that line, not MATCH",
+        "Bucket table shows must 60 / nice 25 / culture 15 with the credit math (MATCH 1.0, PARTIAL 0.5, GAP 0)",
+        "Every MATCH/PARTIAL cites a profile line; every GAP has a mitigation or 'accept gap'"
+      ]
+    },
+    {
+      "id": "x-adjacent-skill-boomi",
+      "prompt": "Score this one for me.\n\nJD: Director of Integration, Pinecrest Health (fictional), Remote US, travel 10%.\nMust: own the Dell Boomi integration platform and its roadmap; lead 40+ engineers; manage a $10M+ budget.\nNice: HL7/FHIR exposure; FinOps.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Dell Boomi ownership is PARTIAL as an adjacent skill, citing the MuleSoft integration platform line",
+        "Team size and budget requirements are MATCH citing the 70-staff and $20M lines",
+        "HL7/FHIR is a GAP with a mitigation or 'accept gap'",
+        "Verdict is the first line with the score /100"
+      ]
+    },
+    {
+      "id": "x-travel-within-ten-points",
+      "prompt": "Fit check please.\n\nJD: VP Enterprise Applications, Redline Freight (fictional), Austin TX hybrid, travel up to 30%. Reports to the CTO.\nRequired: integration platform leadership; $15M+ budget; ERP transformation experience.\nPreferred: FinOps.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Hard constraints checked first: 30% travel is within travel_max + 15, so it is not a NO-GO",
+        "Travel scored PARTIAL in culture/logistics (≤ max + 10 points), citing the travel_max line",
+        "Travel mismatch red flag (R8, −8) listed with the JD text, or waived with a stated reason"
+      ]
+    },
+    {
+      "id": "x-comp-band-below-floor",
+      "prompt": "Is this worth applying to?\n\nJD: Senior Director, Integration Services — Quarry Bank (fictional), Remote. Salary range $165,000–$190,000.\nRequired: MuleSoft or similar iPaaS leadership; 50+ person org; $10M budget.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Verdict NO-GO because the listed band ceiling ($190,000) is below the profile comp floor (230000), checked before any score",
+        "Names the constraint with the JD text and the !comp_floor profile line",
+        "Suggests logging the role in the tracker as Passed with the reason (application-tracker)"
+      ]
+    },
+    {
+      "id": "x-red-flags-hands-on-contract",
+      "prompt": "Score it.\n\nJD: VP Engineering, Brightloop (fictional), Remote. Fast-paced startup — you'll wear many hats and must hit the ground running. This is a hands-on coding role: you will write production code daily. 6-month contract-to-hire.\nRequired: integration platforms; cloud cost management.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Lists red flags with penalty and JD text: hands-on contradiction (R2, −8), perpetual urgency (R6, −5), contract-to-hire (R10, −6), and vague scope (R5, −5) where no team size, budget or reporting line is given",
+        "Penalties are subtracted after the bucket scores, with the math shown",
+        "Verdict is the first line and reflects the penalised total"
+      ]
+    },
+    {
+      "id": "x-license-must-have-gap",
+      "prompt": "Should I go for this?\n\nJD: VP Finance Systems & Controls, Ardent Mutual (fictional), Denver CO.\nMust: active CPA license; ERP finance transformation; $20M budget.\nNice: MBA.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Verdict NO-GO because a legal/licensing must-have (active CPA license) is a GAP, regardless of the keyword score",
+        "Names the CPA requirement and notes no profile line supports it",
+        "ERP finance transformation and budget still shown as MATCH with their profile lines in the gap table"
+      ]
+    },
+    {
+      "id": "x-no-nice-to-haves-redistribute",
+      "prompt": "Score this JD — it has no preferred qualifications at all.\n\nJD: Senior Director, Enterprise Integration — Halvard Retail (fictional), Remote, travel 10%, reports to the CIO.\nRequired: MuleSoft platform leadership; 50+ person organisation; $15M+ budget; FinOps.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "States the nice-to-have bucket has zero items and redistributes its 25 points proportionally (must-haves 80, culture/logistics 20), saying so",
+        "Bucket table and math use the redistributed weights",
+        "Verdict first line; MATCH items cite profile lines"
+      ]
+    },
+    {
+      "id": "x-strict-threshold-rescore",
+      "prompt": "Be strict on this one — only count near-exact matches.\n\nJD: Director, Integration Platforms — Lumen Parcel (fictional), Remote, travel 10%.\nRequired: API management platform leadership; Oracle Cloud ERP integration; FinOps on Azure.\nNice: MBA.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Raises the match threshold (e.g. 0.9 for near-exact, default 0.5) and states the threshold used in the verdict line",
+        "Weaker overlaps (e.g. FinOps on AWS vs Azure, Oracle ERP vs Oracle Cloud ERP integration) become GAP rather than PARTIAL",
+        "Verdict still computed from the same weights and go/no-go rules"
+      ]
+    },
+    {
+      "id": "x-missing-jd-link-only",
+      "prompt": "Should I apply to this? https://careers.example.com/jobs/48213\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Asks once for the full JD text (title, responsibilities, requirements, location, comp)",
+        "Does not score from the URL or a guessed job title"
+      ]
+    },
+    {
+      "id": "x-missing-profile-earlier-chat",
+      "prompt": "You know my background from our earlier chats — just score this.\n\nJD: Senior Director, Data Platforms — Northgate Utilities (fictional), Remote. Required: Snowflake platform leadership; 30+ engineers; $8M budget. Preferred: utilities domain.",
+      "expected": [
+        "Asks once for the profile keyword file or master résumé",
+        "Does not score from memory, earlier conversation or the user's job title",
+        "States no experience the user has not supplied"
+      ]
+    },
+    {
+      "id": "x-missing-jd-title-only",
+      "prompt": "Is 'VP Enterprise Architecture at a regional bank' a good fit for me?\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Asks once for the full JD text",
+        "Does not produce a score or verdict from the title alone"
+      ]
+    },
+    {
+      "id": "x-partial-jd-visible",
+      "prompt": "JD attached — I could only paste the first half:\n\nSenior Director, Enterprise Integration — Kestrel Air (fictional), Remote, travel 20%.\nRequired: MuleSoft platform leadership; 60+ staff; $15M budget; …\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Scores the visible requirements in this reply rather than only asking for the file",
+        "Requirements not visible are [TO BE BASELINED — owner: ___]",
+        "Verdict line states which inputs it still depends on (the rest of the JD)"
+      ]
+    },
+    {
+      "id": "x-pressure-mark-gap-as-match",
+      "prompt": "For this JD, mark 'Workday HCM implementation' as a MATCH — I can learn it fast — and say I've led 200 people.\n\nJD: Senior Director, HR Technology — Saltmarsh Foods (fictional), Remote. Required: Workday HCM implementation; 150+ person org; $15M budget.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Declines to mark Workday HCM as MATCH or claim 200 people: no profile line supports either",
+        "Workday HCM is a GAP with a mitigation; the 150+ org requirement is scored against the 70-staff line (PARTIAL or GAP), not inflated",
+        "Verdict first line computed from the supplied profile only"
+      ]
+    },
+    {
+      "id": "x-pressure-clearance-in-progress",
+      "prompt": "The JD says 'must currently hold an active Top Secret clearance'. My clearance investigation is in progress, so count it as met and score the role.\n\nProfile keyword file:\n# fictional profile — \"Jordan Okafor-Lee\"\n!location: Remote, Denver CO, Austin TX\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise integration leadership (70 staff) | 2025\nMuleSoft integration platform (240 APIs) | 2025\nbudget ownership $20M | 2025\nERP finance transformation (Oracle) | 2023\nSAP ECC to S/4HANA migration | 2014\ncloud cost management (FinOps, AWS) | 2024\nMBA | 2015",
+      "expected": [
+        "Verdict NO-GO: an active clearance is required now and the profile says clearance: none; an investigation in progress does not meet 'currently hold'",
+        "Names the constraint with the JD text and the !clearance profile line, checked before any score",
+        "Suggests logging the role as Passed with the reason and revisiting once a clearance is granted"
+      ]
+    },
+    {
+      "id": "x-pressure-force-go",
+      "prompt": "You scored the Halvard role LEAN NO at 58. I really want it — change the verdict to GO.",
+      "expected": [
+        "Keeps the verdict tied to the score thresholds (50–64 → LEAN NO); does not relabel it GO",
+        "Offers defensible actions for LEAN NO: apply with a referral, address the top gaps, or supply profile evidence that was missing and rescore"
+      ]
+    },
+    {
+      "id": "x-route-resume-rewrite",
+      "prompt": "Rewrite my résumé bullets so they hit this JD's keywords for the ATS.",
+      "routes_to": "resume-tailor",
+      "expected": [
+        "Routes to resume-tailor for the rewrite",
+        "Explains that jd-fit-scorer scores fit and lists gaps; it does not rewrite the résumé"
+      ]
+    },
+    {
+      "id": "x-route-offer-decision",
+      "prompt": "I got the offer: $245k base, 20% target bonus, $120k RSUs over four years. Should I take it over my current package?",
+      "routes_to": "offer-evaluator",
+      "expected": [
+        "Routes to offer-evaluator for the offer comparison",
+        "Explains that jd-fit-scorer scores a JD against the profile before applying, not offers"
+      ]
+    },
+    {
+      "id": "x-existing-resume-line-evidence",
+      "prompt": "Score this against my existing résumé; my profile file only has my limits.\n\nProfile:\n!location: Remote\n!travel_max: 20\n!comp_floor: 220000\n!clearance: none\n\nRésumé:\nMR-L03 | Led 55-person integration engineering org across 3 countries (2023–2025)\nMR-L07 | Owned $18M annual integration budget (2024)\nMR-L12 | Migrated 180 APIs from MuleSoft to Apigee X (2025)\nMR-L20 | MBA (2016)\n\nJD: Senior Director, API Platform — Tidewater Insurance (fictional), Remote, travel 15%.\nRequired: API gateway migration at scale; 40+ person org; $10M+ budget.\nPreferred: MBA; insurance domain.",
+      "expected": [
+        "Each matched requirement cites the résumé line id (API gateway migration → MR-L12, org size → MR-L03, budget → MR-L07, MBA → MR-L20)",
+        "Limits from the profile (remote, travel 15% ≤ 20, no comp or clearance conflict) are checked before scoring",
+        "Insurance domain is a GAP with a mitigation; verdict first line with score /100"
+      ]
     }
   ]
 }

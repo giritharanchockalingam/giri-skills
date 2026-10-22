@@ -100,6 +100,172 @@
           "check": "contains:\"CURRENT FLEET\""
         }
       ]
+    },
+    {
+      "id": "x-claims-summariser-full-sizing",
+      "prompt": "Sizing request for our claims-summary assistant (insurer, 8B model, int8). 1,000 adjusters, 10 requests each per day over a 10-hour working day, peak factor 3 (from last quarter's gateway logs). Average 2,000 tokens in / 300 out. SLO: 25 tokens/s per stream, TTFT under 1.5 s. Benchmark on our vLLM stack (2026-09-28): 1,000 decode tok/s per GPU at batch 16, 8,000 prefill tok/s. Utilization target 0.6, one spare GPU. Prices quoted 2026-10-01: rental $2.40/GPU-hr; API $0.50 per 1M input and $1.50 per 1M output tokens. Rent or API?",
+      "expected": [
+        "Workload: 10,000 requests/day, peak ≈ 0.83 req/s, prefill ≈ 1,667 tok/s and decode 250 tok/s at peak, ≈ 10 concurrent streams by Little's law",
+        "Capacity: 1 GPU required (decode and prefill each 1) plus 1 spare = 2; latency check per-stream ≈ 62.5 tok/s at batch 16 meets the 25 tok/s SLO",
+        "Monthly cost: rental 2 × $2.40 × 730 ≈ $3,504 vs API ≈ $435 (600M input, 90M output tokens at 30 days), with prices cited as dated inputs",
+        "Recommends the API at this volume with revisit triggers (a stated volume, model change, price change or residency rule)"
+      ]
+    },
+    {
+      "id": "x-agentic-calls-multiplier",
+      "prompt": "We're putting a procurement agent in front of 400 buyers. Each buyer request fans out to 4 model calls. 20 requests per buyer per day across an 8-hour day, peak factor 2. 3,000 tokens in and 400 out per call. Our benchmark (2026-10-05, SGLang, fp8): 1,200 decode tok/s and 6,000 prefill tok/s per GPU. u = 0.6, 1 spare. Rental $3.00/GPU-hr quoted 2026-10-05. How many GPUs and what's the monthly bill?",
+      "expected": [
+        "Applies the 4-call multiplier: 32,000 calls/day, peak ≈ 2.22 calls/s, prefill ≈ 6,667 tok/s and decode ≈ 889 tok/s",
+        "GPU count: decode needs 2 and prefill needs 2, so 2 required + 1 spare = 3",
+        "Rental monthly ≈ 3 × $3.00 × 730 = $6,570; API cost left out or marked TBD because no API prices were given",
+        "Flags missing latency SLO and batch size as [TO BE BASELINED] so the latency check cannot be completed"
+      ]
+    },
+    {
+      "id": "x-latency-slo-fails-at-batch",
+      "prompt": "Field-service copilot, 5,000 technicians, 6 requests each per day over 12 hours, peak 2x. 800 in / 500 out tokens. Our team needs 30 tok/s per stream to keep up with reading speed. Benchmark: 1,200 decode tok/s per GPU at batch 64, prefill 10,000 tok/s (both measured 2026-09-20). Rental $2.00/GPU-hr (2026-09-20). Is 2 GPUs enough?",
+      "expected": [
+        "Throughput math gives 1 GPU required + 1 spare = 2 (decode peak ≈ 694 tok/s, prefill ≈ 1,111 tok/s at u = 0.6)",
+        "Latency check fails: per-stream ≈ 1,200 ÷ 64 ≈ 18.8 tok/s is below the 30 tok/s SLO, so throughput alone does not make 2 GPUs enough",
+        "Recommends re-benchmarking at a smaller batch size (or more GPUs) to meet the per-stream SLO rather than assuming a figure",
+        "Gives rental monthly ≈ $2,920 for 2 GPUs always on, with assumptions (utilization, spare, 730 hours) labelled"
+      ]
+    },
+    {
+      "id": "x-selfhost-breakeven-retail",
+      "prompt": "Retail store-associate assistant. 8,000 associates × 12 requests/day, 10 active hours, peak 2. 1,500 in / 400 out tokens. Measured 1,500 decode and 12,000 prefill tok/s per GPU (2026-09-15). u 0.6, spare 1. Prices (2026-09-15): rental $2.50/GPU-hr; self-host capex $30,000 per GPU amortised over 36 months, hosting $400 per GPU-month, 0.5 ops FTE at $180,000/yr, software $1,000/month. Self-host or rent?",
+      "expected": [
+        "GPU count: decode peak ≈ 2,133 tok/s needs 3 GPUs (prefill needs 2), so 3 required + 1 spare = 4",
+        "Monthly cost: rental GPU ≈ $7,300 (4 × $2.50 × 730); self-host capex amortised ≈ $3,333 + hosting $1,600, with the $7,500 ops share and $1,000 software included in TCO",
+        "Breakeven rental hours per GPU per month ≈ 493 ((30,000 ÷ 36 + 400) ÷ 2.50): at 730 always-on hours self-host is cheaper, while rental wins if autoscaling keeps hours below breakeven",
+        "Recommendation names revisit triggers and TCO factors beyond hardware (ops staffing, upgrade cycle, idle cost)"
+      ]
+    },
+    {
+      "id": "x-pilot-api-revisit-trigger",
+      "prompt": "Pilot for 120 HR partners, 8 questions/day each, ~1,000 tokens in and 200 out. API is $0.40/1M in and $1.60/1M out; smallest rented fleet would be 1 GPU + 1 spare at $1.80/GPU-hr. Prices from today's quotes. API or rent? Keep it short.",
+      "expected": [
+        "Short, table-based answer: API ≈ $21/month (28.8M in, 5.76M out tokens) vs rental ≈ $2,628/month (2 × $1.80 × 730) paid while idle",
+        "Recommends the API for the pilot unless residency or data rules forbid it",
+        "Revisit trigger as a volume: ≈ 4.4 billion tokens/month (rental $2,628 ÷ blended $0.60 per 1M tokens)"
+      ]
+    },
+    {
+      "id": "x-residency-blocks-api",
+      "prompt": "Small pilot — 60 caseworkers at a public agency, maybe 5 requests a day each. Rules say citizen data must stay in our in-country region, and the API vendor has no in-region endpoint. Rent GPUs or use the API?",
+      "expected": [
+        "States that the residency rule rules out the API option despite the low volume, so the comparison is rental vs self-host in-region",
+        "Asks once for the missing facts needed to size it (tokens in/out, latency SLO, model and precision, measured decode/prefill tokens/s per GPU, dated in-region GPU prices) without quoting any throughput or price",
+        "Notes that at pilot volume the smallest fleet with a spare will be mostly idle, and that idle cost should be in the TCO"
+      ]
+    },
+    {
+      "id": "x-70b-tensor-parallel",
+      "prompt": "Legal research assistant on a 70B model sharded 4-way (tensor parallel 4). 600 lawyers, 8 requests/day, 9-hour day, peak 2. 4,000 in / 600 out tokens. Benchmark per GPU on our stack: 900 decode tok/s, 5,000 prefill tok/s (2026-10-10). u 0.6, 1 spare GPU, rental $2.20/GPU-hr (2026-10-10). Size it.",
+      "expected": [
+        "Workload: 4,800 requests/day, peak ≈ 0.30 req/s, prefill ≈ 1,185 tok/s, decode ≈ 178 tok/s",
+        "Applies gpus_per_replica = 4: one replica suffices for throughput, so 4 GPUs required; with the stated 1-GPU spare 5 GPUs, rental ≈ 5 × $2.20 × 730 = $8,030/month",
+        "Notes that a 1-GPU spare cannot serve a 4-GPU replica on its own, labelling spare and redundancy as an assumption to revisit (e.g. a full spare replica)"
+      ]
+    },
+    {
+      "id": "x-autoscale-rental-hours",
+      "prompt": "Same claims assistant as before (1,000 users × 10 req/day, 10 h, peak 3, 2,000 in / 300 out, 1,000 decode and 8,000 prefill tok/s per GPU, u 0.6, 1 spare, $2.40/GPU-hr quoted 2026-10-01) but now we'll autoscale to zero outside business hours — about 300 provisioned hours a month. What does rental cost now?",
+      "expected": [
+        "Keeps the GPU count at 1 required + 1 spare = 2 (autoscaling changes hours, not peak capacity)",
+        "Rental monthly ≈ 2 × $2.40 × 300 = $1,440 instead of $3,504 always-on",
+        "States cold-start/TTFT risk of scaling to zero as an assumption to verify, and gives revisit triggers"
+      ]
+    },
+    {
+      "id": "x-contact-centre-no-facts",
+      "prompt": "We want to run a 70B model for 3,000 contact-centre agents. Ballpark how many H100s and what it costs?",
+      "expected": [
+        "Asks once, in one list, for requests per agent per day, peak factor, tokens in/out, latency SLO (TTFT and tokens/s per stream), precision and context length, measured decode and prefill tokens/s per GPU at a stated batch size, and dated unit prices",
+        "Does not quote an H100 throughput or price as fact and gives no GPU count",
+        "Offers assets/gpu-sizing-inputs.csv to fill"
+      ]
+    },
+    {
+      "id": "x-missing-token-counts",
+      "prompt": "2,500 users, 15 requests/day each, peak 2.5 over 10 hours. Our benchmark is 1,400 decode tok/s per GPU at batch 32 and 9,000 prefill. Rental $2.10/GPU-hr quoted 2026-09-01. How many GPUs?",
+      "expected": [
+        "Asks for the average tokens in and out per request, which are required to convert requests into prefill and decode tokens/s",
+        "Does not assume token counts or produce a GPU count without them; may show requests/day (37,500) and peak req/s as far as the inputs allow",
+        "Also asks for the latency SLO so the latency check can be done"
+      ]
+    },
+    {
+      "id": "x-no-prefill-benchmark",
+      "prompt": "Size it: 500 users × 20 req/day, 10 h, peak 2, 6,000 in / 250 out tokens (long RAG context). Decode benchmark 1,100 tok/s per GPU at batch 16 (2026-10-02). We never measured prefill. SLO 20 tok/s per stream, TTFT < 2 s. Rental $2.60/GPU-hr (2026-10-02).",
+      "expected": [
+        "Computes the decode side (decode peak ≈ 139 tok/s → 1 GPU) but marks the prefill GPU count as [TO BE BASELINED — owner: ML platform lead] because prefill throughput was not measured",
+        "States the TTFT < 2 s SLO cannot be verified without a prefill measurement and flags that the 6,000-token context makes prefill the likely constraint (peak prefill ≈ 3,333 tok/s)",
+        "Does not invent a prefill figure; recommends benchmarking prefill on the serving stack"
+      ]
+    },
+    {
+      "id": "x-monthly-cost-no-prices",
+      "prompt": "Workload is 2,000 users × 10 req/day, 2,000 in / 300 out, 10 h, peak 3. Measured 1,000 decode and 8,000 prefill tok/s per GPU. What will self-host vs rental vs API cost per month?",
+      "expected": [
+        "Sizes GPUs from the given workload and benchmark but marks every price (rental $/GPU-hr, self-host capex/hosting/ops, API $/1M tokens) as [TO BE BASELINED] with no number beside it",
+        "Asks once for dated unit prices and does not quote market or list prices from memory",
+        "Shows the cost formulas (rental = $/GPU-hr × GPUs × hours; API = tokens/month ÷ 1M × price) so the prices can be dropped in"
+      ]
+    },
+    {
+      "id": "x-assume-typical-h100",
+      "prompt": "Don't overthink it — just use whatever an H100 typically does on Llama 3 8B and give me the GPU count for 3,000 users at 12 requests a day, 1,000 in / 300 out.",
+      "expected": [
+        "Declines in one line to assume a typical throughput, because it depends on model, precision, serving stack and batch size, and an invented figure makes the GPU count fiction",
+        "Names the missing keys decode_tokens_per_s_per_gpu and prefill_tokens_per_s_per_gpu as [TO BE BASELINED — owner: ML platform lead] with no number beside them",
+        "Offers the path: run a benchmark on the intended serving stack or cite a dated vendor document"
+      ]
+    },
+    {
+      "id": "x-use-cloud-list-price",
+      "prompt": "We have the benchmark and workload sorted. For the cost table just plug in the current public cloud list price for an 8-GPU H100 node and a typical self-host server price — I don't have quotes.",
+      "expected": [
+        "Declines to supply list or typical prices from memory; rental and self-host prices stay [TO BE BASELINED] with an owner (e.g. procurement/ML platform lead)",
+        "Asks for dated quotes or a cited price page with a date",
+        "Can still give the GPU count and the cost formulas, with costs marked illustrative until prices are supplied"
+      ]
+    },
+    {
+      "id": "x-vendor-10x-claim",
+      "prompt": "Our serving vendor says their engine is 'up to 10x faster than vLLM', so divide the GPU count from our vLLM benchmark (1,000 decode tok/s) by 10 for the budget.",
+      "expected": [
+        "Does not apply an unbenchmarked '10x' marketing claim to the GPU count",
+        "Keeps the sizing on the measured 1,000 decode tok/s and shows the vendor engine's throughput as [TO BE BASELINED] pending a benchmark on the same model, precision and batch",
+        "Offers the defensible path: benchmark the vendor engine on the workload, then re-run the calculator"
+      ]
+    },
+    {
+      "id": "x-which-model-routes-selection",
+      "routes_to": "model-selection",
+      "prompt": "Before we size anything: should our underwriting assistant use an 8B, a 70B or a hosted frontier model? We have eval scores and per-token prices for each.",
+      "expected": [
+        "Routes to model-selection to rank the candidate models on evals and cost",
+        "States that infra-gpu-sizing sizes the GPUs and monthly cost once a model, precision and measured throughput are chosen"
+      ]
+    },
+    {
+      "id": "x-api-feature-cost-routes-cost-model",
+      "routes_to": "llm-cost-model",
+      "prompt": "We're staying on the hosted API. What will our three features cost per month on the new model, and does prompt caching pay off for the long system prompt?",
+      "expected": [
+        "Routes to llm-cost-model for per-feature API cost and prompt-caching analysis",
+        "States that infra-gpu-sizing is for GPU count and self-host vs rental vs API comparison, not per-feature API cost modelling"
+      ]
+    },
+    {
+      "id": "x-existing-fleet-under-provisioned",
+      "prompt": "We run the dispatch assistant on 2 rented GPUs today and users complain about slow answers at shift change. Production numbers from the gateway (Sept): 3,000 users × 20 requests/day, 10 active hours, peak factor 3, 1,200 in / 300 out tokens. Benchmark: 1,000 decode / 9,000 prefill tok/s per GPU. u 0.6, 1 spare. Rental $2.00/GPU-hr (Sept contract). Are we under-sized?",
+      "expected": [
+        "Sizes the measured workload: decode peak 1,500 tok/s → 3 GPUs (prefill 2), so 3 required + 1 spare = 4",
+        "Compares with the 2 GPUs running today: under-provisioned by 2",
+        "Prices the delta at the user's rate: 2 × $2.00 × 730 ≈ $2,920 more per month; no throughput or price invented"
+      ]
     }
   ]
 }

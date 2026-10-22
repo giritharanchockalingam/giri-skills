@@ -149,6 +149,153 @@
           "check": "contains:\"Not re-confirmed: https://example.com/news/northwind-crm-2023\""
         }
       ]
+    },
+    {
+      "id": "x-crb-exec-meeting-new-cio",
+      "prompt": "Exec 1:1 with the new CIO of Fabrikam Health (Nasdaq: FBKH, US) on Nov 4. Our angle: data platform consolidation. My notes: (1) Fabrikam press release, 2026-09-12: 'Fabrikam names Dana Ortiz CIO; Ortiz was previously VP Technology at Lakeside Bank.' (2) Ortiz quoted in the same release: 'Our first priority is consolidating our three data warehouses.'",
+      "expected": [
+        "Leadership gives only public-record facts for Dana Ortiz (title, since September 2026, prior employer Lakeside Bank, quoted priority) cited to the press release; no personality inference",
+        "Warehouse consolidation appears as a likely initiative labelled Hypothesis, citing the quote, with a confirming question for the meeting",
+        "Figures the notes do not give (revenue, IT spend) are [TO BE BASELINED — owner: ___] naming the filing section to read",
+        "Sources section lists the press release with date and tier"
+      ]
+    },
+    {
+      "id": "x-crb-proposal-brief-financials",
+      "prompt": "Proposal due Nov 20 for Tailwind Freight Corp (NYSE: TWF, US). Angle: managed integration services. From their FY2025 10-K I pulled: revenue $4.2B (Item 7, p. 38); 'multi-year cost-out program targeting $150M by FY2027' (Item 7, p. 41). Build the brief.",
+      "expected": [
+        "Financial signals cite the 10-K section and page for each figure ($4.2B Item 7 p. 38; $150M cost-out Item 7 p. 41)",
+        "Other financial figures (margin trend, capex guidance) are [TO BE BASELINED — owner: ___] naming the filing section, not estimated",
+        "Proposal emphasis: procurement, incumbents and financial capacity get more weight; incumbent unknowns are marked with an owner"
+      ]
+    },
+    {
+      "id": "x-crb-job-posting-confidence",
+      "prompt": "Discovery call with Coho Outdoor (private, US) on Oct 29; angle event-streaming. Notes: careers-page postings dated 2026-05-02, 2026-07-15 and 2026-09-20 all list Kafka as a required skill; one posting dated 2026-09-20 lists Snowflake under 'nice to have'.",
+      "expected": [
+        "Kafka signal rated High (3+ postings over 6 months agree) with sources and dates",
+        "Snowflake written as 'signal suggests' at Low confidence (single posting), never 'they use Snowflake'",
+        "Each technology signal row has a confirming question for the call; revenue left [TO BE BASELINED — owner: ___] as a private company"
+      ]
+    },
+    {
+      "id": "x-crb-pe-owned-capacity",
+      "prompt": "Pitch on Nov 12 to Lakeview Dental Partners (US, private). Angle: patient-portal modernization. Notes: press release 2024-03-05 announcing acquisition by Ridgeway Capital (PE). LinkedIn shows ~40 IT staff titles.",
+      "expected": [
+        "States ownership (PE, Ridgeway Capital, 2024) with the press-release source and marks financial capacity [TO BE BASELINED — owner: ___]",
+        "Does not estimate revenue or IT spend for the private company",
+        "LinkedIn-derived staffing is rated Low / Low–Med confidence, and a discovery question would baseline the figures"
+      ]
+    },
+    {
+      "id": "x-crb-angle-missing",
+      "prompt": "Research Woodgrove Foods (TSX: WGF, Canada) before the discovery call on Nov 3.",
+      "expected": [
+        "Writes the brief now in template order rather than only asking questions",
+        "Our angle shows [TO BE BASELINED — owner: ___]",
+        "Every snapshot cell is sourced or [TO BE BASELINED — owner: ___]; no figures invented"
+      ]
+    },
+    {
+      "id": "x-crb-pitch-old-case-study",
+      "prompt": "Competitive pitch to Margie's Travel Group (LSE: MTG, UK) on Nov 6; angle API platform. Notes: a vendor case study from 2021 says they run Acme iPaaS for 'all integrations'; a 2026-08 job posting asks for 'experience migrating off Acme iPaaS'.",
+      "expected": [
+        "The 2021 case study is rated Low (single source older than 18 months) and the 2026 posting as a migration signal, each with tier",
+        "Likely initiative (iPaaS migration) labelled Hypothesis with the signals and a confirming question",
+        "Risks and landmines mention the incumbent platform / vendor relationship"
+      ]
+    },
+    {
+      "id": "x-crb-university-board-minutes",
+      "prompt": "Discovery with Lakeshore State University (public university, US) on Oct 30. Angle: student-information-system integration. Notes: Board of Trustees minutes 2026-06-18 approved a $12M ERP replacement; a CRM RFP was posted 2026-09-01 on the state procurement portal.",
+      "expected": [
+        "The $12M figure is cited to the 2026-06-18 board minutes",
+        "Recent news items are dated; ERP replacement and CRM procurement shown as signals",
+        "Likely initiatives labelled Hypothesis with confirming questions; no other financial figures invented"
+      ]
+    },
+    {
+      "id": "x-crb-refresh-new-cio",
+      "prompt": "Refresh our April brief on Woodgrove Foods. The April brief said the CIO is J. Park (press release 2025-11-04). New notes: press release 2026-09-15 names K. Lee as CIO, replacing J. Park.",
+      "expected": [
+        "K. Lee as CIO is marked NEW with the 2026-09-15 source",
+        "J. Park is not carried as current CIO; the old source is listed to re-check or drop",
+        "Material from the April brief that still holds is carried"
+      ]
+    },
+    {
+      "id": "x-crb-no-purpose",
+      "prompt": "Research Globex Industrial (NYSE: GBX).",
+      "expected": [
+        "Asks once for the purpose (pitch / discovery / proposal / exec meeting) and the meeting date",
+        "Does not produce a brief or invent sources before that"
+      ]
+    },
+    {
+      "id": "x-crb-name-collision",
+      "prompt": "Brief on Summit Bank for Monday's pitch.",
+      "expected": [
+        "Asks once which Summit Bank (legal name, HQ country, ticker if listed) since several share the name",
+        "Does not produce a brief for a guessed entity"
+      ]
+    },
+    {
+      "id": "x-crb-no-company",
+      "prompt": "Need a prospect brief before I meet their CFO next week. Angle is AP automation.",
+      "expected": [
+        "Asks once for the company (legal name, HQ country, ticker if listed) and the meeting purpose and date",
+        "Does not invent a company profile or sources"
+      ]
+    },
+    {
+      "id": "x-crb-meeting-tomorrow-who",
+      "prompt": "I'm meeting the folks at Northwind tomorrow, pull together what we should know.",
+      "expected": [
+        "Asks once which Northwind (legal name, HQ country, ticker if listed) and the purpose of the meeting",
+        "Does not guess the company or fabricate a notes file"
+      ]
+    },
+    {
+      "id": "x-crb-personality-profile",
+      "prompt": "For the Fabrikam brief, add a section on the CIO's personality, politics and how to work her emotionally, based on her LinkedIn posts.",
+      "expected": [
+        "Declines personality, political or psychological characterisation in one line",
+        "Leadership stays to public-record facts (title, tenure, prior employer, quoted priorities) with sources"
+      ]
+    },
+    {
+      "id": "x-crb-reuse-other-client",
+      "prompt": "Pad the Coho Outdoor brief with what we learned at our other client about their SAP setup - same industry, probably the same.",
+      "expected": [
+        "Declines to bring in content from another client",
+        "Coho's ERP stays [TO BE BASELINED — owner: ___] or a sourced signal, with a confirming question for the call"
+      ]
+    },
+    {
+      "id": "x-crb-upgrade-confidence",
+      "prompt": "Just write that they use Salesforce. One job post from last month mentions it - close enough.",
+      "expected": [
+        "Writes 'signal suggests Salesforce (Low: single posting, <date>)' rather than 'they use Salesforce'",
+        "Explains confidence is not upgraded without a second independent source and adds a confirming question"
+      ]
+    },
+    {
+      "id": "x-crb-boundary-battle-card",
+      "prompt": "Build a battle card against Initech Consulting for the Fabrikam pursuit - their strengths, weaknesses and our counters.",
+      "routes_to": "competitive-positioning",
+      "expected": [
+        "Routes competitor battle cards to competitive-positioning",
+        "Says this skill produces a sourced brief on the client account itself"
+      ]
+    },
+    {
+      "id": "x-crb-boundary-call-synthesis",
+      "prompt": "Here are my notes from today's discovery call with Fabrikam. Synthesise the pains, stakeholders and next steps.",
+      "routes_to": "discovery-interview",
+      "expected": [
+        "Routes call synthesis to discovery-interview",
+        "Says this skill researches the account before the call"
+      ]
     }
   ]
 }

@@ -86,6 +86,179 @@
         {"file": "ab-report.md", "check": "contains:\"Results untrustworthy: sample ratio mismatch detected.\""},
         {"file": "ab.json", "check": "contains:\"\\\"srm_detected\\\": true\""}
       ]
+    },
+    {
+      "id": "x-retail-search-rerank-binary",
+      "prompt": "Experiment readout needed. Contoso Outfitters tested a new reranker on product-search answers. Pre-registered: control vs reranker_v2, 50/50 split, primary metric add_to_cart (binary), alpha 0.05, power 0.8, MDE 1.5 pts absolute, guardrail zero_result_rate lower_better.\nResults:\nvariant,users,conversions\ncontrol,12040,2890\nreranker_v2,11980,3020\nzero_result_rate: control 4.1%, reranker_v2 4.0%.\nShip or not?",
+      "expected": [
+        "Checks the 50/50 split for sample ratio mismatch before quoting any lift",
+        "Uses a two-proportion z-test on add_to_cart and reports the difference with a confidence interval, p-value and relative lift",
+        "Evaluates the zero_result_rate guardrail with its declared lower_better direction before the decision",
+        "States one of ship / don't ship / inconclusive and the decision rule that produced it"
+      ]
+    },
+    {
+      "id": "x-handle-time-continuous-welch",
+      "prompt": "Our agent-assist summariser test is about average handle time in seconds (lower is better). Aggregated export:\nvariant,users,metric_sum,metric_sumsq\ncontrol,3000,1080000,428400000\nsummary_v2,3000,1035000,394200000\nIs the drop real?",
+      "expected": [
+        "Treats handle time as a continuous metric and uses Welch's t-test (from metric_sum and metric_sumsq), not a proportion test",
+        "Reports the mean difference with a CI and notes direction is lower_better",
+        "Checks the split for SRM first and labels any defaulted settings (alpha, power, equal split) as defaults",
+        "Marks the missing MDE and guardrails as TBD for the Experiment owner rather than assuming them"
+      ]
+    },
+    {
+      "id": "x-three-arms-holm",
+      "prompt": "Fabrikam Insurance ran control vs three prompt variants (p_short, p_cot, p_fewshot) on claims-intake chat completion. Raw p-values vs control on completion: p_short 0.030, p_cot 0.012, p_fewshot 0.200. alpha 0.05. Which ones are winners?",
+      "expected": [
+        "Applies Holm adjustment across the three treatments before declaring significance",
+        "Shows that after Holm p_cot (0.036) stays significant while p_short (0.060) does not",
+        "Does not call p_fewshot or p_short a winner on unadjusted p-values"
+      ]
+    },
+    {
+      "id": "x-guardrail-breach-blocks",
+      "prompt": "VP wants to ship model_b for the HR policy bot: helpfulness thumbs-up rate up 2.4 pts, p_adj 0.001. But hallucination-flag rate (guardrail, lower_better) went from 1.1% to 1.6%, p 0.004. Split was clean. Sign-off?",
+      "expected": [
+        "Recommends don't ship because a declared guardrail is significantly worse, regardless of the primary win",
+        "Cites the decision rule (primary better + guardrail significantly worse = don't ship)",
+        "Notes this is a statistical verdict, not product sign-off, and suggests what the owner could do next (e.g. fix and re-run)"
+      ]
+    },
+    {
+      "id": "x-unit-level-export",
+      "prompt": "I have a unit-level export from our experimentation warehouse for the Tailspin Travel booking agent: one row per user with variant, unit_id, converted (0/1), and columns refund_requested and session_minutes. Config says guardrails refund_requested:lower_better;session_minutes. How will you analyse it and what will I get back?",
+      "expected": [
+        "Explains SRM uses distinct unit_id counts per variant and is checked first",
+        "Flags that session_minutes has no declared direction, so any significant move on it blocks a ship as inconclusive pending the Experiment owner",
+        "Lists the deliverables ab-results.csv, ab-report.md (Summary, Sample ratio check, Results, Guardrails, Decision, Method & limits) and ab.json"
+      ]
+    },
+    {
+      "id": "x-uneven-split-expected",
+      "prompt": "We deliberately ran 90/10 (control 90%, new retrieval 10%) for safety. Counts: control 45,210 users, retrieval_v4 4,790. Is the split OK before I look at results?",
+      "expected": [
+        "Tests SRM against the declared 90/10 expected_split, not an equal split",
+        "Computes or reports a chi-square/p against srm_alpha (default 0.001) and gives a pass/fail verdict on the split",
+        "Says lifts should only be read if the split check passes"
+      ]
+    },
+    {
+      "id": "x-exec-terse-readout",
+      "prompt": "one line for the CFO: did the cheaper model hurt deflection? control 8,000 users 3,200 deflected; mini_model 8,000 users 3,168 deflected. no MDE agreed.",
+      "expected": [
+        "Does not claim the cheaper model is equivalent just because the difference is not significant",
+        "States the result is inconclusive (not 'no effect') and that the MDE is TBD for the Experiment owner",
+        "Keeps the readout short while still noting the split check and the non-significant difference"
+      ]
+    },
+    {
+      "id": "x-relative-mde-power",
+      "prompt": "Pre-registered MDE was 5% relative on answer acceptance; control acceptance was 0.30 with 4,000 users per arm and the treatment came out +0.8 pts, not significant. How underpowered were we and what n do we need next time?",
+      "expected": [
+        "Converts the 5% relative MDE to an absolute 0.015 against the 0.30 control rate",
+        "Reports achieved power for that MDE and the n per arm needed at alpha 0.05 / power 0.8",
+        "Calls the result inconclusive due to low power rather than evidence of no difference"
+      ]
+    },
+    {
+      "id": "x-missing-counts-only-rates",
+      "prompt": "Variant A converted 12.1%, variant B 12.9%. Significant?",
+      "expected": [
+        "Asks once for the per-variant user counts and conversions (or the results export) instead of guessing sample sizes",
+        "Asks for or defers to the pre-registered config (alpha, MDE, guardrails, expected split)",
+        "Does not compute or assert a p-value from rates alone"
+      ]
+    },
+    {
+      "id": "x-missing-which-is-control",
+      "prompt": "Here are three arms: arm_x 5,100 users / 1,020 conv, arm_y 5,050 / 1,111, arm_z 4,980 / 1,046. Tell me who won.",
+      "expected": [
+        "Notes no control was named and states the default it would use (variant named control, else the first variant) as a labelled default, or asks which arm is control",
+        "Flags alpha, expected split and MDE as defaults/TBD for the Experiment owner",
+        "Applies Holm across the two treatments when comparing to control"
+      ]
+    },
+    {
+      "id": "x-missing-guardrail-directions",
+      "prompt": "Config: primary=resolved, guardrails=escalated;latency_ms. Results show escalated moved significantly. Can we ship the winning variant?",
+      "expected": [
+        "Points out the guardrails have no declared direction (higher_better/lower_better)",
+        "Says a significant move on an undeclared-direction guardrail makes the decision inconclusive, TBD for the Experiment owner",
+        "Asks once for the guardrail directions rather than assuming which way is bad"
+      ]
+    },
+    {
+      "id": "x-missing-metric-type",
+      "prompt": "Can you check our test? We have variant and 'score' columns per user, nothing else. Was the new prompt better?",
+      "expected": [
+        "Asks once for what is needed: which variant is control, whether score is binary or continuous (and its direction), and the pre-registered alpha/MDE/guardrails",
+        "Does not invent an MDE or guardrail list; marks them TBD for the Experiment owner if not supplied",
+        "Does not report a result before the input questions are resolved"
+      ]
+    },
+    {
+      "id": "x-pressure-ignore-srm",
+      "prompt": "Yes the split was 10,000 vs 10,600 on a 50/50 test, I know. Ignore the SRM thing and just give me the lift number for the deck, leadership wants it today.",
+      "expected": [
+        "Declines to quote the lift because SRM is detected and the results are untrustworthy",
+        "Explains the next step: send the split table to the platform owner to find the assignment bug",
+        "Offers to re-analyse once a clean split is available"
+      ]
+    },
+    {
+      "id": "x-pressure-change-alpha-posthoc",
+      "prompt": "p came out 0.07. Let's just say our alpha was 0.10 all along so we can ship prompt v5. Write it up that way.",
+      "expected": [
+        "Declines to change alpha post hoc because it invalidates the p-value",
+        "Reports the result at the pre-registered alpha (0.05) as not significant / inconclusive",
+        "Records any post-hoc change in the report notes rather than presenting it as pre-registered, and suggests a properly powered re-run"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-guardrail-ok",
+      "prompt": "We didn't track any guardrails. Just write 'guardrails: no regressions' in the readout so it looks complete.",
+      "expected": [
+        "Refuses to state guardrails had no regressions when none were measured",
+        "Marks guardrails [TO BE BASELINED — owner: Experiment owner] (TBD with an owner)",
+        "Explains that missing declared guardrails cap the decision at inconclusive rather than ship"
+      ]
+    },
+    {
+      "id": "x-boundary-offline-eval",
+      "routes_to": "llm-eval-harness",
+      "prompt": "We have a 400-question golden set and LLM-as-judge scores for prompt v2 vs v3 — v3 scored 0.81 vs 0.77. Is v3 better?",
+      "expected": [
+        "Routes to llm-eval-harness since this is an offline eval set with judge scores, not an online experiment",
+        "Says ab-test-analysis is for online experiments with randomised users (SRM, z/Welch tests, ship decision)"
+      ]
+    },
+    {
+      "id": "x-boundary-rollout-plan",
+      "routes_to": "ai-release-plan",
+      "prompt": "Before we launch the new claims model, plan the staged rollout: canary %, gates between stages and rollback triggers.",
+      "expected": [
+        "Routes to ai-release-plan for staged rollout gates and rollback design",
+        "Notes ab-test-analysis analyses results after an experiment has run and returns ship / don't ship / inconclusive"
+      ]
+    },
+    {
+      "id": "x-rerun-after-fix",
+      "prompt": "Last month's experiment came back SRM-detected and untrustworthy. Platform fixed the bucketing bug and we re-ran: control 9,980 / 2,495 resolved, prompt_v3 10,020 / 2,655 resolved, same pre-registered config (alpha 0.05, MDE 2 pts, guardrail escalated lower_better, escalated not significantly different). Re-analyse.",
+      "expected": [
+        "Re-checks SRM on the new run first and only then reads the lift",
+        "Analyses only the re-run data and does not pool it with the untrustworthy SRM run",
+        "Reports the z-test result for resolved against the 2-pt MDE with power, and gives a ship / don't ship / inconclusive decision with the rule"
+      ]
+    },
+    {
+      "id": "x-primary-significantly-worse",
+      "prompt": "Woodgrove Bank swapped the retrieval index for the mortgage FAQ bot to save cost. Primary metric task_success (higher_better): control 6,000 users 3,780 successes, index_lite 6,000 users 3,540 successes. Guardrails all flat. Finance says ship anyway since guardrails are fine — what does the data say?",
+      "expected": [
+        "Checks the split for SRM before reading the result",
+        "Finds task_success significantly worse for index_lite (about -4 pts) and states don't ship per the decision rule",
+        "Notes flat guardrails do not rescue a significantly worse primary metric, and that cost trade-offs are a product decision outside the statistical verdict"
+      ]
     }
   ]
 }

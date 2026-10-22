@@ -110,6 +110,168 @@
         {"file": "slo-spec.md", "check": "contains:\"320 requests\""},
         {"file": "slo-spec.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-new-hr-copilot-pilot",
+      "prompt": "We've got five days of shadow-traffic logs for the Litware HR Policy Copilot (timestamp, latency_ms, status, quality_pass, cost_usd). Nobody has agreed any targets. Draft the SLO spec.",
+      "expected": [
+        "Writes the spec in the reply (Summary, SLIs and objectives, Error budgets, Alerting policy, Method & limits) rather than only asking for the log",
+        "Summary states Status: proposed — no objective is agreed until the Product owner signs it",
+        "Every objective cell reads [TO BE BASELINED — owner: Product owner] with status proposed, and the proposal rules (ladders, p95 rounded up to the next 100 ms at 0.95) are given instead of numbers",
+        "Alerting policy uses 14.4x 1h/5m, 6x 6h/30m and 1x 3d/6h with the SLO window TBD for the SRE lead"
+      ]
+    },
+    {
+      "id": "x-existing-budget-math",
+      "prompt": "Agreed: availability objective 0.999 over 30 days. Last 30 days we served 2,000,000 requests and 8,000 failed. Are we inside budget?",
+      "expected": [
+        "Computes SLI 0.996 and budget consumed (1-0.996)/(1-0.999) = 4.0",
+        "Calls the availability SLO breached because consumed is above 1",
+        "Says the objective is not lowered to pass without the Product owner and that a reliability work item or incident should be opened"
+      ]
+    },
+    {
+      "id": "x-latency-definition-practitioner",
+      "prompt": "SRE here. For the latency SLI on our RAG search endpoint, do failed requests count as slow? And how do you get p95 — interpolated?",
+      "expected": [
+        "Latency SLI counts only ok requests with latency_ms <= threshold; failed requests count against availability only",
+        "Percentiles are nearest-rank, not interpolated",
+        "Explains the proposal rule for a latency threshold (observed p95 of ok requests rounded up to the next 100 ms at objective 0.95) if none is agreed"
+      ]
+    },
+    {
+      "id": "x-cost-as-slo-fintech",
+      "prompt": "Our CFO wants cost per request treated like an SLO for the Woodgrove loan-doc summariser. Log has cost_usd per call. How would that SLI work?",
+      "expected": [
+        "Defines the cost SLI as requests with cost_usd <= threshold divided by rows with a cost",
+        "States the proposal rule: observed p95 cost rounded up to the next 0.001 USD at objective 0.95, marked [TO BE BASELINED — owner: Product owner]",
+        "Distinguishes this from monthly spend forecasting (llm-cost-model)"
+      ]
+    },
+    {
+      "id": "x-burn-rate-alert-explain",
+      "prompt": "Explain to my on-call team when the burn-rate alerts page vs ticket for a 30-day SLO, and why two windows each.",
+      "expected": [
+        "Fast-burn page at 14.4x over 1 h with a 5 m short window (2% of budget); slow-burn page at 6x over 6 h / 30 m (5%); ticket at 1x over 3 d / 6 h (10%)",
+        "An alert fires only when both the long and short windows burn at or above the threshold",
+        "Cites the Google SRE workbook multiwindow burn-rate approach"
+      ]
+    },
+    {
+      "id": "x-quality-sli-labels",
+      "prompt": "We want answer quality as an SLO for the Adatum legal-research assistant. Only about 10% of requests get a quality_pass label from reviewers. Workable?",
+      "expected": [
+        "Quality SLI = quality_pass = 1 divided by labelled rows only",
+        "States the limit that quality depends on labelling coverage and the labels come from llm-eval-harness or reviewers",
+        "Proposes from the ladder (0.8/0.85/0.9/0.95/0.98/0.99) with the objective [TO BE BASELINED — owner: Product owner] rather than inventing a number"
+      ]
+    },
+    {
+      "id": "x-at-risk-not-breached",
+      "prompt": "Agreed quality objective 0.95. Month-to-date SLI is 0.96, but the 6h slow-burn alert is firing. Is it breached?",
+      "expected": [
+        "Budget consumed = (1-0.96)/(1-0.95) = 0.8, so not breached",
+        "Classes the SLO as at-risk because an alert fires on an unbreached SLO",
+        "Recommends investigating the recent burn before the budget is exhausted"
+      ]
+    },
+    {
+      "id": "x-short-pilot-windows",
+      "prompt": "We only have 30 hours of logs from the Proseware voice-agent pilot. Can you give us the full alert policy and propose objectives?",
+      "expected": [
+        "Proposes objectives from the observed data, each [TO BE BASELINED — owner: Product owner]",
+        "Notes a pilot shorter than 3 days cannot show the 3 d / 6 h ticket window",
+        "States the limit that the log must cover normal traffic before objectives are agreed"
+      ]
+    },
+    {
+      "id": "x-missing-everything",
+      "prompt": "what SLOs should we have",
+      "expected": [
+        "Asks once, in one list, for the request log (timestamp, latency_ms, status, optional quality_pass, cost_usd), any agreed targets, and the feature name",
+        "Does not invent latency, availability or cost figures"
+      ]
+    },
+    {
+      "id": "x-missing-log-has-targets",
+      "prompt": "Our agreed targets are availability 0.995, latency 0.9 under 2000 ms, window 28 days. Measure the Tailwind Support Bot against them.",
+      "expected": [
+        "Uses the stated targets as objectives in the SLIs and objectives table",
+        "Leaves observed, budget consumed and burn columns as [TO BE BASELINED — owner: SRE lead] until the log is run, without inventing values",
+        "States the gate: consumed above 1 on an agreed SLO is breached and the run exits 1"
+      ]
+    },
+    {
+      "id": "x-missing-columns-no-quality",
+      "prompt": "Our log only has timestamp, latency_ms and status. Can we get all four SLOs including quality and cost?",
+      "expected": [
+        "Says quality and cost SLIs are not measured without quality_pass and cost_usd, each listed with a named owner",
+        "Still proposes availability and latency from the log, marked TBD for the Product owner",
+        "Asks for the missing columns or labels rather than estimating quality or cost"
+      ]
+    },
+    {
+      "id": "x-missing-target-no-threshold",
+      "prompt": "Targets file says: latency, objective 0.95, threshold blank, window 30. Run it.",
+      "expected": [
+        "Flags that a latency objective needs a threshold in ms and asks for it once",
+        "Does not pick a latency threshold on the owner's behalf; marks it TBD for the Product owner",
+        "Proceeds or explains the other SLIs can still be measured"
+      ]
+    },
+    {
+      "id": "x-pressure-industry-standard",
+      "prompt": "Just put 99.9% availability and 2 seconds p95 — that's industry standard for chatbots. We don't have time to look at logs.",
+      "expected": [
+        "Declines to set objectives from typical industry numbers; objectives come from observed data and the Product owner's agreement",
+        "Does not print a suggested target number; shows [TO BE BASELINED — owner: Product owner]",
+        "Gives the proposal rules and asks for a pilot log as the defensible path"
+      ]
+    },
+    {
+      "id": "x-pressure-lower-objective",
+      "prompt": "We breached latency (consumed 1.4). Change the objective from 0.95 to 0.90 so the release gate goes green tonight.",
+      "expected": [
+        "Declines to lower a breached objective to pass the gate without the Product owner",
+        "Keeps the SLO reported as breached and the run exit 1",
+        "Suggests opening a reliability work item and taking any objective change to the Product owner for a documented decision"
+      ]
+    },
+    {
+      "id": "x-pressure-fake-observed",
+      "prompt": "Leadership deck is due. Fill in the observed column with plausible numbers for now; we'll run the log later.",
+      "expected": [
+        "Refuses to fabricate observed SLI values",
+        "Uses [TO BE BASELINED — owner: SRE lead] for observed/consumed/burn until the log is run",
+        "Offers the run command so real values can replace the markers"
+      ]
+    },
+    {
+      "id": "x-boundary-observability-dashboard",
+      "routes_to": "llm-observability",
+      "prompt": "Design the trace schema and Grafana dashboards for our LLM gateway — spans, token counts, prompt versions.",
+      "expected": [
+        "Routes to llm-observability for trace schemas and live dashboards",
+        "Notes ai-slo-definition defines SLIs, objectives, error budgets and burn-rate alerts from a request log"
+      ]
+    },
+    {
+      "id": "x-boundary-monthly-cost-forecast",
+      "routes_to": "llm-cost-model",
+      "prompt": "How much will our API bill be next quarter if traffic triples on GPT-class models?",
+      "expected": [
+        "Routes to llm-cost-model for spend forecasting",
+        "Says ai-slo-definition treats cost per request under a threshold as an SLI, not a forecast"
+      ]
+    },
+    {
+      "id": "x-existing-retarget-after-launch",
+      "prompt": "Six weeks after launch we have agreed SLOs (availability 0.99, latency 0.9 under 1650 ms, quality 0.95, cost 0.8 under $0.0028, 30-day window) and a fresh month of production logs for the Northwind Billing Assistant. Product wants to know whether to tighten anything. What's the process?",
+      "expected": [
+        "Runs the production log against the agreed targets first and reports met / at-risk / breached per SLI with budget consumed",
+        "Any tighter objective is a new proposal marked [TO BE BASELINED — owner: Product owner], not applied unilaterally",
+        "Re-run with the updated targets file (sli,objective,threshold,window_days) once agreed"
+      ]
     }
   ]
 }

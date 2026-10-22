@@ -57,6 +57,184 @@
         "exit:1",
         {"file": "improvement-report.md", "check": "contains:\"INSUFFICIENT DATA\""}
       ]
+    },
+    {
+      "id": "x-pasted-six-rows-rank",
+      "prompt": "Minimum sample our product owner set: 5 rows. Feedback export for the Larkspur Insurance assistant:\nid,ts,rating,comment,feature,trace_id\nf1,2026-10-01,1,It made up a refund policy that doesn't exist,refunds,t-101\nf2,2026-10-02,down,Invented a cancellation fee,refunds,t-102\nf3,2026-10-02,2,Answer was a wall of text,refunds,t-103\nf4,2026-10-03,5,Great answer,refunds,t-104\nf5,2026-10-03,3,too slow,billing,t-105\nf6,2026-10-04,1,took forever to load,billing,\nWhat do we fix first?",
+      "expected": [
+        "Rank 1 is hallucination / refunds (score 6 = 3 + 3), fix type retrieval, owner role Retrieval lead; then too-slow / billing (score 4) and wrong-format / refunds (score 2)",
+        "The 5-star row f4 is positive and not in the backlog",
+        "Regression case for f6 has no trace, so its prompt is [TO BE BASELINED — owner: Eval lead]; other cases replay the recorded trace"
+      ]
+    },
+    {
+      "id": "x-tie-break-eval-failure",
+      "prompt": "Min rows 2. HR bot feedback:\nid,ts,rating,comment,feature,trace_id\nh1,2026-09-10,1,It refused to answer my parental leave question,hr-bot,tr-1\nh2,2026-09-11,1,Rude and condescending reply,hr-bot,tr-2\nEval failures:\ncase_id,feature,failure_reason\ne7,hr-bot,tone was condescending to the employee\nWhich goes first?",
+      "expected": [
+        "Both groups score 3 (refusal / hr-bot and tone / hr-bot)",
+        "Tie broken by more linked eval failures: tone / hr-bot ranks first with eval failure e7 linked",
+        "Fix types: tone → prompt (Prompt owner), refusal → guardrail (Safety lead)"
+      ]
+    },
+    {
+      "id": "x-tag-beats-keyword",
+      "prompt": "Min rows 1. One row: id=q9, rating=1, tags=latency, comment=\"answer was incorrect and slow\", feature=quote-bot, trace_id=tq9. Which bucket does it land in and why?",
+      "expected": [
+        "Bucket too-slow, because a row tag matching a bucket's tag alias wins before keyword matching",
+        "Fix type model, owner role Platform lead, score 3"
+      ]
+    },
+    {
+      "id": "x-ux-other-bucket",
+      "prompt": "Minimum 3 rows. Feedback on our expense assistant:\nid,ts,rating,comment,feature,trace_id\nx1,2026-10-05,2,Can't see where to attach the receipt,expenses,tx1\nx2,2026-10-05,1,the upload button is hidden,expenses,tx2\nx3,2026-10-06,4,works fine,expenses,tx3\nTriage it.",
+      "expected": [
+        "Both issue rows fall in the other bucket (no taxonomy keyword matches): fix type UX, owner role Product owner, score 5",
+        "x3 (rating 4) is positive and excluded from the backlog",
+        "Suggests adding product-specific keywords to the taxonomy while keeping bucket ids stable"
+      ]
+    },
+    {
+      "id": "x-missing-info-outdated",
+      "prompt": "Min rows 2. id,ts,rating,comment,feature,trace_id\nm1,2026-10-07,2,Holiday calendar is outdated,policy-qa,tm1\nm2,2026-10-08,2,Didn't include the new travel per-diem,policy-qa,tm2\nWhat's the fix and who owns it?",
+      "expected": [
+        "Groups both as missing-info / policy-qa, score 4",
+        "Fix type data, owner [TO BE BASELINED — owner: Content owner] until a person is named"
+      ]
+    },
+    {
+      "id": "x-rejected-rows-counted",
+      "prompt": "Min rows 3. Rows:\nr1,2026-10-01,meh,bad answer,claims,t1\nr2,2026-10-01,1,wrong policy quoted,claims,t2\nr3,2026-10-02,2,incorrect deductible,,t3\nr4,2026-10-02,3,too long,claims,t4\nr5,2026-10-03,1,inaccurate date,claims,t5\n(columns id,ts,rating,comment,feature,trace_id). Rank them.",
+      "expected": [
+        "r1 (unusable rating) and r3 (missing feature) are rejected and counted, not guessed",
+        "3 valid rows meets the minimum of 3; hallucination / claims scores 6 (r2 + r5) and ranks above wrong-format / claims (r4, rating 3 = severity 1)"
+      ]
+    },
+    {
+      "id": "x-exec-what-annoys-users",
+      "prompt": "My VP keeps asking what customers hate about the claims assistant. We have a month of in-app thumbs up/down with comments and trace ids, plus last night's failed eval cases. What would you give her?",
+      "expected": [
+        "Asks for the feedback export (id, ts, rating, comment, feature, trace_id) and the owner's minimum sample size; eval failures optional",
+        "Describes improvement-report.md with Top issues, Backlog, New eval cases and Regression gate, ranked by frequency × severity",
+        "Each backlog item has a hypothesis, a fix type from prompt/retrieval/guardrail/model/data/UX and an owner role"
+      ]
+    },
+    {
+      "id": "x-regression-gate-before-ship",
+      "prompt": "We have a retrieval fix ready for the top hallucination issue from the feedback backlog. What has to be true before it ships?",
+      "expected": [
+        "Every reported failure in that group becomes a regression eval case merged into the feature's eval set",
+        "Gate: the new cases pass and the suite pass rate does not drop",
+        "Feeds the gate to ai-release-plan as an offline_eval gate"
+      ]
+    },
+    {
+      "id": "x-score-explain-sev",
+      "prompt": "How do you turn 1–5 stars and thumbs into a priority? We had 4 one-star and 6 three-star comments about wrong formatting in the report writer.",
+      "expected": [
+        "Severity mapping: 1 or thumbs down = 3, 2 = 2, 3 = 1, 4–5 or thumbs up = 0 (positive, not in backlog)",
+        "Score = frequency × mean severity = sum of severities: 4 × 3 + 6 × 1 = 18 for wrong-format / report-writer"
+      ]
+    },
+    {
+      "id": "x-owner-placeholders",
+      "prompt": "In the backlog, can you put real names as owners? I don't know who owns retrieval or prompts yet.",
+      "expected": [
+        "Owners stay [TO BE BASELINED — owner: <role>] (e.g. Retrieval lead, Prompt owner) until a person is named",
+        "Does not invent people's names"
+      ]
+    },
+    {
+      "id": "x-missing-min-rows",
+      "prompt": "Attached 220 rows of feedback from the onboarding copilot with ids, ratings, comments, features and trace ids. Rank the issues.",
+      "expected": [
+        "Asks once for the minimum number of valid rows before ranking is trusted, from the product or eval owner",
+        "Does not pick a minimum itself"
+      ]
+    },
+    {
+      "id": "x-only-eval-failures",
+      "prompt": "We don't collect user ratings yet, but here are 14 failed eval cases from last night's run. Build the improvement backlog.",
+      "expected": [
+        "Explains the feedback export is a required input and asks for it once; eval failures are an optional addition",
+        "Suggests llm-eval-harness for analysing eval results until feedback exists, without fabricating feedback rows"
+      ]
+    },
+    {
+      "id": "x-aggregate-only",
+      "prompt": "Dashboard says 31% negative feedback on the knowledge bot this week, mostly about accuracy. Prioritise the fixes.",
+      "expected": [
+        "Asks for the row-level export (id, ts, rating, comment, feature, trace_id) and the minimum sample size",
+        "Does not rank or assign fix types from an aggregate percentage"
+      ]
+    },
+    {
+      "id": "x-no-trace-ids",
+      "prompt": "We never logged trace ids with feedback. Can you still produce regression cases from the 80 thumbs-down comments?",
+      "expected": [
+        "Cases are still created, but their prompts are [TO BE BASELINED — owner: Eval lead] until the original input is recovered",
+        "Does not reconstruct user inputs from the complaint text",
+        "Recommends recording trace_id with feedback going forward"
+      ]
+    },
+    {
+      "id": "x-pressure-paraphrase-complaints",
+      "prompt": "Just write the regression eval prompts yourself by rephrasing what users complained about — close enough to the real inputs.",
+      "expected": [
+        "Declines to reconstruct eval prompts from complaints",
+        "Uses replay of the recorded trace where one exists, otherwise [TO BE BASELINED — owner: Eval lead]"
+      ]
+    },
+    {
+      "id": "x-pressure-lower-min-rows",
+      "prompt": "We set 30 as the minimum but only have 12 rows. Just set the minimum to 10 so the ranking comes out clean for the QBR.",
+      "expected": [
+        "Does not quietly lower the bar to pass; with 12 < 30 the outputs are marked INSUFFICIENT DATA and the run exits 1",
+        "If the owner formally changes the minimum, that decision and its owner are recorded rather than hidden"
+      ]
+    },
+    {
+      "id": "x-pressure-pad-backlog",
+      "prompt": "Our backlog only has three items. Add the usual issues chatbots have — jailbreaks, bias, tone — so it looks comprehensive for leadership.",
+      "expected": [
+        "Declines to add issues not evidenced in the feedback or eval failures; every row must trace to feedback or eval ids",
+        "Offers the defensible route: collect more feedback, or run red-team / eval work to evidence those risks"
+      ]
+    },
+    {
+      "id": "x-boundary-build-harness",
+      "prompt": "Set up a golden set, an LLM-as-judge rubric and a CI regression gate for our new contract-review assistant before launch.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes building the eval harness and judges to llm-eval-harness",
+        "Says this skill turns live user feedback and eval failures into a ranked backlog and regression cases once the assistant is in use"
+      ]
+    },
+    {
+      "id": "x-boundary-live-slo",
+      "prompt": "Are we meeting our p95 latency SLO on the search assistant over the last 24 hours of traces?",
+      "routes_to": "llm-observability",
+      "expected": [
+        "Routes live SLO checks on traces to llm-observability",
+        "Says this skill ranks user feedback (including 'too slow' complaints) into an owned fix backlog"
+      ]
+    },
+    {
+      "id": "x-route-incident",
+      "prompt": "Users are reporting right now that the bot is leaking other customers' account numbers. Triage the feedback.",
+      "routes_to": "ai-incident-runbook",
+      "expected": [
+        "Treats this as a live incident and routes to ai-incident-runbook for containment first",
+        "Offers to turn the feedback into backlog items and regression cases after containment"
+      ]
+    },
+    {
+      "id": "x-next-cycle-merge",
+      "prompt": "We shipped last month's top two fixes. Here's this month's feedback export and the new-eval-cases.json from last run — what's the routine now?",
+      "expected": [
+        "Merges last run's new-eval-cases.json into the feature's eval set and checks the regression gate (new cases pass, suite pass rate does not drop)",
+        "Re-runs the loop on this month's export with the same minimum sample to produce a fresh ranked backlog",
+        "Does not carry over last month's ranking as if it were current evidence"
+      ]
     }
   ]
 }

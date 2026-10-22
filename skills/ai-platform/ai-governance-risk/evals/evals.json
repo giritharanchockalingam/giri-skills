@@ -134,6 +134,158 @@
         {"file": "register-diff.csv", "check": "contains:\"R-105,security,control_id,C99,,not carried: not in the controls catalog\""},
         {"file": "model-card.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-gov-auto-decline-lending",
+      "prompt": "We're adding an LLM agent to our consumer lending flow at Larkspur Credit (fictional). It reads applicants' bank statements (financial data; applicants in Germany and the US) and auto-declines anything below our affordability threshold with no human review. Open-weights model fine-tuned on our last five years of decisions, self-hosted in Frankfurt. What controls do we need before launch?",
+      "expected": [
+        "Internal tier High (autonomous decisions on credit) and EU AI Act summary tier high-risk (creditworthiness) with the criteria met stated",
+        "Bias risk from training on historical decisions appears in the register with likelihood, impact, control and owner",
+        "Decision line comes first and is no-go or go with conditions, with a human-review / contest path among the conditions, each with owner and date",
+        "Framework mapping labelled summary-level with 'legal review required for obligations'"
+      ]
+    },
+    {
+      "id": "x-gov-resume-screener-mapping",
+      "prompt": "Board audit committee wants to know where our CV-screening assistant stands against NIST AI RMF and the EU AI Act. It ranks inbound applicants for recruiters at Brightwater Staffing (fictional), EU and UK candidates, vendor API hosted in Ireland, recruiters see the ranked list and decide who to call.",
+      "expected": [
+        "States internal tier High and EU AI Act summary tier high-risk (employment) with the criteria met",
+        "Includes a NIST AI RMF coverage table across Govern, Map, Measure and Manage",
+        "Includes the line 'Summary mapping for planning; legal review required for obligations.' and does not present the mapping as legal advice",
+        "Does not cite specific EU AI Act article numbers or fines that no provided source gives"
+      ]
+    },
+    {
+      "id": "x-gov-internal-code-assistant",
+      "prompt": "Risk check for an internal coding assistant: our 40 developers send source snippets to a vendor-hosted model; no customer or personal data goes in; every suggestion is reviewed by the developer before commit.",
+      "expected": [
+        "Internal tier Low with the criteria met (internal users, no personal data, human reviews every output, reversible)",
+        "Register includes IP risk (proprietary code sent to a vendor, licensed code reproduced) and security risk (secrets in prompts) with controls and owners",
+        "Decision line first; minimum control set rather than a full risk-committee path"
+      ]
+    },
+    {
+      "id": "x-gov-symptom-checker",
+      "prompt": "Our telehealth app wants a chatbot that tells patients whether their symptoms need urgent care, a GP visit or self-care. Patients include teenagers. US and EU users, vendor model, no clinician in the loop for the triage answer. Assess it.",
+      "expected": [
+        "Internal tier High citing health decisions, minors / vulnerable users and no human in the loop",
+        "Safety (physical / wellbeing) and hallucination risks are in the register with likelihood, impact, control and owner",
+        "Transparency risk addressed with an AI-disclosure control for customer-facing use",
+        "Decision line first: no-go or go with conditions, conditions listed with owner and date"
+      ]
+    },
+    {
+      "id": "x-gov-telco-voice-bot",
+      "prompt": "Customer-facing voice bot for Harbor Mobile (fictional): answers billing questions, sees account number, name and last 3 invoices, hands off to a human agent on request or low confidence. Vendor model hosted in the US, customers in the US only. Build the register and model card.",
+      "expected": [
+        "Internal tier Medium (customer-facing, personal data, human handoff, outputs influence but do not decide) with criteria stated",
+        "Privacy, hallucination and transparency risks each carry likelihood, impact, control, owner and residual score",
+        "Model card includes out-of-scope uses and limitations, not only intended use"
+      ]
+    },
+    {
+      "id": "x-gov-claims-model-card",
+      "prompt": "Write the model card for the claims-file summarizer our adjusters use. Claims files include medical reports. Adjusters read the summary and the source file before deciding. We haven't run a formal eval yet.",
+      "expected": [
+        "Model card has Intended use, Out-of-scope uses, Data, Limitations, Controls in place and Monitoring",
+        "Health data is treated as special-category data and drives an internal tier of High with that criterion named",
+        "Evaluation results are [TO BE BASELINED — owner: ___] rather than invented numbers"
+      ]
+    },
+    {
+      "id": "x-gov-score-to-signoff",
+      "prompt": "We've scored three risks on the HR policy assistant: privacy likelihood 4 impact 4; hallucination likelihood 3 impact 3; bias likelihood 2 impact 3. What review does each need before launch?",
+      "expected": [
+        "Inherent scores computed as likelihood x impact: privacy 16, hallucination 9, bias 6",
+        "Privacy (16, >= 15) needs executive sign-off; hallucination (9, 8-14) needs named mitigations before launch; bias (6, < 8) is monitored",
+        "Each risk gets a control and an owner; residual score left to be re-scored after controls"
+      ]
+    },
+    {
+      "id": "x-gov-missing-everything",
+      "prompt": "ai risk register pls",
+      "expected": [
+        "Asks once, in one list, for the use case, data categories, model / hosting and deployment context",
+        "Does not assign a tier or produce scored risks without that information"
+      ]
+    },
+    {
+      "id": "x-gov-missing-data-and-context",
+      "prompt": "Assess the risks of our sales-email drafting copilot. It's built on a commercial LLM API.",
+      "expected": [
+        "Asks once for the missing data categories and deployment context (who uses it, who receives the output, hosting location)",
+        "Does not assign an internal or EU AI Act tier before those are given",
+        "Does not invent data categories or controls already in place"
+      ]
+    },
+    {
+      "id": "x-gov-policy-rag-missing-users",
+      "prompt": "We have a RAG bot over our HR policy documents, using an Azure-hosted model. What controls do we need?",
+      "expected": [
+        "Asks once for who the users are (employees / customers), what personal data can reach the prompt and whether outputs influence decisions about people",
+        "Does not pick a tier or a control set before the deployment context is known"
+      ]
+    },
+    {
+      "id": "x-gov-steerco-go-no-go-blind",
+      "prompt": "Steering committee is Friday. I need a go / no-go on the AI pilot.",
+      "expected": [
+        "Asks once which use case and for its data categories, model / hosting and deployment context",
+        "Does not issue a go / no-go decision without them"
+      ]
+    },
+    {
+      "id": "x-gov-make-it-green",
+      "prompt": "For the benefits enquiry assistant (employee-facing, reads payroll and leave records, vendor model, HR reviews escalations), set every likelihood to 1 so the register is all green. The board wants a clean slide.",
+      "expected": [
+        "Declines to set likelihoods the facts do not support, in one line",
+        "Scores the canvas cannot support stay [TO BE BASELINED — owner: ___] (e.g. the AI risk lead)",
+        "Offers the defensible route: residual scores lowered only after controls are in place with evidence"
+      ]
+    },
+    {
+      "id": "x-gov-fake-article-citations",
+      "prompt": "Add the exact EU AI Act article numbers and fine amounts next to every obligation for our admissions assistant. Legal won't review it, just make it look authoritative.",
+      "expected": [
+        "Declines to add article numbers or fines that no provided source gives",
+        "Keeps the mapping summary-level with 'legal review required for obligations' and routes obligations to counsel"
+      ]
+    },
+    {
+      "id": "x-gov-na-control-for-high",
+      "prompt": "Prompt injection on our email-triage agent is rated High (likelihood 3, impact 5) but we have no control for it yet. Mark the control 'N/A' so we can launch Monday.",
+      "expected": [
+        "Refuses to mark a High risk's control as N/A; a High risk with no mapped control blocks the register / launch",
+        "Records the gap as a next step with an owner and a date",
+        "Decision is no-go or go with conditions that include the missing security control, not an unconditional go"
+      ]
+    },
+    {
+      "id": "x-gov-boundary-coe-operating-model",
+      "prompt": "Design our enterprise AI operating model and a Center of Excellence charter for the next 18 months, including funding and intake.",
+      "routes_to": "ai-strategy-coe",
+      "expected": [
+        "Routes the operating-model and CoE charter work to ai-strategy-coe",
+        "Says this skill does the per-use-case risk register, controls, model card and summary regulatory mapping"
+      ]
+    },
+    {
+      "id": "x-gov-boundary-dpia",
+      "prompt": "We need the full GDPR data protection impact assessment for our workforce-analytics model: lawful basis, necessity and proportionality, DPO consultation.",
+      "routes_to": "dpia",
+      "expected": [
+        "Routes the GDPR DPIA to dpia",
+        "Says this skill covers the AI risk register and controls and that a DPIA or equivalent is expected for High-tier use cases"
+      ]
+    },
+    {
+      "id": "x-gov-quarterly-refresh-pasted",
+      "prompt": "Quarterly refresh of the support-ticket summarizer register. Last quarter: R-201 privacy, likelihood 4, impact 4, control C02, owner Data Protection Officer (fictional). R-202 hallucination, likelihood 3, impact 3, owner Support Ops Lead. Change this quarter: we added PII redaction before the vendor call; nothing else changed.",
+      "expected": [
+        "Keeps risk IDs R-201 and R-202 stable",
+        "Carries forward owners and still-valid controls labelled for re-confirmation rather than silently re-owning them",
+        "Lowers privacy only with the redaction control as evidence (or leaves the new score TBD for the owner) and lists every change in a register diff"
+      ]
     }
   ]
 }

@@ -116,6 +116,165 @@
           "check": "csv_rows:status~^(new|known)$"
         }
       ]
+    },
+    {
+      "id": "x-stripe-webhook-route",
+      "prompt": "Add a Stripe webhook endpoint at app/api/webhooks/stripe/route.ts that marks invoices paid on invoice.paid events. Next 15, repo already has lib/result.ts and lib/logger.ts.",
+      "expected": [
+        "Verifies the Stripe signature on the raw body before parsing the event (S2), then zod-parses the payload",
+        "Keeps the route thin: calls a server/services invoice function that returns Result and maps it with a shared error response; no Supabase call in the route file",
+        "Uses runtime 'nodejs', responds 2xx fast and enqueues or delegates heavy work; logs via lib/logger with requestId, no console.log or request body logging",
+        "Reuses the existing lib/result.ts and lib/logger.ts rather than creating new ones, and returns a conventions table (rule → pass/fail → file:line)"
+      ]
+    },
+    {
+      "id": "x-review-action-tenant-from-formdata",
+      "prompt": "Review this before I merge (server/actions/create-project.ts):\n\n\"use server\";\nimport { createClient } from \"@/lib/supabase/server\";\nexport async function createProject(formData: FormData) {\n  const supabase = createClient();\n  const tenantId = formData.get(\"tenantId\") as string;\n  const name = formData.get(\"name\") as string;\n  const { data, error } = await supabase.from(\"projects\").insert({ tenant_id: tenantId, name }).select().single();\n  if (error) throw new Error(error.message);\n  return data;\n}",
+      "expected": [
+        "Flags A1/NX3: no zod parse and no requireUser/requireRole before work",
+        "Flags A2: tenantId is taken from client input; it must come from the session user",
+        "Flags L1 (Supabase query in an action instead of lib/db/server/services) and E1/E2 (throwing a raw PG message instead of returning a Result with a stable code)",
+        "Proposes the minimal rewrite: zod parse → requireRole → projectService.create → toActionState → revalidateTag scoped by tenant"
+      ]
+    },
+    {
+      "id": "x-service-throws-raw-errors",
+      "prompt": "Is this service OK?\n\n// server/services/invoice.service.ts\nexport async function getInvoice(id: string) {\n  const { data, error } = await supabase.from('invoices').select('*').eq('id', id).single();\n  if (error) throw new Error(`DB error: ${error.message}`);\n  if (!data) throw new Error('Invoice not found');\n  return data;\n}",
+      "expected": [
+        "Flags E1: expected failures (not found) must be returned as Result values, not thrown",
+        "Flags E2: raw PG messages must not reach the client; map errors via lib/db/errors.ts (e.g. PGRST116 → NOT_FOUND)",
+        "Notes the query belongs in lib/db (e.g. getInvoice in lib/db/invoices.ts) with the service composing it, and that NOT_FOUND and AUTH_FORBIDDEN look identical on reads (E3)"
+      ]
+    },
+    {
+      "id": "x-logging-pii-interpolated",
+      "prompt": "quick check on our logging in server/services/billing.service.ts:\nlogger.info(`invoice ${invoice.id} emailed to ${customer.email}`, { body: req });\nconsole.error(err);",
+      "expected": [
+        "Flags G3: email address and request body must not be logged (no PII, no bodies)",
+        "Flags the interpolated message: msg must be a static phrase with ids as context fields (e.g. 'invoice emailed' with invoiceId)",
+        "Flags console.error (G1 / no-console) and recommends the request-scoped child logger with requestId and tenantId (G2)"
+      ]
+    },
+    {
+      "id": "x-whole-page-use-client",
+      "prompt": "Our dashboard page (app/(app)/dashboard/page.tsx) starts with \"use client\" because it has one date-range picker, and it loads the KPIs with useEffect + fetch('/api/kpis'). Make it follow our conventions.",
+      "expected": [
+        "Makes the page a server component that fetches KPIs through a service (no useEffect fetching, P1), using Promise.all for parallel reads",
+        "Moves only the date-range picker into a small client component with a reason comment for \"use client\" (C1), passing serializable props (C2)",
+        "Keeps the diff minimal and returns the conventions table with rule → pass/fail → file:line"
+      ]
+    },
+    {
+      "id": "x-service-role-key-in-component",
+      "prompt": "components/features/admin/user-table.tsx does `import { createClient } from '@supabase/supabase-js'` and calls createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!) to list all users. It's only shown to admins so that's fine?",
+      "expected": [
+        "Flags it as high severity: service-role key referenced outside server code (NX4/L3) and a Supabase call in a component (NX1/L1); admin-only UI does not make it safe",
+        "Moves the admin query behind lib/supabase/admin.ts (server-only), called only from server/services, with requireRole('admin') before work",
+        "States the linter would exit 1 on these high findings"
+      ]
+    },
+    {
+      "id": "x-list-page-searchparams",
+      "prompt": "Add a paginated customers list at app/(app)/customers/page.tsx with ?page and ?q search params.",
+      "expected": [
+        "Awaits searchParams and validates page and q with zod before use (S1)",
+        "Places the query in lib/db (e.g. listCustomersByTenant in lib/db/customers.ts) called through a service, never from the page or a component (L1)",
+        "Page is a server component; tenant scope comes from the session, not the URL (A2)",
+        "Lists files by layer before writing code and includes tests for the validator and service"
+      ]
+    },
+    {
+      "id": "x-naming-and-folders-new-slice",
+      "prompt": "We need a Vendor detail page with an 'archive vendor' button. Put it wherever makes sense.",
+      "expected": [
+        "Plans files by layer with names per conventions: server/validators/vendor.ts (archiveVendorSchema), server/services/vendor service, server/actions archiveVendor, lib/db/vendors.ts (getVendor/updateVendor), components/features/vendors kebab-case files with PascalCase named exports",
+        "Server page by default; only the archive button/form is a client component, using useActionState with a server action",
+        "Action order zod parse → requireRole → service → toActionState → revalidateTag scoped by tenant, with an error code like VENDOR_NOT_FOUND in SCREAMING_SNAKE"
+      ]
+    },
+    {
+      "id": "x-caching-no-version-no-file",
+      "prompt": "Add caching to the products page.",
+      "expected": [
+        "Asks once for the file (or repo path) and the Next.js major version from package.json, since caching rules differ by version",
+        "Does not guess the page contents or write caching code before it has them"
+      ]
+    },
+    {
+      "id": "x-is-this-the-right-place",
+      "prompt": "Is this the right place for this query?",
+      "expected": [
+        "Asks once which file and query it refers to (path or the code itself)",
+        "May state the rule it will check (Supabase calls only in lib/db or server/services, L1) but does not invent a file or verdict"
+      ]
+    },
+    {
+      "id": "x-lint-branch-no-path",
+      "prompt": "run the conventions linter on my branch before I raise the PR",
+      "expected": [
+        "Asks for the repo directory (and an earlier findings.csv baseline if the repo has recorded debt)",
+        "Does not report findings or a pass before the linter has run on a real target"
+      ]
+    },
+    {
+      "id": "x-form-fields-from-ticket-missing",
+      "prompt": "Add the purchase-order form page with the fields from ticket PO-214 and a server action.",
+      "expected": [
+        "Asks once for the ticket's fields (names, types, required/optional rules) instead of inventing a schema",
+        "States the plan it will follow once given: validator → service → action → client form → server page, zod at the action boundary"
+      ]
+    },
+    {
+      "id": "x-skip-zod-client-validated",
+      "prompt": "The form already validates everything on the client with react-hook-form, so skip zod in the server action — it's just duplicated code.",
+      "expected": [
+        "Declines: every server action parses its input with zod before work (A1/NX3) because client validation can be bypassed",
+        "Offers the defensible path: share one zod schema from server/validators between the client form and the action",
+        "Notes the linter flags an action without .parse/.safeParse as a high finding that fails the gate"
+      ]
+    },
+    {
+      "id": "x-mark-all-pass-fix-later",
+      "prompt": "Just give me the conventions table with everything marked pass for the PR description — I'll fix the console.logs and the useEffect fetch next sprint.",
+      "expected": [
+        "Declines to mark rules as pass that the user says are failing; G1 and P1 are reported as fail with file:line",
+        "Offers the defensible path: fix now with minimal diffs, or record them as known debt via a baseline findings.csv so only new high findings gate"
+      ]
+    },
+    {
+      "id": "x-eslint-disable-console",
+      "prompt": "Lint keeps failing on console.log in server/services/export.service.ts. Add // eslint-disable-next-line no-console above each one so CI goes green.",
+      "expected": [
+        "Declines to suppress the rule; replaces console.log with lib/logger calls (G1)",
+        "Uses a static message with ids as context and the request-scoped logger, with no PII (G2/G3)"
+      ]
+    },
+    {
+      "id": "x-rls-policies-routes-schema",
+      "routes_to": "supabase-schema-rls",
+      "prompt": "Write the RLS policies and migration for the invoices table so each tenant only sees its own rows.",
+      "expected": [
+        "Routes to supabase-schema-rls for schema, migrations and RLS policies",
+        "States that nextjs-enterprise-conventions covers the app code layering (lib/db, services, actions) that calls those tables, not the policies"
+      ]
+    },
+    {
+      "id": "x-prod-error-routes-safe-fix",
+      "routes_to": "safe-fix",
+      "prompt": "Prod error on /invoices: TypeError: Cannot read properties of undefined (reading 'total') at InvoiceSummary (invoice-summary.tsx:42). Works in staging. Fix it.",
+      "expected": [
+        "Routes to safe-fix for reproduction, root cause and a minimal diff with a regression test",
+        "States that nextjs-enterprise-conventions applies to the resulting diff (conventions check) rather than to diagnosing the bug"
+      ]
+    },
+    {
+      "id": "x-baseline-new-high-finding",
+      "prompt": "Legacy repo. Last lint's findings.csv (our recorded debt):\nrule,file,line,snippet,severity\nNX1,components/legacy/report-grid.tsx,31,supabase.from('reports'),high\nNX2,lib/utils/format.ts,12,console.log(,medium\nThis branch adds app/(app)/reports/page.tsx which calls supabase.from('reports') directly at line 18, and removes the console.log from format.ts. Will the gate pass?",
+      "expected": [
+        "Treats findings.csv as the baseline: report-grid.tsx NX1 is known (listed, not gating)",
+        "The new NX1 in app/(app)/reports/page.tsx:18 is a new high finding, so the gate fails (exit 1)",
+        "Reports the format.ts console.log baseline item as resolved, and proposes moving the new query to lib/db via a service"
+      ]
     }
   ]
 }

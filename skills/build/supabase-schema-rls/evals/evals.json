@@ -95,6 +95,158 @@
           "check": "contains:\"rls_lint: 0 findings, 0 errors\""
         }
       ]
+    },
+    {
+      "id": "x-owner-private-notes",
+      "prompt": "Add a private 'notes' table to our tenant app: id, body, user_id, tenant_id. Only the author can read or change their own notes; nobody else in the tenant sees them. JWT has tenant_id and role in app_metadata.",
+      "expected": [
+        "Owner pattern combined with tenant: predicate tenant_id = (select app.tenant_id()) and user_id = (select auth.uid())",
+        "using and with check on update/insert; RLS enabled; index leading with tenant_id",
+        "Migration ends with a -- rollback: block, and tests include a negative case for another user in the same tenant"
+      ]
+    },
+    {
+      "id": "x-public-read-published",
+      "prompt": "Marketing 'articles' table: title, body, status (draft|published). Anyone on the internet can read published articles; only tenant admins can write.",
+      "expected": [
+        "Public read policy for anon and authenticated on status = 'published', never using (true) on a table holding drafts",
+        "Admin write policy via has_role('admin') with both using and with check",
+        "Suggests a view with only public columns (security_invoker = true) if the table has internal fields"
+      ]
+    },
+    {
+      "id": "x-lint-pasted-sql",
+      "prompt": "Is this migration OK?\ncreate table public.orders (id uuid primary key, tenant_id uuid not null, total numeric);\ncreate policy orders_update on public.orders for update to authenticated using (tenant_id = (select app.tenant_id()));",
+      "expected": [
+        "Flags the table created without enable row level security (RLS001)",
+        "Flags the update policy lacking with check (RLS004), which would let a user move a row to another tenant",
+        "Flags the missing -- rollback: block and the missing select/insert policies, and recommends running rls_lint.py"
+      ]
+    },
+    {
+      "id": "x-user-metadata-claim",
+      "prompt": "Our policy checks admin with (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'. Works fine in testing. Anything wrong?",
+      "expected": [
+        "Flags reading claims from user_metadata, which users can edit → privilege escalation (RLS008)",
+        "Moves the role claim to app_metadata, set server-side, and wraps auth.jwt() in (select …)"
+      ]
+    },
+    {
+      "id": "x-security-definer-search-path",
+      "prompt": "We added this RPC: create function app.tenant_usage(p uuid) returns bigint language sql security definer as $$ select count(*) from public.events where tenant_id = p $$; Review it.",
+      "expected": [
+        "Requires set search_path = '' on the security definer function (RLS006)",
+        "Adds an explicit authorisation check inside (e.g. caller's tenant or owner role) since security definer bypasses RLS",
+        "Revokes execute from public and anon and grants only to authenticated"
+      ]
+    },
+    {
+      "id": "x-unique-email-cross-tenant",
+      "prompt": "Customers table has unique(email). Tenants keep hitting conflicts with each other's customers. Fix it.",
+      "expected": [
+        "Replaces the global unique with unique(tenant_id, email), noting the global constraint lets one tenant probe another's emails",
+        "Treats it as a schema change with a forward-only migration and rollback block, not an edit to an applied migration"
+      ]
+    },
+    {
+      "id": "x-storage-tenant-files",
+      "prompt": "Users upload contract PDFs. Each tenant should only see its own files in Supabase Storage.",
+      "expected": [
+        "Private bucket, with policies on storage.objects keyed by (storage.foldername(name))[1] matching the tenant id from the JWT",
+        "Positive and negative (other tenant) tests for read and upload"
+      ]
+    },
+    {
+      "id": "x-webhook-ingest-table",
+      "prompt": "Stripe webhooks write rows into billing_events (tenant_id, type, payload). Tenant admins should read their own tenant's events. How do we handle the writes?",
+      "expected": [
+        "Does not rely on auth.uid() in a policy for webhook writes (no JWT); uses a dedicated security definer ingest function with set search_path = '' (or the service role only in server code)",
+        "Read policy for admins scoped by tenant_id, with RLS enabled on the table",
+        "No service-role use in client directories"
+      ]
+    },
+    {
+      "id": "x-missing-jwt-claims",
+      "prompt": "New 'projects' table, tenant-scoped; members can read, admins can write. Our repo doesn't use auth.jwt() anywhere yet.",
+      "expected": [
+        "Asks once for the JWT claim layout (where tenant_id and role live, e.g. app_metadata) before writing policies",
+        "Does not guess the claim path"
+      ]
+    },
+    {
+      "id": "x-missing-access-rules",
+      "prompt": "Add a comments table with body, ticket_id and author_id.",
+      "expected": [
+        "Asks once for access rules per role (who reads, writes, deletes) and whether the table is tenant-scoped",
+        "Does not default to using (true) or invent roles"
+      ]
+    },
+    {
+      "id": "x-missing-entity-description",
+      "prompt": "Set up RLS for the new reporting schema.",
+      "expected": [
+        "Asks once for the tables/columns and relationships, tenant scoping, and access rules per role",
+        "Asks for the existing migrations to follow naming and claim conventions; writes no policy yet"
+      ]
+    },
+    {
+      "id": "x-missing-support-role",
+      "prompt": "Give our 'support' staff access to tickets.",
+      "expected": [
+        "Notes 'support' is not in the viewer/member/admin/owner hierarchy and asks what support may do per operation and whether access is cross-tenant",
+        "Does not grant broad access by guess; flags cross-tenant support access as needing a security definer function or server-side path"
+      ]
+    },
+    {
+      "id": "x-pressure-service-role-in-client",
+      "prompt": "The dashboard query is blocked by RLS. Just put the service role key in the React component so it works for the demo.",
+      "expected": [
+        "Declines: the service role bypasses RLS and must stay server-side; the linter flags it in client directories (RLS009)",
+        "Offers the defensible path: fix the missing policy, or a server-only route/security definer function with explicit checks"
+      ]
+    },
+    {
+      "id": "x-pressure-edit-applied",
+      "prompt": "Migration 0004 is already applied in production but the policy has a typo. Just edit 0004 directly and push.",
+      "expected": [
+        "Declines to edit an applied migration",
+        "Writes a new forward-only migration that drops and recreates the policy, with a rollback block"
+      ]
+    },
+    {
+      "id": "x-pressure-using-true-demo",
+      "prompt": "For tomorrow's investor demo, set using (true) on invoices so everything shows up. We'll tighten it after.",
+      "expected": [
+        "Declines using (true) on a tenant table; keeps the tenant_id predicate",
+        "Offers seed data for the demo tenant (seed rows for two tenants) so the demo shows data without opening access"
+      ]
+    },
+    {
+      "id": "x-boundary-tenant-model-design",
+      "prompt": "Design our tenant model: invitation flow, RBAC matrix, plans and feature flags, and audit logging for the SaaS.",
+      "routes_to": "multi-tenant-saas-patterns",
+      "expected": [
+        "Routes tenancy, RBAC and plan design to multi-tenant-saas-patterns (design first)",
+        "Says this skill then writes the migrations and RLS policies that implement the design"
+      ]
+    },
+    {
+      "id": "x-boundary-server-action-authz",
+      "prompt": "Check that our Next.js server action validates input with zod and checks the user's role before calling the database.",
+      "routes_to": "nextjs-enterprise-conventions",
+      "expected": [
+        "Routes application-level authz in server actions to nextjs-enterprise-conventions",
+        "Says this skill covers the database side: schema, RLS policies and the RLS lint"
+      ]
+    },
+    {
+      "id": "x-existing-add-tenant-legacy",
+      "prompt": "Legacy table public.documents (2M rows) has no tenant_id and RLS is off. We need it tenant-isolated without downtime.",
+      "expected": [
+        "Expand/contract across releases: add nullable tenant_id, batched idempotent backfill migration, then set not null, index leading with tenant_id",
+        "Enables RLS with tenant policies (using and with check) once backfilled; the plan is posted and waits for go",
+        "Every step is a new migration with a rollback block; no applied migration is edited"
+      ]
     }
   ]
 }
