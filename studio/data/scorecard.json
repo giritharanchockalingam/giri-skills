@@ -10,7 +10,13 @@
   "lift": 0.2,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": -0.083,
+  "liftHi": 0.45,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/agent-architecture",
@@ -23,7 +29,13 @@
   "lift": 0.09,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": -0.048,
+  "liftHi": 0.344,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-adoption-and-literacy",
@@ -36,7 +48,13 @@
   "lift": 0.05,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": -0.111,
+  "liftHi": 0.333,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-bom-license-check",
@@ -49,7 +67,13 @@
   "lift": 0.55,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0.2,
+  "liftHi": 0.875,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-controls-mapping",
@@ -62,7 +86,13 @@
   "lift": 0.4,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.75,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-finops-chargeback",
@@ -75,7 +105,13 @@
   "lift": 0.22,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.071,
+  "liftHi": 0.357,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-governance-risk",
@@ -88,7 +124,13 @@
   "lift": 0.41,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.64,
+  "triggerHi": 0.965,
+  "liftLo": 0.2,
+  "liftHi": 0.536,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-incident-runbook",
@@ -101,7 +143,13 @@
   "lift": 0.3,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0.083,
+  "liftHi": 0.423,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-postmortem",
@@ -114,7 +162,13 @@
   "lift": 0.28,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.643,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-release-plan",
@@ -127,7 +181,13 @@
   "lift": 0.5,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.722,
+  "triggerHi": 1,
+  "liftLo": 0.167,
+  "liftHi": 0.773,
+  "evalCases": 5,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-slo-definition",
@@ -140,7 +200,13 @@
   "lift": 0.5,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.143,
+  "liftHi": 0.731,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-strategy-coe",
@@ -153,7 +219,13 @@
   "lift": -0.03,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.3,
+  "liftHi": 0.179,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-threat-model",
@@ -166,7 +238,13 @@
   "lift": 0.12,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.25,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-transparency-notice",
@@ -179,7 +257,13 @@
   "lift": 0.28,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.143,
+  "liftHi": 0.643,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-use-case-canvas",
@@ -192,7 +276,13 @@
   "lift": 0.46,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.125,
+  "liftHi": 0.692,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/ai-vendor-assessment",
@@ -205,7 +295,13 @@
   "lift": 0.44,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.722,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/annotation-agreement",
@@ -218,7 +314,13 @@
   "lift": 0.45,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.806,
+  "triggerHi": 1,
+  "liftLo": 0.125,
+  "liftHi": 0.7,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/bias-fairness-check",
@@ -231,7 +333,13 @@
   "lift": 0.15,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.071,
+  "liftHi": 0.45,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/conversation-design",
@@ -244,7 +352,13 @@
   "lift": -0.06,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": -0.25,
+  "liftHi": 0,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/data-contract-validator",
@@ -257,7 +371,13 @@
   "lift": 0.2,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.806,
+  "triggerHi": 1,
+  "liftLo": -0.125,
+  "liftHi": 0.562,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/data-readiness-assessment",
@@ -270,7 +390,13 @@
   "lift": 0.22,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.5,
+  "liftHi": 0.692,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/dpia",
@@ -283,7 +409,13 @@
   "lift": 0.41,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0.038,
+  "liftHi": 0.75,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/drift-monitor",
@@ -296,7 +428,13 @@
   "lift": 0.44,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.143,
+  "liftHi": 0.643,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/eu-ai-act-classifier",
@@ -309,7 +447,13 @@
   "lift": 0.25,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": -0.333,
+  "liftHi": 0.667,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/eval-engineering-runner",
@@ -322,7 +466,13 @@
   "lift": 0.17,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.038,
+  "liftHi": 0.357,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/feedback-improvement-loop",
@@ -335,7 +485,13 @@
   "lift": 0.17,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.676,
+  "triggerHi": 1,
+  "liftLo": -0.25,
+  "liftHi": 0.5,
+  "evalCases": 4,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/finetune-dataset-builder",
@@ -348,7 +504,13 @@
   "lift": 0.19,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": -0.083,
+  "liftHi": 0.375,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/guardrails-config",
@@ -361,7 +523,13 @@
   "lift": 0.39,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.056,
+  "liftHi": 0.786,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/infra-gpu-sizing",
@@ -374,7 +542,13 @@
   "lift": 0.36,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.053,
+  "liftHi": 0.808,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/langchain-rag-runner",
@@ -387,7 +561,13 @@
   "lift": 0.17,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.091,
+  "liftHi": 0.5,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/langgraph-hitl-runner",
@@ -400,7 +580,13 @@
   "lift": 0.19,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.562,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/langgraph-runner",
@@ -413,7 +599,13 @@
   "lift": 0.5,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.552,
+  "triggerHi": 0.953,
+  "liftLo": 0.083,
+  "liftHi": 0.833,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/llm-cost-model",
@@ -426,7 +618,13 @@
   "lift": 0.5,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.806,
+  "triggerHi": 1,
+  "liftLo": 0.292,
+  "liftHi": 0.75,
+  "evalCases": 8,
+  "confidence": "solid"
  },
  {
   "skill": "ai-platform/llm-eval-harness",
@@ -439,7 +637,13 @@
   "lift": 0.46,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.111,
+  "liftHi": 0.618,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/llm-observability",
@@ -452,7 +656,13 @@
   "lift": 0.64,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.676,
+  "triggerHi": 1,
+  "liftLo": 0.25,
+  "liftHi": 0.875,
+  "evalCases": 4,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/mcp-server-builder",
@@ -465,7 +675,13 @@
   "lift": 0.27,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.065,
+  "liftHi": 0.591,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/model-selection",
@@ -478,7 +694,13 @@
   "lift": 0.5,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0.25,
+  "liftHi": 0.667,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/pii-data-inventory",
@@ -491,7 +713,13 @@
   "lift": 0.25,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": -0.05,
+  "liftHi": 0.75,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/program-raid-status",
@@ -504,7 +732,13 @@
   "lift": 0.4,
   "verdict": "DESC",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.102,
+  "triggerHi": 0.495,
+  "liftLo": 0,
+  "liftHi": 0.7,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/prompt-spec",
@@ -517,7 +751,13 @@
   "lift": 0.43,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0.227,
+  "liftHi": 0.667,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/rag-pipeline-design",
@@ -530,7 +770,13 @@
   "lift": 0.4,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.062,
+  "liftHi": 0.7,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/red-team-suite",
@@ -543,7 +789,13 @@
   "lift": 0.29,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0.071,
+  "liftHi": 0.583,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "ai-platform/slm-demo-builder",
@@ -556,7 +808,13 @@
   "lift": 0.12,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": -0.188,
+  "liftHi": 0.308,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/ci-cd-vercel-github",
@@ -569,7 +827,13 @@
   "lift": 0.43,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.182,
+  "liftHi": 0.595,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/code-review-runner",
@@ -582,7 +846,13 @@
   "lift": 0.31,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.757,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.55,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "build/domain-modeling-runner",
@@ -595,7 +865,13 @@
   "lift": 0.14,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.722,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.375,
+  "evalCases": 5,
+  "confidence": "borderline"
  },
  {
   "skill": "build/handoff-and-thread-close",
@@ -608,7 +884,13 @@
   "lift": 0.19,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.3,
+  "liftHi": 0.594,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/multi-tenant-saas-patterns",
@@ -621,7 +903,13 @@
   "lift": 0.37,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.225,
+  "liftHi": 0.688,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/nextjs-enterprise-conventions",
@@ -634,7 +922,13 @@
   "lift": 0.11,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.685,
+  "triggerHi": 0.987,
+  "liftLo": -0.278,
+  "liftHi": 0.367,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/observability-setup",
@@ -647,7 +941,13 @@
   "lift": 0.43,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.286,
+  "liftHi": 0.65,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/product-spec-prd",
@@ -660,7 +960,13 @@
   "lift": 0.38,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.64,
+  "triggerHi": 0.965,
+  "liftLo": 0.059,
+  "liftHi": 0.615,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "build/project-bootstrap",
@@ -673,7 +979,13 @@
   "lift": 0.17,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.556,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/safe-fix",
@@ -686,7 +998,13 @@
   "lift": 0.66,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.552,
+  "triggerHi": 0.953,
+  "liftLo": 0.188,
+  "liftHi": 0.9,
+  "evalCases": 6,
+  "confidence": "borderline"
  },
  {
   "skill": "build/security-review",
@@ -699,7 +1017,13 @@
   "lift": 0.5,
   "verdict": "DESC",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.505,
+  "triggerHi": 0.898,
+  "liftLo": 0.188,
+  "liftHi": 0.735,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "build/spec-to-plan",
@@ -712,7 +1036,13 @@
   "lift": 0.39,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.1,
+  "liftHi": 0.763,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/supabase-schema-rls",
@@ -725,7 +1055,13 @@
   "lift": 0.3,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.708,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/systematic-debugging-runner",
@@ -738,7 +1074,13 @@
   "lift": 0.06,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.722,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.25,
+  "evalCases": 5,
+  "confidence": "borderline"
  },
  {
   "skill": "build/test-strategy-tdd",
@@ -751,7 +1093,13 @@
   "lift": 0,
   "verdict": "BOTH",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.454,
+  "triggerHi": 0.883,
+  "liftLo": -0.167,
+  "liftHi": 0.25,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "build/webapp-testing-runner",
@@ -764,7 +1112,13 @@
   "lift": 0.75,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.722,
+  "triggerHi": 1,
+  "liftLo": 0.333,
+  "liftHi": 1,
+  "evalCases": 5,
+  "confidence": "borderline"
  },
  {
   "skill": "career/application-tracker",
@@ -777,7 +1131,13 @@
   "lift": 0.17,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.025,
+  "liftHi": 0.409,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "career/interview-prep",
@@ -790,7 +1150,13 @@
   "lift": 0.28,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.071,
+  "liftHi": 0.833,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "career/jd-fit-scorer",
@@ -803,7 +1169,13 @@
   "lift": 0.5,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.133,
+  "liftHi": 0.8,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "career/offer-evaluator",
@@ -816,7 +1188,13 @@
   "lift": 0.25,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.455,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "career/outreach-and-followup",
@@ -829,7 +1207,13 @@
   "lift": 0.44,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.806,
+  "triggerHi": 1,
+  "liftLo": 0.219,
+  "liftHi": 0.625,
+  "evalCases": 8,
+  "confidence": "solid"
  },
  {
   "skill": "career/resume-tailor",
@@ -842,7 +1226,13 @@
   "lift": 0.24,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.806,
+  "triggerHi": 1,
+  "liftLo": 0.056,
+  "liftHi": 0.5,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/account-plan",
@@ -855,7 +1245,13 @@
   "lift": 0.68,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.4,
+  "liftHi": 0.842,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/client-research-brief",
@@ -868,7 +1264,13 @@
   "lift": 0.35,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.806,
+  "triggerHi": 1,
+  "liftLo": 0,
+  "liftHi": 0.635,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/competitive-positioning",
@@ -881,7 +1283,13 @@
   "lift": 0.56,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": 0.227,
+  "liftHi": 0.704,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/discovery-interview",
@@ -894,7 +1302,13 @@
   "lift": 0.35,
   "verdict": "DESC",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.454,
+  "triggerHi": 0.883,
+  "liftLo": 0.107,
+  "liftHi": 0.579,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/effort-estimator",
@@ -907,7 +1321,13 @@
   "lift": 0.13,
   "verdict": "BOTH",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.505,
+  "triggerHi": 0.898,
+  "liftLo": -0.031,
+  "liftHi": 0.368,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/exec-deck-redline",
@@ -920,7 +1340,13 @@
   "lift": 0.37,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.08,
+  "liftHi": 0.727,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/integration-migration-assessor",
@@ -933,7 +1359,13 @@
   "lift": 0.33,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.091,
+  "liftHi": 0.75,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/orals-prep",
@@ -946,7 +1378,13 @@
   "lift": 0.32,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.083,
+  "liftHi": 0.692,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/proposal-writer",
@@ -959,7 +1397,13 @@
   "lift": -0.03,
   "verdict": "BOTH",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.505,
+  "triggerHi": 0.898,
+  "liftLo": -0.25,
+  "liftHi": 0.269,
+  "evalCases": 8,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/rfp-compliance-matrix",
@@ -972,7 +1416,13 @@
   "lift": 0.17,
   "verdict": "BODY",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": -0.091,
+  "liftHi": 0.477,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/solution-architecture-doc",
@@ -985,7 +1435,13 @@
   "lift": 0.33,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.601,
+  "triggerHi": 0.96,
+  "liftLo": -0.056,
+  "liftHi": 0.594,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/sow-drafter",
@@ -998,7 +1454,13 @@
   "lift": 0.44,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.238,
+  "liftHi": 0.706,
+  "evalCases": 7,
+  "confidence": "borderline"
  },
  {
   "skill": "presales/value-case-builder",
@@ -1011,6 +1473,12 @@
   "lift": 0.37,
   "verdict": "OK",
   "agentPass": 1,
-  "agentVerdict": "Works"
+  "agentVerdict": "Works",
+  "triggerLo": 0.785,
+  "triggerHi": 1,
+  "liftLo": 0.167,
+  "liftHi": 0.577,
+  "evalCases": 7,
+  "confidence": "borderline"
  }
 ]

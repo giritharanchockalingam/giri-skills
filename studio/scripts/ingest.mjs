@@ -224,6 +224,21 @@ for (const cells of scorecardCells(scorecardMd)) {
   });
 }
 
+// ---------- confidence (95% intervals; scripts/behavioral_evals.py skill_confidence) ----------
+{
+  const confCsv = join(RESULTS_DIR, "confidence.csv");
+  if (existsSync(confCsv)) {
+    const byId = new Map(scorecard.map((r) => [r.skill, r]));
+    const num = (x) => (x === "" || x == null ? null : Number(x));
+    for (const r of parseCsv(readFileSync(confCsv, "utf8"))) {
+      const row = byId.get(r.skill);
+      if (!row) continue;
+      Object.assign(row, { triggerLo: num(r.trigger_lo), triggerHi: num(r.trigger_hi), liftLo: num(r.lift_lo), liftHi: num(r.lift_hi),
+        evalCases: num(r.cases), confidence: r.confidence === "solid" || r.confidence === "borderline" ? r.confidence : null });
+    }
+  }
+}
+
 // ---------- agent results (deterministic run_skill.py checks; separate results dir) ----------
 const AGENT_VERDICTS = ["Works", "Partial", "Broken"];
 let agent = [];

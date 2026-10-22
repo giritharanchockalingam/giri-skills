@@ -26,6 +26,15 @@
   never passes with negative lift. Example: without 0.88, with 1.00 → lift 0.12,
   gain 1.00 → OK. Without 0.50, with 0.67 → lift 0.17, gain 0.34 → BODY.
   `merge_eval_results.py --restate <dir>` re-applies the rule to a scorecard.
+- **Confidence** (since 21 Oct 2026): every scorecard carries `confidence.csv` — a 95%
+  Wilson interval for routing and a 95% bootstrap interval for lift that resamples
+  cases (the unit of independence; a case's items and runs move together; fixed seed,
+  2,000 resamples). A verdict is `borderline` when either interval spans its bar, i.e.
+  a re-run could flip it. With the current sets (median 7 cases per skill) the lift
+  interval is about ±0.28, wider than the 0.2 bar, so most verdicts are borderline.
+  More runs do not narrow it (runs share the case); more cases do — roughly ±0.15 at
+  ~25 cases and ±0.10 at ~55. Routing needs ~40 prompts before 100% accuracy rules out
+  < 0.8.
 - **Case inputs** (since 21 Oct 2026): each case's declared inputs are sent with
   its prompt (values inline, files in full up to 6,000 characters, 24,000 per
   case), so cases built on files are graded on a reply to the material.

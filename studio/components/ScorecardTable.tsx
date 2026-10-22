@@ -118,13 +118,13 @@ export function ScorecardTable({ rows, domains, drill }: { rows: ScoreRow[]; dom
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpenId(r.skill); } }}>
                 <td><span className="cell-name">{r.name}</span></td>
                 <td><span className="domain-tag">{r.domain}</span></td>
-                <td><VerdictBadge v={r.verdict} /></td>
+                <td><VerdictBadge v={r.verdict} />{r.confidence === "borderline" && <span className="caption" title={confidenceTitle(r)}> · borderline</span>}</td>
                 <td><AgentBadge v={r.agentVerdict} /></td>
                 <td className="num"><Trig n={r.triggerAcc} /></td>
                 <td className={`num col-wide ${(r.fpRate ?? 0) > 0 ? "num-neg" : ""}`}>{fmt(r.fpRate)}</td>
                 <td className="num col-wide">{fmt(r.without)}</td>
                 <td className="num col-wide">{fmt(r.with)}</td>
-                <td className="num"><Lift n={r.lift} /></td>
+                <td className="num" title={confidenceTitle(r)}><Lift n={r.lift} /></td>
               </tr>
             ))}
             {sorted.length === 0 && <tr><td colSpan={COLS.length} className="none">No skills match.</td></tr>}
@@ -238,4 +238,12 @@ function DrawerBody({ r, d }: { r: ScoreRow; d: ScorecardDrill }) {
       </section>
     </>
   );
+}
+
+/** 95% intervals behind a verdict, for the row's tooltip (scripts/behavioral_evals.py skill_confidence). */
+function confidenceTitle(r: ScoreRow): string | undefined {
+  if (r.liftLo == null || r.liftHi == null) return undefined;
+  const f = (x: number) => (x >= 0 ? "+" : "") + x.toFixed(2);
+  const t = r.triggerLo != null && r.triggerHi != null ? `; routing ${r.triggerLo.toFixed(2)}–${r.triggerHi.toFixed(2)}` : "";
+  return `95% range: lift ${f(r.liftLo)} to ${f(r.liftHi)}${t} (${r.evalCases ?? "?"} cases). ${r.confidence === "borderline" ? "The range spans the bar, so a re-run could change the verdict: the skill needs more test cases to settle it." : "The verdict holds across the range."}`;
 }

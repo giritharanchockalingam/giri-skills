@@ -35,6 +35,9 @@ export interface ScoreRow {
   triggerAcc: number | null; fpRate: number | null; without: number | null; with: number | null; lift: number | null; verdict: Verdict | null;
   /** Share of agent checks passed (0–1), null when the skill has no agent cases. */
   agentPass: number | null; agentVerdict: AgentVerdict | null;
+  /** 95% intervals (Wilson for routing, case bootstrap for lift) and whether the verdict could flip on a re-run. */
+  liftLo?: number | null; liftHi?: number | null; triggerLo?: number | null; triggerHi?: number | null;
+  evalCases?: number | null; confidence?: "solid" | "borderline" | null;
 }
 export interface AgentRow { skill: string; caseId: string; check: string; pass: boolean; evidence: string }
 export interface TriggerRow { skill: string; caseId: string; run: number; selected: string; correct: number | null }

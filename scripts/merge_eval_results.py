@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from behavioral_evals import skill_verdict  # noqa: E402  (one verdict rule for every scorecard)
+from behavioral_evals import skill_verdict, skill_confidence, write_confidence  # noqa: E402  (one rule for every scorecard)
 
 import json  # noqa: E402
 SKILLS_ROOT = Path(__file__).resolve().parents[1] / "skills"
@@ -36,6 +36,34 @@ def read_scorecard(p: Path) -> tuple[dict, list[str], dict[str, str]]:
     head = [l for l in lines if l.startswith("| skill") or re.match(r"^\|[-| ]+\|$", l)]
     rows = {l.split("|")[1].strip(): l for l in lines if l.startswith("| ") and not l.startswith("| skill") and not re.match(r"^\|[-| ]+\|$", l)}
     return meta, head, rows
+
+
+def trigger_hits(trigger_rows: list[dict]) -> dict[str, list[bool]]:
+    """Per-skill router hits scored against each case's target (see trigger_accuracy)."""
+    targets: dict[tuple[str, str], str] = {}
+    hits: dict[str, list[bool]] = {}
+    for r in trigger_rows:
+        key = r["skill"]
+        if key == "(negative)":
+            continue
+        if (key, r["case_id"]) not in targets:
+            f = SKILLS_ROOT / key / "evals" / "evals.json"
+            cases = json.loads(f.read_text(encoding="utf-8")).get("cases", []) if f.is_file() else []
+            case = next((c for c in cases if c.get("id") == r["case_id"]), {})
+            targets[(key, r["case_id"])] = str(case.get("routes_to") or key.split("/")[-1])
+        hits.setdefault(key, []).append(r["selected"] == targets[(key, r["case_id"])])
+    return hits
+
+
+def restate_confidence(results: Path) -> int:
+    """Rewrite results/confidence.csv from its trigger.csv and quality.csv (95% intervals, borderline flag)."""
+    hits = trigger_hits(read_csv(results / "trigger.csv")[1])
+    q: dict[str, list[dict]] = {}
+    for r in read_csv(results / "quality.csv")[1]:
+        q.setdefault(r["skill"], []).append(r)
+    keys = set(hits) | set(q)
+    write_confidence(results, {k: skill_confidence(hits.get(k, []), q.get(k, [])) for k in keys})
+    return len(keys)
 
 
 def trigger_accuracy(trigger_rows: list[dict]) -> dict[str, float]:
@@ -101,6 +129,7 @@ def merge(src: Path, dst: Path) -> dict:
            f"_provider={dm['provider']} model={dm['model']} runs={dm['runs']} seed={dm['seed']} date={span}_",
            f"_estimated spend: ${spend:.2f}_", "", *dhead, *[rows[k] for k in sorted(rows)]]
     (dst / "scorecard.md").write_text("\n".join(out) + "\n", encoding="utf-8")
+    restate_confidence(dst)
     return {"merged": len(skills), "replaced": len(skills & set(drows)), "added": len(skills - set(drows)), "total": len(rows), "spend": spend}
 
 
@@ -120,7 +149,7 @@ if __name__ == "__main__":
         lines = p.read_text(encoding="utf-8").splitlines()
         out = [restate(l, acc) if l.startswith("| ") and not l.startswith("| skill") and not re.match(r"^\|[-| ]+\|$", l) else l for l in lines]
         p.write_text("\n".join(out) + "\n", encoding="utf-8")
-        print("restated", sum(1 for a, b in zip(lines, out) if a != b), "row(s)")
+        print("restated", sum(1 for a, b in zip(lines, out) if a != b), "row(s);", restate_confidence(Path(sys.argv[2])), "confidence row(s)")
         sys.exit(0)
     if len(sys.argv) != 3:
         sys.exit(__doc__)
