@@ -319,3 +319,13 @@ None. All 120 eval cases have a non-empty `prompt` and a non-empty
 - Environment notes for future runs are in the root `AGENTS.md`
   (SDK reinstall after VM replacement, `no_proxy` sanitizing, brotli
   removal for the httpx2 fork).
+
+## Scoring with a local model (Ollama)
+
+`--provider openai` works against any OpenAI-compatible server: set `OPENAI_BASE_URL=http://<host>:11434/v1` and `OPENAI_API_KEY=ollama`.
+
+- **Thinking is removed.** Reasoning models (qwen3, gemma) may write `<think>…</think>` before the answer. The script strips that block and grades only the answer.
+- **Extra room for thinking.** A local endpoint gets `EVAL_THINK_TOKENS` (default 6000) on top of the reply cap, so thinking cannot use up the answer's tokens. `EVAL_REASONING_EFFORT` is passed through when it is set.
+- **Empty replies make the run invalid.** If any reply is empty, the scorecard is stamped `INVALID RUN` and the script exits 2, so a broken connection never reads as a verdict on the skills.
+- **Cost shows as $0.** Calls to a local endpoint are projected at no cost.
+- **Not the official scorecard.** In a local run the same model also grades the answers, so the results compare models with each other.

@@ -133,6 +133,26 @@ class AnthropicLLM(LLM):
         return _retry(_call)
 
 
+THINK_BLOCK = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.S | re.I)
+THINK_OPEN = re.compile(r"<think(?:ing)?>", re.I)
+
+
+def strip_reasoning(text: str | None) -> str:
+    """The answer part of a reply. Local reasoning models (qwen3, gemma, deepseek-r1 via Ollama) may put their thinking
+    in <think>...</think> before the answer; a reply that never closes its thinking block has no answer at all."""
+    text = THINK_BLOCK.sub("", text or "")
+    m = THINK_OPEN.search(text)
+    if m:
+        text = text[:m.start()]
+    return text.strip()
+
+
+def local_endpoint() -> bool:
+    """True when the OpenAI client is pointed at a non-OpenAI server (e.g. Ollama at http://host:11434/v1)."""
+    base = os.environ.get("OPENAI_BASE_URL", "").strip()
+    return bool(base) and "api.openai.com" not in base
+
+
 class OpenAILLM(LLM):
     name = "openai"
 
@@ -146,15 +166,23 @@ class OpenAILLM(LLM):
             sys.exit("error: OPENAI_API_KEY is not set in the environment")
         self.client = openai.OpenAI()
         self.model = model
+        # A local reasoning model spends tokens thinking before it answers. The reply cap applies to the answer, so a
+        # local endpoint gets an extra thinking allowance (EVAL_THINK_TOKENS, default 6000; 0 turns it off).
+        self.think_tokens = int(os.environ.get("EVAL_THINK_TOKENS", "6000" if local_endpoint() else "0"))
+        # Optional pass-through, e.g. EVAL_REASONING_EFFORT=low for servers that support it.
+        self.reasoning_effort = os.environ.get("EVAL_REASONING_EFFORT", "").strip() or None
 
     def complete(self, system: str, user: str, temperature: float = 1.0,
                  max_tokens: int = 1500) -> str:
         def _call():
+            kwargs = {}
+            if self.reasoning_effort:
+                kwargs["reasoning_effort"] = self.reasoning_effort
             resp = self.client.chat.completions.create(
-                model=self.model, temperature=temperature, max_tokens=max_tokens,
+                model=self.model, temperature=temperature, max_tokens=max_tokens + self.think_tokens,
                 messages=[{"role": "system", "content": system},
-                          {"role": "user", "content": user}])
-            return resp.choices[0].message.content
+                          {"role": "user", "content": user}], **kwargs)
+            return strip_reasoning(resp.choices[0].message.content)
         return _retry(_call)
 
 
@@ -490,8 +518,9 @@ def price_for(model: str):
     return DEFAULT_PRICE
 
 
-def project_cost(calls, model: str):
-    pin, pout = price_for(model)
+def project_cost(calls, model: str, provider: str = ""):
+    # a model served from your own machine (Ollama via OPENAI_BASE_URL) costs nothing per token
+    pin, pout = (0.0, 0.0) if provider == "openai" and local_endpoint() else price_for(model)
     in_tok = sum(estimate_tokens(c["system"]) + estimate_tokens(c["user"]) for c in calls)
     out_tok = sum(c["max_tokens"] for c in calls)
     cost = (in_tok * pin + out_tok * pout) / 1_000_000
@@ -709,7 +738,7 @@ def main() -> int:
                                   "judge_for": mode,
                                   "n_expected": len(c["expected"])})
 
-    in_tok, out_tok, cost = project_cost(calls, args.model)
+    in_tok, out_tok, cost = project_cost(calls, args.model, args.provider)
     print(f"Projected LLM usage: ~{len(calls)} calls, "
           f"~{in_tok//1000}k input + ~{out_tok//1000}k output tokens "
           f"~= ${cost:.2f} (model {args.model}, provider {args.provider})")
@@ -735,6 +764,14 @@ def main() -> int:
 
     trigger_rows, quality_rows = [], []
     gen_cache = {}  # (skill, case_id, run, mode) -> output
+    replies = {"total": 0, "empty": 0}
+
+    def ask(system, user, temperature, max_tokens):
+        """One model call; the answer without any reasoning block, counted so empty replies cannot pass as scores."""
+        out = strip_reasoning(llm.complete(system, user, temperature=temperature, max_tokens=max_tokens))
+        replies["total"] += 1
+        replies["empty"] += not out
+        return out
 
     for call in calls:
         kind = call["kind"]
@@ -746,17 +783,14 @@ def main() -> int:
                         if s["key"] == call["skill"] and c.get("id") == call["case_id"])
             items = "\n".join(f"{i}. {e}" for i, e in enumerate(case["expected"], 1))
             user = judge_template.replace("{output}", output).replace("{expected_items}", items)
-            out = llm.complete(call["system"], user,
-                               temperature=0, max_tokens=call["max_tokens"])
+            out = ask(call["system"], user, 0, call["max_tokens"])
             log_call({**call, "user": user}, out)
             for idx, (passed, evidence) in enumerate(parse_judge(out, call["n_expected"])):
                 quality_rows.append([call["skill"], call["case_id"], call["run"],
                                      call["judge_for"], idx,
                                      "PASS" if passed else "FAIL", evidence])
             continue
-        out = llm.complete(call["system"], call["user"],
-                           temperature=call["temperature"],
-                           max_tokens=call["max_tokens"])
+        out = ask(call["system"], call["user"], call["temperature"], call["max_tokens"])
         log_call(call, out)
         if kind in ("router", "neg_router"):
             selected = parse_router(out, skills)
@@ -807,6 +841,9 @@ def main() -> int:
              f"_provider={args.provider} model={args.model} runs={args.runs} "
              f"seed={args.seed} date={datetime.date.today().isoformat()}_",
              f"_estimated spend: ${cost:.2f}_",
+             *([f"_INVALID RUN: {replies['empty']} of {replies['total']} model replies were empty, so these scores "
+                f"measure the connection, not the skills. See raw/calls.jsonl._"]
+               if replies["empty"] else []),
              "",
              "| skill | trigger acc | FP rate | without | with | lift | verdict |",
              "|---|---|---|---|---|---|---|"]
@@ -837,6 +874,10 @@ def main() -> int:
     if broken:
         print(f"skipped {len(broken)} broken case(s); see scorecard.md")
     print(f"estimated spend this run: ${cost:.2f}")
+    if replies["empty"]:
+        print(f"INVALID RUN: {replies['empty']} of {replies['total']} model replies were empty "
+              f"(for a local reasoning model, raise EVAL_THINK_TOKENS). Scores are not valid.", file=sys.stderr)
+        return 2
     return 0
 
 
