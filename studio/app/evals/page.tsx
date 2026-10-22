@@ -9,6 +9,8 @@ export const metadata = { title: "Evals · giri-skills" };
 
 export default function EvalsPage() {
   const s = summarize(scorecard.map((r) => r.verdict));
+  const graded = scorecard.filter((r) => r.confidence).length;
+  const solid = scorecard.filter((r) => r.confidence === "solid").length;
   const a = summarizeAgent(scorecard.map((r) => r.agentVerdict));
   const { rows: perDomain, total } = domainSummaries();
   const cases = skills.reduce((a, sk) => a + sk.cases.length, 0);
@@ -34,7 +36,7 @@ export default function EvalsPage() {
         title="What the evals"
         em="found"
         lead={conclusionSentence(s, a)}
-        caption={<>Last evaluation, {meta.date}: judged by {modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} end-to-end checks · {meta.spend} model spend (estimated)</>}
+        caption={<>Last evaluation, {meta.date}: judged by {modelLabel(meta.model)} · {meta.runs} runs · {cases} cases · {meta.counts.quality.toLocaleString()} judge verdicts · {meta.counts.agent.toLocaleString()} end-to-end checks · {meta.spend} model spend (estimated). {solid} of {graded} verdicts hold across their 95% range; the rest are borderline — a re-run could change them until the skill has more test cases.</>}
       />
 
       <div className="summary-grid">

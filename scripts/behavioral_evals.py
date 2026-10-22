@@ -298,6 +298,76 @@ def skill_verdict(trigger_acc: float | None, without: float | None, with_: float
     return "DESC" if not ok_t else "BODY"
 
 
+# ---------------------------------------------------------------- confidence (docs/EVAL-FINDINGS.md)
+
+BOOTSTRAP_RESAMPLES = 2000
+BOOTSTRAP_SEED = 20261021      # fixed, so the same rows always give the same interval
+
+
+def wilson_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson score interval for a proportion (routing accuracy)."""
+    if n == 0:
+        return (0.0, 1.0)
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return (max(0.0, c - h), min(1.0, c + h))
+
+
+def lift_interval(quality_rows: list[dict]) -> tuple[float, float] | None:
+    """95% percentile bootstrap interval for lift, resampling cases (the unit of independence: a case's expected items
+    and runs move together). quality_rows: dicts with case_id, mode ('with'|'without'), pass ('PASS'|...)."""
+    import random
+    per: dict[str, list[int]] = {}
+    for r in quality_rows:
+        a = per.setdefault(r["case_id"], [0, 0, 0, 0])          # with pass, with n, without pass, without n
+        i = 0 if r["mode"] == "with" else 2
+        a[i] += r["pass"] == "PASS"
+        a[i + 1] += 1
+    cases = [v for v in per.values() if v[1] and v[3]]
+    if len(cases) < 2:
+        return None
+    rng = random.Random(BOOTSTRAP_SEED)
+    lifts = []
+    for _ in range(BOOTSTRAP_RESAMPLES):
+        pick = [cases[rng.randrange(len(cases))] for _ in cases]
+        wp, wn, op, on = (sum(c[j] for c in pick) for j in range(4))
+        lifts.append(wp / wn - op / on)
+    lifts.sort()
+    return (lifts[int(0.025 * len(lifts))], lifts[int(0.975 * len(lifts)) - 1])
+
+
+def skill_confidence(trigger_hits: list[bool], quality_rows: list[dict]) -> dict:
+    """Point verdict plus 95% intervals; 'borderline' when an interval spans the bar, i.e. the verdict could flip on a
+    re-run. Without/with come from the same rows as the point estimate."""
+    k, n = sum(trigger_hits), len(trigger_hits)
+    t_lo, t_hi = wilson_interval(k, n)
+    wo = [r["pass"] == "PASS" for r in quality_rows if r["mode"] == "without"]
+    wi = [r["pass"] == "PASS" for r in quality_rows if r["mode"] == "with"]
+    without = sum(wo) / len(wo) if wo else None
+    with_ = sum(wi) / len(wi) if wi else None
+    li = lift_interval(quality_rows)
+    trig_flip = n > 0 and (t_lo >= TRIGGER_MIN - 1e-9) != (t_hi >= TRIGGER_MIN - 1e-9)
+    qual_flip = bool(li and without is not None and quality_ok(without, without + li[0]) != quality_ok(without, without + li[1]))
+    return {"trigger_lo": t_lo, "trigger_hi": t_hi, "lift_lo": li[0] if li else None, "lift_hi": li[1] if li else None,
+            "cases": len({r["case_id"] for r in quality_rows}), "confidence": "borderline" if (trig_flip or qual_flip) else "solid"}
+
+
+CONFIDENCE_HEADER = ["skill", "trigger_lo", "trigger_hi", "lift_lo", "lift_hi", "cases", "confidence"]
+
+
+def write_confidence(out_dir: Path, by_skill: dict[str, dict]) -> None:
+    import csv as _csv
+    with (out_dir / "confidence.csv").open("w", newline="", encoding="utf-8") as f:
+        w = _csv.writer(f)
+        w.writerow(CONFIDENCE_HEADER)
+        fmt = lambda x: "" if x is None else f"{x:.3f}"
+        for key in sorted(by_skill):
+            c = by_skill[key]
+            w.writerow([key, fmt(c["trigger_lo"]), fmt(c["trigger_hi"]), fmt(c["lift_lo"]), fmt(c["lift_hi"]), c["cases"], c["confidence"]])
+
+
 # ---------------------------------------------------------------- case prompts with their inputs
 
 ATTACH_FILE_CHARS = 6000     # per file
@@ -756,9 +826,14 @@ def main() -> int:
         for skill, cid, reason in broken:
             lines += [f"- {skill} / {cid}: {reason}"]
     (out_dir / "scorecard.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if do_quality:
+        qdicts: dict[str, list[dict]] = {}
+        for skill, cid, _run, mode, _idx, passed, _ev in quality_rows:
+            qdicts.setdefault(skill, []).append({"case_id": cid, "mode": mode, "pass": passed})
+        write_confidence(out_dir, {k: skill_confidence(stats[k]["trigger"], qdicts.get(k, [])) for k in stats})
 
     print(f"\nwrote {out_dir}/trigger.csv ({len(trigger_rows)} rows), "
-          f"quality.csv ({len(quality_rows)} rows), scorecard.md")
+          f"quality.csv ({len(quality_rows)} rows), scorecard.md, confidence.csv")
     if broken:
         print(f"skipped {len(broken)} broken case(s); see scorecard.md")
     print(f"estimated spend this run: ${cost:.2f}")

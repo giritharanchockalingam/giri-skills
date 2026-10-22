@@ -228,3 +228,22 @@ def test_restate_recomputes_routing_with_routes_to(tmp_path):
             {"skill": "ai-platform/drift-monitor", "case_id": "happy-path", "selected": "drift-monitor"},
             {"skill": "(negative)", "case_id": "neg-01", "selected": "none"}]
     assert m.trigger_accuracy(rows) == {"ai-platform/drift-monitor": 1.0}
+
+
+def test_confidence_intervals_and_borderline_flag():
+    mod = _module()
+    lo, hi = mod.wilson_interval(14, 14)
+    assert 0.78 < lo < 0.79 and hi == 1.0                     # 14/14 cannot rule out < 0.8 routing
+    rows = []
+    for i in range(30):                                        # 30 cases: with passes all, without fails all
+        rows += [{"case_id": f"c{i}", "mode": "with", "pass": "PASS"}, {"case_id": f"c{i}", "mode": "without", "pass": "FAIL"}]
+    assert mod.lift_interval(rows) == (1.0, 1.0)
+    c = mod.skill_confidence([True] * 60, rows)
+    assert c["confidence"] == "solid" and c["cases"] == 30
+    noisy = []
+    for i in range(6):                                         # 6 cases, half improve: lift 0.5 but wide
+        noisy += [{"case_id": f"c{i}", "mode": "with", "pass": "PASS" if i % 2 else "FAIL"}, {"case_id": f"c{i}", "mode": "without", "pass": "FAIL"}]
+    lo, hi = mod.lift_interval(noisy)
+    assert lo < 0.2 < hi
+    assert mod.skill_confidence([True] * 12, noisy)["confidence"] == "borderline"
+    assert mod.lift_interval(noisy) == mod.lift_interval(noisy)   # fixed seed: reproducible
