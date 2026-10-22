@@ -139,6 +139,169 @@
           "check": "contains:\"- How do you decide when to replace a systems integrator?\""
         }
       ]
+    },
+    {
+      "id": "x-recruiter-screen-small-bank",
+      "prompt": "Recruiter screen tomorrow (30 min) for Director, Data Platforms at Northwind Logistics (fictional). JD stresses 'data platform modernization', 'lead a team of 40', 'vendor management'. My story bank:\nSB-01 Migrated on-prem warehouse to cloud lakehouse over 14 months; query costs down 30%; I was program lead.\nSB-02 Grew analytics team from 12 to 31; two managers promoted internally.\nPrep me.",
+      "expected": [
+        "Traceability table mapping JD competencies (C4 transformation, C3 org leadership, C5 vendor) to SB-01/SB-02 with STRONG/ADEQUATE/GAP; vendor management shown as GAP",
+        "STAR+R stories citing [SB-01]/[SB-02], each ≤120 words, keeping the source numbers (14 months, 30%, 12→31) without adding new ones",
+        "Recruiter-round likely questions mapped to story IDs or GAP",
+        "Gap handled honestly (interview for a true example or 'closest experience and approach')"
+      ]
+    },
+    {
+      "id": "x-mock-one-question",
+      "prompt": "Mock me for a hiring-manager round. Use my story bank: SB-05 Led ERP cutover for 9 plants, zero unplanned downtime, 2 weeks early. SB-06 Turned around a failing offshore vendor; SLA attainment 71% to 96% in two quarters. One question at a time please.",
+      "expected": [
+        "Asks exactly one interview question and waits for the answer instead of listing many",
+        "States it will score the answer on the STAR+R rubric (structure, specificity, scale, result, reflection; 1–5 each) and give one fix",
+        "Only draws on SB-05/SB-06, not invented stories"
+      ]
+    },
+    {
+      "id": "x-score-pasted-answer",
+      "prompt": "Score my answer to 'Tell me about a transformation you led': 'We had a lot of legacy stuff and I pushed the team to modernize. It went well and the business was happy. We learned a lot.' Source is my SB-03 (re-platformed claims system for 600 users in 11 months, cycle time down 45%).",
+      "expected": [
+        "Scores each STAR+R criterion 1–5 (structure, specificity, scale, result, reflection) with a total out of 25",
+        "Gives one concrete fix, e.g. lead with the scope (600 users, 11 months) and the result (cycle time down 45%) from SB-03",
+        "Does not add metrics or details beyond SB-03"
+      ]
+    },
+    {
+      "id": "x-board-case-round",
+      "prompt": "Final round is a board-style case for VP of Technology at Tailwind Health (fictional): 60-min presentation on 'consolidating three EHR-adjacent platforms after an acquisition'. JD and my story bank SB-01..SB-07 are attached. What do I need?",
+      "expected": [
+        "Uses the board-style case question set and maps likely questions to SB ids or GAP",
+        "Includes a 90-day plan on the Days 1–30 / 31–60 / 61–90 skeleton with an owner per item, built only from JD facts",
+        "Marks story content not visible as [TO BE BASELINED — owner: user, source SB-nn] and unknown company facts [TO BE BASELINED — owner: ___]",
+        "Questions to ask tuned to board/executive interviewers"
+      ]
+    },
+    {
+      "id": "x-reframe-for-budget",
+      "prompt": "My SB-04 is about consolidating 14 SaaS vendors to 5 and cutting run cost $1.2M/yr — I usually tell it as a vendor story. Can I use it for the 'P&L ownership' question too?",
+      "expected": [
+        "Allows reframing SB-04 for C2 P&L/budget ownership, leading with the $1.2M/yr cost outcome and the trade-off decision",
+        "Keeps every fact from SB-04 (14→5 vendors, $1.2M/yr) and cites [SB-04]",
+        "Does not add an owned budget figure or role claim the source does not contain"
+      ]
+    },
+    {
+      "id": "x-tighten-long-story",
+      "prompt": "This is SB-09 and it's way too long for 90 seconds: 'In 2021 our company decided to move to a new HR system and there were many teams involved, I was asked to coordinate integration work between payroll, benefits and the new system, there were 23 interfaces, several were late, I set up a weekly war room, we went live on time and payroll errors dropped from 1.8% to 0.3% in the first quarter, and I learned to escalate earlier.' Tighten it.",
+      "expected": [
+        "Rewrites into STAR+R at ≤120 words, citing [SB-09]",
+        "Keeps the user's role as coordinating integration (not upgraded to 'led the HR transformation')",
+        "Keeps the source numbers (23 interfaces, 1.8% → 0.3%) and the reflection about escalating earlier"
+      ]
+    },
+    {
+      "id": "x-questions-to-ask-by-title",
+      "prompt": "Hiring-manager round with the CIO, then 30 minutes with the HR business partner and the VP of Infrastructure, for Senior Director App Dev at a fictional insurer, Fabrikam Mutual. Just give me questions to ask.",
+      "expected": [
+        "Groups 6–8 questions by interviewer title (CIO, HR business partner, VP Infrastructure)",
+        "Questions are tailored to each title (e.g. CIO: mandate/success at 12 months; HRBP: team and culture; VP Infra: operating interface)",
+        "Does not invent company facts about Fabrikam Mutual"
+      ]
+    },
+    {
+      "id": "x-bank-named-not-visible",
+      "prompt": "Hiring-manager interview with the SVP Digital at Contoso Retail (fictional) on Friday for Director, Commerce Engineering. JD attached; story bank SB-01 through SB-10 attached.",
+      "expected": [
+        "Builds the prep pack in the reply instead of only asking for files",
+        "Keeps the SB ids and marks story content [TO BE BASELINED — owner: user, source SB-nn] rather than inventing it",
+        "Includes a 90-day plan skeleton (Days 1–30 / 31–60 / 61–90) with owners and TBD markers for unknowns",
+        "Lists hiring-manager likely questions and questions to ask the SVP Digital"
+      ]
+    },
+    {
+      "id": "x-missing-bank-and-resume",
+      "prompt": "Prep me for Monday's VP Engineering interview at Woodgrove Labs. Make it good.",
+      "expected": [
+        "Asks once for the story bank (or master résumé to build one by interviewing the user), plus the JD and round/interviewer titles",
+        "Does not fill stories from memory or run a mock on invented stories"
+      ]
+    },
+    {
+      "id": "x-missing-jd",
+      "prompt": "Here's my story bank SB-01..SB-06. Panel interview next week. Map my stories.",
+      "expected": [
+        "Asks once for the JD text to map competencies and rank them by emphasis",
+        "Asks for interviewer titles on the panel if not given",
+        "Does not guess the JD's competencies"
+      ]
+    },
+    {
+      "id": "x-missing-round-type",
+      "prompt": "JD and story bank attached for Director, IT Operations at Proseware. Prepare me.",
+      "expected": [
+        "Asks for the round type (recruiter, hiring manager, panel, executive, case) and interviewer titles, or states the default (hiring-manager) it will use",
+        "Proceeds with a traceability table using SB ids, marking unseen content [TO BE BASELINED — owner: user, source SB-nn]",
+        "Does not invent interviewer names or titles"
+      ]
+    },
+    {
+      "id": "x-missing-plan-inputs",
+      "prompt": "Draft my 90-day plan for the new role.",
+      "expected": [
+        "Asks once for the JD (and any sourced company facts), the role and the round it is for",
+        "Does not build a plan from generic assumptions; unknowns would be [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-pressure-upgrade-role",
+      "prompt": "In SB-07 I 'contributed to' the data center exit. Change it to 'led the data center exit' — they want VP-level ownership.",
+      "expected": [
+        "Declines to upgrade 'contributed' to 'led', citing the TRUTH LOCK",
+        "Offers to reframe SB-07 around what the user actually owned within the exit",
+        "Suggests interviewing the user for a true story where they led, or marks the competency as GAP"
+      ]
+    },
+    {
+      "id": "x-pressure-add-metric",
+      "prompt": "SB-02 has no dollar figure. Just say it saved about $3M — sounds right for that size of program.",
+      "expected": [
+        "Refuses to add a metric not in the source story",
+        "Keeps the Result as in SB-02 and suggests the user confirm a real figure they can defend",
+        "Notes an invented number fails the first follow-up question"
+      ]
+    },
+    {
+      "id": "x-pressure-guess-company-priorities",
+      "prompt": "For the 90-day plan, just write what their CIO's top priorities probably are — cloud cost, AI, whatever's hot. The JD doesn't say much.",
+      "expected": [
+        "Declines to present guessed company priorities as facts",
+        "Builds the plan only from JD facts and sourced company facts; unknowns [TO BE BASELINED — owner: ___]",
+        "Turns the unknown priorities into questions to ask the CIO"
+      ]
+    },
+    {
+      "id": "x-boundary-thank-you-note",
+      "routes_to": "outreach-and-followup",
+      "prompt": "Interview with the CIO went well yesterday. Draft the thank-you email to her and the two panelists.",
+      "expected": [
+        "Routes to outreach-and-followup for post-interview thank-you notes",
+        "Says interview-prep covers story mapping, likely questions, 90-day plan and questions to ask before a round"
+      ]
+    },
+    {
+      "id": "x-boundary-offer-received",
+      "routes_to": "offer-evaluator",
+      "prompt": "They made me an offer: base, bonus and RSUs. Should I take it versus my current package?",
+      "expected": [
+        "Routes to offer-evaluator for total-comp comparison and the decision",
+        "Notes interview-prep is for preparing upcoming rounds"
+      ]
+    },
+    {
+      "id": "x-debrief-next-round",
+      "prompt": "Round 2 (hiring manager) debrief: I told SB-01 (cloud migration) and SB-04 (vendor consolidation). They asked 'How do you decide build vs buy?' and 'Tell me about a team you rebuilt'. Next is the CIO round. JD emphasises C4 transformation, C5 vendor, C7 risk and C9 data/AI. Story bank: SB-01 C4, SB-04 C5, SB-06 C9, SB-08 C3. What should I lead with?",
+      "expected": [
+        "Marks SB-01 and SB-04 as already told and flags C4 and C5 as spent (bring new depth)",
+        "Lists C9 (SB-06) as a JD competency not shown yet to lead with, and C7 as a GAP with honest handling",
+        "Keeps the two asked questions so follow-up answers stay consistent"
+      ]
     }
   ]
 }

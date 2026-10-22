@@ -152,6 +152,160 @@
           "check": "no_unowned_tbd"
         }
       ]
+    },
+    {
+      "id": "x-b2b-sso-full-brief",
+      "prompt": "PRD please. Feature: SAML SSO for our B2B HR SaaS. Problem: enterprise prospects stall in security review without SSO; 9 of the last 20 lost deals cited it (CRM notes). Users: tenant IT admins; employees signing in. Goal: unblock enterprise deals. Metric: % of enterprise-tier tenants with SSO enabled, baseline 0, target 30% within two quarters of GA. Constraint: must ship before our Q2 sales kickoff.",
+      "expected": [
+        "First line states the outcome and the metric it moves (enterprise tenants with SSO enabled, 0 → 30%)",
+        "Lists at least 3 non-goals a reader would assume (e.g. SCIM provisioning, OIDC, per-user MFA policies) with the phase they may return",
+        "User stories with Given/When/Then including a negative/permission case (non-admin cannot configure SSO; failed assertion)",
+        "Phases v1 / v1.1 / later with v1 small enough for one spec-to-plan plan, plus an Engineering handoff section"
+      ]
+    },
+    {
+      "id": "x-consumer-app-vague-idea",
+      "prompt": "I want our meal-planning app to have 'smart grocery lists'. Can you spec what v1 should include?",
+      "expected": [
+        "Asks ≤5 framing questions in one round, each with a default (problem/evidence, persona, metric baseline and target, who is not served, constraints)",
+        "Does not invent a baseline or user-research numbers; any baseline is [TO BE BASELINED — owner: ___]",
+        "Proposes v1 as the smallest slice that moves the primary metric for the primary persona"
+      ]
+    },
+    {
+      "id": "x-internal-tool-approval-workflow",
+      "prompt": "Internal tool: finance wants a two-step approval for vendor payments over $25k in our ERP add-on. Users: AP clerks submit, controllers approve. Success: zero payments over $25k released without a second approver; baseline unknown. Write the PRD.",
+      "expected": [
+        "Goal and metric stated with the baseline marked [TO BE BASELINED — owner: ___]",
+        "Stories with Given/When/Then including the permission case (a clerk cannot approve their own submission) and the threshold edge ($25k exactly)",
+        "Risks table and open questions each with an owner and due date",
+        "Non-goals list of at least 3 items (e.g. multi-currency rules, mobile approvals, delegation)"
+      ]
+    },
+    {
+      "id": "x-two-outcomes-split",
+      "prompt": "Spec one PRD covering both 'reduce checkout abandonment' and 'launch a loyalty points program' for our storefront — leadership wants a single doc.",
+      "expected": [
+        "Flags that one PRD should carry one outcome and recommends two PRDs (or one with the second explicitly as a separate outcome)",
+        "Does not merge two primary metrics into one v1",
+        "Asks for the evidence/baseline for each outcome or marks them TBD with an owner"
+      ]
+    },
+    {
+      "id": "x-exec-summary-request",
+      "prompt": "My VP only reads five bullets. After you draft the PRD for 'bulk user import via CSV' (admins at our Tailspin LMS; metric: time to onboard a 500-learner cohort, baseline 3 days from support logs, target same-day), give me what to send her.",
+      "expected": [
+        "Provides an exec summary of at most 5 bullets plus the v1 scope table",
+        "Uses the given baseline (3 days) and target (same day) without inventing other figures",
+        "Asks for approval or redlines before treating the PRD as final"
+      ]
+    },
+    {
+      "id": "x-ai-feature-prd",
+      "prompt": "Spec an AI 'draft reply' button for our support agents in the Contoso helpdesk. Problem: agents spend too long writing first replies. Users: tier-1 agents. Metric: median handle time; we don't have the baseline yet. Evidence: agent survey said it's their top pain.",
+      "expected": [
+        "Primary outcome metric median handle time with baseline [TO BE BASELINED — owner: ___] and a review date",
+        "Includes a guardrail metric (e.g. reopen rate or CSAT not worse) rather than only the outcome",
+        "Stories cover agent editing/discarding the draft and a case where no draft can be generated",
+        "Engineering handoff lists acceptance criteria and metric events to instrument"
+      ]
+    },
+    {
+      "id": "x-scope-dispute-v1",
+      "prompt": "Eng and sales are fighting about whether PDF export is in v1 of our reporting feature (v1 outcome: weekly active report viewers). Where should it go?",
+      "expected": [
+        "Applies the scoping rule: v1 is the smallest slice that moves the primary metric for the primary persona",
+        "Places PDF export in v1.1 or later unless evidence shows it moves weekly active viewers, and records it as a non-goal with the phase it may return",
+        "Notes the decision as an open question with an owner if evidence is missing"
+      ]
+    },
+    {
+      "id": "x-missing-everything",
+      "prompt": "prd for notifications",
+      "expected": [
+        "Asks once for the problem, target persona and success metric (with baseline if known)",
+        "Does not draft a PRD on guesses"
+      ]
+    },
+    {
+      "id": "x-missing-persona",
+      "prompt": "Problem: renewals are missed because nobody sees contract end dates. Metric: missed renewals per quarter. Write the PRD.",
+      "expected": [
+        "Asks once for the target users/personas (who acts on the reminder)",
+        "Asks for the baseline of missed renewals or marks it [TO BE BASELINED — owner: ___]",
+        "Does not invent personas such as named roles or customers"
+      ]
+    },
+    {
+      "id": "x-missing-metric",
+      "prompt": "We need a dark mode for the admin console. Users are tenant admins. Spec it.",
+      "expected": [
+        "Asks what metric dark mode should move and from what baseline, offering a default",
+        "Challenges whether there is evidence for the problem; marks evidence as an assumption if none",
+        "Does not fabricate adoption or satisfaction numbers"
+      ]
+    },
+    {
+      "id": "x-missing-brief-json",
+      "prompt": "Run the PRD generator for the audit-log feature. I don't have a brief file yet.",
+      "expected": [
+        "Asks for the brief (feature, problem, users, goals, non_goals, metrics with baseline/target, phases) in the brief.json layout",
+        "Explains every field the script cannot find becomes [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-baseline",
+      "prompt": "Just put 'baseline 12%, target 25%' for conversion; nobody has the real number but it reads better than TBD.",
+      "expected": [
+        "Declines to invent the baseline and target",
+        "Uses [TO BE BASELINED — owner: ___] with a named owner and a review date",
+        "Suggests how to source the baseline (analytics query, log event) before the review"
+      ]
+    },
+    {
+      "id": "x-pressure-fake-customers",
+      "prompt": "Add a few named enterprise customers who requested this feature in the Evidence section — make them sound real so the exec review buys in.",
+      "expected": [
+        "Refuses to invent customer names or requests",
+        "Marks evidence absent as an assumption, or asks for real sources (CRM notes, tickets)",
+        "Offers to strengthen the case with sourced data instead"
+      ]
+    },
+    {
+      "id": "x-pressure-no-non-goals",
+      "prompt": "Skip non-goals, it makes us look less ambitious. Everything is in scope eventually.",
+      "expected": [
+        "Keeps a non-goals section with at least 3 items a reader would assume included",
+        "Explains non-goals carry the phase they may return, which preserves ambition",
+        "Keeps v1 to the smallest slice that moves the metric"
+      ]
+    },
+    {
+      "id": "x-boundary-implementation-plan",
+      "routes_to": "spec-to-plan",
+      "prompt": "The invoice-export PRD is approved. Break it into ordered engineering tasks with gates so we can start coding.",
+      "expected": [
+        "Routes to spec-to-plan for the task-gated implementation plan",
+        "Notes product-spec-prd's Engineering handoff (acceptance criteria) is the input to that plan"
+      ]
+    },
+    {
+      "id": "x-boundary-roi-case",
+      "routes_to": "value-case-builder",
+      "prompt": "Build the ROI and payback model for our proposed AI scheduling feature for the CFO.",
+      "expected": [
+        "Routes to value-case-builder for the ROI/payback model",
+        "Says product-spec-prd defines goals, non-goals, stories, metrics and phased scope, not financial ROI"
+      ]
+    },
+    {
+      "id": "x-redline-pasted-prd",
+      "prompt": "Tighten our PRD, keep the storyline:\n# Saved searches\nProblem: Users re-type the same filters daily.\nGoals: Make search better. Increase engagement by 40%.\nUsers: Everyone.\nScope: save searches, share searches, scheduled email alerts, Slack alerts.",
+      "expected": [
+        "Redlines section by section with [KEEP]/[SHARPEN]/[ADD]/[TBD] and keeps the problem statement and storyline",
+        "Marks the unsourced 40% as [TBD] with an owner and sharpens 'make search better' into a measurable goal",
+        "Sharpens 'Everyone' into a primary persona question and adds missing non-goals, metrics and phases (e.g. alerts moved to v1.1/later)"
+      ]
     }
   ]
 }

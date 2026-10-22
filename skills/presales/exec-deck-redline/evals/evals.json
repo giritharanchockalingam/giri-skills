@@ -133,6 +133,171 @@
           "check": "csv_rows:verdict!empty"
         }
       ]
+    },
+    {
+      "id": "x-pasted-five-slide-cio",
+      "prompt": "Redline for the CIO of Contoso Retail (fictional); decision: approve a 12-week discovery for POS modernization; 20-minute slot.\n--- slide 1 --- Title: POS Modernization\n--- slide 2 --- Background: 1,400 stores; POS platform 11 years old; outages hurt sales.\n--- slide 3 --- Approach: discovery, design, pilot, rollout. Lots of workshops with stakeholders across store ops, finance and IT to understand needs and pain points in detail.\n--- slide 4 --- Benefits: 25% fewer outages, $4M annual savings.\n--- slide 5 --- Next steps",
+      "expected": [
+        "Storyline as found in ≤6 bullets, kept (background → approach → benefits → next steps) with an [ADD] for the missing decision/ask rather than a new narrative",
+        "Slide 4's 25% and $4M have no source in the materials and become [TO BE BASELINED — owner: ___]",
+        "Label titles (Background, Approach, Benefits, Next steps) rewritten as assertions of ≤12 words; slide 3 sharpened to one point",
+        "Executive summary slide with the decision (approve 12-week discovery), three reasons and next steps with owners and dates"
+      ]
+    },
+    {
+      "id": "x-board-pack-time-fit",
+      "prompt": "Board pack for the Fabrikam Mutual (fictional) audit & risk committee: 34 slides, 25-minute slot, decision is to endorse the cyber-resilience program budget. Deck attached; the program charter is the source doc. Sharpen it.",
+      "expected": [
+        "Applies time fit of about one body slide per 2 minutes (25 minutes → ~12 body slides) and moves overflow to an appendix with a parked list naming destinations",
+        "Writes the storyline as found with [confirm against slide n] markers since slide text is not visible, without inventing content",
+        "Numbers checked against the program charter; anything not traceable marked [TO BE BASELINED — owner: ___]",
+        "Rubric score given before and after"
+      ]
+    },
+    {
+      "id": "x-pitch-deck-investor-style",
+      "prompt": "Sharpen our 12-slide pitch to Tailspin Airlines' (fictional) VP Digital: decision = select us for the loyalty-platform shortlist; 30 min with 10 for Q&A. Keep our story — problem, our approach, proof, team, commercials. Deck attached.",
+      "expected": [
+        "Preserves the author's storyline (problem → approach → proof → team → commercials) rather than replacing it",
+        "Sets the decision test: what the VP must believe after slide 1 and approve (shortlist) by the last slide",
+        "Time fit accounts for 20 minutes of presenting (~10 body slides), parking the rest",
+        "Speaker notes ≤60 words per kept or sharpened slide"
+      ]
+    },
+    {
+      "id": "x-title-rewrite-only",
+      "prompt": "Steerco tomorrow, CFO audience, decision is release of phase-2 funding, 15 minutes. My titles are 'Status', 'Budget', 'Risks', 'Timeline', 'Ask'. Budget slide says spent $1.1M of $1.6M (per finance report attached). Rewrite the titles.",
+      "expected": [
+        "Rewrites each label title as an assertion with a number or consequence, ≤12 words",
+        "Uses the $1.1M of $1.6M figures since they are sourced to the finance report, without adding new numbers",
+        "Marks any other figure, date or owner needed in a title as [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-dense-slide-to-table",
+      "prompt": "Slide 7 of our steerco deck (audience: COO; decision: approve vendor shortlist; 30 min) is a wall of text comparing 4 vendors on cost, fit, risk, and references. How should it look after the redline?",
+      "expected": [
+        "Marks slide 7 [SHARPEN] and converts the 3+ items into a table (vendors × criteria)",
+        "States the so-what in the first line of the body and a title that is an assertion",
+        "Any vendor figures without a source become [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-speaker-notes-request",
+      "prompt": "We've already agreed the redline for the 8-slide QBR deck for the Northwind (fictional) CTO (decision: renew managed-services scope; 20 minutes). Now just write the speaker notes per slide.",
+      "expected": [
+        "Speaker notes ≤60 words per kept or sharpened slide, with the spoken point, the number to say and the transition",
+        "Notes contain nothing absent from the slides or sources; unknown numbers stay [TO BE BASELINED — owner: ___]",
+        "Asks for or marks slide text not visible in the conversation instead of inventing it"
+      ]
+    },
+    {
+      "id": "x-duplicate-slides-cut",
+      "prompt": "Our 18-slide architecture review deck for the client CIO (decision: approve target architecture; 30 min) has three slides that repeat the same integration diagram and two agenda slides. Redline it.",
+      "expected": [
+        "Marks duplicate diagram slides and the extra agenda slide [CUT] with reasons and where the content moves (appendix/parked list)",
+        "Keeps the storyline and the decision test (approve target architecture)",
+        "Every slide gets a verdict in the redline table"
+      ]
+    },
+    {
+      "id": "x-missing-everything",
+      "prompt": "make my slides better",
+      "expected": [
+        "Asks once in one list for the deck, the audience, the decision it must obtain and the time slot",
+        "Does not start slide rewrites without the decision test",
+        "Offers a density-only pass labelled 'density-only — not a decision redline' as a fallback"
+      ]
+    },
+    {
+      "id": "x-missing-decision-has-audience",
+      "prompt": "Deck for the Woodgrove (fictional) CFO next Tuesday, 30 minutes. Sharpen it.",
+      "expected": [
+        "Asks once for the decision the deck must obtain (and the deck itself if not provided)",
+        "Explains a deck without a decision can be tidied but not sharpened",
+        "Does not invent the decision"
+      ]
+    },
+    {
+      "id": "x-missing-slot",
+      "prompt": "Redline this steerco deck for the client's CIO; we need approval for wave 1. Deck attached.",
+      "expected": [
+        "Proceeds with the redline (storyline, decision test, verdicts) since audience and decision are known",
+        "Asks for or marks the time slot as needed for the time-fit check rather than assuming one",
+        "Marks unsourced numbers [TO BE BASELINED — owner: ___] since no source documents were provided"
+      ]
+    },
+    {
+      "id": "x-missing-sources",
+      "prompt": "Board deck: decision = approve $ for the data platform; audience = board finance committee; 20 min. All the numbers came from 'conversations'. Redline it.",
+      "expected": [
+        "Proceeds with the redline; missing source documents do not stop it",
+        "Marks every number, role and date without a source as [TO BE BASELINED — owner: ___]",
+        "Lists the TBDs in Open items with owners"
+      ]
+    },
+    {
+      "id": "x-pressure-sponsor-and-roi",
+      "prompt": "Put 'Sponsor: Jane Ruiz, SVP Ops' on slide 2 and add '320% ROI' to the exec summary — I'm fairly sure that's what the value case will say.",
+      "expected": [
+        "Declines in one line: the redline marks unknowns rather than inventing figures, roles or dates",
+        "Shows sponsor and ROI as [TO BE BASELINED — owner: ___], with the ROI note naming the value case as the confirming source",
+        "Does not print the requested name or the 320% figure anywhere in the redline"
+      ]
+    },
+    {
+      "id": "x-pressure-rewrite-narrative",
+      "prompt": "Honestly the storyline is boring. Throw it out and write me a whole new narrative around AI — the CIO loves AI.",
+      "expected": [
+        "Declines to replace the narrative; keeps the original storyline and sharpens it",
+        "Suggests where AI content could be an [ADD] only if sourced and tied to the decision",
+        "Offers sharpening options (assertion titles, so-what first lines) within the existing story"
+      ]
+    },
+    {
+      "id": "x-pressure-golive-quarter",
+      "prompt": "Just say go-live Q1 next year on the timeline slide; the estimate's still being finished but Q1 sounds safe.",
+      "expected": [
+        "Declines to put a chosen quarter on the slide",
+        "Shows go-live as [TO BE BASELINED — owner: ___] tied to the estimate's critical path",
+        "Keeps the timeline slide in the storyline as [SHARPEN]/[TBD]"
+      ]
+    },
+    {
+      "id": "x-boundary-build-roi-model",
+      "routes_to": "value-case-builder",
+      "prompt": "Before the redline, build the savings and payback model that the business-case slide should show.",
+      "expected": [
+        "Routes to value-case-builder for the savings/ROI model",
+        "Says exec-deck-redline then marks and sources the slide's numbers against that value case"
+      ]
+    },
+    {
+      "id": "x-boundary-orals-script",
+      "routes_to": "orals-prep",
+      "prompt": "For the bid defense next week, script what our delivery lead says when the evaluators ask 'why are you more expensive', and assign speakers.",
+      "expected": [
+        "Routes to orals-prep for the presenter script and speaker assignments",
+        "Notes exec-deck-redline sharpens the deck itself slide by slide"
+      ]
+    },
+    {
+      "id": "x-second-pass-after-redline",
+      "prompt": "Second pass: after last week's redline the owner sourced two TBDs — run-cost saving $640k/yr and 9-month payback, both from the signed value case v2. Go-live is still unknown. Same audience (CFO), decision (approve wave 0), 30 min. Update the redline.",
+      "expected": [
+        "Replaces the two TBDs with the sourced figures ($640k/yr, 9-month payback) citing value case v2",
+        "Keeps go-live as [TO BE BASELINED — owner: ___] tied to the estimate critical path",
+        "Keeps the storyline and other verdicts stable, updating the after rubric score and Open items"
+      ]
+    },
+    {
+      "id": "x-terse-practitioner-verdicts",
+      "prompt": "verdicts only pls. slides: 1 Title, 2 Agenda, 3 Agenda (dup), 4 'Current state' (sourced, fine), 5 'Benefits' 30% faster (no source), 6 'Ask'. aud: CIO, decision: approve pilot, 10 min",
+      "expected": [
+        "Gives a verdict per slide, e.g. slide 3 [CUT] as duplicate, slide 4 [KEEP] or [SHARPEN], slide 5 [SHARPEN] + [TBD] with 30% marked [TO BE BASELINED — owner: ___]",
+        "Slide 6 'Ask' is sharpened into an assertion title stating the decision (approve the pilot)",
+        "Keeps the reply short and table-based as asked"
+      ]
     }
   ]
 }
