@@ -131,10 +131,12 @@ def test_fix_kind_skips_definition_and_plan_and_builds_from_the_composed_spec(tm
     assert r.returncode == 0, r.stdout + r.stderr
     assert [s["id"] for s in spec["stages"]] == ["build", "evaluate", "deploy", "operate"]
     build = spec["stages"][0]
-    assert [t["id"] for t in build["steps"]] == ["brief", "spec", "code", "conventions"]       # compose steps carried in
+    assert [t["id"] for t in build["steps"]] == ["brief", "spec", "files", "code", "conventions"]   # compose steps carried in
+    files = next(t for t in build["steps"] if t["id"] == "files")
+    assert files["produces"] == ["files.txt"] and files["inputs"] == {"plan": "$steps.spec:spec.md", "target": "$repo"}   # no tasks.csv: the builder names the files
     code = next(t for t in build["steps"] if t["id"] == "code")
-    assert code["inputs"] == {"plan": "$steps.spec:spec.md", "target": "$repo"}               # no plan.md: the spec is the plan
-    assert "build/test-strategy-tdd" not in skills_in(spec)                                   # needs tasks.csv from spec-to-plan
+    assert code["inputs"] == {"plan": "$steps.spec:spec.md", "files": "$steps.files:files.txt", "target": "$repo"}   # no plan.md: the spec is the plan
+    assert "build/test-strategy-tdd" not in skills_in(spec)                                   # needs feature.md from the plan
     assert "build/spec-to-plan" not in skills_in(spec) and "build/product-spec-prd" not in skills_in(spec)
     assert "spec" not in next(t for t in spec["stages"][1]["steps"] if t["id"] == "review")["inputs"]   # prd absent: optional input dropped
     assert run_script("scripts/validate_pipelines.py", str(tmp_path / "fix-js.json")).returncode == 0
@@ -230,7 +232,8 @@ def test_deliver_loads_a_pipeline_from_pipelines_composed_by_name(tmp_path, monk
         target.write_text(json.dumps(spec), encoding="utf-8")
         out = tmp_path / "run"
         r = run_script("scripts/deliver.py", "t-fix-js", "--repo", str(JS_AWS_REPO), "--request", "Fix the export", "--out", str(out),
-                       "--provider", "dry", "--dry", "--builder", "manual", "--patch", str(FIX / "delivery-build" / "diff.patch"))
+                       "--provider", "dry", "--dry", "--builder", "manual", "--patch", str(FIX / "delivery-build" / "diff.patch"),
+                       "--files", str(FIX / "delivery-build" / "files.txt"))      # a fix has no tasks.csv: the builder names the files
         assert r.returncode == 0, r.stdout + r.stderr
         assert json.loads((out / "run.json").read_text())["pipeline"] == "t-fix-js"
     finally:
@@ -252,7 +255,7 @@ def test_deliver_in_portal_mode_reads_the_composed_pipeline_from_the_run(tmp_pat
         out = tmp_path / "run"
         r = run_script("scripts/deliver.py", "--pipeline", "composed-fix-portal", "--repo", str(JS_AWS_REPO), "--request", "Fix the export",
                        "--out", str(out), "--provider", "dry", "--dry", "--builder", "manual", "--patch", str(FIX / "delivery-build" / "diff.patch"),
-                       "--run", RUN_UUID, "--portal", stub.url)
+                       "--files", str(FIX / "delivery-build" / "files.txt"), "--run", RUN_UUID, "--portal", stub.url)
         assert r.returncode == 0, r.stdout + r.stderr
         assert json.loads((out / "pipeline.json").read_text()) == spec
         rj = json.loads((out / "run.json").read_text())

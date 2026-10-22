@@ -4,7 +4,7 @@
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
         --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
-        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--dry] [--resume] [--run-id ID] \
+        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--dry] [--resume] [--run-id ID] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
 
 `--pipeline <name>` is an alias of the positional. With --run and --portal (API key in env SF_API_KEY) the executor
@@ -23,11 +23,17 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
   compose   a deterministic derivation (brief-from-request, spec-from-prd, feature-from-plan)
   approval  blocks: needs_approval.json is written and the run exits 3, unless --approve-all or the
             --approvals file records the step ({"approvals": [{"step": "<id>", "by": "...", "note": "..."}]})
-  agent     --builder none        -> needs_builder.json, exit 4: a person or IDE agent writes the code and
+  agent     the code step (no `produces`):
+            --builder none        -> needs_builder.json, exit 4: a person or IDE agent writes the code and
                                      drops the diff at <out>/build/diff.patch, then re-runs with --resume
             --builder manual      -> <out>/build/diff.patch must exist (nothing is applied; it is recorded)
             --builder claude-code -> `claude -p` on the checkout with a prompt built from the plan, the test
-                                     plan and the constraint files; `git diff` is captured as diff.patch
+                                     plan, files.txt and the constraint files; `git diff` is captured as diff.patch
+            the files step (`produces: ["files.txt"]`): the files the change will touch, one repo-relative
+            path per line. When tasks.csv names files for every task the executor derives files.txt itself
+            (no builder). Otherwise --builder none stops with needs_builder.json (exit 4) naming the path
+            <out>/evidence/<nn>-build/files/files.txt (or <out>/build/files.txt, where --files copies to);
+            --builder manual expects it there; --builder claude-code prompts `claude -p` to write it.
   pr        --dry writes pr.json {"dry": true}; otherwise: branch deliver/<run-id> on the checkout, the checkout's
             changes committed as skills-factory[bot], pushed to origin (`gh auth setup-git` first when GH_TOKEN is
             set), then `gh pr create --title … --body-file EVIDENCE.md` run with cwd = the checkout
@@ -40,8 +46,9 @@ exit codes, durations and the sha256 of every evidence file. --dry works on a co
 <out>/repo (git-initialised with a fixed identity, so the run is reproducible); otherwise the checkout is used
 in place. --resume continues an existing <out> from the first incomplete stage (completed steps are kept).
 
-Exit codes: 0 every stage passed · 1 a gate or step failed · 2 bad arguments / missing input (needs_input.json)
-· 3 waiting for an approval (needs_approval.json) · 4 waiting for the builder (needs_builder.json).
+Exit codes: 0 every stage passed · 1 a gate or step failed · 2 bad arguments / missing pipeline input
+(needs_input.json) / pipeline wiring error — a step input no earlier step produced (wiring_error.json, never a
+gate failure) · 3 waiting for an approval (needs_approval.json) · 4 waiting for the builder (needs_builder.json).
 Stdlib only; deterministic apart from the timestamps in run.json.
 """
 from __future__ import annotations
@@ -84,11 +91,33 @@ BOT_GIT_ENV = {"GIT_AUTHOR_NAME": BOT_NAME, "GIT_AUTHOR_EMAIL": BOT_EMAIL,
 CALLBACK_RETRIES = 3
 CALLBACK_BACKOFF = float(os.environ.get("SF_CALLBACK_BACKOFF", "1") or 0)   # seconds; doubles per retry
 STAGE_STATUS = {"passed": "succeeded", "failed": "blocked", "awaiting_approval": "awaiting_approval",
-                "awaiting_builder": "blocked", "running": "running"}
+                "awaiting_builder": "blocked", "wiring_error": "blocked", "running": "running"}
+FILES_TXT = "files.txt"
 
 
 class StepError(Exception):
     pass
+
+
+class WiringError(StepError):
+    """A step input that no earlier step produced: the pipeline is mis-wired (exit 2), not a gate verdict."""
+
+    def __init__(self, step: str, inp: str, detail: str, skill: str = ""):
+        self.step, self.input, self.skill, self.detail = step, inp, skill, detail
+        super().__init__(f"pipeline wiring error: step '{step}' input '{inp}' {detail}")
+
+
+def read_files_txt(path: Path) -> list[str]:
+    """files.txt: one repo-relative path per line; blank lines and `#` comments ignored; order kept, duplicates dropped."""
+    out: list[str] = []
+    for ln in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        s = s.strip("`").lstrip("./")
+        if s and s not in out:
+            out.append(s)
+    return out
 
 
 def now() -> str:
@@ -360,6 +389,9 @@ class Run:
                 raise StepError(f"{where}: step '{sid}' did not write {rel}")
             if not key:
                 return str(path)
+            if key in vp.TEXT_MODIFIERS:   # `#csv` / `#lines` on a text file such as files.txt
+                lines = read_files_txt(path)
+                return ",".join(lines) if key == "csv" else "\n".join(lines)
             cur = read_json(path)
             for part in key.split("."):
                 if isinstance(cur, dict) and part in cur:
@@ -420,8 +452,13 @@ class Run:
                 rec["failed_checks"] = failed[:6]
         if r.returncode == 2:
             ni = sdir / "needs_input.json"
-            missing = [m.get("name") for m in read_json(ni).get("missing", [])] if ni.is_file() else []
-            raise StepError(f"skill {step['skill']} needs input {missing}: not produced by any earlier step")
+            missing = [str(m.get("name")) for m in read_json(ni).get("missing", [])] if ni.is_file() else []
+            declared = step.get("inputs") or {}
+            name = next((n for n in missing if n), "?")
+            src = declared.get(name)
+            detail = (f"resolved to nothing from {src!r}: no earlier step produced it (skill {step['skill']} requires it)" if src
+                      else f"is required by skill {step['skill']} but the pipeline does not wire it")
+            raise WiringError(step["id"], name, detail, step["skill"])
         if r.returncode >= 3:
             tail = (r.stderr or r.stdout).strip().splitlines()
             raise StepError(f"skill {step['skill']} failed (exit {r.returncode}): {tail[-1] if tail else ''}"[:300])
@@ -488,20 +525,125 @@ class Run:
             files |= {f.strip().strip("`") for f in re.split(r"[,\s;]+", m.group(1)) if "/" in f or "." in f}
         return sorted(f for f in files if f and not TBD_RE.search(f))
 
-    def _record_diff(self, patch: Path, sdir: Path, rec: dict, plan_path: str, summary: str) -> None:
+    def _allowed_files(self, plan_path: str, files_path: str) -> tuple[list[str], str]:
+        """The files the code step may touch: files.txt from the files step when wired, else the plan's task blocks."""
+        if files_path and Path(files_path).is_file():
+            return read_files_txt(Path(files_path)), "files.txt"
+        return self._plan_files(plan_path), "plan.md"
+
+    def _record_diff(self, patch: Path, sdir: Path, rec: dict, plan_path: str, summary: str, files_path: str = "") -> None:
         text = patch.read_text(encoding="utf-8", errors="replace")
         changed = sorted({m.group(1) for m in re.finditer(r"^\+\+\+ b/(\S+)", text, re.M)}
                          | {m.group(1) for m in re.finditer(r"^--- a/(\S+)", text, re.M)})
-        plan_files = self._plan_files(plan_path)
+        plan_files, source = self._allowed_files(plan_path, files_path)
         outside = [f for f in changed if plan_files and f not in plan_files and not re.search(r"(^|/)(tests?|__tests__|e2e)/", f)]
         shutil.copy(patch, sdir / "diff.patch")
-        write_json(sdir / "files-changed.json", {"files": changed, "plan_files": plan_files, "outside_plan": outside,
+        write_json(sdir / "files-changed.json", {"files": changed, "plan_files": plan_files, "plan_files_source": source, "outside_plan": outside,
                                                  "lines_added": sum(1 for ln in text.splitlines() if ln.startswith("+") and not ln.startswith("+++")),
                                                  "lines_removed": sum(1 for ln in text.splitlines() if ln.startswith("-") and not ln.startswith("---"))})
         md = [f"# Builder summary — {self.args.builder}", "", summary.strip() or "(no summary)", "",
-              "## Files changed", ""] + [f"- `{f}`" + (" — NOT named in the plan" if f in outside else "") for f in changed] + [""]
+              "## Files changed", ""] + [f"- `{f}`" + (f" — NOT named in {source}" if f in outside else "") for f in changed] + [""]
         (sdir / "agent-summary.md").write_text("\n".join(md), encoding="utf-8")
         rec.update(exit=0, files_changed=len(changed), outside_plan=outside)
+
+    # ---- the files step (agent step with produces: ["files.txt"])
+    def _derive_files_txt(self, tasks_path: str) -> tuple[list[str], str]:
+        """files.txt from tasks.csv when EVERY task names files (nothing invented); else ([], why-not)."""
+        if not tasks_path or not Path(tasks_path).is_file():
+            return [], "no tasks.csv to derive from"
+        rows = list(csv.DictReader(io.StringIO(Path(tasks_path).read_text(encoding="utf-8"))))
+        if not rows:
+            return [], "tasks.csv has no tasks"
+        files: list[str] = []
+        for r in rows:
+            cell = (r.get("files") or "").strip()
+            if not cell or TBD_RE.search(cell):
+                return [], f"task {r.get('id') or '?'} names no files in tasks.csv"
+            for f in re.split(r"[,;]+", cell):
+                f = f.strip().strip("`").lstrip("./")
+                if f and f not in files:
+                    files.append(f)
+        return files, ""
+
+    def step_files(self, step: dict, sdir: Path, rec: dict) -> bool:
+        builder = self.args.builder
+        rec["builder"] = builder
+        plan = str(self.resolve(step["inputs"].get("plan"), "files plan"))
+        tasks = str(self.resolve(step["inputs"].get("tasks", ""), "files tasks") or "")
+        target = Path(str(self.resolve(step["inputs"].get("target", "$repo"), "files target")))
+        expected = sdir / FILES_TXT
+        dropped = self.out / "build" / FILES_TXT          # where --files copies to; an alternative drop point
+
+        def record(files: list[str], source: str, note: str) -> bool:
+            if not files:
+                raise StepError(f"{source} names no files: the build has nothing to constrain")
+            missing = [f for f in files if not (target / f).exists()]
+            write_json(sdir / "files.json", {"files": files, "source": source, "derived": source == "tasks.csv",
+                                             "create": missing, "modify": [f for f in files if f not in missing], "note": note})
+            rec.update(exit=0, files=len(files), files_source=source)
+            return True
+
+        derived, why = self._derive_files_txt(tasks)
+        if derived and not expected.is_file() and not dropped.is_file():
+            expected.write_text(f"# derived by deliver.py from tasks.csv: every task names its files (checked against {target.name})\n"
+                                + "".join(f"{f}\n" for f in derived), encoding="utf-8")
+            return record(derived, "tasks.csv", "derived — the builder was not asked")
+        if not expected.is_file() and dropped.is_file():
+            shutil.copy(dropped, expected)
+        if expected.is_file():
+            head = expected.read_text(encoding="utf-8", errors="replace").lstrip().split("\n", 1)[0]
+            source = "tasks.csv" if head.startswith("# derived by deliver.py") else ("claude-code" if builder == "claude-code" else "builder")
+            return record(read_files_txt(expected), source, f"supplied at {expected.relative_to(self.out)} (builder: {builder})")
+        if builder in ("none", "manual"):
+            rec["status"] = "awaiting_builder"
+            write_json(self.out / "needs_builder.json", {
+                "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+                "builder": builder, "target": str(target), "plan": plan, "tasks": tasks or None,
+                "why": f"files.txt could not be derived: {why}",
+                "produce": FILES_TXT, "expected": str(expected), "alternative": str(dropped),
+                "format": "one repo-relative path per line (source files the change will create or modify; test files are not "
+                          "needed — the tests step adds them); blank lines and `#` comments are ignored",
+                "rule": "read plan.md / tasks.csv and the checkout; list only files the plan's tasks require; nothing invented",
+                "how": f"write {FILES_TXT} at the expected path (or pass --files <file>), then re-run with --resume"})
+            return False
+        if builder == "claude-code":
+            exe = shutil.which("claude")
+            if not exe:
+                raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with files.txt)")
+            prompt = self.files_prompt(step, plan, tasks, expected)
+            (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
+            t0 = time.time()
+            r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
+                               text=True, timeout=1800)
+            rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
+            (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
+            (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
+            if r.returncode != 0:
+                raise StepError(f"claude -p exited {r.returncode}: {r.stderr.strip().splitlines()[-1:] or ''}"[:300])
+            if not expected.is_file():
+                raise StepError(f"builder claude-code did not write {expected}")
+            if is_git_root(target) and shutil.which("git"):
+                _, dirty = git(target, "status", "--porcelain")
+                if dirty.strip():
+                    rec["warning"] = "the files step changed the checkout; it should only read it"
+            return record(read_files_txt(expected), "claude-code", f"written by claude -p at {expected.relative_to(self.out)}")
+        raise StepError(f"unknown builder {builder!r}")
+
+    def files_prompt(self, step: dict, plan: str, tasks: str, expected: Path) -> str:
+        def body(p: str) -> str:
+            t = Path(p).read_text(encoding="utf-8", errors="replace") if p and Path(p).is_file() else "(missing)"
+            return t if len(t) <= CONTEXT_LIMIT else t[:CONTEXT_LIMIT] + "\n[... truncated ...]"
+        parts = ["You are the files step of a delivery pipeline. Read the plan below and this repository, then write the list of "
+                 "repo-relative source files the change will create or modify — one path per line, nothing else — to:",
+                 str(expected), "",
+                 "Rules: list only files the plan's tasks require (existing files to modify, new files to create); do not list "
+                 "test files (the tests step adds them); do not change any file in the repository; do not commit.",
+                 "", "## Plan", "", body(plan)]
+        if tasks:
+            parts += ["", "## tasks.csv", "", body(tasks)]
+        parts += ["", "## Stack profile", "", json.dumps(self.record.get("stack_profile", {}), indent=2),
+                  "", "When done, reply with the list you wrote."]
+        return "\n".join(parts)
 
     def _apply_to_copy(self, patch: Path, target: Path) -> str:
         if not shutil.which("git") or not is_git_root(target):
@@ -522,28 +664,34 @@ class Run:
             clean.unlink(missing_ok=True)
 
     def step_agent(self, step: dict, sdir: Path, rec: dict) -> bool:
+        if FILES_TXT in (step.get("produces") or []):
+            return self.step_files(step, sdir, rec)
         builder = self.args.builder
         rec["builder"] = builder
         plan = str(self.resolve(step["inputs"].get("plan"), "agent plan"))
         tests = str(self.resolve(step["inputs"].get("tests", ""), "agent tests") or "")
+        files = str(self.resolve(step["inputs"].get("files", ""), "agent files") or "")
         target = Path(str(self.resolve(step["inputs"].get("target", "$repo"), "agent target")))
+        allowed, allowed_source = self._allowed_files(plan, files)
+        rec["allowed_files"] = allowed
         manual_patch = self.out / "build" / "diff.patch"
         if builder in ("none", "manual"):
             if manual_patch.is_file():
                 note = "nothing was applied by deliver.py (the checkout already carries the change)."
                 if self.args.dry:  # the checkout is a throwaway copy: land the diff so the lint stages assess the change
                     note = self._apply_to_copy(manual_patch, target)
-                self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}")
+                self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
                 return True
             rec["status"] = "awaiting_builder"
             write_json(self.out / "needs_builder.json", {
                 "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
-                "builder": builder, "target": str(target), "plan": plan, "tests": tests,
+                "builder": builder, "target": str(target), "plan": plan, "tests": tests, "files": files or None,
+                "allowed_files": allowed, "allowed_files_source": allowed_source,
                 "constraints": [str(ROOT / c) for c in step.get("constraints") or []],
-                "rule": "touch only files the plan names; make the red tests green; no other changes",
-                "expected": str(manual_patch),
+                "rule": f"touch only the files {allowed_source} names (plus the test files the test plan names); make the red tests green; no other changes",
+                "produce": "diff.patch", "expected": str(manual_patch),
                 "how": "write the code on the checkout, save `git diff` (staged + unstaged, new files included) to the "
-                       "expected path, then re-run with --resume"})
+                       "expected path (or pass --patch <file>), then re-run with --resume"})
             return False
         if builder == "claude-code":
             exe = shutil.which("claude")
@@ -551,7 +699,7 @@ class Run:
                 raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with build/diff.patch)")
             if not is_git_root(target):
                 raise StepError(f"builder claude-code: {target} is not a git repository root; the diff cannot be captured")
-            prompt = self.agent_prompt(step, plan, tests)
+            prompt = self.agent_prompt(step, plan, tests, allowed, allowed_source)
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
             r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
@@ -564,18 +712,20 @@ class Run:
             _, diff = git(target, "diff", "--cached", "--binary")
             patch = sdir / "captured.patch"
             patch.write_text(diff, encoding="utf-8")
-            self._record_diff(patch, sdir, rec, plan, r.stdout)
+            self._record_diff(patch, sdir, rec, plan, r.stdout, files)
             patch.unlink()
             return True
         raise StepError(f"unknown builder {builder!r}")
 
-    def agent_prompt(self, step: dict, plan: str, tests: str) -> str:
+    def agent_prompt(self, step: dict, plan: str, tests: str, allowed: list[str] | None = None, source: str = "plan.md") -> str:
         def body(p: str) -> str:
             t = Path(p).read_text(encoding="utf-8", errors="replace") if p and Path(p).is_file() else "(missing)"
             return t if len(t) <= CONTEXT_LIMIT else t[:CONTEXT_LIMIT] + "\n[... truncated ...]"
         parts = ["You are the build step of a delivery pipeline. Implement the plan below on this repository.",
-                 "Rules: touch ONLY the files the plan names (plus the test files the test plan names); make the red tests "
-                 "green; follow every constraint file; do not refactor, rename or reformat anything else; do not commit.",
+                 f"Rules: touch ONLY the files listed under 'Files you may touch' (from {source}) plus the test files the test "
+                 "plan names; make the red tests green; follow every constraint file; do not refactor, rename or reformat "
+                 "anything else; do not commit.",
+                 "", "## Files you may touch", ""] + [f"- {f}" for f in (allowed or [])] + (["(none listed: the plan names the files)"] if not allowed else []) + [
                  "", "## Plan", "", body(plan), "", "## Test plan", "", body(tests)]
         for c in step.get("constraints") or []:
             parts += ["", f"## Constraint: {c}", "", body(str(ROOT / c))]
@@ -735,7 +885,7 @@ class Run:
                 "status": status, "gate": {"kind": str(g.get("kind", "")), "verdict": verdict, "detail": str(g.get("detail", ""))[:4000]},
                 "evidence": self.stage_evidence(srec)}
         failed = next((st for st in srec.get("steps", []) if st.get("status") == "failed"), None)
-        if srec.get("status") == "failed" and failed:
+        if srec.get("status") in ("failed", "wiring_error") and failed:
             body["error"] = f"{failed['id']}: {failed.get('error', '')}"[:4000]
         pr = None
         for st in srec.get("steps", []):
@@ -801,6 +951,22 @@ class Run:
                     self.step_pr(step, sdir, rec)
                 else:
                     raise StepError(f"unknown step kind {step.get('kind')!r}")
+            except WiringError as e:
+                # the pipeline, not the work, is wrong: never a gate verdict — stop with exit 2 and say which wire is missing
+                rec.update(status="failed", error=str(e)[:400], duration_s=round(time.time() - t0, 3))
+                srec["steps"].append(rec)
+                srec.update(status="wiring_error", duration_s=round(time.time() - t_stage, 3))
+                srec["gate"] = {"verdict": "fail", "kind": stage["gate"]["kind"], "detail": str(e)[:400],
+                                "role": stage.get("role"), "approved_by": "", "at": now()}
+                write_json(stage_dir / "gate.json", srec["gate"])
+                write_json(self.out / "wiring_error.json", {
+                    "run_id": self.run_id, "pipeline": self.spec["name"], "stage": stage["id"], "step": e.step,
+                    "input": e.input, "skill": e.skill, "reference": (step.get("inputs") or {}).get(e.input),
+                    "message": str(e),
+                    "how": "fix the pipeline file (wire the input from a step that produces it, or add the step that does), "
+                           "then start a new run; this is not a gate failure and not a missing user input"})
+                self._finish_stage(srec, stage)
+                return "wiring_error", EXIT_ARGS
             except StepError as e:
                 rec.update(status="failed", error=str(e)[:400])
                 halted = f"{sid}: {e}"
@@ -957,6 +1123,7 @@ def build_args(argv=None):
     ap.add_argument("--approve-all", action="store_true", help="satisfy every approval step (the invoker approves)")
     ap.add_argument("--approvals", help="JSON file recording approvals: {\"approvals\": [{\"step\": id, \"by\": name, \"note\": ...}]}")
     ap.add_argument("--patch", help="copy this diff to <out>/build/diff.patch before running (manual builder)")
+    ap.add_argument("--files", help="copy this files.txt (one repo-relative path per line) to <out>/build/files.txt before running: the files step takes it when tasks.csv does not name every task's files")
     ap.add_argument("--dry", action="store_true", help="work on a copy of the repo under <out>/repo; the pr step opens nothing")
     ap.add_argument("--resume", action="store_true", help="continue an existing run from the first incomplete stage")
     ap.add_argument("--run-id", help="run id (default: derived from pipeline + request + repo, with a time suffix outside --dry)")
@@ -1042,9 +1209,13 @@ def main(argv=None) -> int:
     else:
         base = hashlib.sha256(f"{spec['name']}|{given.get('request', '')}|{repo_key}".encode()).hexdigest()[:10]
         run.run_id = args.run_id or (base if args.dry else f"{base}-{int(time.time())}")
-    if args.patch:
-        (out / "build").mkdir(exist_ok=True)
-        shutil.copy(args.patch, out / "build" / "diff.patch")
+    for src, name in ((args.patch, "diff.patch"), (args.files, FILES_TXT)):
+        if src:
+            if not Path(src).is_file():
+                print(f"error: {name} not found: {src}", file=sys.stderr)
+                return EXIT_ARGS
+            (out / "build").mkdir(exist_ok=True)
+            shutil.copy(src, out / "build" / name)
     approvals = load_approvals(args.approvals)
 
     run.record = {"run_id": run.run_id, "pipeline": spec["name"], "version": spec.get("version", ""), "mode": spec.get("mode", ""),
@@ -1087,8 +1258,12 @@ def main(argv=None) -> int:
         run.post_stage_result(next(st for st in run.record["stages"] if st["id"] == stage["id"]))
         if code != EXIT_OK:
             where = {EXIT_APPROVAL: f"needs approval — see {out / 'needs_approval.json'}",
-                     EXIT_BUILDER: f"needs the builder — see {out / 'needs_builder.json'}"}.get(code, "gate failed — see " + str(run.evidence / f"{n:02d}-{stage['id']}" / "gate.json"))
+                     EXIT_BUILDER: f"needs the builder — see {out / 'needs_builder.json'}",
+                     EXIT_ARGS: f"pipeline wiring error — see {out / 'wiring_error.json'}"}.get(code, "gate failed — see " + str(run.evidence / f"{n:02d}-{stage['id']}" / "gate.json"))
             print(f"{spec['name']} run {run.run_id}: stopped at stage '{stage['id']}' ({status}): {where}")
+            if code == EXIT_ARGS:
+                we = read_json(out / "wiring_error.json")
+                print(f"error: {we['message']}", file=sys.stderr)
             return code
         if profile_after == stage["id"]:
             try:

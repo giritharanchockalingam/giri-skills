@@ -120,6 +120,40 @@ def test_steps_reference_must_name_a_declared_output(tmp_path):
     assert "diff.patch" in out   # the message lists what it does declare
 
 
+def test_agent_step_produces_and_text_file_modifiers(tmp_path):
+    """The files step: an agent step with `produces: ["files.txt"]`; later steps read it with #csv / #lines."""
+    spec = load("feature-delivery")
+    files = step(spec, "build", "files")
+    assert files["kind"] == "agent" and files["produces"] == ["files.txt"]
+    assert step(spec, "build", "tests")["inputs"]["files"] == "$steps.files:files.txt#csv"
+    assert step(spec, "build", "code")["inputs"]["files"] == "$steps.files:files.txt"
+    assert "$steps.files:files.txt" in stage(spec, "build")["evidence"]
+    assert validate(spec, tmp_path)[0] == 0
+    spec = load("feature-delivery")
+    step(spec, "build", "tests")["inputs"]["files"] = "$steps.files:files.txt#lines"
+    assert validate(spec, tmp_path)[0] == 0
+    spec = load("feature-delivery")
+    step(spec, "build", "tests")["inputs"]["files"] = "$steps.files:files.txt#files"       # a json key path on a text file
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "'#files' on a text file must be one of #csv, #lines" in out
+    spec = load("feature-delivery")
+    step(spec, "build", "tests")["inputs"]["files"] = "$steps.feature:feature.json#csv"      # a text modifier on a json file
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "'#csv' joins the lines of a text file, not a .json file" in out
+    spec = load("feature-delivery")
+    step(spec, "build", "files")["produces"] = []
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "`produces` must be a non-empty list of file names" in out
+    spec = load("feature-delivery")
+    step(spec, "build", "files")["produces"] = ["plan.md"]
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "`produces` ['plan.md'] is not something the executor can ask a builder for" in out
+    spec = load("feature-delivery")
+    del step(spec, "build", "files")["produces"]                                            # a plain agent step declares diff.patch, not files.txt
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "step 'files' does not declare output 'files.txt'" in out and "diff.patch" in out
+
+
 def test_input_reference_must_be_declared(tmp_path):
     spec = load("feature-delivery")
     step(spec, "requirements", "brief")["inputs"]["request"] = "$in.ticket"

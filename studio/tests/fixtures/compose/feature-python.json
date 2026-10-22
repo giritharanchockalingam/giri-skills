@@ -242,6 +242,13 @@
     {
       "stage": "build",
       "role": "full-stack-engineer",
+      "step": "files",
+      "decision": "chosen",
+      "why": "the files step (plan: $steps.plan:plan.md): the files the change touches, derived from tasks.csv when every task names them"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
       "step": "tests",
       "skill": "build/test-strategy-tdd",
       "decision": "rejected",

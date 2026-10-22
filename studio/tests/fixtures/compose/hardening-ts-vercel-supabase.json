@@ -140,12 +140,25 @@
             ]
           },
           {
+            "id": "files",
+            "kind": "agent",
+            "agent": "claude-code",
+            "inputs": {
+              "plan": "$steps.plan:plan.md",
+              "tasks": "$steps.plan:tasks.csv",
+              "target": "$repo"
+            },
+            "produces": [
+              "files.txt"
+            ]
+          },
+          {
             "id": "tests",
             "kind": "skill",
             "skill": "build/test-strategy-tdd",
             "inputs": {
               "feature": "$steps.feature:feature.md",
-              "files": "$steps.feature:feature.json#files",
+              "files": "$steps.files:files.txt#csv",
               "target": "$repo"
             }
           },
@@ -156,6 +169,7 @@
             "inputs": {
               "plan": "$steps.plan:plan.md",
               "tests": "$steps.tests:test-plan.md",
+              "files": "$steps.files:files.txt",
               "target": "$repo"
             },
             "constraints": [
@@ -179,6 +193,7 @@
           "step": "conventions"
         },
         "evidence": [
+          "$steps.files:files.txt",
           "$steps.tests:test-plan.md",
           "$steps.tests:scaffold-report.json",
           "$steps.code:diff.patch",
@@ -383,6 +398,13 @@
       "step": "-",
       "decision": "rejected",
       "why": "no wiring recipe in the step library (inputs not derivable from earlier steps or the profile): ai-platform/agent-architecture, ai-platform/ai-threat-model, ai-platform/infra-gpu-sizing, ai-platform/llm-cost-model, ai-platform/model-selection, ai-platform/rag-pipeline-design, build/multi-tenant-saas-patterns"
+    },
+    {
+      "stage": "build",
+      "role": "full-stack-engineer",
+      "step": "files",
+      "decision": "chosen",
+      "why": "the files step (plan: $steps.plan:plan.md): the files the change touches, derived from tasks.csv when every task names them"
     },
     {
       "stage": "build",
