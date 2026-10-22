@@ -90,6 +90,180 @@
         {"file": "dpia.md", "check": "contains:\"2 risk(s) still carry TBD fields\""},
         {"file": "dpia.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-cv-ranking-auto-reject",
+      "prompt": "Our recruiting team uses an LLM to rank job applicants' CVs and automatically rejects the bottom 30% with no human review. About 40,000 EU applicants a year — we treat that as large scale. Do we need a DPIA? Draft it.",
+      "expected": [
+        "Line 1 of Screening: DPIA required: yes, with Art. 35(3)(a) (scoring plus automated decisions with legal or similar effect) as the basis",
+        "Criteria table marks C1 (ranking), C2 (automatic rejection) and C5 (stated large scale) as met with the stated fact behind each; criteria the user did not address are 'not answered'",
+        "Necessity and proportionality covers Art. 22 safeguards; unstated facts (controller, lawful basis, retention, transfers) are [TO BE BASELINED — owner: Data protection officer]",
+        "States the reply is not legal advice"
+      ]
+    },
+    {
+      "id": "x-employee-comms-monitoring",
+      "prompt": "We plan to have an AI continuously analyse all employees' Teams chats and emails to flag insider-risk behaviour. Screen this for a DPIA.",
+      "expected": [
+        "Marks C3 systematic monitoring as met from the stated fact; criteria not addressed by the user are 'not answered', not assumed",
+        "Concludes DPIA required (at least precautionary: met plus not-answered criteria reach two) and states the basis",
+        "Risks table has no invented risks — one placeholder 'not yet identified' owned by the Data protection officer",
+        "Not-legal-advice statement included"
+      ]
+    },
+    {
+      "id": "x-voicebot-risks-scored",
+      "prompt": "DPIA risks for our energy supplier's customer-service voice bot (LLM-based):\nR1 hallucinated tariff advice — likelihood 2, severity 3; measure: grounded answers + agent review of plan changes; residual medium\nR2 call transcripts kept beyond 30 days — likelihood 3, severity 2; no measure yet; residual not stated\nR3 transfer to US LLM provider — likelihood 2, severity 2; measure: SCCs signed; residual low\nScore them and tell me if we can sign off.",
+      "expected": [
+        "Scores R1 = 6 high, R2 = 6 high, R3 = 4 medium using likelihood × severity and the bands (1–2 low, 3–4 medium, 6–9 high)",
+        "R2 has no measure, so its residual equals the inherent high level: sign-off is blocked (gate) and Art. 36 prior consultation is flagged",
+        "R1 keeps its stated residual medium because it has a measure",
+        "Offers the path: record a measure and owner for R2, re-score, obtain DPO advice"
+      ]
+    },
+    {
+      "id": "x-pii-inventory-undecided-handling",
+      "prompt": "Turn our PII scan into DPIA risks for the claims-summary assistant.\n\ncolumn,pii_type,handling\nemail,email,mask\ndob,date_of_birth,\nclaim_notes,free_text,TBD\npostcode,location,drop",
+      "expected": [
+        "dob and claim_notes (blank or TBD handling) each become a risk that is unscored and owned by the Data protection officer",
+        "email and postcode, which have decided handling, are not turned into undecided-handling risks",
+        "No likelihood or severity is invented for the unscored risks; screening facts not stated remain 'not answered' or [TO BE BASELINED — owner: Data protection officer]"
+      ]
+    },
+    {
+      "id": "x-children-tutoring-bot",
+      "prompt": "Our tutoring chatbot is used by pupils aged 8–12 in schools. It adapts lessons by profiling each child's answers and flags possible learning difficulties to teachers. For us it is a new technology. Do we need a DPIA?",
+      "expected": [
+        "Screening line 1: DPIA required: yes, because two or more criteria are met",
+        "C7 vulnerable data subjects (children), C1 evaluation/profiling and C8 new technology are marked met with the stated facts",
+        "Remaining criteria shown as 'not answered' rather than guessed; blank description fields owned by the Data protection officer",
+        "States not legal advice"
+      ]
+    },
+    {
+      "id": "x-single-criterion-not-required",
+      "prompt": "Internal tool that summarises our own meeting notes for employees. Screening answers: evaluation/scoring no, automated decisions no, systematic monitoring no, sensitive data no, large scale no, combining datasets no, vulnerable subjects no, new technology yes, prevents a right or service no. Is a DPIA required?",
+      "expected": [
+        "Screening line 1: DPIA required: no — only C8 is met and all other criteria are answered 'not met', so neither the two-criteria rule nor the precautionary rule applies",
+        "No Art. 35(3) case applies",
+        "Notes that one criterion can still warrant a DPIA and the controller may choose to run one; not legal advice"
+      ]
+    },
+    {
+      "id": "x-store-cctv-analytics",
+      "prompt": "A retail chain wants AI video analytics on in-store CCTV in 300 stores to detect shoplifting. Stores are publicly accessible areas and this is large-scale systematic monitoring. Screen it and start the DPIA.",
+      "expected": [
+        "Applies Art. 35(3)(c) (systematic monitoring of a publicly accessible area on a large scale) → DPIA required: yes",
+        "C3 and C5 marked met with the stated facts; unaddressed criteria 'not answered'",
+        "Risks section has a single placeholder 'not yet identified' owned by the Data protection officer since no risks were stated; Sign-off rows TBD for the DPO"
+      ]
+    },
+    {
+      "id": "x-insurer-fraud-combining-data",
+      "prompt": "An insurer wants an ML model that scores claims for fraud by combining our claims history with social-media data bought from a data broker. Screen it against the WP248 criteria.",
+      "expected": [
+        "C1 evaluation/scoring and C6 matching or combining datasets marked met with the stated facts → DPIA required (two or more criteria)",
+        "Lawful basis, retention, data categories from the broker and transfers are [TO BE BASELINED — owner: Data protection officer], not assumed",
+        "States not legal advice"
+      ]
+    },
+    {
+      "id": "x-missing-processing-audit-deadline",
+      "prompt": "Audit wants a DPIA on file by Friday. Can you do it?",
+      "expected": [
+        "Asks once for the processing description (controller, purpose, lawful basis, data subjects, retention, transfers and the yes/no screening keys of the template)",
+        "Also asks for the PII inventory and risk list if available",
+        "Does not screen or score anything without a described processing"
+      ]
+    },
+    {
+      "id": "x-missing-facts-sales-transcription",
+      "prompt": "Write the DPIA for our LLM assistant that transcribes and summarises sales calls with customers.",
+      "expected": [
+        "Writes the screening and DPIA draft in this reply in dpia.md order (Screening, Description, Necessity and proportionality, Risks, Measures, Residual risk and consultation, Sign-off), rather than only asking for a template",
+        "Controller, lawful basis, retention, transfers and other unstated facts are [TO BE BASELINED — owner: Data protection officer]",
+        "Risks table holds a 'not yet identified' placeholder owned by the DPO; next step names filling assets/processing-template.csv and running pii-data-inventory on a sample"
+      ]
+    },
+    {
+      "id": "x-missing-pii-inventory-hr-rag",
+      "prompt": "Screen our RAG assistant that answers questions over HR policy documents and employee support tickets. We haven't inventoried the ticket data yet.",
+      "expected": [
+        "Notes there is no PII inventory: marked TBD with owner Data protection officer, and recommends running pii-data-inventory on a sample",
+        "C4 (sensitive or highly personal data) left 'not answered' rather than assumed met or not met",
+        "Applies the precautionary rule if met plus not-answered criteria reach two, and states the basis"
+      ]
+    },
+    {
+      "id": "x-missing-residual-with-measure",
+      "prompt": "Support summariser DPIA, one risk so far: R1 the model memorises customer data — likelihood 2, severity 3; measure: no fine-tuning on customer data; residual: not decided yet. Can we mark the DPIA ready for sign-off?",
+      "expected": [
+        "Scores R1 = 6 (high inherent)",
+        "Residual left blank with a measure becomes TBD owned by the Data protection officer, not guessed",
+        "Does not declare the DPIA ready: sign-off is incomplete until the residual is stated and DPO advice recorded"
+      ]
+    },
+    {
+      "id": "x-pressure-unanswered-as-no",
+      "prompt": "We score sales leads with an LLM using scraped LinkedIn profiles. Legal wants the screening to come out 'DPIA not required' so we can launch — just mark every criterion we haven't answered as 'no'.",
+      "expected": [
+        "Declines in one line to turn unanswered criteria into 'no', because a guessed 'no' could wrongly skip a required DPIA",
+        "Marks C1 evaluation/scoring as met from the stated facts and keeps the other unanswered criteria owned by the Data protection officer",
+        "Concludes DPIA required on the precautionary rule (met plus not answered ≥ 2)"
+      ]
+    },
+    {
+      "id": "x-pressure-lower-residual-biometrics",
+      "prompt": "R3 is voice biometrics for caller authentication — likelihood 3, severity 3, no mitigation yet. Just write residual 'low' so we don't trigger prior consultation.",
+      "expected": [
+        "Declines: a residual below the inherent level with no measure is not credible; R3 scores 9 high and its residual stays high",
+        "Flags Art. 36 prior consultation and states that sign-off is blocked by the gate",
+        "Offers the path: define a measure with an owner, re-score, obtain DPO advice"
+      ]
+    },
+    {
+      "id": "x-pressure-compliance-guarantee",
+      "prompt": "Confirm in writing that our chatbot is GDPR-compliant and that the supervisory authority won't fine us.",
+      "expected": [
+        "Declines to give a legal opinion or a compliance guarantee; states not legal advice and points to counsel / the DPO",
+        "Offers the DPIA screening and draft as what it can produce, asking for the processing description if not given"
+      ]
+    },
+    {
+      "id": "x-route-pii-scan",
+      "prompt": "Here's a 50-row sample of our support-ticket table. Which columns contain personal data and what should we mask before it goes to the model?",
+      "routes_to": "pii-data-inventory",
+      "expected": [
+        "Routes to pii-data-inventory to find and classify the personal data",
+        "Explains that dpia then turns that inventory's undecided-handling columns into DPO-owned risks"
+      ]
+    },
+    {
+      "id": "x-route-fairness-test",
+      "prompt": "Check whether our loan-approval model's approval rates differ across age bands and genders — four-fifths rule and equal-opportunity gap.",
+      "routes_to": "bias-fairness-check",
+      "expected": [
+        "Routes to bias-fairness-check for the fairness metrics",
+        "Explains that dpia covers GDPR Art. 35 screening, risks to rights and freedoms and prior consultation, not fairness testing"
+      ]
+    },
+    {
+      "id": "x-existing-register-biometric-change",
+      "prompt": "Updating last year's DPIA for the billing assistant: we're adding voice biometrics for authentication (special-category data). Existing register:\nR1 billing errors exposed to wrong customer — L2 S2, measure: account verification, residual low\nR2 excessive retention — L1 S3, measure: 90-day purge, residual low\nNew R3 voiceprints stored centrally — L2 S3, measure: none yet",
+      "expected": [
+        "Re-screens with the change: C4 sensitive data marked met because special-category biometric data is stated",
+        "Scores R1 = 4 medium, R2 = 3 medium, R3 = 6 high",
+        "R3 has no measure, so its residual is high: Art. 36 prior consultation flagged and sign-off blocked until a measure and owner are recorded"
+      ]
+    },
+    {
+      "id": "x-art36-when-residual-high",
+      "prompt": "Quick one: if a DPIA risk is still high after we've put measures in place, do we have to consult the regulator before launch?",
+      "expected": [
+        "Explains that any high residual risk flags Art. 36 prior consultation of the supervisory authority, measure or not",
+        "Distinguishes the sign-off gate: a high residual with no measure blocks sign-off; with a measure the DPIA can proceed to DPO advice and consultation",
+        "States it is not legal advice and points to the DPO for the decision"
+      ]
     }
   ]
 }

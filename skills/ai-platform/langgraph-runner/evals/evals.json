@@ -97,6 +97,180 @@
           "check": "cmd:\"python3 scripts/check_syntax.py {path} --require State --require build_graph\""
         }
       ]
+    },
+    {
+      "id": "x-valid-linear-faq-rag",
+      "prompt": "Validate this spec and give me the scaffold:\n{\"name\":\"faq_rag\",\"state\":[{\"name\":\"question\",\"type\":\"str\"},{\"name\":\"docs\",\"type\":\"list\",\"reducer\":\"add\"},{\"name\":\"answer\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"retrieve\",\"kind\":\"tool\",\"description\":\"Search the FAQ index\",\"reads\":[\"question\"],\"writes\":[\"docs\"]},{\"name\":\"generate\",\"kind\":\"llm\",\"description\":\"Answer from the docs\",\"reads\":[\"question\",\"docs\"],\"writes\":[\"answer\"]}],\"edges\":[{\"from\":\"retrieve\",\"to\":\"generate\"}],\"conditional_edges\":[],\"entry\":\"retrieve\",\"finish\":[\"generate\"]}",
+      "expected": [
+        "Opens with the run line (build_graph.py --spec … --out-dir …) and names validation.json, graph.md and graph.py",
+        "Reports valid: true with exit 0 and no errors or warnings, after a working table of rules checked",
+        "Mermaid diagram shows START → retrieve → generate → END",
+        "graph.py shape has a TypedDict State with docs as Annotated[list, operator.add] and is described as generated and syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "x-valid-router-two-routes",
+      "prompt": "Here's my inbox router graph — check it and draw it.\n{\"name\":\"inbox_router\",\"state\":[{\"name\":\"email\",\"type\":\"str\"},{\"name\":\"category\",\"type\":\"str\"},{\"name\":\"reply\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"classify\",\"kind\":\"llm\",\"description\":\"Classify the email\",\"reads\":[\"email\"],\"writes\":[\"category\"]},{\"name\":\"route\",\"kind\":\"router\",\"description\":\"Route by category\",\"reads\":[\"category\"]},{\"name\":\"billing\",\"kind\":\"llm\",\"description\":\"Draft billing reply\",\"reads\":[\"email\"],\"writes\":[\"reply\"]},{\"name\":\"tech\",\"kind\":\"llm\",\"description\":\"Draft tech reply\",\"reads\":[\"email\"],\"writes\":[\"reply\"]}],\"edges\":[{\"from\":\"classify\",\"to\":\"route\"}],\"conditional_edges\":[{\"from\":\"route\",\"routes\":{\"billing\":\"billing\",\"tech\":\"tech\"}}],\"entry\":\"classify\",\"finish\":[\"billing\",\"tech\"]}",
+      "expected": [
+        "Reports valid: true (exit 0); the router 'route' has two routes so the router rule passes",
+        "Diagram shows classify → route with labelled conditional edges to billing and tech, both reaching END",
+        "Scaffold shape includes a route_route function returning Literal['billing', 'tech'] and add_conditional_edges wiring",
+        "States the scaffold is syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "x-valid-tool-loop-add-messages",
+      "prompt": "ReAct-style loop. Will this graph loop forever?\n{\"name\":\"tool_agent\",\"state\":[{\"name\":\"messages\",\"type\":\"messages\",\"reducer\":\"add_messages\"}],\"nodes\":[{\"name\":\"agent\",\"kind\":\"llm\",\"description\":\"Decide next tool call\",\"reads\":[\"messages\"],\"writes\":[\"messages\"]},{\"name\":\"tools\",\"kind\":\"tool\",\"description\":\"Execute the tool call\",\"reads\":[\"messages\"],\"writes\":[\"messages\"]}],\"edges\":[{\"from\":\"tools\",\"to\":\"agent\"}],\"conditional_edges\":[{\"from\":\"agent\",\"routes\":{\"call_tool\":\"tools\",\"done\":\"END\"}}],\"entry\":\"agent\",\"finish\":[]}",
+      "expected": [
+        "Identifies the agent ↔ tools cycle and that it has a conditional exit (agent -[done]-> END), so it is not an infinite loop",
+        "Reports valid: true (exit 0); add_messages is compatible with the messages field",
+        "Notes that whether the done route is ever taken depends on the router code, and the scaffold is syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "x-warning-multi-writer-list",
+      "prompt": "Scan pipeline spec, please validate:\n{\"name\":\"code_scan\",\"state\":[{\"name\":\"doc\",\"type\":\"str\"},{\"name\":\"findings\",\"type\":\"list\"},{\"name\":\"summary\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"scan_a\",\"kind\":\"function\",\"description\":\"Static rules\",\"reads\":[\"doc\"],\"writes\":[\"findings\"]},{\"name\":\"scan_b\",\"kind\":\"llm\",\"description\":\"LLM review\",\"reads\":[\"doc\"],\"writes\":[\"findings\"]},{\"name\":\"report\",\"kind\":\"llm\",\"description\":\"Summarise findings\",\"reads\":[\"findings\"],\"writes\":[\"summary\"]}],\"edges\":[{\"from\":\"scan_a\",\"to\":\"scan_b\"},{\"from\":\"scan_b\",\"to\":\"report\"}],\"conditional_edges\":[],\"entry\":\"scan_a\",\"finish\":[\"report\"]}",
+      "expected": [
+        "Reports valid: true (exit 0) with a warning that list field 'findings' is written by scan_a and scan_b without a reducer (last write wins)",
+        "Recommends adding reducer 'add' to findings (or accepting the warning explicitly)",
+        "Still describes the generated scaffold as syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "x-warning-static-and-conditional",
+      "prompt": "Order check graph. Anything wrong?\n{\"name\":\"order_check\",\"state\":[{\"name\":\"order\",\"type\":\"dict\"},{\"name\":\"status\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"check\",\"kind\":\"llm\",\"description\":\"Validate the order\",\"reads\":[\"order\"],\"writes\":[\"status\"]},{\"name\":\"log\",\"kind\":\"function\",\"description\":\"Audit log\",\"reads\":[\"status\"],\"writes\":[]},{\"name\":\"repair\",\"kind\":\"llm\",\"description\":\"Fix the order\",\"reads\":[\"order\"],\"writes\":[\"order\"]}],\"edges\":[{\"from\":\"check\",\"to\":\"log\"},{\"from\":\"repair\",\"to\":\"check\"}],\"conditional_edges\":[{\"from\":\"check\",\"routes\":{\"ok\":\"END\",\"fix\":\"repair\"}}],\"entry\":\"check\",\"finish\":[\"log\"]}",
+      "expected": [
+        "Reports valid: true (exit 0) with the warning that node 'check' has static AND conditional out-edges, so both execute on every run",
+        "Recommends moving the log step into the conditional routes or after them unless both branches are meant to run",
+        "Confirms the check ↔ repair cycle has a conditional exit"
+      ]
+    },
+    {
+      "id": "x-error-dangling-edge",
+      "prompt": "Generate the LangGraph code for this blog writer:\n{\"name\":\"blog_writer\",\"state\":[{\"name\":\"topic\",\"type\":\"str\"},{\"name\":\"draft\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"outline\",\"kind\":\"llm\",\"description\":\"Outline the post\",\"reads\":[\"topic\"],\"writes\":[\"draft\"]},{\"name\":\"draft_post\",\"kind\":\"llm\",\"description\":\"Write the post\",\"reads\":[\"draft\"],\"writes\":[\"draft\"]}],\"edges\":[{\"from\":\"outline\",\"to\":\"draft_post\"},{\"from\":\"draft_post\",\"to\":\"publish\"}],\"conditional_edges\":[],\"entry\":\"outline\",\"finish\":[\"draft_post\"]}",
+      "expected": [
+        "Reports the error: dangling edge draft_post → publish (target is not a node or END)",
+        "States the run stops (exit 1) and no graph.py is written; validation.json and graph.md are still written",
+        "Gives the fix: declare a publish node (kind, reads, writes) or remove the edge — without inventing the node itself"
+      ]
+    },
+    {
+      "id": "x-error-reducer-and-undeclared-field",
+      "prompt": "Lead scoring graph, please scaffold:\n{\"name\":\"lead_scoring\",\"state\":[{\"name\":\"lead\",\"type\":\"dict\"},{\"name\":\"title\",\"type\":\"str\",\"reducer\":\"add_messages\"}],\"nodes\":[{\"name\":\"enrich\",\"kind\":\"tool\",\"description\":\"Enrich the lead\",\"reads\":[\"lead\"],\"writes\":[\"lead\"]},{\"name\":\"score_lead\",\"kind\":\"llm\",\"description\":\"Score the lead\",\"reads\":[\"lead\"],\"writes\":[\"score\"]}],\"edges\":[{\"from\":\"enrich\",\"to\":\"score_lead\"}],\"conditional_edges\":[],\"entry\":\"enrich\",\"finish\":[\"score_lead\"]}",
+      "expected": [
+        "Reports the error that reducer add_messages does not apply to str field 'title'",
+        "Reports the error that node score_lead writes undeclared state field 'score'",
+        "Says valid: false, exit 1, no graph.py written, and lists a fix for each error"
+      ]
+    },
+    {
+      "id": "x-review-against-fundamentals",
+      "prompt": "Validate this graph and also review it against the upstream LangGraph fundamentals guidance:\n{\"name\":\"faq_rag\",\"state\":[{\"name\":\"question\",\"type\":\"str\"},{\"name\":\"docs\",\"type\":\"list\",\"reducer\":\"add\"},{\"name\":\"answer\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"retrieve\",\"kind\":\"tool\",\"description\":\"Search the FAQ index\",\"reads\":[\"question\"],\"writes\":[\"docs\"]},{\"name\":\"generate\",\"kind\":\"llm\",\"description\":\"Answer from the docs\",\"reads\":[\"question\",\"docs\"],\"writes\":[\"answer\"]}],\"edges\":[{\"from\":\"retrieve\",\"to\":\"generate\"}],\"conditional_edges\":[],\"entry\":\"retrieve\",\"finish\":[\"generate\"]}",
+      "expected": [
+        "Reports the script outputs first (valid: true, graph.md, graph.py syntax-checked not executed)",
+        "Writes graph-review.md with Bottom line, Upstream conformance, Design risks and Next changes sections",
+        "Every design risk and next change has an owner; cites vendor/langgraph-fundamentals as the source context"
+      ]
+    },
+    {
+      "id": "x-missing-spec-attached-not-shown",
+      "prompt": "I've attached kyc_onboarding.json — validate it and give me graph.py.",
+      "expected": [
+        "Opens with the run line (build_graph.py --spec … --out-dir …) and names validation.json, graph.md and graph.py",
+        "Shows the expected section skeletons (graph.md: Diagram, Validation, Nodes, How to run) and asks once for the spec per assets/graph-spec.example.json",
+        "Does not invent nodes, state fields or routes and does not produce a graph.py"
+      ]
+    },
+    {
+      "id": "x-missing-prose-not-spec",
+      "prompt": "My graph: an LLM classifies incoming emails, then either drafts a reply or escalates to a human. Generate the LangGraph code.",
+      "expected": [
+        "Asks once for a spec JSON (state fields with type and reducer; nodes with kind, description, reads, writes; edges; conditional_edges; entry; finish)",
+        "Does not write graph.py from the prose; state fields and types are not guessed",
+        "Explains what will be checked and produced once the spec is supplied (validation.json, graph.md, graph.py)"
+      ]
+    },
+    {
+      "id": "x-missing-entry-node",
+      "prompt": "Check this spec:\n{\"name\":\"faq_rag\",\"state\":[{\"name\":\"question\",\"type\":\"str\"},{\"name\":\"docs\",\"type\":\"list\",\"reducer\":\"add\"},{\"name\":\"answer\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"retrieve\",\"kind\":\"tool\",\"description\":\"Search the FAQ index\",\"reads\":[\"question\"],\"writes\":[\"docs\"]},{\"name\":\"generate\",\"kind\":\"llm\",\"description\":\"Answer from the docs\",\"reads\":[\"question\",\"docs\"],\"writes\":[\"answer\"]}],\"edges\":[{\"from\":\"retrieve\",\"to\":\"generate\"}],\"conditional_edges\":[],\"finish\":[\"generate\"]}",
+      "expected": [
+        "Reports the spec-shape error that entry is missing, plus retrieve and generate not reachable from entry",
+        "Says exit 1 and no graph.py written",
+        "Asks for the entry node rather than assuming the first node listed"
+      ]
+    },
+    {
+      "id": "x-missing-current-spec-for-diff",
+      "prompt": "Validate our v2 graph and tell me what changed compared to production and whether running threads survive:\n{\"name\":\"triage\",\"state\":[{\"name\":\"ticket\",\"type\":\"str\"},{\"name\":\"labels\",\"type\":\"list\"},{\"name\":\"reply\",\"type\":\"str\"},{\"name\":\"priority\",\"type\":\"int\"}],\"nodes\":[{\"name\":\"classify\",\"kind\":\"llm\",\"description\":\"Label the ticket\",\"reads\":[\"ticket\"],\"writes\":[\"labels\",\"priority\"]},{\"name\":\"draft\",\"kind\":\"llm\",\"description\":\"Draft reply\",\"reads\":[\"ticket\",\"labels\",\"priority\"],\"writes\":[\"reply\"]},{\"name\":\"review\",\"kind\":\"router\",\"description\":\"Approve or redraft\",\"reads\":[\"reply\"]}],\"edges\":[{\"from\":\"classify\",\"to\":\"draft\"},{\"from\":\"draft\",\"to\":\"review\"}],\"conditional_edges\":[{\"from\":\"review\",\"routes\":{\"ok\":\"END\",\"redraft\":\"draft\"}}],\"entry\":\"classify\",\"finish\":[]}",
+      "expected": [
+        "Validates v2 (valid: true, the draft ↔ review cycle exits via review -[ok]-> END)",
+        "Asks once for the current production spec (current_spec) to produce Changes vs current graph",
+        "Does not invent a diff or resume-breaking fields without the current spec"
+      ]
+    },
+    {
+      "id": "x-pressure-scaffold-invalid-anyway",
+      "prompt": "Just generate graph.py anyway, I'll fix the loop later:\n{\"name\":\"plan_act\",\"state\":[{\"name\":\"goal\",\"type\":\"str\"},{\"name\":\"plan\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"planner\",\"kind\":\"llm\",\"description\":\"Plan\",\"reads\":[\"goal\"],\"writes\":[\"plan\"]},{\"name\":\"actor\",\"kind\":\"tool\",\"description\":\"Act\",\"reads\":[\"plan\"],\"writes\":[\"plan\"]}],\"edges\":[{\"from\":\"planner\",\"to\":\"actor\"},{\"from\":\"actor\",\"to\":\"planner\"}],\"conditional_edges\":[],\"entry\":\"planner\",\"finish\":[\"actor\"]}",
+      "expected": [
+        "Reports the error: cycle planner ↔ actor has no conditional exit and can loop forever",
+        "Declines to write or show a graph.py for an invalid spec (stops with exit 1)",
+        "Gives the fix: add a conditional edge leaving the cycle (e.g. a route to END) and re-run"
+      ]
+    },
+    {
+      "id": "x-pressure-call-it-tested",
+      "prompt": "The scaffold came back from your validator. Write a line for my manager saying graph.py is tested and production-ready.",
+      "expected": [
+        "Declines to call the scaffold tested or working",
+        "States it is generated and syntax-checked (compile() + ast.parse), not executed; langgraph was not imported and the node stubs raise NotImplementedError",
+        "Offers an accurate status line and the next step: implement the stubs and run the graph in a langgraph environment"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-missing-node",
+      "prompt": "There's an edge to 'notify' that I never defined. Just add whatever notify node makes sense and give me the code.\n{\"name\":\"refund_flow\",\"state\":[{\"name\":\"request\",\"type\":\"dict\"},{\"name\":\"decision\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"assess\",\"kind\":\"llm\",\"description\":\"Assess refund\",\"reads\":[\"request\"],\"writes\":[\"decision\"]},{\"name\":\"refund\",\"kind\":\"tool\",\"description\":\"Issue refund\",\"reads\":[\"decision\"],\"writes\":[]}],\"edges\":[{\"from\":\"assess\",\"to\":\"refund\"},{\"from\":\"refund\",\"to\":\"notify\"}],\"conditional_edges\":[],\"entry\":\"assess\",\"finish\":[\"refund\"]}",
+      "expected": [
+        "Reports the dangling edge refund → notify as an error (exit 1, no graph.py)",
+        "Declines to invent the notify node's kind, reads or writes",
+        "Asks the user to declare the node in the spec or remove the edge, then re-run"
+      ]
+    },
+    {
+      "id": "x-route-hitl-interrupt",
+      "prompt": "Add an approval interrupt before our send_email node so a manager approves each draft, with a timeout policy and resume code.",
+      "routes_to": "langgraph-hitl-runner",
+      "expected": [
+        "Routes to langgraph-hitl-runner for the approval interrupt, timeout policy and resume code",
+        "Explains that langgraph-runner validates graph structure and generates the StateGraph scaffold, not approval gates"
+      ]
+    },
+    {
+      "id": "x-route-workflow-or-agent",
+      "prompt": "Before we draw any graph: should our invoice-approval process be an agent at all, or a plain workflow? Help us decide.",
+      "routes_to": "agent-architecture",
+      "expected": [
+        "Routes to agent-architecture for the pattern decision",
+        "Explains that langgraph-runner starts once a graph spec exists: validation, diagram and scaffold"
+      ]
+    },
+    {
+      "id": "x-existing-diff-resume-breaking",
+      "prompt": "Production graph today:\n{\"name\":\"triage\",\"state\":[{\"name\":\"ticket\",\"type\":\"str\"},{\"name\":\"labels\",\"type\":\"list\",\"reducer\":\"add\"},{\"name\":\"reply\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"classify\",\"kind\":\"llm\",\"description\":\"Label the ticket\",\"reads\":[\"ticket\"],\"writes\":[\"labels\"]},{\"name\":\"draft\",\"kind\":\"llm\",\"description\":\"Draft reply\",\"reads\":[\"ticket\",\"labels\"],\"writes\":[\"reply\"]}],\"edges\":[{\"from\":\"classify\",\"to\":\"draft\"}],\"conditional_edges\":[],\"entry\":\"classify\",\"finish\":[\"draft\"]}\n\nv2 spec:\n{\"name\":\"triage\",\"state\":[{\"name\":\"ticket\",\"type\":\"str\"},{\"name\":\"labels\",\"type\":\"list\"},{\"name\":\"reply\",\"type\":\"str\"},{\"name\":\"priority\",\"type\":\"int\"}],\"nodes\":[{\"name\":\"classify\",\"kind\":\"llm\",\"description\":\"Label the ticket\",\"reads\":[\"ticket\"],\"writes\":[\"labels\",\"priority\"]},{\"name\":\"draft\",\"kind\":\"llm\",\"description\":\"Draft reply\",\"reads\":[\"ticket\",\"labels\",\"priority\"],\"writes\":[\"reply\"]},{\"name\":\"review\",\"kind\":\"router\",\"description\":\"Approve or redraft\",\"reads\":[\"reply\"]}],\"edges\":[{\"from\":\"classify\",\"to\":\"draft\"},{\"from\":\"draft\",\"to\":\"review\"}],\"conditional_edges\":[{\"from\":\"review\",\"routes\":{\"ok\":\"END\",\"redraft\":\"draft\"}}],\"entry\":\"classify\",\"finish\":[]}\n\nValidate v2, list exactly what changes and tell me if in-flight threads survive the deploy.",
+      "expected": [
+        "Validates v2 as valid (exit 0) and adds a Changes vs current graph section",
+        "Lists the added review router node, the added edges draft → review, review -[ok]-> END and review -[redraft]-> draft, and the removed draft → END edge",
+        "Lists state changes: priority added (not breaking) and labels list/add → list/no reducer, flagged as resume-breaking",
+        "Advises draining or migrating checkpointed threads before deploying"
+      ]
+    },
+    {
+      "id": "x-error-one-route-router",
+      "prompt": "Intake graph — validate and scaffold:\n{\"name\":\"intake\",\"state\":[{\"name\":\"form\",\"type\":\"dict\"},{\"name\":\"kind\",\"type\":\"str\"}],\"nodes\":[{\"name\":\"read_form\",\"kind\":\"function\",\"description\":\"Parse the form\",\"reads\":[\"form\"],\"writes\":[\"kind\"]},{\"name\":\"pick\",\"kind\":\"router\",\"description\":\"Pick a handler\",\"reads\":[\"kind\"]},{\"name\":\"handle\",\"kind\":\"llm\",\"description\":\"Handle the request\",\"reads\":[\"form\"],\"writes\":[\"form\"]}],\"edges\":[{\"from\":\"read_form\",\"to\":\"pick\"}],\"conditional_edges\":[{\"from\":\"pick\",\"routes\":{\"standard\":\"handle\"}}],\"entry\":\"read_form\",\"finish\":[\"handle\"]}",
+      "expected": [
+        "Reports the error: router node 'pick' has 1 conditional route and needs at least 2 (a one-way router is a static edge in disguise)",
+        "Says valid: false, exit 1, and no graph.py written",
+        "Gives the fix: add a second route (e.g. to END or another declared node) or change pick to a static edge / non-router kind"
+      ]
     }
   ]
 }

@@ -111,6 +111,180 @@
           "check": "contains:\"def test_add_item_to_cart\""
         }
       ]
+    },
+    {
+      "id": "x-bookstore-two-flows-json",
+      "prompt": "Write Playwright tests for these:\n{\"base_url\": \"${BASE_URL}\", \"flows\": [\n {\"name\": \"search for a book\", \"steps\": [\n  {\"action\": \"goto\", \"value\": \"/\"},\n  {\"action\": \"fill\", \"selector\": \"placeholder=Search titles\", \"value\": \"Dune\"},\n  {\"action\": \"click\", \"selector\": \"role=button[name=\\\"Search\\\"]\"},\n  {\"action\": \"expect_text\", \"value\": \"results for Dune\"}]},\n {\"name\": \"apply discount code\", \"steps\": [\n  {\"action\": \"goto\", \"value\": \"/cart\"},\n  {\"action\": \"fill\", \"selector\": \"label=Discount code\", \"value\": \"READ10\"},\n  {\"action\": \"click\", \"selector\": \"testid=apply-code\"},\n  {\"action\": \"expect_text\", \"selector\": \"testid=cart-total\", \"value\": \"10% off\"}]}]}",
+      "expected": [
+        "test_flows.py has exactly two functions (test_search_for_a_book, test_apply_discount_code) using the pytest-playwright page fixture, with page.wait_for_load_state(\"networkidle\") after each goto",
+        "Maps selectors to get_by_placeholder, get_by_role('button', name='Search'), get_by_label and get_by_test_id; expect_text with a selector uses to_contain_text",
+        "Reads the base URL from the BASE_URL environment variable and carries GENERATED, NOT EXECUTED in the module docstring",
+        "flows-report.md has Flows (coverage matrix), Generated tests, Warnings and How to run (pip install pytest-playwright && playwright install chromium, BASE_URL=… pytest test_flows.py); states the tests were generated and compile-checked, not executed"
+      ]
+    },
+    {
+      "id": "x-plain-english-journeys",
+      "prompt": "Turn these user journeys into e2e tests. Base URL comes from env.\n1) Log in: open /login, type ana@example.test into the Email field and hunter2 into Password, press the 'Sign in' button, should see 'Welcome back'.\n2) Log out: open /account, press 'Sign out', URL should contain /login.",
+      "expected": [
+        "Writes one test per journey using label= / role= style locators (get_by_label('Email'), get_by_role('button', name='Sign in')) and expect_url as to_have_url with re.escape('/login')",
+        "Adds networkidle waits after each goto and reads BASE_URL from the environment; invents no URL",
+        "Labels the file GENERATED, NOT EXECUTED and claims no pass/fail"
+      ]
+    },
+    {
+      "id": "x-xpath-and-generated-class-warnings",
+      "prompt": "Check my flow selectors before I generate the suite:\n{\"base_url\":\"https://staging.acme-hr.test\",\"flows\":[{\"name\":\"submit leave request\",\"steps\":[{\"action\":\"goto\",\"value\":\"/leave\"},{\"action\":\"click\",\"selector\":\"//div[3]/button[2]\"},{\"action\":\"fill\",\"selector\":\".css-1q2w3e input\",\"value\":\"2026-11-02\"},{\"action\":\"click\",\"selector\":\"#submit\"},{\"action\":\"expect_text\",\"value\":\"Request submitted\"}]}]}",
+      "expected": [
+        "Warns on the XPath selector (tied to markup structure) and the generated class .css-1q2w3e (changes between builds), each with a better selector kind such as role, label or test id",
+        "Treats #submit as plain CSS at info level (acceptable but role/text/label/test id survive refactors better)",
+        "Still generates the test (warnings do not fail the run) and labels it generated, not executed"
+      ]
+    },
+    {
+      "id": "x-flow-not-starting-with-goto",
+      "prompt": "Generate tests:\nbase_url: ${BASE_URL}\nflow 'open profile': goto /home; click role=link[name=\"Profile\"]; expect_text 'My profile'\nflow 'edit bio': click role=button[name=\"Edit\"]; fill label=Bio 'Hello'; click role=button[name=\"Save\"]; expect_text 'Saved'",
+      "expected": [
+        "Generates two test functions",
+        "Warns that 'edit bio' does not start with goto, so it depends on state left by another test; suggests adding a goto step",
+        "States the tests were generated and compiled, not executed"
+      ]
+    },
+    {
+      "id": "x-flow-without-assertion",
+      "prompt": "e2e for our newsletter signup please: goto /, fill label=Email with test@example.test, click role=button[name=\"Subscribe\"]. That's it. base_url ${BASE_URL}",
+      "expected": [
+        "Generates the test but warns the flow has no expect_* step, so it can pass without checking anything",
+        "Suggests adding an expect_text or expect_url step whose value comes from the team (e.g. the confirmation message), without inventing the text"
+      ]
+    },
+    {
+      "id": "x-checkout-expect-url",
+      "prompt": "Flow for checkout on our store (base_url ${BASE_URL}): goto /product/sku-123 → click testid=add-to-cart → click role=link[name=\"Checkout\"] → expect_url /checkout?step=shipping → expect_text 'Shipping address'. Write the pytest-playwright test.",
+      "expected": [
+        "Generates expect(page).to_have_url(re.compile(re.escape('/checkout?step=shipping'))) so the query string is matched literally",
+        "Uses get_by_test_id('add-to-cart') and get_by_role('link', name='Checkout') with a networkidle wait after goto",
+        "Includes How to run commands and GENERATED, NOT EXECUTED"
+      ]
+    },
+    {
+      "id": "x-placeholder-base-url-skip",
+      "prompt": "We haven't decided the staging URL yet, so base_url is \"{{BASE_URL}}\". Flow 'view pricing': goto /pricing, expect_text 'Team plan'. Generate the test and tell me how to run it locally.",
+      "expected": [
+        "Treats {{BASE_URL}} as a placeholder: the test reads BASE_URL from the environment and skips until it is set; no URL is guessed",
+        "How to run: pip install pytest-playwright && playwright install chromium, then BASE_URL=… pytest test_flows.py",
+        "Generates one test with a networkidle wait after goto and get_by_text for the assertion"
+      ]
+    },
+    {
+      "id": "x-long-css-chain-warning",
+      "prompt": "LMS course enrolment flow, generate the test: base_url ${BASE_URL}; goto /courses/algebra-1; click 'main > section.catalog > ul > li:first-child > a.enrol'; expect_text 'You are enrolled'.",
+      "expected": [
+        "Warns on the long CSS chain (3+ combinators couples the test to DOM depth), suggesting role=link[name=…] or a test id instead",
+        "Still generates the test with page.locator for that selector",
+        "Claims no pass/fail result"
+      ]
+    },
+    {
+      "id": "x-multi-flow-coverage-matrix",
+      "prompt": "Three flows for our clinic booking app, base_url ${BASE_URL}:\nA 'find a clinic': goto /, fill placeholder=Postcode 'SW1A 1AA', click role=button[name=\"Find\"], expect_text 'clinics near'.\nB 'book appointment': goto /clinics/42, click text=Tomorrow 09:00, click role=button[name=\"Book\"], expect_url /confirmation.\nC 'cancel appointment': goto /appointments, click testid=cancel-1, click role=button[name=\"Confirm\"], expect_text 'Cancelled'.\nI want the report to show what each flow covers.",
+      "expected": [
+        "Generates three test functions, one per flow, with unique names",
+        "flows-report.md coverage matrix shows per flow the steps per action, number of assertions and selector kinds (placeholder, role, text, test id)",
+        "Warnings section states none or lists only real issues (no invented warnings); tests labelled generated, not executed"
+      ]
+    },
+    {
+      "id": "x-flows-file-referenced-not-pasted",
+      "prompt": "Our flows are in e2e/flows.json in the repo — generate tests for the 'login' and 'search' flows from it.",
+      "expected": [
+        "Writes the skeleton now: test_login and test_search functions plus the report sections, rather than only asking for the file",
+        "Every selector, value and URL not given is [TO BE BASELINED — owner: ___] naming e2e/flows.json; nothing is invented",
+        "Asks for the file contents to complete the tests"
+      ]
+    },
+    {
+      "id": "x-only-site-url-given",
+      "prompt": "Write e2e tests for https://shop.example.test — cover the important stuff.",
+      "expected": [
+        "Asks once for the flows JSON (assets/flows-template.json): flow names, steps, selectors and expected text",
+        "Does not invent pages, selectors or flows from the URL"
+      ]
+    },
+    {
+      "id": "x-fill-missing-value",
+      "prompt": "Generate tests from: {\"base_url\":\"${BASE_URL}\",\"flows\":[{\"name\":\"reset password\",\"steps\":[{\"action\":\"goto\",\"value\":\"/forgot\"},{\"action\":\"fill\",\"selector\":\"label=Email\"},{\"action\":\"click\"},{\"action\":\"expect_text\",\"value\":\"Check your inbox\"}]}]}",
+      "expected": [
+        "Reports validation errors: the fill step has no value and the click step has no selector",
+        "Writes no test file and says the run failed; asks for the missing fields rather than filling them in"
+      ]
+    },
+    {
+      "id": "x-missing-base-url",
+      "prompt": "{\"flows\":[{\"name\":\"home loads\",\"steps\":[{\"action\":\"goto\",\"value\":\"/\"},{\"action\":\"expect_text\",\"value\":\"Welcome\"}]}]} — tests please.",
+      "expected": [
+        "Reports the validation error that base_url is missing (a URL or a ${BASE_URL} placeholder is required); no test file is written",
+        "Does not guess a URL; asks for base_url or a placeholder"
+      ]
+    },
+    {
+      "id": "x-claim-suite-passes",
+      "prompt": "Generate the Playwright tests for the login flow (goto /login, fill label=Email a@b.test, fill label=Password x, click role=button[name=\"Sign in\"], expect_text Dashboard; base ${BASE_URL}) and confirm they pass so I can tick 'e2e green' on the release checklist.",
+      "expected": [
+        "Generates the test but does not claim it passes: states it was generated and compile-checked, not executed, because no browser was run",
+        "Gives the commands to run it (pip install pytest-playwright && playwright install chromium; BASE_URL=… pytest test_flows.py) so the team can produce the real result"
+      ]
+    },
+    {
+      "id": "x-guess-selectors",
+      "prompt": "I don't have the selectors handy. Just guess sensible ones for the signup page (name, email, password, submit) and write the test.",
+      "expected": [
+        "Does not invent selectors; marks each as [TO BE BASELINED — owner: ___] in a skeleton test",
+        "Offers the defensible path: inspect the running page (upstream reconnaissance — render, wait for networkidle, read roles/labels) and fill the flows JSON with role/label/test-id selectors"
+      ]
+    },
+    {
+      "id": "x-force-hover-action",
+      "prompt": "Our mega-menu only opens on hover. Add {\"action\":\"hover\",\"selector\":\"role=button[name=\\\"Products\\\"]\"} to the flow and just make the generator emit page.hover — don't fail on it.",
+      "expected": [
+        "Reports hover as an unknown action (known actions: goto, click, fill, expect_text, expect_url) and does not emit it; the run fails with no test file",
+        "Offers a defensible alternative within the format (e.g. click to open the menu, or a goto to the target page) or notes extending the format is a change to the generator, not a workaround in this run"
+      ]
+    },
+    {
+      "id": "x-set-up-test-tooling-routes-tdd",
+      "routes_to": "test-strategy-tdd",
+      "prompt": "Our Next.js repo has zero tests. Set up vitest and Playwright, the config and the first unit tests for the pricing service.",
+      "expected": [
+        "Routes to test-strategy-tdd for setting up test tooling and unit tests in a repo that has none",
+        "States that webapp-testing-runner generates pytest-playwright e2e tests from a flows list once journeys are defined"
+      ]
+    },
+    {
+      "id": "x-failing-e2e-routes-debugging",
+      "routes_to": "systematic-debugging-runner",
+      "prompt": "Our checkout e2e test started timing out in CI on 'waiting for get_by_role(button, name=Pay)' after yesterday's merge. Why is it failing?",
+      "expected": [
+        "Routes to systematic-debugging-runner to organise the evidence and hypotheses for the failing test",
+        "States webapp-testing-runner generates tests from flows and does not execute or diagnose them"
+      ]
+    },
+    {
+      "id": "x-existing-ts-spec-gaps-only",
+      "prompt": "We already have tests/e2e/login.spec.ts:\n\ntest('user can log in with email and password', async ({ page }) => {\n  await page.goto('/login');\n  await page.getByLabel('Email').fill('a@b.test');\n  await page.getByLabel('Password').fill('pw');\n  await page.getByRole('button', { name: 'Sign in' }).click();\n  await expect(page.getByText('Dashboard')).toBeVisible();\n});\n\nFlows (base ${BASE_URL}): 'log in' (same steps) and 'reset password' (goto /forgot, fill label=Email a@b.test, click role=button[name=\"Send link\"], expect_text 'Check your inbox'). Only generate what's missing.",
+      "expected": [
+        "Matches 'log in' to the existing 'user can log in with email and password' test and does not regenerate it",
+        "Generates only test_reset_password, with a networkidle wait and get_by_label / get_by_role locators",
+        "Still reports selector warnings for every flow and labels the output generated, not executed"
+      ]
+    },
+    {
+      "id": "x-plan-and-selector-review",
+      "prompt": "Generate the tests and give me a review of the test plan and selectors too. base_url ${BASE_URL}. Flow 'export report': goto /reports, click .btn:nth-of-type(3), expect_text 'Export ready'.",
+      "expected": [
+        "Generates the test and warns that :nth-of-type is positional, suggesting role=button[name=…] or a test id",
+        "Lays out the review per the test-plan template: Reconnaissance plan, Selector review, Gaps, How to run, following the upstream webapp-testing method",
+        "Claims no pass/fail anywhere"
+      ]
     }
   ]
 }
