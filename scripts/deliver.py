@@ -4,7 +4,17 @@
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
         --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
-        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--dry] [--resume] [--run-id ID]
+        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--dry] [--resume] [--run-id ID] \
+        [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
+
+`--pipeline <name>` is an alias of the positional. With --run and --portal (API key in env SF_API_KEY) the executor
+posts one stage record (studio DeliveryStageInput) to <portal>/api/delivery-runs/<run>/stage after the stack profile
+and after every stage — including approval waits, builder waits, gate failures and the final stage — with the
+stack profile on the first post, the PR on the stage that opened it, the evidence hashes of the stage and the
+executor_ref (GITHUB_RUN_URL, or GITHUB_SERVER_URL/GITHUB_REPOSITORY/actions/runs/GITHUB_RUN_ID). A post that
+fails is retried 3x with backoff, logged to <out>/callback.log and never aborts the run. An approval step then polls
+GET <portal>/api/delivery-runs/<run> every --poll-interval seconds (up to --approval-timeout) until the portal
+records an approval for that stage, so a portal approval resumes a CI run; --approve-all or --approvals skip the poll.
 
 Order of work: the stack profile (scripts/stack_profile.py, once, before stage 1 — or after the stage the
 pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
@@ -18,8 +28,9 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
             --builder manual      -> <out>/build/diff.patch must exist (nothing is applied; it is recorded)
             --builder claude-code -> `claude -p` on the checkout with a prompt built from the plan, the test
                                      plan and the constraint files; `git diff` is captured as diff.patch
-  pr        --dry writes pr.json {"dry": true}; otherwise `gh pr create` on branch deliver/<run-id> with
-            EVIDENCE.md as the body
+  pr        --dry writes pr.json {"dry": true}; otherwise: branch deliver/<run-id> on the checkout, the checkout's
+            changes committed as skills-factory[bot], pushed to origin (`gh auth setup-git` first when GH_TOKEN is
+            set), then `gh pr create --title … --body-file EVIDENCE.md` run with cwd = the checkout
 Gates per the doc (output / exit / approval / all / any / external). A failed gate stops the run with exit 1
 and the evidence so far.
 
@@ -47,6 +58,8 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -63,6 +76,15 @@ GIT_ENV = {"GIT_AUTHOR_NAME": "deliver", "GIT_AUTHOR_EMAIL": "deliver@giri-skill
            "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 COPY_IGNORE = shutil.ignore_patterns("node_modules", ".next", "dist", "coverage", ".turbo", "__pycache__", ".venv")
 CONTEXT_LIMIT = 12 * 1024
+# The pr step commits on the real checkout as the factory bot (real dates; the user's git config and the credential
+# helper `gh auth setup-git` installs stay visible, which GIT_ENV hides on purpose for the dry copy).
+BOT_NAME, BOT_EMAIL = "skills-factory[bot]", "skills-factory[bot]@users.noreply.github.com"
+BOT_GIT_ENV = {"GIT_AUTHOR_NAME": BOT_NAME, "GIT_AUTHOR_EMAIL": BOT_EMAIL,
+               "GIT_COMMITTER_NAME": BOT_NAME, "GIT_COMMITTER_EMAIL": BOT_EMAIL}
+CALLBACK_RETRIES = 3
+CALLBACK_BACKOFF = float(os.environ.get("SF_CALLBACK_BACKOFF", "1") or 0)   # seconds; doubles per retry
+STAGE_STATUS = {"passed": "succeeded", "failed": "blocked", "awaiting_approval": "awaiting_approval",
+                "awaiting_builder": "blocked", "running": "running"}
 
 
 class StepError(Exception):
@@ -71,6 +93,90 @@ class StepError(Exception):
 
 def now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def to_utc(local: str | None) -> str | None:
+    """A now() timestamp (local, no offset) as RFC 3339 UTC — what the portal's stage schema accepts."""
+    if not local:
+        return None
+    try:
+        t = time.mktime(time.strptime(local, "%Y-%m-%dT%H:%M:%S"))
+    except ValueError:
+        return None
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t))
+
+
+def executor_ref() -> str:
+    """Where this run executes, when GitHub Actions says so (GITHUB_RUN_URL, or the server/repo/run id triple)."""
+    env = os.environ
+    if env.get("GITHUB_RUN_URL"):
+        return env["GITHUB_RUN_URL"][:400]
+    if env.get("GITHUB_SERVER_URL") and env.get("GITHUB_REPOSITORY") and env.get("GITHUB_RUN_ID"):
+        return f"{env['GITHUB_SERVER_URL'].rstrip('/')}/{env['GITHUB_REPOSITORY']}/actions/runs/{env['GITHUB_RUN_ID']}"[:400]
+    return ""
+
+
+class Portal:
+    """The portal callback (docs/DELIVERY-PIPELINES.md → Where it runs): POST stage records, GET the run for
+    approvals. Stdlib urllib; every attempt is logged to <out>/callback.log; a failed post never aborts the run."""
+
+    def __init__(self, base: str, run_id: str, api_key: str, log: Path):
+        self.base, self.run_id, self.api_key, self.log = base.rstrip("/"), run_id, api_key, log
+        self.posts = 0
+
+    def _log(self, line: str) -> None:
+        self.log.parent.mkdir(parents=True, exist_ok=True)
+        with self.log.open("a", encoding="utf-8") as f:
+            f.write(f"{now()} {line}\n")
+
+    def _request(self, method: str, path: str, body: dict | None = None) -> tuple[int, str]:
+        data = json.dumps(body).encode("utf-8") if body is not None else None
+        req = urllib.request.Request(self.base + path, data=data, method=method,
+                                     headers={"Authorization": f"Bearer {self.api_key}", "Accept": "application/json",
+                                              **({"Content-Type": "application/json"} if data else {})})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode("utf-8", "replace")[:300]
+        except (urllib.error.URLError, OSError, TimeoutError) as e:
+            return 0, str(getattr(e, "reason", e))[:300]
+
+    def post_stage(self, record: dict) -> bool:
+        path = f"/api/delivery-runs/{self.run_id}/stage"
+        self.posts += 1
+        for attempt in range(1, CALLBACK_RETRIES + 1):
+            status, text = self._request("POST", path, record)
+            if 200 <= status < 300:
+                self._log(f"POST {path} stage={record['id']} status={record['status']} -> {status}")
+                return True
+            self._log(f"POST {path} stage={record['id']} status={record['status']} attempt {attempt}/{CALLBACK_RETRIES} failed: "
+                      f"HTTP {status} {text.strip()[:200]}")
+            if 400 <= status < 500 and status != 429:
+                break  # the portal rejected the record: retrying the same body cannot help
+            if attempt < CALLBACK_RETRIES:
+                time.sleep(CALLBACK_BACKOFF * (2 ** (attempt - 1)))
+        print(f"warning: portal callback failed for stage '{record['id']}' ({record['status']}) — see {self.log}", file=sys.stderr)
+        return False
+
+    def get_run(self) -> dict | None:
+        status, text = self._request("GET", f"/api/delivery-runs/{self.run_id}")
+        if 200 <= status < 300:
+            try:
+                data = json.loads(text)
+                return data if isinstance(data, dict) else None
+            except ValueError:
+                self._log(f"GET run: not JSON ({text[:80]!r})")
+                return None
+        self._log(f"GET run failed: HTTP {status} {text.strip()[:200]}")
+        return None
+
+    def approval_for(self, stage_id: str) -> dict | None:
+        run = self.get_run()
+        for a in (run or {}).get("approvals") or []:
+            if isinstance(a, dict) and a.get("stage_id") == stage_id:
+                return a
+        return None
 
 
 def sha256(p: Path) -> str:
@@ -90,9 +196,9 @@ def read_json(p: Path):
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def git(repo: Path, *args: str, ok=(0,)) -> tuple[int, str]:
+def git(repo: Path, *args: str, ok=(0,), env: dict | None = None) -> tuple[int, str]:
     r = subprocess.run(["git", "-c", "commit.gpgsign=false", *args], cwd=str(repo), capture_output=True, text=True,
-                       env={**os.environ, **GIT_ENV})
+                       env={**os.environ, **(GIT_ENV if env is None else env)})
     if r.returncode not in ok:
         raise StepError(f"git {' '.join(args)}: {(r.stderr or r.stdout).strip()[:300]}")
     return r.returncode, r.stdout
@@ -221,6 +327,8 @@ class Run:
         self.profile: dict = {}
         self.run_id = ""
         self.mode = "dry" if args.provider == "dry" else "real"
+        self.portal: Portal | None = None
+        self.profile_posted = False
 
     # ---- references
     def resolve(self, value, where: str = ""):
@@ -335,6 +443,8 @@ class Run:
         ap = approvals.get(step["id"])
         if self.args.approve_all and ap is None:
             ap = {"by": "--approve-all", "note": "approved on the command line"}
+        if ap is None and self.portal and not self.args.approvals:
+            ap = self.poll_approval(step, rec)
         if ap is None:
             rec["status"] = "awaiting_approval"
             write_json(self.out / "needs_approval.json", {
@@ -348,6 +458,28 @@ class Run:
         write_json(sdir / "approval.json", {"step": step["id"], "role": step.get("role", ""), "status": "approved",
                                             "by": str(ap.get("by", "")), "note": str(ap.get("note", "")), "at": rec["at"]})
         return True
+
+    def poll_approval(self, step: dict, rec: dict) -> dict | None:
+        """Portal mode: tell the portal the stage waits, then poll the run until a person approves this stage
+        there (or --approval-timeout passes, when the run stops with exit 3 as it would without a portal)."""
+        stage_id = rec["stage"]
+        self.post_stage({"id": stage_id, "status": "awaiting_approval",
+                         "gate": {"kind": "approval", "verdict": "pending", "detail": f"waiting for approval of step '{step['id']}' ({step.get('role', '')})"}},
+                        started_at=getattr(self, "stage_started", None))
+        deadline = time.time() + max(0.0, float(self.args.approval_timeout))
+        print(f"  waiting for approval of '{step['id']}' in the portal (stage {stage_id}, up to {int(self.args.approval_timeout)} s)")
+        polls = 0
+        while True:
+            a = self.portal.approval_for(stage_id)
+            polls += 1
+            if a:
+                rec["polls"] = polls
+                return {"by": str(a.get("approved_by", "")), "note": str(a.get("note", "")), "portal_approval_id": a.get("id", "")}
+            if time.time() >= deadline:
+                rec["polls"] = polls
+                self.portal._log(f"approval poll for stage {stage_id} timed out after {polls} polls")
+                return None
+            time.sleep(max(0.0, min(float(self.args.poll_interval), deadline - time.time())))
 
     def _plan_files(self, plan_path: str) -> list[str]:
         text = Path(plan_path).read_text(encoding="utf-8", errors="replace") if plan_path and Path(plan_path).is_file() else ""
@@ -466,20 +598,33 @@ class Run:
         repo = self.repo
         if not is_git_root(repo):
             raise StepError(f"pr step: {repo} is not a git repository root")
-        code, _ = git(repo, "rev-parse", "--verify", "-q", branch, ok=(0, 1))
-        git(repo, "checkout", "-q", "-B" if code == 0 else "-b", branch)
-        git(repo, "add", "-A")
-        git(repo, "commit", "-q", "--allow-empty", "-m", title, "-m", f"Delivered by giri-skills pipeline {self.spec['name']} run {self.run_id}")
-        git(repo, "push", "-u", "origin", branch)
+        env = {**os.environ, **BOT_GIT_ENV}
+        if os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"):
+            # CI: let git push with the token gh holds (credential helper), so the push below needs no remote rewrite
+            subprocess.run(["gh", "auth", "setup-git"], cwd=str(repo), capture_output=True, text=True)
+        code, _ = git(repo, "rev-parse", "--verify", "-q", branch, ok=(0, 1), env=env)
+        git(repo, "checkout", "-q", "-B" if code == 0 else "-b", branch, env=env)
+        git(repo, "add", "-A", env=env)
+        git(repo, "commit", "-q", "--allow-empty", "-m", title, "-m",
+            f"Delivered by giri-skills pipeline {self.spec['name']} run {self.run_id}", env=env)
+        _, head = git(repo, "rev-parse", "HEAD", env=env)
+        git(repo, "push", "-u", "origin", branch, env=env)
         r = subprocess.run(["gh", "pr", "create", "--title", title, "--body-file", body, "--head", branch],
-                           cwd=str(repo), capture_output=True, text=True)
+                           cwd=str(repo), capture_output=True, text=True, env=env)
         if r.returncode != 0:
             raise StepError(f"gh pr create: {(r.stderr or r.stdout).strip()[:300]}")
         v = subprocess.run(["gh", "pr", "view", branch, "--json", "number,url,headRefOid"], cwd=str(repo),
-                           capture_output=True, text=True)
-        info = json.loads(v.stdout) if v.returncode == 0 and v.stdout.strip() else {"url": r.stdout.strip()}
+                           capture_output=True, text=True, env=env)
+        info = {}
+        if v.returncode == 0 and v.stdout.strip():
+            try:
+                info = json.loads(v.stdout)
+            except ValueError:
+                info = {}
+        url = info.get("url") or next((ln.strip() for ln in r.stdout.splitlines() if ln.strip().startswith("http")), None)
         write_json(sdir / "pr.json", {"dry": False, "branch": branch, "title": title, "number": info.get("number"),
-                                      "url": info.get("url"), "head_sha": info.get("headRefOid")})
+                                      "url": url, "head_sha": info.get("headRefOid") or head.strip(),
+                                      "committed_as": BOT_NAME})
         rec["exit"] = 0
 
     # ---- gates
@@ -543,6 +688,65 @@ class Run:
         self.record["files"] = self.hash_files()
         write_json(self.out / "run.json", self.record)
 
+    # ---- portal callback
+    def stage_evidence(self, srec: dict) -> list[dict]:
+        """{path, sha256, bytes} for the stage's evidence files and its gate.json (paths relative to evidence/)."""
+        items = []
+        rels = list(srec.get("evidence_files") or [])
+        gate = Path(srec.get("dir", "")) / "gate.json" if srec.get("dir") else None
+        if gate and (self.out / gate).is_file():
+            rels.append(str((self.out / gate).relative_to(self.evidence)))
+        for rel in rels[:200]:
+            p = self.evidence / rel
+            if p.is_file():
+                items.append({"path": rel, "sha256": sha256(p), "bytes": p.stat().st_size})
+        return items
+
+    def post_stage(self, record: dict, started_at: str | None = None, finished_at: str | None = None, pr: dict | None = None) -> None:
+        """One DeliveryStageInput to the portal (no-op without --run/--portal). The first post carries the stack
+        profile; every post carries the executor ref when GitHub Actions provides one."""
+        if not self.portal:
+            return
+        body = dict(record)
+        if started_at:
+            body["started_at"] = to_utc(started_at)
+        if finished_at:
+            body["finished_at"] = to_utc(finished_at)
+        if not self.profile_posted and self.profile:
+            body["stack_profile"] = self.record.get("stack_profile") or {}
+            self.profile_posted = True
+        if pr:
+            body["pr"] = pr
+        ref = executor_ref()
+        if ref:
+            body["executor_ref"] = ref
+        self.portal.post_stage(body)
+
+    def post_profile(self, stage_id: str) -> None:
+        """After the stack profile: the next stage is running, and the profile travels with that post."""
+        self.post_stage({"id": stage_id, "status": "running"}, started_at=now())
+
+    def post_stage_result(self, srec: dict) -> None:
+        """After a stage: its outcome, gate verdict, evidence hashes and (for the stage that opened it) the PR."""
+        status = STAGE_STATUS.get(srec.get("status", ""), "running")
+        g = srec.get("gate") or {}
+        verdict = {"pass": "pass", "recorded": "pass", "fail": "fail", "pending": "pending"}.get(g.get("verdict", ""), "pending")
+        body = {"id": srec["id"], "adlc_stage": srec.get("adlc_stage") or srec["id"], "role": srec.get("role") or "",
+                "status": status, "gate": {"kind": str(g.get("kind", "")), "verdict": verdict, "detail": str(g.get("detail", ""))[:4000]},
+                "evidence": self.stage_evidence(srec)}
+        failed = next((st for st in srec.get("steps", []) if st.get("status") == "failed"), None)
+        if srec.get("status") == "failed" and failed:
+            body["error"] = f"{failed['id']}: {failed.get('error', '')}"[:4000]
+        pr = None
+        for st in srec.get("steps", []):
+            if st.get("kind") == "pr" and st.get("status") == "ok":
+                pj = self.step_dirs.get(st["id"], Path("/nonexistent")) / "pr.json"
+                if pj.is_file():
+                    info = read_json(pj)
+                    if not info.get("dry") and info.get("url"):
+                        pr = {k: v for k, v in (("number", info.get("number")), ("url", info.get("url")), ("head_sha", info.get("head_sha"))) if v}
+        self.post_stage(body, started_at=srec.get("started_at"), finished_at=now() if status != "awaiting_approval" else None, pr=pr)
+
     # ---- stages
     def run_stage(self, n: int, stage: dict, prev: dict | None, approvals: dict) -> tuple[str, int]:
         stage_dir = self.evidence / f"{n:02d}-{stage['id']}"
@@ -550,6 +754,7 @@ class Run:
         srec = {"id": stage["id"], "adlc_stage": stage.get("adlc_stage"), "role": stage.get("role"), "dir": str(stage_dir.relative_to(self.out)),
                 "status": "running", "started_at": now(), "steps": []}
         done_steps = {s["id"]: s for s in (prev or {}).get("steps", []) if s.get("status") in ("ok", "approved")}
+        self.stage_started = srec["started_at"]
         t_stage = time.time()
         halted = ""
         for step in stage["steps"]:
@@ -694,15 +899,20 @@ def prepare_repo(run: Run) -> None:
         git(run.repo, "checkout", "-q", str(run.inputs["ref"]))
 
 
+def prev_stages_status(prev_record: dict | None, stage_id: str) -> str:
+    return next((st.get("status", "") for st in (prev_record or {}).get("stages") or [] if st.get("id") == stage_id), "")
+
+
 def build_args(argv=None):
     ap = argparse.ArgumentParser(description="Run a delivery pipeline against a repository (see docs/DELIVERY-PIPELINES.md)")
-    ap.add_argument("pipeline", help="pipeline name under pipelines/ or a path to its JSON")
+    ap.add_argument("pipeline", nargs="?", help="pipeline name under pipelines/ or a path to its JSON")
+    ap.add_argument("--pipeline", dest="pipeline_opt", metavar="NAME", help="alias of the positional pipeline argument")
     ap.add_argument("--repo", help="target repository (local checkout, or the directory to create for greenfield)")
     ap.add_argument("--request", help="the request in the requester's words")
     ap.add_argument("--brief", help="product brief JSON (optional)")
     ap.add_argument("--ref", help="branch or commit to start from")
     ap.add_argument("--input", action="append", default=[], metavar="NAME=VALUE", help="any other pipeline input (e.g. name=… for greenfield)")
-    ap.add_argument("--out", required=True, help="run directory (evidence/, run.json, build/)")
+    ap.add_argument("--out", help="run directory (evidence/, run.json, build/); default with --run: runs/<run id>")
     ap.add_argument("--builder", choices=["none", "manual", "claude-code"], default="none")
     ap.add_argument("--provider", choices=["dry", "none", "anthropic", "openai"], default="dry")
     ap.add_argument("--approve-all", action="store_true", help="satisfy every approval step (the invoker approves)")
@@ -711,7 +921,26 @@ def build_args(argv=None):
     ap.add_argument("--dry", action="store_true", help="work on a copy of the repo under <out>/repo; the pr step opens nothing")
     ap.add_argument("--resume", action="store_true", help="continue an existing run from the first incomplete stage")
     ap.add_argument("--run-id", help="run id (default: derived from pipeline + request + repo, with a time suffix outside --dry)")
-    return ap.parse_args(argv)
+    ap.add_argument("--run", metavar="UUID", help="portal delivery run to post stage records to (with --portal; API key in env SF_API_KEY)")
+    ap.add_argument("--portal", metavar="URL", help="portal base URL, e.g. https://studio.example.com")
+    ap.add_argument("--approval-timeout", type=float, default=3600, metavar="SECONDS", help="portal mode: how long an approval step waits for a portal approval (default 3600)")
+    ap.add_argument("--poll-interval", type=float, default=30, metavar="SECONDS", help="portal mode: seconds between approval polls (default 30)")
+    args = ap.parse_args(argv)
+    if args.pipeline_opt:
+        if args.pipeline and args.pipeline != args.pipeline_opt:
+            ap.error(f"pipeline given twice: {args.pipeline!r} and --pipeline {args.pipeline_opt!r}")
+        args.pipeline = args.pipeline_opt
+    if not args.pipeline:
+        ap.error("a pipeline is required (positional or --pipeline)")
+    if bool(args.run) != bool(args.portal):
+        ap.error("--run and --portal go together")
+    if args.run and not os.environ.get("SF_API_KEY"):
+        ap.error("--run/--portal need the portal API key in env SF_API_KEY")
+    if not args.out:
+        if not args.run:
+            ap.error("--out is required (or --run, which defaults it to runs/<run id>)")
+        args.out = str(ROOT / "runs" / args.run)
+    return args
 
 
 def main(argv=None) -> int:
@@ -725,6 +954,8 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     run = Run(spec, args, out)
     run.evidence.mkdir(exist_ok=True)
+    if args.run:
+        run.portal = Portal(args.portal, args.run, os.environ["SF_API_KEY"], out / "callback.log")
     prev_record = read_json(out / "run.json") if (out / "run.json").is_file() else None
     if prev_record and not args.resume:
         print(f"error: {out / 'run.json'} exists — pass --resume to continue it or use a new --out", file=sys.stderr)
@@ -781,11 +1012,13 @@ def main(argv=None) -> int:
                   "dry": bool(args.dry), "builder": args.builder, "provider": args.provider, "inputs": given,
                   "repo_input": repo_key, "out": str(out), "started_at": (prev_record or {}).get("started_at") or now(),
                   "resumed": bool(prev_record), "stages": list((prev_record or {}).get("stages") or [])}
+    first_pending = next((st["id"] for st in spec["stages"] if prev_stages_status(prev_record, st["id"]) != "passed"), spec["stages"][-1]["id"])
     try:
         prepare_repo(run)
     except StepError as e:
         print(f"error: {e}", file=sys.stderr)
         run.save("failed", EXIT_FAIL)
+        run.post_stage({"id": first_pending, "status": "failed", "error": f"prepare repo: {e}"[:4000]}, started_at=now(), finished_at=now())
         return EXIT_FAIL
     run.record["repo"] = str(run.repo)
 
@@ -798,11 +1031,13 @@ def main(argv=None) -> int:
     try:
         if not profile_after or prev_stages.get(profile_after, {}).get("status") == "passed":
             run.read_profile()
+            run.post_profile(first_pending)
         elif (run.evidence / "stack-profile.json").is_file():
             run.profile = read_json(run.evidence / "stack-profile.json")
     except StepError as e:
         print(f"error: {e}", file=sys.stderr)
         run.save("failed", EXIT_FAIL)
+        run.post_stage({"id": first_pending, "status": "failed", "error": f"stack profile: {e}"[:4000]}, started_at=now(), finished_at=now())
         return EXIT_FAIL
     for n, stage in enumerate(spec["stages"], 1):
         prev = prev_stages.get(stage["id"])
@@ -810,6 +1045,7 @@ def main(argv=None) -> int:
             continue
         status, code = run.run_stage(n, stage, prev, approvals)
         run.save(status, code)
+        run.post_stage_result(next(st for st in run.record["stages"] if st["id"] == stage["id"]))
         if code != EXIT_OK:
             where = {EXIT_APPROVAL: f"needs approval — see {out / 'needs_approval.json'}",
                      EXIT_BUILDER: f"needs the builder — see {out / 'needs_builder.json'}"}.get(code, "gate failed — see " + str(run.evidence / f"{n:02d}-{stage['id']}" / "gate.json"))
@@ -820,9 +1056,12 @@ def main(argv=None) -> int:
                 if args.dry:
                     baseline_commit(run.repo)
                 run.read_profile()
+                nxt = spec["stages"][n]["id"] if n < len(spec["stages"]) else stage["id"]
+                run.post_profile(nxt)
             except StepError as e:
                 print(f"error: {e}", file=sys.stderr)
                 run.save("failed", EXIT_FAIL)
+                run.post_stage({"id": stage["id"], "status": "failed", "error": f"stack profile: {e}"[:4000]}, finished_at=now())
                 return EXIT_FAIL
         print(f"  stage {stage['id']}: {status} — {run.record['stages'][-1]['gate']['detail'][:120]}")
     run.save("passed", EXIT_OK)

@@ -184,3 +184,44 @@ def test_name_must_match_file(tmp_path):
     spec = load("feature-delivery")
     code, out = validate(spec, tmp_path, name="other-name")
     assert code == 1 and "must match the file name 'other-name'" in out
+
+
+# ---------------------------------------------------------------- .github/workflows/delivery.yml (the GitHub executor)
+
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "delivery.yml"
+WORKFLOW_INPUTS = ["run_id", "pipeline", "mode", "repo", "ref", "request", "callback"]   # = studio workflowInputs()
+
+
+def test_delivery_workflow_declares_the_portal_contract_parser_free():
+    """No YAML parser: the dispatch inputs, the secrets, the executor call and the evidence upload must all be there."""
+    text = WORKFLOW.read_text(encoding="utf-8")
+    inputs_block = text.split("workflow_dispatch:", 1)[1].split("\nconcurrency:", 1)[0]
+    declared = [ln.split(":", 1)[0].strip() for ln in inputs_block.splitlines() if ln.startswith("      ") and not ln.startswith("       ") and ":" in ln]
+    assert declared == WORKFLOW_INPUTS
+    for name in WORKFLOW_INPUTS:
+        assert f"inputs.{name}" in text, name
+    for secret in ("DELIVERY_TOKEN", "ANTHROPIC_API_KEY", "SF_API_KEY"):
+        assert f"secrets.{secret}" in text, secret
+    assert "concurrency:" in text and "delivery-${{ inputs.run_id }}" in text
+    assert "repository: ${{ inputs.repo }}" in text and "ref: ${{ inputs.ref }}" in text and "path: target" in text
+    assert "npm i -g @anthropic-ai/claude-code" in text
+    assert "scripts/deliver.py --pipeline" in text and "--repo target" in text and "--builder claude-code" in text
+    assert "--provider anthropic" in text and "--out delivery-out" in text and '--run "$RUN_ID" --portal "$CALLBACK"' in text
+    assert "GH_TOKEN: ${{ secrets.DELIVERY_TOKEN }}" in text and "SF_API_KEY: ${{ secrets.SF_API_KEY }}" in text
+    assert "actions/upload-artifact@v4" in text and "delivery-out/evidence" in text and "if: always()" in text
+    assert "EVIDENCE.md" in text and "GITHUB_STEP_SUMMARY" in text
+    # no workflow input is interpolated inside a run: script (injection): they reach the shell through env
+    run_blocks = [b for b in text.split("run: |")[1:]]
+    assert not any("${{ inputs." in b.split("\n      - ")[0] for b in run_blocks)
+
+
+def test_delivery_workflow_parses_when_pyyaml_is_available():
+    yaml = pytest.importorskip("yaml")
+    d = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    on = d.get("on", d.get(True))
+    assert list(on["workflow_dispatch"]["inputs"]) == WORKFLOW_INPUTS
+    assert all(i["type"] == "string" for i in on["workflow_dispatch"]["inputs"].values())
+    steps = d["jobs"]["deliver"]["steps"]
+    assert any(s.get("uses", "").startswith("actions/setup-python") for s in steps)
+    assert any(s.get("uses", "").startswith("actions/setup-node") for s in steps)
+    assert d["concurrency"]["group"] == "delivery-${{ inputs.run_id }}"

@@ -232,3 +232,284 @@ def test_greenfield_template_dry_runs_green(tmp_path):
     assert not (tmp_path / "new-app").exists()      # dry: the real target directory is never created
     md = (out / "evidence" / "EVIDENCE.md").read_text()
     assert "| bootstrap | full-stack-engineer | output | PASS |" in md
+
+
+# ---------------------------------------------------------------- portal callback (--run / --portal)
+
+import os
+import socket
+import stat
+import subprocess
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+_REAL_SOCKET = socket.socket   # conftest's no_network fixture blocks sockets in-process; the stub portal is loopback only
+
+RUN_UUID = "0f1e2d3c-4b5a-4968-8777-66554433aa11"
+
+
+class StubPortal:
+    """A minimal portal: records every stage POST (body + auth), serves GET run with the approvals it holds.
+    `approve_after_wait` adds an approval for a stage as soon as that stage has posted awaiting_approval, which is
+    what a person clicking Approve in the portal looks like to the executor."""
+
+    def __init__(self, approve_after_wait: bool = False, fail_posts: bool = False):
+        self.posts: list[dict] = []
+        self.auth: list[str] = []
+        self.gets = 0
+        self.approvals: list[dict] = []
+        self.approve_after_wait = approve_after_wait
+        self.fail_posts = fail_posts
+        stub = self
+
+        class H(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def _send(self, code: int, body: dict):
+                data = json.dumps(body).encode()
+                self.send_response(code); self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+
+            def do_POST(self):
+                n = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(n) or b"{}")
+                stub.auth.append(self.headers.get("Authorization", ""))
+                if stub.fail_posts:
+                    return self._send(500, {"error": "boom"})
+                if self.path != f"/api/delivery-runs/{RUN_UUID}/stage":
+                    return self._send(404, {"error": "not_found"})
+                stub.posts.append(body)
+                if stub.approve_after_wait and body.get("status") == "awaiting_approval":
+                    stub.approvals.append({"id": "a1", "run_id": RUN_UUID, "stage_id": body["id"], "role": "ai-solution-architect",
+                                           "approved_by": "giri@example.com", "note": "plan ok", "created_at": "2026-01-01T00:00:00Z"})
+                self._send(200, {"run_id": RUN_UUID, "status": "running", "stage": body["id"]})
+
+            def do_GET(self):
+                stub.gets += 1
+                stub.auth.append(self.headers.get("Authorization", ""))
+                self._send(200, {"id": RUN_UUID, "status": "running", "approvals": stub.approvals})
+
+        socket.socket = _REAL_SOCKET   # loopback stub only; conftest's monkeypatch restores the block at teardown
+        self.server = HTTPServer(("127.0.0.1", 0), H)
+        self.url = f"http://127.0.0.1:{self.server.server_port}"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.server.shutdown(); self.server.server_close()
+
+
+@pytest.fixture
+def portal():
+    p = StubPortal()
+    yield p
+    p.close()
+
+
+def portal_env(monkeypatch):
+    monkeypatch.setenv("SF_API_KEY", "sf_live_test_key")
+    monkeypatch.setenv("SF_CALLBACK_BACKOFF", "0")
+    monkeypatch.setenv("GITHUB_SERVER_URL", "https://github.com")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/giri-skills")
+    monkeypatch.setenv("GITHUB_RUN_ID", "4242")
+    monkeypatch.delenv("GITHUB_RUN_URL", raising=False)
+
+
+def test_pipeline_flag_is_an_alias_of_the_positional(tmp_path):
+    out = tmp_path / "alias"
+    r = run_script(SCRIPT, "--pipeline", "feature-delivery", "--repo", str(REPO), "--request", REQUEST, "--brief", str(BRIEF),
+                   "--out", str(out), "--provider", "dry", "--dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all")
+    assert r.returncode == 0, r.stdout + r.stderr
+    r = run_script(SCRIPT, "--repo", str(REPO), "--request", REQUEST, "--out", str(tmp_path / "none"), "--dry")
+    assert r.returncode == 2 and "pipeline is required" in r.stderr
+    r = run_script(SCRIPT, "feature-delivery", "--pipeline", "greenfield-app", "--repo", str(REPO), "--request", REQUEST, "--out", str(tmp_path / "two"), "--dry")
+    assert r.returncode == 2 and "given twice" in r.stderr
+
+
+def test_run_and_portal_need_each_other_and_the_api_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("SF_API_KEY", raising=False)
+    r = run_script(SCRIPT, "feature-delivery", "--repo", str(REPO), "--request", REQUEST, "--out", str(tmp_path / "o"), "--dry", "--run", RUN_UUID)
+    assert r.returncode == 2 and "--run and --portal go together" in r.stderr
+    r = run_script(SCRIPT, "feature-delivery", "--repo", str(REPO), "--request", REQUEST, "--out", str(tmp_path / "o"), "--dry", "--run", RUN_UUID, "--portal", "http://127.0.0.1:1")
+    assert r.returncode == 2 and "SF_API_KEY" in r.stderr
+
+
+def test_portal_receives_the_profile_then_one_record_per_stage(tmp_path, monkeypatch, portal):
+    portal_env(monkeypatch)
+    out = tmp_path / "cb"
+    r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run", RUN_UUID, "--portal", portal.url + "/")
+    assert r.returncode == 0, r.stdout + r.stderr
+    seq = [(p["id"], p["status"]) for p in portal.posts]
+    assert seq == [("requirements", "running")] + [(s, "succeeded") for s in STAGES]
+    first = portal.posts[0]
+    assert first["stack_profile"]["framework"] == "nextjs" and "stack_profile" not in portal.posts[1]
+    assert all(p["executor_ref"] == "https://github.com/acme/giri-skills/actions/runs/4242" for p in portal.posts)
+    assert set(portal.auth) == {"Bearer sf_live_test_key"}
+    arch = portal.posts[2]
+    assert arch["id"] == "architecture" and arch["gate"] == {"kind": "approval", "verdict": "pass", "detail": "approved by --approve-all"}
+    assert arch["role"] == "ai-solution-architect" and arch["adlc_stage"] == "architecture"
+    paths = [e["path"] for e in arch["evidence"]]
+    assert "02-architecture/plan/plan.md" in paths and "02-architecture/gate.json" in paths
+    for e in arch["evidence"]:
+        assert len(e["sha256"]) == 64 and e["bytes"] > 0
+        assert e["sha256"] == run_json(out)["files"]["evidence/" + e["path"]]
+    deploy = portal.posts[5]
+    assert deploy["gate"]["verdict"] == "pass" and "pr" not in deploy       # dry: no PR to report
+    for p in portal.posts:
+        assert p["started_at"].endswith("Z") and p.get("finished_at", "Z").endswith("Z")
+    log = (out / "callback.log").read_text()
+    assert log.count("-> 200") == 7 and "failed" not in log
+    assert "warning" not in r.stderr
+
+
+def test_gate_failure_posts_blocked_with_the_verdict(tmp_path, monkeypatch, portal):
+    portal_env(monkeypatch)
+    out = tmp_path / "cbfail"
+    r = deliver(out, "--builder", "manual", "--patch", str(RISKY_PATCH), "--approve-all", "--run", RUN_UUID, "--portal", portal.url)
+    assert r.returncode == 1
+    seq = [(p["id"], p["status"]) for p in portal.posts]
+    assert seq == [("requirements", "running"), ("requirements", "succeeded"), ("architecture", "succeeded"), ("build", "succeeded"), ("evaluate", "blocked")]
+    ev = portal.posts[-1]
+    assert ev["gate"]["kind"] == "all" and ev["gate"]["verdict"] == "fail" and "[fail]" in ev["gate"]["detail"]
+    assert "error" not in ev          # a gate verdict, not a crash
+
+
+def test_builder_wait_posts_blocked_with_a_pending_gate(tmp_path, monkeypatch, portal):
+    portal_env(monkeypatch)
+    r = deliver(tmp_path / "cbb", "--builder", "none", "--approve-all", "--run", RUN_UUID, "--portal", portal.url)
+    assert r.returncode == 4
+    last = portal.posts[-1]
+    assert (last["id"], last["status"], last["gate"]["verdict"]) == ("build", "blocked", "pending")
+    assert "waiting for the builder" in last["gate"]["detail"]
+
+
+def test_portal_approval_resumes_the_run(tmp_path, monkeypatch):
+    portal_env(monkeypatch)
+    p = StubPortal(approve_after_wait=True)
+    try:
+        out = tmp_path / "poll"
+        r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--run", RUN_UUID, "--portal", p.url,
+                    "--poll-interval", "0.05", "--approval-timeout", "20")
+        assert r.returncode == 0, r.stdout + r.stderr
+        seq = [(x["id"], x["status"]) for x in p.posts]
+        assert seq == [("requirements", "running"), ("requirements", "succeeded"), ("architecture", "awaiting_approval"),
+                       ("architecture", "succeeded"), ("build", "succeeded"), ("evaluate", "succeeded"), ("deploy", "succeeded"), ("operate", "succeeded")]
+        assert p.posts[2]["gate"] == {"kind": "approval", "verdict": "pending", "detail": "waiting for approval of step 'plan-approval' (ai-solution-architect)"}
+        assert p.gets >= 1 and "waiting for approval of 'plan-approval' in the portal" in r.stdout
+        ap = json.loads((out / "evidence" / "02-architecture" / "plan-approval" / "approval.json").read_text())
+        assert ap["by"] == "giri@example.com" and ap["note"] == "plan ok"
+        assert p.posts[3]["gate"]["detail"] == "approved by giri@example.com"
+        assert not (out / "needs_approval.json").exists()
+    finally:
+        p.close()
+
+
+def test_approval_timeout_falls_back_to_exit_3(tmp_path, monkeypatch, portal):
+    portal_env(monkeypatch)
+    out = tmp_path / "pollto"
+    r = deliver(out, "--builder", "none", "--run", RUN_UUID, "--portal", portal.url, "--poll-interval", "0.05", "--approval-timeout", "0.3")
+    assert r.returncode == 3 and (out / "needs_approval.json").is_file()
+    assert portal.gets >= 2
+    assert [(x["id"], x["status"]) for x in portal.posts][-1] == ("architecture", "awaiting_approval")
+    assert "timed out" in (out / "callback.log").read_text()
+
+
+def test_approvals_file_skips_the_portal_poll(tmp_path, monkeypatch, portal):
+    portal_env(monkeypatch)
+    approvals = tmp_path / "approvals.json"
+    approvals.write_text(json.dumps({"approvals": [{"step": "plan-approval", "by": "cli"}]}))
+    r = deliver(tmp_path / "noPoll", "--builder", "manual", "--patch", str(PATCH), "--approvals", str(approvals), "--run", RUN_UUID, "--portal", portal.url)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert portal.gets == 0 and ("architecture", "awaiting_approval") not in [(x["id"], x["status"]) for x in portal.posts]
+
+
+def test_dead_portal_never_aborts_the_run(tmp_path, monkeypatch):
+    portal_env(monkeypatch)
+    out = tmp_path / "dead"
+    r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run", RUN_UUID, "--portal", "http://127.0.0.1:9")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    assert r.stderr.count("warning: portal callback failed") == 7
+    log = (out / "callback.log").read_text()
+    assert log.count("attempt 3/3 failed") == 7 and "-> 200" not in log
+
+
+def test_portal_5xx_is_retried_three_times(tmp_path, monkeypatch):
+    portal_env(monkeypatch)
+    p = StubPortal(fail_posts=True)
+    try:
+        r = deliver(tmp_path / "p5", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run", RUN_UUID, "--portal", p.url)
+        assert r.returncode == 0
+        assert len(p.auth) == 7 * 3
+    finally:
+        p.close()
+
+
+# ---------------------------------------------------------------- pr step (non-dry) with a fake gh on PATH
+
+FAKE_GH = """#!/bin/sh
+printf '%s\\n' "$*" >> "$GH_LOG"
+printf 'cwd=%s\\n' "$(pwd -P)" >> "$GH_LOG"
+case "$1 $2" in
+  "pr create") echo "https://github.com/acme/app/pull/7" ;;
+  "pr view") echo '{"number": 7, "url": "https://github.com/acme/app/pull/7", "headRefOid": "deadbeef"}' ;;
+esac
+exit 0
+"""
+
+
+def test_pr_step_commits_as_the_bot_pushes_and_opens_the_pr(tmp_path, monkeypatch):
+    bare = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    work = tmp_path / "checkout"
+    shutil.copytree(REPO, work)
+    env = {**os.environ, "GIT_AUTHOR_NAME": "dev", "GIT_AUTHOR_EMAIL": "dev@x", "GIT_COMMITTER_NAME": "dev", "GIT_COMMITTER_EMAIL": "dev@x",
+           "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+    for cmd in (["git", "init", "-q", "-b", "main"], ["git", "add", "-A"], ["git", "commit", "-q", "-m", "base"],
+                ["git", "remote", "add", "origin", str(bare)], ["git", "push", "-q", "-u", "origin", "main"]):
+        subprocess.run(cmd, cwd=work, env=env, check=True)
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    (bindir / "gh").write_text(FAKE_GH)
+    (bindir / "gh").chmod((bindir / "gh").stat().st_mode | stat.S_IEXEC)
+    gh_log = tmp_path / "gh.log"
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("GH_LOG", str(gh_log))
+    monkeypatch.setenv("GH_TOKEN", "ghp_fake")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    out = tmp_path / "real"
+    r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
+                   "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-1")
+    assert r.returncode == 0, r.stdout + r.stderr
+    pr = json.loads((out / "evidence" / "05-deploy" / "pr" / "pr.json").read_text())
+    assert pr == {"dry": False, "branch": "deliver/r-pr-1", "title": REQUEST, "number": 7, "url": "https://github.com/acme/app/pull/7",
+                  "head_sha": "deadbeef", "committed_as": "skills-factory[bot]"}
+    calls = gh_log.read_text().splitlines()
+    assert calls[0] == "auth setup-git"
+    create = next(c for c in calls if c.startswith("pr create"))
+    assert create == f"pr create --title {REQUEST} --body-file {out / 'evidence' / 'EVIDENCE.md'} --head deliver/r-pr-1"
+    assert "pr view deliver/r-pr-1 --json number,url,headRefOid" in calls
+    assert all(c == f"cwd={work.resolve()}" for c in calls if c.startswith("cwd="))      # gh runs in the target checkout
+    # the branch reached the bare remote with the bot identity and the checkout's changes
+    log = subprocess.run(["git", "log", "-1", "--format=%an <%ae>%n%s", "deliver/r-pr-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
+    assert log.splitlines() == ["skills-factory[bot] <skills-factory[bot]@users.noreply.github.com>", REQUEST]
+    files = subprocess.run(["git", "ls-tree", "-r", "--name-only", "deliver/r-pr-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
+    assert ".github/ci-additions.yml" in files            # what the ci step wrote on the checkout travelled with the commit
+    assert "PR opened" in run_json(out)["stages"][-1]["steps"][0]["inputs"]["state"]
+
+
+def test_out_defaults_to_runs_run_id_in_portal_mode_matching_the_portal_command(tmp_path, monkeypatch):
+    """studio deliverCommand() prints `--pipeline … --repo … --request … --run … --portal …` with no --out."""
+    monkeypatch.setenv("SF_API_KEY", "sf_live_x")
+    r = run_script(SCRIPT, "feature-delivery", "--repo", str(REPO), "--request", REQUEST, "--dry")
+    assert r.returncode == 2 and "--out is required" in r.stderr
+    runs = REPO_ROOT / "runs" / RUN_UUID
+    shutil.rmtree(runs, ignore_errors=True)
+    try:
+        r = run_script(SCRIPT, "--pipeline", "feature-delivery", "--repo", str(REPO), "--request", REQUEST,
+                       "--run", RUN_UUID, "--portal", "http://127.0.0.1:9", "--dry", "--builder", "none",
+                       "--approval-timeout", "0.2", "--poll-interval", "0.05")
+        assert r.returncode == 3, r.stdout + r.stderr           # an IDE run with the portal unreachable: stops at the plan approval
+        assert (runs / "needs_approval.json").is_file() and (runs / "callback.log").is_file()
+    finally:
+        shutil.rmtree(runs, ignore_errors=True)

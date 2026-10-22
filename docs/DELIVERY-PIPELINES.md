@@ -160,7 +160,7 @@ arbitrary `$run.*` or `$profile.*` key (the validator rejects it).
 | `compose` | a deterministic derivation of a file a later skill needs from what earlier steps wrote (`brief-from-request`, `spec-from-prd`, `feature-from-plan` — implemented in `scripts/deliver.py`, nothing invented, unknowns left to the skills' TBD markers) | the declared `outputs` |
 | `agent` | a coding agent (`claude-code` first) on the checkout, constrained by the listed files and the plan; it may only touch files the plan names. `--builder none` stops the run (exit 4, `needs_builder.json`) for a person or IDE agent; `--builder manual` records a diff supplied at `<out>/build/diff.patch` | diff.patch, files-changed.json (files outside the plan are flagged), agent-summary.md |
 | `approval` | waits for a person holding the stage's role (portal) or the requester (IDE); on the CLI, `--approve-all` or an `--approvals approvals.json` file (`{"approvals": [{"step", "by", "note"}]}`) satisfies it, otherwise the run stops with exit 3 and `needs_approval.json` | approval.json: who, when, note |
-| `pr` | opens the pull request on the target repo with the evidence bundle (`gh pr create`, branch `deliver/<run-id>`, body `EVIDENCE.md`); `--dry` writes `pr.json` with `{"dry": true}` | pr.json (number, url, head sha) |
+| `pr` | on the checkout: branch `deliver/<run-id>`, the checkout's changes committed as `skills-factory[bot]`, `gh auth setup-git` when `GH_TOKEN` is set, push to `origin`, then `gh pr create --title <title> --body-file EVIDENCE.md` with cwd = the checkout; `--dry` writes `pr.json` with `{"dry": true}` and touches nothing | pr.json (number, url, head sha, committed_as) |
 
 ### Gate kinds
 `output` (a check on a step's file, check vocabulary of `scripts/check_output.py`), `exit` (step exit code 0),
@@ -190,17 +190,58 @@ evidence; an approval step is satisfied only by a member assigned to the stage's
 ## Where it runs
 | Entry | Executor | Human gates |
 |---|---|---|
-| Portal → Deliver | GitHub Actions `delivery.yml` in giri-skills, dispatched with repo, ref, request, pipeline | approval in the portal; merge on the PR |
-| IDE (Claude Code, Cursor) → MCP `deliver` | the same `scripts/deliver.py` on the developer's machine; evidence posted to the portal | approval in the terminal; merge on the PR |
+| Portal → Deliver | GitHub Actions `.github/workflows/delivery.yml` in giri-skills, dispatched (`workflow_dispatch`) with `run_id, pipeline, mode, repo, ref, request, callback` | approval in the portal (the executor polls for it); merge on the PR |
+| IDE (Claude Code, Cursor) → MCP `deliver` | the same `scripts/deliver.py` on the developer's machine with `--run <id> --portal <url>` (the portal prints the command); evidence posted to the portal | approval in the portal or the terminal; merge on the PR |
 | CI (`deliver.py --dry`) | `validate.yml` step "Delivery pipelines (dry)" runs feature-delivery on `tests/fixtures/delivery-repo`; `tests/test_deliver.py` dry-runs both templates | none |
+
+### The GitHub executor (`delivery.yml`)
+One job per run (concurrency group `delivery-<run_id>`): checkout giri-skills; Python 3.12 + Node 22; checkout the
+target `inputs.repo` at `inputs.ref` (default branch when empty) into `target/`; `npm i -g @anthropic-ai/claude-code`;
+`python3 scripts/deliver.py --pipeline … --repo target --request … --run <run_id> --portal <callback> --run-id <run_id>
+--builder claude-code --provider anthropic --out delivery-out`; upload `delivery-out/evidence` (plus run.json,
+callback.log, needs_*.json) as the artifact `evidence-<run_id>` — always, even when a gate fails; write EVIDENCE.md
+into the job summary. Workflow inputs never reach a `run:` script as expressions; they are passed through env.
+
+Three repository secrets (giri-skills → Settings → Secrets and variables → Actions):
+
+| Secret | Used by | Scope |
+|---|---|---|
+| `DELIVERY_TOKEN` | target checkout (`token:`), `GH_TOKEN` for the pr step (`gh auth setup-git`, push `deliver/<run-id>`, `gh pr create`) | fine-grained PAT or GitHub App token with **contents: write** and **pull-requests: write** on the target repositories |
+| `ANTHROPIC_API_KEY` | the build step's Claude Code (`claude -p`) and every skill's model step (`--provider anthropic`) | an Anthropic API key |
+| `SF_API_KEY` | `scripts/deliver.py` → `POST /api/delivery-runs/<id>/stage`, `GET /api/delivery-runs/<id>` | a portal API key (`sf_live_…`) of the workspace, created by a member who holds the pipeline's role (API-key reads and writes are scoped to that workspace) |
+
+The portal side needs `DELIVERY_GITHUB_TOKEN` (Actions: write on giri-skills) to dispatch the workflow —
+`studio/.env.example`.
+
+### The portal callback (`--run <id> --portal <url>`, key in `SF_API_KEY`)
+The executor posts one `DeliveryStageInput` (`studio/lib/validation.ts`) to `<portal>/api/delivery-runs/<id>/stage`:
+
+| When | Stage record |
+|---|---|
+| after the stack profile | `{id: <first pending stage>, status: running, stack_profile: {...}}` — the profile travels only on the first post |
+| after every stage | `status` succeeded (gate pass/recorded) · blocked (gate fail, or waiting for the builder with verdict `pending`) · awaiting_approval; `gate {kind, verdict, detail}`; `evidence [{path, sha256, bytes}]` for the stage's evidence files and its `gate.json` (paths relative to `evidence/`); `started_at` / `finished_at` in UTC |
+| the stage with the `pr` step | plus `pr {number, url, head_sha}` (never in `--dry`) |
+| the stack profile or the checkout fails | `status: failed` with `error` |
+| every post | `executor_ref` when GitHub Actions sets `GITHUB_RUN_URL` (or `GITHUB_SERVER_URL` + `GITHUB_REPOSITORY` + `GITHUB_RUN_ID`) |
+
+A post that fails is retried 3× with backoff (1 s, 2 s; `SF_CALLBACK_BACKOFF` overrides), every attempt is logged
+to `<out>/callback.log`, a warning is printed and the run continues — the evidence bundle is the record, the portal
+is the mirror. An **approval** step in portal mode posts `awaiting_approval`, then polls `GET /api/delivery-runs/<id>`
+every `--poll-interval` (30 s) until `approvals[]` holds that stage, up to `--approval-timeout` (3600 s); the approval
+is recorded in `approval.json` (by, note) and the run continues — so approving in the portal resumes the CI run.
+After the timeout the run stops with exit 3 as it would without a portal. `--approve-all` and `--approvals` skip the poll.
 
 ## The executor (`scripts/deliver.py`)
 
 ```
-python3 scripts/deliver.py <pipeline> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
-    [--input name=value …] --out <dir> --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
+python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
+    [--input name=value …] [--out <dir>] --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
     [--approve-all | --approvals approvals.json] [--patch diff.patch] [--dry] [--resume] [--run-id ID]
+    [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
 ```
+
+`--out` is required unless `--run` is given, when it defaults to `runs/<run id>` under giri-skills — the command the
+portal prints (`deliverCommand`) therefore runs as printed.
 
 | Exit | Meaning |
 |---|---|
