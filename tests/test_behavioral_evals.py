@@ -247,3 +247,57 @@ def test_confidence_intervals_and_borderline_flag():
     assert lo < 0.2 < hi
     assert mod.skill_confidence([True] * 12, noisy)["confidence"] == "borderline"
     assert mod.lift_interval(noisy) == mod.lift_interval(noisy)   # fixed seed: reproducible
+
+
+# ---- local reasoning models (Ollama: qwen3, gemma) -------------------------------------------------------------
+
+def test_strip_reasoning_keeps_only_the_answer():
+    mod = _module()
+    assert mod.strip_reasoning("<think>pick one\nmaybe x</think>\naccount-plan") == "account-plan"
+    assert mod.strip_reasoning("<thinking>a</thinking>1. PASS - ok") == "1. PASS - ok"
+    assert mod.strip_reasoning("<think>ran out of tokens while thinking") == ""   # no answer at all
+    assert mod.strip_reasoning(None) == "" and mod.strip_reasoning("  plain  ") == "plain"
+
+
+def test_local_endpoint_detection(monkeypatch):
+    mod = _module()
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    assert not mod.local_endpoint()
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    assert not mod.local_endpoint()
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://192.168.1.5:11434/v1")
+    assert mod.local_endpoint()
+
+
+def test_empty_replies_mark_the_run_invalid(tmp_path, monkeypatch, capsys):
+    """A model that answers nothing must not produce a scorecard that reads as a verdict on the skills."""
+    mod = _module()
+
+    class Silent(mod.LLM):
+        name = "dry"
+
+        def complete(self, system, user, temperature=1.0, max_tokens=1500):
+            return "<think>never finishes"
+
+    monkeypatch.setattr(mod, "make_provider", lambda name, model: Silent())
+    out = tmp_path / "out"
+    monkeypatch.setattr(sys, "argv", ["behavioral_evals.py", "all", "--provider", "dry", "--runs", "1",
+                                      "--skills", SKILLS[0], "--out", str(out)])
+    assert mod.main() == 2
+    assert "INVALID RUN" in (out / "scorecard.md").read_text(encoding="utf-8")
+    assert "INVALID RUN" in capsys.readouterr().err
+
+
+def test_dry_run_is_valid(tmp_path):
+    proc, out = dry_run(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert "INVALID RUN" not in (out / "scorecard.md").read_text(encoding="utf-8")
+
+
+def test_local_endpoint_projects_zero_cost(monkeypatch):
+    mod = _module()
+    calls = [{"system": "x" * 400, "user": "y" * 400, "max_tokens": 100}]
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://10.0.0.2:11434/v1")
+    assert mod.project_cost(calls, "qwen3:14b", "openai")[2] == 0
+    monkeypatch.delenv("OPENAI_BASE_URL")
+    assert mod.project_cost(calls, "gpt-4.1-mini", "openai")[2] > 0
