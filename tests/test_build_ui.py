@@ -192,7 +192,7 @@ def test_malformed_input_clear_errors(tmp_path):
     empty = tmp_path / "empty"; empty.mkdir()
     (empty / "readme.md").write_text("x", encoding="utf-8")
     res, _, _, _ = lint(tmp_path, empty)
-    assert res.returncode == 1 and "no .tsx/.jsx component files" in res.stderr
+    assert res.returncode == 1 and "no React component files" in res.stderr
     bad = tmp_path / "bad.csv"; bad.write_text("a,b\n1,2\n", encoding="utf-8")
     res, _, _, _ = lint(tmp_path, FX / "repo-clean", "--baseline", str(bad))
     assert res.returncode == 1 and "baseline lacks column" in res.stderr
@@ -218,3 +218,64 @@ def test_skips_tests_stories_and_build_output(tmp_path):
     (root / "components/Ok.tsx").write_text('export const Ok = () => <img src="/x.png" alt="ok" />;\n', encoding="utf-8")
     res, rows, md, _ = lint(tmp_path, root)
     assert res.returncode == 0 and rows == [] and "in 1 component file(s)" in md
+
+
+# --- brownfield: JavaScript Next.js repos write JSX inside .js files (regression for "no .tsx/.jsx component files") ---
+
+def test_js_fixture_scans_jsx_js_files_and_skips_plain_js(tmp_path):
+    res, rows, md, cl = lint(tmp_path, FX / "repo-js")
+    assert res.returncode == 1 and "6 high-severity" in res.stderr, res.stderr
+    assert "no React component files" not in res.stderr
+    assert {r["rule"] for r in rows} == ALL_RULES - {"UI9"}  # UI9 needs a Props type; plain JS has none
+    assert "12 finding(s) in 4 component file(s): 6 high, 4 medium, 2 low" in md and "Gate: FAIL" in md
+    files = {r["file"] for r in rows}
+    assert files == {"components/features/orders/OrderTable.js", "components/features/orders/OrderDetail.js",
+                     "app/(app)/orders/page.js"}
+    # the plain .js utility, the route handler, middleware and config are never scanned
+    assert not any(f.startswith(("lib/", "app/api/")) or f in ("middleware.js", "next.config.js") for f in files)
+    where = {(r["rule"], r["file"], r["line"]) for r in rows}
+    assert ("UI1", "components/features/orders/OrderTable.js", "11") in where
+    assert ("UI2", "components/features/orders/OrderTable.js", "21") in where
+    assert ("UI3", "app/(app)/orders/page.js", "9") in where
+    assert ("UI4", "components/features/orders/OrderTable.js", "12") in where
+    assert ("UI5", "components/features/orders/OrderDetail.js", "9") in where
+    assert ("UI8", "components/features/orders/OrderDetail.js", "14") in where
+    assert "6 finding(s)" not in cl.split("| 1.1.1 |")[1].split("\n")[0]
+
+
+def test_js_detection_is_conservative(tmp_path):
+    root = tmp_path / "repo"
+    cases = {
+        # scanned: JSX evidence
+        "components/A.js": 'export function A() {\n  return (\n    <img src="/a.png" />\n  );\n}\n',
+        "components/B.js": 'export const B = () => <img src="/b.png" />;\n',
+        "components/C.js": 'import { useState } from "react";\nexport function C() {\n  const el = <img src="/c.png" />;\n  return el;\n}\n',
+        "app/loading.js": 'export default function L() {\n  return (<><img src="/l.png" /></>);\n}\n',
+        "components/D.ts": 'export function D() {\n  return <img src="/d.png" />;\n}\n',
+        # not scanned: no JSX — comparisons, HTML strings, hooks-only, next imports, route handlers, tests, configs
+        "lib/util.js": 'export const lt = (a, b) => a < b;\nexport const html = `<img src="/x.png"><input placeholder="x">`;\n',
+        "lib/hook.js": 'import { useEffect } from "react";\nexport function useX() { useEffect(() => {}, []); return null; }\n',
+        "app/api/x/route.js": 'import { NextResponse } from "next/server";\nexport function GET() { return NextResponse.json({ img: "<img src=\'/x.png\'>" }); }\n',
+        "middleware.js": 'import { NextResponse } from "next/server";\nexport function middleware() { return NextResponse.next(); }\n',
+        "components/A.test.js": 'export function T() { return <img src="/t.png" />; }\n',
+        "components/A.spec.js": 'export function T() { return <img src="/t.png" />; }\n',
+        "types.d.ts": 'declare module "x";\n',
+        "next.config.js": 'module.exports = { reactStrictMode: true };\n',
+    }
+    for rel, src in cases.items():
+        p = root / rel; p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(src, encoding="utf-8")
+    res, rows, md, _ = lint(tmp_path, root)
+    assert res.returncode == 1
+    assert sorted(r["file"] for r in rows) == ["app/loading.js", "components/A.js", "components/B.js",
+                                                "components/C.js", "components/D.ts"]
+    assert {r["rule"] for r in rows} == {"UI1"} and "in 5 component file(s)" in md
+
+
+def test_js_only_repo_without_jsx_reports_clear_error(tmp_path):
+    root = tmp_path / "repo"
+    (root / "lib").mkdir(parents=True)
+    (root / "lib/a.js").write_text("export const a = 1;\n", encoding="utf-8")
+    (root / "api.ts").write_text("export const b = (x: number) => x < 2;\n", encoding="utf-8")
+    res, _, _, _ = lint(tmp_path, root)
+    assert res.returncode == 1 and "no React component files" in res.stderr and ".js/.ts files containing JSX" in res.stderr

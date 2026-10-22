@@ -3,8 +3,9 @@
 `scripts/audit_debt.py` is static analysis only: it reads source files, never runs the app, never reads git history, never touches the network. Every rule below is checkable by hand with the method in the "How it is checked" column; thresholds are constants at the top of the script, echoed in the report.
 
 ## Scope
-- Files: `.ts .tsx .js .jsx .mjs` under the target, skipping `node_modules .next out dist build coverage .git` and `*.d.ts`.
-- Test files (`tests/ test/ __tests__/ spec/` folders, `*.test.* *.spec.*`) join the import graph — an import from a test counts as a use for TD5 and as coverage for TD8 — but are not audited for TD1, TD2, TD6, TD7.
+- Files: `.ts .tsx .js .jsx .mjs` under the target, skipping `node_modules .next out dist build coverage .git` and `*.d.ts`. A JavaScript repo (no `tsconfig.json`, `.js/.jsx` sources) is audited exactly like a TypeScript one: every rule reads `.js/.jsx/.mjs` the same way as `.ts/.tsx`, except TD7, which only applies to `.ts/.tsx` because `any` is a TypeScript construct.
+- Test files (`tests/ test/ __tests__/ spec/` folders, `*.test.* *.spec.*`) join the import graph — an import from a test counts as a use for TD5 and as coverage for TD8 — but are never audited (no TD1–TD8 finding is ever reported on a test file).
+- `evals/` (eval corpora and harnesses) joins the import graph the same way but is never audited and never counts as test coverage for TD8.
 - Import graph: relative imports (`./`, `../`) and the `@/` alias (repo root). Package imports are ignored. `import X`, `import { a as b }`, `import * as ns`, `import type`, `export { a } from`, `export * from`, `import("…")` and `require("…")` are all parsed.
 
 ## Rules
@@ -14,10 +15,25 @@
 | TD2 god-file | medium; **high** above 800 lines | Line count > 400 or exported symbols > 12. Exports counted: `export function/class/const/let/var/type/interface/enum`, `export default`, `export { a, b }`. | Split by responsibility behind the existing exports (an `index.ts` re-export keeps callers unchanged); one move per PR; characterisation test first. |
 | TD3 circular-import | high | Tarjan strongly-connected components over the import graph of audited files. One finding per cycle, on the alphabetically first file, at its import line; the snippet lists the cycle. | Extract the shared piece (type, constant, helper) into a third module both import, or invert one edge via dependency injection / a callback parameter. Type-only cycles: use `import type`. |
 | TD4 layering-violation | high | A file under `lib/` importing a module under `app/` or `components/`; a file under `app/` importing a module under `app/` that is neither in its own folder subtree, nor in an ancestor folder, nor in a private (`_`-prefixed, non-route) folder — i.e. a sibling route folder. | Move the shared helper to `lib/` (pure) or `server/` (server-side) and import it from both routes; `lib/` must never know about UI or routes. |
-| TD5 dead-export | medium | An exported symbol that no other file imports by name (a `*`/namespace import or `export *` of the module counts as using everything). Excluded: `index.*` files, root config/`middleware`/`instrumentation` files, everything in `app/**/route.*`, and the framework exports of `app/**/page|layout|loading|error|not-found|template|default.*` (`default`, `metadata`, `generateMetadata`, `generateStaticParams`, `dynamic`, `revalidate`, `runtime`, …). | Delete it, or un-export it if it is only used inside the file. If it is a public package surface, say so in a comment and record it as known debt in the baseline. |
+| TD5 dead-export | medium | An exported symbol that no other file imports by name (a `*`/namespace import or `export *` of the module counts as using everything). Excluded: `index.*` files, the root files and Next.js special files listed under **TD5 exclusion list** below. | Delete it, or un-export it if it is only used inside the file. If it is a public package surface, say so in a comment and record it as known debt in the baseline. |
 | TD6 todo-comment | low | `TODO`, `FIXME` or `HACK` at the start of a `//`, `/*`, `*` or `#` comment. One finding per file with the count; the age is unknown because no history is read. | Turn each into a ticket (`TODO(ABC-123)`) or delete it; `code-review-runner` CR-TODO then keeps new owner-less ones out. |
-| TD7 any-density | medium | Count of the `any` keyword in comment- and string-stripped text of a `.ts/.tsx` file; > 5 flags the file. | Type the boundaries first (`unknown` + a zod/type guard at the entry point), then let inference remove the rest; keep `any` only with an `// eslint-disable-next-line` and a reason. |
-| TD8 missing-tests | medium | For each `lib/**/*.ts(x)` (not `index`): no file under `tests/ test/ __tests__/ spec/` whose name contains the module stem, and no `<stem>.test|spec.*` sibling in the same folder. | Add a unit test file named after the module; for data-access modules, test against a fake client. Do this before any TD1/TD2 refactor that touches the module. |
+| TD7 any-density | medium | Count of the `any` keyword in comment- and string-stripped text of a `.ts/.tsx` file; > 5 flags the file. `.js/.jsx` files are skipped by design (`any` is a TypeScript construct). | Type the boundaries first (`unknown` + a zod/type guard at the entry point), then let inference remove the rest; keep `any` only with an `// eslint-disable-next-line` and a reason. |
+| TD8 missing-tests | medium | For each `lib/**/*.{ts,tsx,js,jsx,mjs}` (not `index`): no file under `tests/ test/ __tests__/ spec/` whose name contains the module stem, and no `<stem>.test|spec.*` sibling in the same folder. | Add a unit test file named after the module; for data-access modules, test against a fake client. Do this before any TD1/TD2 refactor that touches the module. |
+
+## TD5 exclusion list — exports the framework consumes
+Next.js loads these by file name; no import ever names them, so they are never dead. The list is the same for `.js .jsx .ts .tsx` (and `.mjs/.cjs` at the root) and lives in `FRAMEWORK_FILES`, `FRAMEWORK_EXPORTS` and `ROOT_FRAMEWORK` at the top of the script.
+
+| Where | Files | Exports not counted as dead |
+|---|---|---|
+| `app/**` (also `src/app/**`, route groups, parallel `@slot/` and dynamic `[param]/` folders) | `page`, `layout`, `template`, `loading`, `error`, `global-error`, `not-found`, `default` | `default`, `metadata`, `generateMetadata`, `viewport`, `generateViewport`, `generateStaticParams`, `dynamic`, `dynamicParams`, `revalidate`, `fetchCache`, `runtime`, `preferredRegion`, `maxDuration`, `experimental_ppr` |
+| `app/**` | `route` | every export (`GET`, `POST`, …, plus the segment config above) |
+| `app/**` | `manifest`, `robots`, `sitemap` | `default`, `generateSitemaps`, plus the segment config above |
+| `app/**` | `opengraph-image`, `twitter-image`, `icon`, `apple-icon` | `default`, `alt`, `size`, `contentType`, `generateImageMetadata`, plus the segment config above |
+| repo root | `middleware.*`, `instrumentation.*`, `instrumentation-client.*`, `next.config.*`, any `*.config.*` (`sentry.client.config.js`, `vitest.config.js`, `playwright.config.js`, `tailwind.config.ts`, …) | every export |
+| anywhere | `index.*` | every export (a barrel re-export is a public surface by design) |
+| `tests/ test/ __tests__/ spec/`, `*.test.* *.spec.*`, `evals/` | all | not audited at all (importers only) |
+
+Any other export in a special file — a helper `export function parseSlug()` in `app/blog/[slug]/page.js`, a constant in `app/sitemap.js` — is still a TD5 candidate when nothing imports it: move it to `lib/` or un-export it. `pages/` (Pages Router) is not special-cased; record its `default`/`getStaticProps` findings as known in the baseline.
 
 ## Severity and the gate
 - `high` = TD3, TD4, TD2 above 800 lines. The script exits 1 only when a **new** high finding exists; medium and low findings never gate.
@@ -27,6 +43,7 @@
 - TD1 on generated code or intentionally parallel adapters: record them in the baseline; the rule is a judgement prompt, not a verdict.
 - TD4 for a Next.js `app/` tree that shares a private `_components/` or `_lib/` folder: `_`-prefixed folders are not routes, so `app/_components/nav` imported from `app/(app)/x/page.tsx` does not fire; ancestor folders (`app/providers.tsx`) do not fire either; only sibling route folders do.
 - TD5 for symbols imported through a path alias other than `@/` (e.g. `~/`): the graph does not resolve them, so they look unused. Add the alias to `resolve_import` or record the findings as known.
+- TD5 on a file the framework loads by name that is not in the exclusion list above (a new Next.js convention, a `pages/` file, a Storybook `*.stories.*`, a tool loaded from `scripts/`): add the stem to `FRAMEWORK_FILES` / `ROOT_FRAMEWORK` with a one-line reason, add it to the table above, and cover it in `evals/fixtures/repo-nextjs-special`; until then record the finding as known.
 - TD7 in a file that wraps an untyped third-party SDK: type the wrapper's public surface and accept the internal `any` as known debt.
 - TD8 for `lib/` modules that are pure types or constants: there is nothing to test; record as known.
 

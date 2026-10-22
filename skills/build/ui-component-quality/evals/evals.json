@@ -118,6 +118,49 @@
       ]
     },
     {
+      "id": "agent-brownfield-js-components",
+      "prompt": "Our Next.js repo is plain JavaScript — components and pages are .js files with JSX, API routes are route.js, and it deploys to AWS. Run the UI quality check on it.",
+      "expected": [
+        "Scans the .js files that contain JSX (components, app pages, loading.js) and finds the same kinds of violations as in a TypeScript repo: UI1, UI2, UI3, UI4, UI8 (high), UI5, UI6, UI7 (medium), UI10, UI11 (low)",
+        "Does not scan plain .js files without JSX — lib/orders.js, app/api/orders/route.js, middleware.js, next.config.js — so no finding names them and the file count is 4",
+        "Exits 1 with the failing gate instead of reporting 'no component files'"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-js"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity,status]"
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:file~^(components/|app/\\(app\\)/).*\\.js$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"UI2,components/features/orders/OrderTable.js,21\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"UI8,components/features/orders/OrderDetail.js,14\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"UI3,app/(app)/orders/page.js,9\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"12 finding(s) in 4 component file(s): 6 high, 4 medium, 2 low\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: FAIL\""
+        }
+      ]
+    },
+    {
       "id": "x-review-pasted-icon-button",
       "prompt": "Review this before I merge (components/ui/DeleteButton.tsx):\n\nexport function DeleteButton({ onDelete }: { onDelete: () => void }) {\n  return (\n    <button type=\"button\" onClick={onDelete}>\n      <TrashIcon className=\"h-4 w-4\" />\n    </button>\n  );\n}",
       "expected": [

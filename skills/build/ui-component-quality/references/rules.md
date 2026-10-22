@@ -1,6 +1,6 @@
 # Rules — what `ui_lint.py` flags, why, and how to fix it
 
-Static, source-only heuristics over `.tsx`/`.jsx` (tests, stories, `node_modules`, `.next`, `dist`, `build`, `coverage` skipped). Every rule has a clean fixture that does not trigger it and a violation fixture that does (`evals/fixtures/`). Spread props (`{...rest}`) make a tag unknowable, so UI1–UI4 skip spread tags on purpose.
+Static, source-only heuristics over React component files: every `.tsx`/`.jsx`, plus the `.js`/`.ts` files that contain JSX — a JavaScript Next.js repo keeps components in `.js` (tests, stories, `.d.ts`, `node_modules`, `.next`, `dist`, `build`, `coverage` skipped). A `.js`/`.ts` file counts as a component when it returns or arrows into a JSX tag or fragment (`return (<…`, `return <…`, `=> <…`, `return (<>`), or imports `react`/`react-dom`/`next/*` and contains a JSX tag; `route`, `middleware`, `instrumentation` and `*.config` files never count. Plain utilities (comparisons like `a < b`, HTML in template strings) are therefore not scanned and cannot trip UI1–UI11. UI9 needs a TypeScript `Props` type, so it does not fire in plain JavaScript. Fixtures: `repo-violations`/`repo-clean` (TypeScript), `repo-js` (JavaScript brownfield shape: `.js` components, `route.js`, `middleware.js`, an AWS workflow). Every rule has a clean fixture that does not trigger it and a violation fixture that does (`evals/fixtures/`). Spread props (`{...rest}`) make a tag unknowable, so UI1–UI4 skip spread tags on purpose.
 
 | Rule | Severity | Flags | Rationale | Fix |
 |---|---|---|---|---|

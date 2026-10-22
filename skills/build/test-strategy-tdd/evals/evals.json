@@ -135,6 +135,53 @@
       ]
     },
     {
+      "id": "agent-mode-existing-js",
+      "prompt": "This is a JavaScript Next.js repo (page.js, components/*.js, vitest + playwright already set up as .js). Scaffold the tests for the coach nudges bell against what exists.",
+      "expected": [
+        "Reads the repo first: JavaScript flavour (no tsconfig, .js sources), vitest from package.json, tests/unit from vitest.config.js and tests/e2e from playwright.config.js, @/ alias from jsconfig.json",
+        "app/portal/page.js is a page (Playwright spec tests/e2e/app-portal-page.spec.js), components/AppShell.js is listed for a manual component test, the existing tests/unit/lib-coach.test.js is kept and read (criterion 3 covered, 1 and 2 to add); no .test.ts / .spec.ts is written into the JS repo"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature-coach.md",
+        "files": "app/portal/page.js,components/AppShell.js,lib/coach.js,app/api/health/route.js",
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing-js"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/e2e/app-portal-page.spec.js",
+        "exists:repo/tests/unit/app-api-health-route.test.js",
+        {
+          "file": "repo/tests/e2e/app-portal-page.spec.js",
+          "check": "contains:\"await page.goto(\\\"/portal\\\");\""
+        },
+        {
+          "file": "repo/tests/unit/app-api-health-route.test.js",
+          "check": "contains:\"from \\\"vitest\\\"\""
+        },
+        {
+          "file": "repo/tests/unit/lib-coach.test.js",
+          "check": "contains:\"written by the team before the bell feature\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"flavour\\\": \\\"js\\\"\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"tests/unit/components-appshell.test.jsx\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"| `tests/unit/lib-coach.test.js` | 1 | #3 |\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "sections:[\"Repo (read before write)\",\"Pyramid\",\"Criteria map\"]"
+        }
+      ]
+    },
+    {
       "id": "x-password-reset-feature",
       "prompt": "Feature: password reset — token validator, reset service, server action, /reset page. ACs: 1) valid token sets a new password; 2) expired token is rejected; 3) token is single-use. Tests first.",
       "expected": [

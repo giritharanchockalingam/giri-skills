@@ -68,13 +68,15 @@
       "id": "agent-custom-ci-missing-jobs-fails",
       "prompt": "Our ci.yml is customised and drops the RLS lint — leave it and mark CI as done.",
       "expected": [
-        "The customised ci.yml is kept, not overwritten; validation reports rls-lint and secrets-scan missing and exits 1 instead of marking CI done"
+        "The customised ci.yml is kept, not overwritten; rls-lint and secrets-scan are reported missing in the standard-jobs table and proposed in .github/ci-additions.yml to merge by hand; gate is NEEDS-MERGE (not PASS, CI is not marked done) and the run exits 0 instead of failing half-way"
       ],
       "inputs": {
-        "target": "evals/fixtures/repo-custom-ci"
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-custom-ci"
       },
       "checks": [
-        "exit:1",
+        "exit:0",
+        "exists:repo/.github/ci-additions.yml",
         {
           "file": "ci-report.json",
           "check": "contains:\"rls-lint\""
@@ -84,8 +86,16 @@
           "check": "contains:\"\\\"action\\\": \\\"kept\\\"\""
         },
         {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"ok\\\": false\""
+        },
+        {
           "file": "ci-report.md",
-          "check": "contains:\"gate: FAIL\""
+          "check": "contains:\"gate: NEEDS-MERGE\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"`rls-lint` | missing → `.github/ci-additions.yml`\""
         }
       ]
     },
@@ -116,6 +126,47 @@
         {
           "file": "ci-report.md",
           "check": "contains:\"gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing-aws",
+      "prompt": "Add our standard CI to this JavaScript Next.js repo. It already deploys to AWS ECS with its own workflows and has a ci.yml.",
+      "expected": [
+        "Reads the repo first: JavaScript flavour (jsconfig.json, no tsconfig) and AWS as the deploy target (aws-actions/, ECS) — a bare vercel.json and a *.vercel.app hostname in uptime.yml do not count as Vercel",
+        "preview.yml and prod.yml are NOT written; the report states the detected target (AWS) and that only the CI-only pieces apply",
+        "The team's ci.yml is kept; lint-typecheck-test, rls-lint and secrets-scan are reported missing and proposed in .github/ci-additions.yml; exit 0, no half-install"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-aws-existing-ci"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/.github/ci-additions.yml",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"deploy_workflows\\\": \\\"skipped\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"detected\\\": \\\"aws\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"flavour\\\": \\\"javascript\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"action\\\": \\\"skipped\\\"\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"this repo deploys to **AWS**\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: NEEDS-MERGE\""
         }
       ]
     },

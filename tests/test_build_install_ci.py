@@ -38,17 +38,27 @@ def test_fresh_install_writes_and_validates(tmp_path):
     assert "gate: PASS" in text and "## Workflows" in text and "## Branch protection" in text
 
 
-def test_existing_workflow_kept_and_missing_jobs_fail(tmp_path):
+def test_existing_workflow_kept_and_missing_jobs_proposed_as_additions(tmp_path):
     repo = tmp_path / "repo"
     shutil.copytree(FX / "repo-custom-ci", repo)
     before = (repo / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     res, data, md = run(tmp_path, repo)
-    assert res.returncode == 1
+    assert res.returncode == 0, res.stderr                                             # never fails on a kept ci.yml
     assert (repo / ".github/workflows/ci.yml").read_text(encoding="utf-8") == before   # never overwritten
     ci = next(w for w in data["workflows"] if w["workflow"] == "ci.yml")
     assert ci["action"] == "kept" and ci["missing_jobs"] == ["rls-lint", "secrets-scan"]
-    assert data["ok"] is False and "gate: FAIL" in md.read_text(encoding="utf-8")
-    assert "rls-lint" in res.stderr
+    assert ci["additions_path"] == ".github/ci-additions.yml" and ci["additions_action"] == "written"
+    adds = (repo / ".github/ci-additions.yml").read_text(encoding="utf-8")
+    assert "  rls-lint:" in adds and "  secrets-scan:" in adds and "  lint-typecheck-test:" not in adds
+    assert "rls_lint.py" in adds                                   # the job body comes from the asset, not a stub
+    text = md.read_text(encoding="utf-8")
+    assert data["ok"] is False and data["gate"] == "NEEDS-MERGE" and "gate: NEEDS-MERGE" in text
+    assert "| `.github/workflows/ci.yml` | `lint-typecheck-test` | present |" in text
+    assert "| `.github/workflows/ci.yml` | `rls-lint` | missing → `.github/ci-additions.yml` |" in text
+    # a second run is idempotent: identical additions file is kept, still exit 0
+    res2, data2, _ = run(tmp_path, repo)
+    assert res2.returncode == 0
+    assert next(w for w in data2["workflows"] if w["workflow"] == "ci.yml")["additions_action"] == "kept"
 
 
 def test_malformed_workflow_is_invalid(tmp_path):
@@ -56,10 +66,14 @@ def test_malformed_workflow_is_invalid(tmp_path):
     wf = repo / ".github/workflows"
     wf.mkdir(parents=True)
     (wf / "preview.yml").write_text("name: preview\nsteps:\n  - run: echo hi\n", encoding="utf-8")
-    res, data, _ = run(tmp_path, repo)
+    res, data, md = run(tmp_path, repo)
     assert res.returncode == 1
     pv = next(w for w in data["workflows"] if w["workflow"] == "preview.yml")
     assert pv["valid"] is False and "missing top-level on:" in pv["problems"] and "missing top-level jobs:" in pv["problems"]
+    # atomic: a malformed kept workflow means nothing lands in the repo, and the report says why
+    assert sorted(p.name for p in wf.iterdir()) == ["preview.yml"]
+    assert data["gate"] == "ABORTED" and data["writes"] == [] and "nothing written" in res.stderr
+    assert "## Conflicts (nothing was written)" in md.read_text(encoding="utf-8")
 
 
 def test_bad_input_exits_1(tmp_path):

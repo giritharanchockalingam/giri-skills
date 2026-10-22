@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
-"""Tech-debt audit of a TypeScript / Next.js repo — the pass a senior engineer makes on joining an unfamiliar codebase.
+"""Tech-debt audit of a TypeScript or JavaScript Next.js repo — the pass a senior engineer makes on joining an unfamiliar codebase.
 
     python3 -I scripts/audit_debt.py --target <repo> [--baseline findings.csv] [--owners owners.csv] \
         --findings findings.csv --report report.md --plan refactor-plan.md
 
 Static analysis only (no app run, no network, stdlib). Scans .ts/.tsx/.js/.jsx/.mjs, skipping node_modules,
-.next, out, dist, build, coverage, .git. Test files (tests/, __tests__/, *.test.*, *.spec.*) join the import
-graph (an import from a test counts as a use) but are not audited themselves. Rules:
+.next, out, dist, build, coverage, .git. Every rule treats .js/.jsx exactly like .ts/.tsx except TD7 (`any` is a
+TypeScript construct). Test files (tests/, __tests__/, *.test.*, *.spec.*) and evals/ join the import graph (an
+import from them counts as a use) but are not audited themselves. Rules:
 
   TD1 duplicate-logic       medium  near-identical function bodies (>= 6 normalised lines) in two different files
   TD2 god-file              medium  > 400 lines or > 12 exported symbols; HIGH above 800 lines
   TD3 circular-import       high    a cycle in the import graph (relative and `@/` imports)
   TD4 layering-violation    high    app/ importing an app/ sibling route folder; lib/ importing app/ or components/
-  TD5 dead-export           medium  an exported symbol no other file imports (framework files and index re-exports excluded)
+  TD5 dead-export           medium  an exported symbol no other file imports (Next.js special files, root config/middleware/
+                                    instrumentation files and index re-exports excluded — see FRAMEWORK_FILES / ROOT_FRAMEWORK)
   TD6 todo-comment          low     TODO / FIXME / HACK comments, one finding per file with the count (age unknown)
   TD7 any-density           medium  more than 5 `any` type usages in one file
-  TD8 missing-tests         medium  a lib/ module with no tests/**<stem>* file and no <stem>.test|spec.* sibling
+  TD8 missing-tests         medium  a lib/ module (.ts/.tsx/.js/.jsx/.mjs) with no tests/**<stem>* file and no <stem>.test|spec.* sibling
 
 Writes findings.csv (rule, file, line, snippet, severity, status), report.md (Summary, Findings, [Baseline], Rules)
 and refactor-plan.md (Summary, Architecture map, Priorities, Sequencing). Exit 1 only on NEW high findings (the
@@ -38,12 +40,20 @@ SKIP_DIRS = {"node_modules", ".next", "out", "dist", "build", "coverage", ".git"
 EXTS = (".ts", ".tsx", ".js", ".jsx", ".mjs")
 RESOLVE_SUFFIXES = (".ts", ".tsx", ".js", ".jsx", ".mjs", "/index.ts", "/index.tsx", "/index.js")
 TEST_DIRS = {"tests", "test", "__tests__", "spec"}
-TEST_FILE = re.compile(r"\.(test|spec)\.[jt]sx?$")
-FRAMEWORK_FILES = {"page", "layout", "route", "loading", "error", "not-found", "template", "default", "global-error"}
+TEST_FILE = re.compile(r"\.(test|spec)\.[cm]?[jt]sx?$")
+# Importers only, never audited (TD1–TD8) and never counted as test coverage for TD8: eval corpora and harnesses.
+AUX_DIRS = {"evals"}
+# Next.js App Router special files: the framework consumes their exports, no import ever will. Same set for .js/.jsx/.ts/.tsx.
+FRAMEWORK_FILES = {"page", "layout", "template", "loading", "error", "global-error", "not-found", "default", "route",
+                   "manifest", "robots", "sitemap", "opengraph-image", "twitter-image", "icon", "apple-icon"}
 FRAMEWORK_EXPORTS = {"default", "metadata", "generateMetadata", "generateStaticParams", "generateViewport", "viewport",
                      "dynamic", "dynamicParams", "revalidate", "fetchCache", "runtime", "preferredRegion", "maxDuration",
-                     "config", "middleware", "register", "onRequestError"}
-ROOT_FRAMEWORK = re.compile(r"^(middleware|instrumentation|[\w.-]+\.config)\.[jt]sx?$|^[\w.-]+\.config\.mjs$")
+                     "experimental_ppr", "config", "middleware", "register", "onRequestError",
+                     "alt", "size", "contentType", "generateImageMetadata", "generateSitemaps"}
+# Root-level files the framework or a tool loads by name: middleware, instrumentation(-client), next.config and any
+# *.config.* (sentry.*.config.js, vitest/playwright/tailwind config) — in every extension the scan accepts.
+ROOT_FRAMEWORK = re.compile(r"^(middleware|instrumentation(?:-client)?|[\w.-]+\.config)\.(?:[cm]?[jt]s|[jt]sx)$")
+APP_DIR = re.compile(r"^(?:src/)?app/")
 
 DUP_MIN_LINES = 6
 GOD_LINES, GOD_LINES_HIGH, GOD_EXPORTS = 400, 800, 12
@@ -91,6 +101,11 @@ def die(msg: str, code: int = 2) -> None:
 def is_test_path(rel: str) -> bool:
     parts = rel.split("/")
     return any(p in TEST_DIRS for p in parts[:-1]) or bool(TEST_FILE.search(parts[-1]))
+
+
+def is_audited(rel: str) -> bool:
+    """Tests and aux folders (evals/) are importers only: they keep symbols alive but are never audited."""
+    return not is_test_path(rel) and rel.split("/")[0] not in AUX_DIRS
 
 
 def source_files(root: Path) -> list[tuple[Path, str]]:
@@ -358,11 +373,13 @@ def find_dead_exports(graph: dict[str, list[dict]], exports: dict[str, list], au
             used.setdefault(e["target"], set()).update(e["names"])
     out = []
     for rel in sorted(audited):
+        if is_framework_file(rel):
+            continue
         name = rel.rsplit("/", 1)[-1]
         stem = name.rsplit(".", 1)[0]
-        if stem == "index" or ("/" not in rel and ROOT_FRAMEWORK.match(name)):
+        if stem == "index":
             continue
-        framework = rel.startswith("app/") and stem in FRAMEWORK_FILES
+        framework = bool(APP_DIR.match(rel)) and stem in FRAMEWORK_FILES
         u = used.get(rel, set())
         if "*" in u:
             continue
@@ -372,6 +389,11 @@ def find_dead_exports(graph: dict[str, list[dict]], exports: dict[str, list], au
             if sym not in u:
                 out.append(finding("TD5", rel, ln, f"export {sym} is never imported"))
     return out
+
+
+def is_framework_file(rel: str) -> bool:
+    """Root files loaded by name (middleware, instrumentation, *.config.*): every export is the framework's, not ours."""
+    return "/" not in rel and bool(ROOT_FRAMEWORK.match(rel))
 
 
 def find_todos(sources: dict[str, str]) -> list[dict]:
@@ -399,7 +421,7 @@ def find_missing_tests(audited: set[str], all_files: set[str]) -> list[dict]:
     test_files = [f for f in all_files if is_test_path(f)]
     out = []
     for rel in sorted(audited):
-        if not rel.startswith("lib/") or not rel.endswith((".ts", ".tsx")):
+        if not rel.startswith("lib/"):
             continue
         stem = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
         if stem == "index":
@@ -652,9 +674,9 @@ def audit(target: Path) -> tuple[list[dict], int, list[dict]]:
         die(f"no .ts/.tsx/.js/.jsx/.mjs source files under {target}")
     all_rel = {rel for _, rel in files}
     texts = {rel: p.read_text(encoding="utf-8", errors="replace") for p, rel in files}
-    audited = {rel for rel in all_rel if not is_test_path(rel)}
+    audited = {rel for rel in all_rel if is_audited(rel)}
     if not audited:
-        die(f"only test files under {target}; nothing to audit")
+        die(f"only test/eval files under {target}; nothing to audit")
     graph = {rel: parse_imports(strip_comments(texts[rel]), rel, all_rel) for rel in sorted(all_rel)}
     exports = {rel: parse_exports(strip_comments(texts[rel])) for rel in audited}
     src = {rel: texts[rel] for rel in sorted(audited)}
@@ -666,7 +688,7 @@ def audit(target: Path) -> tuple[list[dict], int, list[dict]]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Tech-debt audit of a TypeScript / Next.js repo (TD1–TD8)")
+    ap = argparse.ArgumentParser(description="Tech-debt audit of a TypeScript or JavaScript Next.js repo (TD1–TD8)")
     ap.add_argument("--target", default="", help="repo root")
     ap.add_argument("--verify", default="", help="verify a findings.csv written by this script (columns, rule ids, severities, statuses); exit 0 when valid")
     ap.add_argument("--baseline", default="", help="findings.csv from an earlier run: known debt that does not gate")

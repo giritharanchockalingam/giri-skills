@@ -42,3 +42,16 @@ HTTP: `200` for `ok`/`degraded`, `503` for `down`. `degraded` = any check slow (
 | Storage | if uploads are core | `storage.listBuckets()` limit 1 |
 | Queue / jobs table | if async flows are core | `select count(*) from jobs where status='pending' and created_at < now() - interval '15 min'` → degraded if > 0 |
 | Payment provider | optional | `GET /v1/balance` style lightweight call (cached 60 s) |
+
+## Brownfield: a health route already exists
+Keep it — never add `route.ts` beside `route.js` (Next.js resolves one and the other is dead code or a build error). `scripts/install.py` reports the existing route as `exists, kept` and runs this static check; close the gaps by editing the file in place.
+
+| Check | Standard | Typical gap |
+|---|---|---|
+| exports `GET` | the route responds | missing export → the monitor gets 405 |
+| `dynamic = "force-dynamic"` | never prerendered | cached "ok" during an outage |
+| `Cache-Control: no-store` | never cached by CDN | stale status |
+| build info (`version`/`sha`) | smoke test compares with the released commit | — |
+| `ts` | monitors spot a stuck clock | — |
+| liveness has no dependency calls (`fetch`, `.rpc(`, Supabase client) | a DB outage must not make the app look dead | existing route probes Supabase → move that probe to `/api/health/deep` |
+| deep: bearer-protected, per-dependency timeout, 503 on a required failure | see rules above | unauthenticated deep check exposes topology |
