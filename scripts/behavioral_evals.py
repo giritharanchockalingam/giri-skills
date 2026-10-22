@@ -705,6 +705,9 @@ def build_args():
     ap.add_argument("--budget-usd", type=float, default=15.0)
     ap.add_argument("--yes", action="store_true",
                     help="proceed even if projected cost exceeds the budget")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="parallel model calls (generations and routing first, then judges); 8 is a good value for "
+                         "OpenAI, 1–4 for a local Ollama server (set OLLAMA_NUM_PARALLEL there)")
     ap.add_argument("--resume", action="store_true",
                     help="reuse every reply already recorded in <out>/raw/calls.jsonl (a run that stopped "
                          "part-way — out of credits, network — continues without paying for finished calls)")
@@ -811,61 +814,71 @@ def main() -> int:
     started = time.monotonic()
     show_progress = args.provider != "dry"
 
-    def ask(system, user, temperature, max_tokens, key=None):
-        """One model call; the answer without any reasoning block, counted so empty replies cannot pass as scores.
-        With --resume, a reply recorded for the same (mode, skill, case, run) is reused and the model is not called."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    lock = threading.Lock()
+
+    def judge_user(call):
+        output = gen_cache.get((call["skill"], call["case_id"], call["run"], call["judge_for"]), "")
+        case = next(c for s, c in ok_cases if s["key"] == call["skill"] and c.get("id") == call["case_id"])
+        items = "\n".join(f"{i}. {e}" for i, e in enumerate(case["expected"], 1))
+        return judge_template.replace("{output}", output).replace("{expected_items}", items)
+
+    def run_call(call):
+        """One call end to end: ask (or reuse), log. Returns the reply. Safe to run on several threads: the model
+        client is re-entrant, the log and the counters are written under a lock."""
+        if call["kind"] == "judge":
+            user, temp = judge_user(call), 0
+            key = (call["kind"], call["skill"], call["case_id"], call["run"], call["judge_for"])
+        else:
+            user, temp = call["user"], call["temperature"]
+            key = (call["kind"], call["skill"], call["case_id"], call["run"], None)
+        with lock:
+            recorded = key in done_calls
+            if recorded:
+                return done_calls.pop(key)
         t0 = time.monotonic()
-        if key is not None and key in done_calls:
-            return done_calls.pop(key)
-        out = strip_reasoning(llm.complete(system, user, temperature=temperature, max_tokens=max_tokens))
-        replies["total"] += 1
-        replies["empty"] += not out
-        if show_progress:   # a slow local model must never look like a hang
-            done, total = replies["total"], len(calls)
-            per = (time.monotonic() - started) / done
-            print(f"[{done}/{total}] {time.monotonic() - t0:5.1f}s{' EMPTY' if not out else ''} · "
-                  f"~{per * (total - done) / 60:.0f} min left", file=sys.stderr, flush=True)
+        out = strip_reasoning(llm.complete(call["system"], user, temperature=temp, max_tokens=call["max_tokens"]))
+        with lock:
+            replies["total"] += 1
+            replies["empty"] += not out
+            log_call({**call, "user": user}, out)
+            if show_progress:   # a slow local model must never look like a hang
+                done, total = replies["total"], len(calls)
+                per = (time.monotonic() - started) / done
+                print(f"[{done}/{total}] {time.monotonic() - t0:5.1f}s{' EMPTY' if not out else ''} · "
+                      f"~{per * (total - done) / 60:.0f} min left", file=sys.stderr, flush=True)
         return out
 
-    for call in calls:
+    def record(call, out):
         kind = call["kind"]
         if kind == "judge":
-            # judge the generation this call was budgeted for
-            gen_key = (call["skill"], call["case_id"], call["run"], call["judge_for"])
-            output = gen_cache.get(gen_key, "")
-            case = next(c for s, c in ok_cases
-                        if s["key"] == call["skill"] and c.get("id") == call["case_id"])
-            items = "\n".join(f"{i}. {e}" for i, e in enumerate(case["expected"], 1))
-            user = judge_template.replace("{output}", output).replace("{expected_items}", items)
-            key = (call["kind"], call["skill"], call["case_id"], call["run"], call["judge_for"])
-            recorded = key in done_calls
-            out = ask(call["system"], user, 0, call["max_tokens"], key)
-            if not recorded:
-                log_call({**call, "user": user}, out)
             for idx, (passed, evidence) in enumerate(parse_judge(out, call["n_expected"])):
-                quality_rows.append([call["skill"], call["case_id"], call["run"],
-                                     call["judge_for"], idx,
+                quality_rows.append([call["skill"], call["case_id"], call["run"], call["judge_for"], idx,
                                      "PASS" if passed else "FAIL", evidence])
-            continue
-        key = (call["kind"], call["skill"], call["case_id"], call["run"], None)
-        recorded = key in done_calls
-        out = ask(call["system"], call["user"], call["temperature"], call["max_tokens"], key)
-        if not recorded:
-            log_call(call, out)
-        if kind in ("router", "neg_router"):
+        elif kind in ("router", "neg_router"):
             selected = parse_router(out, skills)
             if kind == "router":
                 owner = next(s for s in skills if s["key"] == call["skill"])
                 case = next((c for c in owner["cases"] if c.get("id") == call["case_id"]), {})
-                correct = "1" if selected == routing_target(owner, case) else "0"
-                trigger_rows.append([call["skill"], call["case_id"], call["run"],
-                                     selected, correct])
+                trigger_rows.append([call["skill"], call["case_id"], call["run"], selected,
+                                     "1" if selected == routing_target(owner, case) else "0"])
             else:
-                trigger_rows.append(["(negative)", call["case_id"], call["run"],
-                                     selected, ""])
+                trigger_rows.append(["(negative)", call["case_id"], call["run"], selected, ""])
         else:  # gen_without / gen_with
-            gen_cache[(call["skill"], call["case_id"], call["run"],
-                       kind.split("_", 1)[1])] = out
+            gen_cache[(call["skill"], call["case_id"], call["run"], kind.split("_", 1)[1])] = out
+
+    # Judges grade generations, so the two waves run in order; inside a wave calls are independent and run on
+    # --workers threads. Rows are recorded in the original call order either way, so results are deterministic.
+    workers = max(1, args.workers)
+    for wave in ([c for c in calls if c["kind"] != "judge"], [c for c in calls if c["kind"] == "judge"]):
+        if workers == 1:
+            outs = [run_call(c) for c in wave]
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                outs = list(pool.map(run_call, wave))
+        for c, o in zip(wave, outs):
+            record(c, o)
     raw_log.close()
 
     # ---- score
