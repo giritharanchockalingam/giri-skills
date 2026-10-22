@@ -69,6 +69,24 @@ def test_csv_rows_not_empty(tmp_path):
     assert not ok("csv_rows:acceptance!empty", w(tmp_path, "h.csv", "id,acceptance\n"), mode="real")
 
 
+def test_csv_rows_not_tbd(tmp_path):
+    """csv_rows:<col>!tbd — a scaffold cell nobody filled fails the gate, in dry mode too (spec-to-plan's TBD is script output, not a model slot)."""
+    tbd = w(tmp_path, "t.csv", "id,task,acceptance,files\nT1,Export,Signed off,lib/a.js\nT2,Quote,[TO BE BASELINED — owner: Tech lead],lib/a.js\n")
+    assert ok("csv_rows:files!tbd", tbd, mode="real") and ok("csv_rows:files!tbd", tbd, mode="dry")
+    r = co.run_check("csv_rows:acceptance!tbd", str(tbd), mode="real")
+    assert not r["pass"] and r["evidence"] == "1 of 2 rows still [TO BE BASELINED] in 'acceptance' (rows ['T2'])"
+    assert not ok("csv_rows:acceptance!tbd", tbd, mode="dry")                  # never skipped
+    assert ok("csv_rows:acceptance!empty", tbd, mode="real")                   # !empty alone lets the marker through: the gate needs both
+    filled = w(tmp_path, "f.csv", "id,acceptance\nT1,Signed off\nT2,Row count equals orders\n")
+    assert ok("csv_rows:acceptance!tbd", filled, mode="real")
+    blank = w(tmp_path, "b.csv", "id,acceptance\nT1,\n")
+    assert ok("csv_rows:acceptance!tbd", blank, mode="real")                   # blank is !empty's business, not !tbd's
+    r = co.run_check("csv_rows:nope!tbd", str(filled), mode="real")
+    assert not r["pass"] and "not in header" in r["evidence"]
+    assert not ok("csv_rows:acceptance!tbd", w(tmp_path, "h.csv", "id,acceptance\n"), mode="real")   # no data rows
+    assert co.parse_spec("csv_rows:files!tbd") == ("csv_rows", "files!tbd")
+
+
 def test_csv_rows_regex(tmp_path):
     p = w(tmp_path, "s.csv", "slide,verdict\n1,[KEEP]\n2,[SHARPEN] + [TBD]\n")
     assert ok(r"csv_rows:verdict~\[(KEEP|SHARPEN|CUT|ADD|TBD)\]", p, mode="real")

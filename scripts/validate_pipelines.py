@@ -13,7 +13,8 @@ Rules (one message per violation, prefixed with the file):
   steps       ids unique across the pipeline; kind skill|compose|agent|approval|pr; a skill step names an agent
               skill, uses only inputs the skill declares and supplies every required one; a compose step names a
               known derivation and declares outputs; an agent step names a known agent and existing constraint
-              files, and `produces` (optional) is a non-empty list of file names the builder writes (files.txt);
+              files, and `produces` (optional) is one of the file sets the executor can ask a builder for
+              (["files.txt"] — the files step; ["plan.md", "tasks.csv"] — the plan-refine step);
               an approval step's role is the stage's role; a pr step has title, branch and body
   references  $in.<name> is a declared input; $profile.<key> is a stack-profile fact; $steps.<id>:<file>[#key]
               points to an EARLIER step and a file that step declares (a skill's {out}/ outputs, a compose
@@ -48,7 +49,10 @@ DERIVATIONS = {"brief-from-request": ["brief.json"], "spec-from-prd": ["spec.md"
                "feature-from-plan": ["feature.md", "feature.json"]}
 AGENTS = {"claude-code"}
 AGENT_OUTPUTS = ["diff.patch", "agent-summary.md", "files-changed.json"]
-AGENT_PRODUCES = {"files.txt"}          # what an agent step may declare under `produces` (the executor knows how to ask for it)
+# what an agent step may declare under `produces` (the executor knows how to ask a builder for each set):
+# the files step writes files.txt; the plan-refine step writes the refined plan.md + tasks.csv together
+AGENT_PRODUCE_SETS = [["files.txt"], ["plan.md", "tasks.csv"]]
+AGENT_PRODUCES = {f for s in AGENT_PRODUCE_SETS for f in s}
 TEXT_MODIFIERS = {"csv", "lines"}       # $steps.<id>:<text file>#csv | #lines
 PR_OUTPUTS = ["pr.json"]
 APPROVAL_OUTPUTS = ["approval.json"]
@@ -283,10 +287,10 @@ def validate_pipeline(spec: dict, ctx: dict, filename: str | None = None) -> lis
                     outputs = list(AGENT_OUTPUTS)
                 elif not isinstance(produces, list) or not produces or not all(isinstance(x, str) and x.strip() for x in produces):
                     e.append(f"{sw}: `produces` must be a non-empty list of file names")
+                elif sorted(produces) not in [sorted(s) for s in AGENT_PRODUCE_SETS]:
+                    e.append(f"{sw}: `produces` {produces} is not something the executor can ask a builder for (one of {AGENT_PRODUCE_SETS})")
+                    outputs = list(produces)
                 else:
-                    bad = [x for x in produces if x not in AGENT_PRODUCES]
-                    if bad:
-                        e.append(f"{sw}: `produces` {bad} is not something the executor can ask a builder for (one of {sorted(AGENT_PRODUCES)})")
                     outputs = list(produces)
             elif kind == "approval":
                 if step.get("role") != role_name:

@@ -154,6 +154,37 @@ def test_agent_step_produces_and_text_file_modifiers(tmp_path):
     assert code == 1 and "step 'files' does not declare output 'files.txt'" in out and "diff.patch" in out
 
 
+def test_plan_refine_step_produces_the_refined_plan_and_the_gate_checks_it(tmp_path):
+    """The architecture stage: plan (scaffold) → plan-refine (agent, produces plan.md + tasks.csv) → plan-approval; the
+    gate is `all` of the tasks.csv checks and the approval; the build stage reads the refined plan."""
+    for name in ("feature-delivery", "greenfield-app"):
+        spec = load(name)
+        refine = step(spec, "architecture", "plan-refine")
+        assert refine["kind"] == "agent" and refine["produces"] == ["plan.md", "tasks.csv"]
+        assert refine["inputs"] == {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd:prd-final.md", "request": "$in.request", "target": "$repo"}
+        assert [t["id"] for t in stage(spec, "architecture")["steps"]] == ["spec", "plan", "plan-refine", "plan-approval"]
+        gate = stage(spec, "architecture")["gate"]
+        assert gate["kind"] == "all" and gate["of"][-1] == {"kind": "approval", "step": "plan-approval"}
+        assert [g["check"] for g in gate["of"][:-1]] == ["csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"]
+        assert all(g["step"] == "plan-refine" and g["file"] == "tasks.csv" for g in gate["of"][:-1])
+        for tid in ("feature", "files", "code"):
+            assert step(spec, "build", tid)["inputs"]["plan"] == "$steps.plan-refine:plan.md", (name, tid)
+        assert step(spec, "build", "files")["inputs"]["tasks"] == "$steps.plan-refine:tasks.csv"
+        assert "$steps.plan-refine:tasks.csv" in stage(spec, "architecture")["evidence"] and "$steps.plan:tasks.csv" in stage(spec, "architecture")["evidence"]
+        assert validate(spec, tmp_path, name=name)[0] == 0
+    spec = load("feature-delivery")
+    step(spec, "architecture", "plan-refine")["produces"] = ["tasks.csv"]                  # the two files go together
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "`produces` ['tasks.csv'] is not something the executor can ask a builder for" in out and "['plan.md', 'tasks.csv']" in out
+    spec = load("feature-delivery")
+    stage(spec, "architecture")["gate"]["of"][2]["check"] = "csv_rows:files!filled"           # not a check the vocabulary has
+    code, out = validate(spec, tmp_path)
+    assert code == 0                                                                        # the name is csv_rows: vocabulary-valid; the predicate is judged at run time
+    stage(spec, "architecture")["gate"]["of"][2]["check"] = "rows_tbd:files"
+    code, out = validate(spec, tmp_path)
+    assert code == 1 and "not a file-level check" in out
+
+
 def test_input_reference_must_be_declared(tmp_path):
     spec = load("feature-delivery")
     step(spec, "requirements", "brief")["inputs"]["request"] = "$in.ticket"

@@ -12,8 +12,9 @@ Deterministic assembly, nothing invented:
      to skills the role lists; a skill is chosen when its `metadata.fits` matches the stack (signal ids derived
      from the stack profile, `any` matches all) and the request kind, and every step it needs is in the pipeline;
   4. compose steps (brief-from-request, spec-from-prd, feature-from-plan) are added where first needed; the agent
-     files step (produces files.txt) and build step take the plan, else the composed spec; a stage with no fitting
-     skill is dropped with a note.
+     plan-refine step (produces plan.md + tasks.csv) follows spec-to-plan and gates the approval on the refined
+     tasks.csv; the files step (produces files.txt) and build step take the refined plan, else the composed spec;
+     a stage with no fitting skill is dropped with a note.
 `--explain` prints the decision table (stage → role → step: chosen / rejected / dropped and why). The result passes
 scripts/validate_pipelines.py and runs with scripts/deliver.py. Exit 2 on a bad argument or an unknown kind, 1 when
 nothing could be composed. Stdlib only. Importable: compose(...), stacks_from_profile(...), load_catalog(...).
@@ -32,7 +33,10 @@ import skillmeta  # noqa: E402
 
 KINDS_FILE = ROOT / "shared" / "request-kinds.json"
 VERSION = "0.1.0"
-NOTE = "Approve the plan before any code is written; edit plan.md / tasks.csv in the step folder first if files or tests are missing"
+NOTE = ("Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback "
+        "(the gate refuses a plan with TBD cells)")
+# the architecture gate on the refined tasks.csv (plan-refine): files and acceptance filled, no scaffold TBD cell left
+PLAN_CHECKS = ["csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"]
 
 # ------------------------------------------------------------------ the step library (the templates' wiring)
 # Per ADLC stage, in order. A step is included when: kind skill → the stage's role lists the skill, its fits match,
@@ -61,23 +65,28 @@ LIBRARY: dict[str, list[dict]] = {
         {"id": "plan", "kind": "skill", "skill": "build/spec-to-plan", "requires": ["spec"],
          "inputs": {"spec": "$steps.spec:spec.md", "section": "$steps.spec:spec.json#section", "repo": "$repo"},
          "evidence": ["$steps.plan:plan.md", "$steps.plan:tasks.csv"]},
-        {"id": "plan-approval", "kind": "approval", "requires": ["plan"], "note": NOTE,
+        {"id": "plan-refine", "kind": "agent", "agent": "claude-code", "produces": ["plan.md", "tasks.csv"], "requires": ["plan"], "optional": ["prd"],
+         "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd:prd-final.md", "request": "$in.request", "target": "$repo"},
+         "plan_fallback": ["$steps.plan:plan.md"],
+         "gate": {"kind": "all", "of": [{"kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": c} for c in PLAN_CHECKS]},
+         "evidence": ["$steps.plan-refine:plan.md", "$steps.plan-refine:tasks.csv"]},
+        {"id": "plan-approval", "kind": "approval", "requires": ["plan-refine"], "note": NOTE,
          "gate": {"kind": "approval", "step": "plan-approval"}},
     ],
     "build": [
-        {"id": "feature", "kind": "compose", "derive": "feature-from-plan", "requires": ["plan"], "optional": ["brief"],
-         "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "brief": "$steps.brief:brief.json"},
+        {"id": "feature", "kind": "compose", "derive": "feature-from-plan", "requires": ["plan-refine"], "optional": ["brief"],
+         "inputs": {"plan": "$steps.plan-refine:plan.md", "tasks": "$steps.plan-refine:tasks.csv", "brief": "$steps.brief:brief.json"},
          "outputs": ["feature.md", "feature.json"]},
         {"id": "files", "kind": "agent", "agent": "claude-code", "produces": ["files.txt"], "optional": ["tasks"],
-         "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "target": "$repo"},
-         "plan_fallback": ["$steps.plan:plan.md", "$steps.spec:spec.md"],
+         "inputs": {"plan": "$steps.plan-refine:plan.md", "tasks": "$steps.plan-refine:tasks.csv", "target": "$repo"},
+         "plan_fallback": ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"],
          "evidence": ["$steps.files:files.txt"]},
         {"id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd", "requires": ["feature", "files"],
          "inputs": {"feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo"},
          "evidence": ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json"]},
         {"id": "code", "kind": "agent", "agent": "claude-code", "optional": ["tests", "files"],
-         "inputs": {"plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo"},
-         "plan_fallback": ["$steps.plan:plan.md", "$steps.spec:spec.md"],
+         "inputs": {"plan": "$steps.plan-refine:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo"},
+         "plan_fallback": ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"],
          "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"],
          "fallback_gate": {"kind": "output", "step": "code", "file": "diff.patch", "check": "exists"},
          "evidence": ["$steps.code:diff.patch", "$steps.code:agent-summary.md"]},
@@ -328,8 +337,10 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
             if plan_ref and not available(_step_of(plan_ref)):
                 carry(_step_of(plan_ref))
             add(st, {"skill": "fits the stack and the request kind; every input resolves",
-                     "agent": (f"the files step (plan: {plan_ref}): the files the change touches, derived from tasks.csv when every task names them"
-                               if st.get("produces") else f"the build step (plan: {plan_ref})"), "approval": "follows the plan",
+                     "agent": (f"the plan-refine step (scaffold: {plan_ref}): the architect fills the scaffold — file table, acceptance, test, rollback, files; skipped when the scaffold is already complete"
+                               if "tasks.csv" in (st.get("produces") or []) else
+                               f"the files step (plan: {plan_ref}): the files the change touches, derived from tasks.csv when every task names them"
+                               if st.get("produces") else f"the build step (plan: {plan_ref})"), "approval": "follows the refined plan",
                      "pr": "the pull request carries the evidence"}[k])
         elsewhere, unwired = [], []
         for sk in sorted(role_skills - {st.get("skill") for st in LIBRARY[sid] if st.get("skill")}):
@@ -350,6 +361,7 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
         gates = [_lib(s["id"])["gate"] for s in chosen if "gate" in _lib(s["id"])]
         if not gates:
             gates = [_lib(s["id"])["fallback_gate"] for s in chosen if "fallback_gate" in _lib(s["id"])]
+        gates = [g for x in gates for g in (x["of"] if x.get("kind") == "all" else [x])]   # one flat `all`, as the templates write it
         gate = gates[0] if len(gates) == 1 else {"kind": "all", "of": gates}
         evidence = [e for s in chosen for e in (_lib(s["id"]).get("evidence") or [])]
         composed_stages.append({"id": sid, "adlc_stage": adlc, "role": role, "steps": chosen, "gate": gate, "evidence": evidence})

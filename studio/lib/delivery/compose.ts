@@ -21,7 +21,9 @@ export interface ComposeResult { pipeline: ComposedPipeline | null; decisions: D
 export interface ComposeInput { stacks: string[]; requestKind: string; mode?: PipelineMode | null; stages?: string[] | null; name?: string | null }
 
 export const COMPOSE_VERSION = "0.1.0";
-const NOTE = "Approve the plan before any code is written; edit plan.md / tasks.csv in the step folder first if files or tests are missing";
+const NOTE = "Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback (the gate refuses a plan with TBD cells)";
+/** The architecture gate on the refined tasks.csv (plan-refine): files and acceptance filled, no scaffold TBD cell left. */
+const PLAN_CHECKS = ["csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"];
 
 interface LibStep {
   id: string; kind: "skill" | "compose" | "agent" | "approval" | "pr"; skill?: string; derive?: string; agent?: string;
@@ -46,19 +48,24 @@ export const LIBRARY: Record<string, LibStep[]> = {
       inputs: { brief: "$steps.brief:brief.json", prd: "$steps.prd:prd-final.md", request: "$in.request" }, outputs: ["spec.md", "spec.json"] },
     { id: "plan", kind: "skill", skill: "build/spec-to-plan", requires: ["spec"], inputs: { spec: "$steps.spec:spec.md", section: "$steps.spec:spec.json#section", repo: "$repo" },
       evidence: ["$steps.plan:plan.md", "$steps.plan:tasks.csv"] },
-    { id: "plan-approval", kind: "approval", requires: ["plan"], note: NOTE, gate: { kind: "approval", step: "plan-approval" } },
+    { id: "plan-refine", kind: "agent", agent: "claude-code", produces: ["plan.md", "tasks.csv"], requires: ["plan"], optional: ["prd"],
+      inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", prd: "$steps.prd:prd-final.md", request: "$in.request", target: "$repo" },
+      plan_fallback: ["$steps.plan:plan.md"],
+      gate: { kind: "all", of: PLAN_CHECKS.map((check) => ({ kind: "output", step: "plan-refine", file: "tasks.csv", check })) },
+      evidence: ["$steps.plan-refine:plan.md", "$steps.plan-refine:tasks.csv"] },
+    { id: "plan-approval", kind: "approval", requires: ["plan-refine"], note: NOTE, gate: { kind: "approval", step: "plan-approval" } },
   ],
   build: [
-    { id: "feature", kind: "compose", derive: "feature-from-plan", requires: ["plan"], optional: ["brief"],
-      inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", brief: "$steps.brief:brief.json" }, outputs: ["feature.md", "feature.json"] },
+    { id: "feature", kind: "compose", derive: "feature-from-plan", requires: ["plan-refine"], optional: ["brief"],
+      inputs: { plan: "$steps.plan-refine:plan.md", tasks: "$steps.plan-refine:tasks.csv", brief: "$steps.brief:brief.json" }, outputs: ["feature.md", "feature.json"] },
     { id: "files", kind: "agent", agent: "claude-code", produces: ["files.txt"], optional: ["tasks"],
-      inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", target: "$repo" }, plan_fallback: ["$steps.plan:plan.md", "$steps.spec:spec.md"],
+      inputs: { plan: "$steps.plan-refine:plan.md", tasks: "$steps.plan-refine:tasks.csv", target: "$repo" }, plan_fallback: ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"],
       evidence: ["$steps.files:files.txt"] },
     { id: "tests", kind: "skill", skill: "build/test-strategy-tdd", requires: ["feature", "files"],
       inputs: { feature: "$steps.feature:feature.md", files: "$steps.files:files.txt#csv", target: "$repo" },
       evidence: ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json"] },
-    { id: "code", kind: "agent", agent: "claude-code", optional: ["tests", "files"], inputs: { plan: "$steps.plan:plan.md", tests: "$steps.tests:test-plan.md", files: "$steps.files:files.txt", target: "$repo" },
-      plan_fallback: ["$steps.plan:plan.md", "$steps.spec:spec.md"], constraints: ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"],
+    { id: "code", kind: "agent", agent: "claude-code", optional: ["tests", "files"], inputs: { plan: "$steps.plan-refine:plan.md", tests: "$steps.tests:test-plan.md", files: "$steps.files:files.txt", target: "$repo" },
+      plan_fallback: ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"], constraints: ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"],
       fallback_gate: { kind: "output", step: "code", file: "diff.patch", check: "exists" }, evidence: ["$steps.code:diff.patch", "$steps.code:agent-summary.md"] },
     { id: "conventions", kind: "skill", skill: "build/nextjs-enterprise-conventions", step_gate: true, inputs: { target: "$repo", baseline: "$profile.baselines.nextjs" },
       gate: { kind: "exit", step: "conventions" }, evidence: ["$steps.conventions:report.md"] },
@@ -222,9 +229,10 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
       }
       if (planRef && !available(stepOf(planRef))) carry(stepOf(planRef));
       add(st, st.kind === "skill" ? "fits the stack and the request kind; every input resolves"
+        : st.kind === "agent" && st.produces?.includes("tasks.csv") ? `the plan-refine step (scaffold: ${planRef}): the architect fills the scaffold — file table, acceptance, test, rollback, files; skipped when the scaffold is already complete`
         : st.kind === "agent" && st.produces ? `the files step (plan: ${planRef}): the files the change touches, derived from tasks.csv when every task names them`
         : st.kind === "agent" ? `the build step (plan: ${planRef})`
-        : st.kind === "approval" ? "follows the plan" : "the pull request carries the evidence");
+        : st.kind === "approval" ? "follows the refined plan" : "the pull request carries the evidence");
     }
     const wiredHere = new Set(LIBRARY[sid].map((s) => s.skill).filter(Boolean));
     const elsewhere: string[] = [], unwired: string[] = [];
@@ -246,6 +254,7 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
     for (const s of chosen) present.add(s.id);
     let gates = chosen.map((s) => lib(s.id)!.gate).filter((g): g is Record<string, unknown> => !!g);
     if (!gates.length) gates = chosen.map((s) => lib(s.id)!.fallback_gate).filter((g): g is Record<string, unknown> => !!g);
+    gates = gates.flatMap((g) => (g.kind === "all" ? (g.of as Record<string, unknown>[]) : [g]));   // one flat `all`, as the templates write it
     const gate = gates.length === 1 ? gates[0] : { kind: "all", of: gates };
     const evidence = chosen.flatMap((s) => lib(s.id)!.evidence ?? []);
     stagesOut.push({ id: sid, adlc_stage: adlc, role, steps: chosen, gate, evidence });

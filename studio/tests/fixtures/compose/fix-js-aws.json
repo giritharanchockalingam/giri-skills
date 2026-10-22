@@ -308,7 +308,7 @@
       "role": "full-stack-engineer",
       "step": "files",
       "decision": "note",
-      "why": "optional input `tasks` dropped: step plan is not in this pipeline"
+      "why": "optional input `tasks` dropped: step plan-refine is not in this pipeline"
     },
     {
       "stage": "build",
@@ -323,7 +323,7 @@
       "step": "tests",
       "skill": "build/test-strategy-tdd",
       "decision": "rejected",
-      "why": "needs step(s) feature: plan (architecture stage, absent or dropped)"
+      "why": "needs step(s) feature: plan-refine (architecture stage, absent or dropped)"
     },
     {
       "stage": "build",
