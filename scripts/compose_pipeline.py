@@ -12,7 +12,8 @@ Deterministic assembly, nothing invented:
      to skills the role lists; a skill is chosen when its `metadata.fits` matches the stack (signal ids derived
      from the stack profile, `any` matches all) and the request kind, and every step it needs is in the pipeline;
   4. compose steps (brief-from-request, spec-from-prd, feature-from-plan) are added where first needed; the agent
-     build step takes the plan, else the composed spec; a stage with no fitting skill is dropped with a note.
+     files step (produces files.txt) and build step take the plan, else the composed spec; a stage with no fitting
+     skill is dropped with a note.
 `--explain` prints the decision table (stage → role → step: chosen / rejected / dropped and why). The result passes
 scripts/validate_pipelines.py and runs with scripts/deliver.py. Exit 2 on a bad argument or an unknown kind, 1 when
 nothing could be composed. Stdlib only. Importable: compose(...), stacks_from_profile(...), load_catalog(...).
@@ -67,11 +68,15 @@ LIBRARY: dict[str, list[dict]] = {
         {"id": "feature", "kind": "compose", "derive": "feature-from-plan", "requires": ["plan"], "optional": ["brief"],
          "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "brief": "$steps.brief:brief.json"},
          "outputs": ["feature.md", "feature.json"]},
-        {"id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd", "requires": ["feature"],
-         "inputs": {"feature": "$steps.feature:feature.md", "files": "$steps.feature:feature.json#files", "target": "$repo"},
+        {"id": "files", "kind": "agent", "agent": "claude-code", "produces": ["files.txt"], "optional": ["tasks"],
+         "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "target": "$repo"},
+         "plan_fallback": ["$steps.plan:plan.md", "$steps.spec:spec.md"],
+         "evidence": ["$steps.files:files.txt"]},
+        {"id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd", "requires": ["feature", "files"],
+         "inputs": {"feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo"},
          "evidence": ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json"]},
-        {"id": "code", "kind": "agent", "agent": "claude-code", "optional": ["tests"],
-         "inputs": {"plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "target": "$repo"},
+        {"id": "code", "kind": "agent", "agent": "claude-code", "optional": ["tests", "files"],
+         "inputs": {"plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo"},
          "plan_fallback": ["$steps.plan:plan.md", "$steps.spec:spec.md"],
          "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"],
          "fallback_gate": {"kind": "output", "step": "code", "file": "diff.patch", "check": "exists"},
@@ -272,6 +277,8 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
                 out["inputs"] = inputs
             if st["kind"] == "compose":
                 out["outputs"] = list(st["outputs"])
+            elif st["kind"] == "agent" and st.get("produces"):
+                out["produces"] = list(st["produces"])
             elif st["kind"] == "agent":
                 out["constraints"] = [c for c in st["constraints"] if "nextjs" in stacks or not c.startswith("skills/build/nextjs")]
             elif st["kind"] == "skill" and st.get("step_gate"):
@@ -321,7 +328,8 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
             if plan_ref and not available(_step_of(plan_ref)):
                 carry(_step_of(plan_ref))
             add(st, {"skill": "fits the stack and the request kind; every input resolves",
-                     "agent": f"the build step (plan: {plan_ref})", "approval": "follows the plan",
+                     "agent": (f"the files step (plan: {plan_ref}): the files the change touches, derived from tasks.csv when every task names them"
+                               if st.get("produces") else f"the build step (plan: {plan_ref})"), "approval": "follows the plan",
                      "pr": "the pull request carries the evidence"}[k])
         elsewhere, unwired = [], []
         for sk in sorted(role_skills - {st.get("skill") for st in LIBRARY[sid] if st.get("skill")}):

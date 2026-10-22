@@ -79,16 +79,18 @@ is the same with a `bootstrap` stage in front):
         { "id": "feature", "kind": "compose", "derive": "feature-from-plan",
           "inputs": { "plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "brief": "$steps.brief:brief.json" },
           "outputs": ["feature.md", "feature.json"] },
+        { "id": "files", "kind": "agent", "agent": "claude-code", "produces": ["files.txt"],
+          "inputs": { "plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "target": "$repo" } },
         { "id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd",
-          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.feature:feature.json#files", "target": "$repo" } },
+          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo" } },
         { "id": "code", "kind": "agent", "agent": "claude-code",
-          "inputs": { "plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "target": "$repo" },
+          "inputs": { "plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo" },
           "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"] },
         { "id": "conventions", "kind": "skill", "skill": "build/nextjs-enterprise-conventions",
           "inputs": { "target": "$repo", "baseline": "$profile.baselines.nextjs" }, "gate": true }
       ],
       "gate": { "kind": "exit", "step": "conventions" },
-      "evidence": ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json", "$steps.code:diff.patch", "$steps.code:agent-summary.md", "$steps.conventions:report.md"]
+      "evidence": ["$steps.files:files.txt", "$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json", "$steps.code:diff.patch", "$steps.code:agent-summary.md", "$steps.conventions:report.md"]
     },
     {
       "id": "evaluate", "adlc_stage": "evaluate", "role": "ai-quality-red-team",
@@ -135,7 +137,8 @@ Where the shipped file differs from the first sketch, and why (every name is the
 |---|---|---|
 | `product-spec-prd` took `request` and wrote `prd.md` | a `brief-from-request` **compose** step writes `brief.json` (the brief given, else `{feature, problem}` from the request); the skill takes `brief` and writes `prd-final.md` | the skill's only required input is `brief`; `request` is not an input it declares |
 | `spec-to-plan` took `spec: prd.md, section: $in.request` | a `spec-from-prd` compose step writes `spec.md` (one bullet per v1 scope item / brief task, `files:` when the brief names them) and `spec.json#section` | `spec-to-plan` plans the first heading containing `section` and needs bullets under it; a PRD has neither |
-| `test-strategy-tdd` read `feature.md` and `plan.json#files` from the plan step | a `feature-from-plan` compose step derives `feature.md` (one criterion per task) and `feature.json#files` from `tasks.csv`; output is `test-plan.md`, not `tests-report.md` | `spec-to-plan` writes `plan.md` + `tasks.csv` only |
+| `test-strategy-tdd` read `feature.md` and `plan.json#files` from the plan step | a `feature-from-plan` compose step derives `feature.md` (one criterion per task) from `tasks.csv`; `files` comes from the **files step** (`$steps.files:files.txt#csv`); output is `test-plan.md`, not `tests-report.md` | `spec-to-plan` writes `plan.md` + `tasks.csv` only, and a plan composed without a brief names no files — the first real run failed there with a "missing input" that looked like a gate failure |
+| the build stage went feature → tests → code | feature → **files** → tests → code → conventions (see "The build stage") | the files the change touches must be known before tests are scaffolded; when the plan names them the executor derives `files.txt`, otherwise the builder is asked for that list first (exit 4), never the tests skill |
 | evaluate gate: review PASS + security exit | plus `perf` and `ui` exit gates | each of those skills exits 1 on new high findings — a verdict the stage must honour |
 | handoff gate on `docs/HANDOFF.md` | `HANDOFF.md` in the step folder | the skill writes `{out}/HANDOFF.md`; `--write-to-repo` is not used by the pipeline |
 | `$run.draft_only` did not exist | `product-spec-prd` and `security-review` get `draft_only=true` when the provider is `dry` or `none` | their model step cannot run without a provider; the script draft is then the final, labelled as such |
@@ -146,7 +149,8 @@ Where the shipped file differs from the first sketch, and why (every name is the
 | `$in.<name>` | a pipeline input |
 | `$repo` | the working checkout of the target repository (a `path` input to skills) |
 | `$profile.<key>` | a stack-profile fact (`flavour`, `framework`, `package_manager`, `test_runner`, `deploy_target`, `migrations_dir`, `baselines.<check>`) |
-| `$steps.<id>:<file>[#json.key]` | an output file of an earlier step (same syntax as playbooks) |
+| `$steps.<id>:<file>[#json.key]` | an output file of an earlier step (same syntax as playbooks); `#key.path` reads a key of a `.json` file |
+| `$steps.<id>:<text file>#csv` / `#lines` | the non-blank, non-`#` lines of a text file such as `files.txt`, joined with commas / newlines (how `test-strategy-tdd` gets its comma-separated `files`) |
 | `$run.id`, `$run.state`, `$run.draft_only` | the run id; the run's honest state line for the handoff; `true` when the provider is `dry` or `none` (skills with a model step take their script draft as final) |
 | `$evidence` | the evidence bundle so far (`evidence/EVIDENCE.md`) |
 
@@ -158,13 +162,33 @@ arbitrary `$run.*` or `$profile.*` key (the validator rejects it).
 |---|---|---|
 | `skill` | a published library skill via `run_skill.py`; `gate: true` means exit 1 blocks the stage; an optional input that resolves to nothing is omitted; exit 2 (missing input) fails the stage with the input named | run.json, outputs, checks |
 | `compose` | a deterministic derivation of a file a later skill needs from what earlier steps wrote (`brief-from-request`, `spec-from-prd`, `feature-from-plan` — implemented in `scripts/deliver.py`, nothing invented, unknowns left to the skills' TBD markers) | the declared `outputs` |
-| `agent` | a coding agent (`claude-code` first) on the checkout, constrained by the listed files and the plan; it may only touch files the plan names. `--builder none` stops the run (exit 4, `needs_builder.json`) for a person or IDE agent; `--builder manual` records a diff supplied at `<out>/build/diff.patch` | diff.patch, files-changed.json (files outside the plan are flagged), agent-summary.md |
+| `agent` | **code step** (no `produces`): a coding agent (`claude-code` first) on the checkout, constrained to the files `files.txt` lists (plus the test files the test plan names) and the plan. `--builder none` stops the run (exit 4, `needs_builder.json`) for a person or IDE agent; `--builder manual` records a diff supplied at `<out>/build/diff.patch` (or `--patch`). **files step** (`produces: ["files.txt"]`): the list of repo-relative files the change will create or modify — derived by the executor from `tasks.csv` when every task names files (no builder), else asked of the builder the same three ways (see "The build stage") | code: diff.patch, files-changed.json (files outside `files.txt` are flagged), agent-summary.md · files: files.txt, files.json (source, derived, create/modify against the checkout) |
 | `approval` | waits for a person holding the stage's role (portal) or the requester (IDE); on the CLI, `--approve-all` or an `--approvals approvals.json` file (`{"approvals": [{"step", "by", "note"}]}`) satisfies it, otherwise the run stops with exit 3 and `needs_approval.json` | approval.json: who, when, note |
 | `pr` | on the checkout: branch `deliver/<run-id>`, the checkout's changes committed as `skills-factory[bot]`, `gh auth setup-git` when `GH_TOKEN` is set, push to `origin`, then `gh pr create --title <title> --body-file EVIDENCE.md` with cwd = the checkout; `--dry` writes `pr.json` with `{"dry": true}` and touches nothing | pr.json (number, url, head sha, committed_as) |
 
 ### Gate kinds
 `output` (a check on a step's file, check vocabulary of `scripts/check_output.py`), `exit` (step exit code 0),
 `approval`, `all` / `any` (combinations), `external` (recorded, satisfied outside the run, e.g. CI on the PR).
+
+A step input that **no earlier step produced** is never a gate verdict: the executor stops with exit 2 and
+`<out>/wiring_error.json` naming the stage, the step, the input and the reference that resolved to nothing (distinct
+from `needs_input.json`, which is a missing *user* input). Fix the pipeline, start a new run.
+
+### The build stage
+The architecture stage runs `spec-to-plan` with `repo: "$repo"`, so every file a task names is checked against the real
+checkout and marked modify / create in `plan.md` ("Repo check") and `tasks.csv`. The build stage then runs, in order:
+
+| Step | Kind | Takes | Produces | Builder |
+|---|---|---|---|---|
+| `feature` | compose `feature-from-plan` | `plan.md`, `tasks.csv`, `brief.json` | `feature.md` (one criterion per task), `feature.json` | — |
+| `files` | agent, `produces: ["files.txt"]` | `plan.md`, `tasks.csv`, the checkout | `files.txt` — one repo-relative path per line (source files to create or modify; `#` comments allowed), `files.json` | **derived by the executor** when `tasks.csv` names files for every task (header `# derived by deliver.py …`; the builder is not asked). Otherwise `--builder none` stops with exit 4 and `needs_builder.json` saying exactly what to write and where: `<out>/evidence/03-build/files/files.txt` (`expected`; or `<out>/build/files.txt`, where `--files <file>` copies to); `--builder manual` expects it at one of those paths (else the same stop); `--builder claude-code` prompts `claude -p` (plan, tasks.csv, stack profile) to write it, and fails the step if it does not |
+| `tests` | skill `test-strategy-tdd` | `feature.md`, `files` = `$steps.files:files.txt#csv`, the checkout | `test-plan.md`, `scaffold-report.json`, red stubs on the checkout | — |
+| `code` | agent | `plan.md`, `test-plan.md`, `files.txt`, the checkout | `diff.patch`, `files-changed.json`, `agent-summary.md` | constrained to the files in `files.txt` plus test files (`tests/`, `__tests__/`, `e2e/`); anything else is flagged `outside_plan`. `--builder none` → exit 4 (`<out>/build/diff.patch` expected, or `--patch`); `manual` → that diff recorded (applied to the dry copy under `--dry`); `claude-code` → `claude -p`, `git diff` captured |
+| `conventions` | skill `nextjs-enterprise-conventions`, `gate: true` | the checkout, the baseline | `report.md` | — |
+
+`--resume` picks up at the first incomplete step of the stage: after the builder drops `files.txt` in place the run
+continues with `tests`, then stops again at `code` until the diff is there. `greenfield-app` runs the same build stage
+(`project-bootstrap` names its files in `bootstrap-report.json`; the plan's `tasks.csv` is what `files.txt` derives from).
 
 ### Stack profile (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
 Read once, before stage 1, never guessed: `flavour` (ts|js), `framework` (nextjs|…), `package_manager`, `test_runner`
@@ -236,7 +260,7 @@ After the timeout the run stops with exit 3 as it would without a portal. `--app
 ```
 python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
     [--input name=value …] [--out <dir>] --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
-    [--approve-all | --approvals approvals.json] [--patch diff.patch] [--dry] [--resume] [--run-id ID]
+    [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--dry] [--resume] [--run-id ID]
     [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
 ```
 
@@ -249,9 +273,9 @@ portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a pa
 |---|---|
 | 0 | every stage passed |
 | 1 | a gate or step failed — the evidence so far is in `<out>/evidence/` |
-| 2 | bad arguments or a missing pipeline input (`needs_input.json`) |
+| 2 | bad arguments, a missing pipeline input (`needs_input.json`), or a **pipeline wiring error** (`wiring_error.json`: a step input no earlier step produced — fix the pipeline, never a gate verdict) |
 | 3 | waiting for an approval (`needs_approval.json`); re-run with `--resume` and `--approvals` |
-| 4 | waiting for the builder (`needs_builder.json`); drop the diff at `<out>/build/diff.patch`, re-run with `--resume` |
+| 4 | waiting for the builder (`needs_builder.json`, its `step` says which): `files` → write `files.txt` at `expected` (or pass `--files`); `code` → drop the diff at `<out>/build/diff.patch` (or pass `--patch`); re-run with `--resume` |
 
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).

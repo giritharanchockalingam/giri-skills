@@ -13,11 +13,14 @@ Rules (one message per violation, prefixed with the file):
   steps       ids unique across the pipeline; kind skill|compose|agent|approval|pr; a skill step names an agent
               skill, uses only inputs the skill declares and supplies every required one; a compose step names a
               known derivation and declares outputs; an agent step names a known agent and existing constraint
-              files; an approval step's role is the stage's role; a pr step has title, branch and body
+              files, and `produces` (optional) is a non-empty list of file names the builder writes (files.txt);
+              an approval step's role is the stage's role; a pr step has title, branch and body
   references  $in.<name> is a declared input; $profile.<key> is a stack-profile fact; $steps.<id>:<file>[#key]
               points to an EARLIER step and a file that step declares (a skill's {out}/ outputs, a compose
-              step's outputs, diff.patch / agent-summary.md / files-changed.json for an agent step, pr.json for a
-              pr step); $repo, $run.id, $run.state, $run.draft_only, $evidence are the executor's own values
+              step's outputs, diff.patch / agent-summary.md / files-changed.json for an agent step — or the files
+              its `produces` lists, e.g. files.txt for the files step — pr.json for a pr step); `#key` reads a key of
+              a .json file, `#csv` / `#lines` join the non-comment lines of a text file (comma / newline);
+              $repo, $run.id, $run.state, $run.draft_only, $evidence are the executor's own values
   gates       kind output|exit|approval|all|any|external; output names a step of the stage, one of its declared
               files and a file-level check from scripts/check_output.py; exit names a skill step of the stage;
               approval names an approval step of the stage; all/any carry a non-empty `of`; external says `what`
@@ -45,6 +48,8 @@ DERIVATIONS = {"brief-from-request": ["brief.json"], "spec-from-prd": ["spec.md"
                "feature-from-plan": ["feature.md", "feature.json"]}
 AGENTS = {"claude-code"}
 AGENT_OUTPUTS = ["diff.patch", "agent-summary.md", "files-changed.json"]
+AGENT_PRODUCES = {"files.txt"}          # what an agent step may declare under `produces` (the executor knows how to ask for it)
+TEXT_MODIFIERS = {"csv", "lines"}       # $steps.<id>:<text file>#csv | #lines
 PR_OUTPUTS = ["pr.json"]
 APPROVAL_OUTPUTS = ["approval.json"]
 PROFILE_KEYS = {"flavour", "framework", "package_manager", "test_runner", "e2e", "deploy_target", "migrations_dir",
@@ -105,11 +110,15 @@ def check_ref(value, inputs: set, known: dict, errors: list, where: str, allow_e
         return
     m = STEP_REF.match(value)
     if m:
-        sid, rel = m.group(1), m.group(2)
+        sid, rel, key = m.group(1), m.group(2), m.group(3)
         if sid not in known:
             errors.append(f"{where}: {value} references step '{sid}', which is not an earlier step")
         elif rel not in known[sid]:
             errors.append(f"{where}: {value} — step '{sid}' does not declare output '{rel}' (declares: {', '.join(known[sid]) or 'nothing'})")
+        elif key and not rel.endswith(".json") and key not in TEXT_MODIFIERS:
+            errors.append(f"{where}: {value} — '#{key}' on a text file must be one of {', '.join('#' + k for k in sorted(TEXT_MODIFIERS))} (a #key path reads a .json file)")
+        elif key and rel.endswith(".json") and key in TEXT_MODIFIERS:
+            errors.append(f"{where}: {value} — '#{key}' joins the lines of a text file, not a .json file")
         return
     errors.append(f"{where}: bad reference {value!r}")
 
@@ -269,7 +278,16 @@ def validate_pipeline(spec: dict, ctx: dict, filename: str | None = None) -> lis
                 for c in step.get("constraints") or []:
                     if not (ctx["root"] / str(c)).is_file():
                         e.append(f"{sw}: constraint file missing: {c}")
-                outputs = list(AGENT_OUTPUTS)
+                produces = step.get("produces")
+                if produces is None:
+                    outputs = list(AGENT_OUTPUTS)
+                elif not isinstance(produces, list) or not produces or not all(isinstance(x, str) and x.strip() for x in produces):
+                    e.append(f"{sw}: `produces` must be a non-empty list of file names")
+                else:
+                    bad = [x for x in produces if x not in AGENT_PRODUCES]
+                    if bad:
+                        e.append(f"{sw}: `produces` {bad} is not something the executor can ask a builder for (one of {sorted(AGENT_PRODUCES)})")
+                    outputs = list(produces)
             elif kind == "approval":
                 if step.get("role") != role_name:
                     e.append(f"{sw}: approval role {step.get('role')!r} must be the stage's role '{role_name}'")

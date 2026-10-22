@@ -25,7 +25,7 @@ const NOTE = "Approve the plan before any code is written; edit plan.md / tasks.
 
 interface LibStep {
   id: string; kind: "skill" | "compose" | "agent" | "approval" | "pr"; skill?: string; derive?: string; agent?: string;
-  inputs?: Record<string, string>; outputs?: string[]; requires?: string[]; optional?: string[]; plan_fallback?: string[];
+  inputs?: Record<string, string>; outputs?: string[]; produces?: string[]; requires?: string[]; optional?: string[]; plan_fallback?: string[];
   constraints?: string[]; step_gate?: boolean; note?: string; title?: string; branch?: string; body?: string;
   gate?: Record<string, unknown>; fallback_gate?: Record<string, unknown>; evidence?: string[];
 }
@@ -51,10 +51,13 @@ export const LIBRARY: Record<string, LibStep[]> = {
   build: [
     { id: "feature", kind: "compose", derive: "feature-from-plan", requires: ["plan"], optional: ["brief"],
       inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", brief: "$steps.brief:brief.json" }, outputs: ["feature.md", "feature.json"] },
-    { id: "tests", kind: "skill", skill: "build/test-strategy-tdd", requires: ["feature"],
-      inputs: { feature: "$steps.feature:feature.md", files: "$steps.feature:feature.json#files", target: "$repo" },
+    { id: "files", kind: "agent", agent: "claude-code", produces: ["files.txt"], optional: ["tasks"],
+      inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", target: "$repo" }, plan_fallback: ["$steps.plan:plan.md", "$steps.spec:spec.md"],
+      evidence: ["$steps.files:files.txt"] },
+    { id: "tests", kind: "skill", skill: "build/test-strategy-tdd", requires: ["feature", "files"],
+      inputs: { feature: "$steps.feature:feature.md", files: "$steps.files:files.txt#csv", target: "$repo" },
       evidence: ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json"] },
-    { id: "code", kind: "agent", agent: "claude-code", optional: ["tests"], inputs: { plan: "$steps.plan:plan.md", tests: "$steps.tests:test-plan.md", target: "$repo" },
+    { id: "code", kind: "agent", agent: "claude-code", optional: ["tests", "files"], inputs: { plan: "$steps.plan:plan.md", tests: "$steps.tests:test-plan.md", files: "$steps.files:files.txt", target: "$repo" },
       plan_fallback: ["$steps.plan:plan.md", "$steps.spec:spec.md"], constraints: ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"],
       fallback_gate: { kind: "output", step: "code", file: "diff.patch", check: "exists" }, evidence: ["$steps.code:diff.patch", "$steps.code:agent-summary.md"] },
     { id: "conventions", kind: "skill", skill: "build/nextjs-enterprise-conventions", step_gate: true, inputs: { target: "$repo", baseline: "$profile.baselines.nextjs" },
@@ -179,6 +182,7 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
         out.inputs = inputs;
       }
       if (st.kind === "compose") out.outputs = [...st.outputs!];
+      else if (st.kind === "agent" && st.produces) out.produces = [...st.produces];
       else if (st.kind === "agent") out.constraints = st.constraints!.filter((c) => stacks.includes("nextjs") || !c.startsWith("skills/build/nextjs"));
       else if (st.kind === "skill" && st.step_gate) out.gate = true;
       else if (st.kind === "approval") { out.role = role; out.note = st.note; }
@@ -217,7 +221,9 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
         continue;
       }
       if (planRef && !available(stepOf(planRef))) carry(stepOf(planRef));
-      add(st, st.kind === "skill" ? "fits the stack and the request kind; every input resolves" : st.kind === "agent" ? `the build step (plan: ${planRef})`
+      add(st, st.kind === "skill" ? "fits the stack and the request kind; every input resolves"
+        : st.kind === "agent" && st.produces ? `the files step (plan: ${planRef}): the files the change touches, derived from tasks.csv when every task names them`
+        : st.kind === "agent" ? `the build step (plan: ${planRef})`
         : st.kind === "approval" ? "follows the plan" : "the pull request carries the evidence");
     }
     const wiredHere = new Set(LIBRARY[sid].map((s) => s.skill).filter(Boolean));

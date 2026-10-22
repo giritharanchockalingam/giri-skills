@@ -59,8 +59,10 @@ test("deterministic and pure: the same input composes the same pipeline; no inpu
   assert.deepEqual(a.pipeline!.fits.stacks, ["nextjs", "react"]);
   assert.equal(a.pipeline!.name, "composed-fix-nextjs-react");
   const build = a.pipeline!.stages[0];
-  assert.deepEqual(build.steps.map((s) => s.id), ["brief", "spec", "code", "conventions"]);
+  assert.deepEqual(build.steps.map((s) => s.id), ["brief", "spec", "files", "code", "conventions"]);
+  assert.deepEqual((build.steps[2] as { inputs: unknown; produces: unknown }).produces, ["files.txt"]);   // no tasks.csv in a fix: the builder names the files
   assert.deepEqual((build.steps[2] as { inputs: unknown }).inputs, { plan: "$steps.spec:spec.md", target: "$repo" });
+  assert.deepEqual((build.steps[3] as { inputs: unknown }).inputs, { plan: "$steps.spec:spec.md", files: "$steps.files:files.txt", target: "$repo" });
 });
 
 test("unknown kind, mode and stage are clear errors; new-app is an alias of greenfield", () => {
@@ -104,8 +106,8 @@ test("tools/list advertises compose with the request kinds; tools/call composes 
   assert.deepEqual(calls, [{ repo: "acme/billing", request_kind: "fix", mode: undefined, stack_profile: undefined }]);
   assert.equal(r.result.isError, false);
   assert.equal(r.result.structuredContent.pipeline.name, "composed-fix-nextjs-react");
-  assert.match(r.result.content[0].text, /Composed pipeline composed-fix-nextjs-react — 4 stage\(s\)\n- build \(full-stack-engineer\): brief \[compose\] → spec \[compose\] → code \[agent\] → build\/nextjs-enterprise-conventions/);
-  assert.match(r.result.content[0].text, /Decisions:\n- build · tests · build\/test-strategy-tdd: rejected — needs step\(s\) feature/);
+  assert.match(r.result.content[0].text, /Composed pipeline composed-fix-nextjs-react — 4 stage\(s\)\n- build \(full-stack-engineer\): brief \[compose\] → spec \[compose\] → files \[agent\] → code \[agent\] → build\/nextjs-enterprise-conventions/);
+  assert.match(r.result.content[0].text, /Decisions:\n(- build · [^\n]*\n)*- build · tests · build\/test-strategy-tdd: rejected — needs step\(s\) feature/);
   const missing = await handle(rpc("tools/call", { name: "compose", arguments: { request_kind: "fix" } }), backend()) as { error: { message: string } };
   assert.match(missing.error.message, /repo or stack_profile is required/);
   const unknown = await handle(rpc("tools/call", { name: "compose", arguments: { repo: "a/b", request_kind: "nope" } }), backend()) as { error: { message: string } };

@@ -14,6 +14,7 @@ FIX = REPO_ROOT / "tests" / "fixtures"
 REPO = FIX / "delivery-repo"
 BRIEF = FIX / "delivery-build" / "brief.json"
 PATCH = FIX / "delivery-build" / "diff.patch"
+FILES = FIX / "delivery-build" / "files.txt"
 RISKY_PATCH = REPO_ROOT / "skills" / "build" / "code-review-runner" / "evals" / "fixtures" / "change-risky.patch"
 REQUEST = "Export orders as CSV"
 STAGES = ["requirements", "architecture", "build", "evaluate", "deploy", "operate"]
@@ -50,6 +51,26 @@ def test_happy_path_every_stage_passes(happy):
     rj = run_json(out)
     assert rj["status"] == "passed" and rj["exit_code"] == 0 and rj["dry"] is True
     assert rj["stack_profile"]["framework"] == "nextjs" and rj["stack_profile"]["flavour"] == "js"
+    assert not (out / "needs_builder.json").exists() and not (out / "wiring_error.json").exists()
+
+
+def test_files_step_is_derived_from_tasks_csv_when_every_task_names_files(happy):
+    """The plan (spec-to-plan with repo=$repo) names files for every task: files.txt is derived, the builder is not asked."""
+    out, _ = happy
+    ev = out / "evidence"
+    txt = (ev / "03-build" / "files" / "files.txt").read_text()
+    assert txt.startswith("# derived by deliver.py from tasks.csv") and txt.splitlines()[1:] == ["lib/orders.js", "app/api/orders/export/route.js"]
+    fj = json.loads((ev / "03-build" / "files" / "files.json").read_text())
+    assert fj["derived"] is True and fj["source"] == "tasks.csv"
+    assert fj["modify"] == ["lib/orders.js"] and fj["create"] == ["app/api/orders/export/route.js"]   # checked against the checkout
+    build = next(s for s in run_json(out)["stages"] if s["id"] == "build")
+    steps = {t["id"]: t for t in build["steps"]}
+    assert list(steps) == ["feature", "files", "tests", "code", "conventions"]
+    assert steps["files"]["status"] == "ok" and steps["files"]["files_source"] == "tasks.csv" and steps["files"]["files"] == 2
+    assert steps["tests"]["inputs"]["files"] == "lib/orders.js,app/api/orders/export/route.js"        # $steps.files:files.txt#csv
+    assert steps["code"]["allowed_files"] == ["lib/orders.js", "app/api/orders/export/route.js"]       # the code step is constrained by files.txt
+    assert "03-build/files/files.txt" in build["evidence_files"]
+    assert "evidence/03-build/files/files.txt" in run_json(out)["files"]
 
 
 def test_evidence_md_has_one_row_per_stage(happy):
@@ -100,7 +121,8 @@ def test_manual_builder_records_the_diff_and_files_changed(happy):
     out, _ = happy
     fc = json.loads((out / "evidence" / "03-build" / "code" / "files-changed.json").read_text())
     assert fc["files"] == ["app/api/orders/export/route.js", "lib/orders.js", "tests/unit/lib/orders.test.js"]
-    assert fc["plan_files"] == ["app/api/orders/export/route.js", "lib/orders.js"] and fc["outside_plan"] == []
+    assert fc["plan_files"] == ["lib/orders.js", "app/api/orders/export/route.js"] and fc["outside_plan"] == []
+    assert fc["plan_files_source"] == "files.txt"                                           # the code step is constrained by files.txt
     summary = (out / "evidence" / "03-build" / "code" / "agent-summary.md").read_text()
     assert "builder: manual" in summary and "applied to the dry working copy" in summary
     assert (out / "repo" / "app" / "api" / "orders" / "export" / "route.js").is_file()   # landed on the copy only
@@ -155,10 +177,96 @@ def test_builder_none_blocks_with_exit_4(tmp_path):
     need = json.loads((out / "needs_builder.json").read_text())
     assert need["stage"] == "build" and need["step"] == "code" and need["expected"] == str(out / "build" / "diff.patch")
     assert need["plan"].endswith("02-architecture/plan/plan.md") and need["tests"].endswith("03-build/tests/test-plan.md")
+    assert need["files"].endswith("03-build/files/files.txt") and need["allowed_files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
     assert any(c.endswith("shared/stack-conventions.md") for c in need["constraints"])
     assert stage_status(out)["build"] == "awaiting_builder"
     steps = {s["id"]: s["status"] for s in run_json(out)["stages"][-1]["steps"]}
-    assert steps == {"feature": "ok", "tests": "ok", "code": "awaiting_builder"}
+    assert steps == {"feature": "ok", "files": "ok", "tests": "ok", "code": "awaiting_builder"}   # files.txt derived: no stop there
+
+
+def test_builder_none_stops_at_the_files_step_when_the_plan_names_no_files(tmp_path):
+    """No brief, request only: spec-to-plan names no files, so the files step asks the builder (exit 4) — before tests."""
+    out = tmp_path / "nofiles"
+    r = deliver(out, "--builder", "none", "--approve-all", brief=None)
+    assert r.returncode == 4, r.stdout + r.stderr
+    need = json.loads((out / "needs_builder.json").read_text())
+    assert need["stage"] == "build" and need["step"] == "files" and need["produce"] == "files.txt"
+    assert need["expected"] == str(out / "evidence" / "03-build" / "files" / "files.txt")
+    assert need["alternative"] == str(out / "build" / "files.txt")
+    assert need["why"] == "files.txt could not be derived: task T1 names no files in tasks.csv"
+    assert need["plan"].endswith("02-architecture/plan/plan.md") and need["tasks"].endswith("02-architecture/plan/tasks.csv")
+    assert "one repo-relative path per line" in need["format"] and "--resume" in need["how"]
+    steps = {s["id"]: s["status"] for s in run_json(out)["stages"][-1]["steps"]}
+    assert steps == {"feature": "ok", "files": "awaiting_builder"}
+    assert not list((out / "evidence" / "03-build" / "tests").glob("*"))      # tests did not run: nothing to scaffold for yet
+    assert "stopped at stage 'build' (awaiting_builder)" in r.stdout
+
+
+def test_resume_picks_up_at_the_files_step_after_the_builder_drops_files_txt(tmp_path):
+    out = tmp_path / "resume-files"
+    assert deliver(out, "--builder", "none", "--approve-all", brief=None).returncode == 4
+    shutil.copy(FILES, out / "evidence" / "03-build" / "files" / "files.txt")      # the builder writes it in place
+    r = deliver(out, "--builder", "none", "--approve-all", "--resume", brief=None)
+    assert r.returncode == 4, r.stdout + r.stderr                                  # tests ran; now the code step waits
+    need = json.loads((out / "needs_builder.json").read_text())
+    assert need["step"] == "code" and need["allowed_files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
+    build = next(s for s in run_json(out)["stages"] if s["id"] == "build")
+    steps = {t["id"]: t for t in build["steps"]}
+    assert [(k, v["status"]) for k, v in steps.items()] == [("feature", "ok"), ("files", "ok"), ("tests", "ok"), ("code", "awaiting_builder")]
+    assert steps["feature"].get("resumed") is True and "resumed" not in steps["files"]
+    assert steps["files"]["files_source"] == "builder"
+    fj = json.loads((out / "evidence" / "03-build" / "files" / "files.json").read_text())
+    assert fj["derived"] is False and fj["files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
+    assert steps["tests"]["inputs"]["files"] == "lib/orders.js,app/api/orders/export/route.js"
+    report = json.loads((out / "evidence" / "03-build" / "tests" / "scaffold-report.json").read_text())
+    assert "tests/unit/lib-orders.test.js" in report["written"]
+    (out / "build").mkdir(exist_ok=True)
+    shutil.copy(PATCH, out / "build" / "diff.patch")
+    r = deliver(out, "--builder", "none", "--approve-all", "--resume", brief=None)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+
+
+def test_manual_builder_with_a_files_txt_fixture_passes_end_to_end_without_a_brief(tmp_path):
+    out = tmp_path / "files-fixture"
+    r = deliver(out, "--builder", "manual", "--files", str(FILES), "--patch", str(PATCH), "--approve-all", brief=None)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    assert (out / "build" / "files.txt").read_text() == FILES.read_text()
+    assert (out / "evidence" / "03-build" / "files" / "files.txt").read_text() == FILES.read_text()
+    fj = json.loads((out / "evidence" / "03-build" / "files" / "files.json").read_text())
+    assert fj["source"] == "builder" and fj["derived"] is False
+    fc = json.loads((out / "evidence" / "03-build" / "code" / "files-changed.json").read_text())
+    assert fc["plan_files_source"] == "files.txt" and fc["outside_plan"] == []
+    assert "build/files.txt" in run_json(out)["files"]
+    r = deliver(tmp_path / "nofile", "--builder", "manual", "--files", str(tmp_path / "missing.txt"), "--patch", str(PATCH), brief=None)
+    assert r.returncode == 2 and "files.txt not found" in r.stderr
+
+
+def test_a_missing_wire_is_a_pipeline_error_with_exit_2_not_a_gate_failure(tmp_path):
+    """The first real run's failure: tests wired from feature.json#files, empty without a brief. That is a wiring error."""
+    spec = json.loads((REPO_ROOT / "pipelines" / "feature-delivery.json").read_text())
+    build = next(s for s in spec["stages"] if s["id"] == "build")
+    build["steps"] = [t for t in build["steps"] if t["id"] != "files"]
+    next(t for t in build["steps"] if t["id"] == "tests")["inputs"]["files"] = "$steps.feature:feature.json#files"
+    del next(t for t in build["steps"] if t["id"] == "code")["inputs"]["files"]
+    build["evidence"] = [e for e in build["evidence"] if ":files.txt" not in e]
+    spec["name"] = "miswired"
+    (tmp_path / "miswired.json").write_text(json.dumps(spec))
+    out = tmp_path / "wire"
+    r = deliver(out, "--builder", "none", "--approve-all", pipeline=str(tmp_path / "miswired.json"), brief=None)
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "stopped at stage 'build' (wiring_error)" in r.stdout
+    assert r.stderr.strip().endswith("pipeline wiring error: step 'tests' input 'files' resolved to nothing from "
+                                     "'$steps.feature:feature.json#files': no earlier step produced it (skill build/test-strategy-tdd requires it)")
+    we = json.loads((out / "wiring_error.json").read_text())
+    assert we["step"] == "tests" and we["input"] == "files" and we["skill"] == "build/test-strategy-tdd" and we["stage"] == "build"
+    assert we["reference"] == "$steps.feature:feature.json#files" and "not a gate failure" in we["how"]
+    assert not (out / "needs_input.json").exists() and not (out / "needs_builder.json").exists()
+    assert stage_status(out) == {"requirements": "passed", "architecture": "passed", "build": "wiring_error"}
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert gate["verdict"] == "fail" and gate["detail"].startswith("pipeline wiring error")
+    assert run_json(out)["exit_code"] == 2
 
 
 def test_resume_continues_from_the_first_incomplete_stage(tmp_path):
@@ -178,7 +286,7 @@ def test_resume_continues_from_the_first_incomplete_stage(tmp_path):
     assert rj["resumed"] is True and stage_status(out) == {s: "passed" for s in STAGES}
     build = next(s for s in rj["stages"] if s["id"] == "build")
     reused = {t["id"]: t.get("resumed", False) for t in build["steps"]}
-    assert reused == {"feature": True, "tests": True, "code": False, "conventions": False}
+    assert reused == {"feature": True, "files": True, "tests": True, "code": False, "conventions": False}
     assert len([ln for ln in (out / "evidence" / "EVIDENCE.md").read_text().splitlines() if ln.startswith("| ") and "Stage" not in ln]) == 6
 
 
@@ -198,18 +306,18 @@ def test_missing_required_input_exits_2_with_needs_input(tmp_path):
     assert r.returncode != 0 and "pipeline not found" in r.stderr
 
 
-def test_request_only_run_without_a_brief_stops_honestly_when_no_files_are_named(tmp_path):
+def test_request_only_run_without_a_brief_asks_the_builder_for_the_files_never_fails_a_gate(tmp_path):
     out = tmp_path / "nobrief"
     r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", brief=None)
-    assert r.returncode == 1, r.stdout + r.stderr
+    assert r.returncode == 4, r.stdout + r.stderr                     # manual builder, no files.txt yet: same stop as --builder none
     brief = json.loads((out / "evidence" / "01-requirements" / "brief" / "brief.json").read_text())
     assert brief["feature"] == REQUEST and brief["problem"] == REQUEST and "_composed" in brief
     fj = json.loads((out / "evidence" / "03-build" / "feature" / "feature.json").read_text())
     assert fj["files"] == "" and fj["files_source"].startswith("none")
-    # test-strategy-tdd needs files the plan did not name: the step says so instead of guessing
-    tests_step = next(t for s in run_json(out)["stages"] if s["id"] == "build" for t in s["steps"] if t["id"] == "tests")
-    assert tests_step["status"] == "failed" and "needs input ['files']" in tests_step["error"]
-    assert stage_status(out)["build"] == "failed"
+    need = json.loads((out / "needs_builder.json").read_text())
+    assert need["step"] == "files" and need["builder"] == "manual"
+    assert stage_status(out)["build"] == "awaiting_builder"            # never a gate failure, never a needs_input
+    assert not (out / "wiring_error.json").exists() and not (out / "needs_input.json").exists()
 
 
 def test_claude_code_builder_without_claude_on_path_fails_clearly(tmp_path, monkeypatch):

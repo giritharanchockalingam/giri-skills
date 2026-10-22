@@ -51,16 +51,18 @@
         { "id": "feature", "kind": "compose", "derive": "feature-from-plan",
           "inputs": { "plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "brief": "$steps.brief:brief.json" },
           "outputs": ["feature.md", "feature.json"] },
+        { "id": "files", "kind": "agent", "agent": "claude-code", "produces": ["files.txt"],
+          "inputs": { "plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "target": "$repo" } },
         { "id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd",
-          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.feature:feature.json#files", "target": "$repo" } },
+          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo" } },
         { "id": "code", "kind": "agent", "agent": "claude-code",
-          "inputs": { "plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "target": "$repo" },
+          "inputs": { "plan": "$steps.plan:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo" },
           "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"] },
         { "id": "conventions", "kind": "skill", "skill": "build/nextjs-enterprise-conventions",
           "inputs": { "target": "$repo", "baseline": "$profile.baselines.nextjs" }, "gate": true }
       ],
       "gate": { "kind": "exit", "step": "conventions" },
-      "evidence": ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json", "$steps.code:diff.patch", "$steps.code:agent-summary.md", "$steps.conventions:report.md"]
+      "evidence": ["$steps.files:files.txt", "$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json", "$steps.code:diff.patch", "$steps.code:agent-summary.md", "$steps.conventions:report.md"]
     },
     {
       "id": "evaluate", "adlc_stage": "evaluate", "role": "ai-quality-red-team",
