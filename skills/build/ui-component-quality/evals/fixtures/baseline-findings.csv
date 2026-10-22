@@ -1,0 +1,9 @@
+rule,file,line,snippet,severity,status
+# fictional fixture — the debt recorded by an earlier ui_lint run on repo-violations (ui-component-quality evals),,,,,
+UI3,app/(app)/orders/page.tsx,9,"<span onClick={() => console.info(""open help"")}>Need help with orders?</span>",high,new
+UI8,components/features/orders/OrderDetail.tsx,12,"<div dangerouslySetInnerHTML={{ __html: data?.notesHtml ?? """" }} />",high,new
+UI1,components/features/orders/OrderTable.tsx,19,"<img src=""/logo.png"" />",high,new
+UI4,components/features/orders/OrderTable.tsx,20,"<input type=""search"" value={query} onChange={(e) => setQuery(e.target.value)} placeholder=""Search"" />",high,new
+UI3,components/features/orders/OrderTable.tsx,28,<div onClick={() => onOpen(order.id)}>{order.customer}</div>,high,new
+UI2,components/features/orders/OrderTable.tsx,29,"<button type=""button"" onClick={() => onDelete(order.id)}>",high,new
+UI1,components/features/orders/CustomerAvatar.tsx,7,"<img src={avatarUrl} className=""h-8 w-8 rounded-full"" />",high,new
