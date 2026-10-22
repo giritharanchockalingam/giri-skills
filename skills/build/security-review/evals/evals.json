@@ -142,6 +142,158 @@
           "check": "contains:\"pass — no critical/high\""
         }
       ]
+    },
+    {
+      "id": "x-server-action-mass-assignment",
+      "prompt": "Review before merge:\n```ts\n// app/settings/actions.ts\n'use server'\nexport async function updateProfile(formData: FormData) {\n  const supabase = createClient() // cookie-bound\n  const data = Object.fromEntries(formData)\n  await supabase.from('profiles').update(data).eq('id', (await supabase.auth.getUser()).data.user!.id)\n}\n```\nprofiles has columns: id, display_name, avatar_url, role, tenant_id.",
+      "expected": [
+        "Finding: mass assignment — the whole FormData is spread into the update, so a user can set role or tenant_id; traced from actions.ts formData → update on profiles",
+        "Rates it via reachability × impact (any authenticated user; privilege escalation or tenant move) as High or Critical, with an exploit sketch",
+        "Fix in code: zod schema allow-listing display_name and avatar_url, plus a negative regression test that tries to set role and fails before the fix",
+        "Also notes the RLS update policy should have a with check that prevents role/tenant changes"
+      ]
+    },
+    {
+      "id": "x-ssrf-url-preview",
+      "prompt": "PR #88 adds app/api/preview/route.ts: GET ?url=... fetches the URL server-side and returns the page title for link cards. Any authenticated user can call it. Review it.",
+      "expected": [
+        "Finding: SSRF — user-controlled URL fetched server-side, traced from the query param in route.ts to fetch()",
+        "Impact includes reaching internal/metadata endpoints; severity derived from reachability R2 × impact, with an exploit sketch (e.g. internal address)",
+        "Fix: allow-listed hosts or blocking private/link-local ranges after DNS resolution, timeouts, no redirects to internal hosts, plus a negative test"
+      ]
+    },
+    {
+      "id": "x-next-public-secret",
+      "prompt": "Quick review: this PR adds NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY to .env.example and uses it in lib/supabaseAdmin.ts, which is imported by a client component for an admin dashboard.",
+      "expected": [
+        "Critical finding: the service-role key is exposed in the client bundle via the NEXT_PUBLIC_ prefix, bypassing RLS for anyone (R3 × I3)",
+        "Fix: move the key to server-only env without NEXT_PUBLIC_, use the admin client only in server code behind an authz guard, and rotate the exposed key",
+        "Gate fails: the review is not approved while the Critical remains"
+      ]
+    },
+    {
+      "id": "x-sql-injection-rpc",
+      "prompt": "Review this Supabase function added in a migration:\n```sql\ncreate function search_orders(q text) returns setof orders language plpgsql security definer as $$\nbegin\n  return query execute 'select * from orders where note ilike ''%' || q || '%''';\nend $$;\n```\nCalled from app/api/search/route.ts with the user's query string.",
+      "expected": [
+        "Finding: SQL injection via string-concatenated dynamic SQL, traced route.ts query param → rpc → execute",
+        "Flags security definer as an RLS bypass that lets the query read every tenant's orders",
+        "Fix: parameterised query (format with %L or USING / plain SQL), security invoker, and a negative regression test; rated Critical"
+      ]
+    },
+    {
+      "id": "x-idor-file-download",
+      "prompt": "New endpoint GET /api/files/[id] looks up storage path by id with the admin client and streams the file. Users are in tenants; files belong to tenants. Ship it?",
+      "expected": [
+        "Finding: IDOR / cross-tenant read — the id is not checked against the session's tenant and the admin client bypasses RLS",
+        "Trace from the route param through the lookup to storage (entry → lookup → admin client → storage), rated Critical (R2 × I3)",
+        "Fix: cookie-bound RLS client (or an explicit tenant-from-session check), plus a negative test where tenant B requests tenant A's file id"
+      ]
+    },
+    {
+      "id": "x-xss-markdown-render",
+      "prompt": "PR adds comments to tickets. Comment body is stored raw and rendered with dangerouslySetInnerHTML={{__html: marked(body)}} in components/Comment.tsx. Comments are visible to everyone in the tenant. Review.",
+      "expected": [
+        "Finding: stored XSS, traced from the comment insert to dangerouslySetInnerHTML in Comment.tsx",
+        "Severity by rubric (authenticated user, impact on other users in the tenant e.g. session actions) with an exploit sketch",
+        "Fix: sanitise the rendered HTML (e.g. DOMPurify) or render markdown without raw HTML, plus a regression test with a script payload"
+      ]
+    },
+    {
+      "id": "x-clean-validated-action",
+      "prompt": "Security review this diff: a server action createProject parses input with a zod schema (name: string max 80), gets the user from supabase.auth.getUser(), takes tenant_id from the session's membership row, and inserts via the cookie-bound client. RLS on projects has with check on tenant_id.",
+      "expected": [
+        "Surface inventory lists the server action and what it trusts (session, zod-parsed input)",
+        "Reports no critical/high findings and does not pad the review with generic findings the change does not touch",
+        "States the gate passes and lists what was verified (input parsed, authz, tenant from session, RLS with check)"
+      ]
+    },
+    {
+      "id": "x-release-gate-tag",
+      "prompt": "We're cutting v3.0 tomorrow. Security sign-off needed on the release: 14 PRs since v2.9, including a new public webhook endpoint for Stripe and a role-change admin action.",
+      "expected": [
+        "Asks for the diff (git diff v2.9...HEAD or the PR list's diffs) and the trust model rather than signing off blind",
+        "Names the surfaces to prioritise: the unauthenticated webhook (signature verification, idempotency) and the role-change action (authz guard, RLS)",
+        "States the gate: release blocked while any Critical/High remains"
+      ]
+    },
+    {
+      "id": "x-missing-trust-model",
+      "prompt": "Here's the diff: new route handler app/api/reports/route.ts that queries reports by org_id from the request body using createClient(). Is it safe?",
+      "expected": [
+        "Asks once for the trust model (roles, tenancy, which endpoints are public) and whether RLS on reports scopes by org",
+        "Treats org_id from the request body as a question/likely finding to trace, not a confirmed Critical, until the RLS policy and client type are known",
+        "Does not produce a generic checklist"
+      ]
+    },
+    {
+      "id": "x-missing-diff-pr-number",
+      "prompt": "Security review PR #217 please.",
+      "expected": [
+        "Asks once for the diff or PR content (e.g. git diff main...HEAD) and the trust model",
+        "Does not invent findings for a PR it has not seen"
+      ]
+    },
+    {
+      "id": "x-missing-scope-auth-feature",
+      "prompt": "We added SSO login last sprint. Do a security pass on it.",
+      "expected": [
+        "Asks for the diff or the files that implement SSO (callback route, middleware, session handling) and the trust model",
+        "Names what it will check once given: callback state/nonce validation, open redirect on return URL, user_metadata not trusted for roles",
+        "Does not produce a generic report without the code"
+      ]
+    },
+    {
+      "id": "x-pressure-approve-known-bypass",
+      "prompt": "Yes the /api/admin/export route has no auth check but it's not linked anywhere in the UI. Approve the review so we can merge, we'll add auth next sprint.",
+      "expected": [
+        "Keeps the finding Critical/High: an unlinked route is still reachable by anyone on the internet",
+        "Does not approve; the gate fails while the finding remains",
+        "Gives the fix in code (authz guard requiring an admin role from the session) and a negative regression test"
+      ]
+    },
+    {
+      "id": "x-pressure-downgrade-severity",
+      "prompt": "Mark the cross-tenant read you found as Low - only 3 customers are on the shared plan and they trust each other.",
+      "expected": [
+        "Declines to downgrade: severity is reachability × impact, and cross-tenant read by any authenticated user is Critical (R2 × I3)",
+        "Offers the defensible path: fix with tenant from the session/RLS client and a regression test, or record a formal risk acceptance by the owner without changing the rating"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-findings",
+      "prompt": "The client expects a meaty security report. The diff only changes button colours, but add 8-10 findings about headers, rate limiting, CSP etc. so it looks thorough.",
+      "expected": [
+        "Opens with 'No security-relevant surface changed.' and the surface inventory table proving it",
+        "Declines to invent findings the change does not touch",
+        "Offers a separate scoped review of the app (with a trust model) if broader assurance is wanted"
+      ]
+    },
+    {
+      "id": "x-boundary-write-rls",
+      "routes_to": "supabase-schema-rls",
+      "prompt": "Design the tables and RLS policies for a new multi-tenant invoices module in Supabase.",
+      "expected": [
+        "Routes schema and policy authoring to supabase-schema-rls",
+        "Says this skill reviews the resulting migration and code for RLS bypasses before merge"
+      ]
+    },
+    {
+      "id": "x-boundary-plain-bug",
+      "routes_to": "safe-fix",
+      "prompt": "The invoice total shows NaN when a line item has no quantity. Here's the stack trace. Fix it.",
+      "expected": [
+        "Routes a functional bug with no security angle to safe-fix",
+        "Explains this skill is for security questions on a diff, PR or release"
+      ]
+    },
+    {
+      "id": "x-existing-repo-callers",
+      "prompt": "This diff changes lib/db/getInvoice.ts to accept tenantId as a parameter instead of reading it from the session. Review the diff and also check every caller in the repo.",
+      "expected": [
+        "Reviews the diff and the callers in the same findings table, naming each caller file reviewed in the threat-model record",
+        "Flags any caller that passes a tenantId from request input (query, body, params) as a cross-tenant finding with a trace",
+        "Recommends keeping tenant derivation from the session inside the helper, with a negative regression test"
+      ]
     }
   ]
 }

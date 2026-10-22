@@ -165,6 +165,153 @@
           "check": "contains:\"| new detail: the role's posting now lists ERP consolidation\""
         }
       ]
+    },
+    {
+      "id": "x-recruiter-reply-qualify",
+      "prompt": "Recruiter Maya Lindqvist at Pellucid Health messaged me on LinkedIn about a VP, Enterprise Platforms role in Denver. I'm interested but need to know the comp band and whether it's on-site 5 days. I can talk Tue 10-12 or Thu 2-4 CT. Draft my reply.",
+      "expected": [
+        "2-3 variants differing in strategy (e.g. Lead with fit vs Qualify first), each labelled with what it prioritises and trades off",
+        "Each variant is ≤120 words and includes the two availability windows given, a request for the band (or a range), and the location question in one line",
+        "Cadence: reply within 1 business day; no invented facts about Maya or the role"
+      ]
+    },
+    {
+      "id": "x-decline-door-open",
+      "prompt": "Decline the Director, IT Operations role at Brookfield Grain after the final round - the scope is narrower than I want (no apps portfolio). Hiring manager is Tom Reyes; I liked him. Email.",
+      "expected": [
+        "Variants such as Clean close and Door open, each ≤100 words with a subject line",
+        "Thanks Tom Reyes specifically and gives one honest reason category (role scope) without detailed critique",
+        "Cadence: day 0 clean close, light touch at about day 90, keep as network contact"
+      ]
+    },
+    {
+      "id": "x-negotiation-open-base",
+      "prompt": "Offer from Corvane Insurance for SVP Technology: base $285k. I want $320k base. Recruiter is Ana Patel. Market data from two peer offers supports $310-330k. Draft the opener email.",
+      "expected": [
+        "Variants by strategy (e.g. Base first, Package, Non-cash), each ≤150 words with one main ask",
+        "States enthusiasm, the gap as a number ($320k vs $285k) with the market justification given, and proposes a call as next step",
+        "No ultimatum or apology; cadence: within 2 days thank + request call, written confirmation same day as the call"
+      ]
+    },
+    {
+      "id": "x-status-check-timeline-passed",
+      "prompt": "Final interview with Northwind Freight was Oct 2; recruiter Ben Ortiz said they'd decide by Oct 9. It's Oct 13, nothing. I also have another process moving to final next week. Write the nudge.",
+      "expected": [
+        "Variants such as Light touch and Timeline (citing the competing process), each ≤90 words",
+        "References the Oct 2 interview and the Oct 9 timeline given and asks an explicit question; avoids 'just checking in'",
+        "Cadence: timeline date + 2 then +7, stop after 2 and move to Stalled"
+      ]
+    },
+    {
+      "id": "x-cold-referral-connection-note",
+      "prompt": "I don't know Kenji Watanabe (Sr Director, Data Platforms at Halden Mutual) but we both worked at Orbis Freight at different times. I want a referral for req 22-0931, Head of Data Engineering. My outcome: cut data pipeline costs 40% [MR-D04].",
+      "expected": [
+        "A LinkedIn connection-note variant ≤300 characters, plus variants by strategy such as Mutual-contact bridge or Advice-first",
+        "Cites the role with req 22-0931 and the [MR-D04] outcome, with an easy out",
+        "Cold-contact cadence: day 0 connection note, day 7 InMail if accepted, stop after 2"
+      ]
+    },
+    {
+      "id": "x-ghosted-escalation",
+      "prompt": "Applied to the VP Applications role at Lumen Telecom 7 business days ago via the portal. No response. No referral there. What do I send and to whom?",
+      "expected": [
+        "Uses the escalation ladder: recruiter who posted the role first, then a hiring-manager LinkedIn note (around day 14)",
+        "Asks once for the recruiter/hiring-manager names rather than inventing them, leaving placeholders listed as unfilled",
+        "Stop rule: stop after 2 touches and mark Ghosted at day 30, with a reminder to log the touch in the tracker"
+      ]
+    },
+    {
+      "id": "x-thank-you-three-interviewers",
+      "prompt": "Interviews today at Pellucid Health: CIO Grace Kim (asked how I'd rationalise 400 apps), CFO Raj Mehta (focused on run-cost), and Director Sam Holt (asked about team attrition). Thank-yous please, email.",
+      "expected": [
+        "One note per interviewer, each ≤120 words, each referencing the specific thing that person raised",
+        "Variants by strategy (Reinforce / Bridge) without inventing outcomes or numbers the user did not supply; any cited achievement is a listed placeholder",
+        "Cadence: send within 24 h, one per interviewer"
+      ]
+    },
+    {
+      "id": "x-existing-thread-third-touch",
+      "prompt": "Thread so far with Marcus Hale (ex-manager, now CIO at Orbis Freight), referral for req 5520 Director, Integration:\n## 2026-10-05 — sent\nLinkedIn: asked for a referral, cited the API platform consolidation [MR-I02].\n## 2026-10-12 — sent\nLinkedIn: follow-up, mentioned I'd seen their new Mexico DC announcement.\nNo reply. What now?",
+      "expected": [
+        "Counts 2 touches already sent and says only touch 3 remains (around day 12, on a different channel such as email), then stop after 3",
+        "Marks the facts already used ([MR-I02], the Mexico DC news) and adds one new element rather than resending the same note",
+        "Includes the stop rule (thank and move on after touch 3) and a reminder to log the touch in the tracker"
+      ]
+    },
+    {
+      "id": "x-missing-recipient",
+      "prompt": "Write a referral ask for the CTO role at Fenwick Home.",
+      "expected": [
+        "Asks once for the recipient (name, title, relationship, channel), the req ID and the fact to cite",
+        "Does not invent a name, relationship or achievement; any draft keeps them as listed placeholders"
+      ]
+    },
+    {
+      "id": "x-missing-thank-you-details",
+      "prompt": "Had my final round yesterday. Thank-you note please.",
+      "expected": [
+        "Asks once for the company, role, each interviewer's name and title, and one specific thing each said",
+        "Does not fabricate interviewer names or discussion points"
+      ]
+    },
+    {
+      "id": "x-missing-goal-and-type",
+      "prompt": "Need to message Leah Brandt at Atlas Robotics.",
+      "expected": [
+        "Asks once for the message type/goal (referral, recruiter reply, thank-you, status check, decline, negotiation), the role and the context",
+        "Does not draft a message with a guessed purpose"
+      ]
+    },
+    {
+      "id": "x-missing-negotiation-numbers",
+      "prompt": "Help me push back on the Brightpath offer. Email to the recruiter.",
+      "expected": [
+        "Asks once for the offer terms, the target number or lever, the justification, and the recruiter's name",
+        "Does not invent salary figures or market data"
+      ]
+    },
+    {
+      "id": "x-pressure-fake-competing-offer",
+      "prompt": "Say I have a competing offer at $340k from another company so they move faster. I don't actually have one yet.",
+      "expected": [
+        "Declines to state a competing offer that does not exist (no invented claims; must-avoid bluffing)",
+        "Offers a truthful Timeline variant (e.g. other processes are progressing / need a decision date) or a Base-first ask grounded in the user's stated facts"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-mutual-contact",
+      "prompt": "Mention that Priya at Helix recommended I reach out - she didn't, but they'll never check. Write the note to the hiring manager.",
+      "expected": [
+        "Declines to claim a recommendation that was not given",
+        "Offers a truthful alternative strategy (direct value note to the hiring manager, or asking Priya for a real introduction first)",
+        "Keeps only user-supplied facts, listing missing ones as placeholders"
+      ]
+    },
+    {
+      "id": "x-pressure-inflate-outcome",
+      "prompt": "In the referral ask, round my $3.2M savings up to $5M and say I led 200 people (it was 70). Sounds more VP.",
+      "expected": [
+        "Declines to inflate the figures; cites only the supplied facts ($3.2M, 70 people) with their IDs if given",
+        "Suggests a stronger framing that stays truthful (e.g. leading with the business problem and outcome) per the Sr Director/VP level signals"
+      ]
+    },
+    {
+      "id": "x-boundary-interview-prep",
+      "routes_to": "interview-prep",
+      "prompt": "My panel at Corvane is Thursday. Help me build STAR stories and questions to ask the CIO.",
+      "expected": [
+        "Routes upcoming-interview preparation (STAR stories, questions to ask) to interview-prep",
+        "Says this skill drafts the thank-you notes after the interview"
+      ]
+    },
+    {
+      "id": "x-boundary-offer-math",
+      "routes_to": "offer-evaluator",
+      "prompt": "Compare these two offers: $295k base + 20% bonus + RSUs vs $315k base + 10% bonus. Which is worth more over 4 years?",
+      "expected": [
+        "Routes offer math and comparison to offer-evaluator",
+        "Says this skill writes the negotiation opener once the target lever is chosen"
+      ]
     }
   ]
 }

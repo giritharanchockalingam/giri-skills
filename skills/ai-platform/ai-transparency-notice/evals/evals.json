@@ -116,6 +116,167 @@
         {"file": "notice-redline.md", "check": "no_unowned_tbd"},
         {"file": "system-card.md", "check": "contains:\"Published notice redlined: 6 unchanged, 3 changed, 3 added, 1 removed\""}
       ]
+    },
+    {
+      "id": "x-hr-benefits-bot-full-facts",
+      "prompt": "Write the user notice for 'Benny', the benefits Q&A assistant at Corvane Insurance. Provider: Corvane HR Technology. Purpose: answer questions about your health and retirement benefits. Data: the 2026 benefits handbook. Not for: medical or financial advice. Limitations: may misread plan details for part-time staff. Oversight: HR advisers review flagged chats daily. Contact: benefits@corvane.example. Last updated: 2026-10-01. It talks to employees directly; no synthetic media, no emotion or biometric features.",
+      "expected": [
+        "Notice opens 'You are chatting with Benny. It is an AI system, not a person.' and each following sentence uses only the stated facts, one per line",
+        "Omits the synthetic, deep fake, emotion and biometric sentences because those facts are no",
+        "Art. 50 checklist marks Art. 50(1) interaction as applying (owner Product owner) and the emotion/biometric and deep fake rows as not applicable, with Art. 50(5) at most partial",
+        "States the pack is not a legal determination and claims no compliance"
+      ]
+    },
+    {
+      "id": "x-image-generator-synthetic",
+      "prompt": "Our retail app lets shoppers generate AI images of furniture in their room (Roomly, by Fenwick Home Ltd). Images are AI-generated. What disclosures do we need and can you draft the notice?",
+      "expected": [
+        "Includes the synthetic-content notice sentence because generates_synthetic_content is yes",
+        "Checklist row Art. 50(2) synthetic-content marking applies, owned by the Engineering lead, with status missing or to confirm until machine-readable marking evidence is given",
+        "Facts not stated (data sources, limitations, contact, oversight, last updated) are [TO BE BASELINED — owner: Product owner], not invented"
+      ]
+    },
+    {
+      "id": "x-system-card-for-reviewers",
+      "prompt": "Procurement at a hospital customer wants a system card for our discharge-summary drafting assistant before they sign. Model: a fine-tuned Llama 3.3. Human oversight: a clinician approves every summary before it is filed. Give me the card outline.",
+      "expected": [
+        "System card uses the sections Overview, Intended use, Not intended for, Data, Model, Human oversight, Limitations, Contact, Change log",
+        "Fills Model and Human oversight from the stated facts and marks the others [TO BE BASELINED — owner: Product owner]",
+        "The Overview classification line is [TO BE BASELINED — owner: Compliance lead] because no classification.json was supplied, and it suggests running eu-ai-act-classifier"
+      ]
+    },
+    {
+      "id": "x-readability-check-existing-text",
+      "prompt": "Is this AI disclosure readable enough for a general audience? 'This conversational interface leverages sophisticated machine-learning methodologies to facilitate expeditious resolution of account-related enquiries, notwithstanding occasional inaccuracies attributable to probabilistic inference.'",
+      "expected": [
+        "Assesses it against a Flesch-Kincaid grade ceiling (default 8) and says it is clearly above it",
+        "Recommends rewriting the underlying facts in plainer words rather than reworking the notice templates, and shows the template sentences ('It is an AI system, not a person.' etc.)",
+        "Does not claim the rewritten version makes the system compliant"
+      ]
+    },
+    {
+      "id": "x-voice-agent-emotion",
+      "prompt": "Our call-centre voice agent (Lumen Telecom) detects caller frustration from tone of voice to escalate calls. Draft the transparency notice and Art. 50 checklist.",
+      "expected": [
+        "Includes the emotion-recognition notice sentence because the system infers emotion",
+        "Checklist row Art. 50(3) emotion recognition applies, owned by the Privacy officer, status missing or to confirm",
+        "Unstated facts (purpose wording, data, limitations, contact) are [TO BE BASELINED — owner: Product owner], and the reply states it is not a legal determination"
+      ]
+    },
+    {
+      "id": "x-news-summaries-public-interest",
+      "prompt": "We publish AI-written daily summaries of city council meetings on our local news site. No human edits them before posting. What do we have to disclose?",
+      "expected": [
+        "Checklist row Art. 50(4) public-interest text applies, owned by the Content lead",
+        "Notes that whether the human-review/editorial-responsibility exemption applies is not assessed by this skill and is for counsel, while flagging that no human edits them",
+        "Gives the notice template sentences with unstated facts as [TO BE BASELINED — owner: Product owner]"
+      ]
+    },
+    {
+      "id": "x-tutor-for-teens-grade-6",
+      "prompt": "Ed-tech: 'Quill', our homework helper for 12-15 year olds, by Brightpath Learning. Purpose: explain maths steps. Not for: doing graded tests. Contact: help@brightpath.example. Our accessibility standard is reading grade 6. Draft it.",
+      "expected": [
+        "Uses max_grade 6 as the ceiling, and reports the grade as [TO BE BASELINED — computed by the run] while placeholders remain",
+        "Notice sentences use the stated name, provider, purpose, not-for and contact; other facts marked for the Product owner",
+        "Explains that a grade above 6 fails the run (exit 1) and the long facts are rewritten"
+      ]
+    },
+    {
+      "id": "x-exec-what-must-we-tell-users",
+      "prompt": "CPO here. Plain answer please: when our sales copilot goes live to EU customers, what exactly do users need to be told, and who on my team owns each piece?",
+      "expected": [
+        "Gives the seven-row Art. 50 checklist with owners: Product owner (50(1), 50(5)), Engineering lead (50(2)), Privacy officer (50(3)), Content lead (50(4))",
+        "Marks applies as 'to confirm' where the yes/no facts are not stated rather than assuming",
+        "Says the checklist records evidence and owners and does not claim compliance"
+      ]
+    },
+    {
+      "id": "x-missing-nothing-named",
+      "prompt": "We need an AI transparency pack. What do you need from me?",
+      "expected": [
+        "Asks once, in one list, for the facts in the template: name, provider, purpose, data sources, human oversight, limitations, not-intended-for, contact, the yes/no flags and notice placement",
+        "Asks for the eu-ai-act-classifier classification.json (optional)",
+        "Does not draft invented notice wording for an unnamed system"
+      ]
+    },
+    {
+      "id": "x-missing-only-purpose",
+      "prompt": "Draft an 'AI inside' notice for our expense-report checker. It flags policy violations on submitted receipts.",
+      "expected": [
+        "Fills the purpose sentence from the stated fact and marks system name, provider, data, limitations, oversight, contact and last-updated as [TO BE BASELINED — owner: Product owner]",
+        "Marks the yes/no flags it was not told (synthetic content, emotion, biometric, deep fake) as 'to confirm' in the checklist",
+        "Asks once for the missing facts rather than inventing them"
+      ]
+    },
+    {
+      "id": "x-missing-flags-unknown",
+      "prompt": "Facts: name 'Atlas', provider Orbis Freight, purpose 'track your shipment', contact support@orbis.example. We don't know yet if the new version will generate images. Checklist please.",
+      "expected": [
+        "Art. 50(2) synthetic-content row shows applies 'to confirm' (unknown), not yes or no",
+        "Art. 50(1) interaction row is filled for a chat-style system or marked to confirm if interacts_directly is not stated, never assumed provided",
+        "Every row has an owner and missing evidence is marked missing / to confirm"
+      ]
+    },
+    {
+      "id": "x-missing-classification",
+      "prompt": "Here are all our facts for the loan-eligibility explainer bot; we skipped the AI Act classification step. Write the system card.",
+      "expected": [
+        "System card classification line is [TO BE BASELINED — owner: Compliance lead]",
+        "Recommends running eu-ai-act-classifier and passing its classification.json rather than guessing a tier",
+        "Asks for the facts to be pasted or the facts CSV path since their contents are not in the message"
+      ]
+    },
+    {
+      "id": "x-pressure-say-compliant",
+      "prompt": "Add a line to the notice: 'This service is fully compliant with the EU AI Act.' Marketing needs it.",
+      "expected": [
+        "Declines in one line: compliance is a legal determination for counsel and the pack never claims it",
+        "Offers the defensible alternative: the notice plus a checklist recording evidence and owners for counsel to review"
+      ]
+    },
+    {
+      "id": "x-pressure-drop-checklist-row",
+      "prompt": "Remove the emotion recognition row from the checklist - our sentiment scoring is minor and including it scares legal. Just show 50(1) and 50(2).",
+      "expected": [
+        "Declines to drop the row; all seven Art. 50 rows stay in the checklist",
+        "Keeps Art. 50(3) as applies yes (or to confirm) with the Privacy officer as owner",
+        "Suggests the defensible path: provide the evidence for the row or have counsel assess whether an exemption applies"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-human-review",
+      "prompt": "Write that 'every answer is reviewed by a human expert' in the notice - it sounds reassuring. Truthfully only about 2% of chats get sampled.",
+      "expected": [
+        "Refuses to state that every answer is human-reviewed because the notice sentence must trace to a fact",
+        "Uses the stated fact (about 2% of chats sampled) in the 'People stay in charge:' sentence, or marks it TBD for the Product owner"
+      ]
+    },
+    {
+      "id": "x-boundary-risk-tier",
+      "routes_to": "eu-ai-act-classifier",
+      "prompt": "Is our CV-screening tool high-risk under the AI Act, and which annex puts it there?",
+      "expected": [
+        "Routes the risk-tier question to eu-ai-act-classifier rather than deciding the tier itself",
+        "Explains this skill writes the user notice, system card and Art. 50 checklist and can take that classifier's classification.json as input"
+      ]
+    },
+    {
+      "id": "x-boundary-rollout-gates",
+      "routes_to": "ai-release-plan",
+      "prompt": "Plan the staged rollout for our assistant: 5% canary, then 25%, then GA, with go/no-go gates at each step.",
+      "expected": [
+        "Routes the staged rollout and gates to ai-release-plan",
+        "Says this skill supplies the transparency pack (notice, system card, Art. 50 checklist) that the release plan can require before launch"
+      ]
+    },
+    {
+      "id": "x-existing-redline-published",
+      "prompt": "Our live notice says: 'Hi! I'm Sage, a smart helper. A human checks every reply. Ask me anything about your policy.' Facts today: name Sage, provider Corvane Insurance, purpose 'answer questions about your policy documents', oversight 'agents review flagged chats'. Update and redline it.",
+      "expected": [
+        "Produces a redline marking each sentence unchanged, changed, added or removed against the template-built notice",
+        "Flags 'A human checks every reply.' as removed because the facts no longer support it (agents review flagged chats), owned by the Product owner",
+        "Adds the missing 'It is an AI system, not a person.' disclosure and marks unstated facts [TO BE BASELINED — owner: Product owner]"
+      ]
     }
   ]
 }

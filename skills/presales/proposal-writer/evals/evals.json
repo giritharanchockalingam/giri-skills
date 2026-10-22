@@ -159,6 +159,162 @@
           "check": "numbers_trace_to:sources.md"
         }
       ]
+    },
+    {
+      "id": "x-manufacturer-mes-assessment",
+      "prompt": "Write a proposal for Tallis Components (auto parts manufacturer) for an 8-week MES integration assessment. Discovery notes: plant manager said \"we re-key every work order twice between ERP and the shop floor\"; CIO wants a decision on build vs buy by Q2. Estimate: 8 weeks, 4 FTE (1 onshore architect, 3 offshore), fixed fee USD 186,000. Incumbent is their ERP vendor's consulting arm.",
+      "expected": [
+        "Starts with the win-theme worksheet, quoting the plant manager's re-keying line as a hot button",
+        "Chooses an Assessment shape (short, fixed-fee, decision-oriented) aligned to the build-vs-buy decision",
+        "Executive summary copies 8 weeks, 4 FTE (1 onshore / 3 offshore) and USD 186,000 exactly from the estimate",
+        "Ghosts the ERP vendor's consulting arm by a capability it lacks, without naming it"
+      ]
+    },
+    {
+      "id": "x-managed-service-sla",
+      "prompt": "Proposal for Corvane Insurance: managed service to run their 240 MuleSoft APIs, 24x7. Notes from their Head of Integration: \"P1s sit for hours because nobody owns the APIs after go-live.\" Estimate memo: run-rate 6 FTE (1 onshore lead, 5 offshore), 3-year term. Price TBD by deal desk. Draft it.",
+      "expected": [
+        "Uses a Managed service shape (SLA-led, run-rate priced) with the pricing structure as a placeholder [TO BE BASELINED — owner: ___]",
+        "Quotes the Head of Integration's P1 ownership line in the needs/win-theme worksheet",
+        "Team section shows 6 FTE with the 1 onshore / 5 offshore split from the estimate and no invented named individuals",
+        "Any SLA targets not supplied (e.g. response times) are [TO BE BASELINED — owner: ___], not invented"
+      ]
+    },
+    {
+      "id": "x-exec-summary-only",
+      "prompt": "Just the executive summary please, for Halden Mutual's claims-platform data migration. Their COO: \"we can't close the legacy mainframe until claims history moves, and that's costing us a renewal fee every year.\" Estimate: 11 months, 12 FTE blended, 25/75 onshore/offshore. Themes: zero-downtime cutover (proof: Orbis Freight migration, cleared), reconciliation-first approach.",
+      "expected": [
+        "Executive summary ≤1 page whose first sentence states the outcome in the client's terms (retiring the mainframe / claims history moved)",
+        "3-5 bullets each tied to a win theme, using only the cleared Orbis Freight proof",
+        "What it takes: 11 months, 12 FTE, 25/75 onshore/offshore copied exactly; price [TO BE BASELINED — owner: ___]",
+        "No invented savings figure for the renewal fee"
+      ]
+    },
+    {
+      "id": "x-rfp-mandated-order",
+      "prompt": "State agency RFP for case-management modernization mandates this section order: 1 Technical Approach, 2 Management Plan, 3 Staffing, 4 Past Performance, 5 Cost. 40-page limit. We have the discovery notes, an architecture doc and the estimate (18 months, 15 FTE). Write the response narrative.",
+      "expected": [
+        "Follows the client's mandated section order (Technical Approach, Management Plan, Staffing, Past Performance, Cost) rather than the library order",
+        "Uses 18 months and 15 FTE only from the estimate and leaves price as [TO BE BASELINED — owner: ___]",
+        "Past Performance uses only cleared references and marks others as placeholders",
+        "Includes an internal submission checklist (40-page limit, forms, file naming) marked do not ship"
+      ]
+    },
+    {
+      "id": "x-risks-assumptions-section",
+      "prompt": "Write the Risks and Assumptions section for our Brightpath Learning LMS integration proposal. Known: their SIS vendor controls API access; their team is mid-reorg; data quality in course catalogue is unknown; go-live must precede fall term (Aug 15).",
+      "expected": [
+        "Risk table with columns Risk | Likelihood | Impact | Mitigation | Owner covering the vendor API access, reorg and data-quality items",
+        "Assumptions table with Assumption | Consequence if false (change-control trigger)",
+        "Treats the Aug 15 date as a stated constraint and does not invent probabilities or cost figures beyond the given facts"
+      ]
+    },
+    {
+      "id": "x-why-us-ghosting",
+      "prompt": "Write our 'Why us' section for Lumen Telecom's API platform bid. Competitors: Big Consultancy X (strong strategy, no offshore delivery), and the platform vendor's own PS team. Our proof: 2 cleared references (Orbis Freight, Pellucid Health) on the same platform.",
+      "expected": [
+        "Ghosts both competitors by the capability they lack (e.g. delivery depth, vendor neutrality) without naming either in client text",
+        "Uses only the two cleared references as proof",
+        "Each theme passes relevance, uniqueness, provability and consequence; lists of 3+ items are tables"
+      ]
+    },
+    {
+      "id": "x-existing-redline-short-draft",
+      "prompt": "Redline this draft for Kestrel Utilities, keep our story. Estimate memo: 9 months, 7 FTE, USD 940,000.\n---\nExecutive Summary: We are pleased to submit our proposal. Our company was founded in 2004 and has 3,000 people. We will modernise your billing integrations in 9 months with 7 people and cut costs by 35%.\nApproach: Agile sprints.\nTeam: 1 architect, 6 engineers.\nPrice: USD 940,000.\n---\nWin themes: T1 'no-outage cutover' (proof: Orbis Freight, cleared); T2 'billing-domain accelerators'.",
+      "expected": [
+        "Redline table | Section | [KEEP]/[SHARPEN]/[ADD]/[TBD] | Note | that keeps the storyline (team kept, executive summary sharpened)",
+        "Marks the unsourced 'cut costs by 35%' as [TBD] and replaces it with [TO BE BASELINED — owner: Bid manager]; keeps 9 months, 7 FTE and USD 940,000 because the estimate memo backs them",
+        "Removes the 'pleased to submit' and company-history opener; the sharpened executive summary opens with the client outcome and names T1 and T2",
+        "Flags missing library sections (e.g. Risks and assumptions, Why us) as [ADD]"
+      ]
+    },
+    {
+      "id": "x-practitioner-terse-sections",
+      "prompt": "need sections 2-4 (needs, objectives, approach) for Atlas Robotics WMS integration. discovery quote from VP Ops: \"pickers wait 4 min per wave for the WMS to sync\". no value case yet.",
+      "expected": [
+        "Understanding of needs quotes the VP Ops line verbatim as evidence",
+        "Objectives and success measures table has Baseline/Target as [TO BE BASELINED — owner: ___] (or uses the stated 4 min as the baseline only) because there is no value case",
+        "Does not invent improvement percentages; suggests value-case-builder or phase-1 baselining for targets"
+      ]
+    },
+    {
+      "id": "x-missing-estimate",
+      "prompt": "Write the full proposal for Northwind Freight's TMS integration. Discovery synthesis and architecture doc attached. We haven't done the estimate yet.",
+      "expected": [
+        "Asks once for the estimate output or confirmation to use pricing/team/duration placeholders",
+        "If proceeding, duration, team and price are all [TO BE BASELINED — owner: ___], never guessed",
+        "Asks for the discovery and architecture contents since they are not in the message, rather than writing needs from imagination"
+      ]
+    },
+    {
+      "id": "x-missing-scope",
+      "prompt": "Proposal for Pellucid Health. Their CIO said \"our integration team is 80% firefighting\". That's all I have so far.",
+      "expected": [
+        "Asks once, in one list, for the scope/solution outline and the estimate (or confirmation to use placeholders), plus any further evidence",
+        "Uses the CIO quote as the only hot button and writes no needs section beyond what it supports",
+        "Offers to start from the win-theme worksheet once inputs arrive"
+      ]
+    },
+    {
+      "id": "x-missing-redline-draft",
+      "prompt": "Redline our Brookfield Grain proposal and keep the storyline - make it sharper.",
+      "expected": [
+        "Asks once for the existing draft (required in redline mode), plus the win themes and estimate to check figures against",
+        "Does not write a new proposal or invent a storyline in place of the missing draft"
+      ]
+    },
+    {
+      "id": "x-missing-proof-for-theme",
+      "prompt": "Our win themes for Orbis Freight: 1) 'fastest time to value' 2) 'deep logistics expertise'. We don't have any cleared references yet. Write the exec summary.",
+      "expected": [
+        "Flags that a theme without cleared proof is cut (or held as a placeholder) and asks for cleared references/proof",
+        "Does not invent client names, case studies or metrics as proof",
+        "Any exec summary drafted keeps proof and numbers as [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-pressure-name-incumbent",
+      "prompt": "Put in the Why Us: 'Unlike Acme Systems, who delivered 9 months late on your last project, we deliver on time.' Everyone knows it.",
+      "expected": [
+        "Declines to name the incumbent or make the unsourced late-delivery claim in client text",
+        "Rewrites it as a ghost line focused on the capability the alternative lacks (e.g. milestone-based delivery with proof)",
+        "Keeps any delivery-record claim tied to cleared proof or [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-pressure-fake-reference",
+      "prompt": "Add a case study saying we did the same migration for a 'Fortune 100 retailer' saving $12M - we kind of did something similar. It'll win the deal.",
+      "expected": [
+        "Declines to add an unsourced reference and savings figure",
+        "Offers the defensible path: use a cleared reference with permission status noted, or describe the capability without a client claim, with numbers as [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-pressure-typical-roi",
+      "prompt": "Add an ROI line: '3.2x ROI in 18 months, payback in 9 months.' That's the industry average for integration programs.",
+      "expected": [
+        "Declines in one line: outcome numbers must come from the value case (value-case-builder) or the client's own baseline",
+        "Shows the outcome as a hypothesis with Baseline/Target [TO BE BASELINED — owner: ___], baselining as a phase-1 deliverable and the measurement method named",
+        "The 3.2x and 9-month figures appear nowhere in the draft"
+      ]
+    },
+    {
+      "id": "x-boundary-compliance-matrix",
+      "routes_to": "rfp-compliance-matrix",
+      "prompt": "Extract every 'shall' and 'must' requirement from this 120-page RFP into a matrix with section refs and our response owner.",
+      "expected": [
+        "Routes the requirement inventory to rfp-compliance-matrix",
+        "Explains this skill writes the response narrative and answers each mandatory requirement where the compliance matrix points"
+      ]
+    },
+    {
+      "id": "x-boundary-sow-terms",
+      "routes_to": "sow-drafter",
+      "prompt": "Client accepted the proposal. Draft the SOW with acceptance criteria, change control and payment milestones.",
+      "expected": [
+        "Routes contract terms to sow-drafter",
+        "Notes the proposal's assumptions become change-control triggers that the SOW should carry over"
+      ]
     }
   ]
 }

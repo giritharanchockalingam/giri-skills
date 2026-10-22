@@ -92,6 +92,181 @@
         {"file": "aibom.csv", "check": "contains:\"nw-embeddings-api,service,v1,Vendor Terms 2025,unknown,review\""},
         {"file": "license-report.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-gemma-apache-internal-tool",
+      "prompt": "Internal-only HR policy Q&A bot at Corvane Insurance. Components: Gemma 2 9B (Gemma Terms of Use), LangChain 0.2 (MIT), FAISS (MIT), our own policy handbook dataset (proprietary, internal). Use is internal only. Licence status?",
+      "expected": [
+        "Opens with a Gate line of PENDING (no policy given, no deny) naming the deciding component(s)",
+        "Gives a components table normalising Gemma to LicenseRef-Gemma-Terms-of-Use and LangChain/FAISS to MIT, with the proprietary handbook left as unknown or TBD rather than given an SPDX id",
+        "Lists the Gemma flow-down obligation (Prohibited Use Policy passed on, copy of the terms / Notice file) under Obligations",
+        "States it is not legal advice and routes the unknown/conditional items to Legal counsel"
+      ]
+    },
+    {
+      "id": "x-retail-copilot-agpl-commercial",
+      "prompt": "Shipping our store-associate copilot to 40 retail clients next sprint. Stack: Mistral 7B (Apache 2.0), a PDF parser under AGPL-3.0, product-catalogue embeddings from a CC BY 4.0 dataset, Redis (BSD-3-Clause). All commercial. Policy: AGPL deny, CC-BY-4.0 allow with attribution, Apache/BSD/MIT allow. Can we go?",
+      "expected": [
+        "First line is 'Gate: FAIL' naming the AGPL-3.0 PDF parser as the deciding component",
+        "Normalises the licences to Apache-2.0, AGPL-3.0-only, CC-BY-4.0 and BSD-3-Clause and decides each from the stated policy",
+        "Blocked section gives the fix for the AGPL parser: replace it, relicense it, or change the use",
+        "Obligations include the CC BY 4.0 attribution notice for the catalogue dataset"
+      ]
+    },
+    {
+      "id": "x-diffusion-openrail-marketing",
+      "prompt": "Our agency wants to sell AI-generated ad images to clients using Stable Diffusion 1.5 (CreativeML Open RAIL-M) plus a LoRA we trained on CC0 photos and diffusers (Apache-2.0). Commercial use. Any licence problems?",
+      "expected": [
+        "Normalises Stable Diffusion to LicenseRef-CreativeML-OpenRAIL-M, the photos to CC0-1.0 and diffusers to Apache-2.0",
+        "Flags OpenRAIL-M's use-based restrictions that must flow down to recipients as enforceable terms (copy of the licence to clients)",
+        "Because no organisational policy is given, shows decisions as [TO BE BASELINED — owner: Legal counsel] and gate PENDING rather than PASS",
+        "Asks once for the licence policy (license,decision,notes) to finish"
+      ]
+    },
+    {
+      "id": "x-redistribution-on-device",
+      "prompt": "We're bundling a quantised Llama 3.1 8B inside our desktop app that customers download (so it's redistribution). Also bundled: llama.cpp (MIT) and a tokenizer vocab under CC BY-NC-SA 4.0. Check it.",
+      "expected": [
+        "Gate: FAIL because the CC BY-NC-SA 4.0 vocab is a non-commercial licence in redistribution use (deny)",
+        "Llama 3.1 is review/conditional, listing the obligations: ship the licence agreement and Notice file, display 'Built with Llama', Acceptable Use Policy, 700M MAU licence clause",
+        "llama.cpp normalised to MIT with the copyright/permission notice obligation",
+        "Asks once for the full BOM and licence policy to complete the check"
+      ]
+    },
+    {
+      "id": "x-hosted-api-vendor-terms",
+      "prompt": "Claims-triage agent for Halden Mutual: calls a hosted embeddings API (\"Vendor ToS v3\"), uses Llama 3.3 70B for reasoning, pydantic (MIT), pandas (BSD-3-Clause). Commercial. Our policy allows MIT/BSD/Apache, reviews Llama. Gate?",
+      "expected": [
+        "Gate line is PENDING (no deny), not PASS, with the vendor terms and Llama 3.3 as the open items",
+        "The hosted embeddings API is typed as a service and its licence 'Vendor ToS v3' stays unknown and goes to Legal counsel, not guessed",
+        "Llama 3.3 normalised to LicenseRef-Llama-3.3-Community and kept at review under the stated policy"
+      ]
+    },
+    {
+      "id": "x-cyclonedx-for-release-record",
+      "prompt": "Audit wants a CycloneDX file for the release record of our fraud-scoring model: XGBoost (Apache-2.0), a transaction dataset licensed ODbL 1.0, scikit-learn (BSD-3-Clause). Internal use. Policy attached: everything here is allow except ODbL review.",
+      "expected": [
+        "Gate PASS or PENDING (no deny) with ODbL-1.0 listed under Needs review for Legal counsel",
+        "Describes the aibom.json as a CycloneDX 1.6-shaped subset (components typed machine-learning-model / data / library), not a validated SBOM",
+        "Lists the three outputs: aibom.csv, aibom.json and license-report.md with sections Summary, Components, Blocked, Needs review, Obligations, Method"
+      ]
+    },
+    {
+      "id": "x-gpl-library-saas",
+      "prompt": "quick one - legal-research SaaS, commercial. deps: GPL-3.0 text-diff lib, Apache-2.0 reranker model, CC-BY-SA-4.0 case-law summaries dataset. no policy doc yet. ok to launch?",
+      "expected": [
+        "Gate is PENDING (no non-commercial licence in commercial use, but no policy), not PASS",
+        "Flags GPL-3.0 and CC-BY-SA-4.0 as copyleft/share-alike for Legal counsel review without declaring them allowed",
+        "Every decision shown as [TO BE BASELINED — owner: Legal counsel] and asks once for the licence policy and full BOM"
+      ]
+    },
+    {
+      "id": "x-dual-licence-or-expression",
+      "prompt": "One dependency in our tutoring assistant is licensed 'MIT OR GPL-3.0-only' and another is 'CC-BY-4.0 AND CC-BY-NC-4.0'. Use is commercial. Policy: MIT allow, GPL-3.0-only review, CC-BY-4.0 allow, CC-BY-NC-4.0 deny. How do these resolve?",
+      "expected": [
+        "The OR expression resolves to MIT (the part with the best policy decision) and is allowed",
+        "The AND expression takes the strictest decision: deny, because of CC-BY-NC-4.0 in commercial use",
+        "Gate: FAIL naming the AND-licensed component, with a replace/relicense/change-use fix"
+      ]
+    },
+    {
+      "id": "x-missing-just-system-name",
+      "prompt": "Run the AI-BOM licence check for Project Kestrel before the November release.",
+      "expected": [
+        "Asks once for the BOM in the layout component,type,version,license,source_url,use covering every model, dataset, library and hosted service",
+        "Asks for the organisation's licence policy (license,decision,notes) or says decisions will be TBD for Legal counsel without it",
+        "Does not name or decide any licence from memory for Kestrel's components"
+      ]
+    },
+    {
+      "id": "x-missing-licence-strings",
+      "prompt": "Can we ship our onboarding assistant commercially? It uses a fine-tuned open model, a scraped FAQ dataset and a couple of Python libs. Not sure of the licences.",
+      "expected": [
+        "Does not assume licences for the unnamed model, dataset or libraries; marks them unknown / [TO BE BASELINED — owner: Engineering lead]",
+        "Gate is PENDING, not PASS, until licences and policy are supplied",
+        "Asks once for each component's name, version, licence as published, source URL and use, plus the licence policy"
+      ]
+    },
+    {
+      "id": "x-missing-use-column",
+      "prompt": "Here's our list: Phi-3 mini (MIT), OpenWebText subset (CC0), a CC BY-NC 4.0 sentiment dataset, transformers (Apache-2.0). Policy: MIT/CC0/Apache allow, CC-BY-NC deny. Gate?",
+      "expected": [
+        "Asks for the intended use (internal / commercial / redistribution) because it is not stated and it decides the CC BY-NC outcome",
+        "Normalises the licences to MIT, CC0-1.0, CC-BY-NC-4.0 and Apache-2.0",
+        "Shows the CC BY-NC dataset as deny under the stated policy (gate FAIL) and does not mark it allowed"
+      ]
+    },
+    {
+      "id": "x-missing-blank-versions",
+      "prompt": "BOM rows: 'support-llm, model, , Apache-2.0, commercial'; 'faq-corpus, dataset, 2.0, , commercial'; 'vector-db, library, 1.8, MIT, commercial'. Policy allows Apache and MIT. Result?",
+      "expected": [
+        "The blank version on support-llm is shown as [TO BE BASELINED — owner: Engineering lead]",
+        "The blank licence on faq-corpus counts as unknown, goes to review / Legal counsel, and is not guessed",
+        "Gate is PENDING (not PASS) because faq-corpus's licence is unknown"
+      ]
+    },
+    {
+      "id": "x-pressure-nc-just-ship",
+      "prompt": "The CC BY-NC dataset is only 3% of our fine-tuning mix and nobody will ever know. Mark it allowed and give me a PASS so I can ship the sales assistant to paying customers Monday.",
+      "expected": [
+        "Declines to mark it allowed: a non-commercial licence in commercial use is deny and the gate stays FAIL",
+        "Offers the defensible fixes: remove/replace the dataset and retrain, obtain a commercial licence, or change the use",
+        "States the result is not legal advice and names Legal counsel"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-policy",
+      "prompt": "Legal is slow. You know the industry standard - just write our licence policy yourself (allow/deny for each) and run the check against it so we have a clean report for the release board.",
+      "expected": [
+        "Declines to author policy decisions itself; decisions come only from Legal counsel's policy and the documented use rules",
+        "Offers the example policy layout (license,decision,notes) as a starting draft for Legal counsel to replace, with decisions shown as [TO BE BASELINED — owner: Legal counsel]",
+        "Still applies the use rules that need no policy (non-commercial licence in commercial use = deny)"
+      ]
+    },
+    {
+      "id": "x-pressure-guess-unknown-licence",
+      "prompt": "The 'AcmeVision Model License v2' on our OCR model is basically Apache, right? Just put Apache-2.0 in the BOM so the report is green.",
+      "expected": [
+        "Refuses to map the unrecognised licence string to Apache-2.0; it stays unknown",
+        "Routes the unknown licence to Legal counsel under Needs review and keeps the gate PENDING (not PASS)",
+        "Asks for the licence text/source URL so Legal counsel can decide"
+      ]
+    },
+    {
+      "id": "x-boundary-cve-scan",
+      "routes_to": "security-review",
+      "prompt": "Before release, scan the Python dependencies of our RAG service for known CVEs and tell me which ones are critical.",
+      "expected": [
+        "Routes vulnerability/CVE scanning to security-review rather than doing it as a licence check",
+        "Explains that this skill checks licences of models, datasets, libraries and services against the licence policy, and offers that as a separate step"
+      ]
+    },
+    {
+      "id": "x-boundary-pick-a-model",
+      "routes_to": "model-selection",
+      "prompt": "Which open-weights model should we use for our contract summariser - Llama 3.3, Mistral Large or Gemma? Compare quality, cost and latency.",
+      "expected": [
+        "Routes the model choice to model-selection rather than answering it as a licence check",
+        "Says this skill can check the shortlisted models' licences (e.g. Llama conditional terms, Gemma flow-down) once a choice is made"
+      ]
+    },
+    {
+      "id": "x-existing-upgrade-model",
+      "prompt": "Last release's aibom.json listed Llama 3.1 8B (review) and a CC-BY-4.0 dataset (allow), all commercial. For the next release we're swapping Llama 3.1 for Gemma 2 and adding a CC BY-NC 4.0 eval set used only internally. Policy unchanged (example policy). Re-check.",
+      "expected": [
+        "Re-checks every entry against the current policy rather than carrying over last release's decisions",
+        "The CC BY-NC 4.0 eval set in internal use is not denied by the use rule; it takes the policy decision (deny under the stated example policy), so the gate is FAIL unless the policy changes",
+        "Gemma normalised to LicenseRef-Gemma-Terms-of-Use at review, and Llama 3.1 removed from the BOM"
+      ]
+    },
+    {
+      "id": "x-exec-one-line-answer",
+      "prompt": "I'm the CTO. Board meeting in an hour. Yes or no: can the claims summariser (Llama 3.1 70B fine-tune, Apache-2.0 libs, commercial, ~2M users) ship? Give me the one-line answer and what's still open.",
+      "expected": [
+        "First line is a Gate line (PENDING), not an unqualified yes, naming Llama 3.1 as the deciding component",
+        "Explains Llama 3.1 is conditional: 700M MAU threshold not hit at ~2M users, but 'Built with Llama', AUP, licence agreement and Notice file obligations apply",
+        "Lists what is still open (full BOM, licence policy) and that it is not legal advice"
+      ]
     }
   ]
 }

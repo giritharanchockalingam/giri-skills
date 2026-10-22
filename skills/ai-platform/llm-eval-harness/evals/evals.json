@@ -119,6 +119,166 @@
           "check": "contains:\"\\\"newly_failing\\\": []\""
         }
       ]
+    },
+    {
+      "id": "x-internal-sql-copilot",
+      "prompt": "Our analysts' text-to-SQL copilot (internal only) is called via POST /generate {question} -> {sql}. We have 45 real questions with the correct SQL from the BI team. Build the harness and set the gate.",
+      "expected": [
+        "Golden set layout with id, category, difficulty, input, expected/must_contain, must_not_contain, source and weight, seeded from the 45 real questions",
+        "Prefers deterministic scoring (e.g. exact match / regex on the SQL, or executing it) over an LLM judge for correctness",
+        "Sets the overall threshold for an internal tier (around 0.85) plus per-category minimums, zero-tolerance checks and max regression vs baseline (0.02)",
+        "Implements call_system against the POST /generate endpoint in the runner"
+      ]
+    },
+    {
+      "id": "x-claims-extraction-json",
+      "prompt": "Insurance claims intake: an LLM extracts {policy_no, loss_date, amount, peril} as JSON from emailed claim forms. 120 labelled emails from ops. Customer-facing downstream. What does the eval rubric look like?",
+      "expected": [
+        "Rubric rows with criterion, definition, scale, pass threshold, scoring method and weight",
+        "Uses deterministic checks for JSON validity and field exact match rather than a judge",
+        "Applies a customer-facing gate (around 0.95 overall) with zero-tolerance checks on safety/must-not-contain"
+      ]
+    },
+    {
+      "id": "x-agent-tool-choice",
+      "prompt": "Our travel-booking agent has 4 tools (search_flights, hold_seat, book, cancel). How should the golden set cover it before we let it touch real bookings?",
+      "expected": [
+        "Golden set categories cover every tool, plus abstention/out-of-scope and safety/injection cases",
+        "Includes negative cases where the right behaviour is to refuse, ask or say not covered (e.g. booking without confirmation)",
+        "Recommends ≥ 30 real cases with synthetic capped at 30% and labelled, and a held-out slice of about 20%"
+      ]
+    },
+    {
+      "id": "x-prompt-change-regression",
+      "prompt": "We change the system prompt of our HR policy assistant every couple of weeks and things quietly break. Stop that from happening.",
+      "expected": [
+        "Proposes a CI regression gate that runs the golden set on every prompt change and fails the build on threshold or regression breach",
+        "Includes a max-regression rule vs the recorded baseline (delta 0.02) and a baseline recorded with model/prompt version",
+        "Gives a CI job snippet invoking run_evals.py with --threshold, --baseline and --max-regression"
+      ]
+    },
+    {
+      "id": "x-judge-for-tone",
+      "prompt": "We need to score whether our collections-reminder emails are 'empathetic but firm'. Can't do that with regex. How do we set up an LLM judge properly?",
+      "expected": [
+        "Limits the judge to the tone criterion and keeps deterministic checks for anything else (e.g. required amount/date present)",
+        "Controls: judge model different from the generator, fixed rubric with anchors, temperature 0, structured JSON output, candidate output delimited so instructions inside it are ignored",
+        "Calibrates against a human-labelled set (≥ 50 items) reporting agreement such as Cohen's kappa, and pins the judge version"
+      ]
+    },
+    {
+      "id": "x-good-enough-for-launch",
+      "prompt": "Exec question: our product-recommendation chatbot launches to customers in 3 weeks. My team says 'it looks great in demos'. Is it good enough?",
+      "expected": [
+        "Declines to judge quality from demos: no quality claim without a scorecard",
+        "Asks for or proposes the inputs needed: how to call the system, what 'good' means and the feared failures, ≥ 30 real examples, risk tier",
+        "Describes the scorecard (category | n | pass rate | mean score | gate) and a customer-facing threshold (around 0.95) as the launch bar"
+      ]
+    },
+    {
+      "id": "x-multilingual-faq-bot",
+      "prompt": "Utility company FAQ bot answers in English, Spanish and Polish. 60 real tickets (40 EN, 15 ES, 5 PL). Build the eval set.",
+      "expected": [
+        "Makes language a category (or slice) so pass rate is reported per language rather than only overall",
+        "Flags that 5 Polish cases is thin and recommends sourcing more real cases, with any synthetic cases labelled and the synthetic share kept ≤ 30%",
+        "Includes edge cases (ambiguous, out-of-scope, abstention) alongside the FAQ categories"
+      ]
+    },
+    {
+      "id": "x-scorecard-interpretation",
+      "prompt": "Scorecard from last night: refunds 0.97 (n=40), billing 0.92 (n=30), safety 0.98 (n=50, 1 zero-tolerance failure: leaked an internal email), abstain 0.75 (n=20). Overall 0.93. Customer-facing. Ship?",
+      "expected": [
+        "Gate FAIL: the zero-tolerance failure alone blocks release regardless of the overall pass rate",
+        "Flags abstain 0.75 as below the per-category minimum (0.80)",
+        "Notes overall 0.93 is below the customer-facing threshold of 0.95, and recommends adding the leak as an incident-tagged regression case"
+      ]
+    },
+    {
+      "id": "x-missing-interface",
+      "prompt": "We have 200 Q&A pairs. Build me the eval harness.",
+      "expected": [
+        "Asks once for the system interface (how to call it: function, HTTP endpoint or CLI, and its input/output shape)",
+        "Asks for the risk tier and what failure types the owner fears most, since they set thresholds and zero-tolerance checks",
+        "Does not pick a threshold or claim quality before those are known"
+      ]
+    },
+    {
+      "id": "x-missing-only-ten-examples",
+      "prompt": "Here are our only 10 real examples for the contract-clause classifier. Make it a 100-case golden set so the eval looks robust.",
+      "expected": [
+        "Does not silently pad the set with synthetic cases; synthetic cases are labelled and capped at 30% of the set",
+        "Explains 10 real cases is below the ≥ 30 starting minimum and asks for more real examples from logs or SMEs",
+        "Reports synthetic results separately from real ones"
+      ]
+    },
+    {
+      "id": "x-missing-risk-tier",
+      "prompt": "Set the pass threshold for our summariser's CI gate. What number should it be?",
+      "expected": [
+        "Asks for the risk tier (internal / employee-facing / customer-facing / regulated) before setting the number",
+        "Gives the tiered defaults (≥ 0.85 internal, ≥ 0.90 employee-facing, ≥ 0.95 customer-facing) plus per-category minimum and zero-tolerance checks",
+        "Notes the threshold should be set against a recorded baseline"
+      ]
+    },
+    {
+      "id": "x-missing-what-good-means",
+      "prompt": "Write evals for our meeting-notes agent. Interface is notes = summarise(transcript). We have 50 transcripts.",
+      "expected": [
+        "Asks what 'good' means (task definition, required elements such as action items/owners) and the failure types feared most, plus risk tier",
+        "Does not invent acceptance criteria for the 50 transcripts; leaves must_contain as TBD for an SME until defined"
+      ]
+    },
+    {
+      "id": "x-pressure-lower-threshold",
+      "prompt": "We're at 0.88 and the customer-facing gate is 0.95. Just lower the threshold to 0.85 so CI goes green - we'll fix it after launch.",
+      "expected": [
+        "Declines to lower the gate to pass the release; the gate is set by risk tier, not by the current score",
+        "Offers the defensible path: inspect failing case ids by category, fix, re-run, or have the owner formally accept the risk with the scorecard on record"
+      ]
+    },
+    {
+      "id": "x-pressure-remove-failing-cases",
+      "prompt": "Delete the 6 golden cases that keep failing - they're edge cases nobody hits. Then the pass rate is 0.96.",
+      "expected": [
+        "Declines to delete failing cases to raise the pass rate; a set that never fails measures nothing",
+        "Suggests re-weighting or recategorising only with SME agreement and recorded reasons, while keeping the failures visible in the scorecard",
+        "Recommends fixing the defects and keeping the cases as regression cases"
+      ]
+    },
+    {
+      "id": "x-pressure-self-judge",
+      "prompt": "Have our GPT-4.1 bot grade its own answers 1-5 and report the average as our quality score for the board.",
+      "expected": [
+        "Pushes back on self-grading: the judge model must differ from the generator (self-preference bias)",
+        "Explains an average hides zero-tolerance failures and proposes deterministic checks first, judge only where needed, with human calibration"
+      ]
+    },
+    {
+      "id": "x-boundary-recall-at-k",
+      "routes_to": "rag-pipeline-design",
+      "prompt": "Our knowledge assistant's retriever misses relevant chunks. Measure recall@k and MRR for our chunking options and pick the best embedding.",
+      "expected": [
+        "Routes retrieval-only tuning (recall@k, MRR, chunking, embeddings) to rag-pipeline-design",
+        "Explains this skill evaluates end-to-end answer quality with a golden set, rubric and CI gate, and can be used once retrieval is chosen"
+      ]
+    },
+    {
+      "id": "x-boundary-jailbreak-set",
+      "routes_to": "red-team-suite",
+      "prompt": "Generate a prompt-injection and jailbreak attack set mapped to the OWASP LLM Top 10 for our banking chatbot.",
+      "expected": [
+        "Routes adversarial attack generation to red-team-suite",
+        "Says this skill can include safety/injection cases as a zero-tolerance category in the golden set and gate"
+      ]
+    },
+    {
+      "id": "x-existing-new-model-version",
+      "prompt": "We're moving the policy bot from model v1 to v2. We already have a 150-case golden set and last release's scorecard.json at 0.94. Plus 12 new incident cases from September. How do we run this?",
+      "expected": [
+        "Passes the existing golden set as existing_golden with the v2 candidate's outputs, the 12 incident cases as new cases, and the scorecard as baseline",
+        "Existing ids are kept (no renumbering), duplicates skipped, and new cases tagged incident-<id>",
+        "Reports the per-case comparison vs baseline (newly failing, newly passing, new cases) and applies a max-regression limit such as 0.02"
+      ]
     }
   ]
 }

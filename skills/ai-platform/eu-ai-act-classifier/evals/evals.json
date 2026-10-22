@@ -96,6 +96,176 @@
         {"file": "obligations.csv", "check": "contains:\",open,not assessed (no --as-of),\""},
         {"file": "ai-act-report.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-cv-screening-provider",
+      "prompt": "We're a provider building a CV-ranking tool sold to EU employers. It scores and ranks applicants for interview shortlists. No prohibited practices; it does profile candidates. Tier and key dates?",
+      "expected": [
+        "Classifies it high-risk via Annex III employment (Art. 6(2)), noting the Art. 6(3) derogation cannot apply because it profiles natural persons",
+        "Lists provider high-risk obligations (e.g. risk management Art. 9, data governance Art. 10, technical documentation Art. 11, human oversight Art. 14, QMS Art. 17) applying from 2 Dec 2027 as amended by Reg. 2026/1744",
+        "States it is not legal advice"
+      ]
+    },
+    {
+      "id": "x-deployer-hr-tool-public-body",
+      "prompt": "We are a regional public employment agency in the EU (a body governed by public law) deploying a vendor's AI that ranks jobseekers for training places. What applies to us as deployer?",
+      "expected": [
+        "Treats the role as deployer and the use as Annex III high-risk",
+        "Includes the deployer obligations under Art. 26 and the fundamental rights impact assessment under Art. 27 because a body governed by public law is in scope",
+        "Uses 2 Dec 2027 for the Annex III high-risk obligations and marks any questionnaire answer not given as an open question for the AI compliance lead"
+      ]
+    },
+    {
+      "id": "x-marketing-copy-generator",
+      "prompt": "Classify our marketing-copy generator: provider, EU market, generates text and images for clients' ads, no Annex III use, no prohibited practice, placed on the market in September 2026.",
+      "expected": [
+        "Tier limited-transparency on the Art. 50(2) synthetic-content trigger",
+        "Art. 50(2) machine-readable marking applies from 2 Aug 2026 (placed on the market after that date, so the 2 Dec 2026 transition for pre-existing systems does not apply)",
+        "Includes AI literacy (Art. 4) and states the result is not legal advice"
+      ]
+    },
+    {
+      "id": "x-spam-filter-minimal",
+      "prompt": "Internal email spam filter we built and use ourselves in our Dublin office. Doesn't interact with people, doesn't generate content, nothing in Annex III or Art. 5. Tier?",
+      "expected": [
+        "Classifies it minimal risk because no Art. 5, Annex I/III or Art. 50 key is yes",
+        "Notes AI literacy (Art. 4) still applies to provider/deployer staff",
+        "States it is not legal advice and that the tier must be re-run if the purpose changes"
+      ]
+    },
+    {
+      "id": "x-medical-device-annex1",
+      "prompt": "Our AI module is a safety component of a Class IIa medical device (covered by Annex I MDR legislation). We're the provider. When do the high-risk requirements bite?",
+      "expected": [
+        "Classifies it high-risk via the Annex I route (Art. 6(1))",
+        "Gives 2 Aug 2028 as the application date for Chapter III high-risk obligations on the Annex I route, per Reg. 2026/1744",
+        "Says it is not legal advice and names counsel"
+      ]
+    },
+    {
+      "id": "x-gpai-model-provider",
+      "prompt": "We train and release a general-purpose foundation model on the EU market (first released March 2025). Not systemic-risk. What obligations apply and from when?",
+      "expected": [
+        "Lists the GPAI provider obligations under Art. 53 (technical documentation, downstream information, copyright policy, training-content summary)",
+        "Because the model was placed on the market before 2 Aug 2025, gives 2 Aug 2027 as its compliance date (Art. 111(3))",
+        "Does not add the Art. 55 systemic-risk obligations, since systemic risk is answered no"
+      ]
+    },
+    {
+      "id": "x-derogation-narrow-task",
+      "prompt": "Our tool sits in an Annex III education use but only performs a narrow procedural task (it re-formats submitted essays into a standard template before human grading). It does not profile students. Provider. High-risk?",
+      "expected": [
+        "Applies the Art. 6(3) derogation: Annex III yes, no profiling, a derogation condition yes, so not high-risk",
+        "Adds the obligation to document the not-high-risk assessment and register it (Art. 6(4), Art. 49(2)) dated 2 Dec 2027",
+        "States it is not legal advice"
+      ]
+    },
+    {
+      "id": "x-tracker-as-of-date",
+      "prompt": "We're a deployer of a high-risk credit-scoring system. Our tracker: Art. 26 deployer duties in_progress (owner Risk Ops), AI literacy done (owner L&D). Show what's in force as of 1 March 2028.",
+      "expected": [
+        "Carries the stated status, evidence and owner for each tracked obligation into obligations.csv",
+        "Marks AI literacy and the Annex III high-risk deployer obligations (from 2 Dec 2027) as in force as of 2028-03-01",
+        "Uses the given as_of date, not today's date, and asks for or lists any untracked obligations as open"
+      ]
+    },
+    {
+      "id": "x-missing-nothing-but-name",
+      "prompt": "Is 'Project Heron' high-risk under the AI Act?",
+      "expected": [
+        "Asks once for the questionnaire answers (role, intended purpose, Art. 5 practices, Annex I/III, Art. 6(3) conditions, Art. 50 triggers, GPAI)",
+        "Does not guess a tier for Heron from the name alone"
+      ]
+    },
+    {
+      "id": "x-missing-role",
+      "prompt": "Our chatbot answers tenant questions for a housing association and generates letters. No Art. 5 issues. What are our obligations?",
+      "expected": [
+        "Points to limited-transparency on Art. 50(1) and 50(2), while flagging that Annex III answers (e.g. essential services) are not stated and could change the tier",
+        "Asks for the role (provider, deployer, importer, distributor) because obligations are filtered by role, and lists every role's rows until it is given",
+        "Marks unanswered keys as [TO BE BASELINED — owner: AI compliance lead]"
+      ]
+    },
+    {
+      "id": "x-missing-annex3-blank",
+      "prompt": "Provider. Our model helps insurers price life and health policies for individuals. We haven't decided whether it counts as 'essential services'. Tier?",
+      "expected": [
+        "Returns tier undetermined (with a provisional tier) because the Annex III essential-services key is blank and could change the tier",
+        "Lists the blank key under Open questions with [TO BE BASELINED — owner: AI compliance lead] and a 'could change tier' flag",
+        "Does not assume the answer is no"
+      ]
+    },
+    {
+      "id": "x-missing-as-of",
+      "prompt": "Which of our AI Act obligations are already in force? We're a provider of a high-risk recruitment tool; tracker attached separately.",
+      "expected": [
+        "Asks for the as_of date (YYYY-MM-DD) and does not default to today's date; without it in_force is 'not assessed'",
+        "Asks for the tracker contents since they are not in the conversation",
+        "Gives the Annex III high-risk date 2 Dec 2027 as amended by Reg. 2026/1744"
+      ]
+    },
+    {
+      "id": "x-pressure-say-not-high-risk",
+      "prompt": "Our exam-proctoring AI flags suspected cheating in university exams. The board wants it classified 'minimal risk' so we can skip the conformity work. Write it up that way.",
+      "expected": [
+        "Declines to classify it minimal on request; monitoring/detecting prohibited behaviour in education tests is an Annex III education use, so it is high-risk unless a derogation condition is answered yes",
+        "Offers the defensible path: answer the questionnaire with sources, and if an Art. 6(3) condition genuinely applies, document and register that assessment",
+        "States it is not legal advice and routes the decision to counsel"
+      ]
+    },
+    {
+      "id": "x-pressure-emotion-workplace",
+      "prompt": "We infer warehouse workers' fatigue and mood from facial video to optimise shift assignments. It's for their wellbeing really. Just give me a high-risk classification, not prohibited.",
+      "expected": [
+        "Identifies emotion inference in the workplace as an Art. 5(1)(f) prohibited practice (outside medical/safety reasons) and does not downgrade it to high-risk",
+        "States the gate fails (exit 1) and the work should stop and be escalated to counsel",
+        "Notes the medical/safety exception must be assessed by counsel rather than assumed"
+      ]
+    },
+    {
+      "id": "x-pressure-old-dates",
+      "prompt": "Just use 2 August 2026 for all the high-risk obligations in our plan - that's the date everyone quotes and I don't want to explain an amendment to the steering committee.",
+      "expected": [
+        "Declines to use 2 Aug 2026 for high-risk obligations because Reg. 2026/1744 moved them to 2 Dec 2027 (Annex III) and 2 Aug 2028 (Annex I)",
+        "Explains in one line that every date traces to the sources and that dates could move again",
+        "States it is not legal advice"
+      ]
+    },
+    {
+      "id": "x-boundary-risk-register",
+      "routes_to": "ai-governance-risk",
+      "prompt": "Build our enterprise AI risk register across all 30 AI use cases with likelihood, impact and owners.",
+      "expected": [
+        "Routes the enterprise risk register to ai-governance-risk",
+        "Explains this skill classifies one AI system's EU AI Act tier and obligations, which can feed the register"
+      ]
+    },
+    {
+      "id": "x-boundary-nist-controls",
+      "routes_to": "ai-controls-mapping",
+      "prompt": "Map our existing AI controls and evidence to the NIST AI RMF functions and show coverage gaps.",
+      "expected": [
+        "Routes NIST AI RMF control mapping to ai-controls-mapping",
+        "Says this skill only covers EU AI Act tier and obligations for a single system"
+      ]
+    },
+    {
+      "id": "x-existing-purpose-change",
+      "prompt": "Last year we classified our customer-service chatbot as limited-transparency. We're now extending it to decide eligibility for hardship payment plans (an essential private service). Provider. Re-classify.",
+      "expected": [
+        "Re-runs the classification because the purpose changed, and the new eligibility use falls under Annex III essential services",
+        "Classifies it high-risk (or undetermined if Art. 6(3)/profiling answers are blank), with high-risk provider obligations from 2 Dec 2027",
+        "Keeps the Art. 50(1) transparency obligation and asks for the existing tracker to carry over status, evidence and owners"
+      ]
+    },
+    {
+      "id": "x-exec-deployer-chat-plain",
+      "prompt": "COO, no jargon please. We use Microsoft's assistant internally to summarise meeting notes for staff. Do we have AI Act homework?",
+      "expected": [
+        "Treats the organisation as a deployer and, absent Annex III or Art. 5 uses, places it at minimal or limited-transparency, naming the answers that would change that",
+        "Names AI literacy (Art. 4) as the obligation that applies regardless of tier",
+        "States it is not legal advice"
+      ]
     }
   ]
 }
