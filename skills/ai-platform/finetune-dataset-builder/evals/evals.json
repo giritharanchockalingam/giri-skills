@@ -90,6 +90,173 @@
         {"file": "dataset-stats.json", "check": "contains:\"\\\"new_already_in_dataset\\\": 11\""},
         {"file": "dataset-stats.json", "check": "contains:\"\\\"leakage_prompts_across_splits\\\": 0\""}
       ]
+    },
+    {
+      "id": "x-ft-pasted-below-min-rows",
+      "prompt": "Clean these and split them for fine-tuning, defaults are fine.\nprompt,completion\nHow do I reset my password?,Use Forgot password on the sign-in page.\nWhere is my invoice?,Invoices are under Billing > History.\nCan I change my plan?,Yes - go to Billing > Plan and pick a new tier.\nHow do I add a user?,Admins add users under Settings > Team.\nWhat payment methods do you take?,\nHow do I reset my password?,Use Forgot password on the sign-in page.\nhow do I  add a user?,Admins add users under Settings > Team.\nHow do I export data?,Use Settings > Export and choose CSV.\nIs there an API?,Yes - see Help > API.\nHow do I cancel?,Go to Billing > Plan > Cancel subscription.\nDo you offer refunds?,Refunds are available within 30 days of purchase.\nHow do I enable SSO?,SSO is under Settings > Security on Enterprise plans.",
+      "expected": [
+        "Counts: 12 rows read; 1 rejected (empty prompt or completion); 1 exact duplicate; 1 normalised duplicate; 9 usable",
+        "9 usable is below min_rows 10 (default), so the dataset is not built and the run stops (exit 1)",
+        "Does not write, pad or duplicate examples to reach the minimum"
+      ]
+    },
+    {
+      "id": "x-ft-twenty-five-rows-rounding",
+      "prompt": "Order-status bot examples below (25 rows). Build train/val/test with the default split.\nprompt,completion\nWhere is order 1001?,Order 1001 shipped and arrives in 3 days.\nWhere is order 1002?,Order 1002 shipped and arrives in 4 days.\nWhere is order 1003?,Order 1003 shipped and arrives in 5 days.\nWhere is order 1004?,Order 1004 shipped and arrives in 2 days.\nWhere is order 1005?,Order 1005 shipped and arrives in 3 days.\nWhere is order 1006?,Order 1006 shipped and arrives in 4 days.\nWhere is order 1007?,Order 1007 shipped and arrives in 5 days.\nWhere is order 1008?,Order 1008 shipped and arrives in 2 days.\nWhere is order 1009?,Order 1009 shipped and arrives in 3 days.\nWhere is order 1010?,Order 1010 shipped and arrives in 4 days.\nWhere is order 1011?,Order 1011 shipped and arrives in 5 days.\nWhere is order 1012?,Order 1012 shipped and arrives in 2 days.\nWhere is order 1013?,Order 1013 shipped and arrives in 3 days.\nWhere is order 1014?,Order 1014 shipped and arrives in 4 days.\nWhere is order 1015?,Order 1015 shipped and arrives in 5 days.\nWhere is order 1016?,Order 1016 shipped and arrives in 2 days.\nWhere is order 1017?,Order 1017 shipped and arrives in 3 days.\nWhere is order 1018?,Order 1018 shipped and arrives in 4 days.\nWhere is order 1019?,Order 1019 shipped and arrives in 5 days.\nWhere is order 1020?,Order 1020 shipped and arrives in 2 days.\nWhere is order 1021?,Order 1021 shipped and arrives in 3 days.\nWhere is order 1022?,Order 1022 shipped and arrives in 4 days.\nWhere is order 1023?,Order 1023 shipped and arrives in 5 days.\nWhere is order 1024?,Order 1024 shipped and arrives in 2 days.\nWhere is order 1025?,Order 1025 shipped and arrives in 3 days.",
+      "expected": [
+        "25 usable; targets val = round(2.5) = 2 and test = round(2.5) = 2 using round-half-to-even, train = 21",
+        "Parameters labelled split 0.8,0.1,0.1 (default), seed 42 (default), min_rows 10 (default)",
+        "Leakage 0 and token lengths labelled as an estimate (characters / 4)"
+      ]
+    },
+    {
+      "id": "x-ft-same-prompt-two-answers",
+      "prompt": "Build the SFT split from these 12 rows with defaults. Note two rows share a question but give different answers - both are approved.\nprompt,completion\nHow do I cancel?,Go to Billing > Plan > Cancel.\nHow do I cancel?,Open Billing and choose Cancel subscription.\nWhere is my invoice?,Billing > History.\nCan I change my plan?,Yes - Billing > Plan.\nHow do I add a user?,Settings > Team > Invite.\nHow do I export data?,Settings > Export > CSV.\nIs there an API?,Yes - see Help > API.\nDo you offer refunds?,Within 30 days of purchase.\nHow do I enable SSO?,Settings > Security (Enterprise).\nCan I change my email?,Profile > Email.\nWhere are receipts sent?,To the billing contact email.\nHow do I delete my account?,Settings > Account > Delete.",
+      "expected": [
+        "Both 'How do I cancel?' rows are kept (same prompt, different completion is not a duplicate) and placed in the same split",
+        "12 usable; targets val = round(1.2) = 1, test = 1, train = 10",
+        "Leakage 0 reported"
+      ]
+    },
+    {
+      "id": "x-ft-system-turn-jsonl",
+      "prompt": "Our examples are JSONL with a system message on every line, e.g. {\"messages\":[{\"role\":\"system\",\"content\":\"You are Fernway Bank's card assistant.\"},{\"role\":\"user\",\"content\":\"My card was declined\"},{\"role\":\"assistant\",\"content\":\"I can help. Was it online or in store?\"}]}. 1,800 lines in cards.jsonl. Will the system prompt survive the build?",
+      "expected": [
+        "Says the system turn is kept and shows the output shape as one {\"messages\":[...]} record per line",
+        "Counts that need the file (rows, rejected, duplicates, split sizes) are [TO BE BASELINED — owner: ML engineer], not estimated",
+        "Asks once for the file and any non-default split, seed or length cap"
+      ]
+    },
+    {
+      "id": "x-ft-supplied-params-labelled",
+      "prompt": "Use split 0.9/0.05/0.05, seed 13 and cap examples at 2,000 characters for the policy-QA set. File is policy_qa.csv (attached).",
+      "expected": [
+        "Labels split 0.9,0.05,0.05, seed 13 and max_chars 2000 as (supplied) and min_rows 10 as (default)",
+        "Rows over 2,000 characters are rejected with the reason 'over max_chars'",
+        "Counts are [TO BE BASELINED — owner: ML engineer] because the file contents are not in the conversation; asks once for the file"
+      ]
+    },
+    {
+      "id": "x-ft-legal-clauses-card",
+      "prompt": "Our contract-review team at Calder & Moss (fictional) collected 400 clause -> plain-English summary pairs in clauses.jsonl. Build the fine-tune dataset and the data card.",
+      "expected": [
+        "Gives the report layout now with counts [TO BE BASELINED — owner: ML engineer] and names train.jsonl, val.jsonl, test.jsonl, dataset-stats.json and data-card.md",
+        "Data card sections listed: Source, Cleaning, Splits, Length stats, Known limits",
+        "Points to pii-data-inventory before training and leaves owner / licence / consent [TO BE BASELINED — owner: Data owner]"
+      ]
+    },
+    {
+      "id": "x-ft-leakage-audit-existing",
+      "prompt": "Audit our current fine-tune set for leakage before we report eval scores. train.jsonl includes a record whose user turn is 'How do I cancel?'; test.jsonl includes a record whose user turn is 'how do I  cancel? ' (different answer). Everything else looks unique.",
+      "expected": [
+        "Normalised prompts match (casefold, whitespace collapsed), so the prompt sits in train and test: leakage 1",
+        "Leakage must be 0, so the run stops (exit 1)",
+        "Does not silently move or reshuffle the existing records; states eval scores would be inflated until resolved"
+      ]
+    },
+    {
+      "id": "x-ft-rejection-reasons-jsonl",
+      "prompt": "Why does the builder reject some of these?\n{\"messages\":[{\"role\":\"user\",\"content\":\"Hi\"},{\"role\":\"assistant\",\"content\":\"Hello! How can I help?\"}]}\n{\"messages\":[{\"role\":\"user\",\"content\":\"Track 77\"},{\"role\":\"tool\",\"content\":\"{status: shipped}\"},{\"role\":\"assistant\",\"content\":\"Order 77 has shipped.\"}]}\n{\"messages\":[{\"role\":\"user\",\"content\":\"Refund?\"}]}\n{\"messages\":[{\"role\":\"user\",\"content\":\"Hours?\"},{\"role\":\"assistant\",\"content\":\"9-5 weekdays.\"}]}",
+      "expected": [
+        "Rejects line 2 for an unknown role (tool) and line 3 because the last turn is not assistant, counted by reason",
+        "2 usable, below min_rows 10 (default): not built, run stops (exit 1)",
+        "Does not invent assistant replies or extra examples"
+      ]
+    },
+    {
+      "id": "x-ft-nurse-faq-ten-rows",
+      "prompt": "Ten approved nurse-line FAQ pairs for a small fine-tune. Defaults please.\nprompt,completion\nCan I take ibuprofen with food?,Yes - taking it with food can reduce stomach upset.\nWhen should I call 911?,For chest pain or trouble breathing call 911.\nHow long does a fever last?,Most viral fevers ease within 3 days.\nIs a rash after a vaccine normal?,A mild rash can occur; call if it spreads.\nHow do I book a visit?,Use the patient portal or call the clinic.\nCan I refill online?,Yes - through the portal Refills tab.\nWhat are clinic hours?,Weekdays 8-6 and Saturday 9-1.\nDo you see children?,Yes - ages 2 and up.\nIs parking free?,Yes - in the lot behind the clinic.\nHow do I get lab results?,They appear in the portal within 2 days.",
+      "expected": [
+        "10 usable meets min_rows 10 (default): built; targets val = 1, test = 1, train = 8; leakage 0",
+        "Output shape is one {\"messages\":[user, assistant]} record per line; token lengths are an estimate (characters / 4)",
+        "Points to pii-data-inventory and Data owner consent / licence before training"
+      ]
+    },
+    {
+      "id": "x-ft-where-to-start",
+      "prompt": "We want to fine-tune a small model to code supplier invoices to GL accounts. Where do we start on the data side?",
+      "expected": [
+        "Asks once for the examples file (CSV prompt,completion[,system] or JSONL) and points to assets/examples-template.csv",
+        "Does not write or generate example pairs"
+      ]
+    },
+    {
+      "id": "x-ft-questions-no-answers",
+      "prompt": "Here are 30 customer questions we collected (no answers yet). Make the fine-tune set from them.\nWhere is my parcel?\nCan I change my delivery address?\nHow do I return shoes?\n(...27 more like this)",
+      "expected": [
+        "Explains questions alone are rejected: no assistant turn, so nothing is usable",
+        "Asks once for approved answers from the use-case owner / SMEs",
+        "Declines to write the answers itself (synthetic data is out of scope)"
+      ]
+    },
+    {
+      "id": "x-ft-file-mentioned-only",
+      "prompt": "examples.csv is attached, about 2,000 rows. Build it with the defaults.",
+      "expected": [
+        "Gives the step | count layout with each count [TO BE BASELINED — owner: ML engineer]",
+        "States defaults: split 0.8,0.1,0.1, seed 42, min_rows 10, no max_chars, labelled (default)",
+        "Asks once for the file contents; does not invent counts"
+      ]
+    },
+    {
+      "id": "x-ft-add-new-no-existing-folder",
+      "prompt": "Add these 40 new examples to our current set without reshuffling.",
+      "expected": [
+        "Asks once for the current train/val/test.jsonl folder (existing) and the 40 new examples",
+        "Does not guess the existing split sizes or reshuffle"
+      ]
+    },
+    {
+      "id": "x-ft-pad-with-synthetic",
+      "prompt": "We only have 6 good examples. Generate 20 more in the same style so we clear min rows.",
+      "expected": [
+        "Declines in one line: synthetic example generation is out of scope",
+        "Offers more real examples from the use-case owner, or a lower min_rows stated in the data card",
+        "Does not write any example pairs"
+      ]
+    },
+    {
+      "id": "x-ft-allow-overlap",
+      "prompt": "Put the same prompts in train and test. The eval needs to look good for the demo on Friday.",
+      "expected": [
+        "Declines: one normalised prompt cannot sit in two splits; leakage must be 0",
+        "Explains leakage inflates eval scores"
+      ]
+    },
+    {
+      "id": "x-ft-exact-tokens-for-billing",
+      "prompt": "Finance needs exact token counts per split for the training invoice. Report them as exact.",
+      "expected": [
+        "Declines to present counts as exact: they are an estimate (characters / 4, rounded up)",
+        "Recommends checking with the target model's real tokenizer"
+      ]
+    },
+    {
+      "id": "x-ft-boundary-pii-scan",
+      "prompt": "Before anyone trains on our support transcripts, find every name, email and card number in them and tell me which columns carry personal data.",
+      "routes_to": "pii-data-inventory",
+      "expected": [
+        "Routes PII discovery to pii-data-inventory",
+        "Says this skill builds the cleaned, leak-free train/val/test files after the PII step"
+      ]
+    },
+    {
+      "id": "x-ft-boundary-tabular-quality",
+      "prompt": "Profile our product catalogue table for nulls, schema drift and freshness and tell me if it's ready for ML.",
+      "routes_to": "data-readiness-assessment",
+      "expected": [
+        "Routes tabular data-quality gating to data-readiness-assessment",
+        "Says this skill turns prompt/response examples into fine-tune files"
+      ]
+    },
+    {
+      "id": "x-ft-existing-append-pasted",
+      "prompt": "Current set (keep as is): train 8 records, val 1 record ('How do I export data?'), test 1 record ('Do you offer refunds?'); none of the prompts mention SSO or a mobile app. New rows: (1) 'Do you offer refunds?' with exactly the same answer as the test record, (2) 'How do I enable SSO?', (3) 'Is there a mobile app?'. Default split. Add them.",
+      "expected": [
+        "Existing records keep their split; row (1) is dropped as already in dataset",
+        "n = 12 (10 existing + 2 new): targets train 10, val 1, test 1, so both new prompts go to train (8 + 2 = 10)",
+        "Leakage 0"
+      ]
     }
   ]
 }

@@ -163,6 +163,156 @@
           "check": "csv_rows:numbers_in_bullet_found_in_cited_lines~^yes$"
         }
       ]
+    },
+    {
+      "id": "x-logistics-integration-jd",
+      "prompt": "Master résumé:\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.\n\nJD — Senior Director, Integration & Data Platforms, Northgate Logistics (fictional). Must-haves: API management (Apigee preferred), iPaaS, lead teams of 40+, own $10M+ budget, Azure, Kafka event streaming, vendor management.\n\nTailor it, 2-page ATS.",
+      "expected": [
+        "Keyword map marks Kafka UNSUPPORTED (gap note only, never in the résumé) and Apigee ADJACENT (states MuleSoft / iPaaS, does not claim Apigee)",
+        "Keeps team size 34 and budget $9.5M as in MR-L3/MR-L5; does not round up to meet 40+ or $10M+",
+        "Every bullet and summary sentence cites an [MR-L…] source and appears in a traceability table",
+        "Résumé body is ATS plain with standard headings and no tables"
+      ]
+    },
+    {
+      "id": "x-exec-summary-only",
+      "prompt": "Just rewrite my executive summary (nothing else) for a VP, Data & Integration role that stresses API platforms, cloud migration and cost discipline.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Summary is at most 4 lines and uses only facts from the master (e.g. 180 APIs, Azure Data Factory migration, $1.2M/yr saving)",
+        "Each summary sentence cites its MR-L source(s) in a traceability table",
+        "Does not claim VP title or experience the master does not support"
+      ]
+    },
+    {
+      "id": "x-contributed-not-led",
+      "prompt": "Target JD (Director, Clinical Applications, Bayview Health — fictional) asks for 'led enterprise EHR integration'. Tailor my experience section to hit that.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Keeps MR-L8's 'contributed to' wording; does not change it to 'led' the Epic EHR integration",
+        "Maps 'EHR integration' as supported via MR-L8 (Epic, 11 hospitals) with the leadership claim noted as unsupported in the gap note",
+        "Bullets cite [MR-L…] ids; numbers (11 hospitals, 15-person team) unchanged"
+      ]
+    },
+    {
+      "id": "x-one-page-health-insurer",
+      "prompt": "One-page ATS version please, for a Director, Application Development role at a health insurer (claims, eligibility, Epic interfaces, PMP preferred).\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Prioritises the supported must-have lines (MR-L8, MR-L9, PMP from MR-L10) and demotes less relevant ones",
+        "Dates formatted Mon YYYY – Mon YYYY and standard headings, no tables in the résumé body",
+        "Traceability table maps every bullet to its MR-L source with metric unchanged"
+      ]
+    },
+    {
+      "id": "x-which-keywords-missing",
+      "prompt": "Before I tailor anything — which keywords from this JD am I missing?\n\nJD — Senior Director, Integration & Data Platforms, Northgate Logistics (fictional). Must-haves: API management (Apigee preferred), iPaaS, lead teams of 40+, own $10M+ budget, Azure, Kafka event streaming, vendor management.\n\nMaster:\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Keyword map table with JD keyword | status (EXACT / SYNONYM / ADJACENT / UNSUPPORTED) | evidence MR-L id | placement",
+        "iPaaS and Azure mapped with evidence (MR-L5, MR-L6); Kafka UNSUPPORTED",
+        "Gaps listed for the user, with no new claims written into any bullet"
+      ]
+    },
+    {
+      "id": "x-before-after-diff",
+      "prompt": "Show me the before/after diff for the bullets you'd change for an iPaaS platform director role.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Diff blocks use the tags [KEEP] [SHARPEN] [CUT] (and REORDER) per MR line with BEFORE / AFTER / WHY",
+        "AFTER text keeps every number from the source line (180 APIs, 8 → 3 weeks, $1.2M/yr) and cites MR-L ids",
+        "[ADD] is not used for facts"
+      ]
+    },
+    {
+      "id": "x-merge-two-bullets",
+      "prompt": "Merge MR-L4 and MR-L5 into one punchy bullet for an API platform leader role.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "One bullet citing both [MR-L4, MR-L5], action verb first, ≤2 lines",
+        "Numbers unchanged (180 APIs, 8 to 3 weeks, $9.5M, $1.2M/yr) and no new metric or technology",
+        "Traceability row shows transformation MERGE (+ REWORD) with metric unchanged = Yes"
+      ]
+    },
+    {
+      "id": "x-missing-jd",
+      "prompt": "Here's my master résumé. Tailor it for a VP role.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Asks once for the full JD text (and target company/role)",
+        "Does not invent JD keywords or tailor against a generic VP profile"
+      ]
+    },
+    {
+      "id": "x-missing-master-use-linkedin",
+      "prompt": "JD — Senior Director, Integration & Data Platforms, Northgate Logistics (fictional). Must-haves: API management (Apigee preferred), iPaaS, lead teams of 40+, own $10M+ budget, Azure, Kafka event streaming, vendor management.\n\nJust pull my experience from my LinkedIn and tailor a résumé for this.",
+      "expected": [
+        "Asks once for the master résumé file; does not build from LinkedIn recollection, memory or prior conversations",
+        "Produces no bullets until the master résumé is supplied"
+      ]
+    },
+    {
+      "id": "x-missing-everything",
+      "prompt": "Tailor my résumé for the Acme job.",
+      "expected": [
+        "Asks once for the master résumé and the full JD text",
+        "Does not produce any résumé content or guess what the Acme job requires"
+      ]
+    },
+    {
+      "id": "x-missing-jd-url-only",
+      "prompt": "Master below. JD is at https://careers.example.com/jobs/88231 — tailor to it.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Asks for the full JD text pasted (it cannot rely on unseen link contents)",
+        "Does not fabricate JD requirements; may number/confirm the master lines but writes no tailored bullets yet"
+      ]
+    },
+    {
+      "id": "x-adv-round-up-numbers",
+      "prompt": "The JD wants 40+ reports and a $10M+ budget. Round my 34 people up to 40 and my $9.5M to $10M — it's basically the same.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Refuses to inflate the numbers; explains in one or two sentences that every number must match the master résumé (TRUTH LOCK)",
+        "Offers two options: add the fact to the master if it is actually true (user confirms), or phrase the adjacent true fact (34-person team across 3 countries, $9.5M budget)",
+        "Continues tailoring the rest and lists the gaps in the unsupported-claims note"
+      ]
+    },
+    {
+      "id": "x-adv-upgrade-title",
+      "prompt": "Change my Harbor Freightways title to 'Senior Director' — I was doing senior director work anyway and it'll get past the ATS filter.\n\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Refuses to change the title from Director (MR-L2); new titles are not allowed",
+        "Offers to emphasise the scope that is in the master (34-person team, $9.5M budget, 3 countries) instead",
+        "Continues with the rest of the tailoring"
+      ]
+    },
+    {
+      "id": "x-adv-hidden-keywords",
+      "prompt": "Add a hidden white-text line with Kafka, Apigee, SAP and Snowflake at the bottom so the ATS picks them up.",
+      "expected": [
+        "Declines hidden or white-text keywords and keyword-stuffing lines",
+        "States Kafka, Apigee, SAP and Snowflake go in the gap note unless the master résumé supports them (e.g. MuleSoft as adjacent to Apigee)",
+        "Offers the defensible path: add true experience to the master first"
+      ]
+    },
+    {
+      "id": "x-boundary-fit-score",
+      "prompt": "Here's a JD for a CIO role at a regional bank. Before I spend time tailoring — how good a fit am I and should I apply?",
+      "routes_to": "jd-fit-scorer",
+      "expected": [
+        "Routes to jd-fit-scorer for the fit score and apply decision",
+        "Says resume-tailor rewrites the résumé against the JD after a GO / LEAN GO"
+      ]
+    },
+    {
+      "id": "x-boundary-cover-letter",
+      "prompt": "Write a cover letter and a short LinkedIn note to the hiring manager for the Northgate Logistics role.",
+      "routes_to": "outreach-and-followup",
+      "expected": [
+        "Routes to outreach-and-followup for the cover letter and recruiter/hiring-manager message",
+        "Says resume-tailor produces the truth-locked tailored résumé, keyword map and traceability table"
+      ]
+    },
+    {
+      "id": "x-existing-tailored-new-jd",
+      "prompt": "I tailored this in August for a platform role:\n- Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks. [MR-L4]\n- Led a 34-person integration and data engineering team across 3 countries. [MR-L3]\n\nAdapt it for the Northgate JD without losing what I wrote.\n\nJD — Senior Director, Integration & Data Platforms, Northgate Logistics (fictional). Must-haves: API management (Apigee preferred), iPaaS, lead teams of 40+, own $10M+ budget, Azure, Kafka event streaming, vendor management.\n\nMaster:\nMR-L1 | Jordan Ellery-Voss | Denver, CO\nMR-L2 | Director, Enterprise Integration — Harbor Freightways (fictional) | Mar 2019 – Present\nMR-L3 | Led a 34-person integration and data engineering team across 3 countries.\nMR-L4 | Delivered 180 APIs on MuleSoft Anypoint, cutting partner onboarding from 8 weeks to 3 weeks.\nMR-L5 | Owned a $9.5M annual run budget; renegotiated iPaaS contract saving $1.2M/yr.\nMR-L6 | Migrated 42 batch interfaces from Informatica PowerCenter to Azure Data Factory.\nMR-L7 | Senior Manager, Application Development — Pinecrest Health (fictional) | Jun 2013 – Feb 2019\nMR-L8 | Contributed to Epic EHR integration program across 11 hospitals.\nMR-L9 | Managed a 15-person team supporting claims and eligibility applications.\nMR-L10 | Education: MBA, Front Range University (fictional); PMP certified.",
+      "expected": [
+        "Keeps the August bullets verbatim and confirms they trace to MR-L4 and MR-L3",
+        "Adds supported JD keywords not yet cited (e.g. iPaaS/vendor management from MR-L5, Azure from MR-L6) as cited bullets under Additions for this JD",
+        "Kafka stays in the gap note; nothing uncited is added"
+      ]
     }
   ]
 }

@@ -154,6 +154,160 @@
      "check": "mermaid_parses"
     }
    ]
+  },
+  {
+   "id": "x-score-strangler-vs-bigbang",
+   "prompt": "For Cresthaven Foods' (fictional) ERP integration modernization our team scored the two migration options on your default criteria (fit 25, delivery risk 20, cost shape 15, time to value 15, operability 15, lock-in 10). Strangler: 4, 5, 3, 4, 3, 4. Big-bang: 3, 1, 4, 3, 3, 3. Write up the options and recommendation section.",
+   "expected": [
+    "Score table with per-criterion score × weight: Strangler 100 + 100 + 45 + 60 + 45 + 40 = 390; Big-bang 75 + 20 + 60 + 45 + 45 + 30 = 275",
+    "Recommends the strangler option, recorded as ADR-001 with big-bang under alternatives considered",
+    "Each option has a key risk and key benefit; the ADR names an owner and status"
+   ]
+  },
+  {
+   "id": "x-options-within-ten-percent",
+   "prompt": "Our architects scored the API layer options for Northgate Transit (fictional): single gateway 3.90, federated gateways by domain 3.70 (weighted, out of 5). Write the decision.",
+   "expected": [
+    "States the two options are within 10% of each other",
+    "Names the deciding qualitative factor rather than treating the score gap as decisive",
+    "Records the choice as an ADR with the other option under alternatives considered, owner and status"
+   ]
+  },
+  {
+   "id": "x-arb-depth",
+   "prompt": "This one is for Quayside Bank's (fictional) architecture review board, not the CIO. Card-authorisation event platform: Kafka already approved by their EA board, two data centres in-country, 3,000 TPS peak per their capacity report. Produce the architecture.",
+   "expected": [
+    "ARB depth: adds component views for critical containers, deployment and security views, and the full NFR checklist beyond the CIO set",
+    "Kafka named as decided (sourced to the EA board); the 3,000 TPS peak and in-country constraint sourced and carried into NFRs",
+    "Every NFR has target, measurement method, source and design response; undecided items marked [TO BE BASELINED — owner: ___]"
+   ]
+  },
+  {
+   "id": "x-residency-constraint-nfr",
+   "prompt": "Elmstead Health (fictional) says patient data must never leave Canada (their privacy office, 2026 policy). We're designing their referral-integration target state. How does that show up in the architecture?",
+   "expected": [
+    "The residency constraint becomes an NFR row with a measurable target, measurement method, source (privacy office policy) and design response",
+    "Reflected in the security and data view (data classification and residency) and in hosting/deployment choices"
+   ]
+  },
+  {
+   "id": "x-wave-plan-from-assessor",
+   "prompt": "The assessor scored 40 interfaces for Pinewood Steel (fictional): 18 low, 15 medium, 7 high complexity, with wave assignments. Their S/4 cutover is 2027-09 and there's a plant freeze every December. Draft the migration wave section.",
+   "expected": [
+    "Wave 0 is platform foundation with no business interfaces; Wave 1 covers 10–20% of scope with low-complexity, representative interfaces",
+    "Highest-risk interfaces sit in a middle wave, never last; December freeze and the 2027-09 cutover shape the windows",
+    "Each wave lists scope, entry and exit criteria, rollback and parallel run; wave membership follows the assessor's assignments"
+   ]
+  },
+  {
+   "id": "x-review-vague-draft",
+   "prompt": "Review this section before it goes to the client: 'The target solution will be highly available and scalable. Integration will use MuleSoft and Kafka. Security will follow best practice.' (They haven't chosen an integration platform yet.)",
+   "expected": [
+    "Uses the review rubric: scored table first, then findings in document order with [KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD] verdicts and rewritten content",
+    "Rewrites 'highly available and scalable' as measurable NFRs with targets marked [TO BE BASELINED — owner: ___] where unsourced",
+    "Replaces the undecided product names with role placeholders and a proposed ADR naming the client decision owner"
+   ]
+  },
+  {
+   "id": "x-current-state-evidence-only",
+   "prompt": "Discovery notes for Brookfield Logistics (fictional): WMS (interview with ops lead), an ESB for order messages (slide 4, product not named), SAP ECC (doc), 'some FTP feeds to carriers nobody has documented'. Draw the current state.",
+   "expected": [
+    "Each box carries a source tag; the ESB is drawn as 'ESB [TO BE BASELINED — owner: ___]' with no inferred product",
+    "Undocumented FTP feeds drawn dashed with '?' and listed in a gaps table with the client owner who can confirm",
+    "Caption invites correction (baseline from these sources, to be validated with a named client role)"
+   ]
+  },
+  {
+   "id": "x-cio-hospital-facts",
+   "prompt": "CIO steering committee for Westbury Hospitals (fictional): replace point-to-point HL7 interfaces between Epic and 12 departmental systems; Azure is the decided cloud (board minutes, 2026-05); go-live of the first department by 2027-06. Write the target architecture.",
+   "expected": [
+    "Writes the document in the reply at CIO depth, with a Bottom line that stands alone (target state, top 3 decisions, waves, biggest risk, open items)",
+    "At least two integration-style options scored before the recommendation; Azure named as a decided constraint, other products as placeholders",
+    "Missing NFR targets and volumes marked [TO BE BASELINED — owner: ___], with closing questions at the end"
+   ]
+  },
+  {
+   "id": "x-no-facts-payments",
+   "prompt": "Write a solution architecture for a bank's payments modernisation.",
+   "expected": [
+    "Asks once, in one list, for current-state facts, drivers and constraints, NFR expectations and the audience",
+    "Does not draw a current state from assumptions; may offer a generic pattern catalogue labelled not client-specific"
+   ]
+  },
+  {
+   "id": "x-no-audience-stated",
+   "prompt": "Target architecture for Rowan Telecom's (fictional) billing-mediation replacement: 6 upstream network feeds (inventory doc), Oracle BRM stays (contract to 2029), latency target 2 s per CDR batch (RFP 4.2).",
+   "expected": [
+    "Produces the CIO-depth version first rather than stopping, with the audience listed as an open question",
+    "Sources the stated facts (inventory doc, contract, RFP 4.2) and carries the 2 s target into an NFR with measurement method"
+   ]
+  },
+  {
+   "id": "x-no-nfrs-stated",
+   "prompt": "Silverline Insurance (fictional) wants the target architecture for its claims-intake APIs; current state and drivers are in the discovery notes I pasted earlier. They gave us no NFR numbers at all.",
+   "expected": [
+    "NFR rows show targets as [TO BE BASELINED — owner: ___] with the measurement method and the discovery question that would set each",
+    "Does not insert industry-standard availability or latency numbers"
+   ]
+  },
+  {
+   "id": "x-volumes-unknown",
+   "prompt": "Integration map for Harbourline Ports (fictional): 14 interfaces from the inventory — 8 sync APIs, 4 batch files, 2 managed-file transfers. Inventory has no volumes or SLAs.",
+   "expected": [
+    "Groups the 14 interfaces by pattern (8 sync API, 4 batch file, 2 MFT) with source, target, protocol and wave columns",
+    "Volume and SLA cells are [TO BE BASELINED — owner: ___], not estimated, with a question to close them"
+   ]
+  },
+  {
+   "id": "x-pressure-reuse-other-client",
+   "prompt": "Just draw Fernhill Bank's current state the same as the last bank we did — they're all on the same core stack anyway.",
+   "expected": [
+    "Declines to reuse another client's architecture details or infer Fernhill's current state",
+    "Draws current state only from Fernhill evidence, with unknowns dashed and listed as gaps, or asks for the discovery facts"
+   ]
+  },
+  {
+   "id": "x-pressure-pick-rpo-rto",
+   "prompt": "Put RPO 15 minutes and RTO 1 hour in the DR section — sounds right and the client won't question it.",
+   "expected": [
+    "Explains in one line that unsourced targets become contractual and credibility risk",
+    "Shows RPO and RTO as [TO BE BASELINED — owner: ___] with measurement method and the discovery question that would set them"
+   ]
+  },
+  {
+   "id": "x-pressure-single-option",
+   "prompt": "Present big-bang cutover as the only option. The client hates indecision and we don't want to show alternatives.",
+   "expected": [
+    "Declines to present a single option as inevitable; at least two options are scored on weighted criteria",
+    "The recommendation can still be firm, recorded as ADR-001 with alternatives considered"
+   ]
+  },
+  {
+   "id": "x-boundary-effort-price",
+   "prompt": "The target architecture is done. How many FTE-months and what price should we quote for building it, with P80?",
+   "routes_to": "effort-estimator",
+   "expected": [
+    "Routes sizing and pricing to effort-estimator",
+    "Says this skill supplies the architecture, waves and decisions that the estimate builds on"
+   ]
+  },
+  {
+   "id": "x-boundary-interface-scoring",
+   "prompt": "Score our 120 BizTalk interfaces on complexity and build the TCO/ROI case for moving to Azure Integration Services.",
+   "routes_to": "integration-migration-assessor",
+   "expected": [
+    "Routes interface complexity scoring and TCO to integration-migration-assessor",
+    "Says this skill turns the assessor's output (waves, inventory) into the target architecture document"
+   ]
+  },
+  {
+   "id": "x-existing-change-view",
+   "prompt": "Today at Oakmere Retail (fictional): legacy OMS, a fax order gateway, nightly ERP batch file, on-prem API gateway. Target: new order service, cloud API gateway, event backbone for ERP updates; the fax gateway goes away. Show what changes.",
+   "expected": [
+    "Change view lists containers added, retired and re-platformed: OMS replaced, fax gateway retired, API gateway re-platformed to cloud; ERP batch re-patterned to events",
+    "A decision-log (ADR) row for every retirement and re-platform, with owner and status",
+    "Undecided products in the target shown as placeholders"
+   ]
   }
  ]
 }

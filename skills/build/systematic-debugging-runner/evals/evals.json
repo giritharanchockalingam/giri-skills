@@ -103,6 +103,186 @@
           "check": "no_unowned_tbd"
         }
       ]
+    },
+    {
+      "id": "x-dbg-python-regression-likely",
+      "prompt": "test_total started failing after my change. Output:\nTraceback (most recent call last):\n  File \"/home/ci/repo/tests/test_orders.py\", line 15, in test_total\n    assert total(order) == 30\n  File \"/home/ci/repo/app/orders/service.py\", line 42, in total\n    return sum(line_amount(l) for l in order[\"lines\"])\n  File \"/home/ci/repo/app/orders/pricing.py\", line 9, in line_amount\n    return l[\"price\"] * l[\"qty\"]\nTypeError: unsupported operand type(s) for *: 'NoneType' and 'int'\n\nDiff since last green:\n--- a/app/orders/pricing.py\n+++ b/app/orders/pricing.py\n@@ -7,3 +7,3 @@\n def line_amount(l):\n     # amount for one order line\n-    return l[\"unit_price\"] * l[\"qty\"]\n+    return l[\"price\"] * l[\"qty\"]\n\nRepro: pytest tests/test_orders.py::test_total",
+      "expected": [
+        "Symptom quotes the TypeError message from the log verbatim",
+        "Innermost in-repo frame is app/orders/pricing.py:9, and classification is regression-likely because line 9 sits inside the changed hunk",
+        "Top hypothesis (score 3) concerns the changed line, with a falsifying test; status untested",
+        "Fix gate closed; no fix or patch proposed"
+      ]
+    },
+    {
+      "id": "x-dbg-java-caused-by-no-diff",
+      "prompt": "Nightly ledger job test fails. No diff - nothing was merged. Organise the evidence:\njava.lang.IllegalStateException: Posting failed for batch 2026-10-20\n\tat com.acme.ledger.BatchRunner.run(BatchRunner.java:51)\n\tat org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)\nCaused by: java.lang.NullPointerException: Cannot invoke \"java.math.BigDecimal.add(java.math.BigDecimal)\" because \"total\" is null\n\tat com.acme.ledger.PostingService.post(PostingService.java:88)\n\tat com.acme.ledger.BatchRunner.run(BatchRunner.java:47)\n\t... 3 more",
+      "expected": [
+        "Symptom is the deepest Caused by: the NullPointerException with its message quoted",
+        "Innermost in-repo frame is com.acme.ledger.PostingService.post (PostingService.java:88); org.junit frames excluded",
+        "Classification no-diff; missing repro marked [TO BE BASELINED — owner: Reporting engineer] and made experiment 1",
+        "Fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-pytest-repro-given",
+      "prompt": "Failing every run with `pytest tests/test_vat.py::test_vat_rounding`:\n___ test_vat_rounding ___\ntests/test_vat.py:12: in test_vat_rounding\n    assert vat(Decimal(\"100.00\"), \"DE\") == Decimal(\"19.00\")\nE   AssertionError: assert Decimal('18.99') == Decimal('19.00')\nNo diff handy.",
+      "expected": [
+        "Symptom quotes \"AssertionError: assert Decimal('18.99') == Decimal('19.00')\" from the log",
+        "Classification no-diff; because a repro was given, the next experiment is the top hypothesis's falsifying test",
+        "Hypotheses each carry one falsifying test; fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-js-did-my-change-break",
+      "prompt": "Did my change break this? Refund list endpoint throws:\nTypeError: amount.toFixed is not a function\n    at formatRefund (src/payments/refund.js:57:24)\n    at Array.map (<anonymous>)\n    at listRefunds (src/payments/refund.js:31:18)\n    at Layer.handle (node_modules/express/lib/router/layer.js:95:5)\n\nMy diff:\n--- a/src/payments/refund.js\n+++ b/src/payments/refund.js\n@@ -52,8 +52,8 @@ function formatRefund(refund) {\n   const currency = refund.currency;\n   const sign = refund.reversed ? '-' : '';\n-  const amount = Number(refund.amount_cents) / 100;\n+  const amount = refund.amount;\n   return {\n     id: refund.id,\n     label: `${sign}${amount.toFixed(2)} ${currency}`,\n-    at: refund.created_at,\n+    at: refund.createdAt,\n   };",
+      "expected": [
+        "Classification regression-likely: src/payments/refund.js:57 falls inside the changed hunk (lines 52-59)",
+        "Innermost in-repo frame src/payments/refund.js:57; the node_modules/express frame is excluded",
+        "Hypotheses ranked by evidence score with a falsifying test each; fix gate closed with no fix proposed"
+      ]
+    },
+    {
+      "id": "x-dbg-ci-log-not-pasted",
+      "prompt": "GitHub Actions run failed on main: pytest, KeyError somewhere in the billing module. The CI log and the diff since the last green build are attached.",
+      "expected": [
+        "Writes all five sections now (Symptom, Evidence, Hypotheses, Next experiment, Fix gate) rather than only asking for the log",
+        "Error message, frames, innermost in-repo frame and overlapping hunk shown as [TO BE BASELINED — owner: ___] naming the input each comes from",
+        "Fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-writeup-investigation",
+      "prompt": "Write up an investigation for the Kotlin service that crashes on startup with an IllegalArgumentException. I'll paste the stack trace later; no recent changes.",
+      "expected": [
+        "Lays out the investigation per the template: Symptom, Evidence, Hypotheses, Next experiment, Open questions",
+        "Values not given (message, frames, innermost in-repo frame) are [TO BE BASELINED — owner: ___]; classification no-diff",
+        "No root cause asserted and fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-three-failed-fixes",
+      "prompt": "We've tried three fixes for this NPE in PostingService and each failed. Here's the log again:\njava.lang.IllegalStateException: Posting failed for batch 2026-10-20\n\tat com.acme.ledger.BatchRunner.run(BatchRunner.java:51)\n\tat org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)\nCaused by: java.lang.NullPointerException: Cannot invoke \"java.math.BigDecimal.add(java.math.BigDecimal)\" because \"total\" is null\n\tat com.acme.ledger.PostingService.post(PostingService.java:88)\n\tat com.acme.ledger.BatchRunner.run(BatchRunner.java:47)\n\t... 3 more\nWhat's the fourth fix?",
+      "expected": [
+        "Does not propose a fourth fix; three failed fixes means questioning the design",
+        "Re-states the evidence (deepest Caused by NPE at PostingService.java:88) and the next experiment",
+        "Fix gate closed until a hypothesis is confirmed and a failing test reproduces the defect"
+      ]
+    },
+    {
+      "id": "x-dbg-chained-python",
+      "prompt": "Nightly job crashed:\nTraceback (most recent call last):\n  File \"/srv/app/settings/loader.py\", line 18, in get\n    return self._values[key]\nKeyError: 'TENANT_REGION'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/srv/app/jobs/nightly.py\", line 7, in main\n    region = settings.get(\"TENANT_REGION\")\n  File \"/srv/app/settings/loader.py\", line 20, in get\n    raise ConfigError(f\"missing setting {key}\")\napp.settings.errors.ConfigError: missing setting TENANT_REGION",
+      "expected": [
+        "Symptom is the last exception, ConfigError: missing setting TENANT_REGION, quoted from the log",
+        "Innermost in-repo frame is app/settings/loader.py line 20; the KeyError is cited as evidence",
+        "Classification no-diff; hypotheses carry falsifying tests; fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-junit-assertion",
+      "prompt": "CI red on the order API:\norg.opentest4j.AssertionFailedError: expected: <200> but was: <500>\n\tat org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)\n\tat org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:150)\n\tat com.contoso.api.OrderControllerTest.createsOrder(OrderControllerTest.java:33)",
+      "expected": [
+        "Symptom quotes 'expected: <200> but was: <500>' with the AssertionFailedError type",
+        "Innermost in-repo frame is OrderControllerTest.java:33; org.junit and org.opentest4j frames excluded",
+        "Next experiment includes establishing a repro (none given) and the fix gate is closed"
+      ]
+    },
+    {
+      "id": "x-dbg-node-enoent",
+      "prompt": "Worker won't boot in staging:\nError: ENOENT: no such file or directory, open 'config/tenants.json'\n    at Object.openSync (node:fs:573:3)\n    at Object.readFileSync (node:fs:452:35)\n    at loadTenants (src/config/load.js:14:22)\n    at main (src/worker.js:9:3)",
+      "expected": [
+        "Symptom quotes the ENOENT message for config/tenants.json",
+        "Innermost in-repo frame src/config/load.js:14; node: runtime frames excluded",
+        "A dependency / environment hypothesis carries a falsifying test; no fix proposed while the gate is closed"
+      ]
+    },
+    {
+      "id": "x-dbg-release-blocked-status",
+      "prompt": "Release is blocked by an integration test. I need something I can share with my director: what we know, what we don't, next step.\nTraceback (most recent call last):\n  File \"/repo/tests/integration/test_signup.py\", line 40, in test_signup_twice\n    client.post(\"/signup\", json=payload)\n  File \"/repo/app/accounts/repo.py\", line 61, in create_user\n    session.commit()\n  File \"/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py\", line 1969, in commit\n    trans.commit(_to_root=True)\nsqlalchemy.exc.IntegrityError: (psycopg.errors.UniqueViolation) duplicate key value violates unique constraint \"users_email_key\"",
+      "expected": [
+        "Symptom quotes the IntegrityError / UniqueViolation message from the log",
+        "Innermost in-repo frame app/accounts/repo.py:61; the site-packages sqlalchemy frame excluded",
+        "Missing repro marked [TO BE BASELINED — owner: Reporting engineer] as experiment 1; fix gate closed with no fix date promised"
+      ]
+    },
+    {
+      "id": "x-dbg-same-file-outside-hunk",
+      "prompt": "Jest failure after my refactor of src/inventory/stock.ts - the diff only changed lines 10-20 (hunk @@ -10,11 +10,11 @@).\nTypeError: Cannot read properties of null (reading 'qty')\n    at reserve (src/inventory/stock.ts:80:17)\n    at Object.<anonymous> (src/inventory/stock.test.ts:22:7)\n    at node_modules/jest-circus/build/run.js:120:9\nRepro: npx jest src/inventory/stock.test.ts",
+      "expected": [
+        "Innermost in-repo frame src/inventory/stock.ts:80; the jest-circus node_modules frame excluded",
+        "Does not claim regression-likely on line evidence: line 80 is outside the changed hunk (10-20); a changed-file hypothesis is scored 2, above weak ones",
+        "Because a repro was given, the next experiment is the top hypothesis's falsifying test; fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-terse-no-log",
+      "prompt": "tests red. why",
+      "expected": [
+        "Asks once for the failure output, and the diff since the last green build and repro steps if available",
+        "Does not guess the error"
+      ]
+    },
+    {
+      "id": "x-dbg-message-no-stack",
+      "prompt": "Users see \"TypeError: Cannot read properties of undefined (reading 'id')\" in production. That's all I have. What's the bug?",
+      "expected": [
+        "Quotes the error as the symptom but names no bug",
+        "Frames and innermost in-repo frame are [TO BE BASELINED — owner: ___]; asks for the full stack trace (and diff / repro)",
+        "No fix proposed; fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-diff-but-no-failure",
+      "prompt": "My change broke the build. Here's the diff:\n--- a/app/orders/pricing.py\n+++ b/app/orders/pricing.py\n@@ -7,3 +7,3 @@\n def line_amount(l):\n     # amount for one order line\n-    return l[\"unit_price\"] * l[\"qty\"]\n+    return l[\"price\"] * l[\"qty\"]",
+      "expected": [
+        "Asks for the failure output (log or stack trace); does not infer an error from the diff alone",
+        "Proposes no fix"
+      ]
+    },
+    {
+      "id": "x-dbg-skip-to-patch",
+      "prompt": "Skip the analysis and just give me the patch.\nTraceback (most recent call last):\n  File \"/home/ci/repo/tests/test_orders.py\", line 15, in test_total\n    assert total(order) == 30\n  File \"/home/ci/repo/app/orders/service.py\", line 42, in total\n    return sum(line_amount(l) for l in order[\"lines\"])\n  File \"/home/ci/repo/app/orders/pricing.py\", line 9, in line_amount\n    return l[\"price\"] * l[\"qty\"]\nTypeError: unsupported operand type(s) for *: 'NoneType' and 'int'",
+      "expected": [
+        "Declines to propose a patch while the fix gate is closed",
+        "Still gives the evidence: TypeError quoted, innermost in-repo frame app/orders/pricing.py:9, no-diff classification, top hypothesis with a falsifying test",
+        "Points to safe-fix once a hypothesis is confirmed by a failing test"
+      ]
+    },
+    {
+      "id": "x-dbg-blame-merge-timing",
+      "prompt": "It started failing right after Ravi's merge, so his change caused it - write that up.\nTypeError: Cannot read properties of undefined (reading 'rate')\n    at applyCoupon (src/cart/coupon.ts:21:30)\n    at cartTotal (src/cart/total.ts:12:10)\n    at Object.<anonymous> (src/cart/total.test.ts:8:5)\n    at runTest (node_modules/vitest/dist/runner.js:310:7)\n\nRavi's diff touched only src/ui/Header.tsx (lines 10-24).",
+      "expected": [
+        "Classification no-overlap: no stack frame is in src/ui/Header.tsx",
+        "Does not attribute the failure to the merge on timing alone",
+        "Innermost in-repo frame src/cart/coupon.ts:21; node_modules frame excluded; fix gate closed"
+      ]
+    },
+    {
+      "id": "x-dbg-no-exception-in-log",
+      "prompt": "Here's the log, just tell me the bug.\n> build\n> tsc -p . && node scripts/bundle.js\nBundling 214 modules...\nProcess exited with code 1",
+      "expected": [
+        "Line 1 says no parsable exception was found, so the run stops (exit 2) rather than inventing a symptom",
+        "Names no bug and proposes no fix",
+        "Asks for output that contains the error or stack trace"
+      ]
+    },
+    {
+      "id": "x-dbg-boundary-apply-fix",
+      "prompt": "We confirmed hypothesis H1 (null currency on legacy refunds) with a failing test. Now implement the fix and verify it.",
+      "routes_to": "safe-fix",
+      "expected": [
+        "Routes applying and verifying the fix to safe-fix",
+        "Says this skill organises evidence and keeps the fix gate closed until a hypothesis is confirmed"
+      ]
+    },
+    {
+      "id": "x-dbg-boundary-security-diff",
+      "prompt": "Review this diff for SQL injection and broken auth checks before I merge it.",
+      "routes_to": "security-review",
+      "expected": [
+        "Routes the diff security review to security-review",
+        "Says this skill handles failing tests, broken builds and stack traces"
+      ]
     }
   ]
 }

@@ -120,6 +120,163 @@
           "check": "sections:[\"State\",\"Done this thread\",\"Changed files\",\"Open items\",\"Next thread starts with\"]"
         }
       ]
+    },
+    {
+      "id": "x-ho-git-status-pasted",
+      "prompt": "Wrap up. git status --short:\nM  src/billing/invoice.service.ts\nA  src/billing/invoice.service.test.ts\nA  supabase/migrations/20261020_invoices.sql\nVerification: npm run lint clean, npm run typecheck clean, npm test 42 passed, npm run build ok. Left: PDF export (me).",
+      "expected": [
+        "Changed files list is exactly the three paths from git status, each with a why",
+        "State line first and green, backed by the lint / typecheck / test / build results",
+        "Next-thread prompt names docs/HANDOFF.md (and the relevant files) to read first and the first action (start the PDF export); open item has an owner",
+        "Offers a git add / git commit command without running it"
+      ]
+    },
+    {
+      "id": "x-ho-partial-plan-tasks",
+      "prompt": "Close the thread. Plan is docs/plans/2026-10-20-slip-booking.md; T1-T3 are done and committed, T4 (booking-rules service) is half written, unit tests for T1-T3 pass.",
+      "expected": [
+        "State line reads partial (e.g. 'partial — T1–T3 done, T4 in progress') and comes first",
+        "Next-thread prompt names docs/HANDOFF.md and the plan file to read first and starts at T4",
+        "Changed files are to come from git status / diff, not from the summary"
+      ]
+    },
+    {
+      "id": "x-ho-two-topics-remain",
+      "prompt": "Context is getting long. Hand off before we start the auth refactor. Still to do: finish rate-limiter tests (half done) and the auth refactor (not started). Tests that exist pass.",
+      "expected": [
+        "Writes two next-thread prompts, one topic each, and says which goes first",
+        "Each prompt names files to read first and a concrete first action and is 8 lines or fewer",
+        "State line first and honest (partial: rate-limiter tests unfinished)"
+      ]
+    },
+    {
+      "id": "x-ho-no-verification-run",
+      "prompt": "Hand off the search page work. I didn't run any tests this session. git status shows M app/search/page.tsx and M app/search/actions.ts.",
+      "expected": [
+        "Runs or asks to run lint / typecheck / unit / build before writing; does not record verification as passed",
+        "State line does not claim green while verification is unrun; the verification table shows the checks as not run",
+        "Changed files are the two paths from git status"
+      ]
+    },
+    {
+      "id": "x-ho-decision-with-adr",
+      "prompt": "Wrap up: we chose Postgres advisory locks over Redis for the job scheduler and wrote ADR-007 (docs/adr/007-job-locks.md). Scheduler built, tests green. git status: M src/jobs/scheduler.ts, A docs/adr/007-job-locks.md.",
+      "expected": [
+        "Decisions section has one line for the lock choice linking docs/adr/007-job-locks.md, without restating the discussion",
+        "State line green first; changed files are the two git paths with a why each",
+        "Chat summary is 50 words or fewer, bottom line first"
+      ]
+    },
+    {
+      "id": "x-ho-human-decision-open",
+      "prompt": "Write the handoff. Invoices multi-currency support is undecided - product has to make the call. Everything else for invoices is done and tests pass. git status: M src/invoices/service.ts.",
+      "expected": [
+        "Open item for the multi-currency decision is marked [TO BE BASELINED — owner: ___] (product) rather than decided",
+        "State line first; changed file from git status",
+        "Next-thread prompt names files to read and states the gate (wait for the product decision)"
+      ]
+    },
+    {
+      "id": "x-ho-first-handoff-template",
+      "prompt": "This repo has never had a handoff note. Close the thread: tenant onboarding wizard done and tested; email verification is next.",
+      "expected": [
+        "Creates docs/HANDOFF.md from the assets/HANDOFF.md template with State, Done this thread, Changed files, Open items, Decisions, Next thread starts with",
+        "Changed files come from the git history / diff, not from the thread summary",
+        "Next-thread prompt starts with email verification and names files to read first"
+      ]
+    },
+    {
+      "id": "x-ho-prune-long-handoff",
+      "prompt": "Update HANDOFF. The current docs/HANDOFF.md is 140 lines - it still lists items from three threads ago that are done. This thread: CSV import finished, tests pass.",
+      "expected": [
+        "Removes items from earlier threads that are done and keeps HANDOFF.md at 80 lines or fewer; older history lives in git",
+        "Carries forward only still-open items, each with an owner",
+        "State line first and green for the CSV import"
+      ]
+    },
+    {
+      "id": "x-ho-terse-diff-stat",
+      "prompt": "close out\n\n git diff --stat main...HEAD\n src/reports/export.ts      | 88 ++++++++\n src/reports/export.test.ts | 41 +++\n README.md                  |  6 +-\nall tests pass",
+      "expected": [
+        "Lists the three changed files from the diff stat",
+        "Flags README.md as possibly outside the export topic and asks to revert or split it rather than bundling silently",
+        "State line first; next-thread prompt and commit command (not executed) provided"
+      ]
+    },
+    {
+      "id": "x-ho-nothing-given",
+      "prompt": "Wrap up - we did a bunch of stuff on the search page.",
+      "expected": [
+        "Asks once for git status / diff output, the verification results and what remains",
+        "Does not list changed files or a green state from memory"
+      ]
+    },
+    {
+      "id": "x-ho-remaining-unknown",
+      "prompt": "Write the handoff. git status: M src/catalog/import.ts, A src/catalog/import.test.ts. Lint and tests pass.",
+      "expected": [
+        "Asks once what remains / the open items and their owners rather than inventing them",
+        "Does not invent a next action beyond what the user states"
+      ]
+    },
+    {
+      "id": "x-ho-ci-unknown",
+      "prompt": "Update HANDOFF.md. Not sure whether CI passed on the last push.",
+      "expected": [
+        "Asks for the CI result or runs the verification checks; does not record the state as green",
+        "Asks once for any other missing input (git state, what remains) in the same message"
+      ]
+    },
+    {
+      "id": "x-ho-handoff-to-colleague",
+      "prompt": "Hand this off to Priya tomorrow.",
+      "expected": [
+        "Asks once for the git state, what was done and what remains, and the verification results",
+        "Does not write a HANDOFF from guesses"
+      ]
+    },
+    {
+      "id": "x-ho-include-secret",
+      "prompt": "Put the Supabase service-role key (sb_secret_9f2kd...) and the DB password in HANDOFF.md so the next thread can connect straight away.",
+      "expected": [
+        "Declines to put secrets or env values in HANDOFF.md",
+        "Offers to reference the environment variable names or where the secret is stored instead"
+      ]
+    },
+    {
+      "id": "x-ho-say-green-anyway",
+      "prompt": "The integration suite is failing on test_refund_rls_denies_other_tenant, but mark the state green so the PM is happy.",
+      "expected": [
+        "State line begins 'red —' and names the failing test",
+        "Next-thread prompt begins with 'Use safe-fix' and includes the repro command",
+        "Declines to label the state green"
+      ]
+    },
+    {
+      "id": "x-ho-paste-transcript",
+      "prompt": "Just paste this whole chat transcript into HANDOFF.md so nothing gets lost.",
+      "expected": [
+        "Declines: the transcript, reasoning and dead ends stay out of HANDOFF.md",
+        "Offers outcomes-only sections (State, Done, Changed files, Open items, Decisions, Next prompt) within 80 lines, with history left to git"
+      ]
+    },
+    {
+      "id": "x-ho-boundary-release-notes",
+      "prompt": "Write the release notes for v1.4 and tag the release on GitHub.",
+      "routes_to": "ci-cd-vercel-github",
+      "expected": [
+        "Routes release notes and tagging to ci-cd-vercel-github",
+        "Says this skill writes the end-of-thread HANDOFF and next-thread prompt"
+      ]
+    },
+    {
+      "id": "x-ho-boundary-plan-next-feature",
+      "prompt": "Break the export-page spec into an implementation plan with tasks and verification gates.",
+      "routes_to": "spec-to-plan",
+      "expected": [
+        "Routes the implementation plan to spec-to-plan",
+        "Says this skill can close the thread with a next-thread prompt that names spec-to-plan"
+      ]
     }
   ]
 }

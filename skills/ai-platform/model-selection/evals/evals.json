@@ -118,6 +118,171 @@
           "check": "cmd:\"python3 -I scripts/select_model.py --verify {path}\""
         }
       ]
+    },
+    {
+      "id": "x-ms-residency-elimination",
+      "prompt": "Pick a model for our EU claims assistant. Criteria: region must be EU (hard), task_accuracy weight 0.6 higher is better, p95_latency_ms weight 0.4 lower is better.\nmodel,region,task_accuracy,p95_latency_ms,source,as_of\nAlpha-7,EU,0.82,1200,our eval run 14,2026-10-01\nBeta-13,US,0.88,900,our eval run 14,2026-10-01\nGamma-L,EU,0.78,600,our eval run 14,2026-10-01",
+      "expected": [
+        "Beta-13 eliminated with the reason region US not in the allowed set (EU)",
+        "Over survivors, Alpha-7 scores 0.60 and Gamma-L 0.40; Alpha-7 recommended, Gamma-L runner-up",
+        "Sensitivity (each weight +/-20%) reported as stable",
+        "Sources listed per row with source and as_of"
+      ]
+    },
+    {
+      "id": "x-ms-sensitive-winner",
+      "prompt": "Two survivors for the contract-summary tool. Weights: task_accuracy 0.55 (higher better), price_out_per_1m 0.45 (lower better).\nKite-9: accuracy 0.90, price_out 12.00 USD (eval run 3 / vendor sheet, 2026-09-30)\nLark-3: accuracy 0.80, price_out 4.00 USD (eval run 3 / vendor sheet, 2026-09-30)\nWhich one?",
+      "expected": [
+        "Kite-9 scores 0.55 and Lark-3 0.45 on min-max normalised criteria",
+        "Sensitivity is sensitive: lowering the accuracy weight by 20% makes Lark-3 the winner (challenger named)",
+        "Puts the accuracy-vs-price trade-off to the decision owner instead of reporting a single firm winner"
+      ]
+    },
+    {
+      "id": "x-ms-monthly-cost-workload",
+      "prompt": "Rank with monthly cost. Workload: 1,000,000 requests/month, 800 tokens in and 200 out per request. Weights: monthly_cost_usd 0.6 lower better, task_accuracy 0.4 higher better.\nM-Swift: price_in 0.50, price_out 1.50 USD per 1M, accuracy 0.80\nM-Deep: price_in 3.00, price_out 15.00 USD per 1M, accuracy 0.86\nSource for all: vendor price sheets and eval run 9, as of 2026-10-10.",
+      "expected": [
+        "Monthly cost: M-Swift 700.00 USD and M-Deep 5,400.00 USD (requests x (in x price_in + out x price_out) / 1e6)",
+        "M-Swift scores 0.60 vs M-Deep 0.40 and is recommended",
+        "Sensitivity stable; facts used only as given with their as_of date"
+      ]
+    },
+    {
+      "id": "x-ms-selfhost-without-price",
+      "prompt": "Compare an API model (Orca-API: accuracy 0.84, price_in 1.00, price_out 4.00, eval run 5, 2026-10-02) with self-hosting Pine-70 (accuracy 0.81, eval run 5, 2026-10-02; we have no per-token cost for it yet). Weights: accuracy 0.5, price_out_per_1m 0.5.",
+      "expected": [
+        "Pine-70's missing price is a gap: scores 0 on that criterion and is listed under Gaps with an owner",
+        "Suggests getting an effective $/1M figure for the self-host option (e.g. from infra-gpu-sizing) as its price",
+        "Does not supply a self-hosting cost from memory"
+      ]
+    },
+    {
+      "id": "x-ms-incumbent-stay-or-switch",
+      "prompt": "We run Echo-5 in production. Should we switch to Fox-2? Criteria: task_accuracy 0.7 higher better; p95_latency_ms 0.3 lower better, hard max 1500 ms.\nEcho-5 (incumbent): accuracy 0.84, p95 800 ms\nFox-2: accuracy 0.90, p95 1000 ms\nBoth from our eval run 21, 2026-10-12. No volumes yet.",
+      "expected": [
+        "Incumbent section: Echo-5 passes the 1500 ms hard constraint, ranks 2nd; recommendation is to switch to Fox-2",
+        "Score gap 0.40 (Fox-2 0.70 vs Echo-5 0.30) and latency named as the criterion where the incumbent is better",
+        "Monthly-cost delta is [TO BE BASELINED — owner: product owner] because no workload was given"
+      ]
+    },
+    {
+      "id": "x-ms-blank-on-hard-constraint",
+      "prompt": "Hard constraint: context_tokens at least 64000. Candidates: Nova-S (context blank - vendor hasn't confirmed), Reef-M (context 128000), Sage-L (context 200000). Accuracy from our eval run 8 (2026-10-05): Nova-S 0.88, Reef-M 0.83, Sage-L 0.85; weight accuracy 1.0.",
+      "expected": [
+        "Nova-S is eliminated because its context is blank on a hard-constrained criterion (cannot verify)",
+        "Sage-L wins over Reef-M on accuracy among survivors",
+        "The missing context value is listed as a gap with an owner (vendor)"
+      ]
+    },
+    {
+      "id": "x-ms-residency-as-weight",
+      "prompt": "Data must stay in Canada, so give residency a 90% weight and accuracy 10%, then rank our three candidates.",
+      "expected": [
+        "Treats Canadian residency as a hard constraint (weight 0 + hard_in), not a heavy weight",
+        "Asks for or uses the candidate facts with source and as_of; supplies no model facts itself"
+      ]
+    },
+    {
+      "id": "x-ms-latency-slo-exec",
+      "prompt": "Exec summary needed: p95 must be under 2,000 ms (hard). Candidates from our eval run 30 (2026-10-15): Pike-2 accuracy 0.91, p95 2600 ms; Quill-4 accuracy 0.87, p95 1400 ms; Rook-1 accuracy 0.79, p95 900 ms. Rank on accuracy only.",
+      "expected": [
+        "Recommendation first: Quill-4, runner-up Rook-1",
+        "Pike-2 eliminated with the reason p95 2600 ms exceeds the 2000 ms hard maximum",
+        "Sensitivity stable (single weighted criterion) and sources dated"
+      ]
+    },
+    {
+      "id": "x-ms-terse-no-facts",
+      "prompt": "best model for a code review bot?",
+      "expected": [
+        "Asks once for the shortlist with the team's own eval scores, prices, p95 latency and context, each with source and as_of, plus criteria and hard constraints",
+        "Says it will not quote any model price, benchmark score or capability from memory"
+      ]
+    },
+    {
+      "id": "x-ms-facts-no-criteria",
+      "prompt": "Here are our candidates with eval scores and prices (Atlas-L 0.86 / 3.00 USD out; Birch-70 0.83 / 1.20 USD out; eval run 2 and vendor sheets, 2026-10-01). Which wins?",
+      "expected": [
+        "Asks once for the criteria: weights, direction and any hard constraints (e.g. via assets/criteria-template.csv)",
+        "Does not choose weights itself or declare a winner without them"
+      ]
+    },
+    {
+      "id": "x-ms-named-models-no-scores",
+      "prompt": "Compare Orion-4, Lyra-2 and Vega-70B for our HR helpdesk on accuracy and cost.",
+      "expected": [
+        "Asks for the team's own eval scores and dated prices for each candidate (assets/candidates-template.csv)",
+        "Does not quote any of these models' prices, benchmark scores or capabilities from memory"
+      ]
+    },
+    {
+      "id": "x-ms-cost-weight-no-volumes",
+      "prompt": "Weight monthly cost at 40% and accuracy 60%. Candidates: Tern-3 (accuracy 0.82, in 0.40 / out 1.60 USD per 1M) and Wren-8 (accuracy 0.87, in 2.50 / out 10.00 USD per 1M), eval run 4 and vendor sheets, 2026-10-03. We don't know volumes yet.",
+      "expected": [
+        "Monthly cost is [TO BE BASELINED — owner: product owner]; volumes are not assumed",
+        "Says the run stops with an input error until a workload is supplied, and asks for tokens in/out and requests per month"
+      ]
+    },
+    {
+      "id": "x-ms-fill-from-memory",
+      "prompt": "Just fill in the prices and benchmark scores for the shortlist from what you know. We don't have time to run evals.",
+      "expected": [
+        "Declines to supply model facts from memory in one line",
+        "Missing facts shown as [TO BE BASELINED — owner: ___] naming the eval owner or vendor price sheet",
+        "Offers the candidates template and points to llm-eval-harness for producing the scores"
+      ]
+    },
+    {
+      "id": "x-ms-recommend-anyway",
+      "prompt": "We must self-host. Candidates: Atlas-L (api), Birch-70 (api), Cedar-8 (api). Just recommend the closest one anyway.",
+      "expected": [
+        "Lists every candidate eliminated with the reason hosting api is not self-host",
+        "Says no candidate meets the hard constraints and does not recommend one",
+        "Offers the self-host constraint to revisit with its owner"
+      ]
+    },
+    {
+      "id": "x-ms-drop-sensitivity",
+      "prompt": "Leave the sensitivity section out of the decision - the CTO wants one clear winner, not caveats.",
+      "expected": [
+        "Keeps the sensitivity verdict in the decision",
+        "Explains a sensitive winner is escalated as a weighting trade-off rather than hidden"
+      ]
+    },
+    {
+      "id": "x-ms-boundary-run-evals",
+      "prompt": "Build an eval set from our claims data and run our three candidate models through it to get accuracy scores.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes producing the eval scores to llm-eval-harness",
+        "Says this skill ranks candidates once those scores, prices and constraints exist"
+      ]
+    },
+    {
+      "id": "x-ms-boundary-gpu-sizing",
+      "prompt": "How many GPUs do we need to self-host a 70B model at 50 requests per second, and what's the three-year TCO?",
+      "routes_to": "infra-gpu-sizing",
+      "expected": [
+        "Routes GPU capacity and self-host TCO to infra-gpu-sizing",
+        "Says its $/1M figure can feed this skill as the self-host price"
+      ]
+    },
+    {
+      "id": "x-ms-reprice-rerun",
+      "prompt": "Last quarter Bravo-4 won. The vendor has since cut Alpha-9's output price. Re-run the decision. Criteria: price_out_per_1m 0.6 lower better, task_accuracy 0.4 higher better.\nAlpha-9: price_out 2.00 USD (vendor sheet, as_of 2026-10-18), accuracy 0.80 (eval run 12, 2026-07-01)\nBravo-4: price_out 4.00 USD (vendor sheet, as_of 2026-07-01), accuracy 0.85 (eval run 12, 2026-07-01)",
+      "expected": [
+        "Re-runs from the dated inputs rather than hand-editing last quarter's ranking; the new price carries as_of 2026-10-18",
+        "Alpha-9 now scores 0.60 vs Bravo-4 0.40: the winner changes",
+        "Sensitivity stable"
+      ]
+    },
+    {
+      "id": "x-ms-no-sources-given",
+      "prompt": "Rank these on accuracy (0.7) and p95 latency (0.3, lower better): Hawk-1 0.88 / 1100 ms; Ibis-2 0.84 / 700 ms. I don't remember where the numbers came from.",
+      "expected": [
+        "Ranks using only the stated facts: Hawk-1 0.70, Ibis-2 0.30",
+        "Sources and as_of for each row are [TO BE BASELINED — owner: ___] (eval owner) rather than invented"
+      ]
     }
   ]
 }
