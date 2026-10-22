@@ -21,7 +21,7 @@ Every fact is read from a file in the repo and carries its evidence; a fact with
                    db/migrate that exists (repo-relative) or null
   monorepo_root    the repo or an ancestor (<= 4 levels) holding pnpm-workspace.yaml, turbo.json, nx.json,
                    lerna.json or package.json "workspaces"; else null
-  baselines        {nextjs, perf, ui}: docs/baselines/<check>-findings.csv when present, else null —
+  baselines        {nextjs, perf, ui, debt}: docs/baselines/<check>-findings.csv when present, else null —
                    the recorded debt the lint skills receive as their `baseline` input
 
 An empty or missing directory yields a profile of unknowns (exit 0; `exists: false` when missing).
@@ -54,7 +54,7 @@ FRAMEWORKS_JS = [("next", "nextjs"), ("nuxt", "nuxt"), ("@remix-run/react", "rem
 FRAMEWORKS_PY = [("fastapi", "fastapi"), ("django", "django"), ("flask", "flask")]
 MIGRATION_DIRS = ("supabase/migrations", "prisma/migrations", "drizzle", "migrations", "alembic/versions", "db/migrate")
 MONOREPO_MARKERS = ("pnpm-workspace.yaml", "turbo.json", "nx.json", "lerna.json")
-BASELINE_CHECKS = ("nextjs", "perf", "ui")
+BASELINE_CHECKS = ("nextjs", "perf", "ui", "debt")
 
 
 def walk(root: Path, exts: tuple[str, ...], limit: int = 4000) -> list[Path]:

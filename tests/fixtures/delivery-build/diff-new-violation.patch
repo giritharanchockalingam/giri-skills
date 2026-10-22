@@ -1,0 +1,14 @@
+# fictional fixture — a builder diff that adds a NEW conventions violation (NX5 raw sql outside lib/db) in a planned file
+diff --git a/app/api/orders/export/route.js b/app/api/orders/export/route.js
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/app/api/orders/export/route.js
+@@ -0,0 +1,7 @@
++import { sql } from "@/lib/db";
++import { listOrders, ordersToCsv } from "@/lib/orders";
++
++export async function GET() {
++  const orders = await sql`select * from orders limit 500`;
++  return new Response(ordersToCsv(orders), { headers: { "content-type": "text/csv" } });
++}

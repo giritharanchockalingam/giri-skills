@@ -790,3 +790,110 @@ def test_repo_key_is_cloned_with_gh_and_a_clear_error_without_access(tmp_path, m
     # a fake gh that clones: an existing checkout is reused untouched
     (tmp_path / "repo").mkdir(); (tmp_path / "repo" / ".git").mkdir()
     assert mod.clone_repo("owner/name", tmp_path / "repo") == tmp_path / "repo"
+
+
+# ---- brownfield baselines: the gate rule is "no NEW high findings from this change", not "the repo is clean"
+
+LEGACY = ('import { sql } from "@/lib/db";\n\nexport default async function Page() {\n'
+          '  const rows = await sql`select id from orders`;\n  return <pre>{JSON.stringify(rows)}</pre>;\n}\n')
+NEW_VIOLATION_PATCH = FIX / "delivery-build" / "diff-new-violation.patch"
+
+
+def brownfield_repo(tmp_path: Path) -> Path:
+    """The fixture repo plus one pre-existing high finding (NX5 in app/legacy/page.js) the change never touches."""
+    repo = tmp_path / "brown"
+    shutil.copytree(REPO, repo)
+    (repo / "app" / "legacy").mkdir(parents=True)
+    (repo / "app" / "legacy" / "page.js").write_text(LEGACY, encoding="utf-8")
+    return repo
+
+
+def findings(out: Path, stage_step: str) -> list[dict]:
+    import csv
+    return list(csv.DictReader((out / "evidence" / stage_step / "findings.csv").open(encoding="utf-8")))
+
+
+def test_pre_existing_violation_is_baselined_and_a_clean_patch_passes(tmp_path):
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", repo=brownfield_repo(tmp_path))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out)["build"] == "passed" and stage_status(out)["evaluate"] == "passed"
+    base = run_json(out)["baseline"]
+    assert base["status"] == "captured" and sorted(base["checks"]) == ["nextjs", "perf", "ui"]
+    assert base["checks"]["nextjs"] == {**base["checks"]["nextjs"], "source": "captured", "findings": 1, "high": 1,
+                                        "path": "evidence/00-baseline/nextjs-enterprise-conventions/findings.csv"}
+    ev = out / "evidence" / "00-baseline"
+    for skill in ("nextjs-enterprise-conventions", "perf-review-runner", "ui-component-quality"):
+        assert (ev / skill / "findings.csv").is_file() and (ev / skill / "report.md").is_file()
+    assert (ev / "baseline.json").is_file()
+    rows = findings(out, "03-build/conventions")
+    assert [(f["rule"], f["file"], f["status"]) for f in rows] == [("NX5", "app/legacy/page.js", "known")]
+    steps = {s["id"]: s for st in run_json(out)["stages"] for s in st["steps"]}
+    assert steps["conventions"]["inputs"]["baseline"] == str(out / "evidence/00-baseline/nextjs-enterprise-conventions/findings.csv")
+    assert steps["perf"]["inputs"]["baseline"].endswith("00-baseline/perf-review-runner/findings.csv")
+    assert steps["ui"]["inputs"]["baseline"].endswith("00-baseline/ui-component-quality/findings.csv")
+    assert steps["code"]["baseline"] == "captured" and steps["conventions"]["known"] == 1 and steps["conventions"]["new_high"] == []
+    md = (out / "evidence" / "EVIDENCE.md").read_text()
+    assert "Baseline (before the change" in md and "nextjs: 1 finding(s), 1 high — [findings.csv](evidence/00-baseline/nextjs-enterprise-conventions/findings.csv)" in md
+    assert "perf: 0 finding(s), 0 high" in md and str(out) not in md
+    files = run_json(out)["files"]
+    assert "evidence/00-baseline/baseline.json" in files and "evidence/00-baseline/nextjs-enterprise-conventions/findings.csv" in files
+
+
+def test_patch_adding_a_new_violation_fails_naming_only_the_new_finding(tmp_path):
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(NEW_VIOLATION_PATCH), "--approve-all", repo=brownfield_repo(tmp_path))
+    assert r.returncode == 1 and "stopped at stage 'build'" in r.stdout
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert gate["verdict"] == "fail"
+    assert gate["detail"].endswith("1 new high finding(s) against the baseline: NX5 app/api/orders/export/route.js:5")
+    assert "app/legacy/page.js" not in gate["detail"]
+    rows = {(f["rule"], f["file"]): f["status"] for f in findings(out, "03-build/conventions")}
+    assert rows == {("NX5", "app/api/orders/export/route.js"): "new", ("NX5", "app/legacy/page.js"): "known"}
+    steps = {s["id"]: s for st in run_json(out)["stages"] for s in st["steps"]}
+    assert steps["conventions"]["new_high"] == ["NX5 app/api/orders/export/route.js:5"]
+
+
+def test_stack_profile_baselines_override_the_captured_ones(tmp_path):
+    """docs/baselines/nextjs-findings.csv in the repo: the profile records it, the executor counts it and does not
+    re-capture that check; the other checks are still captured."""
+    repo = brownfield_repo(tmp_path)
+    recorded = repo / "docs" / "baselines" / "nextjs-findings.csv"
+    recorded.parent.mkdir(parents=True)
+    recorded.write_text("rule,file,line,snippet,severity,status\n"
+                        "NX5,app/legacy/page.js,4,const rows = await sql`select id from orders`;,high,new\n", encoding="utf-8")
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", repo=repo)
+    assert r.returncode == 0, r.stdout + r.stderr
+    base = run_json(out)["baseline"]
+    assert base["checks"]["nextjs"]["source"] == "profile" and base["checks"]["nextjs"]["path"].endswith("docs/baselines/nextjs-findings.csv")
+    assert base["checks"]["nextjs"]["findings"] == 1 and base["checks"]["perf"]["source"] == "captured"
+    assert not (out / "evidence" / "00-baseline" / "nextjs-enterprise-conventions").exists()
+    assert (out / "evidence" / "00-baseline" / "perf-review-runner" / "findings.csv").is_file()
+    steps = {s["id"]: s for st in run_json(out)["stages"] for s in st["steps"]}
+    assert steps["conventions"]["inputs"]["baseline"] == str(out / "repo" / "docs" / "baselines" / "nextjs-findings.csv")
+    assert "nextjs: 1 finding(s), 1 high — repo-recorded (docs/baselines)" in (out / "evidence" / "EVIDENCE.md").read_text()
+
+
+def test_no_baseline_flag_makes_pre_existing_debt_fail_the_gate(tmp_path):
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--no-baseline", repo=brownfield_repo(tmp_path))
+    assert r.returncode == 1 and stage_status(out)["build"] == "failed"
+    base = run_json(out)["baseline"]
+    assert base["status"] == "skipped" and "--no-baseline" in base["reason"]
+    assert not (out / "evidence" / "00-baseline" / "nextjs-enterprise-conventions").exists()
+    assert [f["status"] for f in findings(out, "03-build/conventions")] == ["new"]
+    assert "Baseline (before the change): skipped — --no-baseline" in (out / "evidence" / "EVIDENCE.md").read_text()
+
+
+def test_resume_keeps_the_captured_baseline(tmp_path):
+    """The code step stops for the builder (exit 4) after the baseline is taken; the resume reads baseline.json back
+    instead of re-running the skills on a checkout that now carries the change."""
+    out = tmp_path / "out"
+    r = deliver(out, "--approve-all", repo=brownfield_repo(tmp_path))
+    assert r.returncode == 4 and (out / "evidence" / "00-baseline" / "baseline.json").is_file()
+    at = run_json(out)["baseline"]["at"]
+    r = deliver(out, "--resume", "--builder", "manual", "--patch", str(PATCH), "--approve-all", repo=brownfield_repo(tmp_path / "again"))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert run_json(out)["baseline"]["at"] == at
+    assert [f["status"] for f in findings(out, "03-build/conventions")] == ["known"]

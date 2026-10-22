@@ -58,7 +58,7 @@ PR_OUTPUTS = ["pr.json"]
 APPROVAL_OUTPUTS = ["approval.json"]
 PROFILE_KEYS = {"flavour", "framework", "package_manager", "test_runner", "e2e", "deploy_target", "migrations_dir",
                 "monorepo_root", "baselines", "repo", "exists"}
-PROFILE_BASELINES = {"nextjs", "perf", "ui"}
+PROFILE_BASELINES = {"nextjs", "perf", "ui", "debt"}
 RUN_KEYS = {"id", "state", "draft_only"}
 STEP_REF = re.compile(r"^\$steps\.([A-Za-z_][\w-]*):([^#]+?)(?:#([\w.\-\[\]]+))?$")
 IN_REF = re.compile(r"^\$in\.([A-Za-z_][\w-]*)$")

@@ -158,7 +158,7 @@ Where the shipped file differs from the first sketch, and why (every name is the
 |---|---|
 | `$in.<name>` | a pipeline input |
 | `$repo` | the working checkout of the target repository (a `path` input to skills) |
-| `$profile.<key>` | a stack-profile fact (`flavour`, `framework`, `package_manager`, `test_runner`, `deploy_target`, `migrations_dir`, `baselines.<check>`) |
+| `$profile.<key>` | a stack-profile fact (`flavour`, `framework`, `package_manager`, `test_runner`, `deploy_target`, `migrations_dir`, `baselines.<check>`); `baselines.<nextjs|perf|ui|debt>` resolves to the repo-recorded findings.csv when the profile has one, else to the baseline the executor captured before the code step (see Stack profile and baselines) |
 | `$steps.<id>:<file>[#json.key]` | an output file of an earlier step (same syntax as playbooks); `#key.path` reads a key of a `.json` file |
 | `$steps.<id>:<text file>#csv` / `#lines` | the non-blank, non-`#` lines of a text file such as `files.txt`, joined with commas / newlines (how `test-strategy-tdd` gets its comma-separated `files`) |
 | `$run.id`, `$run.state`, `$run.draft_only` | the run id; the run's honest state line for the handoff; `true` when the provider is `dry` or `none` (skills with a model step take their script draft as final) |
@@ -225,15 +225,38 @@ continues with `tests`, then stops again at `code` until the diff is there. A re
 answers. `greenfield-app` runs the same architecture and build stages (`project-bootstrap` names its files in
 `bootstrap-report.json`; the refined `tasks.csv` is what `files.txt` derives from).
 
-### Stack profile (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
+### Stack profile and baselines (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
 Read once, before stage 1, never guessed: `flavour` (ts|js), `framework` (nextjs|…), `package_manager`, `test_runner`
 (vitest|jest|pytest|none), `e2e` (playwright|none), `deploy_target` (vercel|aws|azure|gcp|fly|railway|unknown),
 `migrations_dir` (or null), `monorepo_root`, `baselines` (paths to recorded findings.csv per check when present:
-`docs/baselines/<nextjs|perf|ui>-findings.csv` in the repo, else null). Every fact carries its `evidence` (the file it
+`docs/baselines/<nextjs|perf|ui|debt>-findings.csv` in the repo, else null). Every fact carries its `evidence` (the file it
 was read from); a missing or empty directory profiles as unknowns. `flavour` is `ts | js | python | unknown`.
 Skills that write files must honour it; skills that lint read it for file selection.
 A greenfield pipeline sets `"stack_profile": {"after": "bootstrap"}`: the profile is read after that stage, because
 before it there is nothing to read.
+
+**Brownfield baselines — the gate rule is "no NEW high findings from this change", never "the repository is clean".**
+A repository with 77 pre-existing conventions findings must not fail a one-file feature on debt it did not add. So,
+before the build stage's `code` step applies anything, the executor runs every baseline-accepting skill a later step
+uses — `nextjs-enterprise-conventions` (`nextjs`), `perf-review-runner` (`perf`), `ui-component-quality` (`ui`),
+`tech-debt-audit-runner` (`debt`) — against the untouched code (`--provider none`, deterministic) and stores
+`<out>/evidence/00-baseline/<skill>/{findings.csv,report.md,run.json}` plus `00-baseline/baseline.json`.
+`$profile.baselines.<check>` then resolves to that `findings.csv`, so the gate skill marks every pre-existing finding
+`known` and fails only on `new` high findings; the gate detail names them (`NX5 app/api/orders/export/route.js:5`).
+
+| Rule | Behaviour |
+|---|---|
+| Profile-recorded baseline wins | a check with `docs/baselines/<check>-findings.csv` in the repo is counted, not re-captured; its path is what the skill receives (the team's recorded debt is the contract) |
+| Untouched code | the checkout when it is clean; `git archive HEAD` into `<out>/baseline-repo` when it is not (the tests step has scaffolded tests, or a manual diff was handed over in place), so the diff never leaks into its own baseline |
+| Once per run | `baseline.json` is read back on `--resume`; the skills are not re-run on a checkout that now carries the change |
+| `--no-baseline` | skips the capture; every finding is then `new` and pre-existing debt fails the gate (the old behaviour) |
+| Greenfield | nothing to baseline: the repository is created by the run (`status: skipped` in `baseline.json`) |
+| A skill that writes no findings.csv | recorded as `source: error` with the reason; that gate runs without a baseline |
+
+`run.json` carries the same record under `baseline` (`status`, `target_source`, `checks.<check>: {skill, source
+captured|profile|error, findings, high, path}`), and EVIDENCE.md a **Baseline** line — findings per check before the
+change, linked to the captured `findings.csv` — above the stage table. Fixing recorded debt is its own PR: re-record
+`docs/baselines/<check>-findings.csv` from the skill's findings.csv when it is paid down.
 
 ## Roles own stages
 `roles/<role>.json` gains `"stages": ["requirements", …]` — the ADLC stages the role may own. A pipeline validates
@@ -296,7 +319,7 @@ After the timeout the run stops with exit 3 as it would without a portal. `--app
 python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
     [--input name=value …] [--out <dir>] --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
     [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID]
-    [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
+    [--no-baseline] [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
 ```
 
 `--out` is required unless `--run` is given, when it defaults to `runs/<run id>` under giri-skills — the command the
@@ -353,10 +376,15 @@ persists nothing. `studio/lib/delivery/compose.ts` is the pure port; `studio/tes
 fixtures the Python script produced (`studio/tests/fixtures/compose/`, regenerated as its README says).
 
 ## Evidence bundle
-`evidence/` in the run: `stack-profile.json`, one folder per stage (`<nn>-<stage>/<step>/…` — every step's outputs
+`evidence/` in the run: `stack-profile.json`, `00-baseline/` (brownfield: `baseline.json` and, per baseline-accepting
+skill a later step uses, `<skill>/findings.csv` + `report.md` taken from the untouched code before the `code` step —
+see Stack profile and baselines), one folder per stage (`<nn>-<stage>/<step>/…` — every step's outputs
 and run_skill log) with `gate.json` (`{verdict, kind, detail, role, approved_by, at}`; verdict `pass | fail |
 recorded | pending`), and `EVIDENCE.md` — the table that goes into the PR body (relative links only, so the bundle
-travels). `<out>/run.json` records the stages, steps, exit codes, durations and the sha256 of every evidence file:
+travels), preceded by the **Baseline** line (findings per check before the change, e.g. `nextjs: 77 finding(s), 12
+high — [findings.csv](evidence/00-baseline/nextjs-enterprise-conventions/findings.csv)`). `<out>/run.json` records
+the stages, steps, exit codes, durations, the `baseline` record and the sha256 of every evidence file (the baseline
+files included):
 
 | Stage | Role | Gate | Verdict | Evidence |
 |---|---|---|---|---|

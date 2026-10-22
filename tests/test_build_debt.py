@@ -253,3 +253,25 @@ def test_js_and_jsx_audited_like_ts(tmp_path):
     assert r["TD6"][0]["file"] == "lib/widget.jsx"
     assert "TD7" not in r
     assert {x["file"] for x in r["TD8"]} == {"lib/big.js", "lib/widget.jsx"}       # pricing.js has tests/unit/pricing.test.js
+
+
+def test_baseline_snippet_whitespace_is_normalised_on_both_sides(tmp_path):
+    """Regression (same defect as the lint scripts): a baseline snippet with a trailing space or doubled spaces
+    still matches the live line-level finding, so an unchanged repo comes back fully `known`."""
+    repo = tmp_path / "repo"
+    write(repo, "lib/orders.ts", "import { x } from \"../app/orders/page\";\nexport const y = x;\n")
+    write(repo, "app/orders/page.tsx", "export const x = 1;\nexport default function Page() { return null; }\n")
+    first = tmp_path / "first"
+    first.mkdir()
+    res, rows, _, _ = audit(first, repo)
+    td4 = [r for r in rows if r["rule"] == "TD4"]
+    assert res.returncode == 1 and len(td4) == 1, res.stderr
+    base = tmp_path / "base.csv"
+    padded = td4[0]["snippet"].replace(" ", "  ") + " "
+    base.write_text("rule,file,line,snippet,severity,status\n", encoding="utf-8")
+    with base.open("a", encoding="utf-8", newline="") as fh:
+        csv.writer(fh).writerow(["TD4", td4[0]["file"], td4[0]["line"], padded, "high", "new"])
+    res, rows, md, _ = audit(tmp_path, repo, "--baseline", str(base))
+    assert res.returncode == 0, res.stderr
+    assert all(r["status"] == "known" for r in rows if r["rule"] == "TD4")
+    assert "0 resolved" in md

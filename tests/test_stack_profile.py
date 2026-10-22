@@ -31,7 +31,7 @@ def test_js_nextjs_aws_repo(tmp_path):
     p = profile(FIX / "delivery-repo", tmp_path)
     assert facts(p) == {"flavour": "js", "framework": "nextjs", "package_manager": "npm", "test_runner": "vitest",
                         "e2e": "playwright", "deploy_target": "aws", "migrations_dir": None, "monorepo_root": None}
-    assert p["baselines"] == {"nextjs": None, "perf": None, "ui": None}
+    assert p["baselines"] == {"nextjs": None, "perf": None, "ui": None, "debt": None}
     assert p["evidence"]["deploy_target"] == ".github/workflows/aws-deploy-production.yml"
     assert p["evidence"]["flavour"] == "jsconfig.json, no tsconfig.json"
 
@@ -56,7 +56,7 @@ def test_empty_dir_is_all_unknowns_never_guessed():
     p = profile(FIX / "stack-profile" / "empty-dir")
     assert facts(p) == {"flavour": "unknown", "framework": "unknown", "package_manager": "unknown", "test_runner": "none",
                         "e2e": "none", "deploy_target": "unknown", "migrations_dir": None, "monorepo_root": None}
-    assert p["exists"] is True and p["baselines"] == {"nextjs": None, "perf": None, "ui": None}
+    assert p["exists"] is True and p["baselines"] == {"nextjs": None, "perf": None, "ui": None, "debt": None}
 
 
 def test_missing_dir_reports_exists_false(tmp_path):
