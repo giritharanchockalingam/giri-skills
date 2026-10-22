@@ -124,6 +124,52 @@
       ]
     },
     {
+      "id": "agent-mode-existing-js",
+      "prompt": "This is a JavaScript Next.js 14 app on AWS (no tsconfig, JSX in .js files) that already has its own app/api/health/route.js. Add logging, the deep health check and alerts without breaking routing.",
+      "expected": [
+        "Detects the JavaScript flavour and writes lib/logger.js, lib/logger/context.js and app/api/health/deep/route.js (no .ts files); app/api/health/route.js is reported 'exists, kept' with no route.ts sibling and a gap table (liveness probes Supabase — move to deep); env vars appended only for files written; console.* calls listed; exit 0"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-js-existing-health",
+        "project": "vg-portal"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/lib/logger.js",
+        "exists:repo/lib/logger/context.js",
+        "exists:repo/app/api/health/deep/route.js",
+        {
+          "file": "repo",
+          "check": "cmd:\"python3 scripts/check_siblings.py {path}\""
+        },
+        {
+          "file": "install-report.json",
+          "check": "contains:\"\\\"flavour\\\": \\\"js\\\"\""
+        },
+        {
+          "file": "install-report.json",
+          "check": "contains:\"exists, kept\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"`app/api/health/route.js` — responds (exports GET)\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"liveness has no dependency calls | MISSING\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "sections:[\"Kept\",\"Existing health route vs the standard\"]"
+        },
+        {
+          "file": "repo/.env.example",
+          "check": "contains:\"# public-export:end\""
+        }
+      ]
+    },
+    {
       "id": "x-saas-journeys-given",
       "prompt": "Multi-tenant invoicing app (Next.js 15, Supabase, Vercel) for Fernwood Accounting goes to prod in 10 days. Critical journeys: sign-in, create invoice, export PDF. Sentry DSN is ready. Alerts go to Slack #fw-ops. Product wants sign-in at 99.5% over 30 days; nothing agreed for the others. Plan the observability setup.",
       "expected": [

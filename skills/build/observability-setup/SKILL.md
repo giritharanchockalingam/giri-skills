@@ -5,20 +5,21 @@ license: MIT
 metadata:
   domain: build
   adlc_stage: operate
-  version: 0.2.0
+  version: 0.3.0
   author: giri-skills
   agent:
     inputs:
       - {name: target, type: path, required: true, from: "Next.js repo root (created if absent)"}
       - {name: project, type: string, required: false, from: "project name for docs/observability.md (default: target dir name)"}
       - {name: dry_run, type: flag, required: false, flag: "--dry-run", from: "true to report only and write nothing"}
+      - {name: flavour, type: string, required: false, from: "ts or js to override the detected language flavour (default: tsconfig.json or .ts/.tsx source → ts, else js)"}
       - {name: seed, type: dir, required: false, from: "evals/demos only: an existing repo layout copied to target first, so the example is never written to (evals/fixtures/repo-existing)"}
     run:
       - {step: seed, kind: script, cmd: "python3 -I scripts/seed_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
-      - {step: install, kind: script, cmd: "python3 -I scripts/install.py --target {target} [--project {project}] {dry_run} --report-json {out}/install-report.json --report-md {out}/install-report.md"}
+      - {step: install, kind: script, cmd: "python3 -I scripts/install.py --target {target} [--project {project}] [--flavour {flavour}] {dry_run} --report-json {out}/install-report.json --report-md {out}/install-report.md"}
     outputs:
       - {path: "{out}/install-report.json", checks: [exists, json, contains:"written"]}
-      - {path: "{out}/install-report.md", checks: [exists, sections:["Written","Proposed","Env vars","Next steps"]]}
+      - {path: "{out}/install-report.md", checks: [exists, sections:["Written","Kept","Proposed","Env vars","Next steps"]]}
     modes:
       new: {case: agent-happy-path, bring: "an empty or brand-new app folder"}
       existing: {case: agent-mode-existing, bring: "your running app's repo, logger and env file included"}
@@ -33,8 +34,8 @@ metadata:
 - **Asked to replace an existing logger or config outright**: decline the overwrite in one line (it loses the team's wiring) and propose the standard file beside it as a `.proposed` twin for a manual merge.
 
 ## Starting points
-- **New** — point `target` at an empty folder: logger, health routes, alert rules, SLO doc and `.env.example` are written.
-- **Existing** — point `target` at your repo: files you already have are never overwritten (a different one gets a `.proposed` copy to merge), missing env vars are appended to your `.env.example`, and every `console.*` call in your source is listed for replacement.
+- **New** — point `target` at an empty folder: logger, health routes, alert rules, SLO doc and `.env.example` are written (TypeScript by default).
+- **Existing** — point `target` at your repo. **Read before write:** the language flavour is detected first (`tsconfig.json` or any `.ts/.tsx` under `app|lib|components` → TypeScript, otherwise JavaScript) and every file is emitted as `.ts` or `.js` to match — a JavaScript Next.js app gets `lib/logger.js` and `route.js`, never a `.ts` file. A file you already have, **in either extension**, is never overwritten and never gets a conflicting sibling (`route.ts` beside `route.js` is a Next.js routing conflict): an existing health route is reported `exists, kept` with a static gap table (exports `GET`? `force-dynamic`? `no-store`? liveness free of dependency calls?), another existing file in the same flavour gets a `.proposed` twin to merge, one in the other flavour is kept and pointed at the asset. Env vars are appended to `.env.example` only for files written in this run; every `console.*` call in your source is listed. A repo that already has every piece exits 0 with just the gap table; a repo that already holds a conflicting pair (`route.js` **and** `route.ts`) writes nothing, says why in the report, and exits 1.
 
 ## When to use
 - First production release; after an incident with "we had no idea"; before an SLA commitment.
@@ -53,11 +54,11 @@ metadata:
 Missing facts do not stop the plan: use the stated defaults, mark thresholds and SLO targets `[TO BE BASELINED — owner: ___]` and ask once at the start. Never invent SLO numbers.
 
 ## Procedure
-1. Read `../../../shared/stack-conventions.md` (Logging, Errors rows) and `../../../shared/token-efficiency.md`. Inventory what exists: logger, Sentry, health routes, Vercel integrations.
+1. Read `../../../shared/stack-conventions.md` (Logging, Errors rows) and `../../../shared/token-efficiency.md`. Inventory what exists: language flavour (`tsconfig.json` / `.ts` source vs `jsconfig.json` / `.js` only), logger, Sentry, health routes in either extension, deploy platform (Vercel or AWS workflows), Next special files. Every file you add takes the repo's extension; never place a `.ts` route or module beside an existing `.js` one.
 2. **Plan.** Table of components to add/change: logger, request context, error tracking (server + client + edge), health endpoints, alert rules, SLOs, dashboard, runbook links. Post; wait for "go". *(gate: plan→approve)*
-3. **Logging.** Install `assets/logger.ts` as `lib/logger.ts` (+ `lib/logger/context.ts` AsyncLocalStorage) per `references/log-schema.md`; wire `requestId` in `middleware.ts`; ESLint `no-console: error`. Replace existing `console.*` in minimal diffs.
+3. **Logging.** Install `assets/logger.ts` (or `assets/logger.js` in a JavaScript repo) as `lib/logger.{ts,js}` (+ `lib/logger/context.{ts,js}` AsyncLocalStorage) per `references/log-schema.md`; wire `requestId` in `middleware.ts`; ESLint `no-console: error`. Replace existing `console.*` in minimal diffs.
 4. **Error tracking.** Follow `references/error-tracking.md`: server, client, edge configs; `requestId`/`tenantId` tags; PII scrubbing; source maps in CI; `error.tsx` reporting.
-5. **Health.** Add `assets/health-route.ts` as `app/api/health/route.ts` (liveness, no deps) and `app/api/health/deep/route.ts` (DB, auth, storage, queue; bearer-protected) per `references/health-endpoints.md`.
+5. **Health.** Add `assets/health-route.ts` (or `.js`) as `app/api/health/route.{ts,js}` (liveness, no deps) and `app/api/health/deep/route.{ts,js}` (DB, auth, storage, queue; bearer-protected) per `references/health-endpoints.md`. If a health route already exists in either extension, keep it, verify it exports `GET`, and list what it is missing versus the standard (see the reference's brownfield table) instead of adding a sibling.
 6. **Alerts + SLOs.** From `references/alerts-and-slos.md`, fill `assets/alert-rules.yaml` for the chosen vendor and the SLO table for the critical journeys. Every alert has a runbook link and an owner.
 7. **Test.** Unit test logger redaction; integration test both health routes (200 / 503 on simulated DB failure); trigger a test error and confirm it appears in the tracker with `requestId`. Full unit suite green. *(gate: build→test)*
 8. **Verify.** Deploy to preview; curl both health routes; confirm Log Drain delivers JSON; confirm an alert fires on a synthetic failure (health 503). *(gate: test→verify)*
@@ -66,9 +67,9 @@ Missing facts do not stop the plan: use the stated defaults, mark thresholds and
 ## Output
 | Artifact | Path |
 |---|---|
-| Logger | `lib/logger.ts`, `lib/logger/context.ts` |
+| Logger | `lib/logger.{ts,js}`, `lib/logger/context.{ts,js}` (extension follows the repo) |
 | Error tracking | `sentry.{server,client,edge}.config.ts` (or vendor equivalent), `app/global-error.tsx` |
-| Health | `app/api/health/route.ts`, `app/api/health/deep/route.ts` |
+| Health | `app/api/health/route.{ts,js}`, `app/api/health/deep/route.{ts,js}` |
 | Alerts / SLOs | `ops/alerts.yaml`, `docs/observability.md` |
 | Dashboard spec | `docs/observability.md` §Dashboards |
 
@@ -76,6 +77,7 @@ Missing facts do not stop the plan: use the stated defaults, mark thresholds and
 - [ ] Every log line has `ts, level, msg, service, env`; request-scoped lines have `requestId`
 - [ ] Redaction list covers email, token, password, authorization, cookie, key
 - [ ] Health liveness has zero dependencies; deep check is auth-protected and times out ≤ 3 s per dependency
+- [ ] Every added file matches the repo's flavour (`.js` in a JavaScript repo); no route or module exists in two extensions
 - [ ] Every alert: threshold, window, severity, runbook, owner, notification channel
 - [ ] SLOs defined for each critical journey with an error-budget policy
 - [ ] Synthetic failure produced an alert end-to-end
@@ -86,8 +88,9 @@ Missing facts do not stop the plan: use the stated defaults, mark thresholds and
 - `references/error-tracking.md` — Sentry (default) wiring for server/client/edge, scrubbing, source maps
 - `references/health-endpoints.md` — liveness vs readiness vs deep; response contract
 - `references/alerts-and-slos.md` — alert catalogue, SLO starter, error-budget policy, dashboard panels
-- `assets/logger.ts`, `assets/logger-context.ts`, `assets/health-route.ts`, `assets/health-deep-route.ts`, `assets/alert-rules.yaml`
-- `scripts/install.py` — installs the assets into a repo without overwriting (`.proposed` twins), appends env vars to `.env.example`
+- `assets/logger.ts`, `assets/logger-context.ts`, `assets/health-route.ts`, `assets/health-deep-route.ts` (+ the `.js` twins `assets/logger.js`, `assets/logger-context.js`, `assets/health-route.js`, `assets/health-deep-route.js`, functionally identical), `assets/alert-rules.yaml`
+- `scripts/install.py` — detects the flavour, installs the matching assets without overwriting or creating `.ts`/`.js` siblings (`exists, kept` + gap table for health routes, `.proposed` twins otherwise), appends env vars for written files to `.env.example`
+- `scripts/check_siblings.py` — fails when any route or module exists in two source extensions (used by the eval checks)
 
 ## How to run (automation, when commands can run)
-This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten: a differing file gets a `.proposed` twin listed in the report for a manual merge.
+This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten and never get a `.ts`/`.js` sibling: a health route that exists is kept and gap-checked, a differing file in the same flavour gets a `.proposed` twin listed in the report for a manual merge, and an existing conflicting pair aborts the run (exit 1, nothing written).

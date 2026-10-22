@@ -1,0 +1,11 @@
+name: aws-deploy-production
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t portal:${{ github.sha }} .
+      - run: aws ecs update-service --cluster portal --service web --force-new-deployment
