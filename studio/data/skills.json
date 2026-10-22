@@ -24568,6 +24568,434 @@
   "bodyMd": "\n# observability-setup\n\n## In a conversation: plan the setup now\n- **The request asks for observability on this stack**: answer **in this reply**, in order: (1) one list of questions, asked once — critical user journeys (≤5), error-tracking vendor (Sentry default) and DSN availability, notification channel — each with your default, then carry on with the defaults; (2) the plan table — component → file → add/change → why — covering logger, request context, error tracking, health endpoints, alert rules, SLOs, dashboard, with a line that nothing changes until \"go\"; (3) logging: `lib/logger.ts` + `lib/logger/context.ts` (JSON fields `ts, level, msg, service, env, requestId`; redaction of email, token, password, authorization, cookie, key; `requestId` set in `middleware.ts`), `console.*` replaced in minimal diffs, ESLint `no-console: error`; (4) health: `app/api/health/route.ts` (liveness, no dependencies) and `app/api/health/deep/route.ts` (bearer-protected, ≤ 3 s timeout per dependency, 503 when one is down), with tests for both; (5) an alert table — alert → threshold → window → severity tier → runbook → owner → channel — and an SLO table per journey with an error-budget policy; (6) verification on preview: force a synthetic failure (deep health 503) and confirm the alert fires end to end, and confirm a test error reaches the tracker tagged with `requestId`. Thresholds and SLO targets the user has not given are `[TO BE BASELINED — owner: ___]`. Never reply with only a request for the repo.\n- **Part of it already exists** (e.g. \"we already have Sentry\"): open with an inventory of what is there (Sentry server/client/edge configs, `global-error.tsx`, tags, source maps) and state that it is kept as is; add only what was asked (e.g. health routes and alert rules); add `requestId` as a Sentry tag only if it is missing, as a minimal diff; touch the logger only if `console.*` calls are found.\n- **Bare \"add observability\"**: ask once, in one list, for the critical journeys and the alert channel; meanwhile show the plan skeleton with every SLO target and alert threshold as `[TO BE BASELINED — owner: ___]`. Never invent SLO numbers.\n- **Asked to replace an existing logger or config outright**: decline the overwrite in one line (it loses the team's wiring) and propose the standard file beside it as a `.proposed` twin for a manual merge.\n\n## Starting points\n- **New** — point `target` at an empty folder: logger, health routes, alert rules, SLO doc and `.env.example` are written.\n- **Existing** — point `target` at your repo: files you already have are never overwritten (a different one gets a `.proposed` copy to merge), missing env vars are appended to your `.env.example`, and every `console.*` call in your source is listed for replacement.\n\n## When to use\n- First production release; after an incident with \"we had no idea\"; before an SLA commitment.\n- Adding a new service/edge function/job that has no logs or health signal.\n- NOT for: a specific bug (`safe-fix`), pipeline alerts (`ci-cd-vercel-github`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Critical user journeys (≤5) | yes | `docs/SPEC.md` / user — ask once |\n| Error-tracking vendor decision (Sentry default) and DSN availability | yes | user |\n| Log sink (Vercel Log Drain target) | no | user; default: vendor's drain |\n| On-call / notification channel | yes | user — ask once |\n| Existing `lib/logger.ts`, health routes | yes | repo |\n\nMissing facts do not stop the plan: use the stated defaults, mark thresholds and SLO targets `[TO BE BASELINED — owner: ___]` and ask once at the start. Never invent SLO numbers.\n\n## Procedure\n1. Read `../../../shared/stack-conventions.md` (Logging, Errors rows) and `../../../shared/token-efficiency.md`. Inventory what exists: logger, Sentry, health routes, Vercel integrations.\n2. **Plan.** Table of components to add/change: logger, request context, error tracking (server + client + edge), health endpoints, alert rules, SLOs, dashboard, runbook links. Post; wait for \"go\". *(gate: plan→approve)*\n3. **Logging.** Install `assets/logger.ts` as `lib/logger.ts` (+ `lib/logger/context.ts` AsyncLocalStorage) per `references/log-schema.md`; wire `requestId` in `middleware.ts`; ESLint `no-console: error`. Replace existing `console.*` in minimal diffs.\n4. **Error tracking.** Follow `references/error-tracking.md`: server, client, edge configs; `requestId`/`tenantId` tags; PII scrubbing; source maps in CI; `error.tsx` reporting.\n5. **Health.** Add `assets/health-route.ts` as `app/api/health/route.ts` (liveness, no deps) and `app/api/health/deep/route.ts` (DB, auth, storage, queue; bearer-protected) per `references/health-endpoints.md`.\n6. **Alerts + SLOs.** From `references/alerts-and-slos.md`, fill `assets/alert-rules.yaml` for the chosen vendor and the SLO table for the critical journeys. Every alert has a runbook link and an owner.\n7. **Test.** Unit test logger redaction; integration test both health routes (200 / 503 on simulated DB failure); trigger a test error and confirm it appears in the tracker with `requestId`. Full unit suite green. *(gate: build→test)*\n8. **Verify.** Deploy to preview; curl both health routes; confirm Log Drain delivers JSON; confirm an alert fires on a synthetic failure (health 503). *(gate: test→verify)*\n9. Write `docs/observability.md` (schema, endpoints, alerts, dashboards, how to find a request by id). Update `docs/HANDOFF.md`.\n\n## Output\n| Artifact | Path |\n|---|---|\n| Logger | `lib/logger.ts`, `lib/logger/context.ts` |\n| Error tracking | `sentry.{server,client,edge}.config.ts` (or vendor equivalent), `app/global-error.tsx` |\n| Health | `app/api/health/route.ts`, `app/api/health/deep/route.ts` |\n| Alerts / SLOs | `ops/alerts.yaml`, `docs/observability.md` |\n| Dashboard spec | `docs/observability.md` §Dashboards |\n\n## Self-check\n- [ ] Every log line has `ts, level, msg, service, env`; request-scoped lines have `requestId`\n- [ ] Redaction list covers email, token, password, authorization, cookie, key\n- [ ] Health liveness has zero dependencies; deep check is auth-protected and times out ≤ 3 s per dependency\n- [ ] Every alert: threshold, window, severity, runbook, owner, notification channel\n- [ ] SLOs defined for each critical journey with an error-budget policy\n- [ ] Synthetic failure produced an alert end-to-end\n- [ ] No PII reached the error tracker (checked a real event)\n\n## References\n- `references/log-schema.md` — fields, levels, redaction, request context\n- `references/error-tracking.md` — Sentry (default) wiring for server/client/edge, scrubbing, source maps\n- `references/health-endpoints.md` — liveness vs readiness vs deep; response contract\n- `references/alerts-and-slos.md` — alert catalogue, SLO starter, error-budget policy, dashboard panels\n- `assets/logger.ts`, `assets/logger-context.ts`, `assets/health-route.ts`, `assets/health-deep-route.ts`, `assets/alert-rules.yaml`\n- `scripts/install.py` — installs the assets into a repo without overwriting (`.proposed` twins), appends env vars to `.env.example`\n\n## How to run (automation, when commands can run)\nThis skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/observability-setup --input <name>=<value> … --out <dir>` (see `--explain build/observability-setup`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Existing files are never overwritten: a differing file gets a `.proposed` twin listed in the report for a manual merge.\n"
  },
  {
+  "id": "build/perf-review-runner",
+  "card": "Static performance review: N+1, unbounded reads, render waste",
+  "domain": "build",
+  "stage": "build",
+  "name": "perf-review-runner",
+  "description": "Use when a Next.js (App Router) + React + TypeScript + Supabase repo needs a static performance review before a traffic spike, launch or scale-up — \"perf review before Black Friday\", \"will this page fall over under load\", \"find the N+1s\", \"why is this list page slow\", \"check our Supabase queries for select(*) and missing limits\". Produces findings.csv (rule, file, line, snippet, severity, status) and report.md (Summary, Findings, Rules) from ten deterministic rules PF1–PF10: N+1 queries in loops, await in loops, select(\"*\"), unbounded list reads, fetching in useEffect, sort/filter over props on every render, raw <img>, heavy client libraries imported in pages, cache \"no-store\" on every fetch, synchronous file reads in route handlers; high findings fail the gate, a baseline marks known debt. Not for stack conventions and layering (use nextjs-enterprise-conventions), measuring latency or errors in production (use observability-setup), or fixing what it finds (use safe-fix).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "build",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "target",
+     "type": "dir",
+     "required": true,
+     "from": "Next.js repo root (app/, components/, lib/, server/)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "baseline",
+     "type": "csv",
+     "required": false,
+     "from": "findings.csv from an earlier run — the recorded performance debt; known findings are listed but only new high-severity ones fail the gate",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "review",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "review",
+     "kind": "script",
+     "cmd": "python3 -I scripts/perf_review.py --target {target} [--baseline {baseline}] --findings {out}/findings.csv --report {out}/report.md"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/findings.csv",
+     "checks": [
+      "exists",
+      "csv:[rule,file,line,snippet,severity,status]"
+     ]
+    },
+    {
+     "path": "{out}/report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Findings\",\"Rules\"]",
+      "contains:\"Gate:\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "target": "evals/fixtures/repo-clean"
+    },
+    "assume": {}
+   },
+   "modes": {
+    "new": {
+     "bring": "a repo before its first big traffic day",
+     "caseId": "agent-happy-path",
+     "inputs": {
+      "target": "evals/fixtures/repo-clean"
+     },
+     "assume": {}
+    },
+    "existing": {
+     "bring": "your repo and the perf debt recorded last time",
+     "caseId": "agent-mode-existing",
+     "inputs": {
+      "target": "evals/fixtures/repo-violations",
+      "baseline": "evals/fixtures/baseline-findings.csv"
+     },
+     "assume": {}
+    }
+   }
+  },
+  "bodyHtml": "<h1 id=\"perf-review-runner\">perf-review-runner</h1>\n<p>The review a senior performance engineer does on the source before a traffic spike: ten checkable patterns that make a Next.js + Supabase app slow under load, each reported as <code>file:line</code> with a severity and a fix. Static only — nothing runs, nothing is measured.</p>\n<h2 id=\"in-a-conversation-review-the-code-now\">In a conversation: review the code now</h2>\n<p><strong>Never</strong></p>\n<ul><li>Never report a PASS, a finding count or a &quot;no N+1s&quot; verdict for code that is not in the conversation. Review only pasted or attached source; for the rest, lay out the checklist and ask for the files.</li><li>Never invent a latency, a query count or a &quot;p95&quot; — this review measures nothing. Numbers come from <code>observability-setup</code> dashboards, not from here.</li><li>Never rate <code>select(&quot;*&quot;)</code>, an unbounded list read or an N+1 as medium because &quot;the table is small today&quot;: they are <strong>high</strong> and fail the gate; the baseline is the only way to carry them as known debt.</li><li>Never flag <code>useMemo</code>-wrapped sort/filter (PF6), a <code>for await</code> loop (PF2), a <code>.single()</code>/<code>.range()</code>/<code>.limit()</code> chain (PF4), a <code>head: true</code> count (PF3/PF4) or a heavy import in a non-page component (PF8): those are the clean forms.</li></ul>\n<p><strong>Procedure (from <code>scripts/perf_review.py</code>; work file by file through the supplied code)</strong></p>\n<ol><li>Classify each file: client (<code>&quot;use client&quot;</code>) or server; <code>app/**/page|layout</code> (page), <code>app/**/route.ts</code> (handler), other.</li><li>Loops and callbacks: a Supabase <code>.from(</code>/<code>.rpc(</code> or <code>fetch(</code> inside a <code>for</code>/<code>while</code> body or a <code>.map</code>/<code>.forEach</code>/<code>.flatMap</code> callback → <strong>PF1 high</strong>. Any other <code>await</code> inside a <code>for</code>/<code>while</code> body (not <code>for await</code>) → <strong>PF2 medium</strong>.</li><li>Every Supabase chain <code>.from(…).select(…)…</code>: a select list containing <code>*</code> → <strong>PF3 high</strong>; a read (no insert/update/delete/upsert, no <code>head: true</code>) with none of <code>.limit(</code>/<code>.range(</code>/<code>.single(</code>/<code>.maybeSingle(</code>/<code>.eq(&quot;id&quot;, …)</code> → <strong>PF4 high</strong>.</li><li>Client files: a <code>useEffect</code> whose callback calls <code>fetch</code>/<code>.from</code>/<code>.rpc</code> → <strong>PF5 medium</strong>; in a PascalCase component body, <code>.sort(</code>/<code>.filter(</code> on a destructured prop or <code>props.x</code> outside <code>useMemo</code>/<code>useCallback</code>/<code>useEffect</code> → <strong>PF6 medium</strong>.</li><li><code>.tsx</code>/<code>.jsx</code>: <code>&lt;img</code> → <strong>PF7 medium</strong>. Pages: a static <code>import … from</code> one of the heavy client libraries (recharts, chart.js, three, monaco, mapbox-gl, leaflet, pdfjs, xlsx, quill, tiptap, ag-grid, moment, lodash, …) → <strong>PF8 medium</strong>; a server page where every <code>fetch</code> passes <code>cache: &quot;no-store&quot;</code> → <strong>PF9 medium</strong> per fetch.</li><li>Route handlers: <code>readFileSync</code>/<code>readdirSync</code> inside an exported <code>GET|POST|…</code> body → <strong>PF10 medium</strong> (module-scope reads are fine).</li><li>Sort by file, line, rule. Gate: FAIL if any high finding is new; PASS otherwise. With a baseline, match on rule + file + snippet (lines may move): matched → <code>known</code>, else <code>new</code>; unmatched baseline rows → resolved.</li></ol>\n<p><strong>Reply layout</strong>: the Summary table (rule, name, severity, count), then <strong>Findings</strong> (rule, <code>file:line</code>, severity, status, snippet, fix from <code>references/perf-rules.md</code>), then the gate line <code>Gate: PASS</code> / <code>Gate: FAIL (high-severity findings)</code>, then the limits line (static, nothing measured).</p>\n<ul><li>Name the run: <code>python3 -I scripts/perf_review.py --target &lt;repo&gt; [--baseline &lt;findings.csv&gt;] --findings findings.csv --report report.md</code>.</li><li><strong>The request names a repo, branch or file but its code is not in the conversation</strong>: write the review skeleton — Summary table with the ten rules and counts <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: author, from the repo</span>, the per-rule checklist above, and the gate line unfilled. End with one line asking for the repo path (and the earlier <code>findings.csv</code> if debt was recorded). Never guess findings.</li><li><strong>Asked to downgrade or &quot;sign off&quot; with highs open</strong>: decline in one line; offer the defensible paths — fix the high rows now (named columns, <code>.range</code>, <code>.in()</code>/embedded select), or record them as a baseline so only new highs gate.</li></ul>\n<h2 id=\"starting-points\">Starting points</h2>\n<ul><li><strong>New</strong> — a repo is reviewed against all ten rules; any high finding (N+1, <code>select(&quot;*&quot;)</code>, unbounded read) fails the gate.</li><li><strong>Existing</strong> — add <code>baseline</code> (the <code>findings.csv</code> of an earlier run): each finding is marked known or new, the gate fails only on new high findings, known debt stays listed and baseline items no longer found are reported as resolved.</li></ul>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Before a launch, campaign, term start or any expected traffic multiple; before scaling the Supabase plan &quot;just in case&quot;.</li><li>&quot;Why is this page slow&quot;, &quot;find the N+1s&quot;, &quot;check our queries&quot;, &quot;are we bundling the chart library into every page&quot;.</li><li>In CI as a required check: exit 1 on new high findings.</li><li>NOT for: stack conventions, layering and where code lives (<code>nextjs-enterprise-conventions</code>), measuring latency, errors or query time in production (<code>observability-setup</code>), schema and indexes (<code>supabase-schema-rls</code>), applying the fixes (<code>safe-fix</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>target</code></td><td>yes</td><td>Next.js repo root (<code>app/</code>, <code>components/</code>, <code>lib/</code>, <code>server/</code>)</td><td>runner exits 2 and writes <code>needs_input.json</code></td></tr><tr><td><code>baseline</code></td><td>no</td><td><code>findings.csv</code> from an earlier run (recorded debt)</td><td>every finding is <code>new</code>; any high finding fails the gate</td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li><strong>Scan</strong> (<code>scripts/perf_review.py</code>): every <code>.ts/.tsx/.js/.jsx/.mjs</code> under <code>target</code>, skipping <code>node_modules</code>, <code>.next</code>, <code>out</code>, <code>dist</code>, <code>build</code>, <code>coverage</code>, tests.</li><li><strong>Detect</strong> PF1–PF10 per file as in the conversation procedure; rules, rationale and fixes in <code>references/perf-rules.md</code>.</li><li><strong>Baseline</strong> (optional): mark known/new, list resolved.</li><li><strong>Write</strong> <code>findings.csv</code> and <code>report.md</code>; print one line per finding and the summary line.</li><li><strong>Gate</strong>: exit 1 when any new high-severity finding remains; 0 otherwise.</li></ol>\n<h2 id=\"output\">Output</h2>\n<table><thead><tr><th>Artifact</th><th>Form</th></tr></thead><tbody><tr><td><code>findings.csv</code></td><td><code>rule,file,line,snippet,severity,status</code> — sorted by file, line, rule</td></tr><tr><td><code>report.md</code></td><td>Summary (per-rule counts), Findings table, Baseline (when given), Rules with fix hints</td></tr></tbody></table>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every finding has rule, <code>file:line</code>, severity and a snippet copied from the source</li><li>[ ] PF1/PF3/PF4 are high; PF2/PF5–PF10 are medium; nothing else is invented</li><li>[ ] A clean repo yields zero findings and <code>Gate: PASS</code>; the same input twice yields byte-identical outputs</li><li>[ ] With a baseline, known debt is listed but does not gate; resolved rows are named</li><li>[ ] The report states that nothing was executed or measured</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/perf-rules.md</code> — PF1–PF10: id, what is matched, rationale, fix, known false positives and limits</li><li><code>scripts/perf_review.py</code> — scanner, baseline matcher, report writer and gate (argparse; stdlib)</li></ul>\n<h2 id=\"how-to-run-automation-when-commands-can-run\">How to run (automation, when commands can run)</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py build/perf-review-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain build/perf-review-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the scripts produce. The review step exits 1 on any new high-severity finding, so a repo with an N+1, <code>select(&quot;*&quot;)</code> or unbounded list read fails the run by design; fix the findings in code (or record them in a baseline as known debt), then re-run.</p>",
+  "files": {
+   "references": [
+    "perf-rules.md"
+   ],
+   "assets": [],
+   "scripts": [
+    "perf_review.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Term starts in two weeks and traffic triples. Run the static perf review on this repo before we scale the Supabase plan.",
+    "expected": [
+     "Runs scripts/perf_review.py; a clean repo passes with an empty findings table and Gate: PASS"
+    ]
+   },
+   {
+    "id": "agent-missing-target",
+    "prompt": "Run the perf review.",
+    "expected": [
+     "Asks for the repo directory"
+    ]
+   },
+   {
+    "id": "agent-violations-fail-gate",
+    "prompt": "The orders page is a bit slow but it works — just give me the perf sign-off so we can ship.",
+    "expected": [
+     "Review exits 1 with PF1 (N+1 in a loop and in a map callback), PF3 (select *) and PF4 (unbounded read) as high; the run reports the failing gate instead of signing off"
+    ]
+   },
+   {
+    "id": "agent-mode-existing",
+    "prompt": "We recorded the perf debt last quarter. Review this branch against it — did we add anything new that should block?",
+    "expected": [
+     "The six recorded high findings are marked known (listed, not gating); the eight medium findings are new; the legacy-report baseline item is reported resolved; gate passes because no new high finding"
+    ]
+   },
+   {
+    "id": "x-n-plus-one-in-loop",
+    "prompt": "Is this going to hold up at 10x traffic? (app/(app)/orders/page.tsx)\n\nexport default async function OrdersPage() {\n  const supabase = createClient();\n  const { data: orders } = await supabase.from(\"orders\").select(\"id, total\").eq(\"tenant_id\", tid).limit(200);\n  const rows = [];\n  for (const o of orders ?? []) {\n    const { data: items } = await supabase.from(\"order_items\").select(\"sku, qty\").eq(\"order_id\", o.id).limit(50);\n    rows.push({ ...o, items });\n  }\n  return <OrderTable rows={rows} />;\n}",
+    "expected": [
+     "Flags PF1 (high) on the order_items query inside the for loop: up to 200 queries per page view, so query count scales with the list",
+     "Proposes one query: an embedded select (select(\"id, total, order_items(sku, qty)\")) or .in(\"order_id\", ids) on order_items, then join in memory",
+     "Does not flag the outer orders query for PF3/PF4 (named columns and .limit(200)) and states the gate fails (exit 1) while the loop remains"
+    ]
+   },
+   {
+    "id": "x-select-star-unbounded-service",
+    "prompt": "Quick perf check of server/services/customer-service.ts:\n\nexport async function listCustomers() {\n  const supabase = createClient();\n  const { data } = await supabase.from(\"customers\").select(\"*\").order(\"name\");\n  return data ?? [];\n}",
+    "expected": [
+     "Flags PF3 select-star (high) and PF4 unbounded-list-read (high) on the same line: every column and every row",
+     "Fix: name the columns the UI renders and paginate with .range(from, to) or cap with .limit(n)",
+     "States that both are high and fail the gate; a small table today does not downgrade them"
+    ]
+   },
+   {
+    "id": "x-await-in-loop-promise-all",
+    "prompt": "Why does our nightly export take so long? server/jobs/export.ts:\n\nfor (const tenantId of tenantIds) {\n  const report = await buildReport(tenantId);\n  await uploadReport(tenantId, report);\n}",
+    "expected": [
+     "Flags PF2 await-in-loop (medium) on the awaits: tenants are processed one after another, so total time is the sum of all tenants",
+     "Fix: map tenants to promises and await Promise.all (or Promise.allSettled), optionally in bounded batches if the upstream rate-limits",
+     "Notes that if the order is intentional, keep the loop with a comment and record it in the baseline; PF2 is medium and does not fail the gate by itself"
+    ]
+   },
+   {
+    "id": "x-use-effect-fetch-client",
+    "prompt": "components/dashboard/KpiTiles.tsx starts with \"use client\" and does:\n\nuseEffect(() => {\n  fetch(\"/api/kpis\").then((r) => r.json()).then(setKpis);\n}, []);\n\nIt renders fine. Anything to worry about before the launch?",
+    "expected": [
+     "Flags PF5 fetch-in-use-effect (medium): the KPI request starts only after hydration, a waterfall that bypasses the server cache",
+     "Fix: fetch the KPIs in the server page (or a server parent) and pass them as props, keeping only the interactive part client-side",
+     "Does not claim a measured latency; says the review is static"
+    ]
+   },
+   {
+    "id": "x-sort-filter-in-render",
+    "prompt": "Review for perf: components/orders/OrderTable.tsx\n\n\"use client\";\nexport function OrderTable({ orders }: { orders: Order[] }) {\n  const [q, setQ] = useState(\"\");\n  const rows = orders.filter((o) => o.status.includes(q)).sort((a, b) => b.total - a.total);\n  return <List rows={rows} onSearch={setQ} />;\n}",
+    "expected": [
+     "Flags PF6 heavy-compute-in-render (medium): the filter/sort over the orders prop runs on every render, including every keystroke",
+     "Fix: wrap in useMemo(() => orders.filter(...).sort(...), [orders, q])",
+     "States that a useMemo-wrapped version would not be flagged"
+    ]
+   },
+   {
+    "id": "x-img-tag-and-heavy-import-page",
+    "prompt": "app/(marketing)/page.tsx imports { LineChart } from \"recharts\" at the top and renders <img src=\"/hero.jpg\" alt=\"Hero\" /> above the fold. Launch is Monday — perf review please.",
+    "expected": [
+     "Flags PF8 heavy-import-in-page (medium): recharts lands in the marketing route bundle; fix with next/dynamic loading a client chart component (ssr: false)",
+     "Flags PF7 img-instead-of-next-image (medium): the hero should be next/image with width/height or fill and sizes, for resizing, modern formats and no layout shift",
+     "Both are medium: the gate passes, but both are listed with file:line"
+    ]
+   },
+   {
+    "id": "x-no-store-every-fetch",
+    "prompt": "Our products page (server component) does three fetches to our catalog API, all with { cache: \"no-store\" } because 'the data changes'. Products change maybe hourly. Is that a problem at scale?",
+    "expected": [
+     "Flags PF9 no-store-on-every-fetch (medium) per fetch: the page is fully dynamic, so every request hits the catalog API and no CDN/ISR hit is possible",
+     "Fix: next: { revalidate: 3600 } or tags with revalidateTag on catalog updates; keep no-store only for a truly per-user call",
+     "Rates it medium and keeps the gate passing"
+    ]
+   },
+   {
+    "id": "x-sync-fs-in-route-handler",
+    "prompt": "app/api/regions/route.ts:\n\nexport async function GET() {\n  const regions = JSON.parse(readFileSync(path.join(process.cwd(), \"data\", \"regions.json\"), \"utf8\"));\n  return Response.json(regions);\n}\n\nregions.json is 9 MB. Fine?",
+    "expected": [
+     "Flags PF10 sync-fs-read-in-handler (medium): the file is read and parsed on every request and blocks the event loop",
+     "Fix: read and parse once at module scope (cached per process) or move the data to the database/KV; a module-scope readFileSync is not flagged"
+    ]
+   },
+   {
+    "id": "x-clean-code-no-findings",
+    "prompt": "Perf check on this service please:\n\nexport async function listInvoices(page: number) {\n  const supabase = createClient();\n  const { data } = await supabase.from(\"invoices\").select(\"id, number, total\").order(\"created_at\", { ascending: false }).range(page * 50, page * 50 + 49);\n  return data ?? [];\n}\nexport async function getInvoice(id: string) {\n  const { data } = await createClient().from(\"invoices\").select(\"id, number, total\").eq(\"id\", id).single();\n  return data;\n}",
+    "expected": [
+     "Reports no findings for the pasted code: named columns, .range pagination, and a .single() point read satisfy PF3 and PF4",
+     "States Gate: PASS for what was reviewed and that the review is static (nothing measured)"
+    ]
+   },
+   {
+    "id": "x-map-callback-parallel-n-plus-one",
+    "prompt": "I already parallelised it, so it's fast now:\n\nconst totals = await Promise.all(customerIds.map(async (id) => {\n  const { data } = await supabase.from(\"orders\").select(\"total\").eq(\"customer_id\", id).limit(500);\n  return sum(data);\n}));",
+    "expected": [
+     "Still flags PF1 (high): Promise.all over a .map callback runs one query per customer in parallel, which is N queries and N connections at once",
+     "Fix: one query with .in(\"customer_id\", customerIds) (or an RPC that aggregates), grouped in memory",
+     "Explains why parallel does not remove the N+1 and that the gate fails"
+    ]
+   },
+   {
+    "id": "x-full-page-review-mixed",
+    "prompt": "Full perf review of app/(app)/catalog/page.tsx before the campaign:\n\n\"use client\";\nimport * as XLSX from \"xlsx\";\nexport default function CatalogPage({ products }: { products: Product[] }) {\n  const [q, setQ] = useState(\"\");\n  useEffect(() => { fetch(\"/api/stock\").then((r) => r.json()).then(setStock); }, []);\n  const visible = products.filter((p) => p.name.includes(q));\n  return <ul>{visible.map((p) => <li key={p.id}><img src={p.image} alt={p.name} /></li>)}</ul>;\n}",
+    "expected": [
+     "Flags PF8 (xlsx imported at the top of a page), PF5 (fetch in useEffect), PF6 (products.filter in the render body) and PF7 (<img>), each with the line",
+     "All four are medium, so the gate passes; proposes a server page that fetches stock and passes props, useMemo for the filter, next/image, and next/dynamic for the export feature",
+     "Does not invent a bundle size or a latency figure"
+    ]
+   },
+   {
+    "id": "x-missing-repo-path",
+    "prompt": "Perf review of the whole repo before Friday's launch, please.",
+    "expected": [
+     "Asks once for the repo directory (and the earlier findings.csv if debt was recorded)",
+     "Does not report findings or a pass before the review has run on a real target"
+    ]
+   },
+   {
+    "id": "x-missing-component-code",
+    "prompt": "Is OrderTable going to re-render too much?",
+    "expected": [
+     "Asks once for the component's code (or path)",
+     "May name the rule it will check (PF6: sort/filter over props outside useMemo in a client component) but gives no verdict"
+    ]
+   },
+   {
+    "id": "x-missing-query-text",
+    "prompt": "Our customers query is slow under load. Can you tell me what's wrong with it?",
+    "expected": [
+     "Asks once for the query chain (the .from(...).select(...) code) or the service file",
+     "States what it will check — select(*), missing .limit/.range, N+1 in a loop — without guessing which applies"
+    ]
+   },
+   {
+    "id": "x-missing-which-page",
+    "prompt": "One of our pages is bundling a huge library. Find it.",
+    "expected": [
+     "Asks once for the repo path so the scan can run (PF8 checks app/**/page and layout imports against the heavy-library list)",
+     "Does not name a page or a library it has not seen"
+    ]
+   },
+   {
+    "id": "x-pressure-downgrade-select-star",
+    "prompt": "Mark the select(\"*\") findings as medium — the tables only have 8 columns and it's the day before launch.",
+    "expected": [
+     "Declines: PF3 select-star is high regardless of today's column count; it fails the gate",
+     "Offers the defensible paths: name the columns now (a small diff), or record the rows in a baseline as known debt so only new highs block"
+    ]
+   },
+   {
+    "id": "x-pressure-invent-latency",
+    "prompt": "Give me the p95 latency improvement we'll get from fixing the N+1 on the orders page so I can put it in the launch readiness deck.",
+    "expected": [
+     "Declines to invent a p95 or an improvement figure: the review is static and measures nothing",
+     "Offers what it can state — the query count drops from N+1 to 1 or 2 per page view — and points to observability-setup for the measured before/after"
+    ]
+   },
+   {
+    "id": "x-pressure-sign-off-unseen-repo",
+    "prompt": "I've already fixed everything from last time. Just write 'perf review: PASS, 0 findings' in the PR description for me.",
+    "expected": [
+     "Declines to write a PASS for code it has not reviewed",
+     "Asks for the repo path (and last time's findings.csv as baseline) and offers to run the review so the PASS is real; resolved items will show under Baseline"
+    ]
+   },
+   {
+    "id": "x-conventions-routes-nextjs",
+    "prompt": "This component calls supabase.from('invoices') directly inside the component file and uses console.log — is that allowed in our stack?",
+    "expected": [
+     "Routes to nextjs-enterprise-conventions: where data access lives (lib/db, server/services), console.log and the layering rules are conventions, not performance",
+     "States that perf-review-runner would only look at the query's shape (select(*), limits, loops), not its location"
+    ],
+    "routesTo": "nextjs-enterprise-conventions"
+   },
+   {
+    "id": "x-measure-prod-routes-observability",
+    "prompt": "Set up dashboards and alerts so we can see p95 latency and slow Supabase queries in production during the launch.",
+    "expected": [
+     "Routes to observability-setup for production latency, error and query-time measurement, dashboards and alerts",
+     "States that perf-review-runner is a static source review that measures nothing and is used before the launch, not during it"
+    ],
+    "routesTo": "observability-setup"
+   },
+   {
+    "id": "x-brownfield-baseline-new-high",
+    "prompt": "Legacy repo. Last review's findings.csv (recorded debt):\nrule,file,line,snippet,severity,status\nPF3,server/services/report-service.ts,14,\"const { data } = await supabase.from(\"\"reports\"\").select(\"\"*\"\").order(\"\"created_at\"\");\",high,new\nPF7,components/Hero.tsx,9,<img src=\"/hero.jpg\" alt=\"Hero\" />,medium,new\nThis branch keeps report-service.ts as it was, replaces the Hero <img> with next/image, and adds app/(app)/audit/page.tsx which does `for (const r of rows) { await supabase.from(\"audit_events\").select(\"id\").eq(\"row_id\", r.id).limit(20); }` at line 12. Does the gate pass?",
+    "expected": [
+     "Treats findings.csv as the baseline: the report-service PF3 is known (listed, not gating) and the Hero PF7 is reported as resolved",
+     "The loop in audit/page.tsx:12 is a new PF1 (high), so the gate fails (exit 1)",
+     "Proposes one query with .in(\"row_id\", ids) and notes that the PF4 on report-service is also present but counts as known only if it was in the baseline — here it is not, so it is a new high as well"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Term starts in two weeks and traffic triples. Run the static perf review on this repo before we scale the Supabase plan.",
+    "inputs": {
+     "target": "evals/fixtures/repo-clean"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "findings.csv",
+      "check": "csv:[rule,file,line,snippet,severity,status]"
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"Gate: PASS\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"0 finding(s) in 6 file(s)\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/perf_review.py; a clean repo passes with an empty findings table and Gate: PASS"
+    ]
+   },
+   {
+    "id": "agent-missing-target",
+    "prompt": "Run the perf review.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:target"
+    ],
+    "expected": [
+     "Asks for the repo directory"
+    ]
+   },
+   {
+    "id": "agent-violations-fail-gate",
+    "prompt": "The orders page is a bit slow but it works — just give me the perf sign-off so we can ship.",
+    "inputs": {
+     "target": "evals/fixtures/repo-violations"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:severity~^(high|medium)$"
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"PF1\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"PF3\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"PF4\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"PF10,app/api/export/route.ts,6\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"14 finding(s) in 5 file(s): 6 high, 8 medium\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"Gate: FAIL\""
+     }
+    ],
+    "expected": [
+     "Review exits 1 with PF1 (N+1 in a loop and in a map callback), PF3 (select *) and PF4 (unbounded read) as high; the run reports the failing gate instead of signing off"
+    ]
+   },
+   {
+    "id": "agent-mode-existing",
+    "prompt": "We recorded the perf debt last quarter. Review this branch against it — did we add anything new that should block?",
+    "inputs": {
+     "target": "evals/fixtures/repo-violations",
+     "baseline": "evals/fixtures/baseline-findings.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "report.md",
+      "check": "contains:\"8 new, 6 known from the baseline, 1 resolved\""
+     },
+     {
+      "file": "report.md",
+      "check": "sections:[\"Findings\",\"Baseline\"]"
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"PF4 `lib/legacy-report.ts`\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:status~^(new|known)$"
+     }
+    ],
+    "expected": [
+     "The six recorded high findings are marked known (listed, not gating); the eight medium findings are new; the legacy-report baseline item is reported resolved; gate passes because no new high finding"
+    ]
+   }
+  ],
+  "bodyMd": "\n# perf-review-runner\n\nThe review a senior performance engineer does on the source before a traffic spike: ten checkable patterns that make a Next.js + Supabase app slow under load, each reported as `file:line` with a severity and a fix. Static only — nothing runs, nothing is measured.\n\n## In a conversation: review the code now\n**Never**\n- Never report a PASS, a finding count or a \"no N+1s\" verdict for code that is not in the conversation. Review only pasted or attached source; for the rest, lay out the checklist and ask for the files.\n- Never invent a latency, a query count or a \"p95\" — this review measures nothing. Numbers come from `observability-setup` dashboards, not from here.\n- Never rate `select(\"*\")`, an unbounded list read or an N+1 as medium because \"the table is small today\": they are **high** and fail the gate; the baseline is the only way to carry them as known debt.\n- Never flag `useMemo`-wrapped sort/filter (PF6), a `for await` loop (PF2), a `.single()`/`.range()`/`.limit()` chain (PF4), a `head: true` count (PF3/PF4) or a heavy import in a non-page component (PF8): those are the clean forms.\n\n**Procedure (from `scripts/perf_review.py`; work file by file through the supplied code)**\n1. Classify each file: client (`\"use client\"`) or server; `app/**/page|layout` (page), `app/**/route.ts` (handler), other.\n2. Loops and callbacks: a Supabase `.from(`/`.rpc(` or `fetch(` inside a `for`/`while` body or a `.map`/`.forEach`/`.flatMap` callback → **PF1 high**. Any other `await` inside a `for`/`while` body (not `for await`) → **PF2 medium**.\n3. Every Supabase chain `.from(…).select(…)…`: a select list containing `*` → **PF3 high**; a read (no insert/update/delete/upsert, no `head: true`) with none of `.limit(`/`.range(`/`.single(`/`.maybeSingle(`/`.eq(\"id\", …)` → **PF4 high**.\n4. Client files: a `useEffect` whose callback calls `fetch`/`.from`/`.rpc` → **PF5 medium**; in a PascalCase component body, `.sort(`/`.filter(` on a destructured prop or `props.x` outside `useMemo`/`useCallback`/`useEffect` → **PF6 medium**.\n5. `.tsx`/`.jsx`: `<img` → **PF7 medium**. Pages: a static `import … from` one of the heavy client libraries (recharts, chart.js, three, monaco, mapbox-gl, leaflet, pdfjs, xlsx, quill, tiptap, ag-grid, moment, lodash, …) → **PF8 medium**; a server page where every `fetch` passes `cache: \"no-store\"` → **PF9 medium** per fetch.\n6. Route handlers: `readFileSync`/`readdirSync` inside an exported `GET|POST|…` body → **PF10 medium** (module-scope reads are fine).\n7. Sort by file, line, rule. Gate: FAIL if any high finding is new; PASS otherwise. With a baseline, match on rule + file + snippet (lines may move): matched → `known`, else `new`; unmatched baseline rows → resolved.\n\n**Reply layout**: the Summary table (rule, name, severity, count), then **Findings** (rule, `file:line`, severity, status, snippet, fix from `references/perf-rules.md`), then the gate line `Gate: PASS` / `Gate: FAIL (high-severity findings)`, then the limits line (static, nothing measured).\n- Name the run: `python3 -I scripts/perf_review.py --target <repo> [--baseline <findings.csv>] --findings findings.csv --report report.md`.\n- **The request names a repo, branch or file but its code is not in the conversation**: write the review skeleton — Summary table with the ten rules and counts `[TO BE BASELINED — owner: author, from the repo]`, the per-rule checklist above, and the gate line unfilled. End with one line asking for the repo path (and the earlier `findings.csv` if debt was recorded). Never guess findings.\n- **Asked to downgrade or \"sign off\" with highs open**: decline in one line; offer the defensible paths — fix the high rows now (named columns, `.range`, `.in()`/embedded select), or record them as a baseline so only new highs gate.\n\n## Starting points\n- **New** — a repo is reviewed against all ten rules; any high finding (N+1, `select(\"*\")`, unbounded read) fails the gate.\n- **Existing** — add `baseline` (the `findings.csv` of an earlier run): each finding is marked known or new, the gate fails only on new high findings, known debt stays listed and baseline items no longer found are reported as resolved.\n\n## When to use\n- Before a launch, campaign, term start or any expected traffic multiple; before scaling the Supabase plan \"just in case\".\n- \"Why is this page slow\", \"find the N+1s\", \"check our queries\", \"are we bundling the chart library into every page\".\n- In CI as a required check: exit 1 on new high findings.\n- NOT for: stack conventions, layering and where code lives (`nextjs-enterprise-conventions`), measuring latency, errors or query time in production (`observability-setup`), schema and indexes (`supabase-schema-rls`), applying the fixes (`safe-fix`).\n\n## Inputs required\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `target` | yes | Next.js repo root (`app/`, `components/`, `lib/`, `server/`) | runner exits 2 and writes `needs_input.json` |\n| `baseline` | no | `findings.csv` from an earlier run (recorded debt) | every finding is `new`; any high finding fails the gate |\n\n## Procedure\n1. **Scan** (`scripts/perf_review.py`): every `.ts/.tsx/.js/.jsx/.mjs` under `target`, skipping `node_modules`, `.next`, `out`, `dist`, `build`, `coverage`, tests.\n2. **Detect** PF1–PF10 per file as in the conversation procedure; rules, rationale and fixes in `references/perf-rules.md`.\n3. **Baseline** (optional): mark known/new, list resolved.\n4. **Write** `findings.csv` and `report.md`; print one line per finding and the summary line.\n5. **Gate**: exit 1 when any new high-severity finding remains; 0 otherwise.\n\n## Output\n| Artifact | Form |\n|---|---|\n| `findings.csv` | `rule,file,line,snippet,severity,status` — sorted by file, line, rule |\n| `report.md` | Summary (per-rule counts), Findings table, Baseline (when given), Rules with fix hints |\n\n## Self-check\n- [ ] Every finding has rule, `file:line`, severity and a snippet copied from the source\n- [ ] PF1/PF3/PF4 are high; PF2/PF5–PF10 are medium; nothing else is invented\n- [ ] A clean repo yields zero findings and `Gate: PASS`; the same input twice yields byte-identical outputs\n- [ ] With a baseline, known debt is listed but does not gate; resolved rows are named\n- [ ] The report states that nothing was executed or measured\n\n## References\n- `references/perf-rules.md` — PF1–PF10: id, what is matched, rationale, fix, known false positives and limits\n- `scripts/perf_review.py` — scanner, baseline matcher, report writer and gate (argparse; stdlib)\n\n## How to run (automation, when commands can run)\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/perf-review-runner --input <name>=<value> … --out <dir>` (see `--explain build/perf-review-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The review step exits 1 on any new high-severity finding, so a repo with an N+1, `select(\"*\")` or unbounded list read fails the run by design; fix the findings in code (or record them in a baseline as known debt), then re-run.\n"
+ },
+ {
   "id": "build/product-spec-prd",
   "card": "PRD with acceptance criteria, ready to plan",
   "domain": "build",
@@ -27767,6 +28195,478 @@
   "bodyMd": "\n# systematic-debugging-runner\n\nWraps `systematic-debugging` from obra/superpowers (pinned in vendor/pins.json). The upstream skill is the method; this skill makes its first three phases (read the error, check recent changes, form testable hypotheses) a deterministic run, and passes the upstream instructions to the optional narrative step by path (`../../../vendor/systematic-debugging/SKILL.md`), never by copy.\n\n## In a conversation: organise the evidence now\n- **The failure log is in the conversation**: write the debug log **in this reply** in this order — Symptom (error type and message quoted from the log: the last Python exception, the deepest Java `Caused by:`), Evidence (stack frames innermost first with file:line and function; the innermost in-repo frame named; site-packages, node_modules, runtime and JDK/JUnit frames excluded), classification (`regression-likely` only when a frame's file and line fall inside a hunk the diff changed; `no-diff` when no diff was given), Hypotheses (a table ranked by evidence score — changed line in the stack 3, changed file or error-type signal at an in-repo frame 2, weak 1 — each with one falsifying test and status `untested`), Next experiment (establish a repro if none was given, then the top hypothesis's falsifying test), Fix gate: **closed** — it opens only when an experiment confirms a hypothesis and a failing test reproduces the defect. Missing repro steps are `[TO BE BASELINED — owner: Reporting engineer]` and become experiment 1.\n- **The request says a log, diff or repro is here but its text is not in the conversation**: still write all five sections now from what the request states (test framework, error type, whether a diff exists), with each value not given — error message, frames, innermost in-repo frame, overlapping hunk — shown as `[TO BE BASELINED — owner: ___]` naming the input it comes from. With a write-up request, also lay out the investigation per `assets/investigation-template.md` (Symptom, Evidence, Hypotheses, Next experiment, Open questions) following the upstream method. Never reply with only a request for the log.\n- **No log at all** (\"my build is broken\"): ask once for the failure output (and the diff since the last green build and repro steps if available). Do not guess the error.\n- **Log with no exception, or asked to \"just tell me the bug\"**: say on line 1 that no parsable exception was found, so the run stops (exit 2) rather than inventing a symptom; name no bug and propose no fix. Ask for the output that contains the error or stack trace. No output ever proposes a fix while the gate is closed.\n\n## Starting points\n- **Existing** — the failure log (with the recent diff and repro steps when you have them) becomes an evidence-first debug log: symptom, evidence, ranked hypotheses, the next experiment, and a fix gate that stays closed until the root cause is proven.\n- Only for existing: debugging always starts from a failure in code that already runs; there is no from-scratch starting point.\n\n## When to use\n- A failing test, CI job or crash with a stack trace, before proposing any fix.\n- \"Did my change break this?\" — supply the diff and read the classification.\n- NOT for: applying or verifying the fix (`safe-fix`), security review of a diff (`security-review`), performance profiling, flaky-test statistics across many runs.\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| `log` | yes | Test output or stack trace as text. Python tracebacks and pytest output, JS/TS (Node, Jest, Vitest), Java (incl. `Caused by:` chains). |\n| `diff` | no | Unified diff since the last green build. Without it the classification is `no-diff`. |\n| `repro` | no | Exact steps to reproduce (assets/repro-template.md). Missing → marked `[TO BE BASELINED — owner: Reporting engineer]` and made experiment 1. |\n| `narrative` | no | `true` runs the LLM step that writes the investigation narrative. |\n\n## Procedure\n1. **Parse the log** (`scripts/debug_log.py`): error type and message (the deepest Java `Caused by:`; the last Python exception), stack frames (file, line, function), stored innermost first.\n2. **Find the innermost in-repo frame**: skip site-packages, node_modules, runtime and JDK/JUnit frames (`references/debug-method.md`).\n3. **Correlate with the diff**: a frame overlaps by file (path-suffix or Java package path) and by line (inside a changed hunk). Any overlap → `regression-likely`.\n4. **Rank hypotheses by evidence**: changed line in the stack (3) > changed file or error-type signal at an in-repo frame (2) > weak (1). Each has one falsifying test and status `untested`.\n5. **Next experiment**: establish a repro if none was given, then run the top hypothesis's falsifying test.\n6. **Fix gate**: always written closed. It opens only when a hypothesis is confirmed by its experiment and a failing test reproduces the defect; after three failed fixes, stop and question the design.\n7. Optional: with `narrative=true` the LLM fills `assets/investigation-template.md` from the debug log and the upstream method.\n\n## Output\n- `debug.json` — symptom, frames (with in-repo and overlap flags), classification, ranked hypotheses, next experiments, gate. Checked by `debug_log.py --validate` (ranked, every hypothesis falsifiable, gate not open without confirmation).\n- `debug-log.md` — Symptom, Evidence, Hypotheses, Next experiment, Fix gate.\n- `investigation.md` (only with `narrative=true`) — narrative per `assets/investigation-template.md`.\n\n## Self-check\n- [ ] Error type and message are quoted from the log, never paraphrased into a different error\n- [ ] Every hypothesis has a falsifying test and the table is ranked by evidence score\n- [ ] Regression claims rest on a frame that the diff touches, not on timing alone\n- [ ] Missing repro is marked with an owner and is experiment 1\n- [ ] The fix gate says NO; no fix is proposed in any output\n\n## References\n- `references/debug-method.md` — parsing rules, in-repo heuristics, scoring and the gate\n- `assets/repro-template.md` — reproduction steps layout\n- `assets/investigation-template.md` — narrative template for the optional LLM step\n- `scripts/debug_log.py` — parser, correlator and contract validator (argparse; stdlib)\n- Upstream method: `vendor/systematic-debugging/` (SKILL.md, root-cause-tracing.md)\n\n## How to run (automation, when commands can run)\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/systematic-debugging-runner --input <name>=<value> … --out <dir>` (see `--explain build/systematic-debugging-runner`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. A log with no parsable exception stops the run (script exit 2) instead of inventing a symptom.\n"
  },
  {
+  "id": "build/tech-debt-audit-runner",
+  "card": "Tech-debt audit with an owned, sequenced refactor plan",
+  "domain": "build",
+  "stage": "improve",
+  "name": "tech-debt-audit-runner",
+  "description": "Use when joining or inheriting an unfamiliar TypeScript / Next.js codebase and the question is where the architecture and maintainability debt is — \"audit this repo for tech debt\", \"what should we refactor first\", \"map this codebase before we touch it\", \"is this safe to build on\". Produces findings.csv, report.md and refactor-plan.md (Summary, Architecture map inferred from imports, Priorities with effort/risk/owner, Sequencing) from eight static rules — duplicate function bodies, god files, circular imports, layering violations, dead exports, TODO/FIXME/HACK counts, `any` density, lib/ modules without tests — each with file:line and severity; a baseline findings.csv marks known debt and the gate fails only on new high findings (cycles, layering, files above 800 lines). Not for reviewing one diff or PR (use code-review-runner) or fixing a reported bug (use safe-fix).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "improve",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "target",
+     "type": "dir",
+     "required": true,
+     "from": "repo root of the TypeScript / Next.js codebase (app/, components/, lib/, server/, tests/)",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "baseline",
+     "type": "csv",
+     "required": false,
+     "from": "findings.csv from an earlier audit — the recorded debt; known findings are listed but only new high-severity ones fail the gate",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "owners",
+     "type": "csv",
+     "required": false,
+     "from": "owners csv (layout: assets/owners-template.csv): path_prefix,owner for the plan's Owner column; unmatched items read [TO BE BASELINED — owner: tech lead]",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "audit",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "audit",
+     "kind": "script",
+     "cmd": "python3 -I scripts/audit_debt.py --target {target} [--baseline {baseline}] [--owners {owners}] --findings {out}/findings.csv --report {out}/report.md --plan {out}/refactor-plan.md"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/findings.csv",
+     "checks": [
+      "exists",
+      "csv:[rule,file,line,snippet,severity,status]",
+      "cmd:\"python3 -I scripts/audit_debt.py --verify {path}\""
+     ]
+    },
+    {
+     "path": "{out}/report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Findings\",\"Rules\"]",
+      "contains:\"Gate:\""
+     ]
+    },
+    {
+     "path": "{out}/refactor-plan.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Architecture map\",\"Priorities\",\"Sequencing\"]",
+      "no_unowned_tbd",
+      "contains:\"Phase 1\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "target": "evals/fixtures/repo-clean"
+    },
+    "assume": {}
+   },
+   "modes": {
+    "existing": {
+     "bring": "the repo you inherited and, if you have it, last audit's findings",
+     "caseId": "agent-mode-existing",
+     "inputs": {
+      "target": "evals/fixtures/repo-violations",
+      "baseline": "evals/fixtures/baseline-findings.csv",
+      "owners": "evals/fixtures/owners.csv"
+     },
+     "assume": {}
+    }
+   }
+  },
+  "bodyHtml": "<h1 id=\"tech-debt-audit-runner\">tech-debt-audit-runner</h1>\n<h2 id=\"in-a-conversation-audit-the-codebase-now\">In a conversation: audit the codebase now</h2>\n<p><strong>Never</strong></p>\n<ul><li>Never report a finding for code you have not seen: no file:line in the conversation or on disk means no finding. Fabricated findings are worse than none — they send a team refactoring the wrong file.</li><li>Never fail the gate on medium or low debt: the gate is <strong>exit 1 only on a new high finding</strong> (TD3 circular import, TD4 layering violation, TD2 god file above 800 lines). A god file of 401–800 lines, duplicates, dead exports, <code>any</code> hot spots, missing tests and TODOs are reported, prioritised and sequenced — they do not block.</li><li>Never invent an owner, an effort estimate for the codebase, or a TODO's age: owners come from the owners csv or read <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: tech lead</span>; effort S/M/L is the per-rule default and says so; TODO age is &quot;unknown (no history read)&quot;.</li><li>Never mark recorded debt as new or new debt as known: with a baseline, line-level findings match on rule + file + snippet, file-level ones (TD2, TD6, TD7, TD8) on rule + file; everything else is new; baseline rows not found again are resolved.</li></ul>\n<p><strong>Procedure (from <code>scripts/audit_debt.py</code>; work it by hand on the files you are given)</strong></p>\n<ol><li>Inventory: list the <code>.ts/.tsx/.js/.jsx/.mjs</code> files, set aside test files (<code>tests/</code>, <code>__tests__/</code>, <code>*.test.*</code>, <code>*.spec.*</code>) as importers only.</li><li>Import graph: for every file, the relative (<code>./</code>, <code>../</code>) and <code>@/</code> imports it resolves to, with the symbols imported (<code>*</code> for namespace / <code>export *</code> / dynamic imports).</li><li>Rules, each with file:line, severity and a one-line snippet — TD1 duplicate-logic (same normalised body ≥ 6 lines in two files; medium), TD2 god-file (&gt; 400 lines or &gt; 12 exports; high above 800 lines), TD3 circular-import (a cycle; high), TD4 layering-violation (<code>app/</code> importing a sibling route folder; <code>lib/</code> importing <code>app/</code> or <code>components/</code>; high), TD5 dead-export (exported, never imported; framework files and <code>index</code> re-exports excluded; medium), TD6 todo-comment (count per file; low), TD7 any-density (&gt; 5 <code>any</code> in a file; medium), TD8 missing-tests (<code>lib/</code> module with no <code>tests/**&lt;stem&gt;*</code> or <code>&lt;stem&gt;.test|spec.*</code>; medium). Thresholds and fix hints: <code>references/debt-rules.md</code>.</li><li>Baseline, if given: mark each finding known/new, list resolved rows.</li><li>Architecture map: per top-level folder — files, folders it imports, folders that import it, and the inferred responsibility (entry surface / intermediate layer / foundation, plus the Next.js folder meaning).</li><li>Plan: Priorities ordered severity → new before known → rule, each row finding → file:line → effort (TD1 S, TD2 L, TD3 M, TD4 S, TD5 S, TD6 S, TD7 M, TD8 M) → risk (= severity) → status → owner; Sequencing in four phases — restore the dependency direction (TD3, TD4), split the god files (TD2), one implementation under test (TD1, TD8), trim the surface (TD5, TD7, TD6).</li></ol>\n<p><strong>Reply layout</strong>: the gate line first (<code>Gate: PASS</code> / <code>Gate: FAIL (new high-severity findings)</code> with counts: N high, N medium, N low; with a baseline also N new, N known, N resolved), then the findings table (rule, file:line, severity, status, snippet), then the three <code>refactor-plan.md</code> sections — <strong>Architecture map</strong>, <strong>Priorities</strong>, <strong>Sequencing</strong> — and the <strong>Rules</strong> list with the thresholds used. Name the run: <code>python3 -I scripts/audit_debt.py --target &lt;repo&gt; [--baseline findings.csv] [--owners owners.csv] --findings findings.csv --report report.md --plan refactor-plan.md</code>.</p>\n<ul><li><strong>The request pastes a few files or an import list, not the whole repo</strong>: audit exactly those files against every rule, say which rules could not be judged (TD5 and TD8 need the whole repo to know what imports a symbol or where tests live; TD3/TD4 only within the pasted set), and mark those <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: tech lead, from the full repo</span>.</li><li><strong>The request names a repo, a baseline or an owners file that is not in the conversation</strong>: write the audit skeleton now — the eight rules with their thresholds as the checklist, the three plan sections with their headings, Gate: <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: tech lead, from the audit run</span> — and end with one line asking for the repo path (and the earlier <code>findings.csv</code> if they have recorded debt). Never print a gate verdict or a findings table for a repo you have not read.</li><li><strong>Asked to &quot;just sign off&quot; or to drop the cycle so the gate passes</strong>: decline in one line — a new cycle or layering violation fails the gate regardless of deadline; the defensible path is to record existing debt in a baseline (known debt does not gate) and fix the new high items, or break the cycle (extract the shared piece, <code>import type</code>, invert the edge) and re-run.</li><li><strong>Asked for the plan with owners and sprint estimates filled in</strong>: owners only from the owners csv or the conversation, otherwise <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: tech lead</span>; effort stays the per-rule S/M/L default labelled as such; no dates, no story points.</li></ul>\n<h2 id=\"starting-points\">Starting points</h2>\n<ul><li><strong>Existing</strong> — the repo you inherited is read as it is: import graph, eight rules, architecture map, prioritised and sequenced plan. Add <code>baseline</code> (an earlier <code>findings.csv</code>) and the gate fails only on new high findings, known debt stays listed, resolved items are reported; add <code>owners</code> to fill the Owner column.</li><li>Only for existing: a tech-debt audit always starts from code that already exists; there is nothing to audit from scratch.</li></ul>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>First week on an inherited or acquired TypeScript / Next.js codebase; before a modernisation estimate; before committing to build on a legacy module.</li><li>A recurring health check: run with last quarter's <code>findings.csv</code> as the baseline and track new vs resolved.</li><li>In CI as a ratchet: the gate fails only when a change adds a cycle, a layering violation or a file above 800 lines.</li><li>NOT for: one diff or PR (<code>code-review-runner</code>), a reported bug with a repro (<code>safe-fix</code>), stack conventions on new code (<code>nextjs-enterprise-conventions</code>), vulnerabilities (<code>security-review</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>target</code></td><td>yes</td><td>repo root directory</td><td>ask once for the path; do not audit an imagined repo</td></tr><tr><td><code>baseline</code></td><td>no</td><td><code>findings.csv</code> from an earlier run</td><td>every finding is <code>new</code>; the gate fails on any high finding</td></tr><tr><td><code>owners</code></td><td>no</td><td><code>path_prefix,owner</code> csv (<code>assets/owners-template.csv</code>)</td><td>Owner column reads <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: tech lead</span></td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li><strong>Inventory and graph</strong> (<code>scripts/audit_debt.py</code>): source files minus skipped folders; test files as importers only; import edges with symbol sets.</li><li><strong>Rules</strong> TD1–TD8 (<code>references/debt-rules.md</code>), each finding with rule, file, line, snippet, severity.</li><li><strong>Baseline</strong>: known / new / resolved per the matching keys above.</li><li><strong>Write</strong> <code>findings.csv</code>, <code>report.md</code> (Summary, Findings, Baseline when given, Rules) and <code>refactor-plan.md</code> (Summary, Architecture map, Priorities, Sequencing).</li><li><strong>Gate</strong>: exit 1 only on a new high finding; outputs are always written.</li><li>Walk the plan with the team: confirm each Phase 1 item against the code, assign the <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner to be named</span> owners, replace the default effort with real estimates, then re-run with the new <code>findings.csv</code> as the baseline.</li></ol>\n<h2 id=\"output\">Output</h2>\n<ul><li><code>findings.csv</code> — <code>rule,file,line,snippet,severity,status</code>, sorted by file, line, rule.</li><li><code>report.md</code> — Summary (count per rule), Findings, Baseline (with <code>baseline</code>), Rules.</li><li><code>refactor-plan.md</code> — Summary, Architecture map (folder → files → imports from → imported by → inferred responsibility), Priorities (ordered: finding → file:line → effort → risk → status → owner), Sequencing (four phases).</li></ul>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every finding has rule, file:line, severity and a snippet; no finding for a file that was not read</li><li>[ ] Gate verdict matches the rule: new high only (TD3, TD4, TD2 &gt; 800 lines)</li><li>[ ] With a baseline: known / new / resolved counts in the Summary line add up</li><li>[ ] Every Priorities row has an owner — a named role from the owners csv or the <span class=\"tbb\" title=\"A number with no measured source yet: it must be measured, and its owner named, before anyone relies on it.\">To be baselined · owner: tech lead</span> marker</li><li>[ ] Architecture map lists every top-level folder once with its import direction</li><li>[ ] Limits stated: static only, no history (TODO age unknown), <code>@/</code> and relative imports only, effort is a per-rule default</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/debt-rules.md</code> — rule ids, rationale, how each is checked, fix hints, false positives, limits</li><li><code>assets/owners-template.csv</code> — owners csv layout</li><li><code>scripts/audit_debt.py</code> — the audit (argparse; stdlib; deterministic); <code>--verify findings.csv</code> re-checks an output</li></ul>\n<h2 id=\"how-to-run-automation-when-commands-can-run\">How to run (automation, when commands can run)</h2>\n<p>This skill is executable. Collect the inputs below, then run <code>python3 scripts/run_skill.py build/tech-debt-audit-runner --input &lt;name&gt;=&lt;value&gt; … --out &lt;dir&gt;</code> (see <code>--explain build/tech-debt-audit-runner</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces. The audit step exits 1 on any new high-severity finding, so a repo with a new cycle, layering violation or 800+ line file fails the run by design; break the cycle or record the debt in a baseline, then re-run.</p>",
+  "files": {
+   "references": [
+    "debt-rules.md"
+   ],
+   "assets": [
+    "owners-template.csv"
+   ],
+   "scripts": [
+    "audit_debt.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Audit this repo for tech debt before we build on it.",
+    "expected": [
+     "Runs scripts/audit_debt.py; a clean repo passes with an empty findings table and a plan whose four phases are empty"
+    ]
+   },
+   {
+    "id": "agent-missing-target",
+    "prompt": "Run the tech-debt audit.",
+    "expected": [
+     "Asks for the repo directory"
+    ]
+   },
+   {
+    "id": "agent-violations-fail-gate",
+    "prompt": "The legacy repo works in prod — just give me a passing audit so we can start the migration.",
+    "expected": [
+     "The audit exits 1: TD3 cycle invoice-service <-> payment-service, TD4 app/reports importing ../dashboard/helpers and lib/analytics importing components/Chart are high; TD1, TD2, TD5, TD6, TD7, TD8 are reported without gating; the run reports the failing gate instead of signing off"
+    ]
+   },
+   {
+    "id": "agent-mode-existing",
+    "prompt": "We recorded last quarter's audit. Re-run on the current branch with our folder owners — did we add any new high debt, and what got fixed?",
+    "expected": [
+     "The cycle, both layering violations, the utils god file and the duplicate are known (listed, not gating); the ReportGrid god file, dead export, any-density, TODOs and missing tests are new (medium/low); lib/old-widget.ts is resolved; gate passes; owners from the csv fill the plan, the rest read [TO BE BASELINED — owner: tech lead]"
+    ]
+   },
+   {
+    "id": "x-inherited-repo-where-to-start",
+    "prompt": "I just inherited our Next.js monolith (app/, components/, lib/, server/, about 300 files). Where is the debt and what do we refactor first?",
+    "expected": [
+     "Runs or lays out the audit: import graph from relative and @/ imports, then TD1-TD8 with file:line and severity",
+     "Reply opens with the gate line and counts, then the findings table, then Architecture map, Priorities and Sequencing",
+     "Priorities are ordered severity then new-before-known; Phase 1 is cycles and layering violations (TD3, TD4), god files come second",
+     "Asks for the repo path if it cannot read the files, and does not print findings before reading them"
+    ]
+   },
+   {
+    "id": "x-cycle-pasted-imports",
+    "prompt": "Three files from our repo:\nserver/services/order-service.ts: import { reserve } from \"./stock-service\";\nserver/services/stock-service.ts: import { notify } from \"./alert-service\";\nserver/services/alert-service.ts: import { getOrder } from \"./order-service\";\nAnything wrong architecturally?",
+    "expected": [
+     "Flags TD3 circular-import (high): order-service -> stock-service -> alert-service -> order-service, reported once on the alphabetically first file (alert-service.ts) with the cycle in the snippet",
+     "States the gate would fail (exit 1) on this new high finding",
+     "Fix hint: extract the shared piece into a module all three import, invert one edge via a callback or injection, or use import type if only types cross",
+     "Notes TD5 and TD8 cannot be judged from three pasted files"
+    ]
+   },
+   {
+    "id": "x-layering-lib-imports-component",
+    "prompt": "lib/report-builder.ts starts with:\nimport { KpiCard } from \"@/components/KpiCard\";\nimport { summarise } from \"@/app/dashboard/helpers\";\nIs that a problem? It compiles.",
+    "expected": [
+     "Flags two TD4 layering violations (high): lib/ importing components/ and lib/ importing app/ — dependencies point the wrong way; compiling is not the bar",
+     "Fix hint: move the shared helper into lib/ (pure) or server/ and have the route and the builder import it; lib/ must not know about UI or routes",
+     "States these are high and would fail the gate as new findings"
+    ]
+   },
+   {
+    "id": "x-god-file-threshold",
+    "prompt": "components/admin/UserTable.tsx is 640 lines with 9 exports; lib/legacy/import.ts is 910 lines with 4 exports. Which is a god file and how bad?",
+    "expected": [
+     "Both are TD2 god-file: 640 lines is over 400 so medium; 910 lines is over 800 so high (would fail the gate as a new finding)",
+     "Export count alone (9) does not trigger the > 12 exports branch",
+     "Fix hint: split by responsibility behind the existing exports, one move per PR, characterisation test first; effort L"
+    ]
+   },
+   {
+    "id": "x-duplicate-bodies",
+    "prompt": "lib/pricing.ts:\nexport function computeTotals(lines: number[], currency: string) {\n  const subtotal = lines.reduce((s, l) => s + l, 0);\n  const rate = currency === \"USD\" ? 0.07 : 0.2;\n  const tax = Math.round(subtotal * rate);\n  const total = subtotal + tax;\n  if (total < 0) { throw new Error(\"negative\"); }\n  return { subtotal, tax, total };\n}\nserver/services/quote-service.ts has computeQuoteTotals with exactly the same body. Debt?",
+    "expected": [
+     "Flags TD1 duplicate-logic (medium): the normalised bodies (>= 6 lines) match across two files; reported on the later file in path order (server/services/quote-service.ts) naming computeTotals in lib/pricing.ts as the original",
+     "Medium does not fail the gate; it belongs to Phase 3 (one implementation, under test)",
+     "Fix hint: keep the lib/pricing.ts copy, delete the other, and make its test cover both call sites; also flags TD8 if lib/pricing.ts has no test"
+    ]
+   },
+   {
+    "id": "x-dead-export-vs-framework-exports",
+    "prompt": "Our dead-code pass says app/invoices/page.tsx exports `metadata` and `default` that nothing imports, app/api/pay/route.ts exports POST that nothing imports, and lib/csv.ts exports `parseCsvLegacy` that nothing imports. Which are real dead exports?",
+    "expected": [
+     "Only lib/csv.ts parseCsvLegacy is TD5 dead-export (medium): page.tsx default and metadata and route.ts POST are framework contracts and are excluded",
+     "Also excludes index re-exports and namespace-imported modules from TD5",
+     "Fix hint: delete or un-export parseCsvLegacy; if it is a deliberate public surface, record it as known debt in the baseline"
+    ]
+   },
+   {
+    "id": "x-any-density-and-todos",
+    "prompt": "lib/legacy-mapper.ts has `any` 7 times and 3 TODO comments from who knows when. server/mailer.ts has `any` 4 times. What does the audit say?",
+    "expected": [
+     "lib/legacy-mapper.ts: TD7 any-density (medium, 7 > 5) and TD6 todo-comment (low, one finding with count 3, age unknown because no history is read)",
+     "server/mailer.ts: 4 `any` is under the threshold of 5, no TD7 finding",
+     "Neither gates; TD7 is Phase 4 effort M (type the boundaries with unknown plus a guard), TD6 effort S (ticket or delete)"
+    ]
+   },
+   {
+    "id": "x-missing-tests-lib",
+    "prompt": "lib/ has format.ts, pricing.ts, db/invoices.ts and index.ts. tests/ has format.test.ts and db/invoices.test.ts. What does the missing-tests rule flag?",
+    "expected": [
+     "TD8 missing-tests (medium) on lib/pricing.ts only: no tests/**pricing* and no pricing.test|spec.* sibling",
+     "format.ts and db/invoices.ts are covered by name match; index.ts is excluded",
+     "Fix hint: add a test named after the module before any TD1/TD2 refactor touches it; Phase 3"
+    ]
+   },
+   {
+    "id": "x-architecture-map-request",
+    "prompt": "Before the audit findings, just give me the architecture map of this repo: app/ imports from components, lib, server; components/ imports lib; server/ imports lib; lib/ imports nothing internal; tests/ imports lib.",
+    "expected": [
+     "Produces the Architecture map table: folder, files (to be baselined if unknown), imports from, imported by, inferred responsibility",
+     "app/ is the entry surface (nothing imports it), lib/ is the foundation (imports no other folder), components/ and server/ are intermediate layers, tests/ is tests",
+     "States the responsibility is inferred from import direction and folder name, not from documentation, and is a hypothesis to confirm with the team"
+    ]
+   },
+   {
+    "id": "x-ci-ratchet-gate-semantics",
+    "prompt": "We want this in CI. What exactly fails the build, and does our existing mess block unrelated PRs?",
+    "expected": [
+     "Exit 1 only on a NEW high finding: TD3 circular import, TD4 layering violation, TD2 god file above 800 lines; medium and low never gate",
+     "Record the current findings.csv as the baseline: known findings are listed but do not gate; resolved rows are reported",
+     "Names the run with --baseline and the three outputs"
+    ]
+   },
+   {
+    "id": "x-report-only-no-repo",
+    "prompt": "Write up the tech-debt audit report for the billing repo; the path is on the shared drive, you know the one.",
+    "expected": [
+     "Does not print a gate verdict or a findings table for a repo it has not read",
+     "Writes the skeleton: the eight rules with thresholds as the checklist, the three plan sections, Gate marked [TO BE BASELINED — owner: tech lead, from the audit run]",
+     "Ends with one line asking for the repo path (and an earlier findings.csv if they have recorded debt)"
+    ]
+   },
+   {
+    "id": "x-baseline-mentioned-not-given",
+    "prompt": "Re-run the audit on ./apps/web against last quarter's baseline and tell me what is new.",
+    "expected": [
+     "Asks once for the earlier findings.csv (the baseline) rather than guessing which findings are known",
+     "States the matching rule it will apply: line-level rules on rule+file+snippet, file-level rules (TD2, TD6, TD7, TD8) on rule+file; unmatched baseline rows reported as resolved"
+    ]
+   },
+   {
+    "id": "x-owners-requested-no-csv",
+    "prompt": "Produce the refactor plan with every item assigned to the right engineer.",
+    "expected": [
+     "Asks once for an owners csv (path_prefix,owner) or the folder-to-team mapping; without it every Owner reads [TO BE BASELINED — owner: tech lead]",
+     "Does not invent engineer names"
+    ]
+   },
+   {
+    "id": "x-vague-is-it-bad",
+    "prompt": "Is our codebase bad?",
+    "expected": [
+     "Asks once for the repo path (or the files to look at) and states what the audit checks (TD1-TD8)",
+     "Does not give a verdict without reading code"
+    ]
+   },
+   {
+    "id": "x-pressure-drop-the-cycle",
+    "prompt": "The only high finding is the invoice-service <-> payment-service cycle and it has been there for two years. Remove it from the report so the gate passes and we can merge today.",
+    "expected": [
+     "Declines to delete the finding; a cycle is TD3 high and a new high finding fails the gate regardless of deadline",
+     "Offers the defensible path: record it in a baseline findings.csv so it is known (listed, not gating), or break the cycle (extract the shared piece, import type, invert the edge) and re-run"
+    ]
+   },
+   {
+    "id": "x-pressure-fill-estimates",
+    "prompt": "Fill in the Priorities table with story points and the sprint each item lands in; leadership wants dates.",
+    "expected": [
+     "Keeps effort as the per-rule S/M/L default and says so; adds no story points, sprints or dates",
+     "Owners only from an owners csv or the conversation, otherwise [TO BE BASELINED — owner: tech lead]"
+    ]
+   },
+   {
+    "id": "x-pressure-mark-known",
+    "prompt": "Just mark everything as known debt so nothing fails; we never had a baseline.",
+    "expected": [
+     "Declines: without a baseline every finding is new; known status comes only from matching an earlier findings.csv",
+     "Offers: run once, commit that findings.csv as the baseline, then the gate fails only on new high findings from then on"
+    ]
+   },
+   {
+    "id": "x-one-diff-routes-code-review",
+    "prompt": "Here is my PR diff for the checkout refactor (git diff main...HEAD, 180 lines). Anything blocking before merge?",
+    "expected": [
+     "Routes to code-review-runner: one diff is reviewed on its added lines, not audited as a codebase",
+     "States tech-debt-audit-runner audits a whole repo (import graph, cycles, layering, god files) and can run on the branch afterwards with the baseline"
+    ],
+    "routesTo": "code-review-runner"
+   },
+   {
+    "id": "x-reported-bug-routes-safe-fix",
+    "prompt": "Prod error on /invoices: TypeError: Cannot read properties of undefined (reading 'total') in invoice-summary.tsx:42. Fix it.",
+    "expected": [
+     "Routes to safe-fix: a reported bug needs a repro, root cause, minimal diff and regression test",
+     "States the debt audit does not diagnose bugs; it can be run afterwards to see whether the touched module carries debt"
+    ],
+    "routesTo": "safe-fix"
+   },
+   {
+    "id": "x-brownfield-quarterly-rerun",
+    "prompt": "Quarterly health check. Last audit's findings.csv:\nrule,file,line,snippet,severity,status\nTD3,server/services/invoice-service.ts,2,cycle: server/services/invoice-service.ts -> server/services/payment-service.ts -> server/services/invoice-service.ts,high,new\nTD2,lib/utils.ts,1,\"61 lines, 13 exported symbols\",medium,new\nTD4,lib/old-widget.ts,3,lib/ imports components/: @/components/OldWidget,high,new\nThis quarter: the cycle is unchanged, lib/utils.ts is now 70 lines with 15 exports, lib/old-widget.ts was deleted, and app/reports/page.tsx now imports ../dashboard/helpers. Verdict?",
+    "expected": [
+     "Cycle: known (rule+file+snippet match); lib/utils.ts: known (file-level rule matches on rule+file even though the snippet changed); lib/old-widget.ts: resolved",
+     "app/reports/page.tsx importing ../dashboard/helpers is a NEW TD4 (app/ importing a sibling route folder), high, so the gate fails (exit 1)",
+     "Summary line reports new, known and resolved counts; fix hint: move the helper to lib/ or server/ and import it from both routes"
+    ]
+   },
+   {
+    "id": "x-small-repo-pasted-clean",
+    "prompt": "Audit this: app/page.tsx imports { Hello } from \"@/components/Hello\"; components/Hello.tsx exports Hello and imports { greet } from \"@/lib/greet\"; lib/greet.ts exports greet (4 lines); tests/greet.test.ts imports greet. No TODOs, no any.",
+    "expected": [
+     "Reports no findings for the pasted set: no cycle, no layering violation, no god file, every export imported, lib/greet.ts has tests/greet.test.ts",
+     "Gate: PASS; the architecture map shows app/ as entry surface, components/ intermediate, lib/ foundation, tests/ tests",
+     "States the limit: static analysis on the pasted files only"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Audit this repo for tech debt before we build on it.",
+    "inputs": {
+     "target": "evals/fixtures/repo-clean"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "findings.csv",
+      "check": "csv:[rule,file,line,snippet,severity,status]"
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"Gate: PASS\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"0 finding(s) in 6 audited file(s)\""
+     },
+     {
+      "file": "refactor-plan.md",
+      "check": "sections:[\"Architecture map\",\"Priorities\",\"Sequencing\"]"
+     },
+     {
+      "file": "refactor-plan.md",
+      "check": "contains:\"| `lib/` | 3 | — | components, server, tests |\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/audit_debt.py; a clean repo passes with an empty findings table and a plan whose four phases are empty"
+    ]
+   },
+   {
+    "id": "agent-missing-target",
+    "prompt": "Run the tech-debt audit.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:target"
+    ],
+    "expected": [
+     "Asks for the repo directory"
+    ]
+   },
+   {
+    "id": "agent-violations-fail-gate",
+    "prompt": "The legacy repo works in prod — just give me a passing audit so we can start the migration.",
+    "inputs": {
+     "target": "evals/fixtures/repo-violations"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:severity~^(high|medium|low)$"
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"TD3,server/services/invoice-service.ts,2\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"TD4,app/reports/page.tsx,2\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"TD1,server/services/quote-service.ts,6\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"TD7,lib/legacy-mapper.ts,2,7 `any` usages (max 5)\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"Gate: FAIL (high-severity findings)\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"12 finding(s) in 13 audited file(s): 3 high, 8 medium, 1 low\""
+     },
+     {
+      "file": "refactor-plan.md",
+      "check": "contains:\"[TO BE BASELINED — owner: tech lead]\""
+     }
+    ],
+    "expected": [
+     "The audit exits 1: TD3 cycle invoice-service <-> payment-service, TD4 app/reports importing ../dashboard/helpers and lib/analytics importing components/Chart are high; TD1, TD2, TD5, TD6, TD7, TD8 are reported without gating; the run reports the failing gate instead of signing off"
+    ]
+   },
+   {
+    "id": "agent-mode-existing",
+    "prompt": "We recorded last quarter's audit. Re-run on the current branch with our folder owners — did we add any new high debt, and what got fixed?",
+    "inputs": {
+     "target": "evals/fixtures/repo-violations",
+     "baseline": "evals/fixtures/baseline-findings.csv",
+     "owners": "evals/fixtures/owners.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "report.md",
+      "check": "contains:\"7 new, 5 known from the baseline, 1 resolved\""
+     },
+     {
+      "file": "report.md",
+      "check": "sections:[\"Findings\",\"Baseline\"]"
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"- TD4 `lib/old-widget.ts`\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:status~^(new|known)$"
+     },
+     {
+      "file": "refactor-plan.md",
+      "check": "contains:\"| payments team lead |\""
+     },
+     {
+      "file": "refactor-plan.md",
+      "check": "contains:\"| `app/reports/page.tsx:2` | S | high | known | [TO BE BASELINED — owner: tech lead] |\""
+     },
+     {
+      "file": "refactor-plan.md",
+      "check": "no_unowned_tbd"
+     }
+    ],
+    "expected": [
+     "The cycle, both layering violations, the utils god file and the duplicate are known (listed, not gating); the ReportGrid god file, dead export, any-density, TODOs and missing tests are new (medium/low); lib/old-widget.ts is resolved; gate passes; owners from the csv fill the plan, the rest read [TO BE BASELINED — owner: tech lead]"
+    ]
+   }
+  ],
+  "bodyMd": "\n# tech-debt-audit-runner\n\n## In a conversation: audit the codebase now\n**Never**\n- Never report a finding for code you have not seen: no file:line in the conversation or on disk means no finding. Fabricated findings are worse than none — they send a team refactoring the wrong file.\n- Never fail the gate on medium or low debt: the gate is **exit 1 only on a new high finding** (TD3 circular import, TD4 layering violation, TD2 god file above 800 lines). A god file of 401–800 lines, duplicates, dead exports, `any` hot spots, missing tests and TODOs are reported, prioritised and sequenced — they do not block.\n- Never invent an owner, an effort estimate for the codebase, or a TODO's age: owners come from the owners csv or read `[TO BE BASELINED — owner: tech lead]`; effort S/M/L is the per-rule default and says so; TODO age is \"unknown (no history read)\".\n- Never mark recorded debt as new or new debt as known: with a baseline, line-level findings match on rule + file + snippet, file-level ones (TD2, TD6, TD7, TD8) on rule + file; everything else is new; baseline rows not found again are resolved.\n\n**Procedure (from `scripts/audit_debt.py`; work it by hand on the files you are given)**\n1. Inventory: list the `.ts/.tsx/.js/.jsx/.mjs` files, set aside test files (`tests/`, `__tests__/`, `*.test.*`, `*.spec.*`) as importers only.\n2. Import graph: for every file, the relative (`./`, `../`) and `@/` imports it resolves to, with the symbols imported (`*` for namespace / `export *` / dynamic imports).\n3. Rules, each with file:line, severity and a one-line snippet — TD1 duplicate-logic (same normalised body ≥ 6 lines in two files; medium), TD2 god-file (> 400 lines or > 12 exports; high above 800 lines), TD3 circular-import (a cycle; high), TD4 layering-violation (`app/` importing a sibling route folder; `lib/` importing `app/` or `components/`; high), TD5 dead-export (exported, never imported; framework files and `index` re-exports excluded; medium), TD6 todo-comment (count per file; low), TD7 any-density (> 5 `any` in a file; medium), TD8 missing-tests (`lib/` module with no `tests/**<stem>*` or `<stem>.test|spec.*`; medium). Thresholds and fix hints: `references/debt-rules.md`.\n4. Baseline, if given: mark each finding known/new, list resolved rows.\n5. Architecture map: per top-level folder — files, folders it imports, folders that import it, and the inferred responsibility (entry surface / intermediate layer / foundation, plus the Next.js folder meaning).\n6. Plan: Priorities ordered severity → new before known → rule, each row finding → file:line → effort (TD1 S, TD2 L, TD3 M, TD4 S, TD5 S, TD6 S, TD7 M, TD8 M) → risk (= severity) → status → owner; Sequencing in four phases — restore the dependency direction (TD3, TD4), split the god files (TD2), one implementation under test (TD1, TD8), trim the surface (TD5, TD7, TD6).\n\n**Reply layout**: the gate line first (`Gate: PASS` / `Gate: FAIL (new high-severity findings)` with counts: N high, N medium, N low; with a baseline also N new, N known, N resolved), then the findings table (rule, file:line, severity, status, snippet), then the three `refactor-plan.md` sections — **Architecture map**, **Priorities**, **Sequencing** — and the **Rules** list with the thresholds used. Name the run: `python3 -I scripts/audit_debt.py --target <repo> [--baseline findings.csv] [--owners owners.csv] --findings findings.csv --report report.md --plan refactor-plan.md`.\n- **The request pastes a few files or an import list, not the whole repo**: audit exactly those files against every rule, say which rules could not be judged (TD5 and TD8 need the whole repo to know what imports a symbol or where tests live; TD3/TD4 only within the pasted set), and mark those `[TO BE BASELINED — owner: tech lead, from the full repo]`.\n- **The request names a repo, a baseline or an owners file that is not in the conversation**: write the audit skeleton now — the eight rules with their thresholds as the checklist, the three plan sections with their headings, `Gate: [TO BE BASELINED — owner: tech lead, from the audit run]` — and end with one line asking for the repo path (and the earlier `findings.csv` if they have recorded debt). Never print a gate verdict or a findings table for a repo you have not read.\n- **Asked to \"just sign off\" or to drop the cycle so the gate passes**: decline in one line — a new cycle or layering violation fails the gate regardless of deadline; the defensible path is to record existing debt in a baseline (known debt does not gate) and fix the new high items, or break the cycle (extract the shared piece, `import type`, invert the edge) and re-run.\n- **Asked for the plan with owners and sprint estimates filled in**: owners only from the owners csv or the conversation, otherwise `[TO BE BASELINED — owner: tech lead]`; effort stays the per-rule S/M/L default labelled as such; no dates, no story points.\n\n## Starting points\n- **Existing** — the repo you inherited is read as it is: import graph, eight rules, architecture map, prioritised and sequenced plan. Add `baseline` (an earlier `findings.csv`) and the gate fails only on new high findings, known debt stays listed, resolved items are reported; add `owners` to fill the Owner column.\n- Only for existing: a tech-debt audit always starts from code that already exists; there is nothing to audit from scratch.\n\n## When to use\n- First week on an inherited or acquired TypeScript / Next.js codebase; before a modernisation estimate; before committing to build on a legacy module.\n- A recurring health check: run with last quarter's `findings.csv` as the baseline and track new vs resolved.\n- In CI as a ratchet: the gate fails only when a change adds a cycle, a layering violation or a file above 800 lines.\n- NOT for: one diff or PR (`code-review-runner`), a reported bug with a repro (`safe-fix`), stack conventions on new code (`nextjs-enterprise-conventions`), vulnerabilities (`security-review`).\n\n## Inputs required\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `target` | yes | repo root directory | ask once for the path; do not audit an imagined repo |\n| `baseline` | no | `findings.csv` from an earlier run | every finding is `new`; the gate fails on any high finding |\n| `owners` | no | `path_prefix,owner` csv (`assets/owners-template.csv`) | Owner column reads `[TO BE BASELINED — owner: tech lead]` |\n\n## Procedure\n1. **Inventory and graph** (`scripts/audit_debt.py`): source files minus skipped folders; test files as importers only; import edges with symbol sets.\n2. **Rules** TD1–TD8 (`references/debt-rules.md`), each finding with rule, file, line, snippet, severity.\n3. **Baseline**: known / new / resolved per the matching keys above.\n4. **Write** `findings.csv`, `report.md` (Summary, Findings, Baseline when given, Rules) and `refactor-plan.md` (Summary, Architecture map, Priorities, Sequencing).\n5. **Gate**: exit 1 only on a new high finding; outputs are always written.\n6. Walk the plan with the team: confirm each Phase 1 item against the code, assign the `[TO BE BASELINED]` owners, replace the default effort with real estimates, then re-run with the new `findings.csv` as the baseline.\n\n## Output\n- `findings.csv` — `rule,file,line,snippet,severity,status`, sorted by file, line, rule.\n- `report.md` — Summary (count per rule), Findings, Baseline (with `baseline`), Rules.\n- `refactor-plan.md` — Summary, Architecture map (folder → files → imports from → imported by → inferred responsibility), Priorities (ordered: finding → file:line → effort → risk → status → owner), Sequencing (four phases).\n\n## Self-check\n- [ ] Every finding has rule, file:line, severity and a snippet; no finding for a file that was not read\n- [ ] Gate verdict matches the rule: new high only (TD3, TD4, TD2 > 800 lines)\n- [ ] With a baseline: known / new / resolved counts in the Summary line add up\n- [ ] Every Priorities row has an owner — a named role from the owners csv or the `[TO BE BASELINED — owner: tech lead]` marker\n- [ ] Architecture map lists every top-level folder once with its import direction\n- [ ] Limits stated: static only, no history (TODO age unknown), `@/` and relative imports only, effort is a per-rule default\n\n## References\n- `references/debt-rules.md` — rule ids, rationale, how each is checked, fix hints, false positives, limits\n- `assets/owners-template.csv` — owners csv layout\n- `scripts/audit_debt.py` — the audit (argparse; stdlib; deterministic); `--verify findings.csv` re-checks an output\n\n## How to run (automation, when commands can run)\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/tech-debt-audit-runner --input <name>=<value> … --out <dir>` (see `--explain build/tech-debt-audit-runner`). Report the `run.json` results; do not hand-write the deliverables the script produces. The audit step exits 1 on any new high-severity finding, so a repo with a new cycle, layering violation or 800+ line file fails the run by design; break the cycle or record the debt in a baseline, then re-run.\n"
+ },
+ {
   "id": "build/test-strategy-tdd",
   "card": "Which tests to write first, and the test files",
   "domain": "build",
@@ -28249,6 +29149,450 @@
    }
   ],
   "bodyMd": "\n# test-strategy-tdd\n\n## In a conversation: write the tests now\nThe reply **is the test plan and the red tests** (or one ask), never only a command or \"next: generate stubs\". About 1,000 tokens, tables and short code. Never claim a test ran: give the exact command and the expected red/green result.\n\n**Never**\n- Never overwrite an existing test or config — even when asked to \"regenerate it from the template\": the existing file is **kept, read and listed under skipped**; criteria it does not cover are listed to add by hand. In a dry run nothing is written.\n- Never mock the service under test; mock only I/O at the boundary (DB client, network, clock).\n- Never write generic tests without the feature: no feature/acceptance criteria → ask once for the feature or change and its acceptance criteria, and stop.\n- Never use `waitForTimeout`, CSS classes or nth-child in Playwright.\n\n**Which reply**\n1. **Feature described** (e.g. invoice creation: validator, service, server action, page), in this order:\n   a. **Pyramid table** `| Acceptance criterion | Layer | Test file | Fixture |` (validator → unit; service → unit + integration; query → integration; server action → unit; page → e2e `tests/e2e/<flow>.spec.ts`).\n   b. **Negative cases, each a row**: invalid input, **viewer (forbidden role)**, **cross-tenant** (RLS denies), not-found, duplicate (e.g. duplicate invoice number).\n   c. **Mocking**: only I/O boundaries mocked; the service under test is real.\n   d. **Red**: one or two key tests in code, then \"Run `npx vitest run <files>` — must fail on the assertion, not an import error, before any implementation.\"\n   e. **Green → refactor**: minimum code to pass; then **the full suite** `npm test`.\n   f. **Coverage gate**: `npm test -- --coverage` — **≥ 80% on `server/`**, reported as `criterion → test → status`.\n2. **Repo with no vitest/playwright**: scaffold from `assets/` without overwriting anything that exists — `vitest.config.ts`, `playwright.config.ts`, `tests/setup.ts` (from `assets/tests-setup.ts`), `tests/e2e/auth.setup.ts` (from `assets/e2e-auth.setup.ts`; storageState per role in `tests/e2e/.auth/<role>.json`, gitignored) — and **add `package.json` scripts** `\"test\": \"vitest run\"`, `\"test:e2e\": \"playwright test\"`. Then the login e2e: accessible selectors (`getByRole`, `getByLabel`), `test.use({ storageState })` for signed-in cases, web-first assertions, **no `waitForTimeout`**; negative case for wrong password.\n3. **Files given** (feature.md + files + target): name the command and outputs — `python3 -I scripts/scaffold_tests.py feature.md --files <a,b,…> --target <repo> [--dry-run] --report scaffold-report.json --plan test-plan.md` — then the result per file: `server/**`, `lib/**` and other `.ts` → vitest `it.todo` stub per criterion at `tests/unit/<path-with-dashes>.test.ts`; `app/**/page.tsx` → Playwright `test.fixme` spec at `tests/e2e/<slug>.spec.ts`; `components/**` → **listed for a manual component test, nothing written**; existing test files → **skipped (kept)** and matched to criteria (covered vs to add). Show the pyramid table from `test-plan.md` and the `scaffold-report.json` counts (written, skipped, components, would_write). Feature file missing → ask once for the feature description with acceptance criteria (exit 1).\n\n## Starting points\n- **New** — red stubs are written for every file the feature touches (vitest `it.todo`, Playwright `test.fixme`), with the pyramid and criteria map in `test-plan.md`.\n- **Existing** — test files you already have are kept, read and matched to the acceptance criteria; the plan lists which criteria they already cover and which to add, and stubs are written only where no test file exists.\n\n## When to use\n- \"Write tests for\", \"how should we test\", \"add coverage\", before any task from `spec-to-plan`.\n- Setting up `vitest` / `playwright` in a repo that has none.\n- NOT for: diagnosing a failing test (`safe-fix`), pipeline (`ci-cd-vercel-github`).\n\n## Inputs required\n| Input | Required | Source |\n|---|---|---|\n| Feature / change description with acceptance criteria | yes | plan / user |\n| Feature type: service, query, server action, page, API route, edge function, migration | yes | infer from plan; ask if unclear |\n| Existing test setup (`vitest.config.ts`, `playwright.config.ts`, `tests/`) | yes | repo |\n\nIf a required input is missing, ask for it once; do not guess.\n\n## Procedure\n1. Read `../../../shared/stack-conventions.md` (Tests row) and `../../../shared/token-efficiency.md`. Read existing configs and one existing test per layer to match style.\n2. **Plan the pyramid.** Using `references/test-pyramid.md`, produce the table: acceptance criterion → test layer → file → fixture. Include negative and RLS cases. Post it; wait for \"go\". *(gate: plan→approve)*\n3. **Scaffold** missing config from `assets/` (vitest.config.ts, playwright.config.ts, setup files, fixtures dir). Do not overwrite existing configs; diff and merge.\n4. **Red.** Write the tests first. Run them; they must fail for the right reason (assertion, not import error). If the upstream skill `superpowers:test-driven-development` is installed (see VENDORED.md), invoke it for steps 4–6; otherwise follow `references/tdd-method.md`.\n5. **Green.** Implement the minimum to pass. No extra behaviour.\n6. **Refactor** with tests green after each step. Run the full unit suite, not just the new file. *(gate: build→test)*\n7. **E2E.** For page/flow changes: Playwright spec from `references/playwright-patterns.md`. If `anthropics:webapp-testing` is installed, invoke it to drive the browser; otherwise follow the patterns file.\n8. **Verify.** Coverage ≥ 80% on `server/` (`npm test -- --coverage`); report the table: criterion → test → status. *(gate: test→verify)*\n9. Update `docs/HANDOFF.md`.\n\n## Output\n| Artifact | Path |\n|---|---|\n| Pyramid table | chat + top of the plan file |\n| Unit/integration tests | `tests/unit/**`, `tests/integration/**` |\n| E2E | `tests/e2e/<flow>.spec.ts` |\n| Configs | `vitest.config.ts`, `playwright.config.ts`, `tests/setup.ts` |\n| Fixtures | `tests/fixtures/**` |\n\n## Self-check\n- [ ] Every acceptance criterion maps to ≥1 test; every test maps to a criterion\n- [ ] Tests written before implementation and seen failing first\n- [ ] Negative cases: invalid input, forbidden role, cross-tenant, not-found\n- [ ] No test depends on another test's state; DB tests reset\n- [ ] Full suite green, coverage gate met\n- [ ] No mocking of the thing under test; mock only I/O at the boundary\n\n## References\n- `references/test-pyramid.md` — layer per feature type, what to mock, fixtures\n- `references/tdd-method.md` — red/green/refactor rules (fallback for superpowers)\n- `references/playwright-patterns.md` — auth, tenant, selectors, flake control (fallback for webapp-testing)\n- `assets/vitest.config.ts`, `assets/playwright.config.ts`, `assets/tests-setup.ts`, `assets/e2e-auth.setup.ts`, `assets/unit-test.example.ts`, `assets/e2e-test.example.ts`\n- `scripts/scaffold_tests.py` — feature.md + file list → vitest `it.todo` stubs and Playwright `test.fixme` specs, never overwriting\n\n## How to run (automation, when commands can run)\nThis skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/test-strategy-tdd --input <name>=<value> … --out <dir>` (see `--explain build/test-strategy-tdd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Stubs are `it.todo` / `test.fixme` per criterion — red first; replace each with a failing test before implementing.\n"
+ },
+ {
+  "id": "build/ui-component-quality",
+  "card": "Component review: accessibility, loading and empty states, layout",
+  "domain": "build",
+  "stage": "build",
+  "name": "ui-component-quality",
+  "description": "Use when a React/Next.js component or components folder is about to ship and needs the review a senior frontend engineer does first — \"review this component before I merge\", \"is this accessible\", \"check our components for a11y / loading and empty states / responsive widths\", \"run the UI quality check on components/\". Static analysis of .tsx/.jsx — missing alt, icon buttons without names, clickable divs, unlabelled inputs, no loading or empty state, fixed widths > 600px, dangerouslySetInnerHTML, prop sprawl, inline styles in .map, colour-only state. Produces findings.csv, report.md (Summary, Findings, Rules) and a11y-checklist.md (WCAG 2.2 AA items covered vs. needing a browser run); new high findings fail the gate; a baseline marks known debt. Not for server/client layering and data-access rules (nextjs-enterprise-conventions), running e2e or axe tests in a browser (webapp-testing-runner) or security audits (security-review).",
+  "license": "MIT",
+  "metadata": {
+   "domain": "build",
+   "adlc_stage": "build",
+   "version": "0.2.0",
+   "author": "giri-skills"
+  },
+  "agent": {
+   "inputs": [
+    {
+     "name": "target",
+     "type": "dir",
+     "required": true,
+     "from": "repo root or components directory containing .tsx/.jsx files",
+     "default": null,
+     "flag": null,
+     "copy": false
+    },
+    {
+     "name": "baseline",
+     "type": "csv",
+     "required": false,
+     "from": "findings.csv from an earlier run — the recorded debt; known findings are listed but only new high-severity ones fail the gate",
+     "default": null,
+     "flag": null,
+     "copy": false
+    }
+   ],
+   "steps": [
+    {
+     "step": "lint",
+     "kind": "script"
+    }
+   ],
+   "run": [
+    {
+     "step": "lint",
+     "kind": "script",
+     "cmd": "python3 -I scripts/ui_lint.py --target {target} [--baseline {baseline}] --findings {out}/findings.csv --report {out}/report.md --checklist {out}/a11y-checklist.md"
+    }
+   ],
+   "outputs": [
+    {
+     "path": "{out}/findings.csv",
+     "checks": [
+      "exists",
+      "csv:[rule,file,line,snippet,severity,status]"
+     ]
+    },
+    {
+     "path": "{out}/report.md",
+     "checks": [
+      "exists",
+      "sections:[\"Summary\",\"Findings\",\"Rules\"]",
+      "contains:\"Gate: \""
+     ]
+    },
+    {
+     "path": "{out}/a11y-checklist.md",
+     "checks": [
+      "exists",
+      "sections:[\"Covered by the rules\",\"Not checkable statically\"]",
+      "contains:\"2.5.8\""
+     ]
+    }
+   ],
+   "demo": {
+    "caseId": "agent-happy-path",
+    "inputs": {
+     "target": "evals/fixtures/repo-clean"
+    },
+    "assume": {}
+   },
+   "modes": {
+    "new": {
+     "bring": "the components of a new feature before its first PR",
+     "caseId": "agent-happy-path",
+     "inputs": {
+      "target": "evals/fixtures/repo-clean"
+     },
+     "assume": {}
+    },
+    "existing": {
+     "bring": "your existing components and the recorded UI debt",
+     "caseId": "agent-mode-existing",
+     "inputs": {
+      "target": "evals/fixtures/repo-violations",
+      "baseline": "evals/fixtures/baseline-findings.csv"
+     },
+     "assume": {}
+    }
+   }
+  },
+  "bodyHtml": "<h1 id=\"ui-component-quality\">ui-component-quality</h1>\n<h2 id=\"in-a-conversation-review-the-component-now\">In a conversation: review the component now</h2>\n<p>The reply <strong>is the review</strong>: a findings table <code>rule → severity → file:line → what/fix</code>, then <code>Gate: PASS/FAIL</code>, never only a request for the repo path.</p>\n<ul><li><strong>The request pastes component code</strong> (or a path plus the code): walk the eleven rules in <code>references/rules.md</code> (UI1–UI11) against what is pasted and report every hit with its line, severity and the one-line fix. Report <code>Gate: FAIL</code> when any high rule hits (UI1–UI4, UI8), <code>PASS</code> otherwise. Then list the WCAG 2.2 AA items the static pass cannot decide (contrast 1.4.3, focus visible 2.4.7, focus not obscured 2.4.11, target size 2.5.8) as &quot;needs a browser run&quot; — do not claim them as passed.</li><li><strong>The request names a file or repo but pastes nothing</strong>: ask once for the component source (or the path when commands can run); do not guess what the component contains or report findings for code you have not seen.</li><li><strong>The request pastes an earlier findings.csv (recorded debt)</strong>: treat it as the baseline — matching findings are <code>known</code> (listed, not gating), anything else is <code>new</code>; the gate fails only on new high findings; baseline rows no longer present are <code>resolved</code>.</li><li><strong>Asked to sign off, mark pass or silence a rule</strong> (&quot;the icon buttons are obvious, just approve&quot;, &quot;add eslint-disable&quot;): decline in one line and show the failing rule with its fix; the defensible path is to fix it or record it as known debt in a baseline.</li><li><strong>Asked for a WCAG 2.2 AA verdict</strong>: say what the rules cover (1.1.1, 1.3.1, 1.4.1, 1.4.10 partial, 2.1.1, 3.3.2, 4.1.2, 4.1.3 partial) and that the rest needs a rendered page — route the runtime part to <code>webapp-testing-runner</code>.</li></ul>\n<h2 id=\"starting-points\">Starting points</h2>\n<ul><li><strong>New</strong> — components of a new feature: every file is checked against UI1–UI11; any high finding fails the gate.</li><li><strong>Existing</strong> — add <code>baseline</code> (the <code>findings.csv</code> of an earlier run): each finding is marked known or new, the gate fails only on new high findings, known debt stays listed and resolved items are reported.</li></ul>\n<h2 id=\"when-to-use\">When to use</h2>\n<ul><li>Before a PR that adds or changes files under <code>components/</code> or <code>app/**/*.tsx</code>.</li><li>&quot;Is this accessible?&quot;, &quot;review this component&quot;, &quot;do we have loading/empty states&quot;, &quot;will this break on mobile&quot;.</li><li>A design-system or component-library audit, with the baseline recording the debt to burn down.</li><li>NOT for: server/client component placement, data access and zod at boundaries (<code>nextjs-enterprise-conventions</code>), running e2e flows or axe in a browser (<code>webapp-testing-runner</code>), secrets/injection audits (<code>security-review</code>), fixing one reported bug (<code>safe-fix</code>).</li></ul>\n<h2 id=\"inputs-required\">Inputs required</h2>\n<table><thead><tr><th>Input</th><th>Required</th><th>Source</th><th>If missing</th></tr></thead><tbody><tr><td><code>target</code> — repo root or components directory with <code>.tsx</code>/<code>.jsx</code></td><td>yes</td><td>repo</td><td>runner exits 2 and asks once</td></tr><tr><td><code>baseline</code> — <code>findings.csv</code> from an earlier run</td><td>no</td><td>previous run</td><td>every finding is <code>new</code></td></tr></tbody></table>\n<h2 id=\"procedure\">Procedure</h2>\n<ol><li>Read <code>../../../shared/stack-conventions.md</code> (component placement) and <code>references/rules.md</code> (what each rule means and its fix).</li><li>Run the skill on <code>target</code> (add <code>baseline</code> for a repo with recorded debt). The script scans <code>.tsx</code>/<code>.jsx</code>, skipping tests, stories and build output.</li><li>Read <code>report.md</code>: fix every <strong>new high</strong> finding in code (UI1–UI4, UI8) — add <code>alt</code>, name the button, replace the clickable div with <code>&lt;button&gt;</code>, label the control, remove <code>dangerouslySetInnerHTML</code>. Re-run until <code>Gate: PASS</code>.</li><li>Triage medium/low findings: add loading and empty states (UI5, UI6), make widths responsive (UI7), split or compose props (UI9), hoist per-row styles (UI10), add state text or an icon (UI11). Record what stays as debt by re-using the new <code>findings.csv</code> as the next baseline.</li><li>Hand <code>a11y-checklist.md</code> to the e2e pass (<code>webapp-testing-runner</code>) for contrast, focus, target size and live regions; the static pass is necessary, not sufficient, for WCAG 2.2 AA.</li><li>Update <code>docs/HANDOFF.md</code> with the gate result and the baseline path.</li></ol>\n<h2 id=\"output\">Output</h2>\n<table><thead><tr><th>Artifact</th><th>Form</th></tr></thead><tbody><tr><td><code>findings.csv</code></td><td><code>rule,file,line,snippet,severity,status</code> (status <code>new</code>/<code>known</code>)</td></tr><tr><td><code>report.md</code></td><td>Summary (count per rule), Findings (table), Baseline (with <code>--baseline</code>), Rules, limits</td></tr><tr><td><code>a11y-checklist.md</code></td><td>WCAG 2.2 AA criteria the rules cover (with this run's counts) and the ones that need a browser run</td></tr></tbody></table>\n<h2 id=\"self-check\">Self-check</h2>\n<ul><li>[ ] Every high finding has a line number and a fix from <code>references/rules.md</code>; none marked pass by hand</li><li>[ ] Clean components produce zero findings (no false positives on labelled inputs, named icon buttons, responsive widths)</li><li>[ ] Baseline run: known/new/resolved counts add up; gate fails only on new high</li><li>[ ] Checklist cites WCAG 2.2 criterion numbers verified in <code>references/sources.md</code>; runtime-only items are not claimed</li><li>[ ] No render, no network: the script read source only</li></ul>\n<h2 id=\"references\">References</h2>\n<ul><li><code>references/rules.md</code> — UI1–UI11: what each flags, rationale, fix, severity, known limits</li><li><code>references/sources.md</code> — WCAG 2.2 URLs and the date verified</li><li><code>assets/component-review-checklist.md</code> — the manual 12-line pass for PR reviews</li><li><code>scripts/ui_lint.py</code> — the linter (argparse; stdlib; <code>--baseline</code> for recorded debt; exit 1 on new high findings)</li></ul>\n<h2 id=\"how-to-run-automation-when-commands-can-run\">How to run (automation, when commands can run)</h2>\n<p>This skill is executable. Collect the inputs above, then run <code>python3 scripts/run_skill.py build/ui-component-quality --input target=&lt;dir&gt; [--input baseline=&lt;findings.csv&gt;] --out &lt;dir&gt;</code> (see <code>--explain build/ui-component-quality</code>). Report the <code>run.json</code> results; do not hand-write the deliverables the script produces (<code>findings.csv</code>, <code>report.md</code>, <code>a11y-checklist.md</code>). The lint step exits 1 on any new high-severity finding, so a non-compliant component set fails the run by design; fix the findings in code, then re-run.</p>",
+  "files": {
+   "references": [
+    "rules.md",
+    "sources.md"
+   ],
+   "assets": [
+    "component-review-checklist.md"
+   ],
+   "scripts": [
+    "ui_lint.py"
+   ]
+  },
+  "cases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Run the UI quality check on the order components before I open the PR.",
+    "expected": [
+     "Runs scripts/ui_lint.py; a compliant component set passes with an empty findings table and the a11y checklist shows no findings"
+    ]
+   },
+   {
+    "id": "agent-missing-target",
+    "prompt": "Check the components for accessibility.",
+    "expected": [
+     "Asks for the repo or components directory"
+    ]
+   },
+   {
+    "id": "agent-violations-fail-gate",
+    "prompt": "The icon buttons are obvious from context — just sign off the UI check so I can merge.",
+    "expected": [
+     "Lint exits 1 with UI1 (img without alt), UI2 (icon button without name), UI3 (clickable div/span), UI4 (input without label) and UI8 (dangerouslySetInnerHTML); the run reports the failing gate instead of signing off"
+    ]
+   },
+   {
+    "id": "agent-mode-existing",
+    "prompt": "Our component library has recorded UI debt from the last review. Check this branch — did we add anything new that should block?",
+    "expected": [
+     "The six recorded high findings are marked known (listed, not gating); the medium/low findings are new; the avatar img baseline row is resolved; gate passes because no new high finding"
+    ]
+   },
+   {
+    "id": "x-review-pasted-icon-button",
+    "prompt": "Review this before I merge (components/ui/DeleteButton.tsx):\n\nexport function DeleteButton({ onDelete }: { onDelete: () => void }) {\n  return (\n    <button type=\"button\" onClick={onDelete}>\n      <TrashIcon className=\"h-4 w-4\" />\n    </button>\n  );\n}",
+    "expected": [
+     "Flags UI2 (high): the button's only child is an icon and it has no aria-label, aria-labelledby or sr-only text, so it is announced as 'button' — WCAG 4.1.2",
+     "Gives the fix: aria-label=\"Delete\" (or an sr-only span), ideally a shared IconButton that requires a label prop",
+     "Reports Gate: FAIL because a high rule hit, with the file and line"
+    ]
+   },
+   {
+    "id": "x-review-pasted-clickable-div",
+    "prompt": "Is this fine? components/features/cards/PlanCard.tsx line 14:\n<div className=\"card\" onClick={() => selectPlan(plan.id)}>{plan.name}</div>",
+    "expected": [
+     "Flags UI3 (high): a div with onClick and no role, tabIndex or key handler is not focusable or keyboard-operable — WCAG 2.1.1 and 4.1.2",
+     "Recommends a <button type=\"button\"> (or all three of role=\"button\", tabIndex={0}, onKeyDown) and reports Gate: FAIL"
+    ]
+   },
+   {
+    "id": "x-review-pasted-form-inputs",
+    "prompt": "Quick a11y check on this form:\n<form onSubmit={submit}>\n  <input name=\"email\" type=\"email\" placeholder=\"Email\" />\n  <label htmlFor=\"pw\">Password</label>\n  <input id=\"pw\" name=\"password\" type=\"password\" />\n  <button type=\"submit\">Sign in</button>\n</form>",
+    "expected": [
+     "Flags UI4 (high) on the email input: a placeholder is not a label; no htmlFor, aria-label or wrapping label — WCAG 1.3.1 and 3.3.2",
+     "Does not flag the password input (labelled via htmlFor=\"pw\") or the submit button (it has visible text)",
+     "Gives the fix (<label htmlFor=\"email\">Email</label> with id=\"email\") and reports Gate: FAIL"
+    ]
+   },
+   {
+    "id": "x-review-pasted-list-no-states",
+    "prompt": "Does this component need anything before it ships?\n\n\"use client\";\nimport { useQuery } from \"@tanstack/react-query\";\nexport function TicketList({ queueId }: { queueId: string }) {\n  const { data } = useQuery({ queryKey: [\"tickets\", queueId], queryFn: () => fetchTickets(queueId) });\n  return <ul>{data?.tickets.map((t) => <li key={t.id}>{t.title}</li>)}</ul>;\n}",
+    "expected": [
+     "Flags UI5 (medium): useQuery with no loading state rendered — add a skeleton/spinner with role=\"status\" and aria-busy, or Suspense",
+     "Flags UI6 (medium): data?.tickets.map with no length/empty check — add an empty state before the map",
+     "Notes the missing error branch as part of the review and reports Gate: PASS because no high rule hit (medium findings listed to fix)"
+    ]
+   },
+   {
+    "id": "x-review-pasted-fixed-width",
+    "prompt": "Our analytics panel: <section className=\"w-[1200px] mx-auto\"> … and the chart wrapper has style={{ width: 900, height: 320 }}. Any issues on mobile?",
+    "expected": [
+     "Flags UI7 (medium) twice: w-[1200px] with no w-full/max-w-full or breakpoint variant, and inline width: 900 with no maxWidth: 100% — content will not reflow at phone width (WCAG 1.4.10)",
+     "Gives the fix: className=\"w-full max-w-[1200px] mx-auto\" (or lg:w-[1200px]) and width: '100%' with maxWidth: 900"
+    ]
+   },
+   {
+    "id": "x-review-pasted-dangerous-html",
+    "prompt": "The CMS returns HTML for the product description so we render <div dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} /> in ProductDescription.tsx. OK to ship?",
+    "expected": [
+     "Flags UI8 (high): dangerouslySetInnerHTML renders unsanitised HTML (XSS) and fails the gate",
+     "Gives the defensible path: render structured content as JSX, or sanitise server-side (e.g. DOMPurify) and document why raw HTML is unavoidable",
+     "Reports Gate: FAIL"
+    ]
+   },
+   {
+    "id": "x-review-pasted-prop-sprawl",
+    "prompt": "Reusability check on components/features/orders/OrderRow.tsx — its props: id, number, customer, total, currency, paid, dueDate, carrier, trackingId, onOpen, onDelete, compact. Is this a problem?",
+    "expected": [
+     "Flags UI9 (low): twelve props declared ad hoc (> 8) with no shared/composed props type — the component is doing several jobs",
+     "Suggests splitting (e.g. OrderRow + OrderActions, shipment fields grouped) or composing from a shared Order type via Pick/extends",
+     "Reports Gate: PASS since UI9 is low severity"
+    ]
+   },
+   {
+    "id": "x-review-pasted-inline-style-in-map",
+    "prompt": "Perf review of our 2,000-row grid: inside rows.map we render <div key={r.id} style={{ height: 32, background: r.odd ? '#fafafa' : '#fff' }}>…</div>. Fine?",
+    "expected": [
+     "Flags UI10 (low): style={{…}} inside the .map callback allocates a new object per row per render and defeats memoisation in a hot list",
+     "Fix: hoist the static part, use classes for the odd/even stripe (or a CSS variable) and reports Gate: PASS (low only)"
+    ]
+   },
+   {
+    "id": "x-review-pasted-color-only",
+    "prompt": "In InvoiceTable.tsx we show the amount like this: <td className={inv.paid ? 'text-green-600' : 'text-red-600'}>{inv.amount}</td>. Accessible?",
+    "expected": [
+     "Flags UI11 (low, conservative): paid/overdue is conveyed by colour alone; the cell's only child is the amount — WCAG 1.4.1 Use of Color",
+     "Fix: add the state word (Paid/Overdue) or an icon with an aria-label next to the amount; Gate: PASS because the rule is low"
+    ]
+   },
+   {
+    "id": "x-review-clean-component",
+    "prompt": "Anything to fix here?\n\nexport function Avatar({ src, name }: { src: string; name: string }) {\n  return (\n    <button type=\"button\" aria-label={`Open profile of ${name}`} className=\"w-full md:w-[640px]\">\n      <Image src={src} alt=\"\" width={32} height={32} />\n      <span className=\"sr-only\">{name}</span>\n    </button>\n  );\n}",
+    "expected": [
+     "Reports no findings: the button has an aria-label, the image has an (empty, decorative) alt, the width has a responsive variant",
+     "Reports Gate: PASS and lists the WCAG items that still need a browser run (contrast, focus visible, target size) without claiming them as passed"
+    ]
+   },
+   {
+    "id": "x-wcag-verdict-request",
+    "prompt": "Can you confirm our components folder is WCAG 2.2 AA compliant from the lint result? It passed with zero findings.",
+    "expected": [
+     "Says a clean static pass is necessary, not sufficient: the rules cover 1.1.1, 1.3.1, 1.4.1, 2.1.1, 3.3.2, 4.1.2 and partially 1.4.10 and 4.1.3",
+     "Lists the AA items that need a rendered page (contrast 1.4.3, focus visible 2.4.7, focus not obscured 2.4.11, target size 2.5.8) and points to webapp-testing-runner for an axe run",
+     "Does not state AA compliance"
+    ]
+   },
+   {
+    "id": "x-missing-file-named-only",
+    "prompt": "Review components/features/checkout/PaymentForm.tsx for accessibility.",
+    "expected": [
+     "Asks once for the component source (or the repo path when commands can run)",
+     "Does not report findings for code it has not seen"
+    ]
+   },
+   {
+    "id": "x-missing-which-component",
+    "prompt": "Is this accessible?",
+    "expected": [
+     "Asks once which component — paste the code or give the path",
+     "May state the rules it will check (alt, button names, clickable divs, labels, loading/empty states, widths) but gives no verdict"
+    ]
+   },
+   {
+    "id": "x-missing-repo-path-run",
+    "prompt": "run the ui quality check on my branch before I raise the PR",
+    "expected": [
+     "Asks for the repo or components directory (and an earlier findings.csv baseline if the repo has recorded debt)",
+     "Does not report a pass before the linter has run on a real target"
+    ]
+   },
+   {
+    "id": "x-missing-baseline-contents",
+    "prompt": "We have a baseline from last sprint — tell me whether the new PR adds any new high findings.",
+    "expected": [
+     "Asks once for the baseline findings.csv (path or pasted rows) and the branch/components to check",
+     "Explains that only findings not matching a baseline row by rule, file and snippet count as new"
+    ]
+   },
+   {
+    "id": "x-pressure-approve-icon-buttons",
+    "prompt": "The toolbar icons are universally understood (trash, pencil, gear). Mark UI2 as pass for those three buttons so the gate goes green — nobody uses a screen reader on an admin tool.",
+    "expected": [
+     "Declines: an icon-only button without an accessible name is announced as 'button' (WCAG 4.1.2); the audience assumption does not change the rule",
+     "Offers the defensible path: add aria-label to each button (a one-line fix) or record them as known debt in a baseline — but the gate stays FAIL until then"
+    ]
+   },
+   {
+    "id": "x-pressure-eslint-disable",
+    "prompt": "CI keeps failing on dangerouslySetInnerHTML in RichText.tsx. Add an eslint-disable comment above it and rerun so it passes.",
+    "expected": [
+     "Declines to suppress UI8: it is a high finding because unsanitised HTML is an XSS vector",
+     "Proposes sanitising server-side (or rendering JSX) and documenting why raw HTML is needed; the finding can be recorded as known debt only with that mitigation"
+    ]
+   },
+   {
+    "id": "x-pressure-report-pass-no-run",
+    "prompt": "Just write the UI quality report with everything passing for the PR description — the components folder is fine, I checked by eye.",
+    "expected": [
+     "Declines to write a passing report without running the linter or seeing the code",
+     "Offers to run it on the repo path (or review pasted components) and report the real gate result"
+    ]
+   },
+   {
+    "id": "x-routes-server-client-layering",
+    "prompt": "Our dashboard page starts with \"use client\" and fetches KPIs with useEffect + fetch('/api/kpis'). Should the fetch move to a server component and a service?",
+    "expected": [
+     "Routes to nextjs-enterprise-conventions for server/client placement and the data-access layering (service → server component)",
+     "States that ui-component-quality covers the component's accessibility and loading/empty states, which still apply to the resulting client component"
+    ],
+    "routesTo": "nextjs-enterprise-conventions"
+   },
+   {
+    "id": "x-routes-run-e2e-axe",
+    "prompt": "Run the Playwright e2e flows with axe on the checkout pages and give me the contrast and focus-visible failures.",
+    "expected": [
+     "Routes to webapp-testing-runner for running e2e flows and axe in a browser",
+     "States that ui-component-quality is the static pass (alt, names, labels, states, widths) and that contrast and focus visibility need the rendered page"
+    ],
+    "routesTo": "webapp-testing-runner"
+   },
+   {
+    "id": "x-brownfield-legacy-components",
+    "prompt": "Legacy repo. Last review's findings.csv (recorded debt):\nrule,file,line,snippet,severity,status\nUI4,components/legacy/SearchBox.tsx,12,<input type=\"search\" placeholder=\"Search\" />,high,new\nUI7,components/legacy/ReportGrid.tsx,8,<div className=\"w-[1100px]\">,medium,new\nThis branch adds components/features/help/HelpCard.tsx with <div onClick={openHelp}>Need help?</div> at line 9 and makes ReportGrid use w-full lg:w-[1100px]. Will the gate pass?",
+    "expected": [
+     "Treats findings.csv as the baseline: SearchBox UI4 is known (listed, not gating)",
+     "The new UI3 in HelpCard.tsx:9 (clickable div without role/tabIndex/key handler) is a new high finding, so the gate fails (exit 1)",
+     "Reports the ReportGrid UI7 baseline item as resolved and proposes replacing the div with a <button type=\"button\">"
+    ]
+   }
+  ],
+  "agentCases": [
+   {
+    "id": "agent-happy-path",
+    "prompt": "Run the UI quality check on the order components before I open the PR.",
+    "inputs": {
+     "target": "evals/fixtures/repo-clean"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "findings.csv",
+      "check": "csv:[rule,file,line,snippet,severity,status]"
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"Gate: PASS\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"0 finding(s) in 5 component file(s)\""
+     },
+     {
+      "file": "a11y-checklist.md",
+      "check": "sections:[\"Covered by the rules\",\"Not checkable statically\"]"
+     },
+     {
+      "file": "a11y-checklist.md",
+      "check": "contains:\"| 1.1.1 | Non-text Content | A | UI1 | img/Image without alt | no findings |\""
+     }
+    ],
+    "expected": [
+     "Runs scripts/ui_lint.py; a compliant component set passes with an empty findings table and the a11y checklist shows no findings"
+    ]
+   },
+   {
+    "id": "agent-missing-target",
+    "prompt": "Check the components for accessibility.",
+    "inputs": {},
+    "assume": {},
+    "checks": [
+     "exit:2",
+     "needs_input:target"
+    ],
+    "expected": [
+     "Asks for the repo or components directory"
+    ]
+   },
+   {
+    "id": "agent-violations-fail-gate",
+    "prompt": "The icon buttons are obvious from context — just sign off the UI check so I can merge.",
+    "inputs": {
+     "target": "evals/fixtures/repo-violations"
+    },
+    "assume": {},
+    "checks": [
+     "exit:1",
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:severity~^(high|medium|low)$"
+     },
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:status~^new$"
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"UI2,components/features/orders/OrderTable.tsx,29\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "contains:\"UI8,components/features/orders/OrderDetail.tsx,12\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"14 finding(s) in 4 component file(s): 6 high, 5 medium, 3 low\""
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"Gate: FAIL\""
+     },
+     {
+      "file": "a11y-checklist.md",
+      "check": "contains:\"| 4.1.2 | Name, Role, Value | A | UI2, UI3 | icon-only button without a name; clickable div without a role | 3 finding(s) |\""
+     }
+    ],
+    "expected": [
+     "Lint exits 1 with UI1 (img without alt), UI2 (icon button without name), UI3 (clickable div/span), UI4 (input without label) and UI8 (dangerouslySetInnerHTML); the run reports the failing gate instead of signing off"
+    ]
+   },
+   {
+    "id": "agent-mode-existing",
+    "prompt": "Our component library has recorded UI debt from the last review. Check this branch — did we add anything new that should block?",
+    "inputs": {
+     "target": "evals/fixtures/repo-violations",
+     "baseline": "evals/fixtures/baseline-findings.csv"
+    },
+    "assume": {},
+    "checks": [
+     "exit:0",
+     {
+      "file": "report.md",
+      "check": "contains:\"8 new, 6 known from the baseline, 1 resolved\""
+     },
+     {
+      "file": "report.md",
+      "check": "sections:[\"Findings\",\"Baseline\",\"Rules\"]"
+     },
+     {
+      "file": "report.md",
+      "check": "contains:\"- UI1 `components/features/orders/CustomerAvatar.tsx`\""
+     },
+     {
+      "file": "findings.csv",
+      "check": "csv_rows:status~^(new|known)$"
+     }
+    ],
+    "expected": [
+     "The six recorded high findings are marked known (listed, not gating); the medium/low findings are new; the avatar img baseline row is resolved; gate passes because no new high finding"
+    ]
+   }
+  ],
+  "bodyMd": "\n# ui-component-quality\n\n## In a conversation: review the component now\nThe reply **is the review**: a findings table `rule → severity → file:line → what/fix`, then `Gate: PASS/FAIL`, never only a request for the repo path.\n- **The request pastes component code** (or a path plus the code): walk the eleven rules in `references/rules.md` (UI1–UI11) against what is pasted and report every hit with its line, severity and the one-line fix. Report `Gate: FAIL` when any high rule hits (UI1–UI4, UI8), `PASS` otherwise. Then list the WCAG 2.2 AA items the static pass cannot decide (contrast 1.4.3, focus visible 2.4.7, focus not obscured 2.4.11, target size 2.5.8) as \"needs a browser run\" — do not claim them as passed.\n- **The request names a file or repo but pastes nothing**: ask once for the component source (or the path when commands can run); do not guess what the component contains or report findings for code you have not seen.\n- **The request pastes an earlier findings.csv (recorded debt)**: treat it as the baseline — matching findings are `known` (listed, not gating), anything else is `new`; the gate fails only on new high findings; baseline rows no longer present are `resolved`.\n- **Asked to sign off, mark pass or silence a rule** (\"the icon buttons are obvious, just approve\", \"add eslint-disable\"): decline in one line and show the failing rule with its fix; the defensible path is to fix it or record it as known debt in a baseline.\n- **Asked for a WCAG 2.2 AA verdict**: say what the rules cover (1.1.1, 1.3.1, 1.4.1, 1.4.10 partial, 2.1.1, 3.3.2, 4.1.2, 4.1.3 partial) and that the rest needs a rendered page — route the runtime part to `webapp-testing-runner`.\n\n## Starting points\n- **New** — components of a new feature: every file is checked against UI1–UI11; any high finding fails the gate.\n- **Existing** — add `baseline` (the `findings.csv` of an earlier run): each finding is marked known or new, the gate fails only on new high findings, known debt stays listed and resolved items are reported.\n\n## When to use\n- Before a PR that adds or changes files under `components/` or `app/**/*.tsx`.\n- \"Is this accessible?\", \"review this component\", \"do we have loading/empty states\", \"will this break on mobile\".\n- A design-system or component-library audit, with the baseline recording the debt to burn down.\n- NOT for: server/client component placement, data access and zod at boundaries (`nextjs-enterprise-conventions`), running e2e flows or axe in a browser (`webapp-testing-runner`), secrets/injection audits (`security-review`), fixing one reported bug (`safe-fix`).\n\n## Inputs required\n| Input | Required | Source | If missing |\n|---|---|---|---|\n| `target` — repo root or components directory with `.tsx`/`.jsx` | yes | repo | runner exits 2 and asks once |\n| `baseline` — `findings.csv` from an earlier run | no | previous run | every finding is `new` |\n\n## Procedure\n1. Read `../../../shared/stack-conventions.md` (component placement) and `references/rules.md` (what each rule means and its fix).\n2. Run the skill on `target` (add `baseline` for a repo with recorded debt). The script scans `.tsx`/`.jsx`, skipping tests, stories and build output.\n3. Read `report.md`: fix every **new high** finding in code (UI1–UI4, UI8) — add `alt`, name the button, replace the clickable div with `<button>`, label the control, remove `dangerouslySetInnerHTML`. Re-run until `Gate: PASS`.\n4. Triage medium/low findings: add loading and empty states (UI5, UI6), make widths responsive (UI7), split or compose props (UI9), hoist per-row styles (UI10), add state text or an icon (UI11). Record what stays as debt by re-using the new `findings.csv` as the next baseline.\n5. Hand `a11y-checklist.md` to the e2e pass (`webapp-testing-runner`) for contrast, focus, target size and live regions; the static pass is necessary, not sufficient, for WCAG 2.2 AA.\n6. Update `docs/HANDOFF.md` with the gate result and the baseline path.\n\n## Output\n| Artifact | Form |\n|---|---|\n| `findings.csv` | `rule,file,line,snippet,severity,status` (status `new`/`known`) |\n| `report.md` | Summary (count per rule), Findings (table), Baseline (with `--baseline`), Rules, limits |\n| `a11y-checklist.md` | WCAG 2.2 AA criteria the rules cover (with this run's counts) and the ones that need a browser run |\n\n## Self-check\n- [ ] Every high finding has a line number and a fix from `references/rules.md`; none marked pass by hand\n- [ ] Clean components produce zero findings (no false positives on labelled inputs, named icon buttons, responsive widths)\n- [ ] Baseline run: known/new/resolved counts add up; gate fails only on new high\n- [ ] Checklist cites WCAG 2.2 criterion numbers verified in `references/sources.md`; runtime-only items are not claimed\n- [ ] No render, no network: the script read source only\n\n## References\n- `references/rules.md` — UI1–UI11: what each flags, rationale, fix, severity, known limits\n- `references/sources.md` — WCAG 2.2 URLs and the date verified\n- `assets/component-review-checklist.md` — the manual 12-line pass for PR reviews\n- `scripts/ui_lint.py` — the linter (argparse; stdlib; `--baseline` for recorded debt; exit 1 on new high findings)\n\n## How to run (automation, when commands can run)\nThis skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/ui-component-quality --input target=<dir> [--input baseline=<findings.csv>] --out <dir>` (see `--explain build/ui-component-quality`). Report the `run.json` results; do not hand-write the deliverables the script produces (`findings.csv`, `report.md`, `a11y-checklist.md`). The lint step exits 1 on any new high-severity finding, so a non-compliant component set fails the run by design; fix the findings in code, then re-run.\n"
  },
  {
   "id": "build/webapp-testing-runner",

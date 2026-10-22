@@ -254,7 +254,10 @@
    "build/systematic-debugging-runner",
    "build/safe-fix",
    "build/handoff-and-thread-close",
-   "build/security-review"
+   "build/security-review",
+   "build/perf-review-runner",
+   "build/tech-debt-audit-runner",
+   "build/ui-component-quality"
   ],
   "playbooks": []
  },
