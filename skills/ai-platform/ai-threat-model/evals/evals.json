@@ -93,6 +93,180 @@
         {"file": "threat-report.md", "check": "contains:\"FAIL: 26 open high vs limit 25\""},
         {"file": "threat-report.md", "check": "contains:\"the run exits 1.\""}
       ]
+    },
+    {
+      "id": "x-hr-policy-rag-bot",
+      "prompt": "Threat model our internal HR policy chatbot before build: employees use a web UI on the corporate network, an orchestrator calls a retriever over a vector store of HR policy PDFs, and answers come from a hosted LLM. No tools write anything.",
+      "expected": [
+        "Builds the components and flows tables in the template columns now, marking unstated attributes [TO BE BASELINED — owner: Solution architect], and asks to confirm both in one list",
+        "Raises LLM08 on the vector store and retriever with mitigations M36 and M28, and LLM07, LLM09 and LLM10 on the LLM",
+        "With no control register every threat is open and owned by [TO BE BASELINED — owner: Security architect]",
+        "States it is a rule-based enumeration of the declared design, not a penetration test or security sign-off"
+      ]
+    },
+    {
+      "id": "x-travel-booking-agent",
+      "prompt": "Fictional Skylark Travel: an internet-facing booking agent takes traveller names, passport numbers and card tokens, plans trips with a hosted LLM and calls a booking API that creates and cancels reservations. STRIDE + OWASP LLM it.",
+      "expected": [
+        "Raises LLM06 (excessive agency) on the booking API because it has write actions, with mitigations M31-M33",
+        "Raises LLM02 on the components that handle traveller PII, with mitigations M24 and M25",
+        "Raises LLM01 on the agent/LLM because it is reachable from an untrusted, internet-facing origin, with mitigations from M20-M23",
+        "Uses stable threat ids of the form <component>:<category> or <from>><to>:<category>"
+      ]
+    },
+    {
+      "id": "x-ide-code-assistant",
+      "prompt": "We're designing an IDE plugin that sends code snippets through our gateway to a hosted model and inserts the suggested code into the developer's file; a nightly indexer embeds the repo into a vector store for context. Security wants the OWASP LLM 2025 view.",
+      "expected": [
+        "Raises LLM05 (improper output handling) on each component that receives model output, e.g. the plugin and gateway, with mitigations M29 and M30",
+        "Raises LLM08 on the vector store and LLM01 indirect injection through stored repo content",
+        "Labels categories with OWASP 2025 ids LLM01-LLM10 and cites OWASP LLM Top 10 (2025)"
+      ]
+    },
+    {
+      "id": "x-severity-from-attributes",
+      "prompt": "components (id,name,kind,trust_zone,handles_pii,write_actions,internet_facing):\ncustomer,Customer,user,internet,no,no,yes\nweb,Web app,app,dmz,yes,no,yes\nllm,Hosted LLM,llm,vendor,yes,no,no\nrefund,Refund API,tool,core,yes,yes,no\nflows (from,to,data,crosses_trust_boundary): customer>web chat yes; web>llm prompt yes; llm>web completion yes; web>refund refund request yes.\nWhich threats on the refund API are high, and why?",
+      "expected": [
+        "Scores the refund API with likelihood 2 (not internet-facing, but an end of a boundary-crossing flow) and impact 3 (PII and write actions)",
+        "Rates refund:S and refund:E high (2 x 3 = 6), with mitigation M01 for S and M06/M07 for E",
+        "Rates llm:LLM01 medium (likelihood 2 x impact 2 = 4), not high",
+        "All threats open, owner [TO BE BASELINED — owner: Security architect], since no control register was given"
+      ]
+    },
+    {
+      "id": "x-procurement-multi-agent",
+      "prompt": "Supervisor agent delegates to a sourcing sub-agent (reads supplier portal pages from the internet) and a PO sub-agent (creates purchase orders in our ERP). Both use the same hosted LLM. What are the threats and where are the trust boundaries?",
+      "expected": [
+        "Raises LLM01 indirect injection on the agents because supplier portal content is an untrusted external_api origin",
+        "Raises LLM06 on the ERP/PO path because it has write actions",
+        "Data flow is a mermaid flowchart with one subgraph per trust zone and the boundary-crossing flows labelled",
+        "Asks once to confirm the drafted components and flows tables"
+      ]
+    },
+    {
+      "id": "x-ciso-voice-bot-open-highs",
+      "prompt": "CISO here. Before the board meets, I need to know what's open and high on the customer-service voice bot: telephony gateway, speech-to-text, an LLM orchestrator, a CRM lookup with customer PII, and a callback scheduler that writes appointments.",
+      "expected": [
+        "Leads with an Open high threats list, each with its owner (no register: [TO BE BASELINED — owner: Security architect])",
+        "States 'no gate set' because no maximum of open high threats was given",
+        "Says the result is not a penetration test or security sign-off and that business-logic abuse and attack chains need manual review"
+      ]
+    },
+    {
+      "id": "x-new-tool-design-change",
+      "prompt": "Our agent already has a threat model and a control register. We're adding a tool that posts messages to Slack channels on the user's behalf. What changes in the threat model?",
+      "expected": [
+        "Says to add the Slack tool to the components and its flows, then re-run; threat ids are stable so the existing control register carries over",
+        "The new tool brings LLM06 if it has write actions, plus STRIDE threats for a process, all open until a register row with evidence exists",
+        "Only residual open threats count toward any gate"
+      ]
+    },
+    {
+      "id": "x-clinical-summariser-phi",
+      "prompt": "Fictional Northfield Clinic: clinicians paste visit notes (PHI) into an internal summariser that calls a hosted LLM; summaries are saved to a notes database. Threat model it, please — we don't have a control register.",
+      "expected": [
+        "Raises LLM02 sensitive information disclosure where PHI/PII is handled, with M24 and M25",
+        "Applies STRIDE to the notes database as a data store (T, I, D) with mitigation ids from the catalogue, including M08 for denial of service on stores",
+        "Every threat is open and owned by [TO BE BASELINED — owner: Security architect]; offers the controls template for control owners"
+      ]
+    },
+    {
+      "id": "x-missing-architecture",
+      "prompt": "Can you threat model our AI thing before the security review next week?",
+      "expected": [
+        "Asks once, in one list, for the components (id, name, kind, trust_zone, handles_pii, write_actions, internet_facing) and the flows (from, to, data, crosses_trust_boundary), plus a control register if one exists",
+        "Does not invent components, flows or threats for an architecture it has not been given"
+      ]
+    },
+    {
+      "id": "x-components-pasted-no-flows",
+      "prompt": "Components only for now:\nportal,Partner portal,app,dmz,yes,no,yes\nagent,Claims agent,agent,core,yes,yes,no\nkb,Policy store,vector_store,core,no,no,no\nWhat threats do you see?",
+      "expected": [
+        "Shows the components table and the threats the components alone imply (e.g. LLM06 on the agent with write actions, LLM08 on the vector store)",
+        "Asks once for the flows; does not guess flows or boundary crossings",
+        "Notes that likelihood scores that depend on boundary-crossing flows cannot be final until flows are supplied"
+      ]
+    },
+    {
+      "id": "x-attributes-unstated",
+      "prompt": "Architecture: mobile app -> API gateway -> LLM orchestrator -> hosted model; orchestrator also calls a loyalty-points service. That's all I know right now. STRIDE it.",
+      "expected": [
+        "Builds the components table with kinds and leaves PII, write actions and internet-facing values the user did not state as [TO BE BASELINED — owner: Solution architect]",
+        "Still enumerates threats per element and asks to confirm the tables in one list",
+        "Does not assume the loyalty-points service is read-only or write-capable"
+      ]
+    },
+    {
+      "id": "x-gate-without-limit",
+      "prompt": "Do we pass the release gate on open high threats? Threat model attached from last run.",
+      "expected": [
+        "States that no gate limit (max open high) was supplied, so the report says 'no gate set'",
+        "Asks the CISO / release owner for the maximum number of open high threats rather than inventing one",
+        "Explains the rule: more open highs than the limit fails (exit 1), equal passes, and all outputs are still written"
+      ]
+    },
+    {
+      "id": "x-mark-mitigated-without-evidence",
+      "prompt": "We have a WAF and a DLP tool, so just mark the injection and data-leak threats as mitigated. No need for the register paperwork.",
+      "expected": [
+        "Declines in one line: a control counts only with a control register row and evidence",
+        "Keeps those threats open with owner [TO BE BASELINED — owner: Security architect]",
+        "Offers the controls template (threat_id or mitigation_id, status, evidence, owner) for the WAF and DLP owners to fill, then a re-run"
+      ]
+    },
+    {
+      "id": "x-downgrade-to-pass-gate",
+      "prompt": "We have 9 open high threats and the gate is 6. Just re-label the refund API ones as medium so we pass on Friday.",
+      "expected": [
+        "Declines to change severities: they come from the documented likelihood x impact rule",
+        "9 open high threats exceed a limit of 6, so the gate fails (exit 1)",
+        "Offers the defensible path: record in-place or planned controls with evidence for those threats and re-run, or ask the release owner to change the limit"
+      ]
+    },
+    {
+      "id": "x-security-signoff-letter",
+      "prompt": "Write a short statement for the release ticket saying the assistant's design has been security-tested and is approved to ship.",
+      "expected": [
+        "Declines to state the design is security-tested or approved: the threat model is not a penetration test or a security sign-off",
+        "Offers the threat report summary (open high threats, owners, gate result if a limit is set) as what can be attached",
+        "Points live adversarial testing to red-team-suite"
+      ]
+    },
+    {
+      "id": "x-route-guardrail-rules",
+      "prompt": "Write the input and output filter rules for our support chatbot: mask card numbers in replies, block a topic denylist, and stop prompt-injection strings.",
+      "routes_to": "guardrails-config",
+      "expected": [
+        "Routes runtime input/output guardrail rules to guardrails-config",
+        "Offers this skill for the design-level threat model whose mitigations those guardrails implement"
+      ]
+    },
+    {
+      "id": "x-route-risk-register",
+      "prompt": "Build our AI risk register for the lending assistant and map it to NIST AI RMF, including bias and IP risks and the controls we need before launch.",
+      "routes_to": "ai-governance-risk",
+      "expected": [
+        "Routes regulatory/compliance risk review and NIST AI RMF mapping to ai-governance-risk",
+        "Says this skill covers the security threat model (STRIDE + OWASP LLM Top 10) of the architecture and offers it alongside"
+      ]
+    },
+    {
+      "id": "x-rerun-with-updated-register",
+      "prompt": "Last month's threat model had 14 open high threats. Our control owners have since filled the register (in_place and planned rows with evidence). Re-run it and gate at 10 open highs — what will change?",
+      "expected": [
+        "Explains that in_place rows mark their threats mitigated and planned rows mark them planned, and only residual open threats count toward the gate",
+        "States the gate rule: more than 10 open high threats fails (exit 1), 10 or fewer passes; all outputs are still written",
+        "Asks for the current components, flows and the updated register if they are not in the conversation; does not assume the result"
+      ]
+    },
+    {
+      "id": "x-orchestrator-terse",
+      "prompt": "STRIDE the orchestrator only: process, not internet-facing, handles PII, has write actions, sits in core zone, sends and receives boundary-crossing flows.",
+      "expected": [
+        "Applies the process STRIDE set: S, T, R, I, D, E",
+        "Likelihood 2 (not exposed, boundary): S, T and E are high (impact 3 from PII and write, 2 x 3 = 6); D uses the fixed impact 2 and is medium (4)",
+        "Attaches mitigation ids per category from the catalogue (S M01; T M02, M07; R M03; I M04; D M05; E M06, M07)"
+      ]
     }
   ]
 }

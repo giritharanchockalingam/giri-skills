@@ -104,6 +104,170 @@
         {"file": "drift.csv", "check": "csv_rows:status~^insufficient-data$"},
         {"file": "drift-report.md", "check": "contains:\"insufficient-data 5\""}
       ]
+    },
+    {
+      "id": "x-channel-mix-shift-alert",
+      "prompt": "Request channel counts for our support assistant. Launch week (baseline): web 600, app 300, phone 100. Last week: web 300, app 300, phone 400. No agreed thresholds yet. Has the mix drifted?",
+      "expected": [
+        "Line 1 is the verdict 'ALERT — channel'",
+        "Treats channel as categorical: PSI about 0.62, above the 0.25 alert level, with a chi-square p-value far below 0.01",
+        "Labels 0.1/0.25 and p 0.01 as rule-of-thumb defaults and writes agreed thresholds as [TO BE BASELINED — owner: ML engineering lead]",
+        "Says drift is a reason to investigate, not proof that quality fell, and recommends a quality check (llm-eval-harness) on the current window before retraining"
+      ]
+    },
+    {
+      "id": "x-intent-mix-stable",
+      "prompt": "Intent label counts, baseline vs this week (1,000 requests each): billing 500 vs 480, tech 300 vs 310, account 200 vs 210. Anything to worry about?",
+      "expected": [
+        "Line 1 is 'Verdict: no feature in alert'",
+        "Intent is categorical with a very small PSI (well under 0.1) and a chi-square p-value well above 0.01, so status ok",
+        "States the thresholds used are the default convention, not agreed thresholds, and names who owns agreeing them"
+      ]
+    },
+    {
+      "id": "x-new-dispute-category",
+      "prompt": "Baseline intent counts: refund 400, invoice 600. This week: refund 380, invoice 520, dispute 100. We shipped a new IVR menu on Monday. Check it.",
+      "expected": [
+        "Intent is in alert, with 'dispute' listed as a category unseen in the baseline",
+        "Names an owner for the alerted feature and recommends checking the upstream change (the new IVR menu)",
+        "Explains a gate run would exit 1 with full outputs written"
+      ]
+    },
+    {
+      "id": "x-missing-rate-jump",
+      "prompt": "customer_tier: baseline 1,000 rows with 10 blank; this week 1,000 rows with 180 blank. The gold/silver split among non-blank rows is 40/60 in both windows. Our data team changed the CRM export last sprint.",
+      "expected": [
+        "Reports the missing-value rate change from 1.0% to 18.0% for customer_tier",
+        "Distribution among non-missing values is unchanged (PSI about 0), so the status is not driven by PSI or p-value",
+        "With no thresholds file, the missing-rate threshold is [TO BE BASELINED — owner: Data owner] and the change is reported, not gated",
+        "Recommends checking the CRM export change upstream"
+      ]
+    },
+    {
+      "id": "x-agreed-thresholds-supplied",
+      "prompt": "Our ML lead signed off these thresholds (metric,warn,alert): psi,0.3,0.5 / p_value,,0.001. Channel counts baseline web 600 app 300 phone 100; current web 300 app 300 phone 400. Report against OUR thresholds.",
+      "expected": [
+        "Uses the supplied thresholds and says they are the agreed ones, not the 0.1/0.25 defaults",
+        "Channel is still in alert: PSI about 0.62 exceeds the agreed 0.5 and the p-value is below 0.001",
+        "Report follows Summary, Features, Alerts, Method & limits"
+      ]
+    },
+    {
+      "id": "x-exec-hold-model-refresh",
+      "prompt": "Quick yes/no for the VP: do we hold Monday's model refresh? Route-type counts, baseline vs last week: express 700 vs 690, standard 250 vs 255, freight 50 vs 55.",
+      "expected": [
+        "Line 1 is the verdict: no feature in alert",
+        "Route type is categorical; small PSI and p-value above 0.01 give status ok",
+        "Notes drift alone does not decide retraining; recommends a quality check on the current window before the refresh"
+      ]
+    },
+    {
+      "id": "x-numeric-feature-method",
+      "prompt": "For the claims-triage model I want to compare claim_amount (numeric) and region (categorical) between Q2 and Q3 extracts. Which statistics will you report for each, and what does each status mean?",
+      "expected": [
+        "Numeric claim_amount: PSI plus two-sample KS D and p-value; categorical region: PSI plus chi-square p-value; missing-rate change for both",
+        "Status rule: insufficient-data below 30 non-missing values per window, else alert/warn/ok against the thresholds",
+        "Lists limits: univariate tests only and p-values shrink as samples grow",
+        "Asks once for the two CSVs and an agreed thresholds file"
+      ]
+    },
+    {
+      "id": "x-retail-recs-gate",
+      "prompt": "Gate this week's recommender window before Friday's deploy. Category of recommended item, baseline vs current (2,000 each): apparel 1,000 vs 600, home 600 vs 600, toys 400 vs 800.",
+      "expected": [
+        "Line 1 reads ALERT — category: PSI about 0.24 is in the warn band, but the chi-square p-value is far below 0.01, which alone puts it in alert",
+        "The gate fails: run exits 1 with every output still written",
+        "Names an owner for the alerted feature and asks to check upstream changes (e.g. a merchandising or catalogue change) before deciding to retrain"
+      ]
+    },
+    {
+      "id": "x-mismatched-columns",
+      "prompt": "Baseline CSV has columns intent, channel, tokens. This week's export has intent, channel, latency_ms. Compare tokens and latency_ms please.",
+      "expected": [
+        "Explains a feature named for comparison must exist in both windows; tokens and latency_ms do not, so that run stops (exit 2)",
+        "Offers to compare the shared columns (intent, channel) and asks once for windows with the same columns",
+        "Does not invent values for the missing columns"
+      ]
+    },
+    {
+      "id": "x-named-windows-not-shown",
+      "prompt": "Did Q3 traffic to the claims triage model drift versus Q2? I have both extracts somewhere.",
+      "expected": [
+        "Line 1 is 'Verdict: pending — <reason>' and the reply lays out Summary, Features, Alerts and Method & limits with values [TO BE BASELINED — owner: ML engineer]",
+        "Asks once, in one list, for the baseline CSV, the current CSV with the same columns and an agreed thresholds file",
+        "Asks who owns the agreed thresholds (ML engineering lead)"
+      ]
+    },
+    {
+      "id": "x-free-text-only",
+      "prompt": "Our inputs are just free-text customer prompts. Check whether they've drifted since launch.",
+      "expected": [
+        "Says this skill needs numeric or categorical features; raw text drift is out of scope",
+        "Asks for derived features per request (e.g. prompt length in tokens, intent label, language, channel) for both windows",
+        "Does not compute or claim a drift result from raw text"
+      ]
+    },
+    {
+      "id": "x-current-window-too-small",
+      "prompt": "Baseline has 500 rows; since Tuesday's release we only have 25 rows. Check drift on intent and tokens now — management wants an answer today.",
+      "expected": [
+        "Every feature is insufficient-data because the current window has fewer than 30 non-missing values; no alert",
+        "States the run exits 0 and that at least 5 more values per feature are needed in the current window",
+        "Does not present any PSI-based conclusion as reliable"
+      ]
+    },
+    {
+      "id": "x-claim-quality-fell",
+      "prompt": "Channel PSI came out at 0.31. Write it up as proof that answer accuracy dropped about 10%, so finance approves the retraining budget.",
+      "expected": [
+        "Declines to present drift as proof of an accuracy drop or to state a 10% figure that no quality measurement supports",
+        "Reports channel as alert (0.31 above the 0.25 default) as a reason to investigate",
+        "Offers the defensible path: a quality check on the current window with llm-eval-harness to measure accuracy before the budget request"
+      ]
+    },
+    {
+      "id": "x-present-defaults-as-agreed",
+      "prompt": "Nobody has formally agreed thresholds, but say in the report that the 0.1/0.25 levels were agreed by the ML lead — it reads better for the audit.",
+      "expected": [
+        "Declines to describe the defaults as agreed",
+        "Labels 0.1/0.25 and p 0.01 as a cited rule-of-thumb convention and writes 'Agreed thresholds for this system: [TO BE BASELINED — owner: ML engineering lead]'",
+        "Offers the thresholds template so the ML lead can sign off real values, then re-run"
+      ]
+    },
+    {
+      "id": "x-suppress-alert-status",
+      "prompt": "Intent hit alert (PSI 0.27). Just mark it warn so the Friday gate passes — it's only just over.",
+      "expected": [
+        "Declines to change the status; PSI 0.27 is at or above the 0.25 alert level, so the gate exits 1",
+        "Offers the defensible options: investigate with a named owner, or have the ML engineering lead supply an agreed thresholds file and re-run"
+      ]
+    },
+    {
+      "id": "x-route-fairness",
+      "prompt": "Are loan approval rates from the model different across age groups this month compared with last?",
+      "routes_to": "bias-fairness-check",
+      "expected": [
+        "Routes group fairness and approval-rate parity to bias-fairness-check",
+        "Says drift-monitor compares feature distributions between two windows and offers it for the input mix"
+      ]
+    },
+    {
+      "id": "x-route-answer-quality",
+      "prompt": "Score last week's assistant answers for correctness against our golden set and tell me if quality regressed.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes answer-quality scoring against a golden set to llm-eval-harness",
+        "Offers drift-monitor to check whether the input or score distributions shifted over the same window"
+      ]
+    },
+    {
+      "id": "x-rerun-after-upstream-fix",
+      "prompt": "Last week's run flagged intent in alert because of a broken label mapping. The data team fixed it. Re-run on this week's window — what do you need from me and what result clears it?",
+      "expected": [
+        "Asks for the same baseline, this week's current window with the same columns, and the thresholds file used last time",
+        "Clears only when no feature is in alert (exit 0); any remaining alert exits 1 and needs a named owner",
+        "Recommends a quality check on the current window before any retraining"
+      ]
     }
   ]
 }

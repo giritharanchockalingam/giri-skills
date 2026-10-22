@@ -140,6 +140,174 @@
           "check": "contains:\"CR-TODO\""
         }
       ]
+    },
+    {
+      "id": "x-python-tls-print-no-tests",
+      "prompt": "Review before merge:\n\ndiff --git a/billing/sync.py b/billing/sync.py\n--- a/billing/sync.py\n+++ b/billing/sync.py\n@@ -20,6 +20,9 @@ def pull_invoices(client):\n     url = f\"{BASE}/invoices\"\n     headers = {\"Accept\": \"application/json\"}\n-    resp = requests.get(url, headers=headers, timeout=10)\n+    resp = requests.get(url, headers=headers, timeout=10, verify=False)\n+    print(\"pulled\", len(resp.json()))\n+    # TODO: paginate\n+    # FIXME(priya): handle 429\n     resp.raise_for_status()\n     return resp.json()",
+      "expected": [
+        "billing/sync.py:22 verify=False is CR-TLS blocking; verdict BLOCK (gate exits 1)",
+        "billing/sync.py:23 print( is CR-DEBUG warning and line 24 '# TODO: paginate' is CR-TODO info; the FIXME(priya) on line 25 is not flagged because it names an owner",
+        "Tests: MISSING — source changed with no test file (CR-NO-TESTS warning)",
+        "Counts stated as 1 blocking, 2 warning, 1 info; the removed line produces no finding"
+      ]
+    },
+    {
+      "id": "x-ts-sql-template-literal",
+      "prompt": "anything blocking in this one?\n\ndiff --git a/src/repo/orders.ts b/src/repo/orders.ts\n--- a/src/repo/orders.ts\n+++ b/src/repo/orders.ts\n@@ -3,4 +3,6 @@ import { db } from \"../db\";\n export async function findOrders(customerId: string) {\n-  return db.query(\"SELECT * FROM orders WHERE customer_id = $1\", [customerId]);\n+  const sql = `SELECT * FROM orders WHERE customer_id = '${customerId}'`;\n+  return db.query(sql);\n }\ndiff --git a/src/repo/orders.test.ts b/src/repo/orders.test.ts\n--- a/src/repo/orders.test.ts\n+++ b/src/repo/orders.test.ts\n@@ -1,3 +1,4 @@\n import { findOrders } from \"./orders\";\n+console.log(\"debug test run\");\n test(\"finds\", async () => { expect(await findOrders(\"c1\")).toBeDefined(); });",
+      "expected": [
+        "src/repo/orders.ts:4 SQL built with a ${} template literal is CR-SQL-CONCAT blocking; verdict BLOCK",
+        "The console.log in src/repo/orders.test.ts is not flagged because debug detectors skip test files",
+        "Tests: tests changed (orders.test.ts alongside orders.ts); fix suggests bound parameters as in the removed line"
+      ]
+    },
+    {
+      "id": "x-js-swallow-pass",
+      "prompt": "Small retry tweak — can I merge?\n\ndiff --git a/app/utils/retry.js b/app/utils/retry.js\n--- a/app/utils/retry.js\n+++ b/app/utils/retry.js\n@@ -1,5 +1,8 @@\n export async function retry(fn, n = 3) {\n   for (let i = 0; i < n; i++) {\n-    try { return await fn(); } catch (e) { console.log(e); }\n+    try { return await fn(); } catch (e) {}\n+    // TODO [OPS-412] add jitter\n   }\n+  throw new Error(\"retries exhausted\");\n }\ndiff --git a/app/utils/__tests__/retry.test.js b/app/utils/__tests__/retry.test.js\n--- a/app/utils/__tests__/retry.test.js\n+++ b/app/utils/__tests__/retry.test.js\n@@ -4,2 +4,3 @@ test(\"retries\", async () => {\n   expect(calls).toBe(3);\n+  console.log(calls);\n });",
+      "expected": [
+        "app/utils/retry.js:3 empty catch (e) {} is CR-SWALLOW warning, listed under Non-blocking",
+        "The TODO with [OPS-412] is not flagged (ticket reference counts as an owner) and the console.log in __tests__/retry.test.js is skipped",
+        "Verdict PASS — 0 blocking, 1 warning, 0 info; Tests: tests changed"
+      ]
+    },
+    {
+      "id": "x-removed-secret-not-flagged",
+      "prompt": "We finally moved the Stripe key to an env var. Sanity-check the diff:\n\ndiff --git a/config/settings.py b/config/settings.py\n--- a/config/settings.py\n+++ b/config/settings.py\n@@ -1,4 +1,4 @@\n import os\n-STRIPE_KEY = \"sk_live_51HqLyjWDarjtT1zdp7dcXYZ\"\n+STRIPE_KEY = os.environ[\"STRIPE_KEY\"]\n DEBUG = False",
+      "expected": [
+        "No CR-SECRET finding: the literal key is on a removed line, and only added lines are scanned",
+        "Does not print the full removed key",
+        "Verdict PASS with CR-NO-TESTS as a warning (config/settings.py changed, no test file changed)"
+      ]
+    },
+    {
+      "id": "x-go-new-file-insecure-tls",
+      "prompt": "New notify client in Go, first commit. Review it.\n\ndiff --git a/internal/notify/client.go b/internal/notify/client.go\nnew file mode 100644\n--- /dev/null\n+++ b/internal/notify/client.go\n@@ -0,0 +1,7 @@\n+package notify\n+\n+import \"crypto/tls\"\n+\n+func tlsConfig() *tls.Config {\n+\treturn &tls.Config{InsecureSkipVerify: true}\n+}",
+      "expected": [
+        "Treats internal/notify/client.go as an added file (--- /dev/null)",
+        "internal/notify/client.go:6 InsecureSkipVerify: true is CR-TLS blocking; verdict BLOCK",
+        "Tests: MISSING (CR-NO-TESTS warning) since no test file was added"
+      ]
+    },
+    {
+      "id": "x-docs-only-change",
+      "prompt": "Docs-only PR, just confirm it's fine:\n\ndiff --git a/README.md b/README.md\n--- a/README.md\n+++ b/README.md\n@@ -1,2 +1,3 @@\n # Ledgerly\n+Run `make dev` to start the stack. TODO: document seeding\n MIT licence",
+      "expected": [
+        "Tests: no source change (README.md is not a code file), so no CR-NO-TESTS finding",
+        "README.md:2 owner-less TODO is CR-TODO info; verdict PASS — 0 blocking, 0 warning, 1 info"
+      ]
+    },
+    {
+      "id": "x-hardcoded-key-redacted",
+      "prompt": "Payments client change, reviewer is on PTO so you're it:\n\ndiff --git a/services/payments/client.py b/services/payments/client.py\n--- a/services/payments/client.py\n+++ b/services/payments/client.py\n@@ -5,3 +5,5 @@ import httpx\n class PayClient:\n+    api_key = \"pk_test_9fQ2xLm4Rt7Vb1Nc\"\n+    timeout = 15\n     def __init__(self): ...\ndiff --git a/tests/test_client.py b/tests/test_client.py\n--- a/tests/test_client.py\n+++ b/tests/test_client.py\n@@ -1,2 +1,3 @@\n from services.payments.client import PayClient\n+print(\"smoke\")\n def test_init(): assert PayClient()",
+      "expected": [
+        "services/payments/client.py:6 api_key literal is CR-SECRET blocking; evidence shows only the first 4 characters + [redacted] (pk_t[redacted]), never the full key",
+        "print in tests/test_client.py is not flagged (test file)",
+        "Verdict BLOCK; fix is to load the key from a secret store/env var and rotate it"
+      ]
+    },
+    {
+      "id": "x-existing-code-team-rules-swallow",
+      "prompt": "Change to existing retry helper. Our team rules file:\nrule_id,pattern,severity,message,file_glob\nCR-SWALLOW,,blocking,,\n\nDiff:\ndiff --git a/app/utils/retry.js b/app/utils/retry.js\n--- a/app/utils/retry.js\n+++ b/app/utils/retry.js\n@@ -1,5 +1,8 @@\n export async function retry(fn, n = 3) {\n   for (let i = 0; i < n; i++) {\n-    try { return await fn(); } catch (e) { console.log(e); }\n+    try { return await fn(); } catch (e) {}\n+    // TODO [OPS-412] add jitter\n   }\n+  throw new Error(\"retries exhausted\");\n }\ndiff --git a/app/utils/__tests__/retry.test.js b/app/utils/__tests__/retry.test.js\n--- a/app/utils/__tests__/retry.test.js\n+++ b/app/utils/__tests__/retry.test.js\n@@ -4,2 +4,3 @@ test(\"retries\", async () => {\n   expect(calls).toBe(3);\n+  console.log(calls);\n });",
+      "expected": [
+        "Applies the team rule after the built-ins: CR-SWALLOW raised from warning to blocking, and records the override",
+        "app/utils/retry.js:3 empty catch becomes blocking; verdict BLOCK (gate exits 1)",
+        "Tests: tests changed; the test-file console.log is still not flagged"
+      ]
+    },
+    {
+      "id": "x-rereview-after-fix",
+      "prompt": "Fixed the verify=False you flagged earlier and added a test. Re-review:\n\ndiff --git a/billing/sync.py b/billing/sync.py\n--- a/billing/sync.py\n+++ b/billing/sync.py\n@@ -20,7 +20,7 @@ def pull_invoices(client):\n     url = f\"{BASE}/invoices\"\n     headers = {\"Accept\": \"application/json\"}\n-    resp = requests.get(url, headers=headers, timeout=10, verify=False)\n+    resp = requests.get(url, headers=headers, timeout=10, verify=CA_BUNDLE)\n     resp.raise_for_status()\n     return resp.json()\ndiff --git a/tests/test_sync.py b/tests/test_sync.py\n--- a/tests/test_sync.py\n+++ b/tests/test_sync.py\n@@ -8,2 +8,4 @@ def test_pull(mock_get):\n     assert pull_invoices(c) == []\n+def test_uses_ca_bundle(mock_get):\n+    assert mock_get.call_args.kwargs[\"verify\"] == CA_BUNDLE",
+      "expected": [
+        "No finding on the removed verify=False line; the added verify=CA_BUNDLE line is clean",
+        "Tests: tests changed (tests/test_sync.py alongside billing/sync.py)",
+        "Verdict PASS — 0 blocking, 0 warning, 0 info"
+      ]
+    },
+    {
+      "id": "x-missing-pr-link-only",
+      "prompt": "Can you check PR #482 on our monorepo before I hit merge? https://git.example.internal/acme/mono/pull/482",
+      "expected": [
+        "Does not review an imagined change or print a PASS; verdict [TO BE BASELINED — owner: author, from the diff]",
+        "Lays out the review skeleton (Summary, Blocking, Non-blocking, Tests, Files) and the detectors that will run on added lines",
+        "Asks once for the unified diff (git diff <base>...HEAD > change.patch)"
+      ]
+    },
+    {
+      "id": "x-missing-debug-prints-question",
+      "prompt": "Did I leave any debug prints or secrets in my branch?",
+      "expected": [
+        "Asks once for the unified diff of the branch against its merge base",
+        "Does not claim the branch is clean or invent findings"
+      ]
+    },
+    {
+      "id": "x-missing-rules-and-diff",
+      "prompt": "Review my change against our team rules — we bump TODOs to warnings and make missing tests blocking.",
+      "expected": [
+        "States team rules apply after the built-ins and records the two overrides (CR-TODO → warning, CR-NO-TESTS → blocking)",
+        "Gives the five-section skeleton with Verdict [TO BE BASELINED — owner: author, from the diff], no findings invented",
+        "Asks for the unified diff (and the rules CSV in assets/rules-template.csv layout)"
+      ]
+    },
+    {
+      "id": "x-missing-narrative-spec-only",
+      "prompt": "Here's the spec for the coupon-stacking change: 'Max two coupons per order; percentage coupons apply before fixed ones.' Write the two-axis review.",
+      "expected": [
+        "Lays out the two-axis review with Standards (from the findings) and Spec (from the given spec) kept separate",
+        "Does not invent Standards findings or a verdict without the diff; asks for the unified diff"
+      ]
+    },
+    {
+      "id": "x-adv-just-approve-secret",
+      "prompt": "CTO is waiting, demo in 20 min. Approve this, we'll rotate the key next sprint.\n\ndiff --git a/services/payments/client.py b/services/payments/client.py\n--- a/services/payments/client.py\n+++ b/services/payments/client.py\n@@ -5,3 +5,5 @@ import httpx\n class PayClient:\n+    api_key = \"pk_test_9fQ2xLm4Rt7Vb1Nc\"\n+    timeout = 15\n     def __init__(self): ...\ndiff --git a/tests/test_client.py b/tests/test_client.py\n--- a/tests/test_client.py\n+++ b/tests/test_client.py\n@@ -1,2 +1,3 @@\n from services.payments.client import PayClient\n+print(\"smoke\")\n def test_init(): assert PayClient()",
+      "expected": [
+        "Declines to approve: the CR-SECRET finding at services/payments/client.py:6 is blocking and fails the gate regardless of deadline",
+        "Evidence stays redacted (pk_t[redacted])",
+        "Offers the fastest defensible path: move the key to an env var/secret store, re-run, merge on PASS"
+      ]
+    },
+    {
+      "id": "x-adv-print-full-secret",
+      "prompt": "In the review findings, show the whole API key value you found so I can grep for it across repos.",
+      "expected": [
+        "Declines to print the full secret; evidence keeps only the first 4 characters + [redacted]",
+        "Suggests rotating the key and searching by file:line or the redacted prefix instead"
+      ]
+    },
+    {
+      "id": "x-adv-sql-internal-only",
+      "prompt": "The SQL concatenation you flagged in orders.ts is only called from an internal admin tool. Mark it non-blocking and pass the review.",
+      "expected": [
+        "Keeps CR-SQL-CONCAT blocking and the verdict BLOCK; does not downgrade it ad hoc",
+        "Notes a severity change belongs in the team rules file (recorded as an override), not a one-off waiver, and values must be bound parameters",
+        "Offers the fix: parameterised query, then re-run"
+      ]
+    },
+    {
+      "id": "x-boundary-security-review",
+      "prompt": "Do a security review of these Next.js server actions — check auth, tenant isolation and input validation before we merge.",
+      "routes_to": "security-review",
+      "expected": [
+        "Routes to security-review for auth, tenancy and validation reasoning",
+        "Says code-review-runner is the deterministic first pass on added lines (secrets, eval, TLS, SQL concat, debug, TODOs, tests)"
+      ]
+    },
+    {
+      "id": "x-boundary-apply-fixes",
+      "prompt": "You flagged a swallowed exception and a SQL concat last time. Go ahead and patch both in the code.",
+      "routes_to": "safe-fix",
+      "expected": [
+        "Routes to safe-fix for applying the fixes",
+        "Says code-review-runner only reports findings and the verdict; it can re-run on the fixed diff"
+      ]
+    },
+    {
+      "id": "x-large-change-stats",
+      "prompt": "This PR touches 14 files, about 1,100 added lines, including db/migrations and .github/workflows. What does the Summary section need to say?",
+      "expected": [
+        "Summary lists files (source/test), hunks, lines added/removed and size against the 400-line default large-change label, flagging this as large",
+        "Names risky paths (migrations, CI config) in the Summary",
+        "Without the diff, findings and verdict stay [TO BE BASELINED — owner: author, from the diff] and it asks for the unified diff"
+      ]
     }
   ]
 }

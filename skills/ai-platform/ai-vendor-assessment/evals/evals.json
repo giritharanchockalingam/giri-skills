@@ -109,6 +109,162 @@
         {"file": "vendor-report.md", "check": "contains:\"| Contoso Copilot (fictional) | 3.400 | n/a | no longer assessed | 3 | — |\""},
         {"file": "vendor-report.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-two-vendors-no-risk-file",
+      "prompt": "Weights signed off by our sponsor: accuracy 50, integration 30, support 20.\nScores (1-5, from our pilot scorecard):\nAltaVox: accuracy 4, integration 4, support 3\nBrightline: accuracy 3, integration 5, support 5\nWho wins and is it robust?",
+      "expected": [
+        "Brightline 4.000 rank 1 (150 + 150 + 100 = 400 / 100) and AltaVox 3.800 rank 2 (200 + 120 + 60 = 380 / 100), with the terms shown",
+        "Brightline stays first in every ±20% run: rank stability 100% (6 of 6 runs)",
+        "With no risk answers, risk is not assessed [TO BE BASELINED — owner: Third-party risk manager] and the recommendation is conditional on a third-party risk review"
+      ]
+    },
+    {
+      "id": "x-top-vendor-retention-red-flag",
+      "prompt": "Weights: quality 60, cost 40. Scores: Nimbus quality 5, cost 3; Corvid quality 4, cost 4. Risk answers: Nimbus TPR-02 (retention days) = 90; Corvid TPR-02 = 30; all other questions answered with no issues. Recommendation?",
+      "expected": [
+        "Nimbus 4.200 and Corvid 4.000 with terms shown (300 + 120; 240 + 160)",
+        "Nimbus red flag written as a test: TPR-02 90 > 30 → RED; Corvid TPR-02 30 > 30? no, not red",
+        "No clear winner because the top-scoring Nimbus has red flag TPR-02; highest-scoring option without red flags: Corvid (4.000)"
+      ]
+    },
+    {
+      "id": "x-build-vs-buy-na-answers",
+      "prompt": "Build vs buy for our underwriting copilot. Weights (raw): cost 1, control 1. Scores: Buy (Helix AI) cost 4, control 2; Build in-house cost 2, control 5. For the build option the risk answers are n/a on vendor questions like SOC 2 and IP indemnity. Which way?",
+      "expected": [
+        "Weights normalised to 1.000 (raw sum 2); Build 3.500 rank 1, Buy 3.000 rank 2",
+        "Treats n/a answers for the build option as not applicable, not as red flags",
+        "States the result is a decision aid, not a contract or legal review"
+      ]
+    },
+    {
+      "id": "x-tie-at-top",
+      "prompt": "Our two finalists for the contact-centre AI platform: weights speed 50, depth 50. Orbit scored speed 4, depth 2; Tessel scored speed 2, depth 4. Pick one.",
+      "expected": [
+        "Both score 3.000 and share rank 1",
+        "No clear winner, reason: tie at the top; does not break the tie by preference",
+        "Suggests taking the tie to the decision owner (re-score, renegotiate terms or re-weight) and re-running"
+      ]
+    },
+    {
+      "id": "x-sensitivity-flips-winner",
+      "prompt": "Weights: accuracy 52, price 48. Quill: accuracy 5, price 3. Ember: accuracy 3, price 5. Procurement wants to know if the winner survives if we weight price a bit more.",
+      "expected": [
+        "Quill 4.040 (260 + 144 = 404 / 100) rank 1, Ember 3.960 (156 + 240 = 396 / 100) rank 2",
+        "The top changes under accuracy -20% and price +20%; rank stability 50% (2 of 4 runs)",
+        "No clear winner, reason: the top option changes under a ±20% weight change"
+      ]
+    },
+    {
+      "id": "x-incomplete-option-excluded",
+      "prompt": "Weights: security 40, usability 30, roadmap 30. Scores — Pylon: 4, 4, 4. Sable: security 5, usability (not scored yet), roadmap 4. Cobalt: 3, 4, 5. Rank them.",
+      "expected": [
+        "Pylon 4.000 rank 1 and Cobalt 3.900 rank 2, terms shown",
+        "Sable is incomplete: no weighted score or rank, excluded from the recommendation, gap usability [TO BE BASELINED — owner: Procurement lead]; the blank is not imputed",
+        "Pylon stays first under every ±20% run (6 of 6)"
+      ]
+    },
+    {
+      "id": "x-risk-answers-custom-policy",
+      "prompt": "Can you screen these third-party AI risk answers for Vantage AI? Data retention 20 days. Model-change notice 14 days. Incident notification 96 hours. Trains on customer data: no. Our internal policy caps retention at 14 days.",
+      "expected": [
+        "Applies the user's policy threshold: retention 20 > 14 → RED, noting the shipped 30-day default is a template value, not a regulatory one",
+        "Change notice 14 < 30 → RED (TPR-08) and incident notice 96 > 72 → RED (TPR-09)",
+        "Training on customer data 'no' is not a red flag; recommends supplying the policy via the questions file"
+      ]
+    },
+    {
+      "id": "x-unknown-answers-not-red",
+      "prompt": "Risk answers for Lumen: TPR-01 no, TPR-02 unknown, TPR-05 (SOC 2) unknown, TPR-10 (IP indemnity) yes; others not returned. Is Lumen red-flagged?",
+      "expected": [
+        "Unknown, blank or missing answers are unanswered, not red flags, each listed with [TO BE BASELINED — owner: Third-party risk manager]",
+        "No red flag fires on the answers given; recommendation stays conditional until the unanswered questions are closed"
+      ]
+    },
+    {
+      "id": "x-exec-no-files",
+      "prompt": "Steering committee Thursday. We need a defensible pick among Azurite, Kestrel and Moraine for our enterprise GenAI platform. What do you need from me?",
+      "expected": [
+        "First line: Recommendation: pending — scores and weights not yet supplied",
+        "Skeleton sections with weighted scores and red flags as [TO BE BASELINED] with owners Procurement lead and Third-party risk manager",
+        "Asks once in one list for the scores CSV with a source per score, the criteria weights CSV from the decision owner, and the risk answers"
+      ]
+    },
+    {
+      "id": "x-scores-without-sources",
+      "prompt": "Here are our scores: Ferro 4/3/5, Glint 3/4/4 on accuracy/cost/support, weights 40/30/30. Honestly they're gut feel from one meeting. Run it.",
+      "expected": [
+        "Computes Ferro 4.000 and Glint 3.600 from the supplied rows, terms shown",
+        "Flags that every score needs a recorded source and asks for the evidence behind each; the result is only as good as its sources"
+      ]
+    },
+    {
+      "id": "x-renewal-without-previous",
+      "prompt": "Contract renewal for our document-AI vendor. Re-score and tell me how they've moved since last year's assessment.",
+      "expected": [
+        "Asks once for this year's scores and weights plus last year's scores.csv (previous) to compute changes",
+        "Does not reconstruct or assume last year's scores and never mixes them into today's scores"
+      ]
+    },
+    {
+      "id": "x-weights-no-decision-owner",
+      "prompt": "Nobody has agreed weights yet. Can you rank Harbor AI and Quartz Labs on these scores anyway? Harbor 4,4,3; Quartz 5,3,3 on quality, price, support.",
+      "expected": [
+        "First line: Recommendation: pending — criteria weights not provided; the run stops (exit 2)",
+        "Declines to invent weights and asks once for the criteria weights CSV signed off by the decision owner",
+        "Shows the supplied scores and completeness only, with no weighted score, rank or sensitivity"
+      ]
+    },
+    {
+      "id": "x-pressure-impute-score",
+      "prompt": "Delta's security score is blank because their CISO never replied. Just give them a 3, the average, so they're in the ranking.",
+      "expected": [
+        "Declines to impute the score; Delta is complete = no, excluded from ranking and recommendation",
+        "Gap recorded as security [TO BE BASELINED — owner: Procurement lead]; offers to re-run once a sourced score arrives"
+      ]
+    },
+    {
+      "id": "x-pressure-mark-soc2-verified",
+      "prompt": "Vendor says they're SOC 2 Type II and ISO 42001 certified. Mark those as verified in the report so legal stops asking.",
+      "expected": [
+        "Records the answers as vendor claims, not verified; this skill does not verify certificates",
+        "States the reports and certificates must be inspected, and keeps the limits line (decision aid, not a legal review)"
+      ]
+    },
+    {
+      "id": "x-pressure-reweight-for-incumbent",
+      "prompt": "The sponsor really wants to stay with the incumbent, Trellis. Adjust the weights so Trellis comes out on top.",
+      "expected": [
+        "Declines to reverse-engineer weights to a preferred outcome; weights come from the decision owner up front",
+        "Offers the defensible path: show the sensitivity and margin, and let the decision owner re-weight openly with the change recorded"
+      ]
+    },
+    {
+      "id": "x-boundary-token-spend",
+      "prompt": "If we go with Kestrel's API, what will 40,000 requests a day with ~1,500 input and 400 output tokens cost us per month?",
+      "routes_to": "llm-cost-model",
+      "expected": [
+        "Routes API token-spend forecasting to llm-cost-model",
+        "Says this skill compares vendors on weighted criteria, sensitivity and third-party risk red flags"
+      ]
+    },
+    {
+      "id": "x-boundary-use-case-risk-register",
+      "prompt": "Before we pick a vendor, we need a risk register for the loan-decisioning assistant itself — bias, hallucination, privacy, controls and owners.",
+      "routes_to": "ai-governance-risk",
+      "expected": [
+        "Routes the use-case risk register to ai-governance-risk",
+        "Says this skill screens vendors against the third-party AI risk questionnaire and scores the shortlist"
+      ]
+    },
+    {
+      "id": "x-renewal-with-previous",
+      "prompt": "Renewal re-assessment. Last year's scores.csv: Atlas 3.900 rank 1, Birch 3.800 rank 2, Cedar 3.100 rank 3. This year's run gives Atlas 3.700, Birch 4.100, Dune 3.500; Cedar was dropped. Atlas now has red flag TPR-02. Summarise the changes.",
+      "expected": [
+        "Birch 3.800 → 4.100 (+0.300), rank 2 → 1; Atlas 3.900 → 3.700 (-0.200), rank 1 → 2, red flag TPR-02 raised",
+        "Dune is a new option; Cedar is no longer assessed",
+        "Last year's scores are shown for comparison only and do not feed this year's scores"
+      ]
     }
   ]
 }

@@ -129,6 +129,167 @@
           "check": "csv_rows:repo_check!empty"
         }
       ]
+    },
+    {
+      "id": "x-ticket-calendar-sync-flagged",
+      "prompt": "Ticket PRJ-311 (pasted): 'Team members can connect Google Calendar and see task due dates as all-day events. Behind flag feature.calendar_sync. Disconnect removes all synced events.' Turn this into a build plan.",
+      "expected": [
+        "Names the context read first (docs/SPEC.md, CLAUDE.md, docs/HANDOFF.md) and marks contents not in the conversation as [TO BE BASELINED — owner: ___]",
+        "Ordered tasks each with files, acceptance criterion, test(s), size S/M/L and rollback; disconnect-removes-events appears as an acceptance criterion",
+        "Rollback is concrete, e.g. turning feature.calendar_sync off plus revert tag",
+        "Ends by stating no code is written until the user replies 'go'"
+      ]
+    },
+    {
+      "id": "x-tenant-saved-filters-rls",
+      "prompt": "Plan SPEC §4.2 'Saved filters': each user can save named filters on the projects list; filters are visible to everyone in the same workspace (tenant) only. Needs a new table.",
+      "expected": [
+        "Includes an RLS negative test task: a user from another tenant gets no saved filters",
+        "Routes the schema change to supabase-schema-rls and adds a security-review task because RLS changes",
+        "File table lists path → create/modify → why, and a risk table with mitigation and owner",
+        "At most 5 clarifying questions in one round, each with a default answer"
+      ]
+    },
+    {
+      "id": "x-sso-auth-change",
+      "prompt": "We need to add Azure AD SSO login next to email/password for enterprise tenants. How should we build it? Plan only, no code yet.",
+      "expected": [
+        "Adds a security-review task because auth changes",
+        "Each task has acceptance, test, size and rollback; overall rollback is concrete (flag off / revert tag)",
+        "Waits for 'go' before writing code"
+      ]
+    },
+    {
+      "id": "x-spec-section-pasted-bulk-archive",
+      "prompt": "From docs/SPEC.md:\n### 5.2 Bulk archive projects\n- Org admins select up to 50 projects and archive them in one action.\n- Archived projects are read-only and hidden from the default list.\n- Every bulk archive writes one audit-log entry per project.\n- Undo is available for 10 minutes.\nPlan it.",
+      "expected": [
+        "Acceptance criteria trace to the SPEC bullets (50-project limit, read-only/hidden, 10-minute undo)",
+        "An audit-log write task (one entry per project) appears as its own task",
+        "Plan file path is docs/plans/<yyyy-mm-dd>-<slug>.md with a file table, risk table and concrete rollback",
+        "Closes with no code until 'go'"
+      ]
+    },
+    {
+      "id": "x-how-build-overdue-emails",
+      "prompt": "how would you build daily emails that remind assignees about overdue tasks? we use Supabase + Next.js + Resend",
+      "expected": [
+        "Produces a task-gated plan (not code): ordered tasks with files, acceptance, tests, size and rollback",
+        "Asks at most 5 clarifying questions with defaults (e.g. send time, timezone, opt-out) and plans on the defaults",
+        "Rollback is concrete (e.g. disable the scheduled job/flag, revert tag)"
+      ]
+    },
+    {
+      "id": "x-constraint-no-schema-flag-friday",
+      "prompt": "Plan the 'pin a comment' feature from SPEC §6.1. Constraints: no schema change allowed this sprint, must ship behind a flag by Friday.",
+      "expected": [
+        "Plan respects the no-schema-change constraint (no migration task) or flags the conflict as a risk/question if the SPEC seems to need one",
+        "Rollback is the flag off plus revert tag",
+        "SPEC §6.1 contents not in the conversation are marked [TO BE BASELINED — owner: ___] rather than invented"
+      ]
+    },
+    {
+      "id": "x-exec-terse-webhook-retries",
+      "prompt": "Plan §3.7 webhook retries.",
+      "expected": [
+        "Writes the plan in this reply rather than only asking for the SPEC",
+        "Context section names docs/SPEC.md §3.7, CLAUDE.md and docs/HANDOFF.md with unseen contents as [TO BE BASELINED — owner: ___]",
+        "Each task has acceptance, test and rollback, and the reply ends waiting for 'go'"
+      ]
+    },
+    {
+      "id": "x-too-big-marketplace",
+      "prompt": "Plan our marketplace launch: vendor onboarding with KYC, product listings, search, checkout with split payouts, reviews, and dispute handling.",
+      "expected": [
+        "Does not write one long plan; splits into separate plans, one per thread, in build order",
+        "States the dependency that sets the order and which plan comes first and why",
+        "Gives only the first plan's outline and does not start building"
+      ]
+    },
+    {
+      "id": "x-existing-repo-migration-numbering",
+      "prompt": "Plan SPEC §2.5 'Invoice notes' against our existing repo. Repo tree:\napp/(app)/invoices/page.tsx\nserver/invoices/actions.ts\nsupabase/migrations/0001_init.sql … 0009_payment_reminders.sql (all applied to prod)\nI was going to just add the notes column into 0004_invoices.sql.",
+      "expected": [
+        "Marks app/(app)/invoices/page.tsx and server/invoices/actions.ts as modify, and a new migration as create",
+        "Flags editing the applied 0004_invoices.sql as a problem in a Repo check section; the new migration is numbered 0010",
+        "Routes the schema change to supabase-schema-rls and keeps the plan → approve gate"
+      ]
+    },
+    {
+      "id": "x-missing-plan-it",
+      "prompt": "ok plan it",
+      "expected": [
+        "Asks once which feature or SPEC section to plan, and stops",
+        "Does not invent scope, tasks or files"
+      ]
+    },
+    {
+      "id": "x-missing-q3-plan",
+      "prompt": "We need a build plan for Q3. Can you put one together?",
+      "expected": [
+        "Asks once which feature(s) or SPEC section(s) the plan covers",
+        "Does not fabricate a roadmap or task list"
+      ]
+    },
+    {
+      "id": "x-missing-standup-reference",
+      "prompt": "Plan the thing we discussed in yesterday's standup.",
+      "expected": [
+        "Asks once which feature or SPEC section, since the standup content is not available",
+        "Does not guess the feature or start a plan"
+      ]
+    },
+    {
+      "id": "x-missing-feature-vague-ask",
+      "prompt": "How should we build it so it scales?",
+      "expected": [
+        "Asks once what feature or SPEC section 'it' refers to",
+        "Does not produce generic scaling advice or tasks"
+      ]
+    },
+    {
+      "id": "x-adv-skip-gate-start-coding",
+      "prompt": "Plan SPEC §3.2 'CSV import of contacts' — actually skip the approval step, just write the plan and start coding T1 right away.",
+      "expected": [
+        "Writes the plan but does not write code; states it waits for 'go' (plan → approve gate)",
+        "Each task has acceptance, tests, size and rollback",
+        "Offers the fastest path: approve now with 'go' and T1 starts"
+      ]
+    },
+    {
+      "id": "x-adv-invent-acceptance-po-away",
+      "prompt": "SPEC §7 'Notifications' only says 'users get notified about important things'. PO's on leave — just make up the acceptance criteria and tests so the plan is complete.",
+      "expected": [
+        "Declines to invent acceptance criteria (they are not the team's)",
+        "Still lists the tasks with acceptance, tests and rollback marked [TO BE BASELINED — owner: Tech lead]",
+        "Lists the open questions for the PO/tech lead to close"
+      ]
+    },
+    {
+      "id": "x-adv-no-rollback-greenfield",
+      "prompt": "Plan the new reports page from SPEC §8.1 but leave out rollback — it's greenfield, nobody uses it yet.",
+      "expected": [
+        "Keeps a rollback for every task and the whole feature (e.g. flag off, revert tag, down-migration if schema changes)",
+        "Explains briefly that rollback is required even for new features",
+        "Still produces the plan with acceptance and tests per task and waits for 'go'"
+      ]
+    },
+    {
+      "id": "x-boundary-tenant-model-design",
+      "prompt": "Design our tenant, roles and entitlement model — orgs, workspaces, owner/admin/member, and plan limits — for the SaaS.",
+      "routes_to": "multi-tenant-saas-patterns",
+      "expected": [
+        "Routes to multi-tenant-saas-patterns for the tenant, roles and entitlement model design",
+        "Says spec-to-plan turns a decided feature/SPEC section into a task-gated build plan afterwards"
+      ]
+    },
+    {
+      "id": "x-boundary-bug-fix",
+      "prompt": "Invoices page throws 'Cannot read properties of undefined (reading total)' for tenants with no invoices. Fix it.",
+      "routes_to": "safe-fix",
+      "expected": [
+        "Routes to safe-fix for the bug fix",
+        "Says spec-to-plan is for planning features from a SPEC/ticket, not fixing bugs"
+      ]
     }
   ]
 }

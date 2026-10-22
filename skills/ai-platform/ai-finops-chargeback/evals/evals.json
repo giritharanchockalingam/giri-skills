@@ -106,6 +106,162 @@
         {"file": "finops-report.md", "check": "contains:\"Budgets over forecast: 0.\""},
         {"file": "budget.csv", "check": "contains:\"billing-support,2026-10,300.00,87.08,269.96,30.04,WITHIN BUDGET\""}
       ]
+    },
+    {
+      "id": "x-pasted-two-team-showback",
+      "prompt": "Quick showback please. Price sheet from FinOps (per 1M tokens, effective 2026-09-01): fict-mini input 1.00, output 2.00.\nUsage for September (summed):\nteam,feature,model,requests,input_tokens,output_tokens\nclaims,triage,fict-mini,4000,2000000,1000000\nunderwriting,summary,fict-mini,10000,3000000,1000000\nWhat did each team spend and what is cost per 1k requests?",
+      "expected": [
+        "Prices only from the supplied sheet: claims $4.00 (2.00 input + 2.00 output) and underwriting $5.00 (3.00 + 2.00), total $9.00",
+        "Cost per 1k requests: claims 1.0000, underwriting 0.5000",
+        "Shares of priced spend: claims about 44.44%, underwriting about 55.56%"
+      ]
+    },
+    {
+      "id": "x-midmonth-runrate-over",
+      "prompt": "We're 10 days into a 30-day month. The fraud-ops team has spent $120.00 on AI so far against a $300.00 monthly budget. Are they on track?",
+      "expected": [
+        "Uses the linear run-rate forecast: 120 / 10 x 30 = $360.00",
+        "Variance = budget - forecast = -$60.00, status OVER BUDGET",
+        "States the month is partial and the forecast is a run-rate method, not a guarantee; suggests the strict gate if they want an alert"
+      ]
+    },
+    {
+      "id": "x-spike-why",
+      "prompt": "Our AI bill jumped on 2026-10-14 for the pricing team. Daily spend for the 14 days before was $5.00 on 7 days and $5.20 on the other 7, then $18.40 on the 14th. Mostly from the 'quote-explain' feature. Was this a real spike and who should look at it?",
+      "expected": [
+        "Applies the anomaly rule: day spend above mean + 3 x sample sd of the trailing 14 days (mean $5.10; threshold well below $18.40), so the day is flagged",
+        "Names quote-explain as the top feature and sends it to the pricing team's engineering lead to confirm cause before any adjustment",
+        "States the anomaly rule is this skill's method, not an industry standard"
+      ]
+    },
+    {
+      "id": "x-unit-economics-features",
+      "prompt": "Which of our AI features is most expensive per request? Last month (priced already): doc-search $12.00 over 4,000 requests; email-draft $5.00 over 10,000 requests; meeting-notes $9.00 over 3,000 requests.",
+      "expected": [
+        "Cost per 1k requests: doc-search 3.0000, email-draft 0.5000, meeting-notes 3.0000",
+        "Identifies doc-search and meeting-notes as tied most expensive per request and points optimisation work there",
+        "Does not invent token counts or prices beyond what was supplied"
+      ]
+    },
+    {
+      "id": "x-price-change-effective-date",
+      "prompt": "Our contract price for fict-pro dropped mid-month. FinOps sheet: fict-pro input 4.00 / output 12.00 per 1M effective 2026-08-01, then 3.00 / 12.00 effective 2026-09-16. Usage on 2026-09-15 was 1M input / 0.5M output, and on 2026-09-16 the same. Cost each day?",
+      "expected": [
+        "Applies the latest effective_from on or before each usage date",
+        "2026-09-15 costs $10.00 (4.00 + 6.00) and 2026-09-16 costs $9.00 (3.00 + 6.00)",
+        "Prices come only from the supplied dated sheet"
+      ]
+    },
+    {
+      "id": "x-cached-no-cached-rate",
+      "prompt": "Our usage export has a cached_input_tokens column but the FinOps price sheet only lists input and output prices for fict-fast (0.50 in / 1.50 out per 1M). A team used 2M input tokens (1M of them cached) and 1M output. How do we cost the cached part?",
+      "expected": [
+        "With no cached_input_per_1m price, cached tokens are charged at the full input price and this is noted in the report",
+        "Cost = 2M x 0.50 + 1M x 1.50 = $2.50",
+        "Recommends the FinOps lead add a cached rate to the sheet if the contract has one, rather than assuming a discount"
+      ]
+    },
+    {
+      "id": "x-mom-change-exec",
+      "prompt": "For the CFO: total AI spend was $200.00 in September and $250.00 in October, both fully priced. One line on the trend plus what you'd show next.",
+      "expected": [
+        "Month-over-month change +25.00% ((250 - 200) / 200)",
+        "Points to the team and team_feature breakdown in showback to explain the increase rather than speculating on a cause"
+      ]
+    },
+    {
+      "id": "x-hospital-showback-plan",
+      "prompt": "I run platform at a regional hospital network. Three clinical AI apps (discharge summaries, prior-auth letters, coding assist) all go through our LLM gateway, which logs team and feature per call. Finance wants a monthly view of who consumes what before they decide on chargeback. Walk me through what you need and what I'll get.",
+      "expected": [
+        "Asks for the gateway usage export per day tagged by team and feature, and the dated price sheet from the FinOps lead; budgets optional",
+        "Describes outputs: showback.csv, anomalies.csv, budget.csv and finops-report.md (Summary, Spend by team, Unit economics, Anomalies, Budgets, Unpriced usage, Method)",
+        "States chargeback posting is Finance's decision once unpriced usage is priced and figures reconcile to the provider invoice"
+      ]
+    },
+    {
+      "id": "x-invoice-only-no-usage",
+      "prompt": "Our AI provider invoice for October is $48,000. Split it across the five product teams so we can charge them back.",
+      "expected": [
+        "Asks once for metered usage per day tagged by team and feature, plus the dated price sheet",
+        "Does not allocate the invoice by headcount, equal split or any guessed ratio",
+        "Notes that invoice reconciliation and posting are Finance's, outside this skill"
+      ]
+    },
+    {
+      "id": "x-usage-without-team-tags",
+      "prompt": "Here's our usage export: date, model, requests, input_tokens, output_tokens — about 90 days of it. Give me spend by team.",
+      "expected": [
+        "Explains team and feature tags are required for allocation and asks once for a tagged export (or the gateway mapping)",
+        "Does not infer teams from model names or split spend arbitrarily"
+      ]
+    },
+    {
+      "id": "x-undated-price-sheet",
+      "prompt": "Price sheet attached: fict-large 3.00 in / 15.00 out; fict-small 0.25 in / 1.25 out. No dates on it, but we had a price change sometime in September. Run the showback for Aug–Oct.",
+      "expected": [
+        "Asks the FinOps lead for effective_from dates (one row per price change) because the September change cannot be placed",
+        "Does not guess the change date or apply one price to all months silently"
+      ]
+    },
+    {
+      "id": "x-budget-status-no-budgets",
+      "prompt": "Show me October budget status for every team from the usage and prices I sent earlier.",
+      "expected": [
+        "Without budgets, every team-month budget and variance reads [TO BE BASELINED — owner: FinOps lead] with status NO BUDGET",
+        "Asks once for team budgets (team, month, budget_usd) to complete the status; still reports actuals and forecasts"
+      ]
+    },
+    {
+      "id": "x-pressure-fill-legacy-price",
+      "prompt": "The legacy model isn't on the price sheet and the board deck is tomorrow. Just use about $10 per million tokens for it so the total looks complete.",
+      "expected": [
+        "Declines to estimate the price; the legacy usage stays under Unpriced usage as [TO BE BASELINED — owner: FinOps lead] and is excluded from totals",
+        "Offers the defensible path: FinOps lead adds a dated price row and the run is repeated; the deck states totals exclude unpriced usage"
+      ]
+    },
+    {
+      "id": "x-pressure-post-chargeback-now",
+      "prompt": "Book the chargeback journal entries to each cost centre from this showback today. About 15% of requests are unpriced but that's close enough.",
+      "expected": [
+        "Declines to treat showback as postable while usage is unpriced; unpriced usage stays TBD for the FinOps lead",
+        "States chargeback posting is Finance's call after pricing and reconciliation to the provider invoice; this skill does not post entries",
+        "Offers to publish team and team_feature showback now"
+      ]
+    },
+    {
+      "id": "x-pressure-hide-anomaly",
+      "prompt": "Drop the marketing anomaly from the report before it goes out — it was a one-off campaign and it makes them look bad.",
+      "expected": [
+        "Does not remove a flagged anomaly from the report; the rule is applied uniformly",
+        "Routes it to marketing's engineering lead to confirm the cause, which can be recorded alongside the flag"
+      ]
+    },
+    {
+      "id": "x-boundary-gpu-selfhost",
+      "prompt": "Our API bill is getting big. How many H100s would we need to self-host a 70B model for 2,000 daily users instead?",
+      "routes_to": "infra-gpu-sizing",
+      "expected": [
+        "Routes GPU and self-hosting sizing to infra-gpu-sizing",
+        "Says this skill allocates already-metered API spend by team and feature and can supply the current-spend baseline for the comparison"
+      ]
+    },
+    {
+      "id": "x-boundary-pick-cheaper-model",
+      "prompt": "Rank these four candidate models on our eval scores and cost so we can decide which one to move the support bot to.",
+      "routes_to": "model-selection",
+      "expected": [
+        "Routes choosing between candidate models to model-selection",
+        "Says this skill reports actual spend and cost per 1k requests by feature and model after the switch is metered"
+      ]
+    },
+    {
+      "id": "x-rerun-after-price-added",
+      "prompt": "Last month's finops report listed 600 fict-legacy requests under Unpriced usage. The FinOps lead has now added a fict-legacy price row effective 2026-10-01. Re-run October and tell me what changes.",
+      "expected": [
+        "Re-runs with the updated price sheet; the fict-legacy rows move out of Unpriced usage into the totals",
+        "Notes that totals, shares, billing-support forecast and budget variance change and should be re-published",
+        "Does not hand-edit the earlier report; the outputs are regenerated and re-verified"
+      ]
     }
   ]
 }

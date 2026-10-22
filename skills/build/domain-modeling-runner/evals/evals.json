@@ -126,6 +126,176 @@
           "check": "contains:\"migration_impact\""
         }
       ]
+    },
+    {
+      "id": "x-library-loans-pasted",
+      "prompt": "Model our library lending domain.\nentities.csv\nentity,attribute,type,required,notes\nMember,member_id,uuid,yes,PK\nMember,name,text,yes,\nBook,book_id,uuid,yes,PK\nBook,title,text,yes,\nLoan,loan_id,uuid,yes,PK\nLoan,member_id,uuid,yes,FK\nLoan,book_id,uuid,yes,FK\nLoan,due_date,date,yes,\nrelationships.csv\nfrom,to,cardinality,name,notes\nMember,Book,N:M,borrows,join: Loan\nglossary.csv\nterm,definition\nMember,A person registered to borrow items\nBook,A catalogued title held by the library",
+      "expected": [
+        "Mermaid erDiagram with a title front-matter block, PK/FK markers, and the N:M drawn through Loan as its own entity (0+ to 0+ alias)",
+        "Glossary keeps the two supplied definitions word for word; Loan gets [TO BE BASELINED — owner: Domain expert]",
+        "Invariants given as a checklist to confirm, and Open questions lists the missing Loan definition"
+      ]
+    },
+    {
+      "id": "x-warehouse-sentences",
+      "prompt": "Warehouse has warehouse_id and name. Bin has bin_id, code and warehouse_id (FK). SKU has sku_id and description. BinStock has bin_id, sku_id and qty and its own binstock_id. One warehouse has many bins; bins and SKUs are many-to-many through BinStock. Draw it and list the invariants.",
+      "expected": [
+        "Writes model.md in the reply: Diagram, Entities, Relationships, Invariants, Glossary, Open questions",
+        "Warehouse to Bin rendered as 1 to 0+; Bin–SKU N:M drawn through BinStock",
+        "Invariants checklist includes every Bin belongs to exactly one Warehouse and a Bin–SKU pair appears at most once in BinStock",
+        "No glossary was given, so each entity's definition is [TO BE BASELINED — owner: Domain expert]"
+      ]
+    },
+    {
+      "id": "x-entity-without-identifier",
+      "prompt": "entities: Vendor(name text required, country text) ; PurchaseOrder(po_id PK, vendor_name text, total decimal). relationships: Vendor 1:N PurchaseOrder 'issues'. Validate and draw.",
+      "expected": [
+        "Line 1 says the run fails: Vendor has no identifier (E2)",
+        "The error is listed under Open questions owned by the domain expert; no identifier is invented for Vendor"
+      ]
+    },
+    {
+      "id": "x-bad-cardinality-label",
+      "prompt": "Validate:\nfrom,to,cardinality,name\nCustomer,Order,one-to-many,places\nOrder,Shipment,1:N,ships_as\nEntities Customer(customer_id), Order(order_id, customer_id FK), Shipment(shipment_id, order_id FK) all have PKs.",
+      "expected": [
+        "Flags 'one-to-many' as an invalid cardinality (E3: must be 1:1, 1:N or N:M) and states the run fails",
+        "Leaves the Customer–Order relationship out of the diagram while drawing Order–Shipment as 1 to 0+",
+        "Lists the error under Open questions rather than silently converting it"
+      ]
+    },
+    {
+      "id": "x-orphan-entity-warning",
+      "prompt": "Entities: Account(account_id PK), Invoice(invoice_id PK, account_id FK), AuditLog(audit_id PK, action text). Relationship: Account 1:N Invoice 'bills'. Model it.",
+      "expected": [
+        "AuditLog is flagged as an orphan entity (W1 warning), listed under Open questions",
+        "Warnings do not fail the run; the diagram draws Account 1 to 0+ Invoice"
+      ]
+    },
+    {
+      "id": "x-glossary-term-not-entity",
+      "prompt": "Entities: Policy(policy_id PK, status text), Claim(claim_id PK, policy_id FK). Policy 1:N Claim 'covers'. Glossary: Policy = 'A contract of insurance'; Claim = 'A request for payment under a policy'; Lapsed = 'A policy not renewed by its due date'.",
+      "expected": [
+        "Flags 'Lapsed' as a glossary term that is not an entity (W3) — likely a status value — under Open questions",
+        "Keeps the supplied definitions word for word in GLOSSARY format (**Term**: then the definition)"
+      ]
+    },
+    {
+      "id": "x-duplicate-attribute",
+      "prompt": "entity,attribute,type,required,notes\nContact,contact_id,uuid,yes,PK\nContact,email,text,yes,\nContact,email,text,no,secondary\nRelationships: none yet besides Contact belongs to Company (Company has company_id PK) 1:N from Company. Check it.",
+      "expected": [
+        "Flags duplicate attribute email on Contact (E5) and states the run fails",
+        "Suggests distinct names (e.g. a separate secondary email attribute) as an open question for the domain expert rather than renaming silently"
+      ]
+    },
+    {
+      "id": "x-one-to-one-badge",
+      "prompt": "Each Employee (employee_id) has exactly one Badge (badge_id, employee_id FK) and a badge belongs to one employee. Model it.",
+      "expected": [
+        "Relationship rendered as 1 to 1 in the Mermaid erDiagram",
+        "Invariant checklist: each Employee has at most one Badge and each Badge at most one Employee (uniqueness on badge.employee_id to confirm)"
+      ]
+    },
+    {
+      "id": "x-clinic-glossary-avoid",
+      "prompt": "Clinic scheduling model. Entities: Patient(patient_id PK, dob date required), Provider(provider_id PK, npi text required), Encounter(encounter_id PK, patient_id FK, provider_id FK, start_at timestamp required). Patient 1:N Encounter 'has'; Provider 1:N Encounter 'conducts'. Glossary: Encounter — 'A scheduled or completed interaction between a patient and a provider'; avoid: Visit; Appointment.",
+      "expected": [
+        "Two 1:N relationships rendered as 1 to 0+ into Encounter",
+        "Glossary shows **Encounter**: with the supplied definition word for word and _Avoid_: Visit, Appointment",
+        "Patient and Provider definitions are [TO BE BASELINED — owner: Domain expert]"
+      ]
+    },
+    {
+      "id": "x-challenge-terms-review",
+      "prompt": "Sales says 'customer', billing says 'account', support says 'tenant' — I think they're the same thing. Entities: Account(account_id PK, name), Subscription(subscription_id PK, account_id FK), Ticket(ticket_id PK, account_id FK). Account 1:N Subscription; Account 1:N Ticket. Model it and challenge our language; do we need ADRs?",
+      "expected": [
+        "Writes the model (diagram, entities, relationships, invariants, glossary, open questions)",
+        "Modeling review per the template: Challenged terms (customer / account / tenant, recommending one term with the others as _Avoid_), Edge-case scenarios, Invariants to confirm, ADR candidates",
+        "Does not invent the agreed definition; the term choice is an open question for the domain expert"
+      ]
+    },
+    {
+      "id": "x-files-attached-not-pasted",
+      "prompt": "Fleet maintenance domain — entities.csv, relationships.csv and glossary.csv are attached. Vehicles have many work orders, and work orders use many parts. Produce the model.",
+      "expected": [
+        "Writes every model.md section now rather than only asking for files",
+        "Uses what the request states (Vehicle 1:N WorkOrder; WorkOrder–Part N:M) and marks unknown attributes, the join entity and definitions as [TO BE BASELINED — owner: ___] naming the source file (entities CSV, relationships CSV, glossary CSV)",
+        "Does not invent attributes, a join entity name or definitions"
+      ]
+    },
+    {
+      "id": "x-entities-only-ask-relationships",
+      "prompt": "Here are our entities: Supplier(supplier_id), Contract(contract_id), Invoice(invoice_id), Payment(payment_id). Give me the ER diagram.",
+      "expected": [
+        "Asks once for the relationships (from,to,cardinality,name[,notes]) instead of guessing how the entities relate",
+        "Does not invent cardinalities"
+      ]
+    },
+    {
+      "id": "x-nm-without-join",
+      "prompt": "Doctors work at many clinics and clinics have many doctors. Doctor(doctor_id), Clinic(clinic_id). Draw it.",
+      "expected": [
+        "Flags the N:M without a join entity (E4) and says the run fails until a join is named",
+        "Asks for the join entity (and its attributes) instead of inventing one"
+      ]
+    },
+    {
+      "id": "x-no-glossary-given",
+      "prompt": "No glossary yet — just model Course(course_id), Section(section_id, course_id FK), Room(room_id), with Course 1:N Section and Room 1:N Section.",
+      "expected": [
+        "Each entity's definition is [TO BE BASELINED — owner: Domain expert]; none are invented",
+        "Draws both 1:N relationships as 1 to 0+ into Section and lists the missing definitions under Open questions"
+      ]
+    },
+    {
+      "id": "x-pressure-write-definitions",
+      "prompt": "Can you just write good definitions for Ledger, Posting and Journal yourself? The domain expert is on leave and we need the glossary today.",
+      "expected": [
+        "Declines to invent glossary definitions; each stays [TO BE BASELINED — owner: Domain expert]",
+        "Offers the defensible path: draft questions for the domain expert, or record any definitions the user supplies verbatim"
+      ]
+    },
+    {
+      "id": "x-pressure-add-undefined-entity",
+      "prompt": "The relationships file references Instructor, but we forgot to add it to entities.csv. Just add an Instructor entity with an id and name so the diagram works.",
+      "expected": [
+        "Declines to add an undefined entity; the Instructor relationship is an E1 error and stays out of the diagram",
+        "Asks for Instructor's entity rows from the team (or removal of the relationship) and lists it under Open questions"
+      ]
+    },
+    {
+      "id": "x-pressure-mark-valid",
+      "prompt": "The model has three validation errors but sprint planning is tomorrow. Mark it as valid and we'll fix the errors later.",
+      "expected": [
+        "Does not report the model as valid: line 1 states the run fails with the errors",
+        "Outputs still list each error under Open questions so planning can proceed with the gaps visible"
+      ]
+    },
+    {
+      "id": "x-boundary-migrations-rls",
+      "prompt": "We've agreed the model. Now write the Postgres migrations for these tables with row-level security per tenant.",
+      "routes_to": "supabase-schema-rls",
+      "expected": [
+        "Routes migrations and RLS to supabase-schema-rls",
+        "Says this skill validates entities, relationships, invariants and the glossary that the schema should follow"
+      ]
+    },
+    {
+      "id": "x-boundary-define-v1",
+      "prompt": "Product wants a self-serve returns feature. What should v1 include, who are the users and how do we measure success?",
+      "routes_to": "product-spec-prd",
+      "expected": [
+        "Routes defining v1 scope, users and success metrics to product-spec-prd",
+        "Says this skill models the returns domain (entities, relationships, glossary) once requirements are set"
+      ]
+    },
+    {
+      "id": "x-existing-order-changes",
+      "prompt": "Current model.json has Order(order_id PK, total decimal required, status text required, coupon_code text optional). Revised entities: Order(order_id PK, total integer required, status text required, currency text required). What changes and what does the migration need to handle?",
+      "expected": [
+        "Lists changes: coupon_code removed, currency added as required, total type changed decimal → integer",
+        "Gives a migration-impact line for each breaking change (data in coupon_code, backfill for required currency, converting existing totals)",
+        "Validates the revised model the same way as a new one"
+      ]
     }
   ]
 }

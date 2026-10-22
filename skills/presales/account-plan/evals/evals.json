@@ -145,6 +145,162 @@
           "check": "contains:\"Priya (last quarter's owner — confirm)\""
         }
       ]
+    },
+    {
+      "id": "x-grow-healthy-account",
+      "prompt": "Q3 account plan for Halvorsen Retail (fictional). From our CRM export (2026-06-30): FY revenue $2.1M; one active engagement, POS modernization, ends 2027-06. Advocates: VP Stores (sponsor) and Director of Supply Chain, both strong. Delivery is green. Their supply-chain team mentioned in our last QBR they want demand forecasting next year. Our catalog: app modernization, data & AI, integration, QA.",
+      "expected": [
+        "Line 1: Posture: Grow, citing healthy delivery, advocates in two units and no renewal exposure this quarter",
+        "White-space matrix marks data & AI × supply chain as hypothesis citing the QBR signal, with a confirming action",
+        "3–6 plays with owner, date and success measure, including a growth play from that hypothesis; revenue cells sourced to the CRM export (2026-06-30)"
+      ]
+    },
+    {
+      "id": "x-defend-competitor-entry",
+      "prompt": "Account: Larchmont Insurance (fictional). Our claims platform support contract ends in five months. Brightpath Consulting (fictional) just started a 'platform assessment' for their COO. Our sponsor, the CIO, is still supportive, but the COO has never met us. Build the plan for next quarter.",
+      "expected": [
+        "Line 1: Posture: Defend, citing the renewal within two quarters and evidenced competitive entry",
+        "A renewal/defense play for the contract ending in five months and a coverage play for the COO, each with owner, date and success measure",
+        "Risk register entry for competitive entry with likelihood, impact, early signal, mitigation and owner; COO disposition stays unknown"
+      ]
+    },
+    {
+      "id": "x-harvest-insourcing",
+      "prompt": "Ridgeway Utilities (fictional) is insourcing all application support by mid-2027 per their CIO's town hall; our two remaining staff-aug contracts end 2027-03. Little else we can sell there — they've said no to data work twice. Plan for the next 90 days?",
+      "expected": [
+        "Line 1: Posture: Harvest, citing the insourcing announcement, low white space and the 2027-03 end dates",
+        "Plays focus on protecting margin, delivery quality to the end and a graceful transition, each owned and dated",
+        "Does not invent new growth pipeline"
+      ]
+    },
+    {
+      "id": "x-weighted-pipeline-gap",
+      "prompt": "Account target from my VP (FY27 plan, signed off): $1.0M. Booked so far: $500k (CRM, 2026-10-01). Pipeline from CRM with their probabilities: Data platform phase 2, $400k, 50%; QA automation, $200k, 25%. What's the gap to target?",
+      "expected": [
+        "Weighted pipeline = $200k + $50k = $250k, computed because the CRM supplies the probabilities, and labelled as such",
+        "Gap-to-target = $1.0M − ($500k + $250k) = $250k, with plays that close it",
+        "Each figure sourced to the CRM export date or the VP's FY27 plan"
+      ]
+    },
+    {
+      "id": "x-stale-decision-maker",
+      "prompt": "As of 2026-10-01. Stakeholders at Pemberton Health (fictional): CIO — decision-maker, advocate, our owner Sam, last contact 2026-09-20. CFO — decision-maker, disposition not known, our owner none, last contact 2026-05-15. Director of Apps — influencer, neutral, owner Lee, last contact 2026-09-02. Flag gaps.",
+      "expected": [
+        "CFO flagged as an uncovered decision-maker (no owner and no contact in 90 days); CFO disposition stays unknown, not assumed neutral",
+        "At least one coverage play assigns an owner and a date to reach the CFO, with a success measure"
+      ]
+    },
+    {
+      "id": "x-exec-qbr-sparse-facts",
+      "prompt": "Leadership QBR on Harbor Logistics next Tuesday. All I've got: one active integration engagement ending 2027-01, sponsor is the VP of IT, and there's a $300k API management deal in proposal stage. Give me the plan.",
+      "expected": [
+        "Line 1 is a posture with driving facts, not a question; the plan is written in the reply",
+        "Missing facts (revenue, other stakeholders, catalog, deal close date) marked [TO BE BASELINED — owner: ___] naming their source",
+        "Pipeline shown unweighted (no CRM probabilities); ends with a short list of questions that close the gaps"
+      ]
+    },
+    {
+      "id": "x-refresh-files-not-pasted",
+      "prompt": "Refresh the Granite Federal Credit Union (fictional) plan for Q4. The CRM export, stakeholder list and last quarter's plan are attached. Big news: we won the data governance assessment last month.",
+      "expected": [
+        "Writes the full plan now rather than only asking for the files",
+        "Uses the stated win in the snapshot/plays and marks other values [TO BE BASELINED — owner: ___] naming the source (CRM export, stakeholder list, prior plan)",
+        "Includes a change-log section versus the prior plan, with entries pending the prior plan's contents"
+      ]
+    },
+    {
+      "id": "x-unvalued-deal-in-pipeline",
+      "prompt": "Pipeline for Ashford Manufacturing (fictional), CRM export 2026-10-05: MES integration, stage 'Solutioning', $650k, close 2027-02; Cloud cost review, stage 'Qualify', no value entered, close 2027-01. Total it for the plan.",
+      "expected": [
+        "Pipeline total is $650k (unweighted), sourced to the CRM export; the cloud cost review value is [TO BE BASELINED — owner: ___] and excluded from the total",
+        "No weighted pipeline since the CRM gives no probabilities"
+      ]
+    },
+    {
+      "id": "x-no-facts-new-year",
+      "prompt": "Put together next year's account plan for Meridian Health.",
+      "expected": [
+        "Asks once, in one list, for account facts (engagements, revenue, stakeholders, pipeline), our service catalog and the quarter/horizon",
+        "Does not estimate their spend, wallet share or stakeholder dispositions",
+        "Offers the Enter posture template with every cell [TO BE BASELINED — owner: ___] if Meridian is a target with no history"
+      ]
+    },
+    {
+      "id": "x-missing-catalog-only",
+      "prompt": "Q1 plan for Tidewater Ports (fictional). CRM (2026-12-15): revenue FY26 $900k; active terminal-ops app support engagement to 2027-09; sponsor COO (advocate). Pipeline: none.",
+      "expected": [
+        "Writes the plan with posture on line 1 and the snapshot sourced to the CRM",
+        "White-space matrix rows marked [TO BE BASELINED — owner: ___] pending our service catalog; no services invented",
+        "Ends with a question asking for the catalog"
+      ]
+    },
+    {
+      "id": "x-missing-stakeholders",
+      "prompt": "Account plan for Bellwood County (fictional): two active engagements — permitting portal (ends 2027-02) and GIS support (ends 2027-08); FY revenue $1.4M per CRM 2026-10-01; pipeline: records digitisation $500k in proposal. No stakeholder info handy.",
+      "expected": [
+        "Posture on line 1 driven by the nearest end date (2027-02) and the facts given",
+        "Stakeholder map and coverage gaps marked [TO BE BASELINED — owner: ___] from the stakeholder list; dispositions not assumed",
+        "A renewal/defense play for the permitting portal engagement with owner, date and success measure"
+      ]
+    },
+    {
+      "id": "x-wallet-share-question",
+      "prompt": "What's our wallet share at Cobalt Bank and how much more could we win there?",
+      "expected": [
+        "Does not estimate Cobalt Bank's IT spend or our wallet share",
+        "Asks for the account facts (our revenue, engagements, pipeline, stakeholders) and any spend data the user holds"
+      ]
+    },
+    {
+      "id": "x-pressure-assume-disposition",
+      "prompt": "We've never met Kessler's new CTO. Just mark him neutral-to-positive so the stakeholder map looks balanced for the review.",
+      "expected": [
+        "Keeps the CTO's disposition unknown; does not assume neutral or positive",
+        "Flags the CTO as a coverage gap and adds a coverage play with owner, date and success measure"
+      ]
+    },
+    {
+      "id": "x-pressure-benchmark-spend",
+      "prompt": "Size the white space at Orchard Telecom by estimating their IT budget from industry benchmarks — call it $20M addressable — and put it on page 1.",
+      "expected": [
+        "Declines to estimate the client's spend or addressable white space from benchmarks",
+        "White-space cells use current/qualified/hypothesis/no fit/unknown with signals and confirming actions; any size is [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-pressure-forecast-revenue",
+      "prompt": "The board wants a number: put $3M forecast FY27 revenue for Sterling Pharma on page 1. Our CRM has no values on the three open deals yet.",
+      "expected": [
+        "Declines to print a forecast the inputs do not support; deal values and the forecast stay [TO BE BASELINED — owner: ___]",
+        "Offers the defensible path: deal owners enter values (and, if used, probabilities as their own labelled judgment) in the CRM, then the plan is recomputed"
+      ]
+    },
+    {
+      "id": "x-boundary-new-logo-research",
+      "prompt": "We pitch Vantage Shipping (no history with us) on Monday. Research them — filings, leadership, tech stack, recent news.",
+      "routes_to": "client-research-brief",
+      "expected": [
+        "Routes pre-pitch research on a new logo to client-research-brief",
+        "Says this skill builds the account plan (posture, stakeholder map, white space, plays) once there is an account to plan or as an Enter template"
+      ]
+    },
+    {
+      "id": "x-boundary-battle-card",
+      "prompt": "Build a battle card for the Kestrel Systems recompete — how do we beat the incumbent on this one bid?",
+      "routes_to": "competitive-positioning",
+      "expected": [
+        "Routes a single-pursuit battle card to competitive-positioning",
+        "Says this skill covers the whole account: posture, coverage, white space, risks and 90-day plays"
+      ]
+    },
+    {
+      "id": "x-refresh-play-statuses",
+      "prompt": "Quarterly refresh for Alder Bank (fictional). Last quarter's plays: P1 'Meet new CRO' (owner Priya) — done; P2 'Propose data quality pilot' (owner Ben) — still open; P3 'Expand QA team' — dropped, client froze hiring. This quarter: the data quality pilot moved to proposal ($180k, CRM 2026-10-10).",
+      "expected": [
+        "Change log: P1 achieved, P2 carried over with last quarter's owner (Ben) to confirm, P3 dropped with the reason (hiring freeze)",
+        "Pipeline delta shows the data quality pilot now in proposal at $180k, sourced to the CRM",
+        "New plays each have owner, date and success measure; posture on line 1"
+      ]
     }
   ]
 }

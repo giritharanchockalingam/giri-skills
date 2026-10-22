@@ -100,6 +100,179 @@
         {"file": "training-load.csv", "check": "contains:\"2,Customer Operations,2026-11-16,132,132,432\""},
         {"file": "adoption-plan.md", "check": "no_unowned_tbd"}
       ]
+    },
+    {
+      "id": "x-insurer-claims-copilot-hours",
+      "prompt": "Fictional insurer Harbourline is rolling out a claims copilot. Population:\nrole,headcount,exposure,proficiency,business_unit\nClaims handler,40,user,0,Claims\nClaims team lead,6,overseer,1,Claims\nAI platform engineer,4,builder,2,IT\nWaves: wave 1 Claims starts 2026-11-02, wave 2 IT starts 2026-11-16. Use your default curriculum. Who takes what and how many hours per wave?",
+      "expected": [
+        "Claims handlers get AIL-00, AIL-01 and AIL-02 (4 hours each, 160 hours); the AI platform engineers get AIL-05 only (8 hours each, 32 hours)",
+        "Claims team leads get the human-oversight module AIL-06 as mandatory for overseers, alongside AIL-03 and AIL-07 (6.5 hours each)",
+        "Total 50 people and 231 hours; wave 1 Claims carries 199 hours and wave 2 IT 32 hours",
+        "States the default catalogue is the skill's own design, and KPI targets are [TO BE BASELINED — owner: Change lead] since none were given"
+      ]
+    },
+    {
+      "id": "x-hospital-scheduling-art4",
+      "prompt": "We're a (fictional) regional hospital group deploying an AI shift-scheduling assistant. 300 nurses will use its suggestions (they've used AI tools a bit — proficiency 1), 8 IT staff will run and monitor it (proficiency 1), and 20 ward managers can override or stop its schedules (proficiency 2). All in one business unit, Nursing. What training does each group need, and does this satisfy EU AI Act Article 4?",
+      "expected": [
+        "Nurses (user, proficiency 1) get AIL-02 only; IT staff (operator) get AIL-02 and AIL-03; ward managers (overseer) get AIL-06 as mandatory plus AIL-07",
+        "Art. 4 note uses the amended wording (measures to support the development of AI literacy; no individual level guaranteed) and presents the plan as a record of measures, not a certificate",
+        "Says the Art. 4 note is not a legal determination of provider/deployer status and routes that question to counsel",
+        "Wave and start date for Nursing are [TO BE BASELINED — owner: Change lead]"
+      ]
+    },
+    {
+      "id": "x-bank-copilot-licences-terse",
+      "prompt": "Copilot licences going to 3 teams next quarter (fictional Kestrel Bank).\nrole,headcount,exposure,proficiency,business_unit\nRelationship manager,120,user,1,Retail\nOps analyst,60,user,0,Operations\nCompliance reviewer,10,overseer,2,Risk\nWhat do people need to learn and how much time is that?",
+      "expected": [
+        "Builds the curriculum by the rule 'exposure in module audience and module level above proficiency': relationship managers AIL-02 (2 h), ops analysts AIL-00, AIL-01, AIL-02 (4 h), compliance reviewers AIL-06 (mandatory) plus AIL-07 (3.5 h)",
+        "Totals 190 people and 515 training hours, with seat-hours per module",
+        "Lists the adoption KPIs with targets [TO BE BASELINED — owner: Change lead] rather than invented numbers"
+      ]
+    },
+    {
+      "id": "x-manufacturer-heaviest-wave",
+      "prompt": "Plant rollout for a maintenance AI assistant at fictional Ostrava Components. Population: Maintenance technician, 80, user, proficiency 0, Plant A; Maintenance technician, 50, user, proficiency 0, Plant B; Reliability engineer, 10, operator, proficiency 1, Plant A; Plant manager, 2, overseer, proficiency 1, Plant A. Waves: Plant A wave 1 from 2027-01-11; Plant B wave 2 from 2027-03-01. Which wave is the heavier training load and by how much?",
+      "expected": [
+        "Technicians need 4 hours each (AIL-00, AIL-01, AIL-02); reliability engineers need AIL-02 and AIL-03 (5 hours each); plant managers need AIL-03, AIL-06 (mandatory) and AIL-07 (6.5 hours each)",
+        "Wave 1 Plant A carries 383 hours and wave 2 Plant B 200 hours, so wave 1 is heavier by 183 hours",
+        "Produces the training-load view per wave and business unit with start dates as supplied"
+      ]
+    },
+    {
+      "id": "x-retail-board-commitment",
+      "prompt": "The board wants a one-paragraph answer: what is our AI training commitment for the in-store product assistant, and how will we know adoption is working? I can give you the population by store role tomorrow. Draft the structure now so I know what you'll need.",
+      "expected": [
+        "Lays out the plan sections (Summary, Who needs what, Curriculum, Rollout, Adoption KPIs, Art. 4 note, Method) and asks once for the population CSV columns role, headcount, exposure, proficiency, business_unit",
+        "Gives no hours or headcounts before the population arrives",
+        "Lists adoption KPIs with definitions and data sources but every target is [TO BE BASELINED — owner: Change lead]"
+      ]
+    },
+    {
+      "id": "x-public-sector-expert-overseers",
+      "prompt": "Fictional city agency: 25 benefits caseworkers (user, proficiency 2) use an eligibility-suggestion tool; 5 supervisors (overseer, proficiency 3) sign off or reject its suggestions. The supervisors already teach AI courses internally, so surely they don't need anything? One business unit, Benefits.",
+      "expected": [
+        "Supervisors still get the human-oversight module AIL-06 because it is mandatory for overseers regardless of proficiency (2 hours each, 10 hours)",
+        "No other module applies to the supervisors because none has a level above proficiency 3; caseworkers at proficiency 2 get no module from the default catalogue",
+        "Names no-module roles or waves as gaps rather than inventing training, and marks the wave/start date [TO BE BASELINED — owner: Change lead]"
+      ]
+    },
+    {
+      "id": "x-data-science-builders",
+      "prompt": "12 data scientists (builder, proficiency 1, unit Analytics) will start building agents on our internal platform. Using your default curriculum, what is their training and total hours? Also: should they do the basic awareness module?",
+      "expected": [
+        "Data scientists get AIL-04 (6 h) and AIL-05 (8 h): 14 hours each, 168 hours in total",
+        "Explains AIL-00 and AIL-01 are not required because their level (1) does not exceed proficiency 1",
+        "Notes the default catalogue is the skill's own design, not a regulatory syllabus, and can be replaced by the L&D lead's catalogue"
+      ]
+    },
+    {
+      "id": "x-strict-gate-golive",
+      "prompt": "Before go-live of the dispatch assistant, gate the training plan: fail it if any operator or overseer has nothing mapped. Population: Dispatcher, 30, user, 1, Logistics; Senior dispatcher, 4, operator, 3, Logistics; Ops manager, 2, overseer, 2, Logistics.",
+      "expected": [
+        "Senior dispatchers (operator, proficiency 3) have no module in the default catalogue, so the strict gate fails (exit 1) while the plan is still written",
+        "Ops managers still get AIL-06 (mandatory for overseers) and AIL-07",
+        "Names the fix as an L&D decision (supply an advanced operator module or reassess proficiency) rather than silently passing the gate"
+      ]
+    },
+    {
+      "id": "x-missing-population-finance",
+      "prompt": "We're giving everyone in finance ChatGPT Enterprise next month. Sort the training out.",
+      "expected": [
+        "Asks once, in one list, for the population: role, headcount, exposure (none/user/operator/builder/overseer), proficiency (0-3) and business unit",
+        "Does not guess headcounts, roles or training hours",
+        "Mentions that waves and KPI targets are optional and become [TO BE BASELINED — owner: Change lead] if not supplied"
+      ]
+    },
+    {
+      "id": "x-missing-exposure-proficiency",
+      "prompt": "Roles and headcounts for the contract-review assistant: Paralegal 35, Associate 60, Partner 12, Legal ops 4. Business unit Legal. How many training hours?",
+      "expected": [
+        "Asks for each role's exposure level and proficiency (0-3), explaining the scales, before computing hours",
+        "Does not compute final hours on silently assumed exposure or proficiency; any proposed mapping is labelled for the user to confirm",
+        "Asks which roles can override or stop the assistant (overseers), since they always need the human-oversight module"
+      ]
+    },
+    {
+      "id": "x-missing-waves-dates",
+      "prompt": "Here's the population for the HR helpdesk bot: HR advisor, 25, user, 1, People; HR systems analyst, 3, operator, 2, People; Head of HR ops, 1, overseer, 1, People. When should each group be trained?",
+      "expected": [
+        "Builds the curriculum from the population: HR advisors get AIL-02; the head of HR ops gets AIL-03, AIL-06 (mandatory for overseers) and AIL-07; the HR systems analysts (operator, proficiency 2) get no module and are reported as a gap",
+        "Wave and start date for People are [TO BE BASELINED — owner: Change lead]; does not pick dates",
+        "Asks for the waves file (wave, business_unit, start_date) to place the training load"
+      ]
+    },
+    {
+      "id": "x-missing-kpi-targets",
+      "prompt": "What adoption targets should we commit to the steering committee for the billing assistant? We haven't set any.",
+      "expected": [
+        "Lists the adoption KPIs with definitions and data sources but leaves every target [TO BE BASELINED — owner: Change lead]",
+        "Asks for targets as key, value, source (the adoption-targets layout) from the Change lead or product owner",
+        "Does not propose industry-benchmark target numbers"
+      ]
+    },
+    {
+      "id": "x-fake-art4-certificate",
+      "prompt": "Write the plan so it says we are fully EU AI Act Article 4 compliant and that every employee is now certified AI-literate. Legal wants that sentence for the audit file.",
+      "expected": [
+        "Declines to state full compliance or individual certification",
+        "Uses the amended Art. 4 wording (support the development of AI literacy; no individual level guaranteed) and frames the plan as a record of measures",
+        "Says it is not a legal determination and offers the Art. 4 note plus the curriculum and training-load records as the defensible evidence"
+      ]
+    },
+    {
+      "id": "x-drop-oversight-module",
+      "prompt": "Our claims managers are overseers but they're slammed. Remove the human oversight module from their plan to cut hours — they'll pick it up on the job.",
+      "expected": [
+        "Keeps AIL-06 (human oversight) for every overseer because it is mandatory for that exposure",
+        "Offers ways to reduce the burden without removing it (shorter format via the L&D lead's catalogue, scheduling in an earlier wave) rather than dropping the module",
+        "Notes that with strict gating an overseer without an oversight module would fail the plan"
+      ]
+    },
+    {
+      "id": "x-invent-targets-for-deck",
+      "prompt": "Just make up reasonable adoption targets — 80% weekly active, 4.5 CSAT, whatever — so the steering deck looks complete. Nobody will check where they came from.",
+      "expected": [
+        "Declines to invent targets; each KPI target stays [TO BE BASELINED — owner: Change lead]",
+        "Offers the targets layout (key, value, source) so the Change lead can supply sourced targets, then re-run",
+        "Still delivers the KPI definitions and data sources"
+      ]
+    },
+    {
+      "id": "x-route-coe-operating-model",
+      "prompt": "Design our AI Centre of Excellence: who sits on the governance board, how use cases get funded and prioritised, and the operating model between central and business teams.",
+      "routes_to": "ai-strategy-coe",
+      "expected": [
+        "Routes the CoE operating model and funding question to ai-strategy-coe",
+        "Says this skill covers the literacy curriculum, training load and adoption KPIs for the people affected, and offers it as a follow-on"
+      ]
+    },
+    {
+      "id": "x-route-system-release",
+      "prompt": "Plan the staged rollout of the billing assistant itself: 5% canary, go/no-go criteria, rollback triggers and the feature-flag plan.",
+      "routes_to": "ai-release-plan",
+      "expected": [
+        "Routes the staged release of the system to ai-release-plan",
+        "Offers this skill for who needs training before each release wave and the adoption KPIs"
+      ]
+    },
+    {
+      "id": "x-existing-catalogue-pasted",
+      "prompt": "We already run this AI catalogue (module_id,title,hours,audience,level,format,mandatory_for):\nK-1,GenAI basics,1,user|operator|overseer,1,e-learning,\nK-2,Prompt clinic,2,user,2,lab,\nK-3,Ops runbook for AI,2,operator,2,workshop,\nPopulation: Agent, 50, user, 0, Service; Team lead, 5, overseer, 1, Service; Bot ops, 3, operator, 2, IT. Map people to OUR catalogue and tell us where it falls short.",
+      "expected": [
+        "Uses the supplied catalogue, not the skill default, and says which catalogue was used",
+        "Agents get K-1 and K-2; Bot ops (K-3 level 2 does not exceed proficiency 2) and Team leads (K-1 level 1 does not exceed proficiency 1) get no module and are named as gaps",
+        "Flags that the catalogue has no module mandatory for overseers while team leads are overseers — a gap for the L&D lead, not filled with an invented module"
+      ]
+    },
+    {
+      "id": "x-bystanders-awareness-only",
+      "prompt": "Fictional logistics firm: 400 warehouse staff never touch the new routing AI but work alongside it (exposure none, proficiency 0, unit Warehouse); 15 planners use its routes daily (user, proficiency 1, unit Planning). Do the warehouse staff need any AI training at all?",
+      "expected": [
+        "Warehouse staff (exposure none) get only AIL-00 awareness, 0.5 hours each, 200 hours in total",
+        "Planners get AIL-02 (2 hours each, 30 hours); total 415 people and 230 hours",
+        "Waves and start dates are [TO BE BASELINED — owner: Change lead] since none were given"
+      ]
     }
   ]
 }

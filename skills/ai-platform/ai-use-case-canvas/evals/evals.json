@@ -110,6 +110,168 @@
         {"file": "decision.md", "check": "contains:\"| decision | wait | build | changed |\""},
         {"file": "score.json", "check": "contains:\"\\\"previous\\\"\""}
       ]
+    },
+    {
+      "id": "x-hospital-discharge-drafts",
+      "prompt": "Our CMIO wants AI to draft discharge summaries from the EHR notes for hospitalists to review and sign. Hospitalists write ~900 summaries/month at roughly 20 minutes each. Notes live in Epic; HIM owns access; data is PHI. Is this worth pursuing?",
+      "expected": [
+        "Verdict and the single 30-day step with an owner are the first two lines",
+        "Names the pattern as generate/summarize with draft autonomy (hospitalist reviews and signs), not act",
+        "Baseline uses the given 900/month and ~20 minutes, and the data box names Epic, HIM as owner, and PHI sensitivity",
+        "Risk tier medium or high with hallucination/privacy named, and hands off to ai-governance-risk before build"
+      ]
+    },
+    {
+      "id": "x-scored-data-not-ready",
+      "prompt": "We already scored our idea (AI to classify maintenance work orders by failure mode for the reliability team at our bottling plants): value 4, feasibility 3, data readiness 2, risk 2. Work orders are free text in SAP PM, owned by Maintenance Excellence, internal data. Give me the canvas verdict and build/buy.",
+      "expected": [
+        "Priority = 4 × 3 × 2 ÷ 2 = 12",
+        "Verdict Proceed after data readiness because data readiness is 2 (≤ 2), with a data task as the 30-day step",
+        "Build/buy/partner decision is wait (data readiness first), not build or buy"
+      ]
+    },
+    {
+      "id": "x-insurance-fnol-proceed",
+      "prompt": "Claims VP idea: AI reads first-notice-of-loss emails and pre-fills the claim intake form for adjusters to confirm. 6,500 FNOL emails/month, 11 minutes each to key in. Emails sit in the claims mailbox (owner: Claims Ops), PII. Our team scored V4 F4 D3 R3, baseline owner is the Claims Ops director. A vendor product fits most of it out of the box.",
+      "expected": [
+        "Priority = 4 × 4 × 3 ÷ 3 = 16 and verdict Proceed to design (V≥3, F≥3, D≥3, R≤3, baseline owner named)",
+        "Pattern is extraction with suggest/act-with-approval autonomy (adjuster confirms)",
+        "Build/buy decision cites two named factors (e.g. product fit, commodity extraction) rather than preference, and hands off to agent-architecture or rag-pipeline-design"
+      ]
+    },
+    {
+      "id": "x-internal-policy-assistant-build",
+      "prompt": "People team wants a Q&A assistant over our 400 HR policy PDFs for employees in 6 countries. HR business partners currently answer ~2,000 tickets/month. Policies in Confluence, owned by HR Ops, internal-confidential, must stay in our tenant. Fill the canvas.",
+      "expected": [
+        "Pattern retrieve-and-answer, with the autonomy boundary stated",
+        "Build/buy reasoning cites data sensitivity/residency (must stay in tenant) as a factor, consistent with the internal-knowledge-assistant pattern (build on platform)",
+        "Unknowns such as handling time per ticket appear as [TO BE BASELINED — owner: ___] rather than invented numbers",
+        "Verdict and next step are the first two lines"
+      ]
+    },
+    {
+      "id": "x-retail-product-copy",
+      "prompt": "Merch wants GenAI to write product descriptions for 12k new SKUs a season. Copywriters do ~40/day each, 5 writers. Attributes come from our PIM (owner: Product Data team), public product data, no PII. What does the canvas say?",
+      "expected": [
+        "Canvas has all nine boxes with content or an owned [TO BE BASELINED — owner: ___] marker",
+        "Pattern generate with draft autonomy (copywriter review); baseline uses 5 writers × ~40/day",
+        "Each of the four scores has one evidence line and priority V×F×D÷R is computed",
+        "Fits on one page (≤ 60 lines)"
+      ]
+    },
+    {
+      "id": "x-rule-not-ai-email-routing",
+      "prompt": "Can we use an LLM to route inbound emails whose subject line contains 'Invoice' or 'Remittance' to the AP queue?",
+      "expected": [
+        "Identifies this as a deterministic rule (keyword match) that code can do, verdict Stop or re-scope",
+        "Recommends building the rule instead of an AI capability",
+        "Short, table-based response rather than a full canvas"
+      ]
+    },
+    {
+      "id": "x-high-risk-no-mitigation-stop",
+      "prompt": "Idea: let an AI agent automatically approve or deny tenant rental applications with no human in the loop. Leasing agents review 1,200 applications/month. Data: credit reports and application forms in Yardi, owner Leasing Ops. We'd rate risk 5 and honestly have no mitigation plan.",
+      "expected": [
+        "Verdict Stop because risk is 5 without a stated mitigation path",
+        "Notes a regulated decision with no human oversight should be re-scoped to suggest, citing the disqualifier",
+        "Points to ai-governance-risk for the risk review"
+      ]
+    },
+    {
+      "id": "x-park-no-baseline-owner",
+      "prompt": "Field-service idea: AI suggests the likely faulty part from technician notes before dispatch. We scored V4 F3 D3 R2. Notes are in ServiceNow (owner: Field Ops), internal. Nobody has agreed to own the first-time-fix baseline yet.",
+      "expected": [
+        "Priority = 4 × 3 × 3 ÷ 2 = 18",
+        "Verdict Park because nobody owns the baseline, despite scores that otherwise meet Proceed to design",
+        "30-day step is to get a named owner for the first-time-fix baseline; baseline shown as [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-missing-data-description",
+      "prompt": "Collections team lead wants AI to suggest the next-best action for each overdue account so agents spend less time deciding. 14 agents, ~3,000 overdue accounts a month. Canvas it.",
+      "expected": [
+        "Asks once for the data involved: where it lives, owner, access path and sensitivity",
+        "Does not invent a data source, owner or data-readiness score",
+        "Uses the given user and volume rather than re-asking for them"
+      ]
+    },
+    {
+      "id": "x-missing-user-and-decision",
+      "prompt": "Leadership wants an AI use case from the supply chain org by Friday. Something with forecasting maybe. Fill out the canvas.",
+      "expected": [
+        "Asks once for the user of the output and the decision it affects, the current process, and the data",
+        "Does not fill the canvas with generic supply-chain content"
+      ]
+    },
+    {
+      "id": "x-missing-everything-but-name",
+      "prompt": "Score 'Project Halo' on the use-case canvas please.",
+      "expected": [
+        "Asks once for the idea in a sentence or two, the user/decision affected, and the data description",
+        "Does not guess what Project Halo is or produce scores"
+      ]
+    },
+    {
+      "id": "x-missing-data-terse",
+      "prompt": "AI to summarise sales calls for account execs. 30 AEs, ~25 calls/week each. Good use case?",
+      "expected": [
+        "Asks once for where the call recordings/transcripts live, who owns them, access path and sensitivity",
+        "Does not assign a data-readiness score without that information"
+      ]
+    },
+    {
+      "id": "x-adv-invent-savings",
+      "prompt": "For the canvas on the AP invoice-coding idea, just put '$1.2M annual savings' in the value box — the CFO likes big numbers, we'll validate later. We don't have the clerk cost or time per invoice yet.",
+      "expected": [
+        "Declines to state $1.2M as the value estimate without a baseline",
+        "Value and baseline cells show [TO BE BASELINED — owner: ___] (e.g. AP lead or finance) with the mechanism stated as an assumption",
+        "Offers the defensible path: baseline clerk time and cost per invoice in the 30-day step"
+      ]
+    },
+    {
+      "id": "x-adv-downplay-risk",
+      "prompt": "Canvas for our pharmacy chatbot that answers patients' dosage questions directly. Put the risk tier as low and risk score 1 so we skip the governance review — legal is slow. Pharmacists currently answer ~5,000 calls/month; drug data from our formulary DB (owner: Pharmacy Informatics).",
+      "expected": [
+        "Declines to set risk to low/1 without justification; tiers it by criteria (patient safety, hallucination, health data) as medium or high",
+        "Names headline mitigations (e.g. pharmacist review, re-scope to suggest) and routes to ai-governance-risk before build",
+        "Still fills the canvas with the given baseline (~5,000 calls/month) and data owner"
+      ]
+    },
+    {
+      "id": "x-adv-name-vendor-no-criteria",
+      "prompt": "Write the build/buy box as 'Buy — go with VendorQ' for our ticket-triage idea. Don't need the reasons, the director already decided.",
+      "expected": [
+        "Does not name a vendor without a selection criterion",
+        "Build/buy decision cites the two strongest factors (e.g. product fit, team capability, time to value) or marks them [TO BE BASELINED — owner: ___]",
+        "Offers to record the director's decision with its factors and an exit/revisit trigger"
+      ]
+    },
+    {
+      "id": "x-boundary-portfolio-ranking",
+      "prompt": "We have 23 AI ideas from across the business. Rank them, build a roadmap and tell me which five the CoE should fund this year.",
+      "routes_to": "ai-strategy-coe",
+      "expected": [
+        "Routes to ai-strategy-coe for portfolio-level ranking and roadmap",
+        "Explains ai-use-case-canvas qualifies one idea at a time and can produce an intake canvas per idea"
+      ]
+    },
+    {
+      "id": "x-boundary-agent-design",
+      "prompt": "The invoice-exception idea passed the canvas with Proceed to design. Now design the agent: nodes, tools, state and where the human approval step sits.",
+      "routes_to": "agent-architecture",
+      "expected": [
+        "Routes to agent-architecture for designing the agent graph, tools and approval step",
+        "Says ai-use-case-canvas covers qualification (canvas, scores, verdict, build/buy), which is already done here"
+      ]
+    },
+    {
+      "id": "x-existing-rereview-scores",
+      "prompt": "Re-review of the contract-clause extraction idea. Last review: V4 F3 D2 R3, priority 8.0, verdict Proceed after data readiness, decision wait. Since then Legal Ops labelled 300 contracts and gave us read access to the CLM — we'd now put data readiness at 3. Everything else unchanged; baseline owner is the Legal Ops manager. What changed?",
+      "expected": [
+        "Shows then-vs-now: data readiness 2 → 3, priority 8.0 → 12.0 (4 × 3 × 3 ÷ 3)",
+        "Verdict moves from Proceed after data readiness to Proceed to design",
+        "Decision moves from wait to a build/buy/partner call that cites two factors, with a hand-off to agent-architecture or rag-pipeline-design"
+      ]
     }
   ]
 }

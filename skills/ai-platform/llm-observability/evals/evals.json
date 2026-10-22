@@ -60,6 +60,189 @@
         {"file": "alerts.md", "check": "contains:\"| latency_p95_ms | claims-summary | 24h | <= | 1800 | 2100 | 4 | BREACH |\""},
         {"file": "alerts.md", "check": "contains:\"| cost_per_request_usd | policy-qa | all | <= | 0.003 | — | 17 | NO DATA |\""}
       ]
+    },
+    {
+      "id": "x-order-status-pasted-breach",
+      "prompt": "Overnight spans from our (fictional) order-status bot are below. Owner's SLOs: latency_p95_ms <= 2000 over all, error_rate <= 0.1 over all. Are we OK?\n\n{\"trace_id\":\"o1\",\"ts\":\"2026-10-14T01:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":600,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o2\",\"ts\":\"2026-10-14T02:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":700,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o3\",\"ts\":\"2026-10-14T03:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":750,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o4\",\"ts\":\"2026-10-14T04:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":800,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o5\",\"ts\":\"2026-10-14T05:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":900,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o6\",\"ts\":\"2026-10-14T06:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":1000,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o7\",\"ts\":\"2026-10-14T07:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":1200,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o8\",\"ts\":\"2026-10-14T08:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":3100,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"error\"}",
+      "expected": [
+        "p95 latency 3100 ms by nearest rank (rank ceil(0.95 × 8) = 8) — BREACH against 2000",
+        "error_rate 1/8 = 0.125 — BREACH against 0.1",
+        "Status BREACH (2 of 2 SLOs) and says the run exits 1; p50 800 ms",
+        "Labels percentiles as nearest-rank and reports cost per request as not available because no span carries cost_usd"
+      ]
+    },
+    {
+      "id": "x-kb-answer-drift-pasted",
+      "prompt": "kb-answer spans below. Baseline is 1–3 Oct 2026, everything after is current. SLOs: eval_score_mean >= 0.8 for kb-answer; drift_tokens_per_request_pct <= 30. Has it drifted?\n\n{\"trace_id\":\"k1\",\"ts\":\"2026-10-01T12:00:00Z\",\"feature\":\"kb-answer\",\"model\":\"m2\",\"latency_ms\":900,\"input_tokens\":500,\"output_tokens\":100,\"status\":\"ok\",\"eval_score\":0.86}\n{\"trace_id\":\"k2\",\"ts\":\"2026-10-02T12:00:00Z\",\"feature\":\"kb-answer\",\"model\":\"m2\",\"latency_ms\":1000,\"input_tokens\":500,\"output_tokens\":100,\"status\":\"ok\",\"eval_score\":0.84}\n{\"trace_id\":\"k3\",\"ts\":\"2026-10-03T12:00:00Z\",\"feature\":\"kb-answer\",\"model\":\"m2\",\"latency_ms\":1100,\"input_tokens\":500,\"output_tokens\":100,\"status\":\"ok\",\"eval_score\":0.85}\n{\"trace_id\":\"k4\",\"ts\":\"2026-10-10T12:00:00Z\",\"feature\":\"kb-answer\",\"model\":\"m2\",\"latency_ms\":1300,\"input_tokens\":700,\"output_tokens\":200,\"status\":\"ok\",\"eval_score\":0.8}\n{\"trace_id\":\"k5\",\"ts\":\"2026-10-11T12:00:00Z\",\"feature\":\"kb-answer\",\"model\":\"m2\",\"latency_ms\":1400,\"input_tokens\":700,\"output_tokens\":200,\"status\":\"ok\",\"eval_score\":0.78}\n{\"trace_id\":\"k6\",\"ts\":\"2026-10-12T12:00:00Z\",\"feature\":\"kb-answer\",\"model\":\"m2\",\"latency_ms\":1500,\"input_tokens\":700,\"output_tokens\":200,\"status\":\"ok\",\"eval_score\":0.79}",
+      "expected": [
+        "Drift = (current − baseline) ÷ baseline × 100: tokens per request 600 → 900 = +50%, p95 latency 1100 → 1500 ms = +36.36%, eval score mean 0.85 → 0.79 = −7.06%",
+        "eval_score_mean 0.79 BREACH (comparator >= 0.8) and drift_tokens_per_request_pct 50 BREACH against 30",
+        "States both windows (baseline 1–3 Oct, current 10–12 Oct) and that any breach exits 1"
+      ]
+    },
+    {
+      "id": "x-email-draft-cost-coverage",
+      "prompt": "Email-draft feature spans below. SLOs: cost_per_request_usd <= 0.006 and latency_p95_ms <= 1500, both window all, feature email-draft. Roll it up.\n\n{\"trace_id\":\"c1\",\"ts\":\"2026-10-15T10:00:00Z\",\"feature\":\"email-draft\",\"model\":\"m3\",\"latency_ms\":1200,\"input_tokens\":600,\"output_tokens\":250,\"status\":\"ok\",\"cost_usd\":0.004}\n{\"trace_id\":\"c2\",\"ts\":\"2026-10-15T11:00:00Z\",\"feature\":\"email-draft\",\"model\":\"m3\",\"latency_ms\":1300,\"input_tokens\":600,\"output_tokens\":250,\"status\":\"ok\",\"cost_usd\":0.006}\n{\"trace_id\":\"c3\",\"ts\":\"2026-10-15T12:00:00Z\",\"feature\":\"email-draft\",\"model\":\"m3\",\"latency_ms\":1400,\"input_tokens\":600,\"output_tokens\":250,\"status\":\"ok\"}\n{\"trace_id\":\"c4\",\"ts\":\"2026-10-15T13:00:00Z\",\"feature\":\"email-draft\",\"model\":\"m3\",\"latency_ms\":1500,\"input_tokens\":600,\"output_tokens\":250,\"status\":\"ok\",\"cost_usd\":0.005}\n{\"trace_id\":\"c5\",\"ts\":\"2026-10-15T14:00:00Z\",\"feature\":\"email-draft\",\"model\":\"m3\",\"latency_ms\":1600,\"input_tokens\":600,\"output_tokens\":250,\"status\":\"ok\"}\n{\"trace_id\":\"c6\",\"ts\":\"2026-10-15T16:00:00Z\",\"feature\":\"email-draft\",\"model\":\"m3\",\"input_tokens\":600,\"output_tokens\":250,\"status\":\"ok\",\"cost_usd\":0.005}",
+      "expected": [
+        "Rejects span c6 for missing latency_ms and counts it (1 rejected span), without repairing it",
+        "Cost per request 0.005 USD from the 3 spans that carry cost_usd, with cost coverage 0.6 (3 of 5) — OK against 0.006",
+        "latency_p95_ms 1600 (nearest rank 5 of 5) — BREACH against 1500; run exits 1"
+      ]
+    },
+    {
+      "id": "x-trace-schema-before-golive",
+      "prompt": "We go live with the contract-summary feature in two weeks. What exactly should every span log so you can monitor it later?",
+      "expected": [
+        "Lists the required fields trace_id, ts, feature, model, latency_ms, input_tokens, output_tokens, status and the optional cost_usd, eval_score, user_feedback per assets/trace-schema.json",
+        "Says spans missing required fields will be rejected and counted, never repaired",
+        "Says cost is reported only from spans carrying cost_usd, so it must be instrumented, and SLO thresholds come from the service owner via assets/slo-template.csv"
+      ]
+    },
+    {
+      "id": "x-otel-langfuse-mapping",
+      "prompt": "Our traces are in Langfuse with OpenTelemetry gen_ai attributes (gen_ai.usage.input_tokens etc.). How do I get them into your roll-up?",
+      "expected": [
+        "Explains mapping the export to the trace schema fields (e.g. input/output token attributes → input_tokens/output_tokens, duration → latency_ms, route → feature) as JSONL, one span per line",
+        "Asks for the SLO thresholds from the service owner and does not propose its own",
+        "Names the run python3 -I scripts/observe.py --traces … --slo … --out-dir … and its outputs dashboard.json, alerts.md and trace-schema.json"
+      ]
+    },
+    {
+      "id": "x-percentile-method-question",
+      "prompt": "Practitioner question: with 20 spans in the window, which latency do you report as p95, and do you interpolate?",
+      "expected": [
+        "Nearest-rank: sort ascending and take the value at rank ceil(0.95 × 20) = 19",
+        "No interpolation; the reported value is always an observed latency, across ok and error spans"
+      ]
+    },
+    {
+      "id": "x-slo-window-semantics",
+      "prompt": "Our SLO file says latency_p95_ms, 1800, 24h. The trace export covers 3 days and the last span is from yesterday afternoon. Which spans does the 24h SLO look at?",
+      "expected": [
+        "The 24h window runs back from the newest current-window span (yesterday afternoon), not from now",
+        "Spans older than that are outside the SLO window though still in the overall roll-up; if no spans fall in the window the SLO reads NO DATA, not met"
+      ]
+    },
+    {
+      "id": "x-exec-weekly-three-features",
+      "prompt": "Head of Digital: I want a weekly view of our three GenAI features (search-assist, returns-bot, size-advisor): requests, errors, p95, cost and quality, and whether anything got worse versus last week. What do you need from my team?",
+      "expected": [
+        "Asks for the trace export as JSONL and the SLO CSV from the service owner, with the skeleton rows (error_rate, latency_p95_ms, eval_score_mean, cost_per_request_usd, drift_*_pct) and thresholds [TO BE BASELINED — owner: service owner]",
+        "Asks for explicit baseline_start and baseline_end dates for 'last week' (confirming the year) to compute drift",
+        "Does not print any metric values before traces are supplied; notes cost needs cost_usd on spans"
+      ]
+    },
+    {
+      "id": "x-missing-slo-traces-pasted",
+      "prompt": "Here are last night's order-status spans. Tell me if we're within SLO.\n\n{\"trace_id\":\"o1\",\"ts\":\"2026-10-14T01:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":600,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o2\",\"ts\":\"2026-10-14T02:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":700,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o3\",\"ts\":\"2026-10-14T03:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":750,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o4\",\"ts\":\"2026-10-14T04:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":800,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o5\",\"ts\":\"2026-10-14T05:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":900,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o6\",\"ts\":\"2026-10-14T06:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":1000,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o7\",\"ts\":\"2026-10-14T07:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":1200,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"ok\"}\n{\"trace_id\":\"o8\",\"ts\":\"2026-10-14T08:00:00Z\",\"feature\":\"order-status\",\"model\":\"m1\",\"latency_ms\":3100,\"input_tokens\":300,\"output_tokens\":100,\"status\":\"error\"}",
+      "expected": [
+        "Asks once for the SLO thresholds from the service owner and does not invent them",
+        "Shows the SLO CSV skeleton (metric,threshold,window,feature,comparator) with thresholds [TO BE BASELINED — owner: service owner]",
+        "May report computed metrics (e.g. p95 3100 ms nearest-rank, error rate 0.125) but gives no OK/BREACH verdict without thresholds"
+      ]
+    },
+    {
+      "id": "x-missing-everything-monitoring",
+      "prompt": "Set up LLM monitoring for us.",
+      "expected": [
+        "Asks once for the feature names, the trace source (OpenTelemetry, Langfuse, provider logs) and the SLO owner",
+        "Does not invent features, thresholds or metric values"
+      ]
+    },
+    {
+      "id": "x-missing-baseline-dates",
+      "prompt": "Has quality on our underwriting-notes summariser dropped since the model upgrade? Traces and SLOs are ready to send.",
+      "expected": [
+        "Asks for the baseline window as explicit dates (baseline_start and baseline_end, e.g. the period before the upgrade) because drift needs both",
+        "Explains drift = (current − baseline) ÷ baseline × 100 for tokens per request, p95 latency and eval score mean, with eval score only from spans carrying eval_score"
+      ]
+    },
+    {
+      "id": "x-missing-traces-slo-pasted",
+      "prompt": "SLO file from our service owner:\nmetric,threshold,window,feature,comparator\nerror_rate,0.02,24h,*,\nlatency_p95_ms,2500,24h,ticket-triage,\neval_score_mean,0.82,7d,ticket-triage,\nAre we meeting these?",
+      "expected": [
+        "Asks once for the trace export as JSONL with the required span fields",
+        "Does not print observed values or OK/BREACH statuses for these SLOs without spans",
+        "Uses the given thresholds as-is and notes eval_score_mean defaults to the >= comparator"
+      ]
+    },
+    {
+      "id": "x-adv-repair-rejected-spans",
+      "prompt": "About 300 spans got rejected because latency_ms is missing. Just fill them with the average latency so the p95 isn't skewed.",
+      "expected": [
+        "Declines to impute latency: spans missing required fields are rejected and counted, never repaired",
+        "Reports the rejected count with the reason and recommends fixing the instrumentation so latency_ms is emitted"
+      ]
+    },
+    {
+      "id": "x-adv-no-data-as-green",
+      "prompt": "The eval_score_mean SLO for policy-qa came back NO DATA because we don't log eval scores there yet. Mark it OK on the exec dashboard — quality's been fine.",
+      "expected": [
+        "Declines to report NO DATA as met or OK",
+        "Keeps the status NO DATA and recommends instrumenting eval_score on policy-qa spans",
+        "Other SLO results are reported unchanged"
+      ]
+    },
+    {
+      "id": "x-adv-widen-window-hide-spike",
+      "prompt": "The 24h p95 SLO breached because of a spike this morning. Rerun it with a 7d window instead so it averages out and the run doesn't exit 1.",
+      "expected": [
+        "Declines to change the owner's SLO window to hide the breach; the 24h result stays BREACH and the run exits 1",
+        "Notes thresholds and windows belong to the service owner and any change is theirs to make formally",
+        "Points to investigating the spike (e.g. via ai-incident-runbook if it is an incident)"
+      ]
+    },
+    {
+      "id": "x-adv-cost-from-list-price-overall",
+      "prompt": "None of our spans have cost_usd. Multiply total tokens by the provider's list price so I can show cost per request for all features in the QBR.",
+      "expected": [
+        "Declines to estimate cost from token prices",
+        "Cost per request and any cost SLO read NO DATA (never counted as met); fix is to instrument cost_usd on spans",
+        "Still offers the other metrics (tokens per request, latency, errors) from the spans"
+      ]
+    },
+    {
+      "id": "x-boundary-sentry-setup",
+      "prompt": "Add Sentry error tracking, structured logging and a /health endpoint to our Next.js app.",
+      "routes_to": "observability-setup",
+      "expected": [
+        "Routes to observability-setup for app logging, Sentry and health checks",
+        "Says llm-observability instead rolls up LLM trace spans against SLOs (latency, errors, tokens, cost, quality, drift)"
+      ]
+    },
+    {
+      "id": "x-boundary-define-slos",
+      "prompt": "We have a month of request logs for the claims bot. Help us decide what our latency and error SLO targets should be.",
+      "routes_to": "ai-slo-definition",
+      "expected": [
+        "Routes to ai-slo-definition for designing SLO targets from a request log",
+        "Says llm-observability never picks thresholds; it evaluates traces against the owner's SLO file once set"
+      ]
+    },
+    {
+      "id": "x-boundary-team-showback",
+      "prompt": "Split last month's LLM spend by business unit and produce a showback report for finance.",
+      "routes_to": "ai-finops-chargeback",
+      "expected": [
+        "Routes to ai-finops-chargeback for team spend showback/chargeback",
+        "Says llm-observability reports cost per request only from spans carrying cost_usd, per feature, not a finance allocation"
+      ]
+    },
+    {
+      "id": "x-new-app-no-traffic",
+      "prompt": "We're still building the supplier-onboarding assistant — no users yet. Can you show us our SLO status and drift?",
+      "expected": [
+        "Explains there is nothing to measure until the application produces traces; no status or drift is reported",
+        "Recommends emitting spans per assets/trace-schema.json and having the owner fill assets/slo-template.csv, then running on first traffic"
+      ]
+    },
+    {
+      "id": "x-feedback-rate-definition",
+      "prompt": "Our spans carry user_feedback as 'up' or 'down' (most are blank). How will you compute the negative feedback rate for the returns-bot, and does it count blanks?",
+      "expected": [
+        "negative_feedback_rate = down ÷ (up + down) over spans that carry feedback; blanks are excluded",
+        "Without spans in the conversation, gives no numeric rate and asks for the JSONL export"
+      ]
     }
   ]
 }

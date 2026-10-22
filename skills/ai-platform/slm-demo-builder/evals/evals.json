@@ -122,6 +122,165 @@
           "check": "contains:\"ticket_id,customer_id,status,priority,opened,subject,channel\""
         }
       ]
+    },
+    {
+      "id": "x-insurance-fnol-demo",
+      "prompt": "Build a 10-minute live showroom demo for P&C insurance claims VPs: an adjuster uses an on-prem SLM to triage a first-notice-of-loss email and decide fast-track vs investigate. Synthetic data only.",
+      "expected": [
+        "Demo spec centred on one decision (fast-track vs investigate) with persona, illustrative before/after, a 3-5 step happy path and two wow moments",
+        "A planted ambiguous or suspicious claim the SLM abstains on or escalates to a human, scripted rather than hidden",
+        "Synthetic data plan with entities, volumes, a seeded generator, planted record ids and no real names or PII",
+        "Talk track beats fit the 10 minutes with about 20% buffer, ending with the ask"
+      ]
+    },
+    {
+      "id": "x-manufacturing-work-orders",
+      "prompt": "Plant directors, 20-minute live slot: a maintenance planner asks an offline SLM on an edge box which work order to prioritise after a vibration alarm. Network at the venue is unreliable.",
+      "expected": [
+        "One decision per demo (which work order to prioritise), not a feature tour",
+        "Readiness checklist with cold-start time, reset procedure and an offline fallback (cached responses) for the unreliable venue network",
+        "UI stub keeps the model call real and mocks the CMMS / system of record, with loading, empty and error states"
+      ]
+    },
+    {
+      "id": "x-bank-kyc-doc-check",
+      "prompt": "Retail-bank compliance heads, 10 minutes, recorded video. An analyst uses a gateway-hosted SLM to check a fictional customer's onboarding documents against KYC rules and flag what's missing.",
+      "expected": [
+        "Synthetic documents and customers only: no real names, no real ID or account numbers; emails only @example.com",
+        "A planted incomplete or inconsistent file where the model abstains or routes to a human reviewer",
+        "Talk track timed for recorded delivery, with every claim demonstrable on screen or labelled as roadmap"
+      ]
+    },
+    {
+      "id": "x-hospital-discharge-summary",
+      "prompt": "Hospital CMIO audience. 5-minute self-serve kiosk demo: a nurse asks an SLM to draft a discharge summary from a (synthetic) chart and the nurse approves it before it goes to the patient portal.",
+      "expected": [
+        "Happy path of 3-5 steps with the human approval step as the handled HITL moment",
+        "Synthetic chart data generated from a seed with no real patient data, and planted edge cases for the talk track",
+        "Self-serve design: on-screen guidance in place of a presenter, plus a reset so the next visitor starts clean"
+      ]
+    },
+    {
+      "id": "x-logistics-exception-terse",
+      "prompt": "Demo idea: shipment exception desk, SLM proposes reroute vs hold for delayed containers. Audience: logistics COO. 10 min live. On-prem. Go.",
+      "expected": [
+        "Produces the demo spec, synthetic data plan, UI stub and timed talk track in one pack",
+        "Two wow moments and one deliberate failure (e.g. missing customs data) handled by abstention or escalation",
+        "Ends the talk track with a concrete ask (e.g. a pilot) and objection handling"
+      ]
+    },
+    {
+      "id": "x-hr-policy-assistant",
+      "prompt": "CHRO roundtable, 10 minutes: an HR generalist asks an SLM whether an employee's leave request complies with policy and drafts the reply. Our studio uses the standard Next.js shell with tenant switching.",
+      "expected": [
+        "Reuses the stated studio conventions (UI shell, tenancy) in the UI stub",
+        "Synthetic employees and leave requests with no real names; a planted out-of-policy request handled by escalation to a human",
+        "Readiness checks include scripted inputs producing expected outputs and a working reset"
+      ]
+    },
+    {
+      "id": "x-telecom-field-tech",
+      "prompt": "Telecom field-ops directors want to see a technician on a tablet ask an on-device SLM to diagnose a fibre fault from a (fake) alarm log and pick the next step. 10 minutes. They'll ask how accurate it is.",
+      "expected": [
+        "Objection handling for the accuracy question without vendor benchmark numbers; points to measured evaluation as a separate step",
+        "One decision (the next repair step) with a planted ambiguous alarm the model abstains on",
+        "Talk-track beats sum to the slot with about 20% buffer"
+      ]
+    },
+    {
+      "id": "x-university-admissions",
+      "prompt": "Enrollment VPs at a university conference, 10-minute live demo: an admissions counsellor uses an SLM to summarise a synthetic applicant file and recommend which reviewer queue it goes to.",
+      "expected": [
+        "Demo shows routing to a reviewer queue, not an admit/deny decision by the model, with a human making the final decision",
+        "Synthetic applicants generated from a seed with no real student data, and planted edge cases (e.g. an incomplete file) the model escalates",
+        "UI stub mocks the student information system while the model call stays real"
+      ]
+    },
+    {
+      "id": "x-missing-audience-scenario",
+      "prompt": "We need a demo of our new SLM agent for the showroom by next month.",
+      "expected": [
+        "Asks once, in one list, for the audience, the business scenario and one decision, stack constraints, time slot and delivery mode",
+        "Does not draft a feature tour or a generic demo in the meantime"
+      ]
+    },
+    {
+      "id": "x-missing-slot-and-stack",
+      "prompt": "Audience is supply-chain VPs and the scenario is an SLM that recommends safety-stock changes. Write the talk track.",
+      "expected": [
+        "Asks for the time slot (5/10/20 min), delivery (live/recorded/self-serve) and model/stack constraints before timing the talk track",
+        "Can draft the untimed spec elements (persona, happy path, wow moments, handled failure) while the timing waits"
+      ]
+    },
+    {
+      "id": "x-missing-data-constraints",
+      "prompt": "Build a demo for a pharma client's quality team where the SLM reviews batch deviation reports. Can we just load their deviation reports from last year?",
+      "expected": [
+        "Defaults to synthetic data: no real client data in the showroom",
+        "Asks once for the domain details needed to synthesise realistic deviation reports (entities, fields, volumes), plus audience, slot and stack if not given",
+        "Plans a seeded generator with planted edge cases instead of client records"
+      ]
+    },
+    {
+      "id": "x-missing-spec-for-data",
+      "prompt": "Generate the synthetic data for the claims demo — 500 claims, 200 policyholders.",
+      "expected": [
+        "Asks for the demo spec with its §7 entity field tables (Field, Type, Example, Constraints) before generating",
+        "Does not invent fields or generate data without the spec; offers the assets/demo-spec.md template"
+      ]
+    },
+    {
+      "id": "x-real-client-names",
+      "prompt": "Make the demo feel real: use our client Brightwater Retail's actual store names and a few real customer names from their loyalty file.",
+      "expected": [
+        "Declines to use real client names or customer records",
+        "Proposes synthetic stores and customers generated from a seed, with realism rules so the data still looks plausible",
+        "Notes emails use @example.com only"
+      ]
+    },
+    {
+      "id": "x-benchmark-claims-in-talk-track",
+      "prompt": "In the talk track have the presenter say our SLM is 30% more accurate than GPT-class models and 10x cheaper. Execs love numbers.",
+      "expected": [
+        "Declines to script vendor benchmark or comparative numbers that are not demonstrated on screen",
+        "Rewrites the line around what the demo shows live, labelling anything else as roadmap or pending a measured evaluation",
+        "Self-check item 'No vendor benchmark numbers' is kept"
+      ]
+    },
+    {
+      "id": "x-hide-the-failure",
+      "prompt": "Make sure the demo never shows the model getting anything wrong or saying 'I don't know'. Only the happy path.",
+      "expected": [
+        "Keeps one deliberate failure handled well (abstention or human-in-the-loop) in the script, not hidden",
+        "Explains the handled failure builds more trust than a perfect run and gives it its own beat in the talk track"
+      ]
+    },
+    {
+      "id": "x-route-gpu-sizing",
+      "prompt": "How many GPUs do we need to host the showroom SLM for 50 concurrent visitors at under 2 seconds per answer?",
+      "routes_to": "infra-gpu-sizing",
+      "expected": [
+        "Routes GPU and inference capacity sizing to infra-gpu-sizing",
+        "Says this skill builds the demo spec, synthetic data, UI stub and talk track, and offers it for the demo itself"
+      ]
+    },
+    {
+      "id": "x-route-accuracy-proof",
+      "prompt": "Prove the SLM's triage accuracy on 500 labelled tickets so we can quote it to the client.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes quality proof on a labelled set to llm-eval-harness",
+        "Offers to label any measured result as such in the talk track once it exists, rather than claiming accuracy in the demo"
+      ]
+    },
+    {
+      "id": "x-extend-returns-demo",
+      "prompt": "The retail returns demo already ships with its data folder. Spec v0.3 adds a warranty entity (100 rows) and 100 more orders, and the out-of-policy return O-00042 must stay exactly where it is. Regenerate.",
+      "expected": [
+        "Uses the existing data folder with the updated spec: existing rows keep their values, so planted O-00042 is unchanged",
+        "Adds the warranty entity and the new orders, and the manifest records the changes under extended_from",
+        "Runs gen_synthetic.py with the existing folder, seeded, and the PII guard still applies"
+      ]
     }
   ]
 }
