@@ -11,18 +11,17 @@ metadata:
     inputs:
       - {name: target, type: path, required: true, from: "repo root (created if absent); existing workflows are kept, never overwritten"}
       - {name: seed, type: dir, required: false, from: "evals/demos only: an existing repo layout copied to target first, so the example is never written to (evals/fixtures/repo-existing-ci)"}
+      - {name: deploy, type: string, required: false, from: "vercel|skip — override the deploy-target detection: `vercel` forces preview.yml/prod.yml even when the repo deploys elsewhere, `skip` never writes them; omitted = detect from existing workflows/config (AWS, Azure, GCP, Fly.io, Railway → the Vercel deploy workflows are not written)"}
     run:
       - {step: seed, kind: script, cmd: "python3 -I scripts/seed_repo.py --from {seed} --target {target}", skip_if_missing: [seed]}
-      - {step: install, kind: script, cmd: "python3 -I scripts/install_ci.py --target {target} --report-json {out}/ci-report.json --report-md {out}/ci-report.md"}
+      - {step: install, kind: script, cmd: "python3 -I scripts/install_ci.py --target {target} [--deploy {deploy}] --report-json {out}/ci-report.json --report-md {out}/ci-report.md"}
     outputs:
-      - {path: "{out}/ci-report.json", checks: [exists, json, contains:"jobs_found"]}
-      - {path: "{out}/ci-report.md", checks: [exists, sections:["Workflows","Branch protection","Next steps"]]}
+      - {path: "{out}/ci-report.json", checks: [exists, json, contains:"jobs_found", contains:"deploy_workflows", contains:"flavour"]}
+      - {path: "{out}/ci-report.md", checks: [exists, sections:["Read before write","Workflows","Standard jobs","Branch protection","Next steps"]]}
       - {path: "{target}/.github/workflows/ci.yml", checks: [exists, yaml]}
-      - {path: "{target}/.github/workflows/preview.yml", checks: [exists, yaml]}
-      - {path: "{target}/.github/workflows/prod.yml", checks: [exists, yaml]}
     modes:
       new: {case: agent-happy-path, bring: "an empty or brand-new repo folder"}
-      existing: {case: agent-mode-existing, bring: "your repo with its current workflows and package.json"}
+      existing: {case: agent-mode-existing, bring: "your repo with its current workflows and package.json (a repo that already deploys to AWS/Azure/GCP keeps its deploy workflows and gets only the CI-only pieces — case agent-mode-existing-aws)"}
 ---
 
 # ci-cd-vercel-github
@@ -35,7 +34,18 @@ metadata:
 
 ## Starting points
 - **New** — point `target` at an empty folder: all three workflows are written from `assets/workflows/` and validated.
-- **Existing** — point `target` at your repo: customised workflows are kept and validated job by job, missing ones are added, and every `npm run` they call is checked against your package.json.
+- **Existing** — point `target` at your repo: customised workflows are kept and validated job by job, missing ones are added, and every `npm run` they call is checked against your package.json. A kept `ci.yml` that lacks standard jobs never fails the run: the missing jobs are proposed in `.github/ci-additions.yml` (outside `workflows/`, so Actions ignores it) for you to merge by hand, and the report lists every standard job as present/missing.
+- **Existing, deploys elsewhere** — the script reads the workflows first. AWS (`aws-actions/`, `amazon-ecr`, ECS/CDK/SAM), Azure, Google Cloud, Fly.io or Railway detected and no real Vercel signal (a linked `.vercel/project.json`, `vercel deploy`, `VERCEL_TOKEN`; a bare `vercel.json` or a `*.vercel.app` hostname does not count): `preview.yml`/`prod.yml` are **not** written, the report names the detected target, and only `ci.yml` + its check names are offered. Pass `--input deploy=vercel` to force the Vercel workflows, `deploy=skip` to never write them.
+
+## Read before write (every run)
+| Read | Decides |
+|---|---|
+| `tsconfig.json` / `.ts` sources, else `jsconfig.json` / `.js` sources | language flavour — a JavaScript repo gets the secrets-scan grep widened to `*.js`/`*.jsx`; `npm run typecheck` is flagged when the script is absent |
+| `.github/workflows/*.yml` (comments stripped), `package.json` scripts, `vercel.json`, `.vercel/project.json` | deploy target — Vercel workflows only when Vercel is the target (or the repo has no deploy yet) |
+| existing `ci.yml`/`ci.yaml`, `preview.*`, `prod.*` | kept, never overwritten; never a `.yml` beside a `.yaml` sibling; missing standard jobs → `<name>-additions.yml` |
+| existing `<name>-additions.yml` | identical → kept; different → **conflict**: nothing is written, exit 1 |
+
+All writes are atomic: everything is computed first and written only when no conflict (malformed kept workflow, clashing additions file) exists; otherwise nothing lands in the repo and `ci-report.md` says why.
 
 ## When to use
 - New pipeline, pipeline change, flaky/failing workflow, adding a stage (e2e, RLS lint, coverage gate), release/rollback procedure.
@@ -54,7 +64,7 @@ Missing repo facts do not stop the design: mark them `[TO BE BASELINED — owner
 ## Procedure
 1. Read `../../../shared/stack-conventions.md` (CI row), `../../../shared/token-efficiency.md`. Read existing workflows and `package.json` scripts; map what runs where today.
 2. **Plan.** Stage table (from `references/pipeline-stages.md`): stage → trigger → job → required check name → secrets. For fixes: failing step → root cause hypothesis → minimal change. Post; wait for "go". *(gate: plan→approve)*
-3. **Build.** Copy/merge `assets/workflows/ci.yml`, `assets/workflows/preview.yml`, `assets/workflows/prod.yml`; never overwrite a customised workflow — diff and merge. Confirm every `npm run <script>` exists. Fill the env/secret matrix from `references/env-promotion.md`; list `gh secret set` commands (values never in chat).
+3. **Build.** Read the repo first (flavour, deploy target, existing workflows — table above). Copy/merge `assets/workflows/ci.yml`, and `preview.yml`/`prod.yml` only when Vercel is the deploy target; never overwrite a customised workflow — diff and merge, or hand the team `ci-additions.yml`. Confirm every `npm run <script>` exists. Fill the env/secret matrix from `references/env-promotion.md`; list `gh secret set` commands (values never in chat).
 4. **Branch protection.** Required checks = `ci / lint-typecheck-test`, `ci / rls-lint`, `preview / e2e`. Commands in `project-bootstrap/references/branch-rules.md`.
 5. **Test.** Validate YAML (`python3 -c "import yaml"`-free: open each file; check `on:`/`jobs:`), run `act` if available or push a `chore/ci` branch and watch the run; confirm check names match protection. *(gate: build→test)*
 6. **Prod path.** Walk `references/env-promotion.md`: GitHub Environments `staging` and `production` (required reviewers on production), tag → migrate staging → migrate prod → deploy → smoke → release. Dry-run with a `v0.0.0-rc` tag against staging only if the user approves.
@@ -85,7 +95,7 @@ Missing repo facts do not stop the design: mark them `[TO BE BASELINED — owner
 - `references/rollback.md` — code and migration rollback procedures, decision table
 - `references/troubleshooting.md` — common failures and fixes
 - `assets/workflows/ci.yml`, `assets/workflows/preview.yml`, `assets/workflows/prod.yml`
-- `scripts/install_ci.py` — writes absent workflows, keeps existing ones, validates `on:`/`jobs:` and required job names
+- `scripts/install_ci.py` — read-before-write installer: detects flavour and deploy target, writes absent workflows (Vercel deploy workflows only for Vercel targets), keeps existing ones, proposes missing standard jobs as `<name>-additions.yml`, validates `on:`/`jobs:`; atomic, exit 1 only on conflict
 
 ## How to run (automation, when commands can run)
-This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The install step exits 1 when a kept (customised) workflow lacks a required job, because branch protection depends on those check names; merge the missing stage from `assets/workflows/` and re-run.
+This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/ci-cd-vercel-github --input <name>=<value> … --out <dir>` (see `--explain build/ci-cd-vercel-github`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. A kept (customised) workflow that lacks a standard job gives `gate: NEEDS-MERGE` (exit 0) and `.github/<name>-additions.yml` to merge by hand — branch protection depends on those check names, so do not call CI done until the Standard-jobs table is all `present`. A repo that deploys to AWS/Azure/GCP/Fly.io/Railway gets no Vercel deploy workflows unless `--input deploy=vercel` is passed; the report names the detected target. Exit 1 means nothing was written: a kept workflow is malformed or an additions file clashes.
