@@ -359,3 +359,11 @@ def test_workers_give_identical_results_to_sequential(tmp_path):
     assert (out_a / "trigger.csv").read_text() == (out_b / "trigger.csv").read_text()
     assert (out_a / "quality.csv").read_text() == (out_b / "quality.csv").read_text()
     assert (out_a / "scorecard.md").read_text().splitlines()[3:] == (out_b / "scorecard.md").read_text().splitlines()[3:]
+
+
+def test_local_model_name_without_base_url_is_refused_before_any_call(tmp_path):
+    out = tmp_path / "out"
+    proc = run_eval("all", "--provider", "openai", "--model", "qwen3:14b", "--runs", "1", "--yes", "--skills", SKILLS[0], "--out", str(out),
+                    env_extra={"OPENAI_API_KEY": "ollama"})
+    assert proc.returncode != 0
+    assert "OPENAI_BASE_URL is not set" in proc.stderr

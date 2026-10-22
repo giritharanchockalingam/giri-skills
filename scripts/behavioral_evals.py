@@ -157,6 +157,9 @@ class OpenAILLM(LLM):
     name = "openai"
 
     def __init__(self, model: str):
+        if not local_endpoint() and not re.match(r"^(gpt-|o\d|chatgpt-|text-)", model):
+            sys.exit(f"error: model '{model}' is not an OpenAI model and OPENAI_BASE_URL is not set — this call would go to "
+                     "api.openai.com. For a local server: export OPENAI_BASE_URL=http://<host>:11434/v1 OPENAI_API_KEY=ollama")
         try:
             import openai
         except ImportError:
