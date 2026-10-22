@@ -125,6 +125,161 @@
           "check": "sections:[\"Deliverables\",\"Assumptions\",\"Clauses\"]"
         }
       ]
+    },
+    {
+      "id": "x-sow-tm-with-nte",
+      "prompt": "Approved proposal v1.4 for Tailwind Freight's Snowflake migration (3 phases: assess, migrate, hypercare) and the estimate: 2,400 hours. Commercial model: time and materials with a not-to-exceed of $480,000 stated in the proposal. MSA-2025-031. Draft the SOW.",
+      "expected": [
+        "Commercial section: monthly invoicing against approved timesheets with a not-to-exceed of $480,000 sourced to the proposal",
+        "The 2,400 hours appear as an assumption with basis, consequence if false and change-control trigger = Y",
+        "Deliverables carry objective acceptance criteria, method, review window and approver; deemed-acceptance clause present",
+        "Legal topics referenced to MSA-2025-031 and marked 'confirm with counsel', not drafted"
+      ]
+    },
+    {
+      "id": "x-sow-milestone-percentages",
+      "prompt": "Milestone-based SOW for the Coho Outdoor order-management integration. Proposal pricing: total $300,000; schedule 20% on design sign-off, 40% on build complete, 40% on go-live acceptance. Draft the milestones and payment section.",
+      "expected": [
+        "Payment amounts $60,000, $120,000 and $120,000 tied to the three milestones",
+        "Each payment is due on acceptance of the linked deliverable, with objective acceptance criteria and a review window",
+        "Amounts traced to the proposal pricing; nothing added beyond it"
+      ]
+    },
+    {
+      "id": "x-sow-run-rate-service",
+      "prompt": "Convert the approved managed-service proposal for Lakeview Dental's integration support into an SOW. Run-rate model, 12 months; proposal defines P1 response 30 minutes and monthly volume Band B up to 50,000 transactions.",
+      "expected": [
+        "Run-rate commercial linkage: service levels with credits; monthly service report as the acceptance method",
+        "Volumes above Band B trigger a change request; the band appears as an assumption with change-control trigger = Y",
+        "Credit amounts and fees not in the proposal are [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-sow-acceptance-criteria-only",
+      "prompt": "Write acceptance criteria for three deliverables: D1 target-architecture document, D2 wave-1 migration of 12 interfaces, D3 two knowledge-transfer sessions.",
+      "expected": [
+        "D1 uses document criteria (contains the listed sections, reviewed by a named client role, comments resolved) with review acceptance in 5-10 business days",
+        "D2 uses testable criteria (e.g. test-case pass rates, no open P1 defects, cutover / reconciliation evidence), not satisfaction language",
+        "D3 uses delivery criteria (sessions delivered, attendance recorded, materials stored); deemed-acceptance rule stated"
+      ]
+    },
+    {
+      "id": "x-sow-redline-loose-clause",
+      "prompt": "Redline this clause from our draft SOW: 'Vendor will modernize the client's integrations and provide support as needed.'",
+      "expected": [
+        "Marks the clause [SHARPEN] (or [CUT]/[ADD]) and rewrites it as numbered S-nn statements with verb, object and boundary (e.g. interfaces listed in an appendix)",
+        "Flags 'as needed' support as an ambiguity and adds a mirrored O-nn out-of-scope statement or bounded support term",
+        "The interface count is [TO BE BASELINED — owner: ___] since the clause gives none"
+      ]
+    },
+    {
+      "id": "x-sow-raci",
+      "prompt": "Build the RACI for deliverables D1-D4. Client roles: CIO, Enterprise Architect, PMO Lead. Ours: Delivery Manager, Lead Architect.",
+      "expected": [
+        "RACI has exactly one A per deliverable row",
+        "Uses the supplied client and delivery roles; any role not supplied is [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-sow-client-dependencies",
+      "prompt": "Add client dependencies: they must provide UAT environments by week 3, named SMEs for 4 hours a week, and production access by week 8.",
+      "expected": [
+        "Each dependency has a due date and an owner on the client side",
+        "Includes a delay-consequence clause (e.g. delay beyond 5 business days shifts dependent milestones day for day)",
+        "Dependencies are tied to change control when missed"
+      ]
+    },
+    {
+      "id": "x-sow-change-control-light",
+      "prompt": "Add a change-control section. The client hates paperwork for small stuff.",
+      "expected": [
+        "Procedure: request, impact assessment (effort, schedule, price, risk), approval authority and documentation",
+        "Includes a minor-change threshold to avoid paperwork for trivial items; the threshold value is [TO BE BASELINED — owner: ___] if not given"
+      ]
+    },
+    {
+      "id": "x-sow-terse",
+      "prompt": "SOW for Fabrikam pls",
+      "expected": [
+        "Asks once, in one list, for the approved proposal, the estimate and the commercial model (fixed / T&M / milestone / run-rate)",
+        "Does not draft a commercial section on an assumed model"
+      ]
+    },
+    {
+      "id": "x-sow-commercials-with-procurement",
+      "prompt": "Proposal v3 is approved and the estimate is attached. Draft the SOW - commercials are still being worked out with procurement.",
+      "expected": [
+        "Asks once for the commercial model and says in one line that acceptance-payment linkage depends on it",
+        "May offer to draft scope and deliverables meanwhile but does not write the commercial section on an assumed model"
+      ]
+    },
+    {
+      "id": "x-sow-no-estimate-yet",
+      "prompt": "Fixed-price SOW for the approved Margie's Travel API proposal (2 waves). We haven't finished the estimate.",
+      "expected": [
+        "Drafts scope and deliverables but marks every effort figure and amount [TO BE BASELINED — owner: ___] naming the estimate as the source",
+        "Fixed-price milestones are tied to accepted deliverables per wave without inventing amounts",
+        "Ends with the questions that close the gaps, including the estimate"
+      ]
+    },
+    {
+      "id": "x-sow-redline-without-draft",
+      "prompt": "Redline the SOW procurement sent back.",
+      "expected": [
+        "Asks once for the procurement SOW draft and the approved proposal to reconcile against",
+        "Does not invent clauses to redline"
+      ]
+    },
+    {
+      "id": "x-sow-draft-legal-terms",
+      "prompt": "Add a liability cap of 1x fees and an IP clause giving us ownership of all code we write.",
+      "expected": [
+        "Does not draft the liability or IP clauses; lists them as legal flags referenced to the MSA and marked 'confirm with counsel'",
+        "Explains in one line that legal terms are for counsel"
+      ]
+    },
+    {
+      "id": "x-sow-rate-not-in-proposal",
+      "prompt": "Use our standard day rate of $1,450 to fill the milestone amounts - it isn't in the proposal, but everyone knows it.",
+      "expected": [
+        "Does not compute amounts from a rate absent from the proposal / estimate; amounts stay [TO BE BASELINED — owner: ___]",
+        "Notes the figures must come from the estimate / proposal pricing"
+      ]
+    },
+    {
+      "id": "x-sow-drop-assumptions",
+      "prompt": "Remove the assumptions section. The client says it makes us look like we're hedging.",
+      "expected": [
+        "Keeps the assumptions: each is a change-control trigger with consequence if false",
+        "Explains in one line why they protect both parties and may offer plainer wording"
+      ]
+    },
+    {
+      "id": "x-sow-boundary-exec-summary",
+      "prompt": "Write the executive summary and win themes for the Fabrikam proposal.",
+      "routes_to": "proposal-writer",
+      "expected": [
+        "Routes proposal narrative to proposal-writer",
+        "Says this skill turns the approved proposal into an SOW"
+      ]
+    },
+    {
+      "id": "x-sow-boundary-estimate",
+      "prompt": "How many hours and what team do we need to migrate 60 interfaces in 4 waves?",
+      "routes_to": "effort-estimator",
+      "expected": [
+        "Routes effort and team sizing to effort-estimator",
+        "Says this skill uses that estimate as SOW assumptions"
+      ]
+    },
+    {
+      "id": "x-sow-reconcile-client-paper",
+      "prompt": "Procurement sent their SOW paper. Check it against our approved proposal before we sign.\nProposal deliverables: D-01 assessment report; D-02 wave-1 migration (acceptance: passes 100% of P1 test cases, no open P1 defects); D-03 runbooks. Proposal has a change-control clause.\nClient paper: D-01 assessment report; D-02 wave-1 migration 'to the client's reasonable satisfaction'; D-04 24x7 support for 6 months; no change-control clause.",
+      "expected": [
+        "Flags D-02's 'reasonable satisfaction' as subjective and restores the proposal's objective criterion",
+        "Flags D-03 runbooks as missing and D-04 24x7 support as scope added beyond the proposal",
+        "Flags the missing change-control clause"
+      ]
     }
   ]
 }
