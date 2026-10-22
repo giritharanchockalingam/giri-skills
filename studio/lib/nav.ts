@@ -29,10 +29,11 @@ export const SECTIONS: Section[] = [
   },
   {
     id: "build", label: "Build", href: "/pipeline", who: "For skill owners: build, test and publish skills",
-    hint: "Publish pipeline, evaluations, reference skills",
-    match: starts("/pipeline", "/skills", "/evaluations", "/evals", "/findings", "/reference"),
+    hint: "Publish pipeline, deliver, evaluations, reference skills",
+    match: starts("/pipeline", "/skills", "/deliver", "/evaluations", "/evals", "/findings", "/reference"),
     pages: [
       { href: "/pipeline", label: "Publish pipeline", match: (p) => starts("/pipeline", "/skills")(p) },
+      { href: "/deliver", label: "Deliver", match: starts("/deliver") },
       { href: "/evaluations", label: "Evaluations", match: starts("/evaluations", "/evals", "/findings") },
       { href: "/reference", label: "Reference skills", match: starts("/reference") },
     ],
@@ -86,6 +87,8 @@ export const GLOSSARY: { term: string; means: string; not: string[]; where: stri
   { term: "Instructions", means: "The SKILL.md text that tells a model how to use a skill.", not: ["authoring"], where: "/library/" },
   { term: "Reference skill", means: "A skill vendored from a public GitHub repository, pinned to a commit; read-only.", not: ["upstream skill"], where: "/reference" },
   { term: "Playbook", means: "Skills chained in order, with inputs wired between steps and optional approval gates.", not: ["agent", "pipeline"], where: "/playbooks" },
+  { term: "Delivery pipeline", means: "A template that takes a request through ADLC stages on a real repository: each stage is owned by a job role, runs published skills, and must pass a gate (a check, a skill's exit code or a person's approval) before the next.", not: ["playbook", "publish pipeline"], where: "/deliver" },
+  { term: "Delivery run", means: "One request through one delivery pipeline on one repository: its stack profile, per-stage gate verdicts, evidence file hashes, who approved what, and the pull request it opened.", not: ["run (of a skill)"], where: "/deliver" },
   { term: "Job role", means: "A job (e.g. architect) defined by the skills and playbooks it owns; tailorable. When “Restrict skills by job role” is on, the job roles assigned to a person or API key decide which published skills they may run.", not: ["role (alone, for a job)"], where: "/roles" },
   { term: "Access level", means: "What a member may do in the workspace: run only, author, reviewer or admin. Enforced on the server and in the database.", not: ["role (alone, for permissions)", "consumer (in the interface)"], where: "/admin#members" },
   { term: "Team", means: "Roles working together on one outcome, with hand-offs between them.", not: ["talent pool", "pool", "squad"], where: "/teams" },

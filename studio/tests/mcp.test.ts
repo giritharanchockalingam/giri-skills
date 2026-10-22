@@ -20,6 +20,11 @@ function backend(skills: Set<string> | null = null, calls: unknown[] = []): McpB
       ? { http: 400, body: { error: { code: "missing_inputs", message: "Required input(s) missing: wbs.", details: { missing: ["wbs"] } } } }
       : { http: 200, body: { run_id: "r1", status: "failed", checks: [{ pass: true }, { pass: false }], outputs: [{ path: "rls-lint.txt", content_text: "ERROR RLS001 table public.notes" }] } }; },
     getRun: async (id) => ({ http: 200, body: { run_id: id, status: "succeeded", checks: [], outputs: [] } }),
+    pipelines: () => [{ name: "feature-delivery", title: "Feature delivery", version: "0.1.0", mode: "brownfield", description: "Brownfield.", stages: [{ id: "requirements", role: "ai-product-manager" }, { id: "build", role: "full-stack-engineer" }] }],
+    deliver: async (a) => { calls.push({ deliver: a }); return { http: 201, body: { run_id: "d1", status: "queued", stage: "requirements", command: "python3 scripts/deliver.py --pipeline feature-delivery --repo 'acme/billing' --request 'x' --run d1 --portal 'https://p'", stages: [{ id: "requirements", role: "ai-product-manager", status: "queued" }] } }; },
+    deliveryStatus: async (id) => id === "d1"
+      ? { http: 200, body: { run_id: id, status: "awaiting_approval", stage: "architecture", stages: [{ id: "requirements", role: "ai-product-manager", status: "succeeded", gate: { kind: "output", verdict: "pass" }, evidence: [{ path: "prd.md" }] }, { id: "architecture", role: "ai-solution-architect", status: "awaiting_approval" }], pr: null } }
+      : { http: 404, body: { error: { code: "not_found", message: "No such delivery run for this key's workspace." } } },
   };
 }
 const rpc = (method: string, params?: object, id: number | null = 1) => ({ jsonrpc: "2.0", ...(id !== null ? { id } : {}), method, ...(params ? { params } : {}) });
@@ -41,9 +46,9 @@ test("notifications get no response; bad messages and unknown methods get JSON-R
   assert.deepEqual(((await handle(rpc("ping"), backend())) as { result: object }).result, {});
 });
 
-test("tools/list: one tool per published skill in scope, plus find_skill and get_run", async () => {
+test("tools/list: one tool per published skill in scope, plus find_skill, get_run, deliver and delivery_status", async () => {
   const all = ((await handle(rpc("tools/list"), backend())) as { result: { tools: { name: string; inputSchema: { required?: string[]; properties: Record<string, { type: string }> }; description: string }[] } }).result.tools;
-  assert.deepEqual(all.map((t) => t.name), ["supabase-schema-rls", "effort-estimator", "my-authored", "find_skill", "get_run"]);
+  assert.deepEqual(all.map((t) => t.name), ["supabase-schema-rls", "effort-estimator", "my-authored", "find_skill", "get_run", "deliver", "delivery_status"]);
   const rls = all[0];
   assert.equal(rls.inputSchema.properties.migrations.type, "object");          // a folder
   assert.ok(!("out_dir" in rls.inputSchema.properties));                       // path inputs are runtime-owned
@@ -51,7 +56,11 @@ test("tools/list: one tool per published skill in scope, plus find_skill and get
   const est = all[1];
   assert.deepEqual(est.inputSchema.required, ["wbs", "client"]);               // defaults are not required
   const role = ((await handle(rpc("tools/list"), backend(new Set(["build/supabase-schema-rls"])))) as { result: { tools: { name: string }[] } }).result.tools;
-  assert.deepEqual(role.map((t) => t.name), ["supabase-schema-rls", "find_skill", "get_run"]);   // scoped: authored + other skills hidden
+  assert.deepEqual(role.map((t) => t.name), ["supabase-schema-rls", "find_skill", "get_run", "deliver", "delivery_status"]);   // scoped: authored + other skills hidden
+  const deliver = all.find((t) => t.name === "deliver")!;
+  assert.deepEqual(deliver.inputSchema.required, ["pipeline", "repo", "request"]);
+  assert.deepEqual((deliver.inputSchema.properties.pipeline as { enum?: string[] }).enum, ["feature-delivery"]);
+  assert.match(deliver.description, /feature-delivery v0\.1\.0 \(brownfield\)[\s\S]*requirements\/ai-product-manager → build\/full-stack-engineer/);
 });
 
 test("tools/call runs the published skill; a negative verdict with outputs is not a tool error", async () => {
@@ -103,4 +112,26 @@ test("job roles: a skill the key may not run is not a tool, cannot be called, an
   assert.equal(hit.tool, null);
   assert.equal(hit.access, "not_in_role");
   assert.match(find.result.content[0].text, /not in this key's job roles/);
+});
+
+test("deliver starts an IDE run and returns the exact local command; delivery_status renders stages and the wait", async () => {
+  const calls: unknown[] = [];
+  const r = await handle(rpc("tools/call", { name: "deliver", arguments: { pipeline: "feature-delivery", repo: "acme/billing", request: "add invoice export" } }), backend(null, calls)) as { result: { isError?: boolean; content: { text: string }[]; structuredContent: { run_id: string; command: string } } };
+  assert.deepEqual(calls, [{ deliver: { pipeline: "feature-delivery", repo: "acme/billing", ref: "", request: "add invoice export" } }]);
+  assert.equal(r.result.structuredContent.run_id, "d1");
+  assert.match(r.result.content[0].text, /Delivery run d1 — queued · at requirements[\s\S]*Run locally:\npython3 scripts\/deliver\.py --pipeline feature-delivery/);
+  const missing = await handle(rpc("tools/call", { name: "deliver", arguments: { pipeline: "feature-delivery" } }), backend()) as { error: { code: number; message: string } };
+  assert.equal(missing.error.code, RPC.INVALID_PARAMS);
+  assert.match(missing.error.message, /repo, request are required/);
+  const unknown = await handle(rpc("tools/call", { name: "deliver", arguments: { pipeline: "nope", repo: "a/b", request: "x" } }), backend()) as { error: { code: number; message: string } };
+  assert.match(unknown.error.message, /unknown pipeline: nope/);
+  const st = await handle(rpc("tools/call", { name: "delivery_status", arguments: { run_id: "d1" } }), backend()) as { result: { content: { text: string }[]; structuredContent: { status: string } } };
+  assert.equal(st.result.structuredContent.status, "awaiting_approval");
+  assert.match(st.result.content[0].text, /- requirements \(ai-product-manager\): succeeded · gate pass · 1 evidence file\(s\)\n- architecture \(ai-solution-architect\): awaiting_approval/);
+  assert.match(st.result.content[0].text, /approve it in the portal/);
+  const gone = await handle(rpc("tools/call", { name: "delivery_status", arguments: { run_id: "d2" } }), backend()) as { result: { isError: boolean; content: { text: string }[] } };
+  assert.equal(gone.result.isError, true);
+  assert.match(gone.result.content[0].text, /not_found/);
+  // a workspace skill may never shadow the delivery tools
+  assert.equal(inScope([{ ...CATALOG[0], slug: "deliver" }], { kind: "workspace", slug: null, title: "", skills: null }).length, 0);
 });

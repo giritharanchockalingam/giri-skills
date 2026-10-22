@@ -46,7 +46,11 @@
    "ai-platform/ai-incident-runbook",
    "ai-platform/ai-postmortem",
    "ai-platform/feedback-improvement-loop",
-   "ai-platform/ai-finops-chargeback"
+   "ai-platform/ai-finops-chargeback",
+   "build/handoff-and-thread-close"
+  ],
+  "stages": [
+   "operate"
   ],
   "playbooks": [
    "ai-ops-health-check"
@@ -79,6 +83,9 @@
    "ai-platform/ab-test-analysis",
    "ai-platform/feedback-improvement-loop"
   ],
+  "stages": [
+   "requirements"
+  ],
   "playbooks": []
  },
  {
@@ -102,7 +109,14 @@
    "ai-platform/eval-engineering-runner",
    "ai-platform/red-team-suite",
    "ai-platform/bias-fairness-check",
-   "ai-platform/annotation-agreement"
+   "ai-platform/annotation-agreement",
+   "build/code-review-runner",
+   "build/security-review",
+   "build/perf-review-runner",
+   "build/ui-component-quality"
+  ],
+  "stages": [
+   "evaluate"
   ],
   "playbooks": []
  },
@@ -144,7 +158,11 @@
    "ai-platform/ai-threat-model",
    "build/multi-tenant-saas-patterns",
    "ai-platform/infra-gpu-sizing",
-   "ai-platform/llm-cost-model"
+   "ai-platform/llm-cost-model",
+   "build/spec-to-plan"
+  ],
+  "stages": [
+   "architecture"
   ],
   "playbooks": []
  },
@@ -259,6 +277,9 @@
    "build/tech-debt-audit-runner",
    "build/ui-component-quality"
   ],
+  "stages": [
+   "build"
+  ],
   "playbooks": []
  },
  {
@@ -289,6 +310,9 @@
    "ai-platform/ai-slo-definition",
    "ai-platform/drift-monitor",
    "ai-platform/ai-bom-license-check"
+  ],
+  "stages": [
+   "deploy"
   ],
   "playbooks": []
  },

@@ -108,3 +108,43 @@ export const AssignRoleForm = z.object({ holder: text(80), talent_id: id64 });
 export const UnassignRoleForm = z.object({ id: id64 });
 export const RequestAccessForm = z.object({ talent_id: id64, skill: text(200), note: text(1000) });
 export const DecideAccessForm = z.object({ id: id64, decision: text(10), note: text(1000) });
+
+/* ───────────── delivery runs (app/api/delivery-runs, app/deliverActions.ts, MCP deliver) ───────────── */
+
+const PIPELINE_NAME = /^[a-z0-9][a-z0-9-]{0,78}$/;
+const REPO = /^[\w.-]+\/[\w.-]+$|^[\w./~-]+$/;   // owner/name (catalog) or a local checkout path (IDE)
+const REF = /^[\w./-]{0,200}$/;
+const STAGE_ID = /^[a-z0-9][a-z0-9-]{0,78}$/;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** POST /api/delivery-runs and the MCP `deliver` tool. */
+export const DeliveryStartInput = z.object({
+  pipeline: z.string().regex(PIPELINE_NAME, "pipeline must be a template name (a-z, 0-9, -)"),
+  repo: z.string().trim().min(1).max(300).regex(REPO, "repo must be owner/name or a checkout path"),
+  ref: z.string().trim().max(200).regex(REF).optional().default(""),
+  request: z.string().trim().min(1, "request is required").max(20_000),
+  executor: z.enum(["github-actions", "ide", "local"]).default("github-actions"),
+});
+export type DeliveryStartInput = z.infer<typeof DeliveryStartInput>;
+const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, "sha256 must be 64 hex characters");
+/** POST /api/delivery-runs/{id}/stage — one stage record from the executor (DELIVERY-PIPELINES.md → Evidence). */
+export const DeliveryStageInput = z.object({
+  id: z.string().regex(STAGE_ID),
+  adlc_stage: z.string().max(40).optional(),
+  role: z.string().max(80).optional(),
+  status: z.enum(["queued", "running", "awaiting_approval", "blocked", "failed", "succeeded", "skipped"]),
+  gate: z.object({ kind: z.string().max(40), verdict: z.enum(["pass", "fail", "pending"]), detail: z.string().max(4000).optional() }).nullable().optional(),
+  evidence: z.array(z.object({ path: z.string().min(1).max(400), sha256: Sha256, bytes: z.number().int().min(0) })).max(200).optional(),
+  started_at: z.string().datetime({ offset: true }).nullable().optional(),
+  finished_at: z.string().datetime({ offset: true }).nullable().optional(),
+  error: z.string().max(4000).nullable().optional(),
+  /** run-level facts the executor learns along the way */
+  stack_profile: z.record(z.unknown()).optional(),
+  pr: z.object({ number: z.number().int().positive().optional(), url: z.string().url().optional(), head_sha: z.string().max(64).optional() }).optional(),
+  executor_ref: z.string().max(400).optional(),
+});
+export type DeliveryStageInput = z.infer<typeof DeliveryStageInput>;
+/** POST /api/delivery-runs/{id}/approve */
+export const DeliveryApproveInput = z.object({ stage_id: z.string().regex(STAGE_ID), note: z.string().trim().max(2000).default("") });
+/** The Deliver page form (app/deliverActions.ts). */
+export const StartDeliveryForm = z.object({ pipeline: text(80), repo: text(300), ref: text(200), request: text(20_000), executor: text(20) });
+export const ApproveDeliveryForm = z.object({ run_id: id64, stage_id: text(80), note: text(2000) });

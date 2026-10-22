@@ -8,6 +8,10 @@ import { stripRuntimePaths, publicContract } from "@/lib/factory/publicShape";
 import { handle, SUPPORTED_PROTOCOL_VERSIONS, RPC, type CatalogSkill, type LibraryInfo, type McpBackend, type McpScope } from "@/lib/factory/mcp";
 import { ROLE_TEMPLATES, POOL_TEMPLATES, getRouter } from "@/lib/factory/talentData";
 import { skills as repoSkills, STAGES } from "@/lib/data";
+import { PIPELINES } from "@/lib/delivery/pipelines";
+import { DeliveryError, startForKey } from "@/lib/delivery/server";
+import { getDeliveryRunByKey } from "@/lib/db/delivery";
+import { DeliveryStartInput, UUID } from "@/lib/validation";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -88,6 +92,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ scope?:
       if (error) return { http: 500, body: { error: { code: "query_failed", message: error.message } } };
       if (!data) return { http: 404, body: { error: { code: "not_found", message: "No such run for this key's workspace." } } };
       return { http: 200, body: stripRuntimePaths(publicContract(data as Record<string, unknown>)) as Record<string, unknown> };
+    },
+    pipelines: () => PIPELINES.map((p) => ({ name: p.name, title: p.title, version: p.version, mode: p.mode, description: p.description, stages: p.stages.map((s) => ({ id: s.id, role: s.role })) })),
+    deliver: async (a) => {
+      const parsed = DeliveryStartInput.safeParse({ ...a, executor: "ide" });
+      if (!parsed.success) return { http: 400, body: { error: { code: "invalid_inputs", message: "Some inputs are missing or invalid.", details: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) } } };
+      try {
+        const r = await startForKey(caller.supabase, caller.keyHash, parsed.data, new URL(req.url).origin);
+        return { http: 201, body: { run_id: r.run.id, status: r.run.status, stage: r.run.stage, pipeline: r.run.pipeline, repo: r.run.repo, ref: r.run.ref, executor: r.run.executor, command: r.command, stages: r.run.stages } };
+      } catch (e) {
+        const d = e instanceof DeliveryError ? e : new DeliveryError(500, "delivery_failed", (e as Error).message);
+        return { http: d.status, body: { error: { code: d.code, message: d.message } } };
+      }
+    },
+    deliveryStatus: async (id) => {
+      if (!UUID.test(id)) return { http: 400, body: { error: { code: "bad_request", message: "run_id must be a UUID" } } };
+      try {
+        const run = await getDeliveryRunByKey(caller.supabase, caller.keyHash, id);
+        if (!run) return { http: 404, body: { error: { code: "not_found", message: "No such delivery run for this key's workspace." } } };
+        return { http: 200, body: { ...run, run_id: run.id } as unknown as Record<string, unknown> };
+      } catch (e) { return { http: 500, body: { error: { code: "query_failed", message: (e as Error).message } } }; }
     },
   };
 
