@@ -492,6 +492,42 @@ def parse_router(output: str, skills) -> str:
     return names.get(token, token)  # unknown token -> recorded as-is (counts wrong)
 
 
+def load_recorded_calls(path) -> dict:
+    """Replies recorded by an earlier run of the same out dir: {(mode, skill, case_id, run, judge_for): output}.
+    Only complete replies count — the log keeps at most 8000 characters of an output, so a longer one is re-asked.
+    Judge replies recorded before judge_for was logged are attributed by matching the judged text (the start of the
+    generation they graded) against the recorded generations of the same case and run; when that is ambiguous the
+    judge is re-asked."""
+    out = {}
+    if not path.exists():
+        return out
+    recs = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            recs.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    gens = {}   # (skill, case_id, run) -> {mode: output}
+    for rec in recs:
+        if rec.get("mode") in ("gen_with", "gen_without") and rec.get("output"):
+            gens.setdefault((rec.get("skill"), rec.get("case_id"), rec.get("run")), {})[rec["mode"][4:]] = rec["output"]
+    for rec in recs:
+        output = rec.get("output") or ""
+        if not output or len(output) >= 8000:
+            continue
+        judge_for = rec.get("judge_for")
+        if rec.get("mode") == "judge" and not judge_for:
+            # older log: tell with/without apart by the generation the judge saw (first 300 characters of it)
+            cands = gens.get((rec.get("skill"), rec.get("case_id"), rec.get("run")), {})
+            user = rec.get("user") or ""
+            hits = [m for m, g in cands.items() if g[:300] and g[:300] in user]
+            if len(hits) != 1 or (len(cands) == 2 and cands["with"][:300] == cands["without"][:300]):
+                continue
+            judge_for = hits[0]
+        out[(rec.get("mode"), rec.get("skill"), rec.get("case_id"), rec.get("run"), judge_for)] = output
+    return out
+
+
 def parse_judge(raw: str, n: int):
     results = []
     for i in range(1, n + 1):
@@ -669,6 +705,9 @@ def build_args():
     ap.add_argument("--budget-usd", type=float, default=15.0)
     ap.add_argument("--yes", action="store_true",
                     help="proceed even if projected cost exceeds the budget")
+    ap.add_argument("--resume", action="store_true",
+                    help="reuse every reply already recorded in <out>/raw/calls.jsonl (a run that stopped "
+                         "part-way — out of credits, network — continues without paying for finished calls)")
     ap.add_argument("--out", default="",
                     help="results dir (default: evals/results/<YYYY-MM-DD>)")
     return ap.parse_args()
@@ -751,13 +790,16 @@ def main() -> int:
         print("(dry provider: no real spend, no network, no key needed)")
 
     llm = make_provider(args.provider, args.model)
+    done_calls = load_recorded_calls(raw_dir / "calls.jsonl") if args.resume else {}
+    if args.resume:
+        print(f"resume: {len(done_calls)} recorded repl{'y' if len(done_calls) == 1 else 'ies'} reused from {raw_dir / 'calls.jsonl'}")
     raw_log = (raw_dir / "calls.jsonl").open("a", encoding="utf-8")
 
     def log_call(call, output):
         raw_log.write(json.dumps({
             "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "mode": call["kind"], "skill": call["skill"],
-            "case_id": call["case_id"], "run": call["run"],
+            "case_id": call["case_id"], "run": call["run"], "judge_for": call.get("judge_for"),
             "system": call["system"][:4000], "user": call["user"][:4000],
             "output": redact(output)[:8000],
         }) + "\n")
@@ -769,9 +811,12 @@ def main() -> int:
     started = time.monotonic()
     show_progress = args.provider != "dry"
 
-    def ask(system, user, temperature, max_tokens):
-        """One model call; the answer without any reasoning block, counted so empty replies cannot pass as scores."""
+    def ask(system, user, temperature, max_tokens, key=None):
+        """One model call; the answer without any reasoning block, counted so empty replies cannot pass as scores.
+        With --resume, a reply recorded for the same (mode, skill, case, run) is reused and the model is not called."""
         t0 = time.monotonic()
+        if key is not None and key in done_calls:
+            return done_calls.pop(key)
         out = strip_reasoning(llm.complete(system, user, temperature=temperature, max_tokens=max_tokens))
         replies["total"] += 1
         replies["empty"] += not out
@@ -792,15 +837,21 @@ def main() -> int:
                         if s["key"] == call["skill"] and c.get("id") == call["case_id"])
             items = "\n".join(f"{i}. {e}" for i, e in enumerate(case["expected"], 1))
             user = judge_template.replace("{output}", output).replace("{expected_items}", items)
-            out = ask(call["system"], user, 0, call["max_tokens"])
-            log_call({**call, "user": user}, out)
+            key = (call["kind"], call["skill"], call["case_id"], call["run"], call["judge_for"])
+            recorded = key in done_calls
+            out = ask(call["system"], user, 0, call["max_tokens"], key)
+            if not recorded:
+                log_call({**call, "user": user}, out)
             for idx, (passed, evidence) in enumerate(parse_judge(out, call["n_expected"])):
                 quality_rows.append([call["skill"], call["case_id"], call["run"],
                                      call["judge_for"], idx,
                                      "PASS" if passed else "FAIL", evidence])
             continue
-        out = ask(call["system"], call["user"], call["temperature"], call["max_tokens"])
-        log_call(call, out)
+        key = (call["kind"], call["skill"], call["case_id"], call["run"], None)
+        recorded = key in done_calls
+        out = ask(call["system"], call["user"], call["temperature"], call["max_tokens"], key)
+        if not recorded:
+            log_call(call, out)
         if kind in ("router", "neg_router"):
             selected = parse_router(out, skills)
             if kind == "router":

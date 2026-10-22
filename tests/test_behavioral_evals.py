@@ -301,3 +301,51 @@ def test_local_endpoint_projects_zero_cost(monkeypatch):
     assert mod.project_cost(calls, "qwen3:14b", "openai")[2] == 0
     monkeypatch.delenv("OPENAI_BASE_URL")
     assert mod.project_cost(calls, "gpt-4.1-mini", "openai")[2] > 0
+
+
+def test_resume_reuses_recorded_replies_and_only_asks_for_the_rest(tmp_path, monkeypatch, capsys):
+    """A run that stopped part-way (out of credits) continues from its raw log without calling the model again."""
+    mod = _module()
+    calls = {"n": 0}
+
+    class Counting(mod.DryLLM):
+        def complete(self, system, user, temperature=1.0, max_tokens=1500):
+            calls["n"] += 1
+            return super().complete(system, user, temperature, max_tokens)
+
+    monkeypatch.setattr(mod, "make_provider", lambda name, model: Counting())
+    out = tmp_path / "out"
+    argv = ["behavioral_evals.py", "all", "--provider", "dry", "--runs", "1", "--skills", SKILLS[0], "--out", str(out)]
+    monkeypatch.setattr(sys, "argv", argv)
+    assert mod.main() == 0
+    first = calls["n"]
+    assert first > 0
+    log = out / "raw" / "calls.jsonl"
+    lines = log.read_text(encoding="utf-8").splitlines()
+    # simulate the crash: keep the first 60% of the recorded replies
+    keep = lines[: int(len(lines) * 0.6)]
+    log.write_text("\n".join(keep) + "\n", encoding="utf-8")
+    calls["n"] = 0
+    monkeypatch.setattr(sys, "argv", argv + ["--resume"])
+    assert mod.main() == 0
+    assert 0 < calls["n"] < first, (calls["n"], first)        # only the missing replies were asked
+    assert calls["n"] == first - len(keep)
+    assert "resume:" in capsys.readouterr().out
+    assert (out / "scorecard.md").exists()
+
+
+def test_load_recorded_calls_skips_truncated_and_ambiguous(tmp_path):
+    mod = _module()
+    p = tmp_path / "calls.jsonl"
+    rows = [
+        {"mode": "router", "skill": "s", "case_id": "c", "run": 1, "judge_for": None, "output": "x"},
+        {"mode": "gen_with", "skill": "s", "case_id": "c", "run": 1, "judge_for": None, "output": "y" * 8000},   # truncated
+        {"mode": "gen_without", "skill": "s", "case_id": "c", "run": 1, "judge_for": None, "output": "plain answer without the skill"},
+        {"mode": "judge", "skill": "s", "case_id": "c", "run": 1, "output": "1. PASS - old log", "user": "OUTPUT:\nplain answer without the skill\nITEMS"},   # old log, attributable
+        {"mode": "judge", "skill": "s", "case_id": "c", "run": 1, "output": "1. FAIL - old log", "user": "OUTPUT:\nsomething never generated\nITEMS"},   # old log, ambiguous → re-ask
+        {"mode": "judge", "skill": "s", "case_id": "c", "run": 1, "judge_for": "with", "output": "1. PASS - ok"},
+    ]
+    p.write_text("\n".join(json.dumps(r) for r in rows) + "\nnot json\n", encoding="utf-8")
+    got = mod.load_recorded_calls(p)
+    assert set(got) == {("router", "s", "c", 1, None), ("gen_without", "s", "c", 1, None), ("judge", "s", "c", 1, "without"), ("judge", "s", "c", 1, "with")}
+    assert got[("judge", "s", "c", 1, "without")] == "1. PASS - old log"

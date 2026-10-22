@@ -329,3 +329,7 @@ None. All 120 eval cases have a non-empty `prompt` and a non-empty
 - **Empty replies make the run invalid.** If any reply is empty, the scorecard is stamped `INVALID RUN` and the script exits 2, so a broken connection never reads as a verdict on the skills.
 - **Cost shows as $0.** Calls to a local endpoint are projected at no cost.
 - **Not the official scorecard.** In a local run the same model also grades the answers, so the results compare models with each other.
+
+## Resuming a run that stopped part-way
+
+`--resume` reuses every reply already in `<out>/raw/calls.jsonl` (keyed by mode, skill, case, run and, for judges, which generation they graded) and asks the model only for the rest. A run that stopped on exhausted credits or a network fault continues without paying twice. Replies the log truncated (≥ 8000 characters) and judge replies that cannot be attributed are re-asked.
