@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Static review of React/Next.js components (.tsx/.jsx) — the checks a senior frontend engineer does before a ship.
+"""Static review of React/Next.js components — the checks a senior frontend engineer does before a ship.
 
     python3 -I scripts/ui_lint.py --target <repo> --findings findings.csv --report report.md --checklist a11y-checklist.md
 
-Scans .tsx/.jsx (skipping node_modules, .next, out, dist, build, coverage, tests/**, *.test.tsx, *.stories.tsx) for:
+Scans every .tsx/.jsx file, plus .js/.ts files that contain JSX (a JavaScript Next.js repo writes components in .js:
+a file counts when it returns/arrows into a JSX tag, or imports react/next AND has a JSX tag; plain utilities are
+left out, and route/middleware/instrumentation/*.config files never count, so the rules cannot misfire on them). Skips node_modules,
+.next, out, dist, build, coverage, tests/**, *.test.*, *.spec.*, *.stories.*, *.d.ts. Rules:
   UI1  img-without-alt           high    <img>/<Image> with no alt attribute
   UI2  icon-button-without-name  high    <button> whose children are only elements, with no aria-label/aria-labelledby/title
   UI3  clickable-div             high    <div>/<span> with onClick but missing role, tabIndex or a key handler
@@ -33,8 +36,17 @@ import sys
 from pathlib import Path
 
 SKIP_DIRS = {"node_modules", ".next", "out", "dist", "build", "coverage", ".git", "tests", "test", "__tests__", "storybook-static"}
-SKIP_SUFFIXES = (".test.tsx", ".test.jsx", ".spec.tsx", ".spec.jsx", ".stories.tsx", ".stories.jsx")
-EXTS = {".tsx", ".jsx"}
+SKIP_SUFFIXES = tuple(f".{kind}.{ext}" for kind in ("test", "spec", "stories") for ext in ("tsx", "jsx", "js", "ts", "mjs", "cjs")) + (".d.ts",)
+JSX_EXTS = {".tsx", ".jsx"}          # always component files
+MAYBE_JSX_EXTS = {".js", ".ts"}      # component files only when they contain JSX (JavaScript Next.js repos)
+EXTS = JSX_EXTS | MAYBE_JSX_EXTS
+# Next.js files that are never components, whatever they contain (route handlers, middleware, instrumentation, configs).
+NEVER_COMPONENT_STEMS = {"route", "middleware", "instrumentation"}
+# Conservative JSX detection for .js/.ts: `return (<Tag`, `return <Tag`, `=> <Tag`, `=> (<Tag`, `return (<>` ...
+JSX_RETURN = re.compile(r"(?:\breturn|=>)\s*\(?\s*<(?:>|[A-Za-z][\w.-]*(?:[\s/>]|$))")
+# ... or a react/next import together with a JSX-looking tag (component tag, or a lower-case tag with a prop).
+REACT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*)["'](?:react|react-dom(?:/[\w/-]+)?|next/[\w/-]+)["']""")
+JSX_TAG = re.compile(r"""<[A-Z][\w.]*(?:\s[^<>]*)?/?>|<[a-z][\w-]*\s+[\w-]+\s*=\s*(?:\{|["'])""")
 PX_LIMIT = 600
 PROP_LIMIT = 8
 
@@ -119,14 +131,27 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
+def contains_jsx(text: str) -> bool:
+    """True when a .js/.ts file is a React component file (see module docstring); false for plain utilities."""
+    if JSX_RETURN.search(text):
+        return True
+    return bool(REACT_IMPORT.search(text) and JSX_TAG.search(text))
+
+
 def source_files(root: Path):
+    """(path, relpath, text) for every component file: .tsx/.jsx always, .js/.ts only when they contain JSX."""
     for p in sorted(root.rglob("*")):
         if p.suffix not in EXTS or not p.is_file() or p.name.endswith(SKIP_SUFFIXES):
             continue
         rel = p.relative_to(root)
         if any(part in SKIP_DIRS for part in rel.parts[:-1]):
             continue
-        yield p, rel.as_posix()
+        if p.suffix in MAYBE_JSX_EXTS and (p.stem in NEVER_COMPONENT_STEMS or p.stem.endswith(".config")):
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        if p.suffix in MAYBE_JSX_EXTS and not contains_jsx(text):
+            continue
+        yield p, rel.as_posix(), text
 
 
 def line_no(text: str, pos: int) -> int:
@@ -358,7 +383,7 @@ def write_report(path: Path, findings: list[dict], n_files: int, target: Path,
             "Gate: PASS (no new high-severity findings; known debt listed below)." if high else "Gate: PASS.") if based \
         else ("Gate: FAIL (high-severity findings)." if high else "Gate: PASS.")
     lines = [f"# UI component quality — {target.name}", "", head + ".** " + gate, "",
-             "Static review of .tsx/.jsx components: accessibility, loading/empty states, responsive layout, reusability. "
+             "Static review of React component files (.tsx/.jsx, and .js/.ts containing JSX): accessibility, loading/empty states, responsive layout, reusability. "
              "It reads source only — see a11y-checklist.md for the WCAG items that need a browser run.", "",
              "## Summary", "", "| Rule | Name | Severity | Count |", "|---|---|---|---|"]
     for rule, (name, sev, _) in RULES.items():
@@ -406,7 +431,7 @@ def write_checklist(path: Path, findings: list[dict], target: Path) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Static UI component quality review for React/Next.js (.tsx/.jsx)")
+    ap = argparse.ArgumentParser(description="Static UI component quality review for React/Next.js (.tsx/.jsx, and .js/.ts files containing JSX)")
     ap.add_argument("--target", required=True, help="repo root or components directory")
     ap.add_argument("--findings", default="findings.csv")
     ap.add_argument("--report", default="report.md")
@@ -418,11 +443,11 @@ def main() -> int:
     if not target.is_dir():
         die(f"target is not a directory: {target}")
     findings, n_files = [], 0
-    for p, rel in source_files(target):
+    for _p, rel, text in source_files(target):
         n_files += 1
-        findings += lint_file(p.read_text(encoding="utf-8", errors="replace"), rel)
+        findings += lint_file(text, rel)
     if n_files == 0:
-        die(f"no .tsx/.jsx component files under {target}")
+        die(f"no React component files under {target} (looked for .tsx/.jsx, and .js/.ts files containing JSX)")
     findings.sort(key=lambda f: (f["file"], f["line"], f["rule"]))
     resolved = apply_baseline(findings, load_baseline(Path(a.baseline))) if a.baseline else None
     if resolved is None:

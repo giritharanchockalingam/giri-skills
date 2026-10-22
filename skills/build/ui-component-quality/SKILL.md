@@ -1,15 +1,15 @@
 ---
 name: ui-component-quality
-description: Use when a React/Next.js component or components folder is about to ship and needs the review a senior frontend engineer does first — "review this component before I merge", "is this accessible", "check our components for a11y / loading and empty states / responsive widths", "run the UI quality check on components/". Static analysis of .tsx/.jsx — missing alt, icon buttons without names, clickable divs, unlabelled inputs, no loading or empty state, fixed widths > 600px, dangerouslySetInnerHTML, prop sprawl, inline styles in .map, colour-only state. Produces findings.csv, report.md (Summary, Findings, Rules) and a11y-checklist.md (WCAG 2.2 AA items covered vs. needing a browser run); new high findings fail the gate; a baseline marks known debt. Not for server/client layering and data-access rules (nextjs-enterprise-conventions), running e2e or axe tests in a browser (webapp-testing-runner) or security audits (security-review).
+description: Use when a React/Next.js component or components folder is about to ship and needs the review a senior frontend engineer does first — "review this component before I merge", "is this accessible", "check our components for a11y / loading and empty states / responsive widths", "run the UI quality check on components/". Static analysis of .tsx/.jsx and of .js/.ts files containing JSX (JavaScript Next.js repos) — missing alt, icon buttons without names, clickable divs, unlabelled inputs, no loading or empty state, fixed widths > 600px, dangerouslySetInnerHTML, prop sprawl, inline styles in .map, colour-only state. Produces findings.csv, report.md (Summary, Findings, Rules) and a11y-checklist.md (WCAG 2.2 AA items covered vs. needing a browser run); new high findings fail the gate; a baseline marks known debt. Not for server/client layering and data-access rules (nextjs-enterprise-conventions), running e2e or axe tests in a browser (webapp-testing-runner) or security audits (security-review).
 license: MIT
 metadata:
   domain: build
   adlc_stage: build
-  version: 0.2.0
+  version: 0.3.0
   author: giri-skills
   agent:
     inputs:
-      - {name: target, type: dir, required: true, from: "repo root or components directory containing .tsx/.jsx files"}
+      - {name: target, type: dir, required: true, from: "repo root or components directory with React component files: .tsx/.jsx, or .js/.ts files that contain JSX (JavaScript Next.js repos); plain .js utilities, route.js handlers, middleware and configs are not scanned"}
       - {name: baseline, type: csv, required: false, from: "findings.csv from an earlier run — the recorded debt; known findings are listed but only new high-severity ones fail the gate"}
     run:
       - {step: lint, kind: script, cmd: "python3 -I scripts/ui_lint.py --target {target} [--baseline {baseline}] --findings {out}/findings.csv --report {out}/report.md --checklist {out}/a11y-checklist.md"}
@@ -37,7 +37,7 @@ The reply **is the review**: a findings table `rule → severity → file:line �
 - **Existing** — add `baseline` (the `findings.csv` of an earlier run): each finding is marked known or new, the gate fails only on new high findings, known debt stays listed and resolved items are reported.
 
 ## When to use
-- Before a PR that adds or changes files under `components/` or `app/**/*.tsx`.
+- Before a PR that adds or changes files under `components/` or `app/**` pages/layouts (`.tsx`, or `.js` with JSX in a JavaScript repo).
 - "Is this accessible?", "review this component", "do we have loading/empty states", "will this break on mobile".
 - A design-system or component-library audit, with the baseline recording the debt to burn down.
 - NOT for: server/client component placement, data access and zod at boundaries (`nextjs-enterprise-conventions`), running e2e flows or axe in a browser (`webapp-testing-runner`), secrets/injection audits (`security-review`), fixing one reported bug (`safe-fix`).
@@ -45,12 +45,12 @@ The reply **is the review**: a findings table `rule → severity → file:line �
 ## Inputs required
 | Input | Required | Source | If missing |
 |---|---|---|---|
-| `target` — repo root or components directory with `.tsx`/`.jsx` | yes | repo | runner exits 2 and asks once |
+| `target` — repo root or components directory with React component files: `.tsx`/`.jsx`, or `.js`/`.ts` containing JSX (JavaScript Next.js repos) | yes | repo | runner exits 2 and asks once; the lint exits 1 with "no React component files" when nothing under it contains JSX |
 | `baseline` — `findings.csv` from an earlier run | no | previous run | every finding is `new` |
 
 ## Procedure
 1. Read `../../../shared/stack-conventions.md` (component placement) and `references/rules.md` (what each rule means and its fix).
-2. Run the skill on `target` (add `baseline` for a repo with recorded debt). The script scans `.tsx`/`.jsx`, skipping tests, stories and build output.
+2. Run the skill on `target` (add `baseline` for a repo with recorded debt). The script scans every `.tsx`/`.jsx` file and every `.js`/`.ts` file that contains JSX (`return (<…`, `=> <…`, or a react/next import plus a JSX tag), so a JavaScript Next.js repo whose components live in `.js` files is reviewed in full; plain `.js` utilities, `route.js` handlers, `middleware.js`, `instrumentation.js` and `*.config.js` are never scanned, and tests, stories, `.d.ts` and build output are skipped. UI9 (prop sprawl) needs a TypeScript Props type and does not fire in plain JavaScript.
 3. Read `report.md`: fix every **new high** finding in code (UI1–UI4, UI8) — add `alt`, name the button, replace the clickable div with `<button>`, label the control, remove `dangerouslySetInnerHTML`. Re-run until `Gate: PASS`.
 4. Triage medium/low findings: add loading and empty states (UI5, UI6), make widths responsive (UI7), split or compose props (UI9), hoist per-row styles (UI10), add state text or an icon (UI11). Record what stays as debt by re-using the new `findings.csv` as the next baseline.
 5. Hand `a11y-checklist.md` to the e2e pass (`webapp-testing-runner`) for contrast, focus, target size and live regions; the static pass is necessary, not sufficient, for WCAG 2.2 AA.
@@ -74,7 +74,7 @@ The reply **is the review**: a findings table `rule → severity → file:line �
 - `references/rules.md` — UI1–UI11: what each flags, rationale, fix, severity, known limits
 - `references/sources.md` — WCAG 2.2 URLs and the date verified
 - `assets/component-review-checklist.md` — the manual 12-line pass for PR reviews
-- `scripts/ui_lint.py` — the linter (argparse; stdlib; `--baseline` for recorded debt; exit 1 on new high findings)
+- `scripts/ui_lint.py` — the linter (argparse; stdlib; `.tsx`/`.jsx` plus `.js`/`.ts` containing JSX; `--baseline` for recorded debt; exit 1 on new high findings)
 
 ## How to run (automation, when commands can run)
 This skill is executable. Collect the inputs above, then run `python3 scripts/run_skill.py build/ui-component-quality --input target=<dir> [--input baseline=<findings.csv>] --out <dir>` (see `--explain build/ui-component-quality`). Report the `run.json` results; do not hand-write the deliverables the script produces (`findings.csv`, `report.md`, `a11y-checklist.md`). The lint step exits 1 on any new high-severity finding, so a non-compliant component set fails the run by design; fix the findings in code, then re-run.
