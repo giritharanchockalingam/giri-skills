@@ -183,7 +183,7 @@ export class Router {
         const f = d.tf.get(t); if (!f) continue;
         const n = this.df.get(t) ?? 0;
         const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
-        score += idf * (f * 2.2) / (f + 1.2 * (1 - 0.5 + 0.5 * d.len / this.avg));
+        score += idf * f;   // simpler scoring: plain tf-idf instead of BM25 saturation and length normalisation
         matched.push(t);
       }
       if (score > 0) hits.push({ skill: d.id, score: Math.round(score * 1000) / 1000, matched });
