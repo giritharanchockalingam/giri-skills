@@ -136,6 +136,164 @@
           "check": "max_lines:1"
         }
       ]
+    },
+    {
+      "id": "x-edtech-prep-60-min-provost",
+      "prompt": "Prep me for a 60-minute discovery call with the Provost and the CIO of a mid-size private university (Lakeside University, fictional). Trigger: their LMS contract ends next summer and first-year retention dipped this year. Attendees: Provost, CIO, Director of Institutional Research.",
+      "expected": [
+        "3–5 hypotheses in a table with suspected pain, owner, confirms-if, kills-if and mapped questions",
+        "12–18 questions from the EdTech bank, ordered situation → pain → impact → urgency → decision → constraints, each tagged with persona and H#; none opens with a technology or vendor comparison",
+        "Time budget includes an explicit row \"Client's questions — 20% (12 of 60 min)\"",
+        "Five closes listed (decision owner, budget state, timeline driver, incumbents, success measure) and a 3-row 'If they say X, go to Y' branch table"
+      ]
+    },
+    {
+      "id": "x-travel-prep-30-min-cfo",
+      "prompt": "30 minutes with the CFO and Head of Travel at a corporate travel buyer (fictional Tailspin Group). They want to cut travel spend leakage; their TMC contract is up for rebid in Q3 next year. Prep me.",
+      "expected": [
+        "Uses the Travel question bank and orders questions situation → pain → impact → urgency → decision → constraints, tagged to CFO / Head of Travel and hypotheses",
+        "Time budget includes \"Client's questions — 20% (6 of 30 min)\" plus opening and closes",
+        "Includes the five closes and does not state any spend, leakage or savings figure for the client"
+      ]
+    },
+    {
+      "id": "x-manufacturing-prep-mes-erp",
+      "prompt": "Discovery call Thursday, 45 min, with the VP Operations and the plant IT manager of a 3-plant auto-parts maker. Context: they're moving to S/4HANA and suspect their MES-to-ERP integration won't survive the move.",
+      "expected": [
+        "Hypotheses written before questions, each with confirm/kill evidence (e.g. integration failures drive manual rework; S/4 go-live forces the change)",
+        "12–18 questions from the Manufacturing bank in funnel order, each mapped to a hypothesis and persona; never opens with a technology question",
+        "Time budget with \"Client's questions — 20% (9 of 45 min)\" and the five closes"
+      ]
+    },
+    {
+      "id": "x-retail-synthesis-pursue",
+      "prompt": "Synthesize my notes from the Contoso Grocers call (fictional):\n- CIO: \"Our OMS outages cost us $2.1M in lost orders last peak — that's from finance's incident review.\"\n- VP Supply Chain: \"Stores do manual inventory recounts every Monday, about 4 hours per store.\"\n- CIO: \"It's in the FY27 capital plan, approved last month.\"\n- CIO: \"I sign it, with the CFO.\"\n- CIO: \"It must be live before the March 2027 peak.\"\n- Enterprise architect joined; walked us through the current OMS.\n- CIO: \"Our current SI's contract ends in February; we're talking to two others.\"\n- CIO: \"Success is order fallout under 0.5%.\"",
+      "expected": [
+        "Line 1 is the qualification call PURSUE with the 2–3 facts that drove it (e.g. $2.1M outage cost with a source, funded in the FY27 capital plan, CIO named as approver, March 2027 forcing event)",
+        "Pain matrix quotes evidence verbatim; the OMS outage pain scores Impact 5 (figure with a source) and Urgency names the March 2027 peak",
+        "Five closes answered with verbatim quotes (decision owner, budget, timeline, incumbents, success measure)",
+        "Gaps list rows have owners (e.g. store count / cost of the recount labour), and the follow-up note is ≤120 words with no internal commentary"
+      ]
+    },
+    {
+      "id": "x-travel-synthesis-park",
+      "prompt": "Notes from today's call with the Head of Travel at Fabrikam (fictional), please synthesize:\n\"The booking tool is clunky, people moan about it.\"\n\"We'd find the money somewhere if it made sense.\"\n\"Any decision would go to the procurement committee.\" — Who chairs it? \"Not sure, honestly.\"\n\"No particular date, it's been like this for years.\"\n\"We use our TMC's tool today.\"",
+      "expected": [
+        "Line 1 is PARK, not softened, citing no budget path ('we'd find the money') and a decision committee with no known chair",
+        "Pain scored low (irritant/vague) with verbatim evidence; Impact shows [TO BE BASELINED — owner: ___]; Urgency reflects no forcing event",
+        "Gaps list leads with the unanswered closes (decision owner, budget state, timeline driver) each with a likely client holder and our owner"
+      ]
+    },
+    {
+      "id": "x-edtech-synthesis-with-conditions",
+      "prompt": "Synthesize (Lakeside University call, fictional):\nProvost: \"Retention dropped 4 points this year — the IR report shows it.\"\nProvost: \"We'd need a business case for the board; I'll sponsor it with you.\"\nProvost: \"The CIO, Raj, signs off. He couldn't make today.\"\nIR Director: \"Advisors can't see LMS engagement data until mid-term.\"\nProvost: \"We'd like something in place for next fall's intake.\"",
+      "expected": [
+        "Line 1 is PURSUE-WITH-CONDITIONS, driven by the business case still to be built (sponsor committed) and the decision owner named but not yet met",
+        "The conditions are the first items in the gaps list, each with an owner and a date marked TBD where not stated",
+        "Retention pain quoted verbatim with the 4-point figure and its IR-report source; no dollar impact is invented for it"
+      ]
+    },
+    {
+      "id": "x-multi-stakeholder-divergent-views",
+      "prompt": "Three interviews at Northwind Components (fictional), one opportunity — synthesize:\nCOO: \"We need AI for predictive maintenance. The board keeps asking about AI.\"\nPlant manager: \"Honestly the nightly MES-to-ERP batch fails twice a week and my planners re-key orders the next morning.\"\nIT architect: \"That integration runs on middleware from 2009 and only one person knows it.\"",
+      "expected": [
+        "Adds a stakeholder consistency check (exec / operator / technical views, conflict, resolution owner) and surfaces the AI-vs-batch-failure conflict under Divergent views",
+        "Pain matrix quotes each statement verbatim with who said it; the batch failures (twice a week, re-keying) score higher on evidence than the AI ask",
+        "Impact without a stated figure is [TO BE BASELINED — owner: ___] and scores 2 or lower or qualitative; gaps list includes the cost of re-keying with a likely client holder"
+      ]
+    },
+    {
+      "id": "x-healthcare-prep-outside-banks",
+      "prompt": "Prep a 45-minute discovery call with the CIO and VP Revenue Cycle of a regional hospital network (fictional Riverbend Health). Trigger: claim denials are climbing and their clearinghouse contract renews in 8 months.",
+      "expected": [
+        "States healthcare is outside the four banks and uses the Retail bank as the structural base, saying so",
+        "Hypotheses table and 12–18 funnel-ordered questions tagged to CIO / VP Revenue Cycle; no question opens with a technology or vendor comparison",
+        "Time budget with \"Client's questions — 20% (9 of 45 min)\" and the five closes; no denial-rate or dollar figures invented"
+      ]
+    },
+    {
+      "id": "x-synthesize-notes-not-attached",
+      "prompt": "Synthesize the notes from yesterday's Woodgrove call and give me the qualification call.",
+      "expected": [
+        "Asks once for the raw notes or transcript (and the vertical if not known) because synthesis needs them",
+        "Does not produce a qualification call, pains or quotes without the notes"
+      ]
+    },
+    {
+      "id": "x-what-to-ask-no-vertical",
+      "prompt": "I've got a discovery call tomorrow with Fabrikam's CIO. What should I ask?",
+      "expected": [
+        "Asks once, in one list, for the vertical (EdTech, Retail, Manufacturing, Travel), the opportunity context (initiative, trigger) and other attendees",
+        "Does not write a question list before the vertical is known and does not invent the trigger or pains"
+      ]
+    },
+    {
+      "id": "x-attendees-unknown-prep",
+      "prompt": "Retail discovery call, 45 minutes, client is replatforming POS across 300 stores after their vendor announced end of support. I don't know who'll attend yet.",
+      "expected": [
+        "Produces the prep pack (hypotheses, question plan, five closes, time budget with \"Client's questions — 20% (9 of 45 min)\") from the Retail bank",
+        "Does not invent attendee names or titles; tags questions to likely personas generically or marks attendees unknown, and asks for the attendee list"
+      ]
+    },
+    {
+      "id": "x-default-45-minutes",
+      "prompt": "Prep me for a discovery call with the VP Digital at a regional airline (fictional Contoso Air). They want to modernise the booking and loyalty integration after repeated outages on sale days.",
+      "expected": [
+        "Uses the default 45 minutes since no duration was given, with \"Client's questions — 20% (9 of 45 min)\" in the time budget",
+        "Questions come from the Travel bank in funnel order with hypotheses mapped; the five closes are included"
+      ]
+    },
+    {
+      "id": "x-fill-budget-from-peers",
+      "prompt": "Notes: 'CIO said the integration platform is a mess and they want out of their current contract.' That's all I got. Fill in their budget range and decision owner from what mid-size retailers usually spend so the proposal looks complete.",
+      "expected": [
+        "Says in one line that the budget and decision owner are not in the notes and must be baselined; marks them [TO BE BASELINED — owner: ___]",
+        "Five closes not in the notes show TBD — owner: Engagement lead; no peer benchmark figure is inserted",
+        "Gaps list includes budget state and decision owner with a likely client holder and our owner"
+      ]
+    },
+    {
+      "id": "x-invent-go-live-date",
+      "prompt": "From my notes the COO said they 'want the new WMS integration sometime next year'. Put a hard go-live of June 2027 in the urgency column so it scores a 5.",
+      "expected": [
+        "Declines to add a date the notes do not state; urgency quotes 'sometime next year — no date stated'",
+        "Scores urgency per the rubric for stated intent without a hard date (not 5), and adds the timeline driver to the gaps list with an owner"
+      ]
+    },
+    {
+      "id": "x-soften-park-for-vp",
+      "prompt": "My notes: no budget ('we'd have to find it'), decision 'goes to a committee' with no chair named, no date. I know that's thin, but my VP wants this deal in the pipeline — call it PURSUE.",
+      "expected": [
+        "Keeps the call at PARK, applying the gate rule that a PARK on Money or Decision owner means PARK, and does not soften it",
+        "Offers the defensible path: the specific facts that would change the call (named chair/decision owner, a budget path or sponsor willing to build a business case) as gaps with owners"
+      ]
+    },
+    {
+      "id": "x-company-background-routes-research",
+      "routes_to": "client-research-brief",
+      "prompt": "Before my first meeting with Contoso Retail, pull together their financials, recent news, leadership and tech stack signals.",
+      "expected": [
+        "Routes to client-research-brief for sourced company background",
+        "States that discovery-interview prepares the question plan for the call and synthesises notes afterwards"
+      ]
+    },
+    {
+      "id": "x-roi-model-routes-value-case",
+      "routes_to": "value-case-builder",
+      "prompt": "Now build the ROI and payback model for the MES-ERP integration using the numbers we got in discovery.",
+      "expected": [
+        "Routes to value-case-builder for the benefits tree, cost/savings model and payback",
+        "States that discovery-interview supplies the pain matrix and gaps list (with any stated figures) as inputs to that model"
+      ]
+    },
+    {
+      "id": "x-second-call-update-register",
+      "prompt": "Hypothesis register after call 1 with Contoso Grocers (fictional): H1 Integration outages drive peak revenue loss — untested; H2 Budget exists in FY27 — untested; H3 Incumbent SI is entrenched — untested.\nCall 2 notes:\nCFO: \"FY27 has $3M earmarked for integration modernisation.\"\nOps lead: \"Peak losses last year were mostly carrier delays, not system outages.\"\nUpdate the register and the qualification call.",
+      "expected": [
+        "Updates H2 to confirmed with the CFO quote and H1 to killed or weakened with the Ops lead quote; H3 stays untested",
+        "Qualification call on line 1 reflects the new facts (budget earmarked), naming what still needs confirming (decision owner, pain re-test)",
+        "Adds gaps for the untested items with owners; no figures beyond the $3M quote are introduced"
+      ]
     }
   ]
 }
