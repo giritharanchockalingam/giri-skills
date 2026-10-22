@@ -51,3 +51,9 @@ export async function getAgentVersionWithAgent(sb: SupabaseClient, versionId: st
   const { data } = await sb.from("sf_agent_versions").select("*, sf_agents!inner(slug, name)").eq("id", versionId).single();
   return data as AgentVersionWithAgent;
 }
+
+/** Every agent's slug and name in the workspace. */
+export async function listAgentNames(sb: SupabaseClient, workspaceId: string): Promise<Pick<AgentRow, "slug" | "name">[]> {
+  const { data } = await sb.from("sf_agents").select("slug, name").eq("workspace_id", workspaceId);
+  return (data ?? []) as Pick<AgentRow, "slug" | "name">[];
+}

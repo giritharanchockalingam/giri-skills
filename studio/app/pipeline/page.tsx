@@ -10,7 +10,7 @@ import { skillCounts, countsBridge } from "@/lib/counts";
 import { FunnelStrip, ClosestList } from "@/components/factory/Funnel";
 import { GATE_ORDER, GATE_LABEL, GATE_HELP, closestToPublish, type Gate } from "@/lib/factory/funnel";
 import { requireWorkspace } from "@/lib/factory/db";
-import { loadPipeline } from "@/lib/db/skills";
+import { loadPipeline, loadFrozenShas, loadCaseContracts } from "@/lib/db/skills";
 import { can } from "@/lib/factory/roles";
 import { skills as repoSkills, STAGES, SHELVES, stageOfRepoSkill } from "@/lib/data";
 import { PageHead } from "@/components/PageHead";
@@ -30,14 +30,8 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   const inGate = gate ? new Set(funnel.filter((f) => f.gate === gate).map((f) => f.slug)) : null;
   const stateById = new Map(states.map((s) => [s.version_id, s]));
   // the library's test cases as each repo draft holds them (a draft with old checks is offered the library update)
-  const { data: frozenRows } = await ctx.supabase.from("sf_version_snapshots").select("version_id, sha256").eq("workspace_id", ctx.workspace.id);
-  const frozen = new Map(((frozenRows ?? []) as { version_id: string; sha256: string }[]).map((r) => [r.version_id, r.sha256]));
   const draftIds = versions.filter((v) => v.status === "draft" && v.source.kind === "repo").map((v) => v.id);
-  const draftCases = new Map<string, { name: string; inputs: unknown; checks: unknown }[]>();
-  if (draftIds.length) {
-    const { data } = await ctx.supabase.from("sf_eval_cases").select("version_id, name, inputs, checks").in("version_id", draftIds);
-    for (const c of (data ?? []) as { version_id: string; name: string; inputs: unknown; checks: unknown }[]) draftCases.set(c.version_id, [...(draftCases.get(c.version_id) ?? []), c]);
-  }
+  const [frozen, draftCases] = await Promise.all([loadFrozenShas(ctx.supabase, { workspaceId: ctx.workspace.id }), loadCaseContracts(ctx.supabase, draftIds)]);
   const items: CatalogItem[] = skills.map((s) => {
     const vs = versions.filter((v) => v.skill_id === s.id);
     const working = vs.find((v) => ["draft", "in_review", "approved"].includes(v.status)) ?? null;

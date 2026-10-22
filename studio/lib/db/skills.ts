@@ -68,3 +68,23 @@ export async function loadFunnel(sb: SupabaseClient, workspaceId: string): Promi
     return { slug: s.slug, name: skillTitle(s.name), gate: gateOf(w, vs.some((v) => v.status === "published")), version: working?.version ?? null };
   });
 }
+
+export type CaseContract = { name: string; inputs: unknown; checks: unknown };
+
+/** Frozen-file hashes (sf_version_snapshots) by version id, for a whole workspace or for the given versions. */
+export async function loadFrozenShas(sb: SupabaseClient, scope: { workspaceId: string } | { versionIds: string[] }): Promise<Map<string, string>> {
+  const q = sb.from("sf_version_snapshots").select("version_id, sha256");
+  const { data } = "workspaceId" in scope ? await q.eq("workspace_id", scope.workspaceId) : scope.versionIds.length ? await q.in("version_id", scope.versionIds) : { data: [] };
+  return new Map(((data ?? []) as { version_id: string; sha256: string }[]).map((r) => [r.version_id, r.sha256]));
+}
+
+/** The evaluation cases (name, inputs, checks) of the given versions, grouped by version id. */
+export async function loadCaseContracts(sb: SupabaseClient, versionIds: string[]): Promise<Map<string, CaseContract[]>> {
+  const out = new Map<string, CaseContract[]>();
+  if (!versionIds.length) return out;
+  const { data } = await sb.from("sf_eval_cases").select("version_id, name, inputs, checks").in("version_id", versionIds);
+  for (const c of (data ?? []) as (CaseContract & { version_id: string })[]) {
+    out.set(c.version_id, [...(out.get(c.version_id) ?? []), { name: c.name, inputs: c.inputs, checks: c.checks }]);
+  }
+  return out;
+}

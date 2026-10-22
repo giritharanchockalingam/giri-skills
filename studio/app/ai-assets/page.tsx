@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { loadCatalog } from "@/lib/db/catalog";
+import { listSkillStatuses } from "@/lib/db/skills";
+import { listAgentNames } from "@/lib/db/agents";
 import { ASSET_LABEL, ASSET_PLURAL, type AiAsset, type AssetKind } from "@/lib/github/assets";
 
 export const metadata = { title: "AI assets · Skills Factory" };
@@ -23,17 +25,17 @@ export default async function AiAssetsPage({ searchParams }: { searchParams: Pro
   const ctx = await requireWorkspace();
   const [catalog, skills, playbooks] = await Promise.all([
     loadCatalog(ctx.supabase, ctx.workspace.id),
-    ctx.supabase.from("sf_skills").select("slug, name, status").eq("workspace_id", ctx.workspace.id),
-    ctx.supabase.from("sf_agents").select("slug, name").eq("workspace_id", ctx.workspace.id),
+    listSkillStatuses(ctx.supabase, ctx.workspace.id),
+    listAgentNames(ctx.supabase, ctx.workspace.id),
   ]);
   const repos = catalog.entities.filter((e) => !e.archived);
   const found: (AiAsset & { repo: string; repoId: string; url: string })[] = repos.flatMap((e) => (e.properties.ai_assets ?? []).map((a) => ({ ...a, repo: e.key, repoId: e.id, url: e.url })));
   const scanned = repos.filter((e) => Array.isArray(e.properties.ai_assets)).length;
   const kind = ORDER.includes(sp.kind as AssetKind) ? (sp.kind as AssetKind) : null;
   const count = (k: AssetKind) => found.filter((a) => a.kind === k).length;
-  const sk = (skills.data ?? []) as { slug: string; name: string; status: string }[];
+  const sk = skills ?? [];
   const published = sk.filter((s) => s.status === "published");
-  const pb = (playbooks.data ?? []) as { slug: string; name: string }[];
+  const pb = playbooks;
 
   return (
     <>

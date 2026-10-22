@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireWorkspace } from "@/lib/factory/db";
 import { syncProvider } from "@/lib/integrations/sync";
+import { NoFields } from "@/lib/validation";
 
 export interface SyncState { ok: boolean; message: string; problems: string[] }
 const P = z.enum(["vercel", "supabase", "port"]);
@@ -22,7 +23,8 @@ export async function syncIntegration(_: SyncState | null, fd: FormData): Promis
 }
 
 /** Push published skills to Port as "AI Skill" entities (admins). */
-export async function syncToPort(_: SyncState | null): Promise<SyncState> {
+export async function syncToPort(_: SyncState | null, fd?: FormData): Promise<SyncState> {
+  NoFields.parse(fd);
   const ctx = await requireWorkspace();
   if (ctx.role !== "admin") return { ok: false, message: "Administrators push skills to Port.", problems: [] };
   const { headers } = await import("next/headers");
