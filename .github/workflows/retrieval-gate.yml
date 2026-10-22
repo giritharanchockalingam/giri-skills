@@ -1,6 +1,8 @@
 # Retrieval quality gate for the live skill router (the BM25 search behind Find, the front door and the MCP `route` tool).
 # The rag-pipeline-design skill's own script scores the router on every labelled eval prompt in the library and fails
-# the check when recall@5 falls below the floor or drops against the committed baseline.
+# the check when recall@1 falls below the floor or drops against the committed baseline. The gate is on recall@1
+# because Find and the MCP `route` tool act on the top hit: in testing, a scoring change that cut recall@1 by 4 points
+# left recall@5 unchanged, so a recall@5 gate would have let it through.
 # Intentional change (new cases, a better router): refresh the baseline in the same PR —
 #   cd studio && node --experimental-strip-types scripts/router-retrieval.mts /tmp/rr.csv
 #   python3 -I ../skills/ai-platform/rag-pipeline-design/scripts/eval_retrieval.py --csv /tmp/rr.csv --k 1,3,5 --json ../evals/retrieval/router-baseline.json
@@ -24,12 +26,12 @@ jobs:
           set +e
           python3 -I skills/ai-platform/rag-pipeline-design/scripts/eval_retrieval.py \
             --csv "$RUNNER_TEMP/router-retrieval.csv" --k 1,3,5 \
-            --baseline evals/retrieval/router-baseline.json --max-drop 0.02 --min-recall 0.85 --at 5 \
+            --baseline evals/retrieval/router-baseline.json --max-drop 0.01 --min-recall 0.70 --at 1 \
             --json "$RUNNER_TEMP/router-metrics.json" > "$RUNNER_TEMP/report.txt" 2>&1
           code=$?
           set -e
           {
-            echo "## Skill router retrieval — gate: recall@5 ≥ 0.85 and no drop > 0.02 vs baseline"
+            echo "## Skill router retrieval — gate: recall@1 ≥ 0.70 and no drop > 0.01 vs baseline"
             if [ $code -eq 0 ]; then echo "**PASSED**"; else echo "**FAILED** (exit $code)"; fi
             echo '```'
             grep -v '^misses@' "$RUNNER_TEMP/report.txt"
