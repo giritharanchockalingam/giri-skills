@@ -766,11 +766,20 @@ def main() -> int:
     gen_cache = {}  # (skill, case_id, run, mode) -> output
     replies = {"total": 0, "empty": 0}
 
+    started = time.monotonic()
+    show_progress = args.provider != "dry"
+
     def ask(system, user, temperature, max_tokens):
         """One model call; the answer without any reasoning block, counted so empty replies cannot pass as scores."""
+        t0 = time.monotonic()
         out = strip_reasoning(llm.complete(system, user, temperature=temperature, max_tokens=max_tokens))
         replies["total"] += 1
         replies["empty"] += not out
+        if show_progress:   # a slow local model must never look like a hang
+            done, total = replies["total"], len(calls)
+            per = (time.monotonic() - started) / done
+            print(f"[{done}/{total}] {time.monotonic() - t0:5.1f}s{' EMPTY' if not out else ''} · "
+                  f"~{per * (total - done) / 60:.0f} min left", file=sys.stderr, flush=True)
         return out
 
     for call in calls:
