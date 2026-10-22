@@ -43,3 +43,9 @@ export async function listTalentVersionSummaries(sb: SupabaseClient, talentIds: 
   const { data } = await sb.from("sf_talent_versions").select("talent_id, version, status, spec").in("talent_id", talentIds).order("version", { ascending: false });
   return (data ?? []) as TalentVersionSummary[];
 }
+
+/** Who holds each job role in the workspace: a person (user_id) or an API key (user_id null). */
+export async function listRoleAssignments(sb: SupabaseClient, workspaceId: string): Promise<{ talent_id: string; user_id: string | null }[]> {
+  const { data } = await sb.from("sf_role_assignments").select("talent_id, user_id").eq("workspace_id", workspaceId);
+  return (data ?? []) as { talent_id: string; user_id: string | null }[];
+}

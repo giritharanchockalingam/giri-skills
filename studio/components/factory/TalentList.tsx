@@ -6,7 +6,7 @@ import { can } from "@/lib/factory/roles";
 import { ActionForm } from "@/components/factory/ActionForm";
 import { createTalent } from "@/app/talentActions";
 import { ROLE_TEMPLATES, POOL_TEMPLATES, skillMap } from "@/lib/factory/talentData";
-import { listTalent, listTalentVersionSummaries } from "@/lib/db/talent";
+import { listTalent, listTalentVersionSummaries, listRoleAssignments } from "@/lib/db/talent";
 import type { RoleSpec, PoolSpec } from "@/lib/factory/talent";
 import { STAGES } from "@/lib/data";
 
@@ -18,8 +18,8 @@ export async function TalentList({ kind }: { kind: "role" | "pool" }) {
   const base = kind === "role" ? "/roles" : "/teams";
   const templates = kind === "role" ? ROLE_TEMPLATES : POOL_TEMPLATES;
   const have = new Set(rows.map((r) => r.based_on).filter(Boolean));
-  const { data: held } = kind === "role" ? await ctx.supabase.from("sf_role_assignments").select("talent_id, user_id").eq("workspace_id", ctx.workspace.id) : { data: [] };
-  const holders = (id: string) => { const h = ((held ?? []) as { talent_id: string; user_id: string | null }[]).filter((a) => a.talent_id === id); const p = h.filter((a) => a.user_id).length; return { people: p, keys: h.length - p }; };
+  const held = kind === "role" ? await listRoleAssignments(ctx.supabase, ctx.workspace.id) : [];
+  const holders = (id: string) => { const h = held.filter((a) => a.talent_id === id); const p = h.filter((a) => a.user_id).length; return { people: p, keys: h.length - p }; };
 
   return (
     <div className="stack">

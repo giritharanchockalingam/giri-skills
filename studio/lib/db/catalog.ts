@@ -39,3 +39,15 @@ export async function listEntityResults(sb: SupabaseClient, workspaceId: string,
     .eq("workspace_id", workspaceId).eq("entity_id", entityId).order("created_at", { ascending: false }).limit(200);
   return (data ?? []) as ScorecardResultRow[];
 }
+
+/** The kind of every non-archived catalog entity (for per-kind counts). */
+export async function listActiveEntityKinds(sb: SupabaseClient, workspaceId: string): Promise<{ kind: string }[]> {
+  const { data } = await sb.from("sf_catalog_entities").select("kind").eq("workspace_id", workspaceId).eq("archived", false);
+  return (data ?? []) as { kind: string }[];
+}
+
+/** The GitHub App installations linked to the workspace. */
+export async function listInstallationIds(sb: SupabaseClient, workspaceId: string): Promise<{ installation_id: number }[]> {
+  const { data } = await sb.from("sf_github_installations").select("installation_id").eq("workspace_id", workspaceId);
+  return (data ?? []) as { installation_id: number }[];
+}

@@ -12,6 +12,7 @@ import { can } from "@/lib/factory/roles";
 import { SkillPill, GatePill } from "@/components/factory/Pills";
 import { SkillSubNav } from "@/components/factory/SkillSubNav";
 import { DetailHead } from "@/components/DetailHead";
+import { loadFrozenShas, loadCaseContracts } from "@/lib/db/skills";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return { title: `${humanName(slug)} · Publish pipeline · Skills Factory` }; }
@@ -31,10 +32,9 @@ export default async function SkillLayout({ children, params }: { children: Reac
   const gate = d.skill.status === "retired" ? null : gateOf(working, !!d.published);
   const newest = [...d.versions].sort((a, b) => b.version - a.version)[0];
   const casesStale = newest?.status === "draft" && newest.source.kind === "repo"
-    ? libraryCasesStale(newest.source.repo_skill, ((await d.ctx.supabase.from("sf_eval_cases").select("name, inputs, checks").eq("version_id", newest.id)).data ?? []) as { name: string; inputs: unknown; checks: unknown }[])
+    ? libraryCasesStale(newest.source.repo_skill, (await loadCaseContracts(d.ctx.supabase, [newest.id])).get(newest.id) ?? [])
     : false;
-  const { data: frozenRows } = await d.ctx.supabase.from("sf_version_snapshots").select("version_id, sha256").in("version_id", d.versions.map((v) => v.id));
-  const frozen = new Map(((frozenRows ?? []) as { version_id: string; sha256: string }[]).map((r) => [r.version_id, r.sha256]));
+  const frozen = await loadFrozenShas(d.ctx.supabase, { versionIds: d.versions.map((v) => v.id) });
   const drift = skillDrift(d.versions.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(d.versions.find((v) => v.source.kind === "repo")?.source.repo_skill), casesStale, frozen, currentSkillSha);
   const eg = s ? evalGate(s) : null, ag = s ? approvalGate(s) : null;
   return (

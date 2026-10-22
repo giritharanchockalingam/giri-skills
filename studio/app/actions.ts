@@ -21,6 +21,7 @@ import {
   fromForm, NoFields, EmptyForm, CreateWorkspaceForm, SelectWorkspaceForm, CreateSkillForm, UpdateSkillForm, SaveManifestForm, SaveFileForm, DeleteFileForm,
   CreateDraftForm, UpdateFromLibraryForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
   AddMemberForm, RemoveMemberForm, CreateApiKeyForm, RevokeApiKeyForm, SavePolicyForm, SaveConnectionForm, CancelRunForm,
+  UpdateDraftsFromLibraryForm, RevokeInvitationForm,
 } from "@/lib/validation";
 
 export interface ActionResult { ok: boolean; message: string }
@@ -260,7 +261,8 @@ export async function updateFromLibrary(_: ActionResult | null, fd: FormData): P
 /** Every draft whose library version moved on, updated in place (cases added here are kept). Live versions are not
  *  touched: each needs its own new version, evaluation and approval. */
 export async function updateDraftsFromLibrary(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const ids = String(fd.get("skill_ids") ?? "").split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x)).slice(0, 200);
+  const { skill_ids } = UpdateDraftsFromLibraryForm.parse(fromForm(UpdateDraftsFromLibraryForm, fd));
+  const ids = skill_ids.split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x)).slice(0, 200);
   if (!ids.length) return fail("No drafts to update.");
   const r = await guarded("version.create", async (ctx) => {
     const done: string[] = [], problems: string[] = [];
@@ -467,7 +469,7 @@ async function inviteByEmail(ctx: WsCtx, email: string, role: string): Promise<A
 }
 
 export async function revokeInvitation(_: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  const id = String(fd.get("id") ?? "");
+  const { id } = RevokeInvitationForm.parse(fromForm(RevokeInvitationForm, fd));
   if (!/^[0-9a-f-]{36}$/.test(id)) return fail("Unknown invitation.");
   return guarded("admin.members", async (ctx) => {
     const { error } = await ctx.supabase.from("sf_invitations").update({ revoked_at: new Date().toISOString() }).eq("workspace_id", ctx.workspace.id).eq("id", id);

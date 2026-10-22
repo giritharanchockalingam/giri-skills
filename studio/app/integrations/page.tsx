@@ -3,6 +3,7 @@ import { requireWorkspace } from "@/lib/factory/db";
 import { PageHead } from "@/components/PageHead";
 import { LocalTime } from "@/components/LocalTime";
 import { lastSyncs } from "@/lib/db/entities";
+import { listActiveEntityKinds, listInstallationIds } from "@/lib/db/catalog";
 import { githubConfig } from "@/lib/github/app";
 import { vercelConfig, supabaseConfig } from "@/lib/integrations/fetch";
 import { IntegrationSync } from "@/components/integrations/SyncButton";
@@ -25,13 +26,13 @@ export default async function IntegrationsPage() {
   const origin = `${hh.get("x-forwarded-proto") ?? "https"}://${hh.get("x-forwarded-host") ?? hh.get("host")}`;
   const [syncs, counts, insts] = await Promise.all([
     lastSyncs(ctx.supabase, ctx.workspace.id),
-    ctx.supabase.from("sf_catalog_entities").select("kind").eq("workspace_id", ctx.workspace.id).eq("archived", false),
-    ctx.supabase.from("sf_github_installations").select("installation_id").eq("workspace_id", ctx.workspace.id),
+    listActiveEntityKinds(ctx.supabase, ctx.workspace.id),
+    listInstallationIds(ctx.supabase, ctx.workspace.id),
   ]);
-  const n = (k: string) => ((counts.data ?? []) as { kind: string }[]).filter((e) => e.kind === k).length;
+  const n = (k: string) => counts.filter((e) => e.kind === k).length;
   const gh = githubConfig(), vc = vercelConfig(), sbc = supabaseConfig();
   const cards = [
-    { id: "github", name: "GitHub", what: "Repositories: stack, owners, skills that apply, AI assets, scorecards, delivery metrics, PR gates.", ok: gh.ok && (insts.data ?? []).length > 0,
+    { id: "github", name: "GitHub", what: "Repositories: stack, owners, skills that apply, AI assets, scorecards, delivery metrics, PR gates.", ok: gh.ok && insts.length > 0,
       setup: gh.ok ? "Connected through the GitHub App." : "Set up the GitHub App from the Catalog.", count: `${n("repository")} repositories`, manage: <Link className="btn btn-secondary btn-sm" href="/catalog">Open Catalog</Link> },
     { id: "vercel", name: "Vercel", what: "Services (projects): framework, production URL, production deployments (true deploy frequency), the repository each is built from and the Supabase project it uses.", ok: vc.ok,
       setup: vc.ok ? "Read token set on the server." : "Create a read token at vercel.com/account/settings/tokens and set VERCEL_TOKEN (and VERCEL_TEAM_ID for a team) in the deployment.", count: `${n("service")} services`,

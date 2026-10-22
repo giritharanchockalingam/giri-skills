@@ -2,7 +2,7 @@
 /* Insights write paths: record a browser run (metadata only), set/remove an ROI baseline (admins). */
 import { revalidatePath } from "next/cache";
 import { getContext, requireWorkspace } from "@/lib/factory/db";
-import { fromForm, BrowserRunInput, SaveBaselineForm, RemoveBaselineForm, SKILL_ID as SKILL } from "@/lib/validation";
+import { fromForm, BrowserRunInput, SaveBaselineForm, RemoveBaselineForm, NoArgs, SKILL_ID as SKILL } from "@/lib/validation";
 
 export interface BrowserRun { skill: string; status: string; example: boolean; mode: string | null; checksPassed: number | null; checksTotal: number | null; durationMs: number | null }
 export interface BaselineResult { ok: boolean; message: string }
@@ -59,7 +59,8 @@ export async function removeBaseline(fd: FormData): Promise<void> {
 }
 
 /** Recompute delivery metrics for every catalog repository now (authors and admins). */
-export async function refreshDeliveryNow(): Promise<BaselineResult> {
+export async function refreshDeliveryNow(args?: undefined): Promise<BaselineResult> {
+  NoArgs.parse(args);
   const ctx = await requireWorkspace();
   if (ctx.role !== "admin" && ctx.role !== "author") return { ok: false, message: "Authors and administrators refresh delivery metrics." };
   const { refreshDelivery } = await import("@/lib/insights/deliveryRefresh");
