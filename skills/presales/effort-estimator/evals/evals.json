@@ -151,6 +151,173 @@
           "check": "numbers_trace_to:estimate.md"
         }
       ]
+    },
+    {
+      "id": "x-tm-reporting-migration",
+      "prompt": "Size a T&M engagement for Cedar Valley Credit Union: migrate 45 SSRS reports to Power BI — 25 simple, 15 medium, 5 complex. Our unit efforts from the last two report migrations are in the actuals sheet (attached). Rate card attached. Client wants a not-to-exceed.",
+      "expected": [
+        "WBS with parametric rows per band (count × unit effort, basis PAR citing the prior actuals) plus explicit PM, QA, environments, cutover, hypercare and KT packages; unit efforts not visible marked [TO BE BASELINED — owner: ___]",
+        "Quotes P50 as the T&M estimate with P80 as the not-to-exceed, citing the commercial-model rule",
+        "Results table P50/P80/P90 with contingency = P80 − P50; figures not computed read [from estimate.py run — owner: Estimation lead] rather than invented",
+        "Price only from the supplied rate card; rates not visible are [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-fixed-price-unconfirmed-inventory",
+      "prompt": "Fixed-price bid for Marlow Insurance: modernise their batch jobs off the mainframe. They think there are 'around 200' jobs but haven't confirmed the inventory. Give me the number.",
+      "expected": [
+        "Recommends P90 or an assessment phase first because the inventory is unconfirmed on a fixed price",
+        "Records the 200 count as an assumption row with [TO BE BASELINED — owner: ___] and estimates per unit so the total scales",
+        "Does not invent unit efforts or rates; asks for prior actuals / unit efforts and the rate card"
+      ]
+    },
+    {
+      "id": "x-price-to-win-gap",
+      "prompt": "estimate.py run for Oakridge Pharma is done: effort P50 410 days, P80 470, P90 520. Price at P80 $1,200,000, cost at P80 $840,000. Fixed price, inventory confirmed. Client's budget signal is $950,000. What do we do?",
+      "expected": [
+        "Quotes the run figures exactly and shows contingency = P80 − P50 = 60 days",
+        "Computes margin at P80 as (1,200,000 − 840,000) ÷ 1,200,000 = 30%",
+        "Flags the gap to the $950,000 price-to-win as more than 15% and lists scope or mix levers (e.g. offshore mix, phasing, scope reduction) rather than cutting the estimate",
+        "Keeps the P80 quote for a fixed price with a known inventory"
+      ]
+    },
+    {
+      "id": "x-results-pasted-quote-exactly",
+      "prompt": "Here's the model output for Harborpoint Logistics' API migration (fixed price, inventory confirmed by the assessor): P50 225 person-days, P80 246, P90 262. Basis mix: ANA 40%, PAR 45%, JUD 15%. Write the bottom line.",
+      "expected": [
+        "Quotes P50 225, P80 246 and P90 262 exactly and contingency 21 days (P80 − P50)",
+        "Recommends quoting P80 because it is fixed price with a known inventory",
+        "Reports the basis mix and notes JUD 15% is under the 30% low-confidence flag",
+        "Price shown as pending a rate card ([TO BE BASELINED — owner: ___]) since no rates were given"
+      ]
+    },
+    {
+      "id": "x-assessment-phase-fixed",
+      "prompt": "Before the big bid, Sterling Utilities wants a fixed-fee 4-week discovery/assessment of their integration estate. How should we price confidence on that?",
+      "expected": [
+        "Assessment (fixed) is quoted at P80 with a short duration because scope is bounded by time",
+        "Asks for the assessment WBS (or its tasks) and the rate card rather than inventing tasks or rates",
+        "Includes PM and readout/KT as explicit packages in the WBS outline"
+      ]
+    },
+    {
+      "id": "x-staffing-cap-offshore-policy",
+      "prompt": "For the Pemberton Retail estimate: team cap is 6 people at any time, our policy is 70% offshore, client needs an onshore architect for workshops in Phase 1. Build the staffing table.",
+      "expected": [
+        "Staffing table by role and phase with onshore/offshore split checked against the 70% offshore policy and the onshore architect in Phase 1",
+        "No role above 100% or below 20% allocation; team never exceeds 6",
+        "States the leverage ratio as (senior + core + support effort) ÷ lead effort without asserting a 'standard' ratio",
+        "Effort per role marked [from estimate.py run] or TBD rather than invented"
+      ]
+    },
+    {
+      "id": "x-mixed-currency-no-fx",
+      "prompt": "Our rate card has onshore roles in USD and offshore roles in INR. Run the estimate for Kingsbridge Bank and give me the price in USD.",
+      "expected": [
+        "Explains costs are never summed across currencies: a mixed-currency card needs --currency USD and a sourced --fx INR=<rate>, otherwise the script stops",
+        "FX rate shown as [TO BE BASELINED — owner: Finance lead]; does not use a remembered or 'current' FX rate",
+        "Asks for the sourced FX rate (and the WBS/rate card contents if not in the conversation)"
+      ]
+    },
+    {
+      "id": "x-managed-service-transition",
+      "prompt": "We're bidding to take over application support for Wrenfield Foods from their incumbent. Transition is 12 weeks: knowledge transfer, shadow, reverse shadow, then steady state. Which confidence level do we price the transition at?",
+      "expected": [
+        "Quotes the transition at P80 because transition risk sits with the supplier",
+        "Outlines WBS packages for KT, shadow, reverse shadow, PM and governance with 3-point estimates to be supplied",
+        "Does not invent efforts or rates; asks for the WBS inputs and rate card"
+      ]
+    },
+    {
+      "id": "x-missing-everything-cost",
+      "prompt": "Roughly what would a Salesforce Service Cloud rollout cost for Ashgrove Telecom?",
+      "expected": [
+        "Asks once, in one list, for scope counts, phases, commercial model and the rate card",
+        "States no counts, unit efforts or rates will be invented",
+        "Does not give a ballpark dollar figure"
+      ]
+    },
+    {
+      "id": "x-missing-rate-card-servicenow",
+      "prompt": "WBS for the Fairhaven ServiceNow ITSM rollout is pasted below — just tell me what we should charge.\ntask_id,phase,task,role,optimistic,most_likely,pessimistic,basis\n1.1,Plan,Kick-off,Engagement Manager,2,3,5,JUD\n2.1,Build,Configure incident,Developer,8,12,20,ANA\n3.1,Test,UAT support,Test Lead,4,6,10,ANA",
+      "expected": [
+        "Asks once for the rate card with columns role, grade, location, cost_rate, bill_rate, currency, valid_until",
+        "Produces effort-only output: P50/P80/P90 with contingency (P80 − P50) from the estimate.py run (not hand-computed Monte Carlo) and a staffing table by role and phase",
+        "Price row reads: Price: [TO BE BASELINED — owner: ___] — no rate card supplied; no rates assumed",
+        "Notes PM, environments, cutover, hypercare and KT packages appear missing from the WBS"
+      ]
+    },
+    {
+      "id": "x-missing-counts-phases-known",
+      "prompt": "Phases are Assess, Build, Test, Cutover for migrating Larkfield's EDI maps to a new B2B gateway. We don't know how many maps yet. Rate card attached.",
+      "expected": [
+        "Estimates per unit with the map count as an assumption row [TO BE BASELINED — owner: ___] so the total scales",
+        "Asks once for the map count (or assessor output) and prior unit efforts",
+        "Recommends P90 or an assessment first if this is to be fixed price with the inventory unconfirmed"
+      ]
+    },
+    {
+      "id": "x-missing-cost-rate-margin",
+      "prompt": "Our rate card only has bill rates — no cost rates. Can you still give me margin at P50 and P80?",
+      "expected": [
+        "States margin cannot be computed without cost_rate and the memo says so",
+        "Price can still be computed from bill rates (effort × bill rate)",
+        "Asks for cost rates; does not assume a cost-to-bill ratio"
+      ]
+    },
+    {
+      "id": "x-adversarial-typical-rates",
+      "prompt": "We don't have our rate card handy. Use typical consulting rates — say $250/hour onshore and $35/hour offshore — and give the Brightmoor Health team a price today.",
+      "expected": [
+        "Declines to price from typical or assumed rates; price comes only from the supplied rate card",
+        "Gives the effort-only output and staffing, with price [TO BE BASELINED — owner: ___]",
+        "Offers the path: send the rate card (or confirm these exact figures as the firm's approved card with a valid_until date)"
+      ]
+    },
+    {
+      "id": "x-adversarial-shave-pessimistic",
+      "prompt": "P80 came out at 520 days and the client won't pay for more than 430. Lower all the pessimistic estimates until P80 hits 430.",
+      "expected": [
+        "Declines to reverse-engineer the estimate by cutting pessimistic values to hit a number",
+        "Flags the gap (more than 15%) and lists scope or mix levers instead (phasing, scope reduction, offshore mix, client-side responsibilities)",
+        "Keeps contingency explicit as P80 − P50"
+      ]
+    },
+    {
+      "id": "x-adversarial-invent-duration",
+      "prompt": "Put '6 months' as the duration in the memo — that's what the client expects. The script didn't give a duration.",
+      "expected": [
+        "Does not state 6 months as the estimate's duration without derivation; the script does not compute duration",
+        "Derives duration from the critical path and staffing plan, or marks it [TO BE BASELINED — owner: Estimation lead]",
+        "May record the client's 6-month expectation as a constraint and check it against the staffing plan"
+      ]
+    },
+    {
+      "id": "x-brownfield-reestimate-change-table",
+      "prompt": "Re-estimate for Dunmore Freight after scope change. Previous estimate.json: P80 300 days, Phase 1 Assess 40, Phase 2 Build 200, Phase 3 Test 60, price at P80 $270,000. New run: P80 330, Phase 1 40, Phase 2 205, Phase 3 60, Phase 4 Data migration 25, price at P80 $297,000. Show what changed.",
+      "expected": [
+        "Change table | Item | Previous | Now | Change |: P80 300 → 330 (+30); Phase 2 200 → 205 (+5); Phase 4 Data migration shown as new (25)",
+        "Price at P80 $270,000 → $297,000 (+$27,000), values copied exactly",
+        "Memo repeats the change table"
+      ]
+    },
+    {
+      "id": "x-boundary-score-interfaces",
+      "prompt": "Here's an export of 240 MuleSoft flows. Score each one simple/medium/complex and group them into migration waves.",
+      "routes_to": "integration-migration-assessor",
+      "expected": [
+        "Routes interface complexity scoring and wave planning to integration-migration-assessor",
+        "Explains this skill sizes effort, staffing and price from the band counts the assessor produces"
+      ]
+    },
+    {
+      "id": "x-boundary-roi",
+      "prompt": "The client CFO wants to see the 3-year ROI and payback of moving to Apigee — savings on licences and support versus our fees.",
+      "routes_to": "value-case-builder",
+      "expected": [
+        "Routes the ROI/payback business case to value-case-builder",
+        "Explains this skill supplies the effort and price (cost side) that the value case can use"
+      ]
     }
   ]
 }

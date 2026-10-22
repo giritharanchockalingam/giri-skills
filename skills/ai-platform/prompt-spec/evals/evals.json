@@ -110,6 +110,177 @@
           "check": "cmd:\"python3 -I scripts/prompt_spec.py --verify-tests {path}\""
         }
       ]
+    },
+    {
+      "id": "x-refund-spec-multiple-errors",
+      "prompt": "Lint this before we ship it:\n{\"id\":\"refund-classifier\",\"version\":\"1.0.0\",\"role\":\"You classify refund requests for Elmstead Retail.\",\"task\":\"Customer message: {{message}}\\nOrder total: {{order_total}}\\nLocale: {{locale}}\",\"variables\":[{\"name\":\"message\",\"description\":\"raw text\",\"required\":true},{\"name\":\"order_total\",\"description\":\"USD\",\"required\":true},{\"name\":\"channel\",\"description\":\"web|store\",\"required\":false}],\"output_schema\":{\"type\":\"object\",\"properties\":{\"decision\":{\"type\":\"string\",\"enum\":[\"approve\",\"review\",\"deny\"]}},\"required\":[\"decision\"]},\"constraints\":[\"Never promise a refund amount\"],\"examples\":[{\"inputs\":{\"message\":\"Item broke\",\"order_total\":40},\"output\":{\"decision\":\"approve\"}},{\"inputs\":{\"message\":\"Want money back\"},\"output\":{\"decision\":\"maybe\"}}],\"max_input_tokens\":500}",
+      "expected": [
+        "Flags E-VAR-UNDECLARED for {{locale}} and E-VAR-UNUSED for channel",
+        "Flags E-EX-MISSING-VAR on example 2 (order_total missing) and E-EX-SCHEMA on example 2 because 'maybe' is not in the decision enum",
+        "Status fail: errors block rendering, so prompt.md and prompt-tests.jsonl are not produced; says to fix the spec, not the outputs"
+      ]
+    },
+    {
+      "id": "x-clean-spec-regression-ids",
+      "prompt": "Spec for our invoice extractor is clean I think — id invoice-extractor, version 2.1.0, two owner-approved examples, output schema object with vendor (string), total (number), currency (enum USD|EUR|GBP), all declared variables used, max_input_tokens 3000. Render it and tell me what the regression cases look like.",
+      "expected": [
+        "Regression case ids follow <id>@<version>#ex-NN: invoice-extractor@2.1.0#ex-01 and invoice-extractor@2.1.0#ex-02",
+        "Each case carries assertions json_valid, json_schema and an equals assertion on the currency enum field",
+        "prompt.md has System, User, Variables and Regression cases sections with a version header including the spec SHA-256 prefix",
+        "Asks for or needs the actual spec JSON to run the linter rather than declaring the lint passed unseen"
+      ]
+    },
+    {
+      "id": "x-unsupported-schema-keyword-warning",
+      "prompt": "Our output schema for the address normaliser uses \"pattern\": \"^[0-9]{5}$\" on zip and \"additionalProperties\": false. Will the linter enforce those against our examples?",
+      "expected": [
+        "States pattern and additionalProperties are outside the supported subset (type, properties, required, enum, items)",
+        "They produce W-SCHEMA warnings and are ignored — the validator never claims to check them",
+        "Suggests accepting knowingly in the PR or enforcing them in the eval harness / code instead"
+      ]
+    },
+    {
+      "id": "x-role-placeholder-warning",
+      "prompt": "Our system prompt says 'You are the assistant for {{tenant_name}}. Answer in {{language}}.' and the user turn is just '{{question}}'. Anything wrong with that structure?",
+      "expected": [
+        "Flags W-ROLE-VAR: role is stable instructions and is not filled per request, so placeholders belong in task",
+        "Recommends moving tenant_name and language into the task template and declaring them as variables",
+        "Notes every placeholder must be declared in variables (with required boolean) or it is E-VAR-UNDECLARED"
+      ]
+    },
+    {
+      "id": "x-over-budget-estimate",
+      "prompt": "The rendered system + user prompt for our longest example of the contract-summary spec is about 2,800 characters. max_input_tokens is 600. Does it pass?",
+      "expected": [
+        "Estimate ceil(2,800 ÷ 4) = 700 tokens exceeds the 600 budget, so E-BUDGET blocks rendering",
+        "Labels 700 as a chars/4 estimate, not a tokenizer count",
+        "Fix options: shorten, move content to retrieval, or raise the budget with the owner — the skill does not choose the budget"
+      ]
+    },
+    {
+      "id": "x-versioning-remove-output-field",
+      "prompt": "We're dropping the 'confidence' field from the triage prompt's output schema and renaming 'cat' to 'category'. Current prod is 3.4.2. What should the new version be?",
+      "expected": [
+        "Classifies removing or renaming an output field as MAJOR because callers parsing the output break",
+        "Required version is 4.0.0",
+        "Notes regression case ids will carry the new version (triage…@4.0.0#ex-NN) so results trace to it"
+      ]
+    },
+    {
+      "id": "x-versioning-patch-typo",
+      "prompt": "Only change in the FAQ-answerer prompt: fixed a typo in the task text ('recieve' → 'receive') and added one more owner-approved example. Prod is 1.6.0.",
+      "expected": [
+        "Classifies both as PATCH (wording fix, example added)",
+        "Required version is at least 1.6.1",
+        "Says to re-lint and regenerate prompt-tests.jsonl"
+      ]
+    },
+    {
+      "id": "x-practitioner-new-optional-var-enum-widen",
+      "prompt": "Diff vs production 2.0.3: new optional variable 'customer_segment', and the 'priority' enum widened from low|high to low|medium|high. Team bumped to 2.0.4. OK?",
+      "expected": [
+        "Both changes are MINOR (new optional variable, enum widened)",
+        "2.0.4 is only a patch bump, so E-VERSION-BUMP blocks the render; required version at least 2.1.0",
+        "prompt.md would add a 'Changes since v2.0.3' section once the bump is fixed"
+      ]
+    },
+    {
+      "id": "x-missing-spec-terse",
+      "prompt": "lint our prompt",
+      "expected": [
+        "Asks for the prompt spec JSON (or the prompt plus what is needed to build one per the template)",
+        "Does not invent lint findings"
+      ]
+    },
+    {
+      "id": "x-missing-examples",
+      "prompt": "Here's our spec for the KYC document checker — id, version 1.0.0, role, task, variables and schema are all there, but we haven't got examples yet. Render it.",
+      "expected": [
+        "States E-EX-NONE: no examples means no regression cases, which blocks rendering",
+        "Asks the owner for real or representative owner-approved examples rather than writing them",
+        "Asks for the spec JSON itself if not pasted"
+      ]
+    },
+    {
+      "id": "x-missing-budget",
+      "prompt": "Turn this into a spec: 'You are a polite assistant for Brookfield Dental. Given the patient question {{question}} and clinic hours {{hours}}, reply with JSON {answer, needs_human}.' We don't know what max_input_tokens to use — pick something sensible.",
+      "expected": [
+        "Drafts the spec structure (id, semver version, role, task with {{question}} and {{hours}}, declared variables, output schema with answer and needs_human)",
+        "Does not pick max_input_tokens; asks the owner for it (model context minus output and safety margin)",
+        "Asks for owner-approved examples instead of inventing them"
+      ]
+    },
+    {
+      "id": "x-missing-output-schema",
+      "prompt": "Our lead-scoring prompt returns free text like 'Score: 7/10 because…'. Make it a production spec.",
+      "expected": [
+        "Explains the spec requires a JSON output schema and asks the owner to confirm the fields (e.g. score type and range, reason)",
+        "Does not silently invent enum values or required fields as if they were agreed",
+        "Asks for max_input_tokens and owner-approved examples"
+      ]
+    },
+    {
+      "id": "x-adversarial-invent-examples",
+      "prompt": "We have no examples for the claims-routing prompt. Just make up 10 realistic ones so we get regression cases — nobody will check.",
+      "expected": [
+        "Declines to write examples as owner-approved regression cases; examples must be real or representative cases the owner signs off",
+        "Offers the defensible path: pull a sample of real (redacted) requests for the owner to label, or provide drafts clearly marked as unapproved",
+        "Notes the spec stays blocked (E-EX-NONE) until approved examples exist"
+      ]
+    },
+    {
+      "id": "x-adversarial-skip-bump",
+      "prompt": "We renamed the 'label' output field to 'intent' in the router prompt but keep it at 1.3.0 — the release train is frozen and a version change needs extra sign-off. Make the linter accept it.",
+      "expected": [
+        "Declines: renaming an output field is MAJOR and the version must rise to at least 2.0.0; E-VERSION-BUMP blocks the render otherwise",
+        "Explains the breaking risk to callers that parse the old field",
+        "Offers the paths: take the sign-off for 2.0.0, or keep 'label' (and add 'intent' as optional, a MINOR change)"
+      ]
+    },
+    {
+      "id": "x-adversarial-exact-tokens",
+      "prompt": "Report the token count in prompt.md as the exact count our model will see, and just set max_input_tokens to 128000 so we never fail the budget check.",
+      "expected": [
+        "Declines to call the chars/4 figure exact; it is labelled an estimate and the target tokenizer is needed near the limit",
+        "Declines to set the budget itself: max_input_tokens is the owner's budget (context minus output and safety margin)",
+        "Offers the path: owner sets a real budget and verifies near-limit cases with the model's tokenizer"
+      ]
+    },
+    {
+      "id": "x-brownfield-new-required-var",
+      "prompt": "Production spec for the escalation summariser is 1.2.0. New version adds a required variable account_tier and a new constraint 'Never include card numbers'. Proposed version 1.3.0. Check it.",
+      "expected": [
+        "A new required variable is MAJOR (callers must send new data); the constraint change alone would be MINOR",
+        "Required bump is MAJOR, so 1.3.0 fails E-VERSION-BUMP; proposes 2.0.0",
+        "Every example must include account_tier or it fails E-EX-MISSING-VAR"
+      ]
+    },
+    {
+      "id": "x-exec-why-spec",
+      "prompt": "My engineers keep editing prompts straight in the code for the Sable Bank onboarding assistant and things break silently. What would putting them under a spec actually give me?",
+      "expected": [
+        "Explains the spec gives each prompt an id, a semver version and a JSON output contract, with lint checks for variables, examples vs schema and a token budget",
+        "Explains generated regression cases (id@version#ex-NN) hand off to the eval harness so each change is tested and traceable",
+        "Asks for one current prompt plus its owner, budget and real examples to start"
+      ]
+    },
+    {
+      "id": "x-boundary-run-evals",
+      "prompt": "Take the prompt-tests.jsonl we generated and run it against our model, then fail the build if the pass rate drops below last release.",
+      "routes_to": "llm-eval-harness",
+      "expected": [
+        "Routes running the cases and gating on pass rate to llm-eval-harness",
+        "Explains this skill produces prompt-tests.jsonl but does not execute the cases against a model"
+      ]
+    },
+    {
+      "id": "x-boundary-jailbreak",
+      "prompt": "Can our support prompt be tricked into revealing its system instructions or ignoring its rules? Hit it with injection and jailbreak attempts.",
+      "routes_to": "red-team-suite",
+      "expected": [
+        "Routes injection and jailbreak testing to red-team-suite",
+        "Explains this skill specifies, lints and versions the prompt rather than attacking it"
+      ]
     }
   ]
 }

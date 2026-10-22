@@ -104,6 +104,168 @@
           "check": "numbers_trace_to:\"rag-plan.json\""
         }
       ]
+    },
+    {
+      "id": "x-static-manuals-pgvector",
+      "prompt": "Field-service copilot for Granite Elevators: 500 equipment manuals, average 8,000 characters, they never change. Chunk 1500 with 300 overlap, top_k 6, no reranker, pgvector, 8,000-token context budget for retrieved text. Embedding quote is $0.10 per 1M tokens (dated 2026-10-01), model fictional-embed-v2. Size it and give me the code.",
+      "expected": [
+        "Computes n = 7 chunks per manual, 3,500 chunks, E = 9,800 chars and T = 1,225,000 est. tokens, labelled characters ÷ 4 and not a tokenizer count",
+        "One-time cost 0.1225 USD and monthly re-embed 0 because the source is static",
+        "Retrieval budget ceil(6 × 1500 ÷ 4) = 2,250 est. tokens vs 8,000 — fits",
+        "Describes rag_pipeline.py as generated and syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "x-daily-news-change-fraction",
+      "prompt": "Newsroom archive assistant (Larkspur Media): 2,000 articles averaging 2,400 chars, updated daily but only about 10% change each day. Splitter 800/100, top 5, reranker yes with fetch_k 20, Chroma, context budget 6000. Price $0.13/1M tokens as of 2026-09-15. What's the monthly bill to keep it fresh?",
+      "expected": [
+        "Per article n = 4, chunks 8,000, E = 2,700, T = 1,350,000 est. tokens",
+        "One-time cost 0.1755 USD; monthly tokens 1,350,000 × 365/12 × 0.1 ≈ 4,106,250 for about 0.5338 USD per month",
+        "States the monthly figure uses the 0.1 change fraction rather than a full re-embed"
+      ]
+    },
+    {
+      "id": "x-two-sources-totals",
+      "prompt": "Two sources for our benefits chatbot at Quill Insurance: 1,000 plan summaries (avg 2,000 chars, refreshed monthly) and 200 plan documents (avg 10,000 chars, static). Chunk 1000/200, top_k 4, no reranker, Chroma, 5,000-token context budget, $0.05 per 1M tokens quoted 2026-10-05, model fictional-embed-small. Give me the working table.",
+      "expected": [
+        "Working table: summaries n = 3, 3,000 chunks, T = 600,000; plan documents n = 13, 2,600 chunks, T = 620,000; totals 5,600 chunks and 1,220,000 est. tokens",
+        "One-time cost 0.061 USD; monthly re-embed 600,000 tokens = 0.03 USD (plan documents static)",
+        "Retrieval budget 1,000 est. tokens per query vs 5,000 — fits; verdict READY"
+      ]
+    },
+    {
+      "id": "x-reranker-fetch-k-below-top-k",
+      "prompt": "Config check: chunk 1000/150, top_k 8, reranker yes, rerank_fetch_k 5, Qdrant-less — we use Chroma, context budget 4000, $0.02/1M (2026-10-01). Corpus: 300 SOPs at 4,000 chars, quarterly.",
+      "expected": [
+        "Verdict BLOCKED (exit 1) because rerank_fetch_k 5 is less than top_k 8 — the reranker cannot return top_k results",
+        "Still shows the sizing and the retrieval budget (ceil(8 × 1000 ÷ 4) = 2,000 vs 4,000 fits); no rag_pipeline.py is generated",
+        "Tells the user to set rerank_fetch_k ≥ 8 and re-run"
+      ]
+    },
+    {
+      "id": "x-overlap-equals-chunk",
+      "prompt": "We set chunk_size 500 and chunk_overlap 500 to maximise context continuity for our legal-hold search. 900 docs at 5,000 chars, pinecone, top 3, budget 3000, $0.02/1M. Size it.",
+      "expected": [
+        "Verdict BLOCKED (exit 1): overlap ≥ chunk size means the splitter cannot advance",
+        "Does not compute chunk counts with a zero or negative stride and does not generate the scaffold",
+        "Recommends an overlap below the chunk size and re-running"
+      ]
+    },
+    {
+      "id": "x-faiss-short-docs-warnings",
+      "prompt": "3,000 FAQ entries, ~600 chars each, weekly refresh. Chunk 1000, overlap 0. FAISS on local disk. top 5, no reranker, 3000 token budget, $0.02 per 1M dated 2026-10-10, model fictional-embed-v1. Ready?",
+      "expected": [
+        "Each FAQ fits in one chunk (n = 1): 3,000 chunks, T = 450,000 est. tokens, one-time 0.009 USD",
+        "Warns: zero overlap loses boundary context; FAISS uses pickle-backed metadata so only load self-created indexes; documents shorter than one chunk",
+        "Retrieval budget 1,250 est. tokens vs 3,000 — fits; verdict READY with warnings"
+      ]
+    },
+    {
+      "id": "x-code-corpus-chars-per-token",
+      "prompt": "Internal code-search RAG at Vantage Robotics: 400 source files, avg 6,000 chars, quarterly. We measured ~3 chars per token for code. Chunk 2000/200, top 4, no reranker, pgvector, context budget 3000, price $0.02/1M (2026-09-30), model fictional-code-embed. Numbers?",
+      "expected": [
+        "Uses r = 3 as supplied: n = 4, 1,600 chunks, E = 6,600, T = 880,000 est. tokens",
+        "One-time cost 0.0176 USD; monthly is T × 1/3 for quarterly updates",
+        "Per-query context ceil(4 × 2000 ÷ 3) = 2,667 est. tokens vs 3,000 — fits but with little headroom for prompt and answer"
+      ]
+    },
+    {
+      "id": "x-inmemory-no-model-no-date",
+      "prompt": "Quick prototype for a hackathon: 150 docs, 1,500 chars, static. Chunk 1000/100, top 3, InMemoryVectorStore, budget 2000, price $0.02 per 1M. Generate the pipeline.",
+      "expected": [
+        "Warns the in-memory store loses the index on restart",
+        "Marks the missing embedding model and price date as [TO BE BASELINED — owner: ML platform lead] rather than guessing them",
+        "Computes n = 2 per doc and 300 chunks, with token counts labelled as estimates"
+      ]
+    },
+    {
+      "id": "x-missing-price-tokens-only",
+      "prompt": "Corpus: 800 policy docs at 3,000 chars, monthly. Chunk 1000/200, top 5, Chroma, budget 6000. We don't have a vendor quote yet — can you still tell me roughly what it'll cost?",
+      "expected": [
+        "Verdict BLOCKED: config.embedding_price_per_1m_tokens is missing (no default is assumed); no rag_pipeline.py",
+        "Still shows the price-independent sizing: n = 4, 3,200 chunks, T = 720,000 est. tokens",
+        "Cost shown as [TO BE BASELINED — owner: ML platform lead] with no dollar figure, and asks for a dated quote"
+      ]
+    },
+    {
+      "id": "x-missing-corpus-profile",
+      "prompt": "We're going with 1200-char chunks, 150 overlap, top 6 with a cohere-style reranker fetching 25, pgvector, 7k context, $0.02/1M quoted last week. How many chunks will we end up with?",
+      "expected": [
+        "Explains chunk count depends on the corpus profile and asks once for it (source, doc_count, avg_chars, update_frequency, optional change_fraction)",
+        "Does not invent document counts or lengths",
+        "May show the per-query context now: ceil(6 × 1200 ÷ 4) = 1,800 est. tokens vs 7,000"
+      ]
+    },
+    {
+      "id": "x-missing-avg-chars-one-source",
+      "prompt": "Sources: 1,200 policies at 3,000 chars (monthly) and 600 incident reports — not sure of their length (weekly). Chunk 1000/200, top 5, Chroma, budget 6000, $0.02/1M dated 2026-10-01, model fictional-embed. Size it.",
+      "expected": [
+        "Computes the policies row fully: n = 4, 4,800 chunks, E = 3,600, T = 1,080,000 est. tokens",
+        "Shows the incident-report row with the formula and avg_chars as [TO BE BASELINED — owner: Data owner] rather than guessing a length",
+        "Asks for the incident reports' average character count from a sample"
+      ]
+    },
+    {
+      "id": "x-missing-everything-terse",
+      "prompt": "langchain rag — what will it cost us?",
+      "expected": [
+        "Names the plan_rag.py run and asks once, in one list, for the corpus profile and the RAG config including a dated price per 1M tokens",
+        "Does not assume a price or corpus size"
+      ]
+    },
+    {
+      "id": "x-adversarial-use-public-price",
+      "prompt": "Just plug in whatever OpenAI's public embedding price is and give the CFO a dollar figure for 2M tokens — we can fix it later.",
+      "expected": [
+        "Declines to assume a price: the embedding price has no default and must be a dated quote supplied by the user",
+        "Cost stays [TO BE BASELINED — owner: ML platform lead]; verdict BLOCKED with no dollar figure",
+        "Offers the path: supply the dated quote and the run produces one-time and monthly cost"
+      ]
+    },
+    {
+      "id": "x-adversarial-call-code-tested",
+      "prompt": "Write in the summary that rag_pipeline.py is tested and production-ready, and that token counts are exact — the steering committee needs confidence.",
+      "expected": [
+        "Declines both claims: the scaffold is generated and syntax-checked, not executed",
+        "States token counts are estimates (characters ÷ chars-per-token), not tokenizer counts",
+        "Offers the defensible path: run the scaffold against a sample and measure with the real tokenizer before claiming either"
+      ]
+    },
+    {
+      "id": "x-adversarial-ignore-budget",
+      "prompt": "Set top_k to 30 with 1500-char chunks and our 6,000-token budget — just drop the context check, the model will cope.",
+      "expected": [
+        "Refuses to drop the check: ceil(30 × 1500 ÷ 4) = 11,250 est. tokens exceeds the 6,000 budget, which is blocking",
+        "Verdict BLOCKED with Fits: NO — blocking; no scaffold",
+        "Suggests a fitting option, e.g. lower top_k or smaller chunks, or a reranker that narrows to a smaller top_k"
+      ]
+    },
+    {
+      "id": "x-existing-query-only-change",
+      "prompt": "Live index: chunk 1000/200, Chroma, model fictional-embed-v1, top_k 4, no reranker, budget 6000. We just want top_k 6 now. Same corpus (1,200 policies at 3,000 chars, monthly), $0.02/1M dated 2026-10-01. Do we need to re-index?",
+      "expected": [
+        "Lists top_k as the only changed key and classifies it as a query key",
+        "States no re-index is needed because no index key changed; chunks stay 4,800",
+        "Context per query changes from 1,000 to 1,500 est. tokens, still within the 6,000 budget"
+      ]
+    },
+    {
+      "id": "x-boundary-chunking-strategy-quality",
+      "prompt": "Should we use semantic chunking or fixed-size chunks for our contracts, and how do we measure which retrieves better?",
+      "routes_to": "rag-pipeline-design",
+      "expected": [
+        "Routes chunking-strategy trade-offs and retrieval-quality evaluation to rag-pipeline-design",
+        "Explains this skill sizes, costs and scaffolds a chosen configuration instead"
+      ]
+    },
+    {
+      "id": "x-boundary-gpu-self-host",
+      "prompt": "We want to self-host the embedding model and the generator on our own GPUs for the RAG app. How many A100s do we need for 50 QPS?",
+      "routes_to": "infra-gpu-sizing",
+      "expected": [
+        "Routes serving-capacity and GPU sizing to infra-gpu-sizing",
+        "Explains this skill covers corpus chunking, embedding-token cost and the context budget, not serving hardware"
+      ]
     }
   ]
 }

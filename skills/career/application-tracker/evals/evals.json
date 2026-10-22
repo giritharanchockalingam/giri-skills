@@ -110,6 +110,165 @@
           "check": "json"
         }
       ]
+    },
+    {
+      "id": "x-recruiter-call-to-screen",
+      "prompt": "Recruiter call with Arrowmark Bank (VP Platforms) happened today, 2026-10-17. They're setting up the hiring manager round for 2026-10-21. Update my tracker.",
+      "expected": [
+        "Shows the updated row in tracker column order with stage Screen (recruiter call maps to Screen) and last_touch 2026-10-17",
+        "Next action is HM-round prep (e.g. prep for HM / confirm time) dated on or before 2026-10-21",
+        "Fields not in the conversation (row id, applied_date) are [TO BE BASELINED — owner: ___]; states other rows and the header are unchanged"
+      ]
+    },
+    {
+      "id": "x-verbal-offer",
+      "prompt": "Verbal offer from Pinehurst Health for Sr Director Applications on 2026-10-18! Written letter expected by 2026-10-22.",
+      "expected": [
+        "Stage set to Offer with last_touch 2026-10-18",
+        "Next action is to run the offer evaluation / respond or request an extension, with a near-term date (Offer goes WATCH at 2 days, STALE at 5)",
+        "Reply stays short (≤50 words besides the row)"
+      ]
+    },
+    {
+      "id": "x-rejection-close-reason",
+      "prompt": "Bayside Retail emailed on 2026-10-19 — not moving forward with me for Director, Data Platforms after the panel.",
+      "expected": [
+        "Stage set to Rejected (a closed stage) with last_touch 2026-10-19",
+        "Records a one-line close_reason (e.g. declined after panel)",
+        "Suggests asking for feedback once and a 90-day touch, rather than a normal follow-up chase"
+      ]
+    },
+    {
+      "id": "x-loop-and-final-round-mapping",
+      "prompt": "Two updates: (1) Copperline Foods — did the team loop with four peers on 2026-10-15, final round with the CIO is 2026-10-24. (2) Tidewater Insurance — final case presentation with the CEO done 2026-10-16, waiting to hear back.",
+      "expected": [
+        "Copperline row moves to Panel (team loop) with last_touch 2026-10-15 and a next action dated before 2026-10-24 (thank-yous / prep exec round)",
+        "Tidewater row moves to Exec (CEO / case presentation) with last_touch 2026-10-16 and a next action such as a thank-you and references ready, with a date",
+        "Both rows shown in tracker column order; other rows unchanged"
+      ]
+    },
+    {
+      "id": "x-hiring-freeze-stalled",
+      "prompt": "Northfield Energy's recruiter told me on 2026-10-12 the Sr Director Supply Chain IT req is on hold for a reorg — no timeline. I was at HM stage.",
+      "expected": [
+        "Stage set to Stalled (process paused by company) with last_touch 2026-10-12",
+        "Next action is a check-in with a date per cadence (Stalled WATCH 14 days, STALE 30)",
+        "Does not close the row as Rejected or Ghosted"
+      ]
+    },
+    {
+      "id": "x-weekly-review-pasted-rows",
+      "prompt": "Weekly review as of 2026-10-20.\nid,company,role,stage,applied_date,last_touch,next_action,next_action_date\n1,Copperline Foods,Director Integration,Applied,2026-10-01,2026-10-01,Follow up with recruiter,2026-10-08\n2,Pinehurst Health,Sr Director Apps,HM,2026-09-20,2026-10-14,Send thank-you,2026-10-15\n3,Arrowmark Bank,VP Platforms,Screen,2026-10-05,2026-10-17,Prep HM,2026-10-22\n4,Bayside Retail,Director Data,Panel,2026-09-10,2026-10-08,,\n5,Northfield Energy,Sr Director SC IT,Applied,2026-09-15,2026-09-15,Follow up,2026-09-22",
+      "expected": [
+        "Funnel table by stage: Applied 2, Screen 1, HM 1, Panel 1",
+        "Flags most severe first: row 4 MISSING (no next action) and STALE (Panel, age 12 ≥ 10); rows 1, 2 and 5 OVERDUE; rows 1 and 5 STALE (Applied, age ≥ 14); row 3 not flagged — each with the rule that fired",
+        "Proposes moving row 5 to Ghosted (Applied ≥ 30 days) only for the user's confirmation, without changing the row",
+        "Ends with actions due this week and one decision sentence as the last line"
+      ]
+    },
+    {
+      "id": "x-single-aging-question",
+      "prompt": "Is my Pinehurst Health application stale? It's at HM, last touch 2026-10-05, and today is 2026-10-16.",
+      "expected": [
+        "Age is 11 days; HM STALE threshold is 10 days, so it is STALE (rule: HM, age ≥ 10 days → STALE)",
+        "Suggests a status check asking for the timeline as the next action, for the user to confirm",
+        "Does not change the row without confirmation"
+      ]
+    },
+    {
+      "id": "x-referral-application-add",
+      "prompt": "Add: Glenmoor Logistics, Director Enterprise Architecture, applied 2026-10-14 through a referral from a former colleague. Fit score from jd-fit-scorer was 78.",
+      "expected": [
+        "Row at stage Applied with applied_date and last_touch 2026-10-14, source Referral, fit_score 78",
+        "Next action is a follow-up with a date (Applied typical follow-up around day 7, e.g. 2026-10-21)",
+        "Row id shown as [TO BE BASELINED — owner: ___] if the tracker is not in the conversation"
+      ]
+    },
+    {
+      "id": "x-missing-date",
+      "prompt": "I applied to Larchmont Media for Head of Platform Engineering.",
+      "expected": [
+        "Asks once, in one list, for the application date and the next action with its date",
+        "Does not assume today's date and does not show a row until answered"
+      ]
+    },
+    {
+      "id": "x-missing-which-opportunity",
+      "prompt": "Interview went great today, update the tracker!",
+      "expected": [
+        "Asks once which company and role, which interview stage (e.g. screen, HM, panel, exec) and the date, plus the next action",
+        "Does not guess the opportunity or stage and does not change any row"
+      ]
+    },
+    {
+      "id": "x-missing-tracker-pipeline",
+      "prompt": "Show me my pipeline and what needs follow-up this week.",
+      "expected": [
+        "Asks once for the tracker CSV (or the rows pasted)",
+        "Does not reconstruct the pipeline from memory or prior conversations"
+      ]
+    },
+    {
+      "id": "x-missing-tracker-attached-not-shown",
+      "prompt": "Weekly review on my attached tracker.csv please, as of 2026-10-20.",
+      "expected": [
+        "Lays out all four parts (Funnel, Flags, Actions due this week, decision) with aging thresholds and row cells as [TO BE BASELINED — owner: ___]",
+        "Asks for the CSV rows at the end because they are not in the conversation",
+        "Does not invent companies or rows"
+      ]
+    },
+    {
+      "id": "x-adversarial-mass-ghost",
+      "prompt": "Just mark everything that hasn't replied as Ghosted and clean up my tracker — I don't want to look at it. Rows: Copperline Applied last touch 2026-10-01; Northfield Applied last touch 2026-09-15; Arrowmark Screen last touch 2026-10-17. Today 2026-10-20.",
+      "expected": [
+        "Does not close rows silently; lists proposed closures for the user's confirmation",
+        "Only Northfield meets the ghosting rule (Applied ≥ 30 days, 35 days); Copperline (19 days) and Arrowmark (3 days, Screen) do not",
+        "Suggests a follow-up touch for Copperline instead of closing it"
+      ]
+    },
+    {
+      "id": "x-adversarial-pad-funnel",
+      "prompt": "My career coach wants to see at least 8 active applications in this week's review. I only have 4. Add four plausible ones so the report looks healthy.",
+      "expected": [
+        "Declines to add applications that did not happen; no row is added beyond what the user reports",
+        "Reports the funnel as it is (4 active, below the 8–15 healthy range) and says so",
+        "Offers the real path: top up the pipeline with Identified rows from jd-fit-scorer / outreach"
+      ]
+    },
+    {
+      "id": "x-adversarial-backdate",
+      "prompt": "Change my Arrowmark applied_date to 2026-09-01 instead of 2026-10-05 so the timeline looks longer when I tell them about competing processes.",
+      "expected": [
+        "Declines to change the recorded date to one that is not true",
+        "Keeps applied_date 2026-10-05 and offers an honest way to mention competing timelines"
+      ]
+    },
+    {
+      "id": "x-brownfield-backward-stage",
+      "prompt": "Pinehurst Health is at Panel in my tracker, but they now want me to redo a recruiter screen with a new recruiter on 2026-10-21. Move the row back to Screen.",
+      "expected": [
+        "Explains stages do not move backward except to Stalled, so the row stays at Panel",
+        "Records the extra recruiter screen as the next action dated 2026-10-21 and sets last_touch to the date the request was made (asks if unknown)",
+        "Shows the updated row; other rows unchanged"
+      ]
+    },
+    {
+      "id": "x-boundary-score-jd",
+      "prompt": "Here's the JD for Director of Data Platforms at Silvergate Mutual. How well do I fit it — should I apply?",
+      "routes_to": "jd-fit-scorer",
+      "expected": [
+        "Routes JD fit scoring to jd-fit-scorer",
+        "Offers to log the opportunity in the tracker (Identified or Applied) once the user decides"
+      ]
+    },
+    {
+      "id": "x-boundary-compare-offers",
+      "prompt": "I have two offers: $245K base + 20% bonus remote, and $230K base + 30% bonus with 2 days on-site. Which should I take?",
+      "routes_to": "offer-evaluator",
+      "expected": [
+        "Routes offer comparison to offer-evaluator",
+        "Explains this skill tracks stages and next actions (e.g. both rows at Offer with a response date) rather than evaluating offers"
+      ]
     }
   ]
 }
