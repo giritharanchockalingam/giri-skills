@@ -1,6 +1,6 @@
 ---
 name: project-bootstrap
-description: Use when the user starts a new app or repo (Next.js + Supabase + Vercel by default) and needs the enterprise skeleton before any feature code — SPEC.md, CLAUDE.md, HANDOFF.md, ADR folder, GitHub Actions CI skeleton, .env.example contract, branch rules. Produces the docs/CI/ADR scaffold (via scripts/scaffold.py, idempotent) plus a filled SPEC.md and a stack starter checklist. Not for adding features to an existing repo (use spec-to-plan) or pipeline tuning (use ci-cd-vercel-github).
+description: Use when the user starts a new app or repo (Next.js + Supabase + Vercel by default) and needs the enterprise skeleton before any feature code — SPEC.md, CLAUDE.md, HANDOFF.md, ADR folder, GitHub Actions CI skeleton, .env.example contract, branch rules. Produces the docs/CI/ADR scaffold (via scripts/scaffold.py, idempotent) plus a filled SPEC.md and a stack starter checklist. Not for adding features to an existing repo (use spec-to-plan) or pipeline tuning (use ci-cd-vercel-github). Not for program status, RAID logs, milestone plans or steerco reports (use program-raid-status).
 license: MIT
 metadata:
   domain: build

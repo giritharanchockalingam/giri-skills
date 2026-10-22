@@ -1,6 +1,6 @@
 ---
 name: discovery-interview
-description: Use when the user asks to prepare for, run, or synthesize a client discovery call, scoping workshop, or stakeholder interview in a presales context. Produces a vertical-specific question bank (EdTech, Retail, Manufacturing, Travel), a pain/impact/urgency matrix, a hypothesis register, and a gaps list that feeds proposal-writer and effort-estimator. Do not use for client background research (client-research-brief) or for internal product research synthesis.
+description: Use when the user asks to prepare for, run, or synthesize a client discovery call, scoping workshop, or stakeholder interview in a presales context — including pasted call notes or a transcript ("here are my call notes, synthesize this", "here are two lines of notes"), even when they also ask to fill an impact cost, budget or decision owner "from what clients usually do". Produces a vertical-specific question plan (EdTech, Retail, Manufacturing, Travel) with a time budget and the five closes, a pain/impact/urgency matrix with verbatim evidence, a hypothesis register, a qualification call, and a gaps list that feeds proposal-writer and effort-estimator. Do not use for client background research (client-research-brief), internal product research synthesis, or building the ROI/benefits model (value-case-builder).
 license: MIT
 metadata:
   domain: presales
@@ -29,10 +29,27 @@ metadata:
 # discovery-interview
 
 ## In a conversation: produce the pack now
-- **The request names the vertical and the call** (who attends, how long, the trigger): write the prep pack **in this reply** — do not ask for files first. 3–5 hypotheses in a table (each with what would confirm or kill it and the questions that test it); 12–18 questions from the vertical's question bank ordered situation → pain → impact → urgency → decision → constraints, each tagged with persona and hypothesis ID; the five closes (decision owner, budget state, timeline driver, incumbents, success measure); a time budget that leaves about 20% to the client's questions. No question opens with a technology or vendor comparison.
-- **The request gives call notes**: synthesize them now. Line 1 is the qualification call. Pains scored with verbatim evidence; impact without a stated figure scores 2 or lower and shows `[TO BE BASELINED — owner: ___]`; a gaps list names who at the client likely holds each missing fact and our owner; forcing events are named without inventing dates.
-- **The request lacks the vertical or the mode (prep vs synthesize)**: ask once for mode, vertical and opportunity context, and stop — no question list before the vertical; never invent attendees, triggers or pains.
-- **Asked to fill numbers, budgets or decision owners "from what clients usually do"**: say in one line that it was not in the notes and must be baselined; mark it `[TO BE BASELINED — owner: ___]`.
+The reply **is the pack or the synthesis**, never only a request for files. About 1,000 tokens, tables.
+
+**Never**
+- Never put a figure, budget, decision owner or date in the reply that the notes do not state — even when asked to fill it "from what clients usually do" or "so I can use it in the proposal". Say in one line: "Not in the notes — it must be baselined." Mark it `[TO BE BASELINED — owner: ___]`.
+- Never ask a question that opens with a technology or vendor comparison; never write a question list before the vertical is known.
+
+**Which reply**
+1. **Vertical or mode missing** (e.g. "help me with the discovery call for Northwind"): ask once, one list — mode (prep or synthesize), vertical (EdTech, Retail, Manufacturing, Travel), opportunity context (attendees, trigger) — and stop. Never invent attendees, triggers or pains.
+2. **Prep** (vertical and call described), in this order:
+   - Hypotheses `| H# | Suspected pain | Owner | Confirms if | Kills if | Questions |` (3–5).
+   - **Question plan: 12–18 questions** (a 45-minute call: 36 min of questions ÷ 3 min = 12) from `references/question-banks/<vertical>.md`, ordered **situation → pain → impact → urgency → decision → constraints** (at least one per stage), table `| # | Stage | Question | Persona | H# |`.
+   - **Five closes**: decision owner, budget state, timeline driver, incumbents, success measure.
+   - **Time budget** table with an explicit row **"Client's questions — 20% (9 of 45 min)"** plus opening, question stages and closes.
+   - Branches: "If they say X, go to Y" (3 rows).
+3. **Synthesize call notes**, in this order:
+   - **Line 1: the qualification call** — `PURSUE / PURSUE-WITH-CONDITIONS / PARK` and the 2–3 facts that drove it.
+   - Pain matrix `| Pain | Evidence ("verbatim quote") | Pain score | Impact | Urgency | Owner |` — Impact without a stated figure scores **2 or lower** and shows `[TO BE BASELINED — owner: ___]`; Urgency names the forcing event as the notes state it (e.g. "before the S/4 go-live, next year — no date stated"), never an invented date.
+   - **Gaps list** `| Missing fact | Likely client holder | Our owner |` — one row for every number asked for but not given (e.g. annual cost of the manual reconciliation → plant controller / VP Ops; Engagement lead).
+   - Five closes, each quoted verbatim or `TBD — owner: Engagement lead`; hypothesis register; follow-up note ≤120 words.
+4. **Files or structured inputs given** (vertical, personas, minutes, notes): name the commands and outputs, then show the result:
+   `python3 -I scripts/build_pack.py --vertical <v> --personas "<p1,p2>" --minutes <m> --banks references/question-banks --client <c> --out discovery-pack.md --five-closes five-closes.md --pain-matrix pain-matrix.csv` (time budget: **20% reserved for the client's questions**, 10 min closes, 3 min opening, 3 min per question round-robin across stages; five closes all open; pain matrix header only), then with notes `python3 -I scripts/synthesize.py notes.md --pain-matrix pain-matrix.csv --five-closes five-closes.md --client <c>` (every pain row's evidence is the verbatim line; impact/urgency `H` only when the line holds a figure or a date/renewal word, else TBD; each close quoted or `TBD — owner: Engagement lead`; nothing inferred). Thin notes → closes not in the notes stay TBD with that owner.
 
 ## Starting points
 - **New** — before the call: a timed question plan for the attendees' personas from the vertical's question bank, with the five closes all open and an empty pain matrix.
