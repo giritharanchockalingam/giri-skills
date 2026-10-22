@@ -1,0 +1,20 @@
+{
+  "_note": "FICTIONAL example repo for evals: a JavaScript Next.js 14 app with vitest + playwright already configured as .js",
+  "name": "carelink-portal",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "vitest": "^4.1.10"
+  }
+}

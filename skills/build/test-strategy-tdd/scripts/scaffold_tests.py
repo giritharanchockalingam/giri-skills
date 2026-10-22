@@ -4,22 +4,42 @@
     python3 -I scripts/scaffold_tests.py feature.md --files server/services/export.ts,app/invoices/page.tsx \
         --target <repo> [--dry-run] --report scaffold-report.json --plan test-plan.md
 
-feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each --files entry:
-  app/**/page.tsx | layout.tsx     -> page      -> tests/e2e/<slug>.spec.ts   (test.fixme per criterion)
-  components/**/*.tsx              -> component -> listed for a component test; nothing written
-  everything else (.ts/.tsx)       -> unit      -> tests/unit/<path>.test.ts  (it.todo per criterion)
+feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each --files entry
+(.js / .jsx / .ts / .tsx alike):
+  app/**/page.* | layout.* | template.* | error.* | not-found.*  -> page      -> <e2e dir>/<slug>.spec.<ext>  (test.fixme per criterion)
+  components/**/*                                                -> component -> listed for a component test; nothing written
+  app/**/route.*                                                 -> API route -> <unit dir>/<path>.test.<ext>
+  everything else                                                -> unit      -> <unit dir>/<path>.test.<ext>  (it.todo per criterion)
 Layer per file follows references/test-pyramid.md (validator / service / query / action / route /
-migration). Existing files are never overwritten (listed as skipped); each kept test file is read
-instead: its test titles (it/test, incl. .todo/.fixme/.skip/.only) are matched to the criteria
-(same words after normalising, or >= 60% of the criterion's words in one title) and the criteria it
-does not cover yet are listed to add by hand. --dry-run writes nothing.
-Writes scaffold-report.json ({written, skipped, components, would_write, files, existing_tests}) and
-test-plan.md (pyramid table + criteria map + existing tests). Exit 1 on bad input (missing feature file, no bullets, no files). Stdlib.
+migration).
+
+Read before write — the target repo is inspected first and every stub matches what is there:
+  flavour   tsconfig.json or any .ts/.tsx source under app|components|lib|server|src -> TypeScript
+            (.test.ts / .spec.ts); otherwise JavaScript (.test.js / .spec.js). With no repo yet, the
+            extension of the --files decides (all .js/.jsx -> JavaScript; else TypeScript).
+  runner    package.json dependencies/devDependencies: vitest -> `import { describe, it, expect } from "vitest"`;
+            jest -> no import (globals); neither -> vitest (the skill's default). mocha / jasmine / ava /
+            tap / node:test -> refused (see below).
+  unit dir  the first `include` glob of vitest.config.* / testMatch of jest config, else tests/unit.
+  e2e dir   `testDir` of playwright.config.* (js|ts|mjs|cjs), else tests/e2e.
+  alias     "@/*" in tsconfig.json / jsconfig.json paths -> `@/<module>` import; else a relative import.
+Existing files are never overwritten (listed as skipped) — and a sibling of the other flavour
+(e.g. lib-coach.test.ts when lib-coach.test.js would be written) counts as existing, so no
+conflicting pair is ever created. Each kept test file is read instead: its test titles (it/test,
+incl. .todo/.fixme/.skip/.only) are matched to the criteria (same words after normalising, or >= 60%
+of the criterion's words in one title) and the criteria it does not cover yet are listed to add by
+hand. --dry-run writes nothing.
+When the repo cannot be scaffolded safely (unsupported test runner), nothing is written: the report
+carries `refused` with the reason, the plan says so, and the exit code is 1 — never a half-install.
+Writes scaffold-report.json ({repo, written, skipped, components, would_write, files, existing_tests,
+refused}) and test-plan.md (repo table + pyramid table + criteria map + existing tests). Exit 1 on bad
+input (missing feature file, no bullets, no files). Stdlib.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -33,6 +53,11 @@ LAYERS = [  # (path marker, feature type, layer, what to cover)
     ("supabase/migrations/", "migration / RLS", "integration", "positive + negative per policy"),
     ("supabase/functions/", "edge function", "unit", "handler logic with injected client"),
 ]
+SRC_EXT = r"\.(?:tsx?|jsx?|mjs|cjs)$"
+PAGE_NAMES = ("page", "layout", "template", "error", "not-found")
+SOURCE_DIRS = ("app", "components", "lib", "server", "src", "pages", "supabase")
+SKIP_DIRS = {"node_modules", ".git", ".next", "dist", "build", "out", "coverage", ".vercel", ".turbo"}
+UNSUPPORTED_RUNNERS = ("mocha", "jasmine", "ava", "tap", "node:test", "node --test")
 
 
 def die(msg: str) -> None:
@@ -72,21 +97,123 @@ def existing_titles(text: str) -> list[str]:
     return [m.group(2) for m in TITLE_RE.finditer(text)]
 
 
+# ---------------------------------------------------------------- read before write: the repo
+
+def _read(p: Path) -> str:
+    try:
+        return p.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _first(root: Path, stem: str, exts=("ts", "js", "mjs", "cjs", "mts", "cts")) -> Path | None:
+    for ext in exts:
+        p = root / f"{stem}.{ext}"
+        if p.is_file():
+            return p
+    return None
+
+
+def has_ts_sources(root: Path) -> bool:
+    for d in SOURCE_DIRS:
+        base = root / d
+        if not base.is_dir():
+            continue
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames[:] = [x for x in dirnames if x not in SKIP_DIRS]
+            if any(f.endswith((".ts", ".tsx")) and not f.endswith(".d.ts") for f in filenames):
+                return True
+    return False
+
+
+def detect_repo(root: Path, files: list[str]) -> dict:
+    """Inspect the target once; everything written later follows this."""
+    info = {"exists": root.is_dir(), "flavour": "ts", "flavour_why": "default (no repo, no .js files given)",
+            "runner": "vitest", "runner_why": "default (no package.json)", "unit_dir": "tests/unit", "e2e_dir": "tests/e2e",
+            "e2e_config": None, "unit_config": None, "alias": None, "refused": None}
+    # alias: "@/*" in tsconfig/jsconfig paths (greenfield default below); relative imports otherwise
+    # flavour
+    if root.is_dir() and (root / "tsconfig.json").is_file():
+        info.update(flavour="ts", flavour_why="tsconfig.json present")
+    elif root.is_dir() and has_ts_sources(root):
+        info.update(flavour="ts", flavour_why=".ts/.tsx sources present")
+    elif any(re.search(r"\.tsx?$", f) for f in files):
+        info.update(flavour="ts", flavour_why="--files include .ts/.tsx")
+    elif files and all(re.search(r"\.(jsx?|mjs|cjs)$", f) for f in files):
+        info.update(flavour="js", flavour_why="no tsconfig.json or .ts sources; --files are JavaScript")
+    if not root.is_dir():
+        info["alias"] = "@/"  # greenfield: the stack convention (shared/stack-conventions.md) uses @/*
+        return info
+    # runner
+    pkg = {}
+    pkg_path = root / "package.json"
+    if pkg_path.is_file():
+        try:
+            pkg = json.loads(_read(pkg_path))
+        except ValueError:
+            pkg = {}
+    deps = {**(pkg.get("dependencies") or {}), **(pkg.get("devDependencies") or {})} if isinstance(pkg, dict) else {}
+    test_script = str(((pkg.get("scripts") or {}) if isinstance(pkg, dict) else {}).get("test", ""))
+    if "vitest" in deps:
+        info.update(runner="vitest", runner_why="vitest in package.json")
+    elif "jest" in deps:
+        info.update(runner="jest", runner_why="jest in package.json")
+    else:
+        bad = [r for r in UNSUPPORTED_RUNNERS if r in deps or r in test_script]
+        if bad:
+            info["refused"] = (f"test runner {bad[0]!r} (package.json) is not vitest or jest; writing vitest stubs next to it "
+                               "would leave a half-installed suite — add vitest or jest first, or write these tests by hand")
+        info.update(runner="vitest", runner_why="default (package.json names no vitest/jest)" if pkg_path.is_file()
+                    else "default (no package.json)")
+    # unit dir from the runner config
+    vcfg = _first(root, "vitest.config") or _first(root, "vite.config")
+    if vcfg:
+        info["unit_config"] = vcfg.name
+        m = re.search(r"include\s*:\s*\[\s*[\"']([^\"']+)[\"']", _read(vcfg))
+        if m:
+            info["unit_dir"] = m.group(1).split("*", 1)[0].strip("/") or info["unit_dir"]
+    elif info["runner"] == "jest":
+        jcfg = _first(root, "jest.config")
+        if jcfg:
+            info["unit_config"] = jcfg.name
+            m = re.search(r"testMatch\s*:\s*\[\s*[\"']<rootDir>/([^\"'*]+)", _read(jcfg))
+            if m:
+                info["unit_dir"] = m.group(1).strip("/") or info["unit_dir"]
+    # e2e dir from playwright config
+    pcfg = _first(root, "playwright.config")
+    if pcfg:
+        info["e2e_config"] = pcfg.name
+        m = re.search(r"testDir\s*:\s*[\"']\.?/?([^\"']+)[\"']", _read(pcfg))
+        if m:
+            info["e2e_dir"] = m.group(1).strip("/") or info["e2e_dir"]
+    # import alias
+    for cfg in ("tsconfig.json", "jsconfig.json"):
+        if (root / cfg).is_file() and re.search(r"""["']@/\*["']\s*:""", _read(root / cfg)):
+            info["alias"] = "@/"
+            break
+    return info
+
+
+# ---------------------------------------------------------------- classification and stubs
+
 def classify(rel: str) -> tuple[str, str, str, str]:
-    """-> (kind: page|component|unit, feature type, layer, cover)."""
+    """-> (kind: page|component|unit, feature type, layer, cover). Same for .js/.jsx/.ts/.tsx."""
     name = rel.rsplit("/", 1)[-1]
-    if rel.startswith("app/") and name in ("page.tsx", "page.ts", "layout.tsx"):
+    stem = re.sub(SRC_EXT, "", name)
+    if (rel.startswith("app/") or "/app/" in rel) and stem in PAGE_NAMES and re.search(SRC_EXT, name):
         return "page", "page / flow", "e2e", "critical path: load, act, assert, negative role"
-    if (rel.startswith("components/") or "/components/" in rel) and rel.endswith(".tsx"):
+    if (rel.startswith("components/") or "/components/" in rel) and re.search(SRC_EXT, name):
         return "component", "client component", "component", "client form states (pending, error)"
     for marker, ftype, layer, cover in LAYERS:
         if rel.startswith(marker):
             return "unit", ftype, layer, cover
+    if stem == "route" and re.search(SRC_EXT, name):
+        return "unit", "API route", "unit + contract", "signature verify; bad payload; recorded payloads parse"
     return "unit", "module", "unit", "each exported function: happy path + error branch"
 
 
 def slug(rel: str) -> str:
-    s = re.sub(r"\.(tsx?|jsx?)$", "", rel)
+    s = re.sub(SRC_EXT, "", rel)
     s = re.sub(r"[()\[\]]", "", s)
     return re.sub(r"[^A-Za-z0-9]+", "-", s).strip("-").lower()
 
@@ -95,23 +222,34 @@ def ts_str(s: str) -> str:
     return json.dumps(s, ensure_ascii=False)
 
 
-def unit_stub(rel: str, title: str, bullets: list[str]) -> str:
-    mod = re.sub(r"\.(tsx?|jsx?)$", "", rel)
-    lines = [f"// Red first: generated by test-strategy-tdd for {rel}. Replace each todo with a failing test.",
-             'import { describe, it, expect } from "vitest";',
-             f'// import {{ ... }} from "@/{mod}";', "", f"describe({ts_str(title + ' — ' + rel)}, () => {{"]
+def import_path(rel: str, test_rel: str, alias: str | None) -> str:
+    mod = re.sub(SRC_EXT, "", rel)
+    if alias:
+        return alias + mod
+    up = "../" * (len(test_rel.split("/")) - 1)
+    return (up or "./") + mod
+
+
+def unit_stub(rel: str, title: str, bullets: list[str], test_rel: str, repo: dict) -> str:
+    lines = [f"// Red first: generated by test-strategy-tdd for {rel}. Replace each todo with a failing test."]
+    if repo["runner"] == "vitest":
+        lines.append('import { describe, it, expect } from "vitest";')
+    else:
+        lines.append("// jest: describe / it / expect are globals")
+    lines += [f'// import {{ ... }} from "{import_path(rel, test_rel, repo["alias"])}";', "",
+              f"describe({ts_str(title + ' — ' + rel)}, () => {{"]
     lines += [f"  it.todo({ts_str(b)});" for b in bullets]
     lines += ["  it.todo(\"rejects invalid input / forbidden role / cross-tenant access\");", "});", ""]
     return "\n".join(lines)
 
 
-def e2e_stub(rel: str, title: str, bullets: list[str]) -> str:
-    route = "/" + re.sub(r"^app/|/?(page|layout)\.tsx?$", "", rel)
+def e2e_stub(rel: str, title: str, bullets: list[str], e2e_dir: str) -> str:
+    route = "/" + re.sub(r"^(?:src/)?app/|/?(?:" + "|".join(PAGE_NAMES) + r")" + SRC_EXT, "", rel)
     route = re.sub(r"/\([^)]*\)", "", route) or "/"
     lines = [f"// Red first: generated by test-strategy-tdd for {rel}. Replace each fixme with a real flow.",
              'import { test, expect } from "@playwright/test";', "",
              f"test.describe({ts_str(title + ' — ' + route)}, () => {{",
-             '  test.use({ storageState: "tests/e2e/.auth/member.json" });', ""]
+             f'  test.use({{ storageState: "{e2e_dir}/.auth/member.json" }});', ""]
     for b in bullets:
         lines += [f"  test.fixme({ts_str(b)}, async ({{ page }}) => {{", f"    await page.goto({ts_str(route)});",
                   "    await expect(page).toHaveURL(/./);", "  });", ""]
@@ -119,6 +257,17 @@ def e2e_stub(rel: str, title: str, bullets: list[str]) -> str:
               f"    await page.goto({ts_str(route)});", "    await expect(page.getByText(/not allowed/i)).toBeVisible();",
               "  });", "});", ""]
     return "\n".join(lines)
+
+
+def sibling_conflict(dest: Path) -> Path | None:
+    """An existing test for the same source in the other flavour (lib-coach.test.ts vs .test.js)."""
+    name = dest.name
+    for a, b in ((".test.ts", ".test.js"), (".test.tsx", ".test.jsx"), (".spec.ts", ".spec.js")):
+        for x, y in ((a, b), (b, a)):
+            if name.endswith(x):
+                other = dest.with_name(name[: -len(x)] + y)
+                return other if other.exists() else None
+    return None
 
 
 def main() -> int:
@@ -143,27 +292,39 @@ def main() -> int:
     if target.exists() and not target.is_dir():
         die(f"target is not a directory: {target}")
 
-    report = {"target": str(target), "dry_run": a.dry_run, "title": title, "criteria": bullets,
-              "written": [], "skipped": [], "components": [], "would_write": [], "files": [], "existing_tests": []}
+    repo = detect_repo(target, files)
+    ext = "ts" if repo["flavour"] == "ts" else "js"
+    cext = "tsx" if repo["flavour"] == "ts" else "jsx"
+    unit_dir, e2e_dir = repo["unit_dir"], repo["e2e_dir"]
+    refused = repo["refused"]
+    report = {"target": str(target), "dry_run": a.dry_run, "title": title, "criteria": bullets, "repo": repo,
+              "refused": refused, "written": [], "skipped": [], "components": [], "would_write": [], "files": [],
+              "existing_tests": []}
     for rel in files:
         kind, ftype, layer, cover = classify(rel)
         if kind == "page":
-            test_rel, content = f"tests/e2e/{slug(rel)}.spec.ts", e2e_stub(rel, title, bullets)
+            test_rel, content = f"{e2e_dir}/{slug(rel)}.spec.{ext}", e2e_stub(rel, title, bullets, e2e_dir)
         elif kind == "component":
-            test_rel, content = f"tests/unit/{slug(rel)}.test.tsx", ""
+            test_rel, content = f"{unit_dir}/{slug(rel)}.test.{cext}", ""
         else:
-            test_rel, content = f"tests/unit/{slug(rel)}.test.ts", unit_stub(rel, title, bullets)
+            test_rel = f"{unit_dir}/{slug(rel)}.test.{ext}"
+            content = unit_stub(rel, title, bullets, test_rel, repo)
         row = {"source": rel, "kind": kind, "type": ftype, "layer": layer, "cover": cover, "test": test_rel}
         report["files"].append(row)
         if kind == "component":
             report["components"].append(test_rel)
             continue
+        if refused:
+            continue
         dest = target / test_rel
-        if dest.exists():
-            report["skipped"].append(test_rel)
-            titles = existing_titles(dest.read_text(encoding="utf-8", errors="replace"))
+        existing = dest if dest.exists() else sibling_conflict(dest)
+        if existing is not None:
+            kept_rel = existing.relative_to(target).as_posix()
+            row["test"] = kept_rel
+            report["skipped"].append(kept_rel)
+            titles = existing_titles(_read(existing))
             covered = [i for i, b in enumerate(bullets, 1) if any(covers(t, b) for t in titles)]
-            report["existing_tests"].append({"test": test_rel, "titles": titles, "criteria_covered": covered,
+            report["existing_tests"].append({"test": kept_rel, "titles": titles, "criteria_covered": covered,
                                              "criteria_missing": [i for i in range(1, len(bullets) + 1) if i not in covered]})
             continue
         if a.dry_run:
@@ -177,15 +338,25 @@ def main() -> int:
     rp.parent.mkdir(parents=True, exist_ok=True)
     pp.parent.mkdir(parents=True, exist_ok=True)
     rp.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    lines = [f"# Test plan — {title}", "",
-             f"**{len(bullets)} acceptance criteria across {len(files)} file(s); "
-             f"{len(report['written'])} stub(s) written, {len(report['skipped'])} kept (already exist), "
-             f"{len(report['components'])} component test(s) to write by hand"
-             + (" — dry run, nothing written" if a.dry_run else "") + ".**", "",
-             "## Pyramid", "", "| Source | Type | Layer | Cover | Test file | Status |", "|---|---|---|---|---|---|"]
+    flavour_name = "TypeScript" if repo["flavour"] == "ts" else "JavaScript"
+    lines = [f"# Test plan — {title}", ""]
+    if refused:
+        lines += [f"**Refused — nothing written.** {refused}", ""]
+    lines += [f"**{len(bullets)} acceptance criteria across {len(files)} file(s); "
+              f"{len(report['written'])} stub(s) written, {len(report['skipped'])} kept (already exist), "
+              f"{len(report['components'])} component test(s) to write by hand"
+              + (" — dry run, nothing written" if a.dry_run else "") + ".**", "",
+              "## Repo (read before write)", "", "| Setting | Value | Why |", "|---|---|---|",
+              f"| Flavour | {flavour_name} (`.test.{ext}` / `.spec.{ext}`) | {repo['flavour_why']} |",
+              f"| Unit runner | {repo['runner']} | {repo['runner_why']} |",
+              f"| Unit dir | `{unit_dir}/` | {repo['unit_config'] or 'default'} |",
+              f"| E2E dir | `{e2e_dir}/` | {repo['e2e_config'] or 'default (no playwright.config)'} |",
+              f"| Import alias | {('`' + repo['alias'] + '`') if repo['alias'] else 'relative paths'} | "
+              f"{'tsconfig/jsconfig paths' if repo['alias'] else 'no @/* alias found'} |", "",
+              "## Pyramid", "", "| Source | Type | Layer | Cover | Test file | Status |", "|---|---|---|---|---|---|"]
     for r in report["files"]:
-        status = ("manual (component)" if r["kind"] == "component" else "exists — kept" if r["test"] in report["skipped"]
-                  else "would write" if a.dry_run else "written")
+        status = ("manual (component)" if r["kind"] == "component" else "refused" if refused
+                  else "exists — kept" if r["test"] in report["skipped"] else "would write" if a.dry_run else "written")
         lines.append(f"| `{r['source']}` | {r['type']} | {r['layer']} | {r['cover']} | `{r['test']}` | {status} |")
     lines += ["", "## Criteria map", "", "| # | Criterion | Tests |", "|---|---|---|"]
     tests = ", ".join(f"`{r['test']}`" for r in report["files"] if r["kind"] != "component") or "—"
@@ -204,8 +375,11 @@ def main() -> int:
               "3. Negative cases are mandatory: invalid input, forbidden role, cross-tenant, not-found.",
               "4. Coverage gate: ≥ 80% on `server/` (`npm test -- --coverage`)."]
     pp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if refused:
+        print(f"refused: {refused} -> {rp}, {pp}", file=sys.stderr)
+        return 1
     print(f"{'dry-run: ' if a.dry_run else ''}{len(report['written'])} written, {len(report['skipped'])} skipped, "
-          f"{len(report['components'])} component(s) manual -> {rp}, {pp}")
+          f"{len(report['components'])} component(s) manual [{flavour_name}, {repo['runner']}] -> {rp}, {pp}")
     return 0
 
 

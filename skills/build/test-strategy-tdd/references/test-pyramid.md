@@ -11,6 +11,8 @@
 
 Shape: many unit, some integration, few e2e. Rule of thumb per feature: 5–15 unit, 2–6 integration, 1–2 e2e.
 
+File extension follows the repo, not this table: a JavaScript repo (no `tsconfig.json`, `.js`/`.jsx` sources, `vitest.config.js`, `playwright.config.js`) gets `*.test.js` / `*.spec.js`; a TypeScript repo gets `*.test.ts` / `*.spec.ts`. The layer per feature type is the same in both.
+
 ## By feature type
 | Feature type | Unit | Integration | Contract | Component | E2E |
 |---|---|---|---|---|---|

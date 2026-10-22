@@ -5,7 +5,7 @@ license: MIT
 metadata:
   domain: build
   adlc_stage: evaluate
-  version: 0.2.0
+  version: 0.3.0
   author: giri-skills
   agent:
     inputs:
@@ -45,11 +45,12 @@ The reply **is the test plan and the red tests** (or one ask), never only a comm
    e. **Green → refactor**: minimum code to pass; then **the full suite** `npm test`.
    f. **Coverage gate**: `npm test -- --coverage` — **≥ 80% on `server/`**, reported as `criterion → test → status`.
 2. **Repo with no vitest/playwright**: scaffold from `assets/` without overwriting anything that exists — `vitest.config.ts`, `playwright.config.ts`, `tests/setup.ts` (from `assets/tests-setup.ts`), `tests/e2e/auth.setup.ts` (from `assets/e2e-auth.setup.ts`; storageState per role in `tests/e2e/.auth/<role>.json`, gitignored) — and **add `package.json` scripts** `"test": "vitest run"`, `"test:e2e": "playwright test"`. Then the login e2e: accessible selectors (`getByRole`, `getByLabel`), `test.use({ storageState })` for signed-in cases, web-first assertions, **no `waitForTimeout`**; negative case for wrong password.
-3. **Files given** (feature.md + files + target): name the command and outputs — `python3 -I scripts/scaffold_tests.py feature.md --files <a,b,…> --target <repo> [--dry-run] --report scaffold-report.json --plan test-plan.md` — then the result per file: `server/**`, `lib/**` and other `.ts` → vitest `it.todo` stub per criterion at `tests/unit/<path-with-dashes>.test.ts`; `app/**/page.tsx` → Playwright `test.fixme` spec at `tests/e2e/<slug>.spec.ts`; `components/**` → **listed for a manual component test, nothing written**; existing test files → **skipped (kept)** and matched to criteria (covered vs to add). Show the pyramid table from `test-plan.md` and the `scaffold-report.json` counts (written, skipped, components, would_write). Feature file missing → ask once for the feature description with acceptance criteria (exit 1).
+3. **Files given** (feature.md + files + target): name the command and outputs — `python3 -I scripts/scaffold_tests.py feature.md --files <a,b,…> --target <repo> [--dry-run] --report scaffold-report.json --plan test-plan.md` — then the result per file, **classified by path, the same for `.js` / `.jsx` / `.ts` / `.tsx`**: `server/**`, `lib/**` and other modules → vitest `it.todo` stub per criterion at `<unit dir>/<path-with-dashes>.test.<ext>`; `app/**/page.*` (also `layout`, `template`, `error`, `not-found`) → Playwright `test.fixme` spec at `<e2e dir>/<slug>.spec.<ext>`; `app/**/route.*` → API-route unit stub; `components/**` → **listed for a manual component test, nothing written**; existing test files (a sibling in the other flavour counts, e.g. `lib-coach.test.ts` next to a would-be `.test.js`) → **skipped (kept)** and matched to criteria (covered vs to add). Show the repo table and the pyramid table from `test-plan.md` and the `scaffold-report.json` counts (written, skipped, components, would_write). Feature file missing → ask once for the feature description with acceptance criteria (exit 1).
+4. **Read before write** (the script does this; say it in the reply): the target repo decides the shape of every stub — **flavour** `tsconfig.json` or any `.ts`/`.tsx` source → TypeScript (`.test.ts` / `.spec.ts`), otherwise JavaScript (`.test.js` / `.spec.js`; a JS Next.js repo with `page.js` and `components/*.js` never gets a `.ts` test); **runner** from `package.json` (`vitest` → `import … from "vitest"`, `jest` → globals, neither → vitest); **dirs** from `vitest.config.*` `include` and `playwright.config.*` `testDir` (defaults `tests/unit`, `tests/e2e`); **imports** `@/` only when `tsconfig`/`jsconfig` declares the alias, else relative. An unsupported runner (mocha, jasmine, ava, tap, node:test) → **nothing written**, `refused` in the report, exit 1 — never a half-install.
 
 ## Starting points
-- **New** — red stubs are written for every file the feature touches (vitest `it.todo`, Playwright `test.fixme`), with the pyramid and criteria map in `test-plan.md`.
-- **Existing** — test files you already have are kept, read and matched to the acceptance criteria; the plan lists which criteria they already cover and which to add, and stubs are written only where no test file exists.
+- **New** — red stubs are written for every file the feature touches (vitest `it.todo`, Playwright `test.fixme`), with the pyramid and criteria map in `test-plan.md`. TypeScript + `@/` imports unless the files given are `.js`.
+- **Existing** — the repo is read first (flavour, runner, test dirs, alias — see "Read before write"); test files you already have are kept, read and matched to the acceptance criteria; the plan lists which criteria they already cover and which to add, and stubs are written only where no test file exists, in the repo's own flavour (`evals/fixtures/repo-existing-js` is the JavaScript Next.js example: vitest + playwright as `.js`, `page.js`, `components/*.js`, `route.js`).
 
 ## When to use
 - "Write tests for", "how should we test", "add coverage", before any task from `spec-to-plan`.
@@ -66,7 +67,7 @@ The reply **is the test plan and the red tests** (or one ask), never only a comm
 If a required input is missing, ask for it once; do not guess.
 
 ## Procedure
-1. Read `../../../shared/stack-conventions.md` (Tests row) and `../../../shared/token-efficiency.md`. Read existing configs and one existing test per layer to match style.
+1. Read `../../../shared/stack-conventions.md` (Tests row) and `../../../shared/token-efficiency.md`. Read existing configs and one existing test per layer to match style — and the repo's flavour: `tsconfig.json` / `.ts` sources → TypeScript, otherwise JavaScript; never write a `.ts` test or config into a JavaScript repo, nor a `route.ts` / `page.tsx` sibling next to an existing `.js` file.
 2. **Plan the pyramid.** Using `references/test-pyramid.md`, produce the table: acceptance criterion → test layer → file → fixture. Include negative and RLS cases. Post it; wait for "go". *(gate: plan→approve)*
 3. **Scaffold** missing config from `assets/` (vitest.config.ts, playwright.config.ts, setup files, fixtures dir). Do not overwrite existing configs; diff and merge.
 4. **Red.** Write the tests first. Run them; they must fail for the right reason (assertion, not import error). If the upstream skill `superpowers:test-driven-development` is installed (see VENDORED.md), invoke it for steps 4–6; otherwise follow `references/tdd-method.md`.
@@ -98,7 +99,8 @@ If a required input is missing, ask for it once; do not guess.
 - `references/tdd-method.md` — red/green/refactor rules (fallback for superpowers)
 - `references/playwright-patterns.md` — auth, tenant, selectors, flake control (fallback for webapp-testing)
 - `assets/vitest.config.ts`, `assets/playwright.config.ts`, `assets/tests-setup.ts`, `assets/e2e-auth.setup.ts`, `assets/unit-test.example.ts`, `assets/e2e-test.example.ts`
-- `scripts/scaffold_tests.py` — feature.md + file list → vitest `it.todo` stubs and Playwright `test.fixme` specs, never overwriting
+- `scripts/scaffold_tests.py` — feature.md + file list → vitest `it.todo` stubs and Playwright `test.fixme` specs in the repo's flavour (JS or TS), runner and test dirs, never overwriting
+- `scripts/seed_repo.py` — evals/demos only: copies an example repo layout (`evals/fixtures/repo-existing-suite`, `evals/fixtures/repo-existing-js`) to the run's target
 
 ## How to run (automation, when commands can run)
 This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/test-strategy-tdd --input <name>=<value> … --out <dir>` (see `--explain build/test-strategy-tdd`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. Stubs are `it.todo` / `test.fixme` per criterion — red first; replace each with a failing test before implementing.
