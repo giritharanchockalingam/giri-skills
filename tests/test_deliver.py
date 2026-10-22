@@ -515,3 +515,30 @@ def test_out_defaults_to_runs_run_id_in_portal_mode_matching_the_portal_command(
         assert (runs / "needs_approval.json").is_file() and (runs / "callback.log").is_file()
     finally:
         shutil.rmtree(runs, ignore_errors=True)
+
+
+def test_repo_key_is_cloned_with_gh_and_a_clear_error_without_access(tmp_path, monkeypatch):
+    """The portal names repositories owner/name; the executor clones them itself (via gh) instead of refusing."""
+    import importlib.util, sys as _sys
+    spec = importlib.util.spec_from_file_location("deliver_mod", REPO_ROOT / "scripts" / "deliver.py")
+    mod = importlib.util.module_from_spec(spec)
+    _sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        _sys.path.pop(0)
+    assert mod.REPO_KEY.match("giritharanchockalingam/vg-advantage-portal")
+    assert not mod.REPO_KEY.match("./app") and not mod.REPO_KEY.match("/tmp/x/y")
+    # a fake gh that refuses like GitHub does without access
+    bindir = tmp_path / "bin"; bindir.mkdir()
+    (bindir / "gh").write_text("#!/bin/sh\necho 'remote: Write access to repository not granted.' >&2; exit 1\n")
+    (bindir / "gh").chmod(0o755)
+    import os
+    monkeypatch.setenv("PATH", f"{bindir}:{os.environ['PATH']}")
+    import pytest
+    with pytest.raises(SystemExit) as e:
+        mod.clone_repo("owner/name", tmp_path / "repo")
+    assert "GH_TOKEN" in str(e.value) and "not granted" in str(e.value)
+    # a fake gh that clones: an existing checkout is reused untouched
+    (tmp_path / "repo").mkdir(); (tmp_path / "repo" / ".git").mkdir()
+    assert mod.clone_repo("owner/name", tmp_path / "repo") == tmp_path / "repo"

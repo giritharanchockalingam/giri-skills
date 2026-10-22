@@ -908,11 +908,34 @@ def prepare_repo(run: Run) -> None:
     if not src.is_dir():
         if run.spec.get("mode") == "greenfield":
             src.mkdir(parents=True, exist_ok=True)
+        elif REPO_KEY.match(str(run.inputs["repo"])):
+            # the portal names repositories owner/name: clone it under the run (the token in GH_TOKEN, via gh)
+            src = clone_repo(str(run.inputs["repo"]), run.out / "repo", str(run.inputs.get("ref") or ""))
         else:
-            sys.exit(f"error: --repo {src} is not a directory")
+            sys.exit(f"error: --repo {src} is not a directory (give a local checkout, or owner/name to clone it)")
     run.repo = src.resolve()
     if run.inputs.get("ref") and is_git_root(run.repo):
         git(run.repo, "checkout", "-q", str(run.inputs["ref"]))
+
+
+REPO_KEY = re.compile(r"^(?!\.)[A-Za-z0-9_-][A-Za-z0-9_.-]*/(?!\.)[A-Za-z0-9_-][A-Za-z0-9_.-]*$")
+
+
+def clone_repo(key: str, dest: Path, ref: str = "") -> Path:
+    """Clone owner/name into dest with gh (so GH_TOKEN or the gh login applies); reuse an existing checkout."""
+    if dest.is_dir() and is_git_root(dest):
+        return dest
+    if not shutil.which("gh"):
+        sys.exit(f"error: --repo {key} is a repository name; cloning needs the GitHub CLI (gh) on PATH, or pass a local checkout")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["gh", "repo", "clone", key, str(dest), "--", "--quiet"] + (["--branch", ref] if ref else [])
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        msg = (r.stderr or r.stdout).strip()
+        hint = (" — the token in GH_TOKEN must have access to this repository (fine-grained token: select the repository, "
+                "Contents read/write, Pull requests read/write)" if "403" in msg or "not granted" in msg or "Could not resolve" in msg else "")
+        sys.exit(f"error: could not clone {key}: {msg}{hint}")
+    return dest
 
 
 def prev_stages_status(prev_record: dict | None, stage_id: str) -> str:
