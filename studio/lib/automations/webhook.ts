@@ -19,6 +19,7 @@ type Payload = Record<string, unknown> & {
   action?: string; installation?: { id?: number }; repository?: { full_name?: string; default_branch?: string };
   pull_request?: { number?: number; title?: string; head?: { sha?: string; repo?: { full_name?: string } | null }; base?: { sha?: string; repo?: { full_name?: string } }; draft?: boolean };
   ref?: string; after?: string; deleted?: boolean;
+  check_run?: { head_sha?: string; pull_requests?: { number?: number; head?: { sha?: string }; base?: { sha?: string } }[] };
 };
 const SHA = /^[0-9a-f]{40}$/;
 const PR_ACTIONS = new Set(["opened", "synchronize", "reopened", "ready_for_review"]);
@@ -43,6 +44,18 @@ export function normalize(event: string, p: Payload): NormEvent | null {
   }
   if (event === "push" && !p.deleted && p.ref === `refs/heads/${p.repository?.default_branch}` && SHA.test(p.after ?? "")) {
     return { kind: "push", installationId, repo, sha: p.after! };
+  }
+  // "Re-run" on our own check in GitHub's Checks tab (GitHub sends check_run.rerequested only to the app that owns the
+  // check): the same commit is scored again — as the pull request it belongs to, or as a default-branch commit
+  if (event === "check_run" && p.action === "rerequested") {
+    const sha = p.check_run?.head_sha ?? "";
+    if (!SHA.test(sha)) return null;
+    const pr = (p.check_run?.pull_requests ?? []).find((x) => Number.isSafeInteger(Number(x.number)) && (x.head?.sha ?? sha) === sha);
+    if (pr) {
+      const baseSha = pr.base?.sha ?? "";
+      return { kind: "pull_request", installationId, repo, sha, baseSha: SHA.test(baseSha) ? baseSha : null, pr: Number(pr.number), title: "", fromFork: false };
+    }
+    return { kind: "push", installationId, repo, sha };
   }
   return null;
 }
