@@ -356,6 +356,26 @@ portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a pa
 | 3 | waiting for an approval (`needs_approval.json`); re-run with `--resume` and `--approvals` |
 | 4 | waiting for the builder or the architect (`needs_builder.json`, its `step` and `role` say which): `plan-refine` → the architect writes the refined `plan.md` and `tasks.csv` at the two `expected` paths (or passes `--plan <dir>`); `files` → write `files.txt` at `expected` (or pass `--files`); `code` → drop the diff at `<out>/build/diff.patch` (or pass `--patch`); re-run with `--resume` |
 
+### The role packet (`<step dir>/PROMPT.md`) — any IDE, any LLM
+
+Every exit-4 stop writes a self-contained Markdown packet beside the step's evidence, whatever `--builder` is, and
+`needs_builder.json` points at it (`"prompt"`). A developer pastes it into any agent — Cursor, Copilot, Claude Code, a
+local model via Ollama — or reads it and does the work themselves. The `claude-code` builder's `prompt.txt` is the same
+text (one source, `Run.role_packet`), so the two never drift. It is deterministic (no timestamps, nothing from the
+environment but the command line) and carries no secrets.
+
+| Section | Contents |
+|---|---|
+| Title | `# Role: <role> — step <step> (run <id>, pipeline <name>)` and the `why` of the stop |
+| What to produce | each output with its expected path and the alternative drop path (`expected` / `alternative`), then `Format`, `Rule`, `How` verbatim from `needs_builder.json` |
+| The gate this must pass | the stage's output checks on this step's files, exactly as `eval_gate` evaluates them (`tasks.csv: csv_rows:files!tbd`), plus the other parts of the stage gate (exit, approval) named |
+| Inputs | every input of the step with its path and content inlined under a fence — request text, draft PRD, scaffold `plan.md` / `tasks.csv`, `test-plan.md`, brief; a file over 40 KB is its first 60 lines + "(truncated)"; the code step also lists the allowed files (`files.txt`) and inlines each constraint document; the stack profile closes the section |
+| Role skill | the SKILL.md that backs the role, inlined: `prd-refine` → `skills/build/product-spec-prd/SKILL.md`, `plan-refine` → `skills/build/spec-to-plan/SKILL.md`; `code` → the constraint documents above; `files` → none |
+| When done | the exact resume command — this run's command line with `--resume` added once (`--run`/`--portal` kept) |
+
+Where it lands: `evidence/01-requirements/prd-refine/PROMPT.md`, `evidence/02-architecture/plan-refine/PROMPT.md`,
+`evidence/03-build/files/PROMPT.md`, `evidence/03-build/code/PROMPT.md`.
+
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).
 Without `--dry` the checkout is used in place and the `pr` step needs `gh`; before stage 1 the executor proves the token `gh`
