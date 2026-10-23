@@ -220,7 +220,7 @@ def _system_prompt(produce: list[str], allowed: list[str] | None, target: Path |
 
 def run_role(packet_text: str, *, produce: list[str], allowed: list[str] | None, out_dir: Path, target: Path | None,
              client: OpenAICompat, max_rounds: int = 2, repair_cmd: str | None = None, max_tokens: int = 16000,
-             checks: list[tuple[str, str]] | None = None, check_fn=None,
+             checks: list[tuple[str, str]] | None = None, check_fn=None, extra_check=None,
              timeout_s: float = 900, cmd_timeout_s: float = 1800) -> dict:
     """One role, one packet, up to `max_rounds` model turns. target None → a document step: the blocks named in
     `produce` are written to out_dir. target set → the code step: blocks land in the checkout (allowed + test paths),
@@ -288,6 +288,8 @@ def run_role(packet_text: str, *, produce: list[str], allowed: list[str] | None,
                     r = check_fn(out_dir / fname, spec)
                     if not r.get("pass"):
                         failed.append(f"{fname}: {spec} — {r.get('evidence')}")
+                if extra_check is not None:   # caller's own refusal (e.g. plan files that do not fit the repository)
+                    failed += [str(x) for x in (extra_check(out_dir) or [])]
                 rnd["checks_failed"] = failed
                 if not failed:
                     record.update(ok=True, files=written_all)

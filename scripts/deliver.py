@@ -991,7 +991,7 @@ class Run:
         return out
 
     def run_llm_role(self, sdir: Path, rec: dict, packet: str, *, produce: list[str], allowed: list[str] | None,
-                     target: Path | None, repair_cmd: str | None = None, step_id: str = "") -> dict:
+                     target: Path | None, repair_cmd: str | None = None, step_id: str = "", extra_check=None) -> dict:
         """Send the packet to the model and land its file blocks (llm_builder.run_role); the step record gets `llm`
         {provider, model, base_url_host, rounds}. A reply that parses to nothing, or a repair command still failing
         after --rounds, is a StepError that names the reply head — the gate detail then says what the model did."""
@@ -1001,7 +1001,8 @@ class Run:
             checks = self.step_output_checks(step_id) if (target is None and step_id) else []
             res = llm_builder.run_role(packet, produce=produce, allowed=allowed, out_dir=sdir, target=target, client=client,
                                        max_rounds=self.args.rounds, repair_cmd=repair_cmd,
-                                       checks=checks, check_fn=lambda path, spec: check_output.run_check(spec, str(path), mode="real"))
+                                       checks=checks, check_fn=lambda path, spec: check_output.run_check(spec, str(path), mode="real"),
+                                       extra_check=extra_check)
         except llm_builder.LLMBuildError as e:
             rec["llm"] = {"provider": "openai-compat", "model": client.model, "base_url_host": client.host,
                           "rounds": len((read_json(sdir / "llm-rounds.json") if (sdir / "llm-rounds.json").is_file() else {}).get("rounds") or []),
@@ -1124,6 +1125,56 @@ class Run:
                     gaps.append(f"{r.get('id') or '?'}: {col} is {v}")
         return gaps
 
+    def repo_layout(self, target: Path, limit: int = 400) -> str:
+        """What the architect must see before naming files: the stack profile facts and the checkout's tracked paths
+        (bounded). Found on the first local-model run — the model planned src/*.ts in a JavaScript app-router repo."""
+        prof = self.record.get("stack_profile") or self.profile or {}
+        facts = ", ".join(f"{k}={prof.get(k)}" for k in ("flavour", "framework", "package_manager", "test_runner", "e2e", "migrations_dir", "monorepo_root") if prof.get(k) not in (None, "", "none", "unknown"))
+        paths: list[str] = []
+        if shutil.which("git") and is_git_root(target):
+            code, out = git(target, "ls-files", ok=(0, 128))
+            paths = [ln for ln in out.splitlines() if ln.strip()] if code == 0 else []
+        if not paths and target.is_dir():
+            for root, dirs, files in os.walk(target):
+                dirs[:] = [d for d in dirs if d not in {".git", "node_modules", ".next", ".venv", "__pycache__", "dist", "build"}]
+                for f in files:
+                    paths.append(str(Path(root, f).relative_to(target)))
+        paths.sort()
+        shown = paths[:limit]
+        tops = sorted({p.split("/")[0] for p in paths})
+        lines = [f"Stack profile: {facts or 'unknown'}", f"Top-level entries: {', '.join(tops) or '(empty repository)'}",
+                 f"Tracked files ({len(paths)}{', first ' + str(limit) + ' shown' if len(paths) > limit else ''}):"] + [f"  {p}" for p in shown]
+        lines.append("Rule: every file a task names is a path in THIS layout — an existing file to modify, or a new file in an "
+                     "existing directory with the repository's language and framework conventions (same extension as its neighbours).")
+        return "\n".join(lines)
+
+    @staticmethod
+    def plan_fits_repo(tasks_path: str, target: Path, profile: dict) -> list[str]:
+        """Files the plan names that cannot be right for this checkout: a parent directory that does not exist (a layout
+        the model invented, e.g. src/ in an app-router repo), or an extension that contradicts the stack flavour
+        (.ts in a JavaScript repo and vice versa). Empty list = the plan fits."""
+        if not tasks_path or not Path(tasks_path).is_file():
+            return []
+        rows = list(csv.DictReader(io.StringIO(Path(tasks_path).read_text(encoding="utf-8"))))
+        flavour = str((profile or {}).get("flavour") or "")
+        has_any = any(target.rglob("*")) if target.is_dir() else False
+        problems: list[str] = []
+        for r in rows:
+            for f in [repo_path(x) for x in re.split(r"[,;]+", r.get("files") or "") if repo_path(x)]:
+                if TBD_RE.search(f):
+                    continue
+                p = target / f
+                ext = Path(f).suffix.lower()
+                if flavour == "js" and ext in (".ts", ".tsx"):
+                    problems.append(f"{r.get('id') or '?'}: {f} is TypeScript but the repository is JavaScript (flavour js)")
+                elif flavour == "ts" and ext in (".js", ".jsx") and not p.is_file():
+                    problems.append(f"{r.get('id') or '?'}: {f} is JavaScript but the repository is TypeScript (flavour ts)")
+                if has_any and not p.exists():
+                    top = f.split("/")[0]
+                    if "/" in f and not (target / top).is_dir():
+                        problems.append(f"{r.get('id') or '?'}: {f} is under {top}/, which does not exist in the repository (invented layout)")
+        return problems
+
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
         is when its user stories / acceptance criteria are filled (a brief with stories or tasks); otherwise the run
@@ -1197,6 +1248,10 @@ class Run:
             if missing_cols:
                 raise StepError(f"{TASKS_CSV} from {source} lacks the columns {missing_cols} (spec-to-plan's header: {','.join(PLAN_COLUMNS)})")
             gaps = self.scaffold_gaps(str(expected[TASKS_CSV]))
+            misfit = self.plan_fits_repo(str(expected[TASKS_CSV]), target, self.record.get("stack_profile") or self.profile or {})
+            if misfit:
+                raise StepError(f"{TASKS_CSV} from {source} names files that do not fit the repository: " + "; ".join(misfit[:4])
+                                + " — name existing files or new files in existing directories with the repository's conventions")
             write_json(sdir / "plan-refine.json", {"source": source, "skipped": skipped, "tasks": len(rows), "gaps": gaps,
                                                    "scaffold": {"plan": scaffold_plan, "tasks": scaffold_tasks}, "note": note})
             rec.update(exit=0, plan_source=source, skipped=skipped, tasks=len(rows), gaps=len(gaps))
@@ -1231,6 +1286,7 @@ class Run:
                 "how": f"write both files at the expected paths (or pass --plan <dir> holding {PLAN_MD} and {TASKS_CSV}), then re-run with --resume"}
         packet_inputs = [{"label": "Gaps the gate will refuse", "text": "\n".join(f"- {g}" for g in gaps)},
                          {"label": "Request", "text": request or "(none)"}, {"label": f"PRD ({PRD_MD})", "path": prd},
+                         {"label": "Repository layout (name files that fit it)", "text": self.repo_layout(target)},
                          {"label": f"Scaffold {PLAN_MD}", "path": scaffold_plan}, {"label": f"Scaffold {TASKS_CSV}", "path": scaffold_tasks}]
         if builder in ("none", "manual"):
             rec["status"] = "awaiting_builder"
@@ -1261,7 +1317,9 @@ class Run:
             return record("claude-code", f"written by claude -p at {sdir.relative_to(self.out)}")
         if builder == "openai-compat":
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])
-            res = self.run_llm_role(sdir, rec, prompt, produce=list(PLAN_FILES), allowed=None, target=None, step_id=step["id"])
+            prof = self.record.get("stack_profile") or self.profile or {}
+            res = self.run_llm_role(sdir, rec, prompt, produce=list(PLAN_FILES), allowed=None, target=None, step_id=step["id"],
+                                    extra_check=lambda d: self.plan_fits_repo(str(d / TASKS_CSV), target, prof))
             absent = [f for f in PLAN_FILES if not expected[f].is_file()]
             if absent:
                 raise StepError(f"builder openai-compat did not write {', '.join(str(expected[f]) for f in absent)}")

@@ -177,6 +177,10 @@ def detect(files: list[dict], entropy: float, min_len: int) -> list[dict]:
                 val = m.group(1) if m.groups() else m.group(0)
                 if label == "credential assignment" and PLACEHOLDER.search(val):
                     continue
+                # in a test file a credential-shaped assignment is a fixture (`process.env.TOKEN = 'valid-token'`):
+                # only a real key format (the patterns above) or a high-entropy literal counts there
+                if label == "credential assignment" and test:
+                    continue
                 add("CR-SECRET", f, ln, redact(text, val), label)
                 hit_secret = True
                 break

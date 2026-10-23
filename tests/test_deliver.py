@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
 from pathlib import Path
@@ -1551,3 +1552,47 @@ def test_resume_after_the_gate_refused_a_model_written_document_gives_the_model_
     assert r.returncode == 0, r.stdout + r.stderr
     assert len(stub.calls) > calls_before                  # the model was asked again, the stale file was not re-judged
     assert stage_status(out)["requirements"] == "passed"
+
+
+def test_architect_packet_shows_the_repo_layout_and_a_plan_that_invents_one_is_refused_then_repaired(tmp_path, monkeypatch):
+    """qwen3:14b on the first local-model run planned src/api/health/deep.ts, src/config/health.ts in a JavaScript
+    app-router repo (app/, lib/, no src/) — the packet never showed it the layout and the gate did not check the files.
+    Now the packet carries the stack profile + tracked paths, and a plan naming an invented layout is a repair turn."""
+    llm_env(monkeypatch)
+    import csv as _csv
+    good = (PLAN_DIR / "tasks.csv").read_text()
+    rows = list(_csv.DictReader(io.StringIO(good)))
+    rows[0]["files"] = "src/api/orders/export.ts, src/config/orders.ts"
+    buf = io.StringIO(); w = _csv.DictWriter(buf, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
+    invented = file_block("plan.md", (PLAN_DIR / "plan.md").read_text()) + "\n" + file_block("tasks.csv", buf.getvalue())
+    fitting = file_block("plan.md", (PLAN_DIR / "plan.md").read_text()) + "\n" + file_block("tasks.csv", good)
+    stub = StubLLM({"plan-refine": [invented, fitting], "code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-layout"
+        r = openai_compat(out, stub)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    packet = (out / "evidence" / "02-architecture" / "plan-refine" / "PROMPT.md").read_text()
+    assert "Repository layout" in packet and "flavour=js" in packet and "  lib/orders.js" in packet and "Top-level entries: " in packet
+    rounds = json.loads((out / "evidence" / "02-architecture" / "plan-refine" / "llm-rounds.json").read_text())
+    assert len(rounds["rounds"]) == 2
+    first = " | ".join(rounds["rounds"][0]["checks_failed"])
+    assert "src/api/orders/export.ts is TypeScript but the repository is JavaScript" in first and "under src/, which does not exist" in first
+    assert rounds["rounds"][1]["checks_failed"] == []
+
+
+def test_a_manual_plan_that_does_not_fit_the_repository_is_refused_before_approval(tmp_path):
+    out = tmp_path / "misfit"
+    import csv as _csv
+    (tmp_path / "plan").mkdir()
+    shutil.copy(PLAN_DIR / "plan.md", tmp_path / "plan" / "plan.md")
+    rows = list(_csv.DictReader((PLAN_DIR / "tasks.csv").open()))
+    rows[0]["files"] = "src/api/orders/export.ts"
+    with (tmp_path / "plan" / "tasks.csv").open("w", newline="") as fh:
+        w = _csv.DictWriter(fh, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
+    r = deliver(out, "--builder", "none", "--approve-all", "--plan", str(tmp_path / "plan"), brief=None)
+    assert r.returncode == 1 and "stopped at stage 'architecture' (failed)" in r.stdout, r.stdout + r.stderr
+    steps = {s["id"]: s for s in run_json(out)["stages"][-1]["steps"]}
+    assert "names files that do not fit the repository" in steps["plan-refine"]["error"] and "src/api/orders/export.ts is TypeScript" in steps["plan-refine"]["error"]
+    assert not (out / "needs_approval.json").exists()
