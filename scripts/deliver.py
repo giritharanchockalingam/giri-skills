@@ -1174,7 +1174,7 @@ class Run:
         # OS keychain (osxkeychain, manager) usually holds an older github.com credential that git would try first and
         # GitHub would answer 403 with, whatever the token in GH_TOKEN may do. `-c credential.helper=` empties the
         # helper list for this one command; gh's helper is then the only one.
-        push_cfg = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential"] if shutil.which("gh") else []
+        push_cfg = PUSH_CFG if shutil.which("gh") else []
         code, _ = git(repo, "rev-parse", "--verify", "-q", branch, ok=(0, 1), env=env)
         git(repo, "checkout", "-q", "-B" if code == 0 else "-b", branch, env=env)
         git(repo, "add", "-A", env=env)
@@ -1578,31 +1578,39 @@ def github_key(run: "Run") -> str:
         return key
     if shutil.which("git") and is_git_root(run.repo):
         code, url = git(run.repo, "remote", "get-url", "origin", ok=(0, 2, 128))
-        m = re.search(r"github\.com[:/]([^/\s]+/[^/\s]+?)(?:\.git)?$", url.strip()) if code == 0 else None
+        m = re.search(r"[:/]([^/\s:]+/[^/\s:]+?)(?:\.git)?/?$", url.strip()) if code == 0 and "://" in url or ":" in url else None
         if m:
             return m.group(1)
     return ""
 
 
+PUSH_CFG = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential"]   # authenticate as gh does, only
+
+
 def check_push_access(run: "Run") -> None:
     """Before any stage runs: a pipeline that ends in a pull request needs a token that can push. Found by the first
     real run — the token could clone but not push, and the run stopped at the pr step after every gate had passed.
-    Asked of GitHub through gh (`permissions.push`); a gh that is absent or cannot answer never blocks the run."""
+    Asked the only reliable way, a `git push --dry-run` of HEAD to the delivery branch (GitHub refuses receive-pack
+    with 403 for a token without Contents: write; `permissions.push` on the repo describes the user, not a fine-grained
+    token). Nothing is written to the remote. A push that fails for any other reason (offline, no origin) never blocks."""
     if run.args.dry or not any(st.get("kind") == "pr" for stage in run.spec["stages"] for st in stage["steps"]):
         return
     key = github_key(run)
-    if not key or not shutil.which("gh"):
+    if not key or not shutil.which("git") or not is_git_root(run.repo) or not head_sha(run.repo):
         return
-    r = subprocess.run(["gh", "api", f"repos/{key}", "--jq", ".permissions.push"], capture_output=True, text=True)
-    if r.returncode != 0 or r.stdout.strip() not in ("true", "false"):
+    cfg = PUSH_CFG if shutil.which("gh") else []
+    r = subprocess.run(["git", *cfg, "push", "--dry-run", "origin", f"HEAD:refs/heads/deliver/{run.run_id}"], cwd=str(run.repo),
+                       capture_output=True, text=True, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    why = (r.stderr or r.stdout).strip()
+    if r.returncode == 0 or not ("403" in why or "not granted" in why or "Permission" in why or "denied" in why.lower()):
         return
-    if r.stdout.strip() == "false":
-        write_json(run.out / "needs_input.json", {"pipeline": run.spec["name"], "missing": [
-            {"name": "push access", "type": "token", "from": f"the token gh uses (GH_TOKEN) can read {key} but not push to it; the pr step "
-             f"pushes a branch and opens the pull request — grant it Contents: read and write and Pull requests: read and write "
-             f"on {key} (fine-grained token → Repository access → select {key} → Permissions), then re-run with --resume"}]})
-        sys.exit(f"error: no push access to {key} for the token gh uses — the pr step would fail after every gate passed; "
-                 f"grant Contents: read and write + Pull requests: read and write on {key}, then re-run (--resume keeps the evidence)")
+    write_json(run.out / "needs_input.json", {"pipeline": run.spec["name"], "missing": [
+        {"name": "push access", "type": "token", "from": f"the token gh uses (GH_TOKEN) can read {key} but not push to it "
+         f"(git push --dry-run: {why[:160]}); the pr step pushes a branch and opens the pull request — grant the token "
+         f"Contents: read and write and Pull requests: read and write on {key} (fine-grained token → Repository access → "
+         f"select {key} → Permissions), then re-run with --resume"}]})
+    sys.exit(f"error: no push access to {key} for the token gh uses ({why.splitlines()[0][:120]}) — the pr step would fail after every "
+             f"gate passed; grant Contents: read and write + Pull requests: read and write on {key}, then re-run (--resume keeps the evidence)")
 
 
 REPO_KEY = re.compile(r"^(?!\.)[A-Za-z0-9_-][A-Za-z0-9_.-]*/(?!\.)[A-Za-z0-9_-][A-Za-z0-9_.-]*$")
