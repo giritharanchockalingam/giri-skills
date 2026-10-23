@@ -1170,9 +1170,11 @@ class Run:
         if not is_git_root(repo):
             raise StepError(f"pr step: {repo} is not a git repository root")
         env = {**os.environ, **BOT_GIT_ENV}
-        if os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"):
-            # CI: let git push with the token gh holds (credential helper), so the push below needs no remote rewrite
-            subprocess.run(["gh", "auth", "setup-git"], cwd=str(repo), capture_output=True, text=True)
+        # The push authenticates as gh does (GH_TOKEN, or the gh login) and as nothing else: on a developer machine the
+        # OS keychain (osxkeychain, manager) usually holds an older github.com credential that git would try first and
+        # GitHub would answer 403 with, whatever the token in GH_TOKEN may do. `-c credential.helper=` empties the
+        # helper list for this one command; gh's helper is then the only one.
+        push_cfg = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential"] if shutil.which("gh") else []
         code, _ = git(repo, "rev-parse", "--verify", "-q", branch, ok=(0, 1), env=env)
         git(repo, "checkout", "-q", "-B" if code == 0 else "-b", branch, env=env)
         git(repo, "add", "-A", env=env)
@@ -1184,7 +1186,7 @@ class Run:
             git(repo, "commit", "-q", "--allow-empty", "-m", title, "-m",
                 f"Delivered by giri-skills pipeline {self.spec['name']} run {self.run_id}", env=env)
             _, head = git(repo, "rev-parse", "HEAD", env=env)
-        push = subprocess.run(["git", "push", "-u", "origin", branch], cwd=str(repo), capture_output=True, text=True, env=env)
+        push = subprocess.run(["git", *push_cfg, "push", "-u", "origin", branch], cwd=str(repo), capture_output=True, text=True, env=env)
         if push.returncode != 0:
             why = push.stderr or push.stdout
             hint = (f" — the token gh uses cannot push to this repository: grant Contents: read and write + Pull requests: "
