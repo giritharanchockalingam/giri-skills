@@ -4,7 +4,7 @@
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
         --builder none|manual|claude-code|openai-compat [--model NAME --base-url URL --rounds N --repair-cmd CMD] \
-        [--provider dry|none|anthropic|openai] \
+        [--install auto|none|CMD] [--tests auto|none|CMD] [--provider dry|none|anthropic|openai] \
         [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--prd prd-final.md] [--dry] [--resume] [--run-id ID] \
         [--no-baseline] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
@@ -39,9 +39,19 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
                                      --base-url / OPENAI_BASE_URL, --model / OPENAI_MODEL, OPENAI_API_KEY) and the model's
                                      `=== FILE: … ===` blocks are the step's output: written to the step folder for
                                      prd-refine / plan-refine / files, into the checkout (allowed files + test paths) for
-                                     the code step, where --repair-cmd (default: `npm test` when package.json has a test
-                                     script and node_modules exists) runs and a failure goes back as a repair turn, up to
-                                     --rounds (2); evidence: llm-rounds.json, llm-reply-<n>.txt; run.json step `llm`
+                                     the code step, where --repair-cmd (default: the resolved --tests command) runs and a
+                                     failure goes back as a repair turn, up to --rounds (2); evidence: llm-rounds.json,
+                                     llm-reply-<n>.txt; run.json step `llm`
+            every builder, code step: the checkout's dependencies are installed once per run before the code lands
+            (--install auto: `npm ci` / `npm install` / pnpm / yarn / bun / pip / uv / poetry from the stack profile;
+            <step>/install.log + install.json; node_modules and .venv are kept out of the diff via .git/info/exclude
+            when .gitignore does not cover them) and the project's tests are EXECUTED after the code landed (--tests
+            auto: the package manager's `test` script, `npx vitest run` / `npx jest`, `pytest -q`; <step>/tests.json
+            with cmd, exit, duration, summary and the output tail + tests.log). A failing test command fails the code
+            step (the StepError quotes the tail, so the gate detail says the tests failed); for openai-compat the
+            failing output is the repair turn first, up to --rounds. Both are skipped (recorded as such) in --dry and
+            when the repository has no runner. EVIDENCE.md carries a Tests line ("tests: N passed") and the build
+            row links tests.json / tests.log / install.log.
             every exit-4 stop (prd-refine, plan-refine, files, code) also writes <step dir>/PROMPT.md — the role
             packet (Run.role_packet): role, outputs and paths, the gate checks verbatim, every input inlined, the
             role's SKILL.md and the resume command — for ANY agent or a person; needs_builder.json `prompt` names
@@ -152,10 +162,96 @@ PACKET_INLINE_LIMIT = 40 * 1024                     # an input this size or smal
 PACKET_HEAD_LINES = 60                              # a larger one: its first lines + "(truncated)"
 # the SKILL.md that backs a role step, inlined in its packet (the code step inlines its constraint docs instead)
 PACKET_SKILLS = {PRD_MD: "skills/build/product-spec-prd/SKILL.md", TASKS_CSV: "skills/build/spec-to-plan/SKILL.md"}
+# the code step installs the checkout's dependencies once per run and executes the project's tests after the code
+# lands, for every builder (found by the first local-model run: the clone had no node_modules, the repair command
+# resolved to nothing and the PR's CI was the first place the model's code was ever run)
+INSTALL_TIMEOUT_S = 900                             # 15 min for npm ci / pip install
+TEST_TIMEOUT_S = 1800                               # 30 min for the project's test command
+TEST_TAIL = 4 * 1024                                # tests.json carries the last 4 KB of the runner's output
+TEST_TAIL_IN_ERROR = 400                            # how much of that the step error (the gate detail) quotes
+INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
+TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
+ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 
 class StepError(Exception):
     pass
+
+
+def _read_pkg(target: Path) -> dict:
+    pkg = target / "package.json"
+    if not pkg.is_file():
+        return {}
+    try:
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def install_cmd(profile: dict, target: Path) -> str | None:
+    """How the checkout's dependencies are installed, from the stack profile's package_manager and the manifests on
+    disk — or None when there is nothing to install. npm: `npm ci` with a package-lock.json, else `npm install`;
+    pnpm / yarn frozen when their lockfile is there; bun; Python: uv / poetry / pipenv, else pip from
+    requirements.txt or `pip install -e .` from a pyproject.toml."""
+    pm = str(profile.get("package_manager") or "unknown")
+    if (target / "package.json").is_file():
+        if pm == "pnpm":
+            return "pnpm install --frozen-lockfile" if (target / "pnpm-lock.yaml").is_file() else "pnpm install"
+        if pm == "yarn":
+            return "yarn install --frozen-lockfile" if (target / "yarn.lock").is_file() else "yarn install"
+        if pm == "bun":
+            return "bun install"
+        return "npm ci" if (target / "package-lock.json").is_file() else "npm install --no-audit --no-fund"
+    if pm == "uv":
+        return "uv sync"
+    if pm == "poetry":
+        return "poetry install"
+    if pm == "pipenv":
+        return "pipenv install --dev"
+    if (target / "requirements.txt").is_file():
+        return "python3 -m pip install -r requirements.txt"
+    if str(profile.get("flavour")) == "python" and (target / "pyproject.toml").is_file():
+        return "python3 -m pip install -e ."
+    return None
+
+
+def test_cmd(profile: dict, target: Path) -> str | None:
+    """The project's own test command, from the stack profile and package.json — or None when the repository has no
+    runner. Node: the package manager's `test` script when package.json declares one (`vitest run` in the fixture
+    and the bootstrap skeleton), else the detected runner directly (`npx vitest run` / `npx jest`); Python: pytest
+    through uv / poetry / pipenv when that is the package manager, else `python3 -m pytest -q`."""
+    pm = str(profile.get("package_manager") or "unknown")
+    runner = str(profile.get("test_runner") or "none")
+    pkg = _read_pkg(target)
+    if pkg or (target / "package.json").is_file():
+        if (pkg.get("scripts") or {}).get("test"):
+            return {"pnpm": "pnpm test", "yarn": "yarn test", "bun": "bun run test"}.get(pm, "npm test")
+        if runner == "vitest":
+            return "npx vitest run"
+        if runner == "jest":
+            return "npx jest"
+        return None
+    if runner == "pytest":
+        return {"uv": "uv run pytest -q", "poetry": "poetry run pytest -q", "pipenv": "pipenv run pytest -q"}.get(pm, "python3 -m pytest -q")
+    return None
+
+
+def test_summary(output: str) -> str:
+    """`N passed[, M failed[, K skipped]]` read best-effort from a vitest (`Tests  2 passed (2)`) or pytest
+    (`3 passed, 1 failed in 0.4s`) summary line; "" when the runner printed none (the exit code is the verdict)."""
+    text = ANSI_RE.sub("", output or "")
+    parts = []
+    for word in ("passed", "failed", "skipped"):
+        found = re.findall(rf"(\d+)\s+{word}\b", text)
+        if found:
+            parts.append(f"{found[-1]} {word}")
+    return ", ".join(parts)
+
+
+def output_tail(text: str, limit: int) -> str:
+    text = ANSI_RE.sub("", text or "")
+    return text if len(text) <= limit else "…" + text[-limit:]
 
 
 def new_high_detail(count: int, listed: list[str]) -> str:
@@ -957,23 +1053,133 @@ class Run:
             return f"openai-compat ({self.args.model or os.environ.get('OPENAI_MODEL') or '?'})"
         return f"openai-compat ({c.model} @ {c.host})"
 
-    def repair_cmd(self, target: Path) -> str | None:
-        """The command the code step runs after the model's files land. --repair-cmd CMD as given; `none` → nothing;
-        `auto` → `npm test` when package.json has a test script AND node_modules is installed (an uninstalled checkout
-        would fail on the first round for no reason of the model's), else nothing."""
+    def repair_cmd(self, target: Path, tests: str | None) -> str | None:
+        """The command the openai-compat code step runs after each round of the model's files, whose failing output is
+        the next repair turn. --repair-cmd CMD as given; `none` → no repair loop (the resolved test command still runs
+        once after the model's last reply, and fails the step); `auto` (default) → the resolved test command."""
         given = (self.args.repair_cmd or "").strip()
         if given.lower() in ("", "none", "off"):
             return None
+        return tests if given == "auto" else given
+
+    # ---- the code step's deterministic gates: install once, run the project's tests (every builder)
+    def resolve_install(self, target: Path) -> tuple[str | None, str]:
+        """(command, reason-when-none) for --install auto|none|<cmd>. `auto` reads the stack profile (install_cmd);
+        a dry run installs nothing (the copy is throwaway and offline-reproducible)."""
+        given = (getattr(self.args, "install", "auto") or "auto").strip()
+        if given.lower() in ("none", "off"):
+            return None, "--install none"
         if given != "auto":
-            return given
-        pkg = target / "package.json"
-        if pkg.is_file() and (target / "node_modules").is_dir():
-            try:
-                if (json.loads(pkg.read_text(encoding="utf-8")).get("scripts") or {}).get("test"):
-                    return "npm test"
-            except (ValueError, OSError):
-                return None
-        return None
+            return given, ""
+        if self.args.dry:
+            return None, "dry run"
+        cmd = install_cmd(self.profile, target)
+        return cmd, ("" if cmd else "no package manifest (nothing to install)")
+
+    def resolve_tests(self, target: Path) -> tuple[str | None, str]:
+        """(command, reason-when-none) for --tests auto|none|<cmd>. `auto` reads the stack profile (test_cmd); a dry
+        run skips (its copy has no dependencies installed; an explicit --tests <cmd> still runs there)."""
+        given = (getattr(self.args, "tests", "auto") or "auto").strip()
+        if given.lower() in ("none", "off"):
+            return None, "--tests none"
+        if given != "auto":
+            return given, ""
+        if self.args.dry:
+            return None, "dry run"
+        cmd = test_cmd(self.profile, target)
+        return cmd, ("" if cmd else "no runner")
+
+    @staticmethod
+    def exclude_install_dirs(target: Path) -> list[str]:
+        """node_modules / .venv must never enter the diff or the PR (`git add -A`): when the checkout's .gitignore does
+        not cover them, add them to .git/info/exclude — local to the clone, never a change to the repository."""
+        if not shutil.which("git") or not is_git_root(target):
+            return []
+        added = []
+        code, path = git(target, "rev-parse", "--git-path", "info/exclude", ok=(0, 128))
+        if code != 0:
+            return []
+        exclude = Path(path.strip())
+        if not exclude.is_absolute():
+            exclude = target / exclude
+        for d in INSTALL_DIRS:
+            ignored, _ = git(target, "check-ignore", "-q", d, ok=(0, 1, 128))
+            if ignored == 1:
+                exclude.parent.mkdir(parents=True, exist_ok=True)
+                with exclude.open("a", encoding="utf-8") as fh:
+                    fh.write(f"{d}/\n")
+                added.append(d)
+        return added
+
+    @staticmethod
+    def _sh(cmd: str, cwd: Path, timeout_s: float) -> tuple[int, str]:
+        env = {**os.environ, "CI": os.environ.get("CI") or "1"}   # watch-mode runners (vitest, jest) run once under CI
+        try:
+            r = subprocess.run(cmd, shell=True, cwd=str(cwd), capture_output=True, text=True, timeout=timeout_s, env=env)
+            return r.returncode, (r.stdout or "") + (r.stderr or "")
+        except subprocess.TimeoutExpired as e:
+            partial = (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
+            return 124, f"timed out after {timeout_s:.0f}s\n{partial}"
+
+    def install_deps(self, target: Path, sdir: Path, rec: dict) -> None:
+        """Once per run, in the checkout, before the code lands: the stack profile's install command, its output in
+        <step>/install.log, the record in install.json and run.json `install`. A resume reuses a successful install
+        (install.json with exit 0 and the same command). A failing install fails the code step: the tests cannot run."""
+        cmd, reason = self.resolve_install(target)
+        prev = read_json(sdir / INSTALL_JSON) if (sdir / INSTALL_JSON).is_file() else {}
+        if cmd and prev.get("cmd") == cmd and prev.get("exit") == 0:
+            rec["install"] = {**prev, "reused": True}
+            return
+        excluded = self.exclude_install_dirs(target)   # even without an install: a developer's node_modules must not be staged
+        if not cmd:
+            rec["install"] = {"skipped": reason}
+            write_json(sdir / INSTALL_JSON, rec["install"])
+            return
+        t0 = time.time()
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
+        (sdir / INSTALL_LOG).write_text(output, encoding="utf-8")
+        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG}
+        if excluded:
+            info["excluded_from_git"] = excluded
+        write_json(sdir / INSTALL_JSON, info)
+        rec["install"] = info
+        if code != 0:
+            raise StepError(f"install failed: `{cmd}` exit {code} (see {INSTALL_LOG}); tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+
+    def record_tests(self, sdir: Path, rec: dict, info: dict) -> None:
+        write_json(sdir / TESTS_JSON, info)
+        rec["tests"] = {k: v for k, v in info.items() if k != "tail"}
+
+    def run_tests(self, cmd: str | None, reason: str, target: Path, sdir: Path, rec: dict) -> None:
+        """After the code landed: the project's test command on the checkout, its output in <step>/tests.log, the
+        record (cmd, exit, duration_s, summary, tail) in tests.json and run.json `tests`. Exit != 0 fails the code
+        step — the StepError names the summary and the output tail, so the gate detail says the tests failed."""
+        if not cmd:
+            self.record_tests(sdir, rec, {"skipped": reason})
+            return
+        t0 = time.time()
+        code, output = self._sh(cmd, target, TEST_TIMEOUT_S)
+        (sdir / TESTS_LOG).write_text(output, encoding="utf-8")
+        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "summary": test_summary(output),
+                "tail": output_tail(output, TEST_TAIL), "log": TESTS_LOG}
+        self.record_tests(sdir, rec, info)
+        if code != 0:
+            raise StepError(f"tests failed: `{cmd}` exit {code}" + (f" ({info['summary']})" if info["summary"] else "")
+                            + f"; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+
+    def record_llm_tests(self, cmd: str, sdir: Path, rec: dict) -> None:
+        """openai-compat: the repair command IS the test command, already run by the builder after each round — the
+        last round's result becomes tests.json (its log is that round's llm-cmd-<n>.txt)."""
+        rounds = (read_json(sdir / "llm-rounds.json") if (sdir / "llm-rounds.json").is_file() else {}).get("rounds") or []
+        last = next((r for r in reversed(rounds) if "cmd_exit" in r), None)
+        if last is None:
+            self.record_tests(sdir, rec, {"skipped": "the model's rounds ran no command"})
+            return
+        log = f"llm-cmd-{last['round']}.txt"
+        output = (sdir / log).read_text(encoding="utf-8", errors="replace") if (sdir / log).is_file() else ""
+        self.record_tests(sdir, rec, {"cmd": cmd, "exit": last["cmd_exit"], "duration_s": last.get("cmd_duration_s"),
+                                      "summary": test_summary(output), "tail": output_tail(output, TEST_TAIL), "log": log,
+                                      "rounds": last["round"]})
 
     def step_output_checks(self, step_id: str) -> list[tuple[str, str]]:
         """The stage gate's output checks on this step's files, as (file, check) — what the model's documents are
@@ -1460,11 +1666,13 @@ class Run:
             if manual_patch.is_file():
                 rec["patch_sha256"] = sha256_file(manual_patch)
                 self._revert_superseded_patch(manual_patch, target, sdir, rec)
+                self.install_deps(target, sdir, rec)              # the project's tests need its dependencies
                 if self.args.dry:  # the checkout is a throwaway copy: land the diff so the lint stages assess the change
                     note = self._apply_to_copy(manual_patch, target)
                 else:              # the real checkout: the diff is what the gates and the PR must see
                     note = self._apply_manual(manual_patch, target, allowed, allowed_source, sdir, rec)
                 self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
+                self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the diff
                 return True
             rec["status"] = "awaiting_builder"
             self.write_packet(step, sdir, need, packet_inputs)
@@ -1478,6 +1686,7 @@ class Run:
                 raise StepError(f"builder claude-code: {target} is not a git repository root; the diff cannot be captured")
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
+            self.install_deps(target, sdir, rec)                  # before the agent: it may run the tests itself
             t0 = time.time()
             r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
                                text=True, timeout=3600)
@@ -1491,13 +1700,21 @@ class Run:
             patch.write_text(diff, encoding="utf-8")
             self._record_diff(patch, sdir, rec, plan, r.stdout, files)
             patch.unlink()
+            self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the agent's code
             return True
         if builder == "openai-compat":
             if not is_git_root(target):
                 raise StepError(f"builder openai-compat: {target} is not a git repository root; the diff cannot be captured")
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # one source for every builder
-            cmd = self.repair_cmd(target)
-            res = self.run_llm_role(sdir, rec, prompt, produce=[], allowed=allowed or None, target=target, repair_cmd=cmd)
+            self.install_deps(target, sdir, rec)                  # before the first round: the repair command needs the dependencies
+            tcmd, treason = self.resolve_tests(target)
+            cmd = self.repair_cmd(target, tcmd)                   # default: the test command is the repair loop
+            try:
+                res = self.run_llm_role(sdir, rec, prompt, produce=[], allowed=allowed or None, target=target, repair_cmd=cmd)
+            except StepError:
+                if cmd and cmd == tcmd:                           # the rounds are spent: the last run is the test record
+                    self.record_llm_tests(cmd, sdir, rec)
+                raise
             git(target, "add", "-A")
             _, diff = git(target, "diff", "--cached", "--binary")
             if not diff.strip():
@@ -1509,6 +1726,10 @@ class Run:
                        + (f"; `{cmd}` exit {res.get('cmd_exit')}" if cmd else "; no repair command ran"))
             self._record_diff(patch, sdir, rec, plan, summary, files)
             patch.unlink()
+            if cmd and cmd == tcmd:
+                self.record_llm_tests(cmd, sdir, rec)             # the repair loop already ran the tests (exit 0 here)
+            else:                                                 # --repair-cmd none or an override: the tests run once, now
+                self.run_tests(tcmd, treason, target, sdir, rec)
             return True
         raise StepError(f"unknown builder {builder!r}")
 
@@ -1622,6 +1843,7 @@ class Run:
                 f"Request: {self.inputs.get('request', '')}", "",
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
                 self.baseline_row(), "",
+                self.tests_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
         for s in self.record.get("stages", []):
             g = s.get("gate") or {}
@@ -1647,6 +1869,25 @@ class Run:
             cells.append(f"{check}: {e.get('findings', 0)} finding(s), {e.get('high', 0)} high — {link}")
         return "Baseline (before the change, " + b.get("target_source", "") + "): " + ("; ".join(cells) or "no checks") + \
             ". Gates fail only on findings that are new against it."
+
+    def tests_row(self) -> str:
+        """The Tests line of EVIDENCE.md: what the code step executed on the checkout after the code landed —
+        `tests: N passed` when the runner printed a summary, else the exit code; `tests: skipped (<reason>)`."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "tests" in st), None)
+        if not code:
+            return "Tests (after the change): not run yet — executed by the build stage's code step, every builder."
+        t = code["tests"]
+        if t.get("skipped"):
+            return f"Tests (after the change): tests: skipped ({t['skipped']})."
+        sdir = self.step_dirs.get(code["id"])
+        log = sdir / str(t.get("log") or "") if sdir else None
+        link = f" — [{log.name}]({log.relative_to(self.evidence)})" if log and log.is_file() else ""
+        verdict = f"tests: {t['summary']}" if t.get("summary") else f"tests: exit {t.get('exit')}"
+        install = code.get("install") or {}
+        inst = (f"; install `{install['cmd']}` exit {install['exit']}" if install.get("cmd") else
+                f"; install skipped ({install['skipped']})" if install.get("skipped") else "")
+        return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}."
 
     def hash_files(self) -> dict:
         files = {}
@@ -1854,6 +2095,23 @@ class Run:
                     files.append(str(p.relative_to(self.evidence)))
             except StepError:
                 continue
+        # the code step's own evidence — what the executor ran on the checkout (install, the project's tests) — travels
+        # with the stage whatever the template's evidence list says: tests.json and its log, install.json and its log
+        for st in stage.get("steps") or []:
+            if st.get("kind") != "agent" or st.get("produces"):
+                continue
+            sdir = self.step_dirs.get(st["id"])
+            if not sdir or not sdir.is_dir():
+                continue
+            for name in (TESTS_JSON, INSTALL_JSON):
+                info = read_json(sdir / name) if (sdir / name).is_file() else None
+                if info is None:
+                    continue
+                for p in (sdir / name, sdir / str(info.get("log") or "")):
+                    if p.is_file():
+                        rel = str(p.relative_to(self.evidence))
+                        if rel not in files:
+                            files.append(rel)
         srec["evidence_files"] = files
         stages = self.record.setdefault("stages", [])
         for i, s in enumerate(stages):
@@ -2123,7 +2381,9 @@ def build_args(argv=None):
     ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
     ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
     ap.add_argument("--rounds", type=int, default=2, metavar="N", help="openai-compat builder: model turns per step including repair turns (default 2)")
-    ap.add_argument("--repair-cmd", default="auto", metavar="CMD", help="openai-compat builder: shell command run on the checkout after the code step's files land; a failure is sent back as a repair turn. Default auto: `npm test` when package.json has a test script and node_modules exists; `none` disables it")
+    ap.add_argument("--repair-cmd", default="auto", metavar="CMD", help="openai-compat builder: shell command run on the checkout after each round of the code step's files; a failure is sent back as a repair turn. Default auto: the resolved --tests command; `none` runs no repair loop (the tests still run once after the last reply)")
+    ap.add_argument("--install", default="auto", metavar="auto|none|CMD", help="code step, every builder: install the checkout's dependencies once per run before the code lands (output in <step>/install.log). auto (default): from the stack profile — `npm ci` with a package-lock.json else `npm install --no-audit --no-fund`, pnpm/yarn/bun, pip/uv/poetry for Python; nothing in --dry. `none` skips; any other value runs as given")
+    ap.add_argument("--tests", default="auto", metavar="auto|none|CMD", help="code step, every builder: the project's test command, executed on the checkout after the code lands (tests.json + tests.log in the step dir); a failure fails the code step (openai-compat: it is the repair turn first). auto (default): from the stack profile — the package manager's `test` script, `npx vitest run` / `npx jest`, `pytest -q`; skipped (recorded) in --dry or when the repository has no runner. `none` skips; any other value runs as given")
     ap.add_argument("--provider", choices=["dry", "none", "anthropic", "openai"], default="dry")
     ap.add_argument("--approve-all", action="store_true", help="satisfy every approval step (the invoker approves)")
     ap.add_argument("--approvals", help="JSON file recording approvals: {\"approvals\": [{\"step\": id, \"by\": name, \"note\": ...}]}")

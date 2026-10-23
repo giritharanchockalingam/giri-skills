@@ -330,12 +330,14 @@ def run_role(packet_text: str, *, produce: list[str], allowed: list[str] | None,
             save()
             return {"rounds": n, "files": written_all, "deleted": deleted_all, "model": client.model, "base_url_host": client.host, "ok": True}
         rnd["cmd"] = repair_cmd
+        t_cmd = time.time()
         try:
-            r = subprocess.run(repair_cmd, shell=True, cwd=str(target), capture_output=True, text=True, timeout=cmd_timeout_s)
+            r = subprocess.run(repair_cmd, shell=True, cwd=str(target), capture_output=True, text=True, timeout=cmd_timeout_s,
+                               env={**os.environ, "CI": os.environ.get("CI") or "1"})   # watch-mode runners run once under CI
             exit_code, output = r.returncode, (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired as e:
             exit_code, output = 124, f"timed out after {cmd_timeout_s}s\n" + ((e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or ""))
-        rnd["cmd_exit"] = exit_code
+        rnd["cmd_exit"], rnd["cmd_duration_s"] = exit_code, round(time.time() - t_cmd, 3)
         (out_dir / f"llm-cmd-{n}.txt").write_text(output, encoding="utf-8")
         if exit_code == 0:
             record.update(ok=True, files=written_all, deleted=deleted_all, cmd_exit=0)
