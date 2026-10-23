@@ -238,8 +238,8 @@ def test_compose_steps_derive_spec_and_feature_from_real_outputs(happy):
     out, _ = happy
     ev = out / "evidence"
     spec = (ev / "02-architecture" / "spec" / "spec.md").read_text()
-    assert "## Order CSV export" in spec and "; files: lib/orders.js,app/api/orders/export/route.js)" in spec
-    assert "tasks from brief.tasks" in spec and "(accept: GET /api/orders/export answers 200" in spec   # the brief's tasks carry accept/test/rollback/files
+    assert "## Order CSV export" in spec and "\n  - files: lib/orders.js,app/api/orders/export/route.js" in spec
+    assert "tasks from brief.tasks" in spec and "\n  - accept: GET /api/orders/export answers 200" in spec   # the brief's tasks carry accept/test/rollback/files
     assert json.loads((ev / "02-architecture" / "spec" / "spec.json").read_text())["section"] == "Order CSV export"
     tasks = (ev / "02-architecture" / "plan" / "tasks.csv").read_text()
     assert "T1,CSV export of the current order list" in tasks and "TO BE BASELINED" not in tasks
@@ -1243,6 +1243,37 @@ def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_
                    "--brief", str(BRIEF), "--out", str(tmp_path / "run2"), "--provider", "dry", "--builder", "none", "--run-id", "r-gf-2")
     assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("repo create")) == 1
     assert "repo_created" not in run_json(tmp_path / "run2")
+    # the second run's bootstrap wrote nothing new (the skeleton is on main already): no second bootstrap commit
+    assert log("main") == ["skills-factory[bot]|bootstrap: harbourline"] and "bootstrap_commit" not in run_json(tmp_path / "run2")
+
+
+def test_bootstrap_additions_on_a_repo_with_history_are_committed_to_main_not_left_for_the_feature_pr(tmp_path, monkeypatch):
+    """Second real greenfield run: the repo already had the docs-only bootstrap commit; the new skeleton files were
+    left uncommitted and would have travelled inside the feature PR. Now every bootstrap write lands on main."""
+    bindir = tmp_path / "bin"; bindir.mkdir()
+    (bindir / "gh").write_text(FAKE_GH_REPOS); (bindir / "gh").chmod(0o755)
+    bare = tmp_path / "remote.git"
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("GH_LOG", str(tmp_path / "gh.log")); monkeypatch.setenv("GH_BARE", str(bare)); monkeypatch.setenv("GH_TOKEN", "ghp_fake")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    # a repository that already holds one commit (a README), as GitHub's "initialize with README" leaves it
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    subprocess.run(["git", "-C", str(bare), "symbolic-ref", "HEAD", "refs/heads/main"], check=True)
+    seed = tmp_path / "seed"; subprocess.run(["git", "clone", "-q", str(bare), str(seed)], check=True)
+    (seed / "README.md").write_text("# new\n")
+    env = {**os.environ, **DEV_ENV}
+    for cmd in (["git", "checkout", "-q", "-b", "main"], ["git", "add", "-A"], ["git", "commit", "-q", "-m", "readme"], ["git", "push", "-q", "-u", "origin", "main"]):
+        subprocess.run(cmd, cwd=seed, env=env, check=True)
+    out = tmp_path / "run"
+    r = run_script(SCRIPT, "greenfield-app", "--repo", "acme/new", "--input", "name=harbourline", "--request", "A portal to track harbour orders",
+                   "--brief", str(FIX / "delivery-build" / "brief-greenfield.json"), "--out", str(out), "--provider", "dry", "--builder", "manual",
+                   "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-3")
+    assert r.returncode == 0, r.stdout + r.stderr
+    log = lambda ref: subprocess.run(["git", "log", "--format=%s", ref], cwd=bare, capture_output=True, text=True, check=True).stdout.splitlines()
+    assert log("main") == ["bootstrap: harbourline", "readme"]
+    assert log("deliver/r-gf-3")[1:] == log("main")           # the feature PR is one commit on top of the bootstrap
+    rj = run_json(out)
+    assert rj["bootstrap_commit"] == rj["base_sha"] and rj["base_sha"] != subprocess.run(["git", "rev-parse", "main~1"], cwd=bare, capture_output=True, text=True).stdout.strip()
 
 
 def test_request_only_run_stops_for_the_product_manager_and_resumes_with_the_prd(tmp_path):
@@ -1271,3 +1302,19 @@ def test_a_brief_with_stories_fills_the_prd_and_the_product_manager_is_not_asked
     assert steps["prd-refine"]["prd_source"] == "draft" and steps["prd-refine"]["skipped"] is True
     prd = (out / "evidence" / "01-requirements" / "prd-refine" / "prd-final.md").read_text()
     assert "### S1 — As Operations lead, I want: CSV export of the current order list" in prd and "[TO BE BASELINED" not in prd.split("## User stories")[1].split("## Experience")[0]
+
+
+def test_spec_tasks_with_parentheses_and_semicolons_reach_the_plan_intact(tmp_path):
+    """First greenfield run: acceptance text with `(…)` and `;` broke the inline `(accept: …; test: …)` encoding and
+    every task came back TBD. Tasks are now nested `- accept:` lines, which spec-to-plan reads field by field."""
+    brief = json.loads(BRIEF.read_text())
+    brief["tasks"][0]["accept"] = "GET /api/orders/export (CSV; RFC 4180) answers 200; one row per order (header first)"
+    brief["tasks"][0]["test"] = "unit: toCsv(rows) quotes a name with a comma; route answers text/csv"
+    b = tmp_path / "brief.json"; b.write_text(json.dumps(brief))
+    out = tmp_path / "paren"
+    r = deliver(out, "--builder", "none", "--approve-all", brief=b)
+    assert r.returncode == 4 and "stopped at stage 'build'" in r.stdout, r.stdout + r.stderr   # the plan was complete: straight to the builder
+    import csv
+    rows = list(csv.DictReader((out / "evidence" / "02-architecture" / "plan-refine" / "tasks.csv").open()))
+    assert rows[0]["acceptance"] == brief["tasks"][0]["accept"] and rows[0]["test"] == brief["tasks"][0]["test"]
+    assert "[TO BE BASELINED" not in "".join(rows[0].values())
