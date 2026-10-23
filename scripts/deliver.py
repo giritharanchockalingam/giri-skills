@@ -5,6 +5,7 @@
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
         --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
         [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID] \
+        [--no-baseline] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
 
 `--pipeline <name>` is an alias of the positional. With --run and --portal (API key in env SF_API_KEY) the executor
@@ -51,8 +52,18 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
 Gates per the doc (output / exit / approval / all / any / external). A failed gate stops the run with exit 1
 and the evidence so far.
 
-Evidence bundle under <out>/evidence/: stack-profile.json, one folder per stage (<nn>-<stage>/<step>/… outputs
-and gate.json) and EVIDENCE.md (the table that goes into the PR body). <out>/run.json records stages, steps,
+Brownfield baselines (the gate rule is "no NEW high findings from this change", never "the repo is clean"):
+before the build stage's code step applies anything, the executor runs every baseline-accepting skill a later
+step uses (nextjs-enterprise-conventions, perf-review-runner, ui-component-quality, tech-debt-audit-runner)
+against the untouched checkout — deterministic, provider none — and stores
+<out>/evidence/00-baseline/<skill>/{findings.csv,report.md}. `$profile.baselines.<check>` then resolves to that
+findings.csv when the stack profile records none (a baseline recorded in the repo, docs/baselines/<check>-findings.csv,
+still wins). A checkout that already carries uncommitted changes (--builder manual outside --dry) is baselined
+from `git archive HEAD`. EVIDENCE.md carries a Baseline row (findings per check before the change) and run.json
+`baseline`. --no-baseline skips all of it (every finding is then new); greenfield pipelines have nothing to baseline.
+
+Evidence bundle under <out>/evidence/: stack-profile.json, 00-baseline/ (see above), one folder per stage
+(<nn>-<stage>/<step>/… outputs and gate.json) and EVIDENCE.md (the table that goes into the PR body). <out>/run.json records stages, steps,
 exit codes, durations and the sha256 of every evidence file. --dry works on a copy of the repo under
 <out>/repo (git-initialised with a fixed identity, so the run is reproducible); otherwise the checkout is used
 in place. --resume continues an existing <out> from the first incomplete stage (completed steps are kept).
@@ -75,6 +86,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 import urllib.error
 import urllib.request
@@ -108,6 +120,10 @@ PLAN_MD, TASKS_CSV = "plan.md", "tasks.csv"
 PLAN_FILES = (PLAN_MD, TASKS_CSV)                   # what the plan-refine step produces (see step_plan_refine)
 PLAN_COLUMNS = ["id", "task", "acceptance", "test", "rollback", "files", "size", "repo_check"]   # spec-to-plan's tasks.csv
 PLAN_FILLED = ("acceptance", "test", "files")       # a scaffold is complete when none of these is TBD or empty in any task
+# skills whose `baseline` input is a findings.csv of recorded debt, and the stack-profile check each one is wired from
+BASELINE_SKILLS = {"build/nextjs-enterprise-conventions": "nextjs", "build/perf-review-runner": "perf",
+                   "build/ui-component-quality": "ui", "build/tech-debt-audit-runner": "debt"}
+BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 
 
 class StepError(Exception):
@@ -373,6 +389,7 @@ class Run:
         self.mode = "dry" if args.provider == "dry" else "real"
         self.portal: Portal | None = None
         self.profile_posted = False
+        self.baseline: dict = {}          # run.json `baseline`: {status, target, checks: {check: {skill, source, findings, high, path}}}
 
     # ---- references
     def resolve(self, value, where: str = ""):
@@ -393,6 +410,8 @@ class Run:
             v = self.profile.get(m.group(1))
             if m.group(2) is not None:
                 v = v.get(m.group(2)) if isinstance(v, dict) else None
+            if m.group(1) == "baselines" and m.group(2) and not v:
+                v = self.baseline_path(m.group(2))   # the profile records none: the pre-change findings this run captured
             return "" if v is None else v
         m = vp.STEP_REF.match(value)
         if m:
@@ -441,6 +460,122 @@ class Run:
                                                                           "test_runner", "e2e", "deploy_target",
                                                                           "migrations_dir", "monorepo_root")}
 
+    # ---- brownfield baselines (docs/DELIVERY-PIPELINES.md → Stack profile and baselines)
+    def baseline_path(self, check: str) -> str:
+        """The findings.csv this run captured for a check before the change, or "" when there is none."""
+        info = (self.baseline.get("checks") or {}).get(check) or {}
+        p = self.out / info["path"] if info.get("source") == "captured" and info.get("path") else None
+        return str(p) if p and p.is_file() else ""
+
+    def load_baseline(self) -> None:
+        """A resume: the baseline captured by the earlier run is read back, never re-run on a changed checkout."""
+        bj = self.evidence / BASELINE_DIR / "baseline.json"
+        if bj.is_file():
+            self.baseline = read_json(bj)
+            self.record["baseline"] = self.baseline
+
+    def _baseline_steps(self, stages: list[dict], from_stage: int, after_step: str) -> list[dict]:
+        """Skill steps later in the pipeline that take a baseline findings.csv, one per skill (first wiring wins)."""
+        seen, out = set(), []
+        for i, st in enumerate(stages):
+            if i < from_stage:
+                continue
+            passed = i > from_stage
+            for step in st["steps"]:
+                if i == from_stage and not passed:
+                    passed = step["id"] == after_step
+                    continue
+                skill = step.get("skill", "")
+                if step.get("kind") == "skill" and skill in BASELINE_SKILLS and "baseline" in (step.get("inputs") or {}) and skill not in seen:
+                    seen.add(skill)
+                    out.append(step)
+        return out
+
+    def _baseline_target(self) -> tuple[Path, str]:
+        """The untouched code: the checkout when clean (or not git), else HEAD exported with `git archive` — a manual
+        builder outside --dry hands over a checkout that already carries the change."""
+        repo = self.repo
+        if not shutil.which("git") or not is_git_root(repo):
+            return repo, "the checkout (not a git repository)"
+        code, _ = git(repo, "rev-parse", "--verify", "-q", "HEAD", ok=(0, 1))
+        _, dirty = git(repo, "status", "--porcelain", "--untracked-files=all")
+        if code != 0 or not dirty.strip():
+            return repo, "the checkout (clean)"
+        export = self.out / "baseline-repo"
+        if export.exists():
+            shutil.rmtree(export)
+        export.mkdir(parents=True)
+        r = subprocess.run(["git", "-c", "commit.gpgsign=false", "archive", "--format=tar", "HEAD"], cwd=str(repo),
+                           capture_output=True, env={**os.environ, **GIT_ENV})
+        if r.returncode != 0:
+            raise StepError(f"baseline: git archive HEAD: {r.stderr.decode('utf-8', 'replace').strip()[:200]}")
+        with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tar:
+            tar.extractall(export, filter="data") if hasattr(tarfile, "data_filter") else tar.extractall(export)
+        return export, "git archive HEAD: the checkout was not clean (scaffolded tests or a manual diff)"
+
+    @staticmethod
+    def _count_findings(path: Path) -> tuple[int, int]:
+        rows = list(csv.DictReader(io.StringIO(path.read_text(encoding="utf-8-sig"))))
+        rows = [r for r in rows if (r.get("rule") or "").strip() and not (r.get("rule") or "").startswith("#")]
+        return len(rows), sum(1 for r in rows if (r.get("severity") or "").strip() == "high")
+
+    def capture_baseline(self, stage_index: int, code_step: dict) -> None:
+        """Before the code step changes anything: run every baseline-accepting skill a later step uses against the
+        untouched code (provider none, deterministic) into evidence/00-baseline/<skill>/, so the gates later compare
+        against it. A check the stack profile already records (docs/baselines/<check>-findings.csv) is counted, not
+        re-captured — the profile wins. Idempotent: an existing baseline.json (a resume) is kept."""
+        if self.baseline.get("status"):
+            return
+        bdir = self.evidence / BASELINE_DIR
+        base = {"dir": str(bdir.relative_to(self.out)), "at": now(), "checks": {}}
+        steps = self._baseline_steps(self.spec["stages"], stage_index, code_step["id"])
+        if self.args.no_baseline:
+            base.update(status="skipped", reason="--no-baseline: every finding of the gate skills is new")
+        elif self.spec.get("mode") == "greenfield":
+            base.update(status="skipped", reason="greenfield: the repository is created by this run, there is nothing before the change")
+        elif not steps:
+            base.update(status="none", reason="no later step takes a baseline")
+        else:
+            target, how = self._baseline_target()
+            base.update(status="captured", target=str(target), target_source=how)
+            for step in steps:
+                skill = step["skill"]
+                check = BASELINE_SKILLS[skill]
+                recorded = (self.profile.get("baselines") or {}).get(check)
+                if recorded and Path(str(recorded)).is_file():
+                    n, high = self._count_findings(Path(str(recorded)))
+                    base["checks"][check] = {"skill": skill, "source": "profile", "path": str(recorded), "findings": n, "high": high,
+                                             "note": "recorded in the repository (docs/baselines); the profile wins"}
+                    continue
+                sdir = bdir / skill.rsplit("/", 1)[-1]
+                sdir.mkdir(parents=True, exist_ok=True)
+                argv = [sys.executable, "-I", str(HERE / "run_skill.py"), skill, "--out", str(sdir), "--provider", "none",
+                        "--input", f"target={target}"]
+                for k, v in (step.get("inputs") or {}).items():
+                    if k in ("target", "baseline"):
+                        continue
+                    val = self.resolve(v, f"baseline {skill} input '{k}'") if not (isinstance(v, str) and vp.STEP_REF.match(v)) else ""
+                    if val is not None and str(val) != "":
+                        argv += ["--input", f"{k}={val}"]
+                t0 = time.time()
+                r = subprocess.run(argv, capture_output=True, text=True, cwd=str(ROOT), timeout=1800)
+                (sdir / "deliver-step.log").write_text(r.stdout + r.stderr, encoding="utf-8")
+                findings = sdir / "findings.csv"
+                entry = {"skill": skill, "source": "captured", "exit": r.returncode, "duration_s": round(time.time() - t0, 3),
+                         "path": str(findings.relative_to(self.out)), "report": str((sdir / "report.md").relative_to(self.out))}
+                if r.returncode >= 2:
+                    raise StepError(f"baseline {skill} failed (exit {r.returncode}): "
+                                    f"{(r.stderr or r.stdout).strip().splitlines()[-1:] or ['']}"[:300])
+                if findings.is_file():
+                    entry["findings"], entry["high"] = self._count_findings(findings)
+                else:
+                    entry.update(source="error", path="", findings=None, high=None,
+                                 error=f"{skill} wrote no findings.csv (exit {r.returncode}): the gate runs without a baseline, every finding is new")
+                base["checks"][check] = entry
+        self.baseline = base
+        self.record["baseline"] = base
+        write_json(bdir / "baseline.json", base)
+
     # ---- steps
     def step_skill(self, step: dict, sdir: Path, rec: dict) -> None:
         argv = [sys.executable, "-I", str(HERE / "run_skill.py"), step["skill"], "--out", str(sdir),
@@ -477,8 +612,18 @@ class Run:
         if r.returncode >= 3:
             tail = (r.stderr or r.stdout).strip().splitlines()
             raise StepError(f"skill {step['skill']} failed (exit {r.returncode}): {tail[-1] if tail else ''}"[:300])
+        fcsv = sdir / "findings.csv"
+        if fcsv.is_file():   # the lint skills: what is new against the baseline is what the gate judges
+            rows = [row for row in csv.DictReader(io.StringIO(fcsv.read_text(encoding="utf-8-sig")))
+                    if (row.get("rule") or "").strip() and not (row.get("rule") or "").startswith("#")]
+            rec["findings"] = len(rows)
+            rec["known"] = sum(1 for row in rows if (row.get("status") or "") == "known")
+            rec["new_high"] = [f"{row['rule']} {row.get('file', '')}:{row.get('line', '')}" for row in rows
+                               if (row.get("severity") or "") == "high" and (row.get("status") or "new") != "known"][:12]
         if r.returncode == 1 and step.get("gate"):
-            raise StepError(f"gate step {step['skill']} said no (exit 1): " + "; ".join(rec.get("failed_checks") or ["see report"])[:300])
+            why = (f"{len(rec['new_high'])} new high finding(s) against the baseline: " + "; ".join(rec["new_high"])) if rec.get("new_high") \
+                else "; ".join(rec.get("failed_checks") or ["see report"])
+            raise StepError(f"gate step {step['skill']} said no (exit 1): {why}"[:400])
 
     def step_compose(self, step: dict, sdir: Path, rec: dict) -> None:
         fn = DERIVE.get(str(step.get("derive")))
@@ -963,6 +1108,7 @@ class Run:
                 + (" · DRY RUN" if self.args.dry else ""), "",
                 f"Request: {self.inputs.get('request', '')}", "",
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
+                self.baseline_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
         for s in self.record.get("stages", []):
             g = s.get("gate") or {}
@@ -971,6 +1117,23 @@ class Run:
             rows.append(f"| {s['id']} | {s['role']} | {g.get('kind', '')} | {verdict} | {ev} |")
         rows += ["", "Gate detail per stage is in `<stage>/gate.json`; step logs in `<stage>/<step>/`.", ""]
         (self.evidence / "EVIDENCE.md").write_text("\n".join(rows), encoding="utf-8")
+
+    def baseline_row(self) -> str:
+        """The Baseline line of EVIDENCE.md: findings per check before the change (the gates fail only on new high ones)."""
+        b = self.record.get("baseline") or self.baseline
+        if not b:
+            return "Baseline (before the change): not captured yet — taken before the build stage's code step."
+        if b.get("status") != "captured":
+            return f"Baseline (before the change): {b.get('status', '')} — {b.get('reason', '')}"
+        cells = []
+        for check, e in sorted((b.get("checks") or {}).items()):
+            if e.get("source") == "error":
+                cells.append(f"{check}: not available ({e.get('error', '')})")
+                continue
+            link = f"[findings.csv]({e['path']})" if e.get("source") == "captured" else "repo-recorded (docs/baselines)"
+            cells.append(f"{check}: {e.get('findings', 0)} finding(s), {e.get('high', 0)} high — {link}")
+        return "Baseline (before the change, " + b.get("target_source", "") + "): " + ("; ".join(cells) or "no checks") + \
+            ". Gates fail only on findings that are new against it."
 
     def hash_files(self) -> dict:
         files = {}
@@ -1092,6 +1255,9 @@ class Run:
                         self._finish_stage(srec, stage)
                         return "awaiting_approval", EXIT_APPROVAL
                 elif step["kind"] == "agent":
+                    if not (step.get("produces") or []):   # the code step: baseline the untouched code first
+                        self.capture_baseline(n - 1, step)
+                        rec["baseline"] = self.baseline.get("status", "")
                     if not self.step_agent(step, sdir, rec):
                         rec["duration_s"] = round(time.time() - t0, 3)
                         srec["steps"].append(rec)
@@ -1282,6 +1448,7 @@ def build_args(argv=None):
     ap.add_argument("--plan", metavar="DIR", help="copy DIR/plan.md and DIR/tasks.csv (the architect's refined plan) to <out>/build/plan/ before running: the plan-refine step takes them instead of asking")
     ap.add_argument("--dry", action="store_true", help="work on a copy of the repo under <out>/repo; the pr step opens nothing")
     ap.add_argument("--resume", action="store_true", help="continue an existing run from the first incomplete stage")
+    ap.add_argument("--no-baseline", action="store_true", help="do not baseline the untouched checkout before the code step: the gate skills then treat every finding as new (brownfield debt fails the gate)")
     ap.add_argument("--run-id", help="run id (default: derived from pipeline + request + repo, with a time suffix outside --dry)")
     ap.add_argument("--run", metavar="UUID", help="portal delivery run to post stage records to (with --portal; API key in env SF_API_KEY)")
     ap.add_argument("--portal", metavar="URL", help="portal base URL, e.g. https://studio.example.com")
@@ -1397,6 +1564,7 @@ def main(argv=None) -> int:
         run.post_stage({"id": first_pending, "status": "failed", "error": f"prepare repo: {e}"[:4000]}, started_at=now(), finished_at=now())
         return EXIT_FAIL
     run.record["repo"] = str(run.repo)
+    run.load_baseline()
 
     prev_stages = {s["id"]: s for s in run.record["stages"]}
     # restore step dirs of stages already passed (references into them must resolve on resume)

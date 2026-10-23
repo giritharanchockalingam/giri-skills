@@ -228,3 +228,18 @@ def test_quiet_and_generated_dirs_skipped(tmp_path):
                      "--report", str(tmp_path / "r.md"), "--quiet")
     assert res.returncode == 0 and res.stdout.count("\n") == 1
     assert "in 1 file(s)" in (tmp_path / "r.md").read_text(encoding="utf-8")
+
+
+def test_snippet_cut_at_width_with_trailing_space_still_matches_unchanged_file(tmp_path):
+    """Regression: the snippet is cut to 120 chars after stripping, so it can end in a space; the baseline CSV
+    round-trip strips it. An unchanged file must come back fully `known` (both sides normalised the same way)."""
+    base = 'const { data } = await supabase.from("orders").select("*").limit(10); //'
+    line = base.ljust(119, "-") + " note"                                   # char 120 is a space
+    root = repo(tmp_path, {"app/orders/page.tsx": line + "\n"})
+    first = tmp_path / "first"
+    first.mkdir()
+    res, rows, _ = review(first, root)
+    assert res.returncode == 1 and [r["rule"] for r in rows] == ["PF3"] and rows[0]["snippet"].endswith(" ")
+    res, rows, md = review(tmp_path, root, "--baseline", str(first / "findings.csv"))
+    assert res.returncode == 0, res.stderr
+    assert [r["status"] for r in rows] == ["known"] and "0 new, 1 known from the baseline, 0 resolved" in md

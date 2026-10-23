@@ -70,3 +70,29 @@ def test_bad_baseline_fails(tmp_path):
     assert res.returncode == 1 and "baseline lacks column" in res.stderr
     res, _, _ = lint(tmp_path, FX / "repo-clean", "--baseline", str(tmp_path / "none.csv"))
     assert res.returncode == 1 and "baseline not found" in res.stderr
+
+
+def test_snippet_cut_at_width_with_trailing_space_still_matches_unchanged_file(tmp_path):
+    """Regression: a snippet is cut to 120 chars AFTER stripping, so a live snippet can end in a space while the
+    baseline CSV round-trip strips it — an unchanged file must still come back fully `known`."""
+    repo = tmp_path / "repo"
+    (repo / "app").mkdir(parents=True)
+    line = "const q = sql`select a".ljust(119, "x") + " b`;"           # char 120 is a space: the cut snippet ends in " "
+    (repo / "app/query.js").write_text(line + "\n", encoding="utf-8")
+    first = tmp_path / "first"
+    first.mkdir()
+    res, rows, _ = lint(first, repo)
+    assert res.returncode == 1 and rows[0]["rule"] == "NX5" and rows[0]["snippet"].endswith(" ")
+    res, rows, md = lint(tmp_path, repo, "--baseline", str(first / "findings.csv"))
+    assert res.returncode == 0, res.stderr
+    assert [r["status"] for r in rows] == ["known"] and "0 new, 1 known from the baseline, 0 resolved" in md
+
+
+def test_baseline_snippet_whitespace_runs_are_collapsed(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "app").mkdir(parents=True)
+    (repo / "app/page.tsx").write_text('console.log("x",   y);\n', encoding="utf-8")
+    base = tmp_path / "base.csv"
+    base.write_text('rule,file,line,snippet,severity\nNX2,app/page.tsx,1,"console.log(""x"", y); ",medium\n', encoding="utf-8")
+    _, rows, _ = lint(tmp_path, repo, "--baseline", str(base))
+    assert [r["status"] for r in rows] == ["known"]

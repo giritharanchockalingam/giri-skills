@@ -279,3 +279,17 @@ def test_js_only_repo_without_jsx_reports_clear_error(tmp_path):
     (root / "api.ts").write_text("export const b = (x: number) => x < 2;\n", encoding="utf-8")
     res, _, _, _ = lint(tmp_path, root)
     assert res.returncode == 1 and "no React component files" in res.stderr and ".js/.ts files containing JSX" in res.stderr
+
+
+def test_snippet_cut_at_width_with_trailing_space_still_matches_unchanged_file(tmp_path):
+    """Regression: the snippet is cut to 120 chars after stripping, so it can end in a space; the baseline CSV
+    round-trip strips it. An unchanged file must come back fully `known` (both sides normalised the same way)."""
+    line = 'return <img src="/a.png" className="'.ljust(119, "x") + ' h-4" />;'   # char 120 is a space
+    root = repo(tmp_path, "Logo.tsx", f"export function Logo() {{\n  {line}\n}}\n")
+    first = tmp_path / "first"
+    first.mkdir()
+    res, rows, _, _ = lint(first, root)
+    assert res.returncode == 1 and [r["rule"] for r in rows] == ["UI1"] and rows[0]["snippet"].endswith(" ")
+    res, rows, md, _ = lint(tmp_path, root, "--baseline", str(first / "findings.csv"))
+    assert res.returncode == 0, res.stderr
+    assert [r["status"] for r in rows] == ["known"] and "0 new, 1 known from the baseline, 0 resolved" in md

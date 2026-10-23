@@ -311,6 +311,12 @@ def lint_file(text: str, rel: str) -> list[dict]:
     return out
 
 
+def norm_snippet(s: str) -> str:
+    """One form for both sides of a baseline match: a snippet is cut at a fixed width AFTER stripping, so a live
+    one can end in whitespace (`m.id, `) while the CSV round-trip strips it — strip and collapse internal runs."""
+    return " ".join(str(s or "").split())
+
+
 def load_baseline(path: Path) -> list[tuple[str, str, str]]:
     if not path.is_file():
         die(f"baseline not found: {path}")
@@ -325,9 +331,9 @@ def load_baseline(path: Path) -> list[tuple[str, str, str]]:
 
 def apply_baseline(findings: list[dict], baseline: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
     """Mark each finding known/new (one baseline row matches one finding); return the unmatched (resolved) rows."""
-    pool = list(baseline)
+    pool = [(r, fl, norm_snippet(s)) for r, fl, s in baseline]
     for f in findings:
-        key = (f["rule"], f["file"], f["snippet"])
+        key = (f["rule"], f["file"], norm_snippet(f["snippet"]))
         if key in pool:
             pool.remove(key)
             f["status"] = "known"

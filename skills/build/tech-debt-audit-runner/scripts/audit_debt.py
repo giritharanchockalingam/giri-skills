@@ -440,6 +440,12 @@ def finding(rule: str, rel: str, line: int, snippet: str, severity: str | None =
 
 # ------------------------------------------------------------------ baseline / owners
 
+def norm_snippet(s: str) -> str:
+    """One form for both sides of a baseline match: a snippet is cut at a fixed width AFTER stripping, so a live
+    one can end in whitespace (`m.id, `) while the CSV round-trip strips it — strip and collapse internal runs."""
+    return " ".join(str(s or "").split())
+
+
 def load_baseline(path: Path) -> list[tuple[str, str, str]]:
     if not path.is_file():
         die(f"baseline not found: {path}")
@@ -458,7 +464,7 @@ def load_baseline(path: Path) -> list[tuple[str, str, str]]:
 
 
 def baseline_key(rule: str, file: str, snippet: str) -> tuple:
-    return (rule, file) if rule in FILE_LEVEL else (rule, file, snippet)
+    return (rule, file) if rule in FILE_LEVEL else (rule, file, norm_snippet(snippet))
 
 
 def apply_baseline(findings: list[dict], baseline: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
