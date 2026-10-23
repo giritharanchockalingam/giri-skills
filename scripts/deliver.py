@@ -326,8 +326,15 @@ def derive_brief(inputs: dict, sdir: Path) -> None:
 
 
 def _task_bullet(text: str, fields: dict) -> str:
-    inline = "; ".join(f"{k}: {v}" for k, v in fields.items() if str(v).strip())
-    return f"- {text}" + (f" ({inline})" if inline else "")
+    """One task for spec-to-plan: the task line, then one indented `- <field>: <value>` line per field. Nested lines
+    (not the inline `(accept: …; test: …)` form) because real acceptance text carries parentheses and semicolons —
+    found by the first greenfield run, where every task came back TBD."""
+    lines = [f"- {text}"]
+    for k, v in fields.items():
+        v = " ".join(str(v).split())
+        if v:
+            lines.append(f"  - {k}: {v}")
+    return "\n".join(lines)
 
 
 def prd_stories(md: str) -> list[dict]:
@@ -1673,10 +1680,15 @@ def commit_bootstrap(run: "Run") -> None:
     origin), so the feature the later stages build is a pull request ON TOP of a reviewable base rather than a PR
     against nothing. base_sha is that commit. Idempotent: a repository that already has a commit is left alone."""
     repo = run.repo
-    if run.args.dry or run.spec.get("mode") != "greenfield" or not shutil.which("git") or not is_git_root(repo) or head_sha(repo):
+    if run.args.dry or run.spec.get("mode") != "greenfield" or not shutil.which("git") or not is_git_root(repo):
         return
     env = {**os.environ, **BOT_GIT_ENV, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
     git(repo, "add", "-A", env=env)
+    _, dirty = git(repo, "status", "--porcelain", env=env)
+    if head_sha(repo) and not dirty.strip():
+        return   # nothing new from the bootstrap stage (a repository that already carries the scaffold)
+    # a repository with earlier commits still gets its scaffold additions committed to main (second greenfield run,
+    # or a repository that held a README): the feature PR carries the feature, not the skeleton
     git(repo, "commit", "-q", "-m", f"bootstrap: {run.inputs.get('name') or repo.name}", "-m",
         f"Scaffold by giri-skills pipeline {run.spec['name']} run {run.run_id}", env=env)
     sha = head_sha(repo)

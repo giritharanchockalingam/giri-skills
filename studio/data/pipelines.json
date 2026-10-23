@@ -293,6 +293,12 @@
     "from": "project name"
    },
    {
+    "name": "stack",
+    "type": "string",
+    "required": false,
+    "from": "application skeleton project-bootstrap writes when the directory has no package.json: nextjs-js (default) or nextjs-ts"
+   },
+   {
     "name": "request",
     "type": "text",
     "required": true,

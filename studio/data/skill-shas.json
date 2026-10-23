@@ -51,7 +51,7 @@
  "build/observability-setup": "c2bf13839e05bb5710d43cafcc75f230588fd702320b6102eff992d0528b66a1",
  "build/perf-review-runner": "9f46cdeeebec99786bf19fe7fc75b328ea1a77053cc359f5c64ed6417767d60f",
  "build/product-spec-prd": "746b869782be885d986191b5a7b7606ee2fde2da995aa764ba103b726c764b3c",
- "build/project-bootstrap": "19e7b1b2acc23ac55d5d5866fa604469e1f7208185f9e390a2b04c0f531566c3",
+ "build/project-bootstrap": "d9ae010c20e5359b0ddaa4162a635de9fd9e4d43307b00451ab58c224d041bc5",
  "build/safe-fix": "cd44514b6eb9d6aaca06dd8112e8daea4fc3441d88cf0b0c3cff6e7cf675da31",
  "build/security-review": "68fd742f5f586ebf8b9e0fd013ac2d4c7b894ce58322366799641c2d32e9d896",
  "build/spec-to-plan": "411a0ab1c1a55bea32191a4fe7cf16ff33936013e4f110aab59cd6bdf7d8d673",
