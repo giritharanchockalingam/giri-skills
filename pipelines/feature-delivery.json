@@ -69,7 +69,7 @@
       "id": "evaluate", "adlc_stage": "evaluate", "role": "ai-quality-red-team",
       "steps": [
         { "id": "review",   "kind": "skill", "skill": "build/code-review-runner",  "inputs": { "diff": "$steps.code:diff.patch", "spec": "$steps.prd:prd-final.md" } },
-        { "id": "security", "kind": "skill", "skill": "build/security-review",     "inputs": { "diff": "$steps.code:diff.patch", "target": "$repo", "draft_only": "$run.draft_only" } },
+        { "id": "security", "kind": "skill", "skill": "build/security-review",     "inputs": { "diff": "$steps.code:diff.patch", "draft_only": "$run.draft_only" } },
         { "id": "perf",     "kind": "skill", "skill": "build/perf-review-runner",  "inputs": { "target": "$repo", "baseline": "$profile.baselines.perf" } },
         { "id": "ui",       "kind": "skill", "skill": "build/ui-component-quality", "inputs": { "target": "$repo", "baseline": "$profile.baselines.ui" } }
       ],

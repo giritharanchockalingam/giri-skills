@@ -100,7 +100,7 @@ LIBRARY: dict[str, list[dict]] = {
          "gate": {"kind": "output", "step": "review", "file": "review.md", "check": "contains:\"Verdict: **PASS**\""},
          "evidence": ["$steps.review:review.md"]},
         {"id": "security", "kind": "skill", "skill": "build/security-review", "requires": ["code"],
-         "inputs": {"diff": "$steps.code:diff.patch", "target": "$repo", "draft_only": "$run.draft_only"},
+         "inputs": {"diff": "$steps.code:diff.patch", "draft_only": "$run.draft_only"},   # brownfield: the gate judges the change; greenfield adds target below
          "gate": {"kind": "exit", "step": "security"}, "evidence": ["$steps.security:security-review.md"]},
         {"id": "perf", "kind": "skill", "skill": "build/perf-review-runner",
          "inputs": {"target": "$repo", "baseline": "$profile.baselines.perf"},
@@ -283,6 +283,8 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
                     if isinstance(v, str) and v.startswith("$steps.") and not available(_step_of(v)):
                         continue   # an optional input whose step is absent (required ones were checked before)
                     inputs[k] = v
+                if st["id"] == "security" and mode == "greenfield":
+                    inputs["target"] = "$repo"   # a new app has no prior posture: the whole repo is the change
                 out["inputs"] = inputs
             if st["kind"] == "compose":
                 out["outputs"] = list(st["outputs"])
