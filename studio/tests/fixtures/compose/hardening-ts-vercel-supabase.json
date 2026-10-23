@@ -273,7 +273,6 @@
             "skill": "build/security-review",
             "inputs": {
               "diff": "$steps.code:diff.patch",
-              "target": "$repo",
               "draft_only": "$run.draft_only"
             }
           },

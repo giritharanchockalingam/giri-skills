@@ -73,7 +73,7 @@ export const LIBRARY: Record<string, LibStep[]> = {
   evaluate: [
     { id: "review", kind: "skill", skill: "build/code-review-runner", requires: ["code"], optional: ["prd"], inputs: { diff: "$steps.code:diff.patch", spec: "$steps.prd:prd-final.md" },
       gate: { kind: "output", step: "review", file: "review.md", check: "contains:\"Verdict: **PASS**\"" }, evidence: ["$steps.review:review.md"] },
-    { id: "security", kind: "skill", skill: "build/security-review", requires: ["code"], inputs: { diff: "$steps.code:diff.patch", target: "$repo", draft_only: "$run.draft_only" },
+    { id: "security", kind: "skill", skill: "build/security-review", requires: ["code"], inputs: { diff: "$steps.code:diff.patch", draft_only: "$run.draft_only" },   // brownfield: the gate judges the change; greenfield adds target below
       gate: { kind: "exit", step: "security" }, evidence: ["$steps.security:security-review.md"] },
     { id: "perf", kind: "skill", skill: "build/perf-review-runner", inputs: { target: "$repo", baseline: "$profile.baselines.perf" }, gate: { kind: "exit", step: "perf" }, evidence: ["$steps.perf:report.md"] },
     { id: "ui", kind: "skill", skill: "build/ui-component-quality", inputs: { target: "$repo", baseline: "$profile.baselines.ui" }, gate: { kind: "exit", step: "ui" }, evidence: ["$steps.ui:report.md"] },
@@ -186,6 +186,7 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
           if (isStepRef(v) && !available(stepOf(v))) continue;
           inputs[k] = v;
         }
+        if (st.id === "security" && mode === "greenfield") inputs.target = "$repo";   // a new app has no prior posture: the whole repo is the change
         out.inputs = inputs;
       }
       if (st.kind === "compose") out.outputs = [...st.outputs!];
