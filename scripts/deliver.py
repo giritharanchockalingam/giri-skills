@@ -1676,6 +1676,14 @@ class Run:
         # the stale review.md/findings.csv and failed again).
         keep = (prev or {}).get("status") in ("awaiting_approval", "awaiting_builder")
         done_steps = {s["id"]: s for s in (prev or {}).get("steps", []) if keep and s.get("status") in ("ok", "approved") and not s.get("exit")}
+        if (prev or {}).get("status") == "failed":
+            # a model-written document that the gate refused is not "supplied by the product manager/architect": it is
+            # removed before the step runs again, so the model gets another turn instead of the stale file being
+            # re-judged (found on the first local-model run). Files a person dropped (manual) are never touched.
+            for s in (prev or {}).get("steps", []):
+                if s.get("llm") and s.get("kind") == "agent":
+                    for name in (next((st.get("produces") or [] for st in stage["steps"] if st["id"] == s["id"]), [])):
+                        (stage_dir / s["id"] / name).unlink(missing_ok=True)
         self.stage_started = srec["started_at"]
         t_stage = time.time()
         halted = ""

@@ -1531,3 +1531,23 @@ def test_openai_compat_document_step_feeds_the_gates_refusal_back_as_a_repair_ro
     assert "keep every one of its headings" in prd_calls[0]["body"]["messages"][0]["content"]   # the system prompt now says so
     steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
     assert steps["prd-refine"]["llm"]["rounds"] == 2 and stage_status(out)["requirements"] == "passed"
+
+
+def test_resume_after_the_gate_refused_a_model_written_document_gives_the_model_another_turn(tmp_path, monkeypatch):
+    """First local-model run: the gate refused the model's PRD, the resume found prd-final.md already in the step dir,
+    took it as 'supplied by the product manager' and failed the same way without calling the model."""
+    llm_env(monkeypatch)
+    bad = file_block("prd-final.md", "# Product Specification\n\n## Problem Statement\nx\n")
+    stub = StubLLM({"prd-refine": [bad, bad, bad], "code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-stale"
+        r = openai_compat(out, stub, "--rounds", "1")
+        assert r.returncode == 1 and stage_status(out) == {"requirements": "failed"}, r.stdout + r.stderr
+        calls_before = len(stub.calls)
+        stub.replies["prd-refine"] = [file_block("prd-final.md", PRD_FIX.read_text())]
+        r = openai_compat(out, stub, "--rounds", "1", "--resume")
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert len(stub.calls) > calls_before                  # the model was asked again, the stale file was not re-judged
+    assert stage_status(out)["requirements"] == "passed"
