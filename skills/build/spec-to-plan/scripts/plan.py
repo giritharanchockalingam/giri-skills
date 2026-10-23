@@ -114,7 +114,7 @@ MIGRATIONS_DIR = "supabase/migrations/"
 def task_paths(files: str) -> list[str]:
     if files == TBD:
         return []
-    return [p.strip().strip("`").lstrip("./") for p in re.split(r"[,;]", files) if p.strip().strip("`")]
+    return [re.sub(r"^(?:\./)+", "", p.strip().strip("`")) for p in re.split(r"[,;]", files) if p.strip().strip("`")]
 
 
 def repo_check(tasks: list[dict], repo: Path) -> list[str]:

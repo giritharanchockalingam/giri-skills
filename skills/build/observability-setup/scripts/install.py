@@ -184,7 +184,7 @@ def main() -> int:
     ap.add_argument("--target", required=True, help="repo root (created if absent)")
     ap.add_argument("--dry-run", action="store_true", help="report only; write nothing")
     ap.add_argument("--project", default="", help="project name for docs/observability.md (default: target dir name)")
-    ap.add_argument("--flavour", choices=["ts", "js"], default="", help="override the detected language flavour")
+    ap.add_argument("--flavour", default="", help="ts|js: override the detected language flavour (pipelines pass the stack profile's flavour; any other value is ignored)")
     ap.add_argument("--report-json", default="install-report.json")
     ap.add_argument("--report-md", default="install-report.md")
     a = ap.parse_args()
@@ -197,9 +197,12 @@ def main() -> int:
         die(f"assets missing: {missing}")
     project = a.project or target.name
     detected, evidence = detect_flavour(target)
-    flavour = a.flavour or detected
-    if a.flavour:
-        evidence = f"--flavour {a.flavour} (detected: {detected}, {evidence})"
+    given = a.flavour.strip().lower()
+    flavour = given if given in ("ts", "js") else detected
+    if given in ("ts", "js"):
+        evidence = f"--flavour {given} (detected: {detected}, {evidence})"
+    elif given:
+        evidence += f" (--flavour {given!r} ignored: not ts or js)"
 
     plan = build_plan(target, flavour, project)
     conflicts = [i for i in plan if i["action"] == "conflict"]

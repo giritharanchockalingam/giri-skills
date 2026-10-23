@@ -27,7 +27,11 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
   agent     the code step (no `produces`):
             --builder none        -> needs_builder.json, exit 4: a person or IDE agent writes the code and
                                      drops the diff at <out>/build/diff.patch, then re-runs with --resume
-            --builder manual      -> <out>/build/diff.patch must exist (nothing is applied; it is recorded)
+            --builder manual      -> <out>/build/diff.patch must exist; it is recorded and, outside --dry, applied to the
+                                     checkout with `git apply --index` so the later gates and the pr step see the change
+                                     (refused with exit 1 when it touches files outside files.txt + test paths or does
+                                     not apply cleanly; a diff the checkout already carries is skipped — idempotent on
+                                     --resume); evidence: <step>/applied.json (files, git diff --stat)
             --builder claude-code -> `claude -p` on the checkout with a prompt built from the plan, the test
                                      plan, files.txt and the constraint files; `git diff` is captured as diff.patch
             the files step (`produces: ["files.txt"]`): the files the change will touch, one repo-relative
@@ -55,12 +59,15 @@ and the evidence so far.
 Brownfield baselines (the gate rule is "no NEW high findings from this change", never "the repo is clean"):
 before the build stage's code step applies anything, the executor runs every baseline-accepting skill a later
 step uses (nextjs-enterprise-conventions, perf-review-runner, ui-component-quality, tech-debt-audit-runner)
-against the untouched checkout — deterministic, provider none — and stores
+against the pre-change tree — deterministic, provider none — and stores
 <out>/evidence/00-baseline/<skill>/{findings.csv,report.md}. `$profile.baselines.<check>` then resolves to that
 findings.csv when the stack profile records none (a baseline recorded in the repo, docs/baselines/<check>-findings.csv,
-still wins). A checkout that already carries uncommitted changes (--builder manual outside --dry) is baselined
-from `git archive HEAD`. EVIDENCE.md carries a Baseline row (findings per check before the change) and run.json
-`baseline`. --no-baseline skips all of it (every finding is then new); greenfield pipelines have nothing to baseline.
+still wins). The pre-change tree is `git archive` of the recorded base commit (run.json `base_sha`: HEAD when the run
+started; the change stays uncommitted until the pr step, so HEAD is pre-change) into <out>/baseline-repo — never the
+working copy, no stash. A run resumed at any stage at or past the code step with no baseline yet takes it first.
+EVIDENCE.md carries a Baseline row (findings per check before the change) and run.json `baseline`. A gate that fails
+on new high findings names the full count, the first 10 and "… and M more". --no-baseline skips all of it (every
+finding is then new); greenfield pipelines have nothing to baseline.
 
 Evidence bundle under <out>/evidence/: stack-profile.json, 00-baseline/ (see above), one folder per stage
 (<nn>-<stage>/<step>/… outputs and gate.json) and EVIDENCE.md (the table that goes into the PR body). <out>/run.json records stages, steps,
@@ -124,10 +131,21 @@ PLAN_FILLED = ("acceptance", "test", "files")       # a scaffold is complete whe
 BASELINE_SKILLS = {"build/nextjs-enterprise-conventions": "nextjs", "build/perf-review-runner": "perf",
                    "build/ui-component-quality": "ui", "build/tech-debt-audit-runner": "debt"}
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
+NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
+GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
+TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|e2e)/")   # test files the code step may add beside files.txt
 
 
 class StepError(Exception):
     pass
+
+
+def new_high_detail(count: int, listed: list[str]) -> str:
+    """'N new high finding(s) against the baseline: a; b; … and M more' — the count is always the real total."""
+    shown = listed[:NEW_HIGH_LISTED]
+    more = count - len(shown)
+    return (f"{count} new high finding(s) against the baseline: " + "; ".join(shown)
+            + (f" … and {more} more" if more > 0 else ""))
 
 
 class WiringError(StepError):
@@ -492,26 +510,47 @@ class Run:
         return out
 
     def _baseline_target(self) -> tuple[Path, str]:
-        """The untouched code: the checkout when clean (or not git), else HEAD exported with `git archive` — a manual
-        builder outside --dry hands over a checkout that already carries the change."""
+        """The pre-change tree, never the working copy: the recorded base commit (run.json `base_sha`, HEAD when the
+        run started — the change is applied uncommitted, so HEAD stays pre-change until the pr step commits it)
+        exported with `git archive` into <out>/baseline-repo. No git / no commit yet: the checkout itself, provided
+        it is clean. No stash, nothing on the checkout is touched."""
         repo = self.repo
         if not shutil.which("git") or not is_git_root(repo):
             return repo, "the checkout (not a git repository)"
-        code, _ = git(repo, "rev-parse", "--verify", "-q", "HEAD", ok=(0, 1))
-        _, dirty = git(repo, "status", "--porcelain", "--untracked-files=all")
-        if code != 0 or not dirty.strip():
-            return repo, "the checkout (clean)"
+        code, head = git(repo, "rev-parse", "--verify", "-q", "HEAD", ok=(0, 1))
+        if code != 0:
+            return repo, "the checkout (no commit yet)"
+        base = str(self.record.get("base_sha") or "").strip() or head.strip()
         export = self.out / "baseline-repo"
         if export.exists():
             shutil.rmtree(export)
         export.mkdir(parents=True)
-        r = subprocess.run(["git", "-c", "commit.gpgsign=false", "archive", "--format=tar", "HEAD"], cwd=str(repo),
+        r = subprocess.run(["git", "-c", "commit.gpgsign=false", "archive", "--format=tar", base], cwd=str(repo),
                            capture_output=True, env={**os.environ, **GIT_ENV})
         if r.returncode != 0:
-            raise StepError(f"baseline: git archive HEAD: {r.stderr.decode('utf-8', 'replace').strip()[:200]}")
+            raise StepError(f"baseline: git archive {base[:12]}: {r.stderr.decode('utf-8', 'replace').strip()[:200]}")
         with tarfile.open(fileobj=io.BytesIO(r.stdout)) as tar:
             tar.extractall(export, filter="data") if hasattr(tarfile, "data_filter") else tar.extractall(export)
-        return export, "git archive HEAD: the checkout was not clean (scaffolded tests or a manual diff)"
+        which = "HEAD" if base == head.strip() else f"the recorded base commit {base[:12]}"
+        return export, f"git archive {which} (the pre-change tree; the checkout itself is never linted for the baseline)"
+
+    def code_step_index(self) -> tuple[int, dict | None]:
+        """(stage index, step) of the code step — the agent step with no `produces` — or (-1, None)."""
+        for i, st in enumerate(self.spec["stages"]):
+            for step in st["steps"]:
+                if step.get("kind") == "agent" and not (step.get("produces") or []):
+                    return i, step
+        return -1, None
+
+    def ensure_baseline(self, stage_index: int) -> None:
+        """A stage at or after the code step's is about to run and no baseline exists (a resume at a later step, or a
+        run started before baselines existed): take it now — always from the pre-change tree, never the checkout."""
+        if self.baseline.get("status"):
+            return
+        ci, code_step = self.code_step_index()
+        if code_step is None or stage_index < ci:
+            return
+        self.capture_baseline(ci, code_step)
 
     @staticmethod
     def _count_findings(path: Path) -> tuple[int, int]:
@@ -618,12 +657,14 @@ class Run:
                     if (row.get("rule") or "").strip() and not (row.get("rule") or "").startswith("#")]
             rec["findings"] = len(rows)
             rec["known"] = sum(1 for row in rows if (row.get("status") or "") == "known")
-            rec["new_high"] = [f"{row['rule']} {row.get('file', '')}:{row.get('line', '')}" for row in rows
-                               if (row.get("severity") or "") == "high" and (row.get("status") or "new") != "known"][:12]
+            new_high = [f"{row['rule']} {row.get('file', '')}:{row.get('line', '')}" for row in rows
+                        if (row.get("severity") or "") == "high" and (row.get("status") or "new") != "known"]
+            rec["new_high_count"] = len(new_high)
+            rec["new_high"] = new_high[:NEW_HIGH_LISTED]
         if r.returncode == 1 and step.get("gate"):
-            why = (f"{len(rec['new_high'])} new high finding(s) against the baseline: " + "; ".join(rec["new_high"])) if rec.get("new_high") \
-                else "; ".join(rec.get("failed_checks") or ["see report"])
-            raise StepError(f"gate step {step['skill']} said no (exit 1): {why}"[:400])
+            why = (new_high_detail(rec["new_high_count"], rec["new_high"]) if rec.get("new_high_count")
+                   else "; ".join(rec.get("failed_checks") or ["see report"]))
+            raise StepError(f"gate step {step['skill']} said no (exit 1): {why}"[:GATE_DETAIL_LIMIT])
 
     def step_compose(self, step: dict, sdir: Path, rec: dict) -> None:
         fn = DERIVE.get(str(step.get("derive")))
@@ -696,7 +737,7 @@ class Run:
         changed = sorted({m.group(1) for m in re.finditer(r"^\+\+\+ b/(\S+)", text, re.M)}
                          | {m.group(1) for m in re.finditer(r"^--- a/(\S+)", text, re.M)})
         plan_files, source = self._allowed_files(plan_path, files_path)
-        outside = [f for f in changed if plan_files and f not in plan_files and not re.search(r"(^|/)(tests?|__tests__|e2e)/", f)]
+        outside = [f for f in changed if plan_files and f not in plan_files and not TEST_PATH_RE.search(f)]
         shutil.copy(patch, sdir / "diff.patch")
         write_json(sdir / "files-changed.json", {"files": changed, "plan_files": plan_files, "plan_files_source": source, "outside_plan": outside,
                                                  "lines_added": sum(1 for ln in text.splitlines() if ln.startswith("+") and not ln.startswith("+++")),
@@ -941,6 +982,59 @@ class Run:
         finally:
             clean.unlink(missing_ok=True)
 
+    @staticmethod
+    def _patch_files(text: str) -> list[str]:
+        """The repo-relative paths a unified diff touches (creates, modifies, deletes, renames)."""
+        return sorted({m.group(1) for m in re.finditer(r"^\+\+\+ b/(\S+)", text, re.M)}
+                      | {m.group(1) for m in re.finditer(r"^--- a/(\S+)", text, re.M)})
+
+    def _apply_manual(self, patch: Path, target: Path, allowed: list[str], source: str, sdir: Path, rec: dict) -> str:
+        """--builder manual|none outside --dry: land build/diff.patch on the checkout with `git apply --index`, so the
+        conventions / perf / ui gates and the pr step see the change. Refuses (StepError → exit 1, named in the gate
+        detail) when the diff touches a file outside files.txt + test paths or does not apply cleanly. Idempotent: a
+        diff the checkout already carries (`git apply --check --reverse` succeeds — the IDE agent wrote the code
+        itself, or this is a resume) is skipped. Evidence: <step>/applied.json (files, git diff --stat)."""
+        if not shutil.which("git") or not is_git_root(target):
+            raise StepError(f"builder {self.args.builder}: {target} is not a git repository root; build/diff.patch cannot be applied "
+                            "(check the repo out with git, or run with --dry)")
+        text = patch.read_text(encoding="utf-8", errors="replace")
+        touched = self._patch_files(text)
+        if not touched:
+            raise StepError("build/diff.patch has no `diff --git` / `+++ b/` headers: not a git diff (save `git diff` with new files added)")
+        outside = [f for f in touched if allowed and f not in allowed and not TEST_PATH_RE.search(f)]
+        if outside:
+            raise StepError(f"build/diff.patch touches {len(outside)} file(s) outside {source} + test paths: " + ", ".join(outside)
+                            + f" — the code step may change only {', '.join(allowed)} (plus tests); fix the diff or files.txt")
+        body = "\n".join(ln for ln in text.splitlines() if not ln.startswith("# ")) + "\n"
+        clean = self.out / "build" / ".deliver-apply.patch"
+        clean.write_text(body, encoding="utf-8")
+        applied = {"patch": "build/diff.patch", "files": touched, "allowed_source": source}
+        try:
+            def apply(*flags: str) -> subprocess.CompletedProcess:
+                return subprocess.run(["git", "-c", "commit.gpgsign=false", "apply", *flags, str(clean)], cwd=str(target),
+                                      capture_output=True, text=True, env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
+            if apply("--check", "--reverse").returncode == 0:
+                applied["status"] = "already-applied"
+                note = "already on the checkout (git apply --check --reverse succeeded): not applied again."
+            else:
+                check = apply("--check")
+                if check.returncode != 0:
+                    why = (check.stderr or check.stdout).strip().splitlines()
+                    raise StepError("build/diff.patch does not apply cleanly to the checkout (git apply --check): "
+                                    + "; ".join(why[:4])[:300] + " — regenerate the diff against the current checkout, then --resume")
+                r = apply("--index")
+                if r.returncode != 0:
+                    raise StepError(f"git apply --index failed: {(r.stderr or r.stdout).strip()[:300]}")
+                applied["status"] = "applied"
+                note = "applied to the checkout with `git apply --index` so the gates and the pr step see the change."
+        finally:
+            clean.unlink(missing_ok=True)
+        _, stat = git(target, "diff", "--stat", "HEAD", "--", *touched, ok=(0, 128))
+        applied["diff_stat"] = stat.strip()
+        write_json(sdir / "applied.json", applied)
+        rec.update(applied=applied["status"], applied_files=touched, diff_stat=applied["diff_stat"])
+        return note
+
     def step_agent(self, step: dict, sdir: Path, rec: dict) -> bool:
         produces = step.get("produces") or []
         if FILES_TXT in produces:
@@ -958,9 +1052,10 @@ class Run:
         manual_patch = self.out / "build" / "diff.patch"
         if builder in ("none", "manual"):
             if manual_patch.is_file():
-                note = "nothing was applied by deliver.py (the checkout already carries the change)."
                 if self.args.dry:  # the checkout is a throwaway copy: land the diff so the lint stages assess the change
                     note = self._apply_to_copy(manual_patch, target)
+                else:              # the real checkout: the diff is what the gates and the PR must see
+                    note = self._apply_manual(manual_patch, target, allowed, allowed_source, sdir, rec)
                 self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
                 return True
             rec["status"] = "awaiting_builder"
@@ -1219,6 +1314,11 @@ class Run:
         self.stage_started = srec["started_at"]
         t_stage = time.time()
         halted = ""
+        try:   # a resume at or past the code step with no baseline yet: take it before any gate skill runs
+            self.ensure_baseline(n - 1)
+        except StepError as e:
+            halted = f"baseline: {e}"
+            srec["steps"].append({"id": "baseline", "kind": "baseline", "stage": stage["id"], "status": "failed", "error": str(e)[:400]})
         for step in stage["steps"]:
             sid = step["id"]
             sdir = stage_dir / sid
@@ -1425,6 +1525,14 @@ def clone_repo(key: str, dest: Path, ref: str = "") -> Path:
     return dest
 
 
+def head_sha(repo: Path) -> str:
+    """HEAD of the checkout when it is a git repository with a commit, else "" (recorded as run.json `base_sha`)."""
+    if not shutil.which("git") or not is_git_root(repo):
+        return ""
+    code, out = git(repo, "rev-parse", "--verify", "-q", "HEAD", ok=(0, 1))
+    return out.strip() if code == 0 else ""
+
+
 def prev_stages_status(prev_record: dict | None, stage_id: str) -> str:
     return next((st.get("status", "") for st in (prev_record or {}).get("stages") or [] if st.get("id") == stage_id), "")
 
@@ -1564,6 +1672,7 @@ def main(argv=None) -> int:
         run.post_stage({"id": first_pending, "status": "failed", "error": f"prepare repo: {e}"[:4000]}, started_at=now(), finished_at=now())
         return EXIT_FAIL
     run.record["repo"] = str(run.repo)
+    run.record["base_sha"] = (prev_record or {}).get("base_sha") or head_sha(run.repo)   # the pre-change commit, kept across resumes
     run.load_baseline()
 
     prev_stages = {s["id"]: s for s in run.record["stages"]}

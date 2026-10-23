@@ -258,7 +258,8 @@
             "inputs": {
               "feature": "$steps.feature:feature.md",
               "files": "$steps.files:files.txt#csv",
-              "target": "$repo"
+              "target": "$repo",
+              "flavour": "$profile.flavour"
             }
           },
           {
@@ -383,7 +384,8 @@
             "kind": "skill",
             "skill": "build/observability-setup",
             "inputs": {
-              "target": "$repo"
+              "target": "$repo",
+              "flavour": "$profile.flavour"
             }
           },
           {

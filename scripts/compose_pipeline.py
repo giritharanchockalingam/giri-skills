@@ -82,7 +82,7 @@ LIBRARY: dict[str, list[dict]] = {
          "plan_fallback": ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"],
          "evidence": ["$steps.files:files.txt"]},
         {"id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd", "requires": ["feature", "files"],
-         "inputs": {"feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo"},
+         "inputs": {"feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo", "flavour": "$profile.flavour"},
          "evidence": ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json"]},
         {"id": "code", "kind": "agent", "agent": "claude-code", "optional": ["tests", "files"],
          "inputs": {"plan": "$steps.plan-refine:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo"},
@@ -110,7 +110,7 @@ LIBRARY: dict[str, list[dict]] = {
          "gate": {"kind": "exit", "step": "ui"}, "evidence": ["$steps.ui:report.md"]},
     ],
     "deploy": [
-        {"id": "observe", "kind": "skill", "skill": "build/observability-setup", "inputs": {"target": "$repo"},
+        {"id": "observe", "kind": "skill", "skill": "build/observability-setup", "inputs": {"target": "$repo", "flavour": "$profile.flavour"},
          "evidence": ["$steps.observe:install-report.md"]},
         {"id": "ci", "kind": "skill", "skill": "build/ci-cd-vercel-github", "inputs": {"target": "$repo"},
          "evidence": ["$steps.ci:ci-report.md"]},

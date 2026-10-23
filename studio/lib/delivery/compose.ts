@@ -62,7 +62,7 @@ export const LIBRARY: Record<string, LibStep[]> = {
       inputs: { plan: "$steps.plan-refine:plan.md", tasks: "$steps.plan-refine:tasks.csv", target: "$repo" }, plan_fallback: ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"],
       evidence: ["$steps.files:files.txt"] },
     { id: "tests", kind: "skill", skill: "build/test-strategy-tdd", requires: ["feature", "files"],
-      inputs: { feature: "$steps.feature:feature.md", files: "$steps.files:files.txt#csv", target: "$repo" },
+      inputs: { feature: "$steps.feature:feature.md", files: "$steps.files:files.txt#csv", target: "$repo", flavour: "$profile.flavour" },
       evidence: ["$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json"] },
     { id: "code", kind: "agent", agent: "claude-code", optional: ["tests", "files"], inputs: { plan: "$steps.plan-refine:plan.md", tests: "$steps.tests:test-plan.md", files: "$steps.files:files.txt", target: "$repo" },
       plan_fallback: ["$steps.plan-refine:plan.md", "$steps.spec:spec.md"], constraints: ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"],
@@ -79,7 +79,7 @@ export const LIBRARY: Record<string, LibStep[]> = {
     { id: "ui", kind: "skill", skill: "build/ui-component-quality", inputs: { target: "$repo", baseline: "$profile.baselines.ui" }, gate: { kind: "exit", step: "ui" }, evidence: ["$steps.ui:report.md"] },
   ],
   deploy: [
-    { id: "observe", kind: "skill", skill: "build/observability-setup", inputs: { target: "$repo" }, evidence: ["$steps.observe:install-report.md"] },
+    { id: "observe", kind: "skill", skill: "build/observability-setup", inputs: { target: "$repo", flavour: "$profile.flavour" }, evidence: ["$steps.observe:install-report.md"] },
     { id: "ci", kind: "skill", skill: "build/ci-cd-vercel-github", inputs: { target: "$repo" }, evidence: ["$steps.ci:ci-report.md"] },
     { id: "pr", kind: "pr", title: "$in.request", branch: "deliver/$run.id", body: "$evidence", gate: { kind: "external", what: "CI green on the pull request" }, evidence: ["$steps.pr:pr.json"] },
   ],

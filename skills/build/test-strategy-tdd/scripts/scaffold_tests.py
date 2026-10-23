@@ -2,7 +2,7 @@
 """Scaffold red tests first: a vitest stub per source file and a Playwright spec per page.
 
     python3 -I scripts/scaffold_tests.py feature.md --files server/services/export.ts,app/invoices/page.tsx \
-        --target <repo> [--dry-run] --report scaffold-report.json --plan test-plan.md
+        --target <repo> [--flavour ts|js] [--dry-run] --report scaffold-report.json --plan test-plan.md
 
 feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each --files entry
 (.js / .jsx / .ts / .tsx alike):
@@ -10,13 +10,18 @@ feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each 
   components/**/*                                                -> component -> listed for a component test; nothing written
   app/**/route.*                                                 -> API route -> <unit dir>/<path>.test.<ext>
   everything else                                                -> unit      -> <unit dir>/<path>.test.<ext>  (it.todo per criterion)
+  a non-source entry (docs/*.md, .env.example, *.yml, *.json, …)  -> skipped with a note (`non_source` in the
+                                                                    report); no stub is ever generated for it
 Layer per file follows references/test-pyramid.md (validator / service / query / action / route /
 migration).
 
 Read before write — the target repo is inspected first and every stub matches what is there:
-  flavour   tsconfig.json or any .ts/.tsx source under app|components|lib|server|src -> TypeScript
-            (.test.ts / .spec.ts); otherwise JavaScript (.test.js / .spec.js). With no repo yet, the
-            extension of the --files decides (all .js/.jsx -> JavaScript; else TypeScript).
+  flavour   --flavour ts|js wins when given (the pipeline passes the stack profile's flavour). Otherwise:
+            tsconfig.json -> TypeScript; jsconfig.json without tsconfig.json -> JavaScript; any .ts/.tsx
+            source under app|components|lib|server|src|pages|supabase (build output such as .next/, dist/,
+            coverage/, node_modules/ and dot-directories ignored) -> TypeScript; else the extension of the
+            SOURCE entries in --files decides (docs/env/md/yaml/json paths never count: all .js/.jsx/.mjs/.cjs
+            -> JavaScript; any .ts/.tsx -> TypeScript); no repo and no source files -> TypeScript.
   runner    package.json dependencies/devDependencies: vitest -> `import { describe, it, expect } from "vitest"`;
             jest -> no import (globals); neither -> vitest (the skill's default). mocha / jasmine / ava /
             tap / node:test -> refused (see below).
@@ -31,8 +36,8 @@ of the criterion's words in one title) and the criteria it does not cover yet ar
 hand. --dry-run writes nothing.
 When the repo cannot be scaffolded safely (unsupported test runner), nothing is written: the report
 carries `refused` with the reason, the plan says so, and the exit code is 1 — never a half-install.
-Writes scaffold-report.json ({repo, written, skipped, components, would_write, files, existing_tests,
-refused}) and test-plan.md (repo table + pyramid table + criteria map + existing tests). Exit 1 on bad
+Writes scaffold-report.json ({repo, written, skipped, components, non_source, would_write, files,
+existing_tests, refused}) and test-plan.md (repo table + pyramid table + criteria map + existing tests). Exit 1 on bad
 input (missing feature file, no bullets, no files). Stdlib.
 """
 from __future__ import annotations
@@ -54,10 +59,18 @@ LAYERS = [  # (path marker, feature type, layer, what to cover)
     ("supabase/functions/", "edge function", "unit", "handler logic with injected client"),
 ]
 SRC_EXT = r"\.(?:tsx?|jsx?|mjs|cjs)$"
+# what a stub can be written for: JS/TS source, plus SQL under supabase/ (migrations / RLS, see LAYERS)
+SCAFFOLD_EXT = r"\.(?:tsx?|jsx?|mjs|cjs|sql)$"
 PAGE_NAMES = ("page", "layout", "template", "error", "not-found")
 SOURCE_DIRS = ("app", "components", "lib", "server", "src", "pages", "supabase")
 SKIP_DIRS = {"node_modules", ".git", ".next", "dist", "build", "out", "coverage", ".vercel", ".turbo"}
 UNSUPPORTED_RUNNERS = ("mocha", "jasmine", "ava", "tap", "node:test", "node --test")
+FLAVOURS = ("ts", "js")
+
+
+def is_source(rel: str) -> bool:
+    """A --files entry a stub can be generated for; docs, env files, YAML/JSON/Markdown and the like are not."""
+    return re.search(SCAFFOLD_EXT, rel.rsplit("/", 1)[-1]) is not None
 
 
 def die(msg: str) -> None:
@@ -115,32 +128,43 @@ def _first(root: Path, stem: str, exts=("ts", "js", "mjs", "cjs", "mts", "cts"))
 
 
 def has_ts_sources(root: Path) -> bool:
+    """A .ts/.tsx source (not .d.ts) under a source dir — build output (.next/, dist/, coverage/, node_modules/)
+    and dot-directories are never evidence, wherever they sit."""
     for d in SOURCE_DIRS:
         base = root / d
         if not base.is_dir():
             continue
         for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [x for x in dirnames if x not in SKIP_DIRS]
+            dirnames[:] = [x for x in dirnames if x not in SKIP_DIRS and not x.startswith(".")]
             if any(f.endswith((".ts", ".tsx")) and not f.endswith(".d.ts") for f in filenames):
                 return True
     return False
 
 
-def detect_repo(root: Path, files: list[str]) -> dict:
-    """Inspect the target once; everything written later follows this."""
-    info = {"exists": root.is_dir(), "flavour": "ts", "flavour_why": "default (no repo, no .js files given)",
+def detect_repo(root: Path, files: list[str], flavour: str = "") -> dict:
+    """Inspect the target once; everything written later follows this. `flavour` (ts|js) wins when given."""
+    info = {"exists": root.is_dir(), "flavour": "ts", "flavour_why": "default (no repo, no source files given)",
             "runner": "vitest", "runner_why": "default (no package.json)", "unit_dir": "tests/unit", "e2e_dir": "tests/e2e",
             "e2e_config": None, "unit_config": None, "alias": None, "refused": None}
     # alias: "@/*" in tsconfig/jsconfig paths (greenfield default below); relative imports otherwise
-    # flavour
-    if root.is_dir() and (root / "tsconfig.json").is_file():
+    # flavour — only source entries count (docs/.env/yaml/json paths say nothing about the language)
+    sources = [f for f in files if is_source(f) and not f.endswith(".sql")]
+    if flavour in FLAVOURS:
+        info.update(flavour=flavour, flavour_why=f"--flavour {flavour} (given; the stack profile's flavour)")
+    elif root.is_dir() and (root / "tsconfig.json").is_file():
         info.update(flavour="ts", flavour_why="tsconfig.json present")
+    elif root.is_dir() and (root / "jsconfig.json").is_file():
+        info.update(flavour="js", flavour_why="jsconfig.json present, no tsconfig.json")
     elif root.is_dir() and has_ts_sources(root):
         info.update(flavour="ts", flavour_why=".ts/.tsx sources present")
-    elif any(re.search(r"\.tsx?$", f) for f in files):
-        info.update(flavour="ts", flavour_why="--files include .ts/.tsx")
-    elif files and all(re.search(r"\.(jsx?|mjs|cjs)$", f) for f in files):
-        info.update(flavour="js", flavour_why="no tsconfig.json or .ts sources; --files are JavaScript")
+    elif any(re.search(r"\.tsx?$", f) for f in sources):
+        info.update(flavour="ts", flavour_why="--files include .ts/.tsx source")
+    elif sources and all(re.search(r"\.(jsx?|mjs|cjs)$", f) for f in sources):
+        info.update(flavour="js", flavour_why="no tsconfig.json or .ts sources; the source files in --files are JavaScript")
+    elif root.is_dir() and (root / "package.json").is_file():
+        info.update(flavour="js", flavour_why="package.json without tsconfig.json or .ts/.tsx sources")
+    if flavour and flavour not in FLAVOURS:
+        info["flavour_why"] += f" (--flavour {flavour!r} ignored: not ts or js)"
     if not root.is_dir():
         info["alias"] = "@/"  # greenfield: the stack convention (shared/stack-conventions.md) uses @/*
         return info
@@ -275,6 +299,8 @@ def main() -> int:
     ap.add_argument("feature", help="feature.md: H1 title + one bullet per acceptance criterion")
     ap.add_argument("--files", required=True, help="comma-separated source files the feature touches (repo-relative)")
     ap.add_argument("--target", required=True, help="repo root (tests/ is created under it)")
+    ap.add_argument("--flavour", default="", help="ts|js: the language flavour the stubs take (wins over detection; "
+                                                  "any other value is ignored)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--report", default="scaffold-report.json")
     ap.add_argument("--plan", default="test-plan.md")
@@ -285,22 +311,30 @@ def main() -> int:
     title, bullets = parse_feature(fpath.read_text(encoding="utf-8", errors="replace"))
     if not bullets:
         die("feature.md has no bullets (one per acceptance criterion)")
-    files = [f.strip().replace("\\", "/").lstrip("./") for f in a.files.split(",") if f.strip()]
+    # `./lib/a.js` -> `lib/a.js`; a dotfile (.env.example) keeps its dot — str.lstrip("./") would eat it
+    files = [re.sub(r"^(?:\./)+", "", f.strip().replace("\\", "/")) for f in a.files.split(",") if f.strip()]
     if not files:
         die("--files is empty")
     target = Path(a.target)
     if target.exists() and not target.is_dir():
         die(f"target is not a directory: {target}")
 
-    repo = detect_repo(target, files)
+    repo = detect_repo(target, files, a.flavour.strip().lower())
     ext = "ts" if repo["flavour"] == "ts" else "js"
     cext = "tsx" if repo["flavour"] == "ts" else "jsx"
     unit_dir, e2e_dir = repo["unit_dir"], repo["e2e_dir"]
     refused = repo["refused"]
     report = {"target": str(target), "dry_run": a.dry_run, "title": title, "criteria": bullets, "repo": repo,
-              "refused": refused, "written": [], "skipped": [], "components": [], "would_write": [], "files": [],
-              "existing_tests": []}
+              "refused": refused, "written": [], "skipped": [], "components": [], "non_source": [], "would_write": [],
+              "files": [], "existing_tests": []}
+    if not any(is_source(f) for f in files):
+        die("--files names no source file (" + ", ".join(files) + "): nothing to scaffold a test for")
     for rel in files:
+        if not is_source(rel):   # docs, env, yaml, json …: no test file is ever generated for these
+            report["non_source"].append(rel)
+            report["files"].append({"source": rel, "kind": "non-source", "type": "not source", "layer": "—",
+                                    "cover": "—", "test": "", "note": "skipped: not a source file (no stub generated)"})
+            continue
         kind, ftype, layer, cover = classify(rel)
         if kind == "page":
             test_rel, content = f"{e2e_dir}/{slug(rel)}.spec.{ext}", e2e_stub(rel, title, bullets, e2e_dir)
@@ -345,7 +379,12 @@ def main() -> int:
     lines += [f"**{len(bullets)} acceptance criteria across {len(files)} file(s); "
               f"{len(report['written'])} stub(s) written, {len(report['skipped'])} kept (already exist), "
               f"{len(report['components'])} component test(s) to write by hand"
-              + (" — dry run, nothing written" if a.dry_run else "") + ".**", "",
+              + (f", {len(report['non_source'])} non-source file(s) skipped" if report["non_source"] else "")
+              + (" — dry run, nothing written" if a.dry_run else "") + ".**", ""]
+    if report["non_source"]:
+        lines += ["Not source files — no stub generated (docs, env or config travel with the change, they are not tested here): "
+                  + ", ".join(f"`{f}`" for f in report["non_source"]) + ".", ""]
+    lines += [
               "## Repo (read before write)", "", "| Setting | Value | Why |", "|---|---|---|",
               f"| Flavour | {flavour_name} (`.test.{ext}` / `.spec.{ext}`) | {repo['flavour_why']} |",
               f"| Unit runner | {repo['runner']} | {repo['runner_why']} |",
@@ -355,11 +394,14 @@ def main() -> int:
               f"{'tsconfig/jsconfig paths' if repo['alias'] else 'no @/* alias found'} |", "",
               "## Pyramid", "", "| Source | Type | Layer | Cover | Test file | Status |", "|---|---|---|---|---|---|"]
     for r in report["files"]:
+        if r["kind"] == "non-source":
+            lines.append(f"| `{r['source']}` | {r['type']} | — | — | — | skipped (not a source file) |")
+            continue
         status = ("manual (component)" if r["kind"] == "component" else "refused" if refused
                   else "exists — kept" if r["test"] in report["skipped"] else "would write" if a.dry_run else "written")
         lines.append(f"| `{r['source']}` | {r['type']} | {r['layer']} | {r['cover']} | `{r['test']}` | {status} |")
     lines += ["", "## Criteria map", "", "| # | Criterion | Tests |", "|---|---|---|"]
-    tests = ", ".join(f"`{r['test']}`" for r in report["files"] if r["kind"] != "component") or "—"
+    tests = ", ".join(f"`{r['test']}`" for r in report["files"] if r["kind"] not in ("component", "non-source")) or "—"
     for i, b in enumerate(bullets, 1):
         lines.append(f"| {i} | {b} | {tests} |")
     if report["existing_tests"]:
@@ -379,7 +421,9 @@ def main() -> int:
         print(f"refused: {refused} -> {rp}, {pp}", file=sys.stderr)
         return 1
     print(f"{'dry-run: ' if a.dry_run else ''}{len(report['written'])} written, {len(report['skipped'])} skipped, "
-          f"{len(report['components'])} component(s) manual [{flavour_name}, {repo['runner']}] -> {rp}, {pp}")
+          f"{len(report['components'])} component(s) manual"
+          + (f", {len(report['non_source'])} non-source skipped" if report["non_source"] else "")
+          + f" [{flavour_name}, {repo['runner']}] -> {rp}, {pp}")
     return 0
 
 

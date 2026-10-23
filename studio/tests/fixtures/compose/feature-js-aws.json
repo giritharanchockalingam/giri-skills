@@ -234,7 +234,8 @@
             "inputs": {
               "feature": "$steps.feature:feature.md",
               "files": "$steps.files:files.txt#csv",
-              "target": "$repo"
+              "target": "$repo",
+              "flavour": "$profile.flavour"
             }
           },
           {

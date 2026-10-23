@@ -745,6 +745,10 @@ def test_pr_step_commits_as_the_bot_pushes_and_opens_the_pr(tmp_path, monkeypatc
     assert log.splitlines() == ["skills-factory[bot] <skills-factory[bot]@users.noreply.github.com>", REQUEST]
     files = subprocess.run(["git", "ls-tree", "-r", "--name-only", "deliver/r-pr-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
     assert ".github/ci-additions.yml" in files            # what the ci step wrote on the checkout travelled with the commit
+    assert "app/api/orders/export/route.js" in files      # the manual diff was applied to the checkout and is in the PR
+    applied = json.loads((out / "evidence" / "03-build" / "code" / "applied.json").read_text())
+    assert applied["status"] == "applied" and applied["files"] == ["app/api/orders/export/route.js", "lib/orders.js", "tests/unit/lib/orders.test.js"]
+    assert "3 files changed" in applied["diff_stat"]
     assert "PR opened" in run_json(out)["stages"][-1]["steps"][0]["inputs"]["state"]
 
 
@@ -897,3 +901,152 @@ def test_resume_keeps_the_captured_baseline(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     assert run_json(out)["baseline"]["at"] == at
     assert [f["status"] for f in findings(out, "03-build/conventions")] == ["known"]
+
+
+# ---- --builder manual on a real checkout (no --dry): the diff is applied, the gates see it, resume is idempotent
+
+DEV_ENV = {"GIT_AUTHOR_NAME": "dev", "GIT_AUTHOR_EMAIL": "dev@x", "GIT_COMMITTER_NAME": "dev", "GIT_COMMITTER_EMAIL": "dev@x",
+           "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def checkout(tmp_path: Path, src: Path = REPO, name: str = "checkout") -> Path:
+    """A git checkout of the fixture repo (one commit on main), as the IDE path hands it to deliver.py."""
+    work = tmp_path / name
+    shutil.copytree(src, work)
+    env = {**os.environ, **DEV_ENV}
+    for cmd in (["git", "init", "-q", "-b", "main"], ["git", "add", "-A"], ["git", "commit", "-q", "-m", "base"]):
+        subprocess.run(cmd, cwd=work, env=env, check=True)
+    return work
+
+
+def real(out: Path, work: Path, *extra: str):
+    return run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
+                      "--provider", "dry", "--approve-all", *extra)
+
+
+def git_out(work: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=work, env={**os.environ, **DEV_ENV}, capture_output=True, text=True, check=True).stdout
+
+
+def test_manual_builder_applies_the_patch_to_the_checkout_and_conventions_sees_it(tmp_path):
+    """Defect: the manual builder recorded diff.patch but never applied it, so conventions/perf/ui and the pr step saw
+    unchanged code. Now `git apply --index` lands it: a diff adding a NEW violation fails the conventions gate."""
+    work = checkout(tmp_path, brownfield_repo(tmp_path))
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(NEW_VIOLATION_PATCH))
+    assert r.returncode == 1 and "stopped at stage 'build'" in r.stdout, r.stdout + r.stderr
+    route = work / "app" / "api" / "orders" / "export" / "route.js"
+    assert route.is_file() and "select * from orders" in route.read_text()                 # the checkout carries the change
+    assert "app/api/orders/export/route.js" in git_out(work, "diff", "--cached", "--name-only")   # staged (--index)
+    applied = json.loads((out / "evidence" / "03-build" / "code" / "applied.json").read_text())
+    assert applied["status"] == "applied" and applied["files"] == ["app/api/orders/export/route.js"]
+    assert "route.js" in applied["diff_stat"] and "1 file changed" in applied["diff_stat"]
+    steps = {s["id"]: s for st in run_json(out)["stages"] for s in st["steps"]}
+    assert steps["code"]["applied"] == "applied" and steps["code"]["applied_files"] == ["app/api/orders/export/route.js"]
+    assert "applied to the checkout with `git apply --index`" in (out / "evidence" / "03-build" / "code" / "agent-summary.md").read_text()
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert gate["detail"].endswith("1 new high finding(s) against the baseline: NX5 app/api/orders/export/route.js:5")
+    rows = {(f["rule"], f["file"]): f["status"] for f in findings(out, "03-build/conventions")}
+    assert rows == {("NX5", "app/api/orders/export/route.js"): "new", ("NX5", "app/legacy/page.js"): "known"}
+    base = run_json(out)["baseline"]
+    assert base["status"] == "captured" and base["target_source"].startswith("git archive HEAD")
+    assert run_json(out)["base_sha"] == git_out(work, "rev-parse", "HEAD").strip()
+
+
+def test_manual_patch_that_does_not_apply_fails_the_code_step_with_exit_1(tmp_path):
+    work = checkout(tmp_path)
+    (work / "lib" / "orders.js").write_text("export function listOrders() { return []; }\n", encoding="utf-8")   # context gone
+    subprocess.run(["git", "commit", "-q", "-am", "drift"], cwd=work, env={**os.environ, **DEV_ENV}, check=True)
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(PATCH))
+    assert r.returncode == 1 and "stopped at stage 'build'" in r.stdout, r.stdout + r.stderr
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert gate["verdict"] == "fail" and "code: build/diff.patch does not apply cleanly to the checkout" in gate["detail"]
+    steps = {s["id"]: s for s in run_json(out)["stages"][-1]["steps"]}
+    assert steps["code"]["status"] == "failed" and steps["conventions"]["status"] == "skipped"
+    assert not (work / "app" / "api" / "orders").exists() and git_out(work, "status", "--porcelain", "app", "lib") == ""
+    assert not (out / "evidence" / "03-build" / "code" / "applied.json").exists()
+
+
+def test_manual_patch_outside_files_txt_is_refused_before_anything_is_applied(tmp_path):
+    work = checkout(tmp_path)
+    bad = tmp_path / "bad.patch"
+    bad.write_text(PATCH.read_text() + "diff --git a/next.config.js b/next.config.js\n--- a/next.config.js\n+++ b/next.config.js\n"
+                   "@@ -1,1 +1,2 @@\n+// touched\n module.exports = {};\n", encoding="utf-8")
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(bad))
+    assert r.returncode == 1
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert "touches 1 file(s) outside files.txt + test paths: next.config.js" in gate["detail"]
+    assert not (work / "app" / "api" / "orders").exists()                                  # nothing landed
+
+
+def test_resume_at_the_code_step_takes_the_missing_baseline_from_the_pre_change_tree(tmp_path):
+    """IDE path: run 1 (--builder none) stops at the code step; the IDE agent writes the code on the checkout and saves
+    the diff. A resume with no baseline on disk (a run started before baselines existed) must still take it — from
+    `git archive HEAD`, never from the checkout that now carries the change — and the already-applied diff is not
+    applied twice."""
+    work = checkout(tmp_path, brownfield_repo(tmp_path))
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "none")
+    assert r.returncode == 4 and (out / "evidence" / "00-baseline" / "baseline.json").is_file(), r.stdout + r.stderr
+    shutil.rmtree(out / "evidence" / "00-baseline")                                       # as if no baseline had been taken
+    rj = run_json(out); rj.pop("baseline", None); (out / "run.json").write_text(json.dumps(rj))
+    body = "\n".join(ln for ln in NEW_VIOLATION_PATCH.read_text().splitlines() if not ln.startswith("# ")) + "\n"
+    (tmp_path / "ide.patch").write_text(body, encoding="utf-8")
+    subprocess.run(["git", "apply", str(tmp_path / "ide.patch")], cwd=work, env={**os.environ, **DEV_ENV}, check=True)
+    assert (work / "app" / "api" / "orders" / "export" / "route.js").is_file()
+    r = real(out, work, "--resume", "--builder", "manual", "--patch", str(NEW_VIOLATION_PATCH))
+    assert r.returncode == 1 and "stopped at stage 'build'" in r.stdout, r.stdout + r.stderr
+    base = run_json(out)["baseline"]
+    assert base["status"] == "captured" and base["target_source"].startswith("git archive HEAD")
+    assert base["checks"]["nextjs"]["findings"] == 1                                        # legacy only: route.js is not in HEAD
+    assert (out / "evidence" / "00-baseline" / "nextjs-enterprise-conventions" / "findings.csv").is_file()
+    applied = json.loads((out / "evidence" / "03-build" / "code" / "applied.json").read_text())
+    assert applied["status"] == "already-applied"
+    rows = {(f["rule"], f["file"]): f["status"] for f in findings(out, "03-build/conventions")}
+    assert rows == {("NX5", "app/api/orders/export/route.js"): "new", ("NX5", "app/legacy/page.js"): "known"}
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert gate["detail"].endswith("1 new high finding(s) against the baseline: NX5 app/api/orders/export/route.js:5")
+
+
+def test_baseline_is_taken_on_a_resume_at_a_later_stage_when_it_is_missing(tmp_path):
+    """A run resumed at the evaluate stage (build already passed, the dry copy carries the change) with no baseline on
+    disk: the perf/ui gates still get one, taken from the pre-change tree (git archive HEAD), never the working copy."""
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(PATCH), "--approve-all", repo=brownfield_repo(tmp_path))
+    assert r.returncode == 0, r.stdout + r.stderr
+    rj = run_json(out)
+    rj["stages"] = [st for st in rj["stages"] if st["id"] in ("requirements", "architecture", "build")]   # evaluate and later: not run
+    rj.pop("baseline", None)
+    (out / "run.json").write_text(json.dumps(rj))
+    shutil.rmtree(out / "evidence" / "00-baseline")
+    for st in ("04-evaluate", "05-deploy", "06-operate"):
+        shutil.rmtree(out / "evidence" / st, ignore_errors=True)
+    assert (out / "repo" / "app" / "api" / "orders" / "export" / "route.js").is_file()     # the copy carries the change
+    r = deliver(out, "--resume", "--builder", "manual", "--patch", str(PATCH), "--approve-all", repo=brownfield_repo(tmp_path / "x"))
+    assert r.returncode == 0, r.stdout + r.stderr
+    base = run_json(out)["baseline"]
+    assert base["status"] == "captured" and sorted(base["checks"]) == ["nextjs", "perf", "ui"] and "git archive HEAD" in base["target_source"]
+    assert base["checks"]["nextjs"]["findings"] == 1                                       # legacy only — route.js is not in HEAD
+    assert (out / "evidence" / "00-baseline" / "perf-review-runner" / "findings.csv").is_file()
+    steps = {s["id"]: s for st in run_json(out)["stages"] for s in st["steps"]}
+    assert steps["perf"]["inputs"]["baseline"].endswith("00-baseline/perf-review-runner/findings.csv")
+    assert steps["ui"]["inputs"]["baseline"].endswith("00-baseline/ui-component-quality/findings.csv")
+    assert stage_status(out) == {s: "passed" for s in STAGES}                               # build kept, evaluate onwards re-run
+
+
+def test_gate_detail_names_the_full_count_the_first_ten_and_how_many_more():
+    import importlib.util, sys as _sys
+    spec = importlib.util.spec_from_file_location("deliver_mod2", REPO_ROOT / "scripts" / "deliver.py")
+    mod = importlib.util.module_from_spec(spec)
+    _sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        _sys.path.pop(0)
+    items = [f"NX5 app/f{i}.js:{i}" for i in range(1, 15)]
+    d = mod.new_high_detail(14, items[:10])
+    assert d.startswith("14 new high finding(s) against the baseline: NX5 app/f1.js:1; ") and d.endswith("NX5 app/f10.js:10 … and 4 more")
+    assert "f11" not in d
+    assert mod.new_high_detail(3, items[:3]) == "3 new high finding(s) against the baseline: NX5 app/f1.js:1; NX5 app/f2.js:2; NX5 app/f3.js:3"
