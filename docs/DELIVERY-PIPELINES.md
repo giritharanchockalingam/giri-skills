@@ -338,10 +338,18 @@ After the timeout the run stops with exit 3 as it would without a portal. `--app
 
 ```
 python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
-    [--input name=value …] [--out <dir>] --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
+    [--input name=value …] [--out <dir>] --builder none|manual|claude-code|openai-compat [--provider dry|none|anthropic|openai]
+    [--model NAME] [--base-url URL] [--rounds 2] [--repair-cmd auto|none|<cmd>]                            # openai-compat
     [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID]
     [--no-baseline] [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
 ```
+
+| `--builder` | Who fills the role stops (`prd-refine`, `plan-refine`, `files`, `code`) | Stops |
+|---|---|---|
+| `none` | a person or an IDE agent, from the role packet (`PROMPT.md`); outputs dropped at the `expected` paths, then `--resume` | exit 4 at every unfilled stop |
+| `manual` | the same, with `--prd` / `--plan` / `--files` / `--patch` supplied up front (a code diff is applied to the checkout with `git apply --index`) | exit 4 where nothing was supplied |
+| `claude-code` | `claude -p <packet>` on the checkout; `git diff` captured for the code step | none (a step that writes nothing fails, exit 1) |
+| `openai-compat` | **any OpenAI-compatible model** — the packet is POSTed to `<base>/chat/completions` and the model's `=== FILE: … ===` blocks are the step's files (see "Any LLM") | none (an unusable reply fails the step, exit 1, the reply head in the gate detail) |
 
 `--out` is required unless `--run` is given, when it defaults to `runs/<run id>` under giri-skills — the command the
 portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a path, a name under `pipelines/` or
@@ -375,6 +383,44 @@ environment but the command line) and carries no secrets.
 
 Where it lands: `evidence/01-requirements/prd-refine/PROMPT.md`, `evidence/02-architecture/plan-refine/PROMPT.md`,
 `evidence/03-build/files/PROMPT.md`, `evidence/03-build/code/PROMPT.md`.
+
+### Any LLM (`--builder openai-compat`, `scripts/llm_builder.py`)
+
+The platform promise: the customer's own model plays the product manager, the architect and the builder. Anything
+that serves `POST <base>/chat/completions` — Ollama, vLLM, LM Studio, Azure OpenAI, a Bedrock or LiteLLM proxy, OpenAI
+itself — gets the role packet as the user message, unchanged (the packet is the prompt: `PROMPT.md` ==
+`messages[1]`), with a system prompt that states the output protocol. Stdlib `urllib`, no SDK, no new dependency.
+
+```
+OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=ollama \
+python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" --out runs/r1 \
+    --builder openai-compat --model qwen2.5-coder:14b --approve-all
+```
+
+| Setting | From | Note |
+|---|---|---|
+| model | `--model`, else `OPENAI_MODEL` | required |
+| base URL | `--base-url`, else `OPENAI_BASE_URL`, else `https://api.openai.com/v1` | **guard**: a model name OpenAI does not serve (`qwen…`, `llama…`) with no base URL is refused before any call (exit 2) — the request would otherwise go to api.openai.com. A loopback/LAN host bypasses `HTTP(S)_PROXY` |
+| key | `OPENAI_API_KEY` | any non-empty string for a local server (`ollama`) |
+| `--rounds N` | default 2 | model turns per step, repair turns included |
+| `--repair-cmd` | default `auto` | the code step runs it on the checkout after the model's files land: `auto` = `npm test` when `package.json` has a `test` script **and** `node_modules` exists; `none` runs nothing; any other value is run as given (`sh -c`). A failing command's output tail is the next user turn |
+
+**Output protocol.** The model answers only with file blocks — `=== FILE: <repo-relative path> ===` … `=== END FILE ===`
+(the whole file) and optionally `=== DELETE: <path> ===`. A `<think>…</think>` block (local reasoning models) is
+stripped first. Paths with `..`, absolute or backslash paths are refused; the code step additionally refuses any path
+outside `files.txt` + test paths (`tests/`, `__tests__/`, `e2e/`) — refused before anything is written. For
+`prd-refine` / `plan-refine` / `files` the blocks named `prd-final.md`, `plan.md` + `tasks.csv`, `files.txt` are written
+to the step folder (the `expected` paths), and the run continues exactly as if the product manager or architect had
+dropped them; for `code` they land in the checkout, `git add -A` + `git diff --cached --binary` is the recorded
+`diff.patch` (like `claude-code`), and `files-changed.json` flags anything outside the plan as before. A reply with
+no usable block, a missing produced file, or a repair command still failing after `--rounds` fails the step (exit 1)
+with the reply head in the step error. Retries: 2× on a 5xx or a timeout; a 4xx is final.
+
+**Evidence.** `<step dir>/llm-rounds.json` — `provider`, `model`, `base_url_host`, `repair_cmd`, one entry per round
+(`round`, `prompt_chars`, `reply_chars`, `files`, `deleted`, `cmd`, `cmd_exit`, `error`), `ok`; the raw replies in
+`llm-reply-<n>.txt`, the command output in `llm-cmd-<n>.txt`; `run.json` step `llm {provider, model, base_url_host,
+rounds, duration_s, ok}`; EVIDENCE.md's header prints `builder openai-compat (<model> @ <host>)`. Nothing from the
+environment reaches a prompt: the packet is already clean, the system prompt is static text plus the file lists.
 
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).

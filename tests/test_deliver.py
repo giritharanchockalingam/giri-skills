@@ -1382,3 +1382,128 @@ def test_code_stop_packet_lists_allowed_files_inlines_the_test_plan_and_ends_wit
     fence = md.rstrip().splitlines()
     assert fence[-1] == "```" and fence[-2].endswith(" --resume") and fence[-2].count("--resume") == 1
     assert "scripts/deliver.py feature-delivery" in fence[-2] and f"--out {out}" in fence[-2] and "--builder none" in fence[-2]
+
+
+# ---------------------------------------------------------------- --builder openai-compat (any OpenAI-compatible model)
+
+from test_llm_builder import StubLLM, canned_code_reply, file_block, llm_env, patched_files   # noqa: E402  (loopback stub, canned replies)
+
+
+def openai_compat(out: Path, stub: StubLLM, *extra: str, pipeline: str = "feature-delivery", brief=None, prd=False):
+    return deliver(out, "--builder", "openai-compat", "--base-url", stub.base_url, "--model", "stub", "--approve-all",
+                   "--repair-cmd", "none", *extra, pipeline=pipeline, brief=brief, prd=prd)
+
+
+def test_openai_compat_builder_plays_every_role_from_a_bare_request_to_pass(tmp_path, monkeypatch):
+    """No brief, no PRD, no plan, no patch: the model answers the product-manager, architect and builder packets with
+    canned file blocks (the fixtures), files.txt is derived from the architect's tasks.csv, and every stage passes."""
+    llm_env(monkeypatch)
+    stub = StubLLM({"code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm"
+        r = openai_compat(out, stub)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    ev = out / "evidence"
+    steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
+    for sid in ("prd-refine", "plan-refine", "code"):
+        assert steps[sid]["llm"] == {"provider": "openai-compat", "model": "stub", "base_url_host": "127.0.0.1", "rounds": 1,
+                                     "duration_s": steps[sid]["llm"]["duration_s"], "ok": True}, sid
+        assert steps[sid]["builder"] == "openai-compat"
+    assert steps["prd-refine"]["prd_source"] == "openai-compat" and steps["plan-refine"]["plan_source"] == "openai-compat"
+    assert steps["files"]["files_source"] == "tasks.csv" and "llm" not in steps["files"]      # derived: the model was not asked
+    assert [c["body"]["model"] for c in stub.calls] == ["stub"] * 3
+    for d in ("01-requirements/prd-refine", "02-architecture/plan-refine", "03-build/code"):
+        assert (ev / d / "llm-rounds.json").is_file() and (ev / d / "llm-reply-1.txt").is_file() and (ev / d / "PROMPT.md").is_file(), d
+        assert f"evidence/{d}/llm-rounds.json" in run_json(out)["files"]                      # hashed with the evidence
+    assert (ev / "01-requirements" / "prd-refine" / "prd-final.md").read_text() == PRD_FIX.read_text()
+    assert (ev / "02-architecture" / "plan-refine" / "tasks.csv").read_text() == (PLAN_DIR / "tasks.csv").read_text()
+    fc = json.loads((ev / "03-build" / "code" / "files-changed.json").read_text())
+    assert [f for f in fc["files"] if not f.startswith("tests/")] == ["app/api/orders/export/route.js", "lib/orders.js"]
+    assert "tests/unit/lib/orders.test.js" in fc["files"]                                        # the model's test, beside the scaffolded stubs
+    assert fc["outside_plan"] == [] and fc["plan_files_source"] == "files.txt"
+    assert "ordersToCsv" in (out / "repo" / "lib" / "orders.js").read_text()                   # landed on the dry copy
+    summary = (ev / "03-build" / "code" / "agent-summary.md").read_text()
+    assert "# Builder summary — openai-compat" in summary and "Written by stub @ 127.0.0.1 in 1 round(s)" in summary and "no repair command ran" in summary
+    md = (ev / "EVIDENCE.md").read_text()
+    assert "builder openai-compat (stub @ 127.0.0.1)" in md
+    assert run_json(out)["builder"] == "openai-compat"
+    assert not (out / "needs_builder.json").exists()
+    packet = (ev / "03-build" / "code" / "PROMPT.md").read_text()
+    assert packet == stub.calls[2]["body"]["messages"][1]["content"]                             # the packet IS the prompt
+    assert "stub-key" not in packet and "OPENAI" not in packet
+
+
+def test_openai_compat_builder_answers_the_files_step_when_files_txt_cannot_be_derived(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    stub = StubLLM({"code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-files"
+        r = openai_compat(out, stub, pipeline=str(files_step_without_tasks(tmp_path)))
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
+    assert steps["files"]["files_source"] == "openai-compat" and steps["files"]["llm"]["rounds"] == 1 and steps["files"]["files"] == 2
+    fj = json.loads((out / "evidence" / "03-build" / "files" / "files.json").read_text())
+    assert fj["derived"] is False and fj["files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
+    assert (out / "evidence" / "03-build" / "files" / "llm-rounds.json").is_file()
+    assert [c["body"]["messages"][1]["content"].splitlines()[0].split(" — ")[1].split(" (")[0] for c in stub.calls] == \
+        ["step prd-refine", "step plan-refine", "step files", "step code"]
+
+
+def test_openai_compat_code_step_repair_round_is_recorded_and_the_run_passes(tmp_path, monkeypatch):
+    """The first code reply forgets lib/orders.js; --repair-cmd fails; the output tail goes back; the second reply
+    fixes it — 2 rounds in llm-rounds.json and run.json, and the stages after the build judge the repaired checkout."""
+    llm_env(monkeypatch)
+    full = patched_files()
+    first = canned_code_reply({k: v for k, v in full.items() if k != "lib/orders.js"})
+    second = canned_code_reply({"lib/orders.js": full["lib/orders.js"]})
+    stub = StubLLM({"code": [first, second]})
+    try:
+        out = tmp_path / "llm-repair"
+        r = deliver(out, "--builder", "openai-compat", "--base-url", stub.base_url, "--model", "stub", "--approve-all",
+                    "--repair-cmd", "grep -q ordersToCsv lib/orders.js", "--rounds", "2", brief=None, prd=False)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    code = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "code")
+    assert code["llm"]["rounds"] == 2 and code["llm"]["ok"] is True
+    rounds = json.loads((out / "evidence" / "03-build" / "code" / "llm-rounds.json").read_text())
+    assert [(x["round"], x["cmd_exit"]) for x in rounds["rounds"]] == [(1, 1), (2, 0)] and rounds["cmd_exit"] == 0
+    assert (out / "evidence" / "03-build" / "code" / "llm-reply-2.txt").is_file()
+    assert "`grep -q ordersToCsv lib/orders.js` exit 0" in (out / "evidence" / "03-build" / "code" / "agent-summary.md").read_text()
+    assert len(stub.calls) == 4 and stub.calls[3]["body"]["messages"][-1]["content"].startswith("`grep -q ordersToCsv lib/orders.js` exited 1")
+
+
+def test_openai_compat_reply_without_file_blocks_fails_the_step_naming_the_reply(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    stub = StubLLM({"prd-refine": "I cannot write files, but here is my thinking about the PRD…"})
+    try:
+        out = tmp_path / "llm-bad"
+        r = openai_compat(out, stub, "--rounds", "1")
+    finally:
+        stub.close()
+    assert r.returncode == 1, r.stdout + r.stderr
+    prd = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "prd-refine")
+    assert prd["status"] == "failed" and "builder openai-compat (stub @ 127.0.0.1): round 1: the reply holds no `=== FILE" in prd["error"]
+    assert "I cannot write files" in prd["error"] and prd["llm"]["ok"] is False and prd["llm"]["rounds"] == 1
+    gate = json.loads((out / "evidence" / "01-requirements" / "gate.json").read_text())
+    assert gate["verdict"] == "fail" and "step 'prd-refine' did not complete" in gate["detail"]
+    assert not (out / "needs_builder.json").exists()
+
+
+def test_openai_compat_endpoint_down_fails_the_step_not_the_process(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    stub = StubLLM(status=500)
+    try:
+        monkeypatch.setenv("OPENAI_API_KEY", "stub-key")
+        out = tmp_path / "llm-down"
+        r = openai_compat(out, stub, "--rounds", "1")
+    finally:
+        stub.close()
+    assert r.returncode == 1, r.stdout + r.stderr
+    prd = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "prd-refine")
+    assert prd["status"] == "failed" and "HTTP 500" in prd["error"] and len(stub.calls) == 3    # 2 retries

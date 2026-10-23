@@ -3,7 +3,8 @@
 
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
-        --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
+        --builder none|manual|claude-code|openai-compat [--model NAME --base-url URL --rounds N --repair-cmd CMD] \
+        [--provider dry|none|anthropic|openai] \
         [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--prd prd-final.md] [--dry] [--resume] [--run-id ID] \
         [--no-baseline] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
@@ -34,6 +35,13 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
                                      --resume); evidence: <step>/applied.json (files, git diff --stat)
             --builder claude-code -> `claude -p` on the checkout with a prompt built from the plan, the test
                                      plan, files.txt and the constraint files; `git diff` is captured as diff.patch
+            --builder openai-compat -> the packet is sent to any OpenAI-compatible chat endpoint (scripts/llm_builder.py:
+                                     --base-url / OPENAI_BASE_URL, --model / OPENAI_MODEL, OPENAI_API_KEY) and the model's
+                                     `=== FILE: … ===` blocks are the step's output: written to the step folder for
+                                     prd-refine / plan-refine / files, into the checkout (allowed files + test paths) for
+                                     the code step, where --repair-cmd (default: `npm test` when package.json has a test
+                                     script and node_modules exists) runs and a failure goes back as a repair turn, up to
+                                     --rounds (2); evidence: llm-rounds.json, llm-reply-<n>.txt; run.json step `llm`
             every exit-4 stop (prd-refine, plan-refine, files, code) also writes <step dir>/PROMPT.md — the role
             packet (Run.role_packet): role, outputs and paths, the gate checks verbatim, every input inlined, the
             role's SKILL.md and the resume command — for ANY agent or a person; needs_builder.json `prompt` names
@@ -107,6 +115,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import check_output  # noqa: E402
+import llm_builder  # noqa: E402
 import validate_pipelines as vp  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_ARGS, EXIT_APPROVAL, EXIT_BUILDER = 0, 1, 2, 3, 4
@@ -137,7 +146,7 @@ BASELINE_SKILLS = {"build/nextjs-enterprise-conventions": "nextjs", "build/perf-
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
-TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|e2e)/")   # test files the code step may add beside files.txt
+TEST_PATH_RE = llm_builder.TEST_PATH_RE                     # test files the code step may add beside files.txt (one definition)
 PACKET_MD = "PROMPT.md"                             # the role packet every builder stop writes (see Run.role_packet)
 PACKET_INLINE_LIMIT = 40 * 1024                     # an input this size or smaller is inlined whole in the packet
 PACKET_HEAD_LINES = 60                              # a larger one: its first lines + "(truncated)"
@@ -459,6 +468,7 @@ class Run:
         self.repo: Path | None = None
         self.profile: dict = {}
         self.run_id = ""
+        self._llm = None   # the openai-compat client, built on first use (see llm_client)
         self.mode = "dry" if args.provider == "dry" else "real"
         self.portal: Portal | None = None
         self.profile_posted = False
@@ -926,6 +936,64 @@ class Run:
         need["prompt"] = str(sdir / PACKET_MD)
         return packet
 
+    # ---- the openai-compat builder: the packet goes to any OpenAI-compatible model (scripts/llm_builder.py)
+    def llm_client(self) -> "llm_builder.OpenAICompat":
+        """One client per run, built from --model / --base-url and the OPENAI_* environment; a misconfiguration is a
+        StepError before any call (the same guard main() applies up front)."""
+        if self._llm is None:
+            try:
+                self._llm = llm_builder.OpenAICompat(self.args.model, self.args.base_url)
+            except llm_builder.OpenAICompatError as e:
+                raise StepError(f"builder openai-compat: {e}") from None
+        return self._llm
+
+    def builder_label(self) -> str:
+        """`openai-compat (<model> @ <host>)` for the evidence header; the builder name otherwise."""
+        if self.args.builder != "openai-compat":
+            return self.args.builder
+        try:
+            c = self.llm_client()
+        except StepError:
+            return f"openai-compat ({self.args.model or os.environ.get('OPENAI_MODEL') or '?'})"
+        return f"openai-compat ({c.model} @ {c.host})"
+
+    def repair_cmd(self, target: Path) -> str | None:
+        """The command the code step runs after the model's files land. --repair-cmd CMD as given; `none` → nothing;
+        `auto` → `npm test` when package.json has a test script AND node_modules is installed (an uninstalled checkout
+        would fail on the first round for no reason of the model's), else nothing."""
+        given = (self.args.repair_cmd or "").strip()
+        if given.lower() in ("", "none", "off"):
+            return None
+        if given != "auto":
+            return given
+        pkg = target / "package.json"
+        if pkg.is_file() and (target / "node_modules").is_dir():
+            try:
+                if (json.loads(pkg.read_text(encoding="utf-8")).get("scripts") or {}).get("test"):
+                    return "npm test"
+            except (ValueError, OSError):
+                return None
+        return None
+
+    def run_llm_role(self, sdir: Path, rec: dict, packet: str, *, produce: list[str], allowed: list[str] | None,
+                     target: Path | None, repair_cmd: str | None = None) -> dict:
+        """Send the packet to the model and land its file blocks (llm_builder.run_role); the step record gets `llm`
+        {provider, model, base_url_host, rounds}. A reply that parses to nothing, or a repair command still failing
+        after --rounds, is a StepError that names the reply head — the gate detail then says what the model did."""
+        client = self.llm_client()
+        t0 = time.time()
+        try:
+            res = llm_builder.run_role(packet, produce=produce, allowed=allowed, out_dir=sdir, target=target, client=client,
+                                       max_rounds=self.args.rounds, repair_cmd=repair_cmd)
+        except llm_builder.LLMBuildError as e:
+            rec["llm"] = {"provider": "openai-compat", "model": client.model, "base_url_host": client.host,
+                          "rounds": len((read_json(sdir / "llm-rounds.json") if (sdir / "llm-rounds.json").is_file() else {}).get("rounds") or []),
+                          "duration_s": round(time.time() - t0, 3), "ok": False}
+            raise StepError(f"builder openai-compat ({client.model} @ {client.host}): {e}") from None
+        rec["llm"] = {"provider": "openai-compat", "model": client.model, "base_url_host": client.host,
+                      "rounds": res["rounds"], "duration_s": round(time.time() - t0, 3), "ok": True}
+        return res
+
     # ---- the files step (agent step with produces: ["files.txt"])
     def _derive_files_txt(self, tasks_path: str) -> tuple[list[str], str]:
         """files.txt from tasks.csv when EVERY task names files (nothing invented); else ([], why-not)."""
@@ -1010,6 +1078,13 @@ class Run:
                 if dirty.strip():
                     rec["warning"] = "the files step changed the checkout; it should only read it"
             return record(read_files_txt(expected), "claude-code", f"written by claude -p at {expected.relative_to(self.out)}")
+        if builder == "openai-compat":
+            prompt = self.write_packet(step, sdir, need, packet_inputs)   # the packet is what the model gets
+            res = self.run_llm_role(sdir, rec, prompt, produce=[FILES_TXT], allowed=None, target=None)
+            if not expected.is_file():
+                raise StepError(f"builder openai-compat did not write {expected}")
+            return record(read_files_txt(expected), "openai-compat",
+                          f"written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s) at {expected.relative_to(self.out)}")
         raise StepError(f"unknown builder {builder!r}")
 
     # ---- the plan-refine step (agent step with produces: ["plan.md", "tasks.csv"])
@@ -1073,6 +1148,16 @@ class Run:
         packet_inputs = [{"label": "Request", "text": request or "(none)"}, {"label": f"Draft PRD ({PRD_MD})", "path": draft}]
         if brief_path:
             packet_inputs.append({"label": "Brief (brief.json)", "path": brief_path})
+        if builder == "openai-compat":
+            rec["status"] = "ok"   # not a stop: the model answers the packet now
+            prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
+            res = self.run_llm_role(sdir, rec, prompt, produce=[PRD_MD], allowed=None, target=None)
+            if not expected.is_file():
+                raise StepError(f"builder openai-compat did not write {expected}")
+            rec.update(exit=0, prd_source="openai-compat")
+            write_json(sdir / "prd-refine.json", {"source": "openai-compat", "skipped": False, "draft": draft,
+                                                  "note": f"written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s)"})
+            return True
         self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
         write_json(self.out / "needs_builder.json", need)
         return False
@@ -1157,6 +1242,13 @@ class Run:
                 if dirty.strip():
                     rec["warning"] = "the plan-refine step changed the checkout; it should only read it"
             return record("claude-code", f"written by claude -p at {sdir.relative_to(self.out)}")
+        if builder == "openai-compat":
+            prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])
+            res = self.run_llm_role(sdir, rec, prompt, produce=list(PLAN_FILES), allowed=None, target=None)
+            absent = [f for f in PLAN_FILES if not expected[f].is_file()]
+            if absent:
+                raise StepError(f"builder openai-compat did not write {', '.join(str(expected[f]) for f in absent)}")
+            return record("openai-compat", f"written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s) at {sdir.relative_to(self.out)}")
         raise StepError(f"unknown builder {builder!r}")
 
     def _revert_superseded_patch(self, patch: Path, target: Path, sdir: Path, rec: dict) -> None:
@@ -1325,6 +1417,24 @@ class Run:
             self._record_diff(patch, sdir, rec, plan, r.stdout, files)
             patch.unlink()
             return True
+        if builder == "openai-compat":
+            if not is_git_root(target):
+                raise StepError(f"builder openai-compat: {target} is not a git repository root; the diff cannot be captured")
+            prompt = self.write_packet(step, sdir, need, packet_inputs)   # one source for every builder
+            cmd = self.repair_cmd(target)
+            res = self.run_llm_role(sdir, rec, prompt, produce=[], allowed=allowed or None, target=target, repair_cmd=cmd)
+            git(target, "add", "-A")
+            _, diff = git(target, "diff", "--cached", "--binary")
+            if not diff.strip():
+                raise StepError(f"builder openai-compat ({res['model']}): the model's files left the checkout unchanged (wrote {res['files'] or 'nothing'})")
+            patch = sdir / "captured.patch"
+            patch.write_text(diff, encoding="utf-8")
+            summary = (f"Written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s); files: "
+                       + (", ".join(res["files"]) or "none") + (f"; deleted: {', '.join(res['deleted'])}" if res.get("deleted") else "")
+                       + (f"; `{cmd}` exit {res.get('cmd_exit')}" if cmd else "; no repair command ran"))
+            self._record_diff(patch, sdir, rec, plan, summary, files)
+            patch.unlink()
+            return True
         raise StepError(f"unknown builder {builder!r}")
 
     def step_pr(self, step: dict, sdir: Path, rec: dict) -> None:
@@ -1432,7 +1542,7 @@ class Run:
     # ---- evidence
     def write_evidence_md(self) -> None:
         rows = ["# Evidence", "", f"Pipeline `{self.spec['name']}` v{self.spec.get('version', '')} · run `{self.run_id}` · "
-                f"mode {self.spec.get('mode', '')} · builder {self.args.builder} · provider {self.args.provider}"
+                f"mode {self.spec.get('mode', '')} · builder {self.builder_label()} · provider {self.args.provider}"
                 + (" · DRY RUN" if self.args.dry else ""), "",
                 f"Request: {self.inputs.get('request', '')}", "",
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
@@ -1921,7 +2031,11 @@ def build_args(argv=None):
     ap.add_argument("--ref", help="branch or commit to start from")
     ap.add_argument("--input", action="append", default=[], metavar="NAME=VALUE", help="any other pipeline input (e.g. name=… for greenfield)")
     ap.add_argument("--out", help="run directory (evidence/, run.json, build/); default with --run: runs/<run id>")
-    ap.add_argument("--builder", choices=["none", "manual", "claude-code"], default="none")
+    ap.add_argument("--builder", choices=["none", "manual", "claude-code", "openai-compat"], default="none")
+    ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
+    ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
+    ap.add_argument("--rounds", type=int, default=2, metavar="N", help="openai-compat builder: model turns per step including repair turns (default 2)")
+    ap.add_argument("--repair-cmd", default="auto", metavar="CMD", help="openai-compat builder: shell command run on the checkout after the code step's files land; a failure is sent back as a repair turn. Default auto: `npm test` when package.json has a test script and node_modules exists; `none` disables it")
     ap.add_argument("--provider", choices=["dry", "none", "anthropic", "openai"], default="dry")
     ap.add_argument("--approve-all", action="store_true", help="satisfy every approval step (the invoker approves)")
     ap.add_argument("--approvals", help="JSON file recording approvals: {\"approvals\": [{\"step\": id, \"by\": name, \"note\": ...}]}")
@@ -1957,6 +2071,12 @@ def build_args(argv=None):
 
 def main(argv=None) -> int:
     args = build_args(argv)
+    if args.builder == "openai-compat":
+        try:   # the guard runs before any call: a non-OpenAI model name with no base URL would go to api.openai.com
+            llm_builder.OpenAICompat(args.model, args.base_url)
+        except llm_builder.OpenAICompatError as e:
+            print(f"error: builder openai-compat: {e}", file=sys.stderr)
+            return EXIT_ARGS
     out = Path(args.out).expanduser().resolve()
     portal = Portal(args.portal, args.run, os.environ["SF_API_KEY"], out / "callback.log") if args.run else None
     spec, spec_path = load_pipeline(args.pipeline, portal, out)
