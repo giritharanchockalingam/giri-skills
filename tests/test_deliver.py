@@ -92,6 +92,9 @@ def test_files_step_is_derived_from_tasks_csv_when_every_task_names_files(happy)
     assert list(steps) == ["feature", "files", "tests", "code", "conventions"]
     assert steps["files"]["status"] == "ok" and steps["files"]["files_source"] == "tasks.csv" and steps["files"]["files"] == 2
     assert steps["tests"]["inputs"]["files"] == "lib/orders.js,app/api/orders/export/route.js"        # $steps.files:files.txt#csv
+    assert steps["tests"]["inputs"]["tasks"].endswith("02-architecture/plan-refine/tasks.csv")         # the approved plan names the test files
+    report = json.loads((ev / "03-build" / "tests" / "scaffold-report.json").read_text())
+    assert report["tasks_file"].endswith("plan-refine/tasks.csv") and report["plan_tests"] == []        # this plan's `test` cells name no paths: per-file naming
     assert steps["code"]["allowed_files"] == ["lib/orders.js", "app/api/orders/export/route.js"]       # the code step is constrained by files.txt
     assert "03-build/files/files.txt" in build["evidence_files"]
     assert "evidence/03-build/files/files.txt" in run_json(out)["files"]
