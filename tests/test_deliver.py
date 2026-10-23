@@ -1111,3 +1111,16 @@ def test_the_earlier_diff_is_taken_off_a_real_checkout_before_the_new_one_lands(
     assert steps["code"]["superseded_patch"]["reverted"] is True and steps["code"]["applied"] == "applied"
     assert stage_status(out)["build"] == "passed"
     assert [f["status"] for f in findings(out, "03-build/conventions")] == ["known"]
+
+
+def test_dotfile_paths_keep_their_dot_in_files_txt_and_tasks_csv(tmp_path):
+    """Defect (first real run): `.env.example` in tasks.csv became `env.example` in files.txt (str.lstrip("./")), so the
+    code step refused the diff that touched it as 'outside files.txt'."""
+    import sys
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import deliver as d
+    assert [d.repo_path(x) for x in (".env.example", "./lib/a.js", "`app/x.ts`", "lib\\b.js", "././.github/workflows/ci.yml")] == \
+        [".env.example", "lib/a.js", "app/x.ts", "lib/b.js", ".github/workflows/ci.yml"]
+    ft = tmp_path / "files.txt"
+    ft.write_text("# files\n.env.example\n./lib/a.js\n`lib/a.js`\n", encoding="utf-8")
+    assert d.read_files_txt(ft) == [".env.example", "lib/a.js"]
