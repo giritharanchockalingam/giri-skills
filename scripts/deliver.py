@@ -270,6 +270,10 @@ def write_json(p: Path, data) -> None:
     p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def sha256_file(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
 def read_json(p: Path):
     return json.loads(p.read_text(encoding="utf-8"))
 
@@ -964,6 +968,38 @@ class Run:
                  "", "When done, reply with the task table you wrote."]
         return "\n".join(parts)
 
+    def _revert_superseded_patch(self, patch: Path, target: Path, sdir: Path, rec: dict) -> None:
+        """The code step runs again (a resume after a failed gate, or build/diff.patch changed after the build stage
+        passed) and the checkout still carries the EARLIER diff — the one this step's evidence recorded. Take it back
+        out with `git apply --reverse` so the new diff lands on the pre-change tree; nothing else on the checkout is
+        touched. A checkout that no longer carries the earlier diff (the developer reset it) is left alone: the apply
+        that follows reports on its own terms. Evidence: rec['superseded_patch']."""
+        prior = sdir / "diff.patch"
+        if not prior.is_file() or not shutil.which("git") or not is_git_root(target):
+            return
+        old_sha, new_sha = sha256_file(prior), sha256_file(patch)
+        if old_sha == new_sha:
+            return
+        body = "\n".join(ln for ln in prior.read_text(encoding="utf-8", errors="replace").splitlines() if not ln.startswith("# ")) + "\n"
+        clean = self.out / "build" / ".deliver-revert.patch"
+        clean.write_text(body, encoding="utf-8")
+        note = {"previous_sha256": old_sha, "sha256": new_sha, "reverted": False}
+        try:
+            def apply(*flags: str) -> subprocess.CompletedProcess:
+                return subprocess.run(["git", "-c", "commit.gpgsign=false", "apply", "--reverse", *flags, str(clean)], cwd=str(target),
+                                      capture_output=True, text=True, env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
+            check = apply("--check")
+            if check.returncode == 0:
+                r = apply() if self.args.dry else apply("--index")
+                note["reverted"] = r.returncode == 0
+                if r.returncode != 0:
+                    note["error"] = (r.stderr or r.stdout).strip()[:300]
+            else:
+                note["error"] = "the checkout no longer carries the earlier diff: " + (check.stderr or check.stdout).strip()[:300]
+        finally:
+            clean.unlink(missing_ok=True)
+        rec["superseded_patch"] = note
+
     def _apply_to_copy(self, patch: Path, target: Path) -> str:
         if not shutil.which("git") or not is_git_root(target):
             return "not applied to the dry copy (no git)."
@@ -1052,6 +1088,8 @@ class Run:
         manual_patch = self.out / "build" / "diff.patch"
         if builder in ("none", "manual"):
             if manual_patch.is_file():
+                rec["patch_sha256"] = sha256_file(manual_patch)
+                self._revert_superseded_patch(manual_patch, target, sdir, rec)
                 if self.args.dry:  # the checkout is a throwaway copy: land the diff so the lint stages assess the change
                     note = self._apply_to_copy(manual_patch, target)
                 else:              # the real checkout: the diff is what the gates and the PR must see
@@ -1310,7 +1348,12 @@ class Run:
         stage_dir.mkdir(parents=True, exist_ok=True)
         srec = {"id": stage["id"], "adlc_stage": stage.get("adlc_stage"), "role": stage.get("role"), "dir": str(stage_dir.relative_to(self.out)),
                 "status": "running", "started_at": now(), "steps": []}
-        done_steps = {s["id"]: s for s in (prev or {}).get("steps", []) if s.get("status") in ("ok", "approved")}
+        # Steps are kept across a resume only when the stage STOPPED (waiting for an approval or a builder): the work
+        # before the stop stands. A stage whose gate FAILED runs every step again — the gate must judge fresh outputs
+        # (found by the first real run: the fixed reviewer and security skills were never re-run; the resume re-judged
+        # the stale review.md/findings.csv and failed again).
+        keep = (prev or {}).get("status") in ("awaiting_approval", "awaiting_builder")
+        done_steps = {s["id"]: s for s in (prev or {}).get("steps", []) if keep and s.get("status") in ("ok", "approved") and not s.get("exit")}
         self.stage_started = srec["started_at"]
         t_stage = time.time()
         halted = ""
@@ -1533,6 +1576,39 @@ def head_sha(repo: Path) -> str:
     return out.strip() if code == 0 else ""
 
 
+def supersede_stale_build(spec: dict, run: "Run") -> None:
+    """A resume with a DIFFERENT build/diff.patch than the one the build stage passed on: that stage and every stage
+    after it are superseded — they run again on the new diff (the earlier one is taken off the checkout by the code
+    step). Found by the first real run: the builder fixed the diff after the review failed, the resume kept the passed
+    build stage and judged the old diff.patch again. The run record keeps the superseded verdicts under `superseded`."""
+    patch = run.out / "build" / "diff.patch"
+    if not patch.is_file() or run.args.builder not in ("none", "manual"):
+        return
+    stages = run.record.get("stages") or []
+    by_id = {s["id"]: s for s in stages}
+    for n, stage in enumerate(spec["stages"], 1):
+        code = next((st for st in stage["steps"] if st.get("kind") == "agent" and not (st.get("produces") or [])), None)
+        if not code:
+            continue
+        prev = by_id.get(stage["id"])
+        if not prev or prev.get("status") != "passed":
+            return
+        rec = next((s for s in prev.get("steps", []) if s["id"] == code["id"]), {})
+        evidence_patch = run.evidence / f"{n:02d}-{stage['id']}" / code["id"] / "diff.patch"
+        recorded = rec.get("patch_sha256") or (sha256_file(evidence_patch) if evidence_patch.is_file() else "")
+        current = sha256_file(patch)
+        if not recorded or recorded == current:
+            return
+        later = [st["id"] for st in spec["stages"][n - 1:] if st["id"] in by_id]
+        for s in stages:
+            if s["id"] in later:
+                s["status"] = "superseded"
+                s["superseded"] = {"reason": "build/diff.patch changed after the stage passed", "previous_sha256": recorded,
+                                   "sha256": current, "at": now()}
+        print(f"  build/diff.patch changed since stage '{stage['id']}' passed — re-running {', '.join(later)} on the new diff")
+        return
+
+
 def prev_stages_status(prev_record: dict | None, stage_id: str) -> str:
     return next((st.get("status", "") for st in (prev_record or {}).get("stages") or [] if st.get("id") == stage_id), "")
 
@@ -1663,7 +1739,8 @@ def main(argv=None) -> int:
                   "dry": bool(args.dry), "builder": args.builder, "provider": args.provider, "inputs": given,
                   "repo_input": repo_key, "out": str(out), "started_at": (prev_record or {}).get("started_at") or now(),
                   "resumed": bool(prev_record), "stages": list((prev_record or {}).get("stages") or [])}
-    first_pending = next((st["id"] for st in spec["stages"] if prev_stages_status(prev_record, st["id"]) != "passed"), spec["stages"][-1]["id"])
+    supersede_stale_build(spec, run)
+    first_pending = next((st["id"] for st in spec["stages"] if prev_stages_status(run.record, st["id"]) != "passed"), spec["stages"][-1]["id"])
     try:
         prepare_repo(run)
     except StepError as e:
