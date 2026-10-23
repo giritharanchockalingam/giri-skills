@@ -25,6 +25,12 @@ test("normalize: PR opened/synchronize act; drafts, closes and other repos' nois
   const BASE = "b".repeat(40);
   assert.equal((pr("opened", { base: { sha: BASE, repo: { full_name: "acme/billing" } } }) as { baseSha: string | null }).baseSha, BASE);
   assert.equal((pr("synchronize", { base: { sha: "not-a-sha" } }) as { baseSha: string | null }).baseSha, null);
+  // "Re-run" on the check in GitHub's Checks tab (found on the first real PR: the click did nothing)
+  const rerun = (extra = {}) => normalize("check_run", { ...base, action: "rerequested", check_run: { head_sha: SHA, pull_requests: [{ number: 3, head: { sha: SHA }, base: { sha: BASE } }], ...extra } });
+  assert.deepEqual(rerun(), { kind: "pull_request", installationId: 77, repo: "acme/billing", sha: SHA, baseSha: BASE, pr: 3, title: "", fromFork: false });
+  assert.deepEqual(rerun({ pull_requests: [] }), { kind: "push", installationId: 77, repo: "acme/billing", sha: SHA });
+  assert.equal(normalize("check_run", { ...base, action: "created", check_run: { head_sha: SHA } }), null);
+  assert.equal(rerun({ head_sha: "nope" }), null);
   assert.equal(pr("closed"), null);
   assert.equal(pr("opened", { draft: true }), null);
   assert.equal(normalize("pull_request", { ...base, action: "opened", pull_request: { number: 1, head: { sha: "nope" } } }), null);
