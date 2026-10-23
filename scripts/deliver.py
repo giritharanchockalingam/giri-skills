@@ -379,6 +379,13 @@ def now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S")
 
 
+def now_precise() -> str:
+    """Approvals and rejections are ordered by their timestamps; within one second (a CLI approve right after a
+    reject, or a test) second resolution cannot order them, so these carry microseconds (still sortable as text)."""
+    import datetime as _dt
+    return _dt.datetime.now().isoformat(timespec="microseconds")
+
+
 def to_utc(local: str | None) -> str | None:
     """A now() timestamp (local, no offset) as RFC 3339 UTC — what the portal's stage schema accepts."""
     if not local:
@@ -2813,7 +2820,7 @@ def _write_decision(out: Path, name: str, key: str, entry: dict) -> list[dict]:
 def cmd_approve(args) -> int:
     out = find_run(args.run)
     rec = read_json(out / "run.json")
-    entry = {"step": args.step, "by": args.by, "note": args.note or "", "at": now(), "source": args.source}
+    entry = {"step": args.step, "by": args.by, "note": args.note or "", "at": now_precise(), "source": args.source}
     _write_decision(out, APPROVALS_JSON, "approvals", entry)
     registry_append({"run_id": rec.get("run_id", ""), "pipeline": rec.get("pipeline", ""), "repo": str(rec.get("repo_input") or ""),
                      "status": "approved", "stage": next((s["id"] for s in rec.get("stages") or [] if any(st.get("id") == args.step for st in s.get("steps") or [])), ""),
@@ -2830,7 +2837,7 @@ def cmd_reject(args) -> int:
     out = find_run(args.run)
     rec = read_json(out / "run.json")
     stage = next((s["id"] for s in rec.get("stages") or [] if any(st.get("id") == args.step for st in s.get("steps") or [])), "")
-    entry = {"step": args.step, "stage": stage, "by": args.by, "note": args.note, "at": now(), "source": args.source}
+    entry = {"step": args.step, "stage": stage, "by": args.by, "note": args.note, "at": now_precise(), "source": args.source}
     _write_decision(out, REJECTIONS_JSON, "rejections", entry)
     rec.update(status="rejected", exit_code=EXIT_APPROVAL, rejection=entry, finished_at=entry["at"])
     write_json(out / "run.json", rec)
