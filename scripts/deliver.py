@@ -34,6 +34,10 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
                                      --resume); evidence: <step>/applied.json (files, git diff --stat)
             --builder claude-code -> `claude -p` on the checkout with a prompt built from the plan, the test
                                      plan, files.txt and the constraint files; `git diff` is captured as diff.patch
+            every exit-4 stop (prd-refine, plan-refine, files, code) also writes <step dir>/PROMPT.md — the role
+            packet (Run.role_packet): role, outputs and paths, the gate checks verbatim, every input inlined, the
+            role's SKILL.md and the resume command — for ANY agent or a person; needs_builder.json `prompt` names
+            it, and the claude-code builder's prompt.txt is the same text
             the files step (`produces: ["files.txt"]`): the files the change will touch, one repo-relative
             path per line. When tasks.csv names files for every task the executor derives files.txt itself
             (no builder). Otherwise --builder none stops with needs_builder.json (exit 4) naming the path
@@ -112,7 +116,6 @@ GIT_ENV = {"GIT_AUTHOR_NAME": "deliver", "GIT_AUTHOR_EMAIL": "deliver@giri-skill
            "GIT_AUTHOR_DATE": "2000-01-01T00:00:00Z", "GIT_COMMITTER_DATE": "2000-01-01T00:00:00Z",
            "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 COPY_IGNORE = shutil.ignore_patterns("node_modules", ".next", "dist", "coverage", ".turbo", "__pycache__", ".venv")
-CONTEXT_LIMIT = 12 * 1024
 # The pr step commits on the real checkout as the factory bot (real dates; the user's git config and the credential
 # helper `gh auth setup-git` installs stay visible, which GIT_ENV hides on purpose for the dry copy).
 BOT_NAME, BOT_EMAIL = "skills-factory[bot]", "skills-factory[bot]@users.noreply.github.com"
@@ -135,6 +138,11 @@ BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
 TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|e2e)/")   # test files the code step may add beside files.txt
+PACKET_MD = "PROMPT.md"                             # the role packet every builder stop writes (see Run.role_packet)
+PACKET_INLINE_LIMIT = 40 * 1024                     # an input this size or smaller is inlined whole in the packet
+PACKET_HEAD_LINES = 60                              # a larger one: its first lines + "(truncated)"
+# the SKILL.md that backs a role step, inlined in its packet (the code step inlines its constraint docs instead)
+PACKET_SKILLS = {PRD_MD: "skills/build/product-spec-prd/SKILL.md", TASKS_CSV: "skills/build/spec-to-plan/SKILL.md"}
 
 
 class StepError(Exception):
@@ -794,6 +802,130 @@ class Run:
         (sdir / "agent-summary.md").write_text("\n".join(md), encoding="utf-8")
         rec.update(exit=0, files_changed=len(changed), outside_plan=outside)
 
+    # ---- the role packet: what every builder stop hands to ANY agent (docs/DELIVERY-PIPELINES.md → The role packet)
+    def role_packet(self, step: dict, need: dict, inputs: list[dict], skill: str = "") -> str:
+        """<step dir>/PROMPT.md — a self-contained Markdown packet a developer pastes into any agent (Cursor, Copilot,
+        Claude Code, a local model) or reads themselves, whatever --builder is. One text for every builder: the
+        claude-code builder's prompt.txt is this same packet, so the two never drift. `need` is the needs_builder.json
+        record for the stop (expected / alternative / format / rule / why / how, allowed_files, constraints);
+        `inputs` is an ordered list of {"label", "path"} or {"label", "text"} — a text file of PACKET_INLINE_LIMIT bytes
+        or less is inlined whole under a fence, a larger one as its first PACKET_HEAD_LINES lines + "(truncated)";
+        `skill` is the SKILL.md (repo-relative) that backs the role, inlined when given. Deterministic, no secrets:
+        nothing from the environment but sys.argv (the resume command)."""
+        step_id = step["id"]
+        role = str(need.get("role") or "builder")
+
+        def fenced(text: str) -> list[str]:
+            runs = re.findall(r"`{3,}", text)
+            fence = "`" * (max((len(r) for r in runs), default=2) + 1)
+            return [fence, text.rstrip("\n"), fence]
+
+        def inline(p: str) -> list[str]:
+            path = Path(p) if p else None
+            if not path or not path.is_file():
+                return ["_(missing)_"]
+            raw = path.read_bytes()
+            try:
+                text = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                return [f"_(binary, {len(raw)} bytes — not inlined)_"]
+            if len(raw) <= PACKET_INLINE_LIMIT:
+                return fenced(text)
+            head = "\n".join(text.splitlines()[:PACKET_HEAD_LINES])
+            return fenced(head) + ["", f"_(truncated — {len(raw)} bytes; the first {PACKET_HEAD_LINES} lines are shown; read the file at the path above)_"]
+
+        def as_map(v) -> dict:
+            if isinstance(v, dict):
+                return {str(k): str(x) for k, x in v.items()}
+            produce = need.get("produce")
+            name = produce[0] if isinstance(produce, list) and produce else str(produce or Path(str(v)).name)
+            return {name: str(v)} if v else {}
+
+        def gate_lines(gate: dict) -> tuple[list[str], list[str]]:
+            """(checks on this step's outputs, verbatim as eval_gate evaluates them; the rest of the stage gate)."""
+            mine, rest = [], []
+            kind = gate.get("kind")
+            if kind == "output":
+                line = f"{gate.get('file')}: {gate.get('check')}"
+                if gate.get("step") == step_id:
+                    mine.append(line)
+                else:
+                    rest.append(f"output of step '{gate.get('step')}' — {line}")
+            elif kind in ("all", "any"):
+                for g in gate.get("of") or []:
+                    m, r = gate_lines(g)
+                    mine += m
+                    rest += r
+                if kind == "any" and (gate.get("of") or []):
+                    rest.append("(the parts above are combined with `any`: one passing part passes the stage)")
+            elif kind == "exit":
+                rest.append(f"exit — step '{gate.get('step')}' must exit 0" + (" (it judges this step's output)" if gate.get("step") != step_id else ""))
+            elif kind == "approval":
+                rest.append(f"approval — step '{gate.get('step')}' must be approved")
+            elif kind == "external":
+                rest.append(f"external — {gate.get('what', '')}")
+            return mine, rest
+
+        stage = next((s for s in self.spec["stages"] if s["id"] == need.get("stage")), {})
+        mine, rest = gate_lines(stage.get("gate") or {})
+        expected, alternative = as_map(need.get("expected")), as_map(need.get("alternative"))
+
+        lines = [f"# Role: {role} — step {step_id} (run {self.run_id}, pipeline {self.spec['name']})", "",
+                 f"Stage `{need.get('stage')}` of pipeline `{self.spec['name']}` stopped at step `{step_id}` for the {role}. "
+                 f"This packet is self-contained: paste it into any agent, or do the work yourself.", "",
+                 *([f"Why: {need['why']}", ""] if need.get("why") else []),
+                 "## What to produce", ""]
+        for name, p in expected.items():
+            lines.append(f"- `{name}` → write it at `{p}`" + (f" (or drop it at `{alternative[name]}`)" if alternative.get(name) else ""))
+        if not expected:
+            lines.append(f"- {need.get('produce', '')}")
+        if need.get("target"):
+            lines.append(f"- Repository checkout: `{need['target']}` (read it; the code step is the only one that changes it)")
+        for key, label in (("format", "Format"), ("rule", "Rule"), ("how", "How")):
+            if need.get(key):
+                lines += ["", f"**{label}:** {need[key]}"]
+        lines += ["", "## The gate this must pass", ""]
+        if mine:
+            lines += ["Checks the executor runs on this step's outputs, exactly as it evaluates them (`<file>: <check>`); a failing check refuses the stage:", ""]
+            lines += [f"- `{m}`" for m in mine]
+        else:
+            lines.append("No output check runs on this step's files directly.")
+        if rest:
+            lines += ["", "Also in the stage gate:", ""] + [f"- {r}" for r in rest]
+        lines += ["", "## Inputs", ""]
+        for item in inputs:
+            lines.append(f"### {item['label']}" + (f" — `{item['path']}`" if item.get("path") else ""))
+            lines.append("")
+            lines += fenced(item["text"]) if "text" in item else inline(item.get("path", ""))
+            lines.append("")
+        if need.get("allowed_files") is not None:
+            lines += [f"### Files you may touch (from {need.get('allowed_files_source', 'the plan')})", ""]
+            lines += [f"- `{f}`" for f in need["allowed_files"]] or ["(none listed: the plan names the files)"]
+            lines += ["", "Plus the test files the test plan names. Nothing else.", ""]
+        for c in need.get("constraints") or []:
+            lines += [f"### Constraint — `{c}`", ""] + inline(c) + [""]
+        if self.record.get("stack_profile"):
+            lines += ["### Stack profile", ""] + fenced(json.dumps(self.record["stack_profile"], indent=2)) + [""]
+        lines += ["## Role skill", ""]
+        if skill:
+            lines += [f"The skill that backs this role — `{ROOT / skill}`:", ""] + inline(str(ROOT / skill)) + [""]
+        elif need.get("constraints"):
+            lines += ["The constraint documents under Inputs are the rules this step follows; no further skill backs it.", ""]
+        else:
+            lines += ["None: the format and rule above are the whole brief.", ""]
+        argv = [str(Path(sys.argv[0]).resolve())] + [a for a in sys.argv[1:] if a != "--resume"] + ["--resume"]
+        lines += ["## When done", "",
+                  "Write the output(s) at the expected path(s) above, do not commit, then resume the run:", "",
+                  "```", shlex.join([sys.executable or "python3"] + argv), "```", ""]
+        return "\n".join(lines)
+
+    def write_packet(self, step: dict, sdir: Path, need: dict, inputs: list[dict], skill: str = "") -> str:
+        """Write <step dir>/PROMPT.md, point needs_builder.json at it (need['prompt']) and return the packet text."""
+        packet = self.role_packet(step, need, inputs, skill)
+        (sdir / PACKET_MD).write_text(packet, encoding="utf-8")
+        need["prompt"] = str(sdir / PACKET_MD)
+        return packet
+
     # ---- the files step (agent step with produces: ["files.txt"])
     def _derive_files_txt(self, tasks_path: str) -> tuple[list[str], str]:
         """files.txt from tasks.csv when EVERY task names files (nothing invented); else ([], why-not)."""
@@ -842,23 +974,26 @@ class Run:
             head = expected.read_text(encoding="utf-8", errors="replace").lstrip().split("\n", 1)[0]
             source = "tasks.csv" if head.startswith("# derived by deliver.py") else ("claude-code" if builder == "claude-code" else "builder")
             return record(read_files_txt(expected), source, f"supplied at {expected.relative_to(self.out)} (builder: {builder})")
-        if builder in ("none", "manual"):
-            rec["status"] = "awaiting_builder"
-            write_json(self.out / "needs_builder.json", {
-                "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+        need = {"run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
                 "builder": builder, "target": str(target), "plan": plan, "tasks": tasks or None,
                 "why": f"files.txt could not be derived: {why}",
                 "produce": FILES_TXT, "expected": str(expected), "alternative": str(dropped),
                 "format": "one repo-relative path per line (source files the change will create or modify; test files are not "
                           "needed — the tests step adds them); blank lines and `#` comments are ignored",
-                "rule": "read plan.md / tasks.csv and the checkout; list only files the plan's tasks require; nothing invented",
-                "how": f"write {FILES_TXT} at the expected path (or pass --files <file>), then re-run with --resume"})
+                "rule": "read plan.md / tasks.csv and the checkout; list only files the plan's tasks require; nothing invented; "
+                        "do not change any file in the repository",
+                "how": f"write {FILES_TXT} at the expected path (or pass --files <file>), then re-run with --resume"}
+        packet_inputs = [{"label": "plan.md", "path": plan}] + ([{"label": TASKS_CSV, "path": tasks}] if tasks else [])
+        if builder in ("none", "manual"):
+            rec["status"] = "awaiting_builder"
+            self.write_packet(step, sdir, need, packet_inputs)
+            write_json(self.out / "needs_builder.json", need)
             return False
         if builder == "claude-code":
             exe = shutil.which("claude")
             if not exe:
                 raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with files.txt)")
-            prompt = self.files_prompt(step, plan, tasks, expected)
+            prompt = self.write_packet(step, sdir, need, packet_inputs)   # prompt.txt is the packet: one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
             r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
@@ -876,22 +1011,6 @@ class Run:
                     rec["warning"] = "the files step changed the checkout; it should only read it"
             return record(read_files_txt(expected), "claude-code", f"written by claude -p at {expected.relative_to(self.out)}")
         raise StepError(f"unknown builder {builder!r}")
-
-    def files_prompt(self, step: dict, plan: str, tasks: str, expected: Path) -> str:
-        def body(p: str) -> str:
-            t = Path(p).read_text(encoding="utf-8", errors="replace") if p and Path(p).is_file() else "(missing)"
-            return t if len(t) <= CONTEXT_LIMIT else t[:CONTEXT_LIMIT] + "\n[... truncated ...]"
-        parts = ["You are the files step of a delivery pipeline. Read the plan below and this repository, then write the list of "
-                 "repo-relative source files the change will create or modify — one path per line, nothing else — to:",
-                 str(expected), "",
-                 "Rules: list only files the plan's tasks require (existing files to modify, new files to create); do not list "
-                 "test files (the tests step adds them); do not change any file in the repository; do not commit.",
-                 "", "## Plan", "", body(plan)]
-        if tasks:
-            parts += ["", "## tasks.csv", "", body(tasks)]
-        parts += ["", "## Stack profile", "", json.dumps(self.record.get("stack_profile", {}), indent=2),
-                  "", "When done, reply with the list you wrote."]
-        return "\n".join(parts)
 
     # ---- the plan-refine step (agent step with produces: ["plan.md", "tasks.csv"])
     @staticmethod
@@ -938,16 +1057,24 @@ class Run:
             write_json(sdir / "prd-refine.json", {"source": "draft", "skipped": True, "draft": draft, "note": verdict.get("evidence")})
             return True
         rec["status"] = "awaiting_builder"
-        write_json(self.out / "needs_builder.json", {
-            "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
-            "role": "product-manager", "builder": builder, "prd": draft, "request": request,
-            "why": "the PRD draft has no acceptance criteria: " + str(verdict.get("evidence")),
-            "produce": [PRD_MD], "expected": {PRD_MD: str(expected)}, "alternative": {PRD_MD: str(dropped)},
-            "format": "the draft with every [TO BE BASELINED] cell the request answers filled, and the 'User stories and "
-                      "acceptance criteria' section written as S1..Sn with Given/When/Then lines (nothing invented beyond the request)",
-            "rule": "fill the PRD from the request and what the requester can confirm; mark what you cannot know "
-                    "[TO BE BASELINED — owner: <role>] outside the stories; the gate refuses stories with TBD or template placeholders",
-            "how": f"write {PRD_MD} at the expected path, then re-run with --resume"})
+        need = {"run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+                "role": "product-manager", "builder": builder, "prd": draft, "request": request,
+                "why": "the PRD draft has no acceptance criteria: " + str(verdict.get("evidence")),
+                "produce": [PRD_MD], "expected": {PRD_MD: str(expected)}, "alternative": {PRD_MD: str(dropped)},
+                "format": "the draft with every [TO BE BASELINED] cell the request answers filled, and the 'User stories and "
+                          "acceptance criteria' section written as S1..Sn with Given/When/Then lines (nothing invented beyond the request)",
+                "rule": "fill the PRD from the request and what the requester can confirm; mark what you cannot know "
+                        "[TO BE BASELINED — owner: <role>] outside the stories; the gate refuses stories with TBD or template placeholders",
+                "how": f"write {PRD_MD} at the expected path, then re-run with --resume"}
+        try:
+            brief_path = str(self.resolve(step["inputs"].get("brief", ""), "prd-refine brief") or "")
+        except StepError:
+            brief_path = ""   # the brief is context for the packet, never a reason to fail the stop
+        packet_inputs = [{"label": "Request", "text": request or "(none)"}, {"label": f"Draft PRD ({PRD_MD})", "path": draft}]
+        if brief_path:
+            packet_inputs.append({"label": "Brief (brief.json)", "path": brief_path})
+        self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
+        write_json(self.out / "needs_builder.json", need)
         return False
 
     def step_plan_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
@@ -985,10 +1112,7 @@ class Run:
             shutil.copy(scaffold_tasks, expected[TASKS_CSV])
             return record("scaffold", "the spec-to-plan scaffold is complete (every task names files, acceptance and test): "
                           "step skipped, scaffold taken as the plan", skipped=True)
-        if builder in ("none", "manual"):
-            rec["status"] = "awaiting_builder"
-            write_json(self.out / "needs_builder.json", {
-                "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+        need = {"run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
                 "role": "architect", "builder": builder, "target": str(target),
                 "plan": scaffold_plan, "tasks": scaffold_tasks, "prd": prd or None, "request": request,
                 "why": "the scaffold plan is not a plan yet: " + "; ".join(gaps[:8]) + (" …" if len(gaps) > 8 else ""),
@@ -997,17 +1121,25 @@ class Run:
                 "alternative": {f: str(dropped[f]) for f in PLAN_FILES},
                 "format": f"{TASKS_CSV}: columns {','.join(PLAN_COLUMNS)}; files repo-relative, comma-separated; repo_check "
                           f"`<file>: create|modify` per the checkout; {PLAN_MD}: the scaffold with its file table and every task "
-                          "block filled (Files, Acceptance, Tests, Rollback)",
+                          "block filled (Files, Acceptance, Tests, Rollback); keep the scaffold's structure and task ids",
                 "rule": "read the scaffold plan, the PRD and the checkout; fill the file table and every task's acceptance, test, "
-                        "rollback and files; nothing invented beyond what the PRD and the request state; the gate refuses any "
-                        "[TO BE BASELINED cell in acceptance, test or files",
-                "how": f"write both files at the expected paths (or pass --plan <dir> holding {PLAN_MD} and {TASKS_CSV}), then re-run with --resume"})
+                        "rollback and files; nothing invented beyond what the PRD and the request state — where they are silent, "
+                        "say so in the task text rather than guessing; the gate refuses any [TO BE BASELINED cell in acceptance, "
+                        "test or files; do not change any file in the repository",
+                "how": f"write both files at the expected paths (or pass --plan <dir> holding {PLAN_MD} and {TASKS_CSV}), then re-run with --resume"}
+        packet_inputs = [{"label": "Gaps the gate will refuse", "text": "\n".join(f"- {g}" for g in gaps)},
+                         {"label": "Request", "text": request or "(none)"}, {"label": f"PRD ({PRD_MD})", "path": prd},
+                         {"label": f"Scaffold {PLAN_MD}", "path": scaffold_plan}, {"label": f"Scaffold {TASKS_CSV}", "path": scaffold_tasks}]
+        if builder in ("none", "manual"):
+            rec["status"] = "awaiting_builder"
+            self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])
+            write_json(self.out / "needs_builder.json", need)
             return False
         if builder == "claude-code":
             exe = shutil.which("claude")
             if not exe:
                 raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with --plan <dir>)")
-            prompt = self.plan_prompt(scaffold_plan, scaffold_tasks, prd, request, expected, gaps)
+            prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
             r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
@@ -1026,27 +1158,6 @@ class Run:
                     rec["warning"] = "the plan-refine step changed the checkout; it should only read it"
             return record("claude-code", f"written by claude -p at {sdir.relative_to(self.out)}")
         raise StepError(f"unknown builder {builder!r}")
-
-    def plan_prompt(self, plan: str, tasks: str, prd: str, request: str, expected: dict, gaps: list[str]) -> str:
-        def body(p: str) -> str:
-            t = Path(p).read_text(encoding="utf-8", errors="replace") if p and Path(p).is_file() else "(missing)"
-            return t if len(t) <= CONTEXT_LIMIT else t[:CONTEXT_LIMIT] + "\n[... truncated ...]"
-        parts = ["You are the architect of a delivery pipeline. The plan below is a scaffold spec-to-plan wrote from the spec; "
-                 "it is not a plan yet. Read it, the PRD, the request and this repository, then write the complete plan to:",
-                 f"  {expected[PLAN_MD]}", f"  {expected[TASKS_CSV]}", "",
-                 "Rules: keep the scaffold's structure and task ids; fill the file table and, for every task, Files (repo-relative "
-                 "source files to create or modify, checked against this checkout and marked create/modify under Repo check), "
-                 "Acceptance (observable), Tests (what the red test asserts) and Rollback; nothing invented beyond what the PRD "
-                 f"and the request state — where they are silent, say so in the task text rather than guessing. {TASKS_CSV} keeps "
-                 f"the columns {','.join(PLAN_COLUMNS)}; files comma-separated; repo_check `<file>: create|modify`. Leave no "
-                 "[TO BE BASELINED cell in acceptance, test or files: the stage gate refuses them. Do not change any file in the "
-                 "repository; do not commit.",
-                 "", "## Gaps the gate will refuse", ""] + [f"- {g}" for g in gaps] + [
-                 "", "## Request", "", request or "(none)", "", "## PRD", "", body(prd), "", "## Scaffold plan.md", "", body(plan),
-                 "", f"## Scaffold {TASKS_CSV}", "", body(tasks),
-                 "", "## Stack profile", "", json.dumps(self.record.get("stack_profile", {}), indent=2),
-                 "", "When done, reply with the task table you wrote."]
-        return "\n".join(parts)
 
     def _revert_superseded_patch(self, patch: Path, target: Path, sdir: Path, rec: dict) -> None:
         """The code step runs again (a resume after a failed gate, or build/diff.patch changed after the build stage
@@ -1168,6 +1279,16 @@ class Run:
         allowed, allowed_source = self._allowed_files(plan, files)
         rec["allowed_files"] = allowed
         manual_patch = self.out / "build" / "diff.patch"
+        need = {"run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+                "builder": builder, "target": str(target), "plan": plan, "tests": tests, "files": files or None,
+                "allowed_files": allowed, "allowed_files_source": allowed_source,
+                "constraints": [str(ROOT / c) for c in step.get("constraints") or []],
+                "rule": f"touch only the files {allowed_source} names (plus the test files the test plan names); make the red tests "
+                        "green; follow every constraint document; do not refactor, rename or reformat anything else; do not commit",
+                "produce": "diff.patch", "expected": str(manual_patch),
+                "how": "write the code on the checkout, save `git diff` (staged + unstaged, new files included) to the "
+                       "expected path (or pass --patch <file>), then re-run with --resume"}
+        packet_inputs = [{"label": "Plan (plan.md)", "path": plan}, {"label": "Test plan (test-plan.md)", "path": tests}]
         if builder in ("none", "manual"):
             if manual_patch.is_file():
                 rec["patch_sha256"] = sha256_file(manual_patch)
@@ -1179,15 +1300,8 @@ class Run:
                 self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
                 return True
             rec["status"] = "awaiting_builder"
-            write_json(self.out / "needs_builder.json", {
-                "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
-                "builder": builder, "target": str(target), "plan": plan, "tests": tests, "files": files or None,
-                "allowed_files": allowed, "allowed_files_source": allowed_source,
-                "constraints": [str(ROOT / c) for c in step.get("constraints") or []],
-                "rule": f"touch only the files {allowed_source} names (plus the test files the test plan names); make the red tests green; no other changes",
-                "produce": "diff.patch", "expected": str(manual_patch),
-                "how": "write the code on the checkout, save `git diff` (staged + unstaged, new files included) to the "
-                       "expected path (or pass --patch <file>), then re-run with --resume"})
+            self.write_packet(step, sdir, need, packet_inputs)
+            write_json(self.out / "needs_builder.json", need)
             return False
         if builder == "claude-code":
             exe = shutil.which("claude")
@@ -1195,7 +1309,7 @@ class Run:
                 raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with build/diff.patch)")
             if not is_git_root(target):
                 raise StepError(f"builder claude-code: {target} is not a git repository root; the diff cannot be captured")
-            prompt = self.agent_prompt(step, plan, tests, allowed, allowed_source)
+            prompt = self.write_packet(step, sdir, need, packet_inputs)   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
             r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
@@ -1212,22 +1326,6 @@ class Run:
             patch.unlink()
             return True
         raise StepError(f"unknown builder {builder!r}")
-
-    def agent_prompt(self, step: dict, plan: str, tests: str, allowed: list[str] | None = None, source: str = "plan.md") -> str:
-        def body(p: str) -> str:
-            t = Path(p).read_text(encoding="utf-8", errors="replace") if p and Path(p).is_file() else "(missing)"
-            return t if len(t) <= CONTEXT_LIMIT else t[:CONTEXT_LIMIT] + "\n[... truncated ...]"
-        parts = ["You are the build step of a delivery pipeline. Implement the plan below on this repository.",
-                 f"Rules: touch ONLY the files listed under 'Files you may touch' (from {source}) plus the test files the test "
-                 "plan names; make the red tests green; follow every constraint file; do not refactor, rename or reformat "
-                 "anything else; do not commit.",
-                 "", "## Files you may touch", ""] + [f"- {f}" for f in (allowed or [])] + (["(none listed: the plan names the files)"] if not allowed else []) + [
-                 "", "## Plan", "", body(plan), "", "## Test plan", "", body(tests)]
-        for c in step.get("constraints") or []:
-            parts += ["", f"## Constraint: {c}", "", body(str(ROOT / c))]
-        parts += ["", "## Stack profile", "", json.dumps(self.record.get("stack_profile", {}), indent=2),
-                  "", "When done, reply with a short summary: files changed and how each acceptance criterion is met."]
-        return "\n".join(parts)
 
     def step_pr(self, step: dict, sdir: Path, rec: dict) -> None:
         title = self.subst(step.get("title", "")).strip() or f"deliver {self.run_id}"

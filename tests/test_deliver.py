@@ -1318,3 +1318,67 @@ def test_spec_tasks_with_parentheses_and_semicolons_reach_the_plan_intact(tmp_pa
     rows = list(csv.DictReader((out / "evidence" / "02-architecture" / "plan-refine" / "tasks.csv").open()))
     assert rows[0]["acceptance"] == brief["tasks"][0]["accept"] and rows[0]["test"] == brief["tasks"][0]["test"]
     assert "[TO BE BASELINED" not in "".join(rows[0].values())
+
+
+# ---- the role packet (<step dir>/PROMPT.md): what every builder stop hands to ANY agent — docs/DELIVERY-PIPELINES.md → The role packet
+def test_prd_refine_stop_writes_a_role_packet_for_the_product_manager(tmp_path):
+    """Request only, no brief: the stop at prd-refine writes PROMPT.md naming the role, the expected path, the gate
+    check the executor will run and the draft PRD inlined — pasteable into any agent, whatever --builder is."""
+    out = tmp_path / "pm-packet"
+    r = deliver(out, "--builder", "none", "--approve-all", brief=None, prd=False)
+    assert r.returncode == 4, r.stdout + r.stderr
+    need = json.loads((out / "needs_builder.json").read_text())
+    packet = out / "evidence" / "01-requirements" / "prd-refine" / "PROMPT.md"
+    assert packet.is_file() and need["prompt"] == str(packet)                                   # (d) needs_builder.json points at it
+    md = packet.read_text()
+    assert md.startswith("# Role: product-manager — step prd-refine (run ") and "pipeline feature-delivery)" in md.splitlines()[0]
+    assert f"- `prd-final.md` → write it at `{need['expected']['prd-final.md']}`" in md
+    assert f"(or drop it at `{need['alternative']['prd-final.md']}`)" in md
+    assert '- `prd-final.md: section_filled:"user stories"`' in md and '- `prd-final.md: sections:["Acceptance criteria"]`' in md
+    draft = (out / "evidence" / "01-requirements" / "prd" / "prd-final.md").read_text()
+    assert draft.rstrip("\n") in md                                                               # the draft PRD is inlined whole
+    assert "### Request" in md and "Export orders as CSV" in md
+    assert "## Role skill" in md and "name: product-spec-prd" in md                              # the role's SKILL.md is inlined
+    assert "## When done" in md and "--resume" in md
+    assert not (packet.parent / "prompt.txt").exists()                                           # prompt.txt is the claude-code builder's copy only
+
+
+def test_plan_refine_stop_packet_inlines_the_scaffold_and_lists_the_five_gate_checks(tmp_path):
+    out = tmp_path / "arch-packet"
+    r = deliver(out, "--builder", "none", "--approve-all", brief=None)                             # --prd fixture: stops at plan-refine
+    assert r.returncode == 4 and "needs the architect (plan-refine)" in r.stdout, r.stdout + r.stderr
+    need = json.loads((out / "needs_builder.json").read_text())
+    packet = out / "evidence" / "02-architecture" / "plan-refine" / "PROMPT.md"
+    assert need["prompt"] == str(packet)
+    md = packet.read_text()
+    assert md.startswith("# Role: architect — step plan-refine (run ")
+    for check in ("csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"):
+        assert f"- `tasks.csv: {check}`" in md, check
+    assert "approval — step 'plan-approval' must be approved" in md                              # the rest of the stage gate, named
+    plan_dir = out / "evidence" / "02-architecture" / "plan"
+    assert (plan_dir / "plan.md").read_text().rstrip("\n") in md and (plan_dir / "tasks.csv").read_text().rstrip("\n") in md
+    assert "### Gaps the gate will refuse" in md and "[TO BE BASELINED" in md
+    assert "name: spec-to-plan" in md                                                            # skills/build/spec-to-plan/SKILL.md title
+    for f in ("plan.md", "tasks.csv"):
+        assert f"- `{f}` → write it at `{need['expected'][f]}`" in md
+
+
+def test_code_stop_packet_lists_allowed_files_inlines_the_test_plan_and_ends_with_the_resume_command(tmp_path):
+    out = tmp_path / "code-packet"
+    r = deliver(out, "--builder", "none", "--approve-all")
+    assert r.returncode == 4, r.stdout + r.stderr
+    need = json.loads((out / "needs_builder.json").read_text())
+    packet = out / "evidence" / "03-build" / "code" / "PROMPT.md"
+    assert need["prompt"] == str(packet)
+    md = packet.read_text()
+    assert md.startswith("# Role: builder — step code (run ")
+    assert "### Files you may touch (from files.txt)" in md and "- `lib/orders.js`" in md and "- `app/api/orders/export/route.js`" in md
+    tests_md = (out / "evidence" / "03-build" / "tests" / "test-plan.md").read_text()
+    assert tests_md.rstrip("\n") in md                                                           # test-plan.md inlined
+    assert f"- `diff.patch` → write it at `{out / 'build' / 'diff.patch'}`" in md
+    for c in need["constraints"]:
+        assert f"### Constraint — `{c}`" in md and Path(c).read_text().rstrip("\n") in md         # constraint docs inlined
+    assert "exit — step 'conventions' must exit 0" in md
+    fence = md.rstrip().splitlines()
+    assert fence[-1] == "```" and fence[-2].endswith(" --resume") and fence[-2].count("--resume") == 1
+    assert "scripts/deliver.py feature-delivery" in fence[-2] and f"--out {out}" in fence[-2] and "--builder none" in fence[-2]
