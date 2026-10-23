@@ -1176,11 +1176,24 @@ class Run:
         code, _ = git(repo, "rev-parse", "--verify", "-q", branch, ok=(0, 1), env=env)
         git(repo, "checkout", "-q", "-B" if code == 0 else "-b", branch, env=env)
         git(repo, "add", "-A", env=env)
-        git(repo, "commit", "-q", "--allow-empty", "-m", title, "-m",
-            f"Delivered by giri-skills pipeline {self.spec['name']} run {self.run_id}", env=env)
+        staged, _ = git(repo, "diff", "--cached", "--quiet", ok=(0, 1), env=env)
         _, head = git(repo, "rev-parse", "HEAD", env=env)
-        git(repo, "push", "-u", "origin", branch, env=env)
-        r = subprocess.run(["gh", "pr", "create", "--title", title, "--body-file", body, "--head", branch],
+        # a resume after a failed push: the delivery commit is already on the branch — nothing staged and HEAD is not
+        # the base commit — so it is pushed as it is instead of stacking an empty commit on it
+        if staged == 1 or head.strip() == (self.record.get("base_sha") or ""):
+            git(repo, "commit", "-q", "--allow-empty", "-m", title, "-m",
+                f"Delivered by giri-skills pipeline {self.spec['name']} run {self.run_id}", env=env)
+            _, head = git(repo, "rev-parse", "HEAD", env=env)
+        push = subprocess.run(["git", "push", "-u", "origin", branch], cwd=str(repo), capture_output=True, text=True, env=env)
+        if push.returncode != 0:
+            why = push.stderr or push.stdout
+            hint = (f" — the token gh uses cannot push to this repository: grant Contents: read and write + Pull requests: "
+                    f"read and write, then --resume (the commit is on branch {branch} already)") if "403" in why or "not granted" in why else ""
+            raise StepError(f"git push -u origin {branch}: {why.strip()[:300]}{hint}")
+        existing = subprocess.run(["gh", "pr", "view", branch, "--json", "number,url,headRefOid"], cwd=str(repo),
+                                  capture_output=True, text=True, env=env)
+        r = existing if existing.returncode == 0 and existing.stdout.strip().startswith("{") else \
+            subprocess.run(["gh", "pr", "create", "--title", title, "--body-file", body, "--head", branch],
                            cwd=str(repo), capture_output=True, text=True, env=env)
         if r.returncode != 0:
             raise StepError(f"gh pr create: {(r.stderr or r.stdout).strip()[:300]}")
@@ -1553,6 +1566,41 @@ def prepare_repo(run: Run) -> None:
     run.repo = src.resolve()
     if run.inputs.get("ref") and is_git_root(run.repo):
         git(run.repo, "checkout", "-q", str(run.inputs["ref"]))
+    check_push_access(run)
+
+
+def github_key(run: "Run") -> str:
+    """owner/name of the repository the pr step will push to: the --repo key, or the origin remote of the checkout."""
+    key = str(run.inputs.get("repo") or "")
+    if REPO_KEY.match(key):
+        return key
+    if shutil.which("git") and is_git_root(run.repo):
+        code, url = git(run.repo, "remote", "get-url", "origin", ok=(0, 2, 128))
+        m = re.search(r"github\.com[:/]([^/\s]+/[^/\s]+?)(?:\.git)?$", url.strip()) if code == 0 else None
+        if m:
+            return m.group(1)
+    return ""
+
+
+def check_push_access(run: "Run") -> None:
+    """Before any stage runs: a pipeline that ends in a pull request needs a token that can push. Found by the first
+    real run — the token could clone but not push, and the run stopped at the pr step after every gate had passed.
+    Asked of GitHub through gh (`permissions.push`); a gh that is absent or cannot answer never blocks the run."""
+    if run.args.dry or not any(st.get("kind") == "pr" for stage in run.spec["stages"] for st in stage["steps"]):
+        return
+    key = github_key(run)
+    if not key or not shutil.which("gh"):
+        return
+    r = subprocess.run(["gh", "api", f"repos/{key}", "--jq", ".permissions.push"], capture_output=True, text=True)
+    if r.returncode != 0 or r.stdout.strip() not in ("true", "false"):
+        return
+    if r.stdout.strip() == "false":
+        write_json(run.out / "needs_input.json", {"pipeline": run.spec["name"], "missing": [
+            {"name": "push access", "type": "token", "from": f"the token gh uses (GH_TOKEN) can read {key} but not push to it; the pr step "
+             f"pushes a branch and opens the pull request — grant it Contents: read and write and Pull requests: read and write "
+             f"on {key} (fine-grained token → Repository access → select {key} → Permissions), then re-run with --resume"}]})
+        sys.exit(f"error: no push access to {key} for the token gh uses — the pr step would fail after every gate passed; "
+                 f"grant Contents: read and write + Pull requests: read and write on {key}, then re-run (--resume keeps the evidence)")
 
 
 REPO_KEY = re.compile(r"^(?!\.)[A-Za-z0-9_-][A-Za-z0-9_.-]*/(?!\.)[A-Za-z0-9_-][A-Za-z0-9_.-]*$")

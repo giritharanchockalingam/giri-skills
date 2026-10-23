@@ -342,7 +342,10 @@ portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a pa
 
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).
-Without `--dry` the checkout is used in place and the `pr` step needs `gh`. `--resume` keeps the completed steps of
+Without `--dry` the checkout is used in place and the `pr` step needs `gh`; before stage 1 the executor asks GitHub
+whether the token `gh` holds can push to the repository (`permissions.push`) and stops with `needs_input.json` (exit 2)
+when it cannot, rather than failing at the `pr` step after every gate passed. The `pr` step is idempotent: a resume
+after a failed push pushes the delivery commit already on the branch and reuses an open PR. `--resume` keeps the completed steps of
 a stage that stopped (approval, builder), re-runs a failed stage in full, and re-runs the build stage and everything
 after it when `build/diff.patch` changed since the build stage passed. The run id is derived from pipeline + request + repo (plus a time
 suffix outside `--dry`), so a dry run is deterministic apart from the timestamps in `run.json` and `gate.json`.
