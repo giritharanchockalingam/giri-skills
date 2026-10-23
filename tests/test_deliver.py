@@ -1151,14 +1151,28 @@ def _pr_fixture(tmp_path, monkeypatch, origin: str | None = None):
 def test_a_token_that_cannot_push_stops_the_run_before_any_stage(tmp_path, monkeypatch):
     """First real run: the token cloned the repo but could not push; every gate passed and the run died at the pr step.
     Now the push permission is asked of GitHub up front and the run stops with needs_input.json before stage 1."""
-    work, _, out, gh_log = _pr_fixture(tmp_path, monkeypatch, origin="https://github.com/acme/app.git")
-    monkeypatch.setenv("GH_PUSH", "false")
-    r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
-                   "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-2")
+    import http.server, socket, threading
+    real_socket = next(c for c in socket.SocketType.__subclasses__() if c.__module__ == "socket")   # the class conftest replaced
+    monkeypatch.setattr(socket, "socket", real_socket)   # a loopback stub of GitHub; conftest blocks sockets by default
+
+    class Forbidden(http.server.BaseHTTPRequestHandler):   # GitHub's answer to receive-pack for a token without Contents: write
+        def do_GET(self):
+            self.send_response(403); self.end_headers(); self.wfile.write(b"Write access to repository not granted.")
+        do_POST = do_GET
+        def log_message(self, *a): pass
+    srv = http.server.HTTPServer(("127.0.0.1", 0), Forbidden)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        work, _, out, gh_log = _pr_fixture(tmp_path, monkeypatch, origin=f"http://127.0.0.1:{srv.server_port}/acme/app.git")
+        r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
+                       "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-2")
+    finally:
+        srv.shutdown()
     assert r.returncode != 0 and "no push access to acme/app" in r.stderr and "Contents: read and write" in r.stderr, r.stdout + r.stderr
     need = json.loads((out / "needs_input.json").read_text())
-    assert need["missing"][0]["name"] == "push access" and "acme/app" in need["missing"][0]["from"]
-    assert not (out / "evidence" / "01-requirements").exists() and "api repos/acme/app --jq .permissions.push" in gh_log.read_text()
+    assert need["missing"][0]["name"] == "push access" and "acme/app" in need["missing"][0]["from"] and "403" in need["missing"][0]["from"]
+    assert not (out / "evidence" / "01-requirements").exists()
+    assert not gh_log.exists()   # permissions.push describes the user, not a fine-grained token: the API is not consulted
 
 
 def test_resume_after_a_failed_push_pushes_the_existing_commit_and_opens_one_pr(tmp_path, monkeypatch):
