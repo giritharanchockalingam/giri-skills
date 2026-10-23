@@ -369,7 +369,9 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
             return _result(spec, False, f"section {want!r} is empty")
         if TBD_RE.search(joined):
             return _result(spec, False, f"section {want!r} carries a [TO BE BASELINED marker — nobody filled it")
-        ph = re.search(r"<[a-z][a-z /_-]{1,40}>|…|\.\.\.", joined)
+        # the template's own placeholders: `<persona>`, `<capability>`, `<outcome>`, `<role>` and the ellipsis lines —
+        # not every angle-bracket token (a spec may legitimately say "subject '[ops] DOWN <name>'")
+        ph = re.search(r"<(?:persona|capability|outcome|role|feature|user|describe[^>]*)>|(?:^|\s)…(?:\s|$)|(?:^|\s)\.\.\.(?:\s|$)", joined)
         if ph:
             return _result(spec, False, f"section {want!r} still holds the template placeholder {ph.group(0)!r}")
         return _result(spec, True, f"section {want!r}: {sum(1 for ln in body if ln.strip())} line(s), no placeholders")
