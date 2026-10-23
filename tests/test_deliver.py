@@ -725,11 +725,10 @@ def test_portal_5xx_is_retried_three_times(tmp_path, monkeypatch):
 FAKE_GH = """#!/bin/sh
 printf '%s\\n' "$*" >> "$GH_LOG"
 printf 'cwd=%s\\n' "$(pwd -P)" >> "$GH_LOG"
-case "$1 $2" in
-  "api repos/acme/app") echo "${GH_PUSH:-true}" ;;
-  "pr create") echo "https://github.com/acme/app/pull/7" ;;
-  "pr view") grep -q '^pr create' "$GH_LOG" || { echo 'no pull requests found for branch' >&2; exit 1; }
-             echo '{"number": 7, "url": "https://github.com/acme/app/pull/7", "headRefOid": "deadbeef"}' ;;
+case "$*" in
+  "api repos/"*"/pulls --input "*) echo '{"number": 7, "html_url": "https://github.com/acme/app/pull/7", "head": {"sha": "deadbeef"}}' ;;   # create (REST)
+  "api repos/"*"/pulls?state=open&head="*) grep -q '/pulls --input' "$GH_LOG" && echo '{"number": 7, "url": "https://github.com/acme/app/pull/7", "headRefOid": "deadbeef"}' || echo '' ;;
+  "api repos/"*" --jq .default_branch") echo main ;;
 esac
 exit 0
 """
@@ -762,10 +761,13 @@ def test_pr_step_commits_as_the_bot_pushes_and_opens_the_pr(tmp_path, monkeypatc
     assert pr == {"dry": False, "branch": "deliver/r-pr-1", "title": REQUEST, "number": 7, "url": "https://github.com/acme/app/pull/7",
                   "head_sha": "deadbeef", "committed_as": "skills-factory[bot]"}
     calls = gh_log.read_text().splitlines()
-    assert calls[0].startswith("pr view deliver/r-pr-1")      # no PR yet → create; the push authenticates through `gh auth git-credential` only
-    create = next(c for c in calls if c.startswith("pr create"))
-    assert create == f"pr create --title {REQUEST} --body-file {out / 'evidence' / 'EVIDENCE.md'} --head deliver/r-pr-1"
-    assert "pr view deliver/r-pr-1 --json number,url,headRefOid" in calls
+    # REST only (gh api), never `gh pr create`/`gh pr view` (GraphQL): look up an open PR for the branch, then create
+    assert calls[0].startswith("api repos/") and "/pulls?state=open&head=" in calls[0] and calls[0].endswith(":deliver/r-pr-1 --jq .[0] | {number, url: .html_url, headRefOid: .head.sha}")
+    create = next(c for c in calls if "/pulls --input " in c)
+    assert create.startswith("api repos/") and create.endswith(str(out / "evidence" / "05-deploy" / "pr" / "pr-request.json"))
+    spec = json.loads((out / "evidence" / "05-deploy" / "pr" / "pr-request.json").read_text())
+    assert spec["title"] == REQUEST and spec["head"] == "deliver/r-pr-1" and spec["base"] == "main" and spec["body"].startswith("# Evidence")
+    assert not any(c.startswith("pr ") for c in calls)
     assert all(c == f"cwd={work.resolve()}" for c in calls if c.startswith("cwd="))      # gh runs in the target checkout
     # the branch reached the bare remote with the bot identity and the checkout's changes
     log = subprocess.run(["git", "log", "-1", "--format=%an <%ae>%n%s", "deliver/r-pr-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
@@ -1219,17 +1221,17 @@ def test_resume_after_a_failed_push_pushes_the_existing_commit_and_opens_one_pr(
     assert r.returncode == 0, r.stdout + r.stderr
     log = subprocess.run(["git", "log", "--format=%s", "main..deliver/r-pr-3"], cwd=bare, capture_output=True, text=True, check=True).stdout
     assert log.splitlines() == [REQUEST]                                  # one delivery commit, no empty commit on top
-    assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("pr create")) == 1
+    assert sum(1 for c in gh_log.read_text().splitlines() if "/pulls --input " in c) == 1
     pr = json.loads((out / "evidence" / "05-deploy" / "pr" / "pr.json").read_text())
     assert pr["number"] == 7 and pr["branch"] == "deliver/r-pr-3"
 
 
 # ---- greenfield on GitHub: the run creates the repository, commits the scaffold to main, and the feature is a PR on top
 
-FAKE_GH_REPOS = FAKE_GH.replace('case "$1 $2" in', '''case "$1 $2" in
-  "api repos/acme/new") [ -d "$GH_BARE" ] || exit 1; echo 'new' ;;
-  "repo create") git init -q --bare "$GH_BARE" && git -C "$GH_BARE" symbolic-ref HEAD refs/heads/main ;;
-  "repo clone") git clone -q "$GH_BARE" "$4" 2>/dev/null ;;''')
+FAKE_GH_REPOS = FAKE_GH.replace('case "$*" in', '''case "$*" in
+  "api repos/acme/new --jq .name") [ -d "$GH_BARE" ] || exit 1; echo 'new' ;;
+  "repo create "*) git init -q --bare "$GH_BARE" && git -C "$GH_BARE" symbolic-ref HEAD refs/heads/main ;;
+  "repo clone "*) git clone -q "$GH_BARE" "$4" 2>/dev/null ;;''')
 
 
 def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_opens_the_pr(tmp_path, monkeypatch):
