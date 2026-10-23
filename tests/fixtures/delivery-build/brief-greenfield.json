@@ -1,0 +1,92 @@
+{
+  "_note": "FICTIONAL product brief for the delivery-pipeline tests (Harborline Portal is invented) Greenfield variant: the home page is in scope too (greenfield-diff.patch touches app/page.js).",
+  "feature": "Order CSV export",
+  "problem": "Operations staff copy orders into spreadsheets by hand because the portal has no export",
+  "users": [
+    "Operations lead",
+    "Finance analyst (viewer)"
+  ],
+  "goals": [
+    "An operator exports the current order list as CSV in one click",
+    "Customer names with commas or quotes export intact"
+  ],
+  "non_goals": [
+    "Scheduled or emailed exports",
+    "XLSX formatting",
+    "Export of attachments"
+  ],
+  "metrics": [
+    {
+      "name": "Operators using export per month",
+      "baseline": "0 (feature absent)",
+      "target": "60% of active operators",
+      "source": "logs action=orders.export outcome=ok",
+      "by": "2027-03-31"
+    }
+  ],
+  "phases": [
+    {
+      "name": "v1",
+      "scope": [
+        "CSV export of the current order list",
+        "Customer names quoted per RFC 4180",
+        "Download served by a route handler"
+      ],
+      "excludes": [
+        "Scheduling",
+        "XLSX"
+      ],
+      "exit": "60% of active operators exported at least once in 30 days"
+    },
+    {
+      "name": "Later",
+      "scope": [
+        "Scheduled exports to email"
+      ],
+      "exit": "needs evidence: customer requests"
+    }
+  ],
+  "files": [
+    "lib/orders.js",
+    "app/api/orders/export/route.js",
+    "app/page.js"
+  ],
+  "tasks": [
+    {
+      "task": "CSV export of the current order list",
+      "accept": "GET /api/orders/export answers 200 with text/csv and one row per order in the current list",
+      "test": "unit toCsv returns the header plus one line per order and the route answers 200 text/csv",
+      "rollback": "remove the route handler and the toCsv export from lib/orders.js",
+      "files": [
+        "lib/orders.js",
+        "app/api/orders/export/route.js",
+        "app/page.js"
+      ]
+    },
+    {
+      "task": "Customer names quoted per RFC 4180",
+      "accept": "a customer name holding a comma or a double quote exports as one quoted field with inner quotes doubled",
+      "test": "unit toCsv quotes a name with a comma and doubles an inner quote",
+      "rollback": "revert the quoting change in lib/orders.js",
+      "files": [
+        "lib/orders.js",
+        "app/page.js"
+      ]
+    },
+    {
+      "task": "Download served by a route handler",
+      "accept": "the response carries a Content-Disposition attachment header naming orders.csv",
+      "test": "route test asserts the Content-Disposition attachment header",
+      "rollback": "remove app/api/orders/export/route.js",
+      "files": [
+        "app/api/orders/export/route.js",
+        "app/page.js"
+      ]
+    }
+  ],
+  "constraints": [
+    "No schema change",
+    "Behind feature.exports flag"
+  ],
+  "flag": "feature.exports"
+}

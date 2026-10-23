@@ -255,7 +255,7 @@ uses — `nextjs-enterprise-conventions` (`nextjs`), `perf-review-runner` (`perf
 | Pre-change tree | always `git archive` of the recorded base commit (`run.json` `base_sha`, HEAD when the run started; the change stays uncommitted until the pr step) into `<out>/baseline-repo` — never the working copy, no `git stash`, so scaffolded tests or an applied diff never leak into their own baseline. A checkout without git or without a commit is linted in place |
 | Once per run, whenever missing | `baseline.json` is read back on `--resume`; a resume at any stage at or past the code step that finds no baseline takes it first (from the pre-change tree), before any gate skill runs |
 | `--no-baseline` | skips the capture; every finding is then `new` and pre-existing debt fails the gate (the old behaviour) |
-| Greenfield | nothing to baseline: the repository is created by the run (`status: skipped` in `baseline.json`) |
+| Greenfield | nothing to baseline: the repository is created by the run (`status: skipped` in `baseline.json`). `--repo owner/name` → the executor creates the repository on GitHub (private, `gh repo create`) when it does not exist and clones it; after the bootstrap stage the scaffold is committed to `main` as the bot and pushed (`run.json` `bootstrap_commit` = `base_sha`), so the feature the later stages build opens as a pull request on top of a reviewable base |
 | A skill that writes no findings.csv | recorded as `source: error` with the reason; that gate runs without a baseline |
 
 `run.json` carries the same record under `baseline` (`status`, `target_source`, `checks.<check>: {skill, source

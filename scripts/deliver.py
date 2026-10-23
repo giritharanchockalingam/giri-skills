@@ -1558,7 +1558,11 @@ def prepare_repo(run: Run) -> None:
         baseline_commit(run.repo)
         return
     if not src.is_dir():
-        if run.spec.get("mode") == "greenfield":
+        if run.spec.get("mode") == "greenfield" and REPO_KEY.match(str(run.inputs["repo"])):
+            # greenfield named owner/name: the repository is created on GitHub (private) when it does not exist,
+            # cloned under the run either way; the bootstrap stage then makes its first commit on main
+            src = create_or_clone_repo(str(run.inputs["repo"]), run.out / "repo", run)
+        elif run.spec.get("mode") == "greenfield":
             src.mkdir(parents=True, exist_ok=True)
         elif REPO_KEY.match(str(run.inputs["repo"])):
             # the portal names repositories owner/name: clone it under the run (the token in GH_TOKEN, via gh)
@@ -1566,9 +1570,55 @@ def prepare_repo(run: Run) -> None:
         else:
             sys.exit(f"error: --repo {src} is not a directory (give a local checkout, or owner/name to clone it)")
     run.repo = src.resolve()
+    if run.spec.get("mode") == "greenfield" and shutil.which("git"):
+        if not is_git_root(run.repo):
+            git(run.repo, "init", "-q", "-b", "main")
+        elif not head_sha(run.repo):   # a clone of an empty repository has no branch yet
+            git(run.repo, "checkout", "-q", "-B", "main", ok=(0, 128))
     if run.inputs.get("ref") and is_git_root(run.repo):
         git(run.repo, "checkout", "-q", str(run.inputs["ref"]))
     check_push_access(run)
+
+
+def create_or_clone_repo(key: str, dest: Path, run: "Run") -> Path:
+    """Greenfield on GitHub: `gh repo view` says whether owner/name exists; if not, `gh repo create --private` makes
+    it (the token needs repository-creation rights — the gh login, or a classic token with `repo`); then the usual
+    clone. Recorded on the run (`repo_created`) so the evidence says the run made the repository."""
+    if dest.is_dir() and is_git_root(dest):
+        return dest
+    if not shutil.which("gh"):
+        sys.exit(f"error: --repo {key} names a GitHub repository; creating or cloning it needs the GitHub CLI (gh) on PATH")
+    exists = subprocess.run(["gh", "repo", "view", key, "--json", "name"], capture_output=True, text=True).returncode == 0
+    if not exists:
+        r = subprocess.run(["gh", "repo", "create", key, "--private", "--description", f"created by giri-skills {run.spec['name']}"],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            sys.exit(f"error: could not create {key}: {(r.stderr or r.stdout).strip()[:300]} — create it empty on GitHub yourself "
+                     "(private), or use a token that may create repositories, then re-run")
+        run.record["repo_created"] = key
+    return clone_repo(key, dest)
+
+
+def commit_bootstrap(run: "Run") -> None:
+    """Greenfield, after the bootstrap stage: the scaffold becomes the first commit on main (pushed when there is an
+    origin), so the feature the later stages build is a pull request ON TOP of a reviewable base rather than a PR
+    against nothing. base_sha is that commit. Idempotent: a repository that already has a commit is left alone."""
+    repo = run.repo
+    if run.args.dry or run.spec.get("mode") != "greenfield" or not shutil.which("git") or not is_git_root(repo) or head_sha(repo):
+        return
+    env = {**os.environ, **BOT_GIT_ENV, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+    git(repo, "add", "-A", env=env)
+    git(repo, "commit", "-q", "-m", f"bootstrap: {run.inputs.get('name') or repo.name}", "-m",
+        f"Scaffold by giri-skills pipeline {run.spec['name']} run {run.run_id}", env=env)
+    sha = head_sha(repo)
+    run.record["base_sha"] = sha
+    code, _ = git(repo, "remote", "get-url", "origin", ok=(0, 2, 128), env=env)
+    if code == 0:
+        cfg = PUSH_CFG if shutil.which("gh") else []
+        push = subprocess.run(["git", *cfg, "push", "-u", "origin", "main"], cwd=str(repo), capture_output=True, text=True, env=env)
+        if push.returncode != 0:
+            raise StepError(f"bootstrap commit could not be pushed to origin main: {(push.stderr or push.stdout).strip()[:300]}")
+    run.record["bootstrap_commit"] = sha
 
 
 def github_key(run: "Run") -> str:
@@ -1855,6 +1905,7 @@ def main(argv=None) -> int:
             try:
                 if args.dry:
                     baseline_commit(run.repo)
+                commit_bootstrap(run)
                 run.read_profile()
                 nxt = spec["stages"][n]["id"] if n < len(spec["stages"]) else stage["id"]
                 run.post_profile(nxt)

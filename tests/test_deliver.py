@@ -1195,3 +1195,43 @@ def test_resume_after_a_failed_push_pushes_the_existing_commit_and_opens_one_pr(
     assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("pr create")) == 1
     pr = json.loads((out / "evidence" / "05-deploy" / "pr" / "pr.json").read_text())
     assert pr["number"] == 7 and pr["branch"] == "deliver/r-pr-3"
+
+
+# ---- greenfield on GitHub: the run creates the repository, commits the scaffold to main, and the feature is a PR on top
+
+FAKE_GH_REPOS = FAKE_GH.replace('case "$1 $2" in', '''case "$1 $2" in
+  "repo view") [ -d "$GH_BARE" ] || exit 1; echo '{"name":"new"}' ;;
+  "repo create") git init -q --bare "$GH_BARE" && git -C "$GH_BARE" symbolic-ref HEAD refs/heads/main ;;
+  "repo clone") git clone -q "$GH_BARE" "$4" 2>/dev/null ;;''')
+
+
+def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_opens_the_pr(tmp_path, monkeypatch):
+    bindir = tmp_path / "bin"; bindir.mkdir()
+    (bindir / "gh").write_text(FAKE_GH_REPOS); (bindir / "gh").chmod(0o755)
+    gh_log = tmp_path / "gh.log"; bare = tmp_path / "remote.git"
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("GH_LOG", str(gh_log)); monkeypatch.setenv("GH_BARE", str(bare)); monkeypatch.setenv("GH_TOKEN", "ghp_fake")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    out = tmp_path / "run"
+    r = run_script(SCRIPT, "greenfield-app", "--repo", "acme/new", "--input", "name=harbourline", "--request", "A portal to track harbour orders",
+                   "--brief", str(FIX / "delivery-build" / "brief-greenfield.json"), "--out", str(out), "--provider", "dry", "--builder", "manual",
+                   "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-1")
+    assert r.returncode == 0, r.stdout + r.stderr
+    calls = gh_log.read_text().splitlines()
+    assert "repo view acme/new --json name" in calls and any(c.startswith("repo create acme/new --private") for c in calls)
+    rj = run_json(out)
+    assert rj["repo_created"] == "acme/new" and rj["bootstrap_commit"] == rj["base_sha"]
+    # main on the remote holds exactly the scaffold, committed by the bot; the delivery branch sits on top of it
+    log = lambda ref: subprocess.run(["git", "log", "--format=%an|%s", ref], cwd=bare, capture_output=True, text=True, check=True).stdout.splitlines()
+    assert log("main") == ["skills-factory[bot]|bootstrap: harbourline"]
+    assert log("deliver/r-gf-1")[1:] == log("main") and log("deliver/r-gf-1")[0].startswith("skills-factory[bot]|")
+    files = subprocess.run(["git", "ls-tree", "-r", "--name-only", "deliver/r-gf-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
+    assert "docs/SPEC.md" in files and "app/page.js" in files
+    pr = json.loads((out / "evidence" / "06-deploy" / "pr" / "pr.json").read_text())
+    assert pr["branch"] == "deliver/r-gf-1" and pr["number"] == 7
+    assert stage_status(out) == {s: "passed" for s in ["bootstrap"] + STAGES}
+    # a second run against the now-existing repository clones instead of creating
+    r = run_script(SCRIPT, "greenfield-app", "--repo", "acme/new", "--input", "name=harbourline", "--request", "A second feature",
+                   "--brief", str(BRIEF), "--out", str(tmp_path / "run2"), "--provider", "dry", "--builder", "none", "--run-id", "r-gf-2")
+    assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("repo create")) == 1
+    assert "repo_created" not in run_json(tmp_path / "run2")
