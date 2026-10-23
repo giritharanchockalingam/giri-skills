@@ -1680,10 +1680,15 @@ class Run:
             # a model-written document that the gate refused is not "supplied by the product manager/architect": it is
             # removed before the step runs again, so the model gets another turn instead of the stale file being
             # re-judged (found on the first local-model run). Files a person dropped (manual) are never touched.
-            for s in (prev or {}).get("steps", []):
-                if s.get("llm") and s.get("kind") == "agent":
-                    for name in (next((st.get("produces") or [] for st in stage["steps"] if st["id"] == s["id"]), [])):
-                        (stage_dir / s["id"] / name).unlink(missing_ok=True)
+            if self.args.builder in ("openai-compat", "claude-code"):
+                drops = {PRD_MD: self.out / "build" / "prd" / PRD_MD, PLAN_MD: self.out / "build" / "plan" / PLAN_MD,
+                         TASKS_CSV: self.out / "build" / "plan" / TASKS_CSV, FILES_TXT: self.out / "build" / FILES_TXT}
+                for st in stage["steps"]:
+                    if st.get("kind") != "agent":
+                        continue
+                    for name in st.get("produces") or []:
+                        if not drops.get(name, Path("/nonexistent")).is_file():   # a person's drop wins over the model
+                            (stage_dir / st["id"] / name).unlink(missing_ok=True)
         self.stage_started = srec["started_at"]
         t_stage = time.time()
         halted = ""
