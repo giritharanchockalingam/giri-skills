@@ -1200,7 +1200,7 @@ def test_resume_after_a_failed_push_pushes_the_existing_commit_and_opens_one_pr(
 # ---- greenfield on GitHub: the run creates the repository, commits the scaffold to main, and the feature is a PR on top
 
 FAKE_GH_REPOS = FAKE_GH.replace('case "$1 $2" in', '''case "$1 $2" in
-  "repo view") [ -d "$GH_BARE" ] || exit 1; echo '{"name":"new"}' ;;
+  "api repos/acme/new") [ -d "$GH_BARE" ] || exit 1; echo 'new' ;;
   "repo create") git init -q --bare "$GH_BARE" && git -C "$GH_BARE" symbolic-ref HEAD refs/heads/main ;;
   "repo clone") git clone -q "$GH_BARE" "$4" 2>/dev/null ;;''')
 
@@ -1218,7 +1218,7 @@ def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_
                    "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-1")
     assert r.returncode == 0, r.stdout + r.stderr
     calls = gh_log.read_text().splitlines()
-    assert "repo view acme/new --json name" in calls and any(c.startswith("repo create acme/new --private") for c in calls)
+    assert "api repos/acme/new --jq .name" in calls and any(c.startswith("repo create acme/new --private") for c in calls)
     rj = run_json(out)
     assert rj["repo_created"] == "acme/new" and rj["bootstrap_commit"] == rj["base_sha"]
     # main on the remote holds exactly the scaffold, committed by the bot; the delivery branch sits on top of it

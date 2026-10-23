@@ -1588,7 +1588,7 @@ def create_or_clone_repo(key: str, dest: Path, run: "Run") -> Path:
         return dest
     if not shutil.which("gh"):
         sys.exit(f"error: --repo {key} names a GitHub repository; creating or cloning it needs the GitHub CLI (gh) on PATH")
-    exists = subprocess.run(["gh", "repo", "view", key, "--json", "name"], capture_output=True, text=True).returncode == 0
+    exists = subprocess.run(["gh", "api", f"repos/{key}", "--jq", ".name"], capture_output=True, text=True).returncode == 0   # REST, works where GraphQL is blocked
     if not exists:
         r = subprocess.run(["gh", "repo", "create", key, "--private", "--description", f"created by giri-skills {run.spec['name']}"],
                            capture_output=True, text=True)
@@ -1675,6 +1675,10 @@ def clone_repo(key: str, dest: Path, ref: str = "") -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     cmd = ["gh", "repo", "clone", key, str(dest), "--", "--quiet"] + (["--branch", ref] if ref else [])
     r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0 and not dest.exists():
+        # gh repo clone needs GraphQL, which some proxies refuse: plain git over HTTPS with gh's credential helper
+        r = subprocess.run(["git", *PUSH_CFG, "clone", "--quiet", f"https://github.com/{key}.git", str(dest)] + (["--branch", ref] if ref else []),
+                           capture_output=True, text=True, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
     if r.returncode != 0:
         msg = (r.stderr or r.stdout).strip()
         hint = (" — the token in GH_TOKEN must have access to this repository (fine-grained token: select the repository, "
