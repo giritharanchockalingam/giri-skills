@@ -22,6 +22,10 @@ export interface CheckDef {
   select: (files: TreeFile[]) => { input: string; files: TreeFile[]; strip: string }[];
   values?: Record<string, string>;           // fixed scalar inputs
   primary: string;                           // the output whose content is the evidence shown
+  /** The findings.csv the skill writes (rule, file, line, snippet, severity …). A check that has one is scored on a pull
+   *  request as a delta against the PR's base: only findings NEW against the base fail (docs/DELIVERY-PIPELINES.md,
+   *  "Stack profile and baselines"). Checks without one keep their absolute verdict everywhere. */
+  findings?: string;
   score: (outs: CheckOutput[], status: string) => Scored;
 }
 
@@ -36,6 +40,15 @@ export function commonDir(paths: string[]): string {
   return parts.slice(0, n).join("/");
 }
 const bold = (md: string | null) => md?.match(/\*\*([^*]+)\*\*/)?.[1]?.trim() ?? null;
+/** Source extensions observability-setup/scripts/install.py treats as "the file" at a planned stem (its SIBLING_EXT). */
+const SRC_EXT = "\\.(ts|tsx|js|jsx|mjs|cjs)";
+/** The pieces the installer would write, as the scorecard counts them. `lib/logger/context.*` is a helper of the
+ *  logger, not a capability of its own: when the repository has its logger (`lib/logger.*` is not in the plan) a
+ *  missing context helper is not a missing piece. With no logger at all both stay listed (one install brings both). */
+export function observabilityMissing(written: string[]): string[] {
+  const noLogger = written.some((p) => /^lib\/logger\.[a-z]+$/.test(p));
+  return written.filter((p) => noLogger || !/^lib\/logger\/context\.[a-z]+$/.test(p));
+}
 
 export const CHECKS: CheckDef[] = [
   {
@@ -77,7 +90,7 @@ export const CHECKS: CheckDef[] = [
       const scoped = root ? src.filter((f) => f.path.startsWith(root + "/")) : src.filter((f) => !f.path.includes("/") || /^(app|components|lib|server|src)\//.test(f.path));
       return [{ input: "target", files: scoped, strip: root }];
     },
-    primary: "report.md",
+    primary: "report.md", findings: "findings.csv",
     score: (outs) => {
       const s = bold(out(outs, "report.md"));
       const m = s?.match(/(\d+) finding\(s\) in (\d+) file\(s\): (\d+) high, (\d+) medium/);
@@ -93,7 +106,10 @@ export const CHECKS: CheckDef[] = [
       const cfg = keep(files, /(^|\/)next\.config\.(js|mjs|ts|cjs)$/)[0];
       const root = cfg ? cfg.path.split("/").slice(0, -1).join("/") : "";
       const pre = root ? root + "/" : "";
-      const re = new RegExp(`^${pre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(package\\.json|\\.env\\.example|lib/logger(\\.ts|/.+)|app/api/health/.+|ops/alerts\\.ya?ml|docs/observability\\.md)$`);
+      // everything install.py reads to judge a piece present: the logger module and its context helper in ANY source
+      // extension (SIBLING_EXT — a JavaScript app's lib/logger.js is the logger), the health routes, alert rules, the
+      // SLO doc, .env.example (env vars), and tsconfig/jsconfig (the flavour it detects before planning)
+      const re = new RegExp(`^${pre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(package\\.json|tsconfig\\.json|jsconfig\\.json|\\.env\\.example|lib/logger(${SRC_EXT}|/.+)|app/api/health/.+|ops/alerts\\.ya?ml|docs/observability\\.md)$`);
       return [{ input: "seed", files: keep(files, re), strip: root }];
     },
     values: { dry_run: "true" },
@@ -104,9 +120,10 @@ export const CHECKS: CheckDef[] = [
       let j: { written?: string[]; proposed?: string[]; env_added?: string[] };
       try { j = JSON.parse(raw); } catch { return { verdict: "error", summary: "install report is not valid JSON", findings: null }; }
       // the check is about PRESENCE: a piece that exists with the team's own content is in place (reported, not failed)
-      const missing = (j.written ?? []).length, custom = (j.proposed ?? []).length;
+      const written = observabilityMissing(j.written ?? []);
+      const missing = written.length, custom = (j.proposed ?? []).length;
       return { verdict: missing >= 3 ? "fail" : missing > 0 ? "warn" : "pass",
-        summary: missing ? `${missing} piece(s) missing: ${(j.written ?? []).slice(0, 3).join(", ")}${missing > 3 ? "…" : ""}`
+        summary: missing ? `${missing} piece(s) missing: ${written.slice(0, 3).join(", ")}${missing > 3 ? "…" : ""}`
           : `logging, health checks, alerts and runbook in place${custom ? ` (${custom} customised from the standard)` : ""}`, findings: missing };
     },
   },
@@ -126,10 +143,64 @@ export function bound(files: TreeFile[]): { files: TreeFile[]; partial: boolean 
 
 export const checksFor = (e: EntityFacts) => CHECKS.filter((c) => c.applies(e));
 
+/** Minimal RFC 4180 reader (quoted fields, doubled quotes, CR/LF) → rows keyed by the header line. */
+export function parseCsv(text: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let row: string[] = [], cell = "", q = false;
+  const src = text.replace(/^﻿/, "");
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (q) {
+      if (ch === '"') { if (src[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && src[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell.length || row.length) { row.push(cell); rows.push(row); }
+  const [head, ...body] = rows;
+  if (!head) return [];
+  return body.filter((r) => r.some((c) => c.trim())).map((r) => Object.fromEntries(head.map((h, k) => [h.trim(), r[k] ?? ""])));
+}
+
+export interface Brownfield { new: number; known: number; newHigh: number; resolved: number; total: number; newFindings: string[] }
+/** The delta of a skill's findings.csv on a PR head against the same skill's findings.csv on the PR base — the same
+ *  rule as lint_conventions.py's `--baseline` (and scripts/deliver.py's gate): a head finding whose (rule, file,
+ *  whitespace-normalised snippet) matches one base row is `known` (line numbers may move; one base row matches one
+ *  finding), anything else is `new`; base rows left over are `resolved`. Rows without a rule, or commented (`#`),
+ *  are not findings. Pure: the engine decides the verdict from `newHigh` / `new`. */
+export function brownfield(headCsv: string, baseCsv: string): Brownfield {
+  const norm = (s: string | undefined) => (s ?? "").split(/\s+/).filter(Boolean).join(" ");
+  const real = (r: Record<string, string>) => { const rule = (r.rule ?? "").trim(); return rule && !rule.startsWith("#"); };
+  const key = (r: Record<string, string>) => `${(r.rule ?? "").trim()}\u0000${(r.file ?? "").trim()}\u0000${norm(r.snippet ?? r.evidence)}`;
+  const pool = new Map<string, number>();
+  for (const r of parseCsv(baseCsv).filter(real)) { const k = key(r); pool.set(k, (pool.get(k) ?? 0) + 1); }
+  const head = parseCsv(headCsv).filter(real);
+  let known = 0, newHigh = 0;
+  const newFindings: string[] = [];
+  for (const r of head) {
+    const k = key(r), left = pool.get(k) ?? 0;
+    if (left > 0) { pool.set(k, left - 1); known++; continue; }
+    if ((r.severity ?? "").trim() === "high") newHigh++;
+    newFindings.push(`${(r.rule ?? "").trim()} ${(r.file ?? "").trim()}${(r.line ?? "").trim() ? ":" + (r.line ?? "").trim() : ""}`);
+  }
+  const resolved = [...pool.values()].reduce((a, b) => a + b, 0);
+  return { new: head.length - known, known, newHigh, resolved, total: head.length, newFindings };
+}
+
 export const stripPaths = (t: string) => t.replace(/\/tmp\/sf\/[^\s/]+\/(inputs|out)\/?/g, "");
 /** The last "error: …" / "gate: …" line a skill printed (its own explanation), without runtime paths. */
 export function errorLine(logs: string | null | undefined): string | null {
   const lines = stripPaths(logs ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const hit = [...lines].reverse().find((l) => /^(error|fatal)[:\s]|traceback|exception/i.test(l));
   return hit ? hit.replace(/^error:\s*/i, "").slice(0, 240) : null;
+}
+
+/** The verdict of a findings.csv check on a pull request: fail only on findings NEW against the base, warn on any new
+ *  finding, pass otherwise — the base's debt is reported (`known`), never gated. `findings` stays the head's total. */
+export function brownfieldVerdict(d: Brownfield, baseSha: string): Scored {
+  const other = d.new - d.newHigh;
+  const summary = `${d.newHigh} new high finding(s) against base ${baseSha.slice(0, 7)} (${d.known} known${other ? `, ${other} new medium` : ""}${d.resolved ? `, ${d.resolved} resolved` : ""})`;
+  return { verdict: d.newHigh > 0 ? "fail" : d.new > 0 ? "warn" : "pass", summary, findings: d.total };
 }

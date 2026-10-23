@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { githubConfig, installationToken, repoTree, blobText, headSha, type GhRepo } from "@/lib/github/app";
 import { callRuntime, runtimeConfig } from "@/lib/factory/runtime";
-import { checksFor, bound, errorLine, stripPaths, type CheckDef, type Scored, type TreeFile } from "./checks";
+import { checksFor, bound, errorLine, stripPaths, brownfield, brownfieldVerdict, type CheckDef, type Scored, type TreeFile } from "./checks";
 
 const FETCH_CONCURRENCY = 8;
 const REPORT_EXCERPT = 60_000;
@@ -23,8 +23,11 @@ export interface EntityScore { ok: boolean; entity: string; message: string; res
 type EntityRow = { id: string; key: string; installation_id: number | null; properties: { default_branch?: string; stack?: { id: string }[]; counts?: { migrations: number; files: number } } };
 
 /** Where a scorecard run came from: the default branch (the repository's scorecard) or a pull request's head commit
- *  (evidence on the PR — never replaces the scorecard). `checks` narrows to an automation's chosen checks. */
-export interface ScoreOptions { ref?: string; context?: "default" | "pull_request"; prNumber?: number | null; checks?: string[]; automationRunId?: string | null }
+ *  (evidence on the PR — never replaces the scorecard). `checks` narrows to an automation's chosen checks.
+ *  `baseSha` (pull requests): the PR's base commit — a check that writes findings.csv is then scored on the delta
+ *  against the base, so pre-existing debt never fails a PR (docs/DELIVERY-PIPELINES.md, "Stack profile and baselines"). */
+export interface ScoreOptions { ref?: string; context?: "default" | "pull_request"; prNumber?: number | null; checks?: string[]; automationRunId?: string | null; baseSha?: string }
+
 
 export async function scoreEntity(sb: SupabaseClient, workspaceId: string, userId: string, entityId: string, opts: ScoreOptions = {}): Promise<EntityScore> {
   const c = githubConfig();
@@ -41,19 +44,30 @@ export async function scoreEntity(sb: SupabaseClient, workspaceId: string, userI
   const token = await installationToken(c.cfg, e.installation_id);
   // a commit sha works wherever a branch name does in the trees API, so the same code scores a PR head
   const repo = { full_name: e.key, default_branch: opts.ref ?? e.properties.default_branch ?? "main" } as GhRepo;
-  const [tree, sha] = await Promise.all([repoTree(token, repo), opts.ref && /^[0-9a-f]{40}$/.test(opts.ref) ? Promise.resolve(opts.ref) : headSha(token, repo)]);
-  const blobCache = new Map<string, Promise<string | null>>();
+  // a pull request with a known base: the base tree too, so findings.csv checks score the delta (new findings only)
+  const baseSha = opts.context === "pull_request" && opts.baseSha && /^[0-9a-f]{40}$/.test(opts.baseSha) ? opts.baseSha : null;
+  const [tree, sha, base] = await Promise.all([
+    repoTree(token, repo),
+    opts.ref && /^[0-9a-f]{40}$/.test(opts.ref) ? Promise.resolve(opts.ref) : headSha(token, repo),
+    baseSha && checks.some((c) => c.findings) ? repoTree(token, { ...repo, default_branch: baseSha }) : Promise.resolve(null),
+  ]);
+  const blobCache = new Map<string, Promise<string | null>>();   // keyed by blob sha: a file unchanged between base and head is fetched once
   const text = (f: TreeFile) => { if (!blobCache.has(f.sha)) blobCache.set(f.sha, blobText(token, e.key, f.sha)); return blobCache.get(f.sha)!; };
 
   const results: CheckResult[] = [];
-  for (const chk of checks) results.push(await runCheck(sb, workspaceId, userId, e, chk, tree.files, tree.truncated, sha, text, rt.url, opts));
+  for (const chk of checks) {
+    const baseline = base && baseSha && chk.findings ? { sha: baseSha, tree: base.files, truncated: base.truncated } : null;
+    results.push(await runCheck(sb, workspaceId, userId, e, chk, tree.files, tree.truncated, sha, text, rt.url, opts, baseline));
+  }
   const bad = results.filter((r) => r.verdict === "fail" || r.verdict === "error").length;
   return { ok: true, entity: e.key, message: `${results.length} check(s): ${results.length - bad} without failures`, results, sha };
 }
 
-async function runCheck(sb: SupabaseClient, workspaceId: string, userId: string, e: EntityRow, chk: CheckDef, tree: TreeFile[], truncated: boolean,
-  sha: string | null, text: (f: TreeFile) => Promise<string | null>, url: string, opts: ScoreOptions): Promise<CheckResult> {
-  const t0 = Date.now();
+type Baseline = { sha: string; tree: TreeFile[]; truncated: boolean };
+type Invoked = { inputs: Record<string, unknown>; used: number; partial: boolean; called: Awaited<ReturnType<typeof callRuntime>> | null };
+
+/** Gather a check's inputs from one tree and run its skill on the runtime (null `called` = nothing to run). */
+async function invoke(chk: CheckDef, tree: TreeFile[], truncated: boolean, text: (f: TreeFile) => Promise<string | null>, url: string): Promise<Invoked> {
   const inputs: Record<string, unknown> = {};
   let partial = truncated, used = 0;
   for (const sel of chk.select(tree)) {
@@ -66,31 +80,57 @@ async function runCheck(sb: SupabaseClient, workspaceId: string, userId: string,
   }
   for (const [k, v] of Object.entries(chk.values ?? {})) inputs[k] = { kind: "value", value: v };
   if (chk.id === "observability") inputs.target = { kind: "value", value: "{out}/target" };   // dry run inside the run folder
+  if (!Object.values(inputs).some((v) => (v as { kind: string }).kind === "files") && chk.id !== "observability") return { inputs, used, partial, called: null };
+  const called = await callRuntime(url, { run_id: crypto.randomUUID(), skill: { kind: "repo", repo_skill: chk.skill }, inputs, assumptions: {}, provider: "none", model: null, timeout_s: 50, max_retries: 0 });
+  return { inputs, used, partial, called };
+}
+
+async function runCheck(sb: SupabaseClient, workspaceId: string, userId: string, e: EntityRow, chk: CheckDef, tree: TreeFile[], truncated: boolean,
+  sha: string | null, text: (f: TreeFile) => Promise<string | null>, url: string, opts: ScoreOptions, baseline: Baseline | null): Promise<CheckResult> {
+  const t0 = Date.now();
+  const head = await invoke(chk, tree, truncated, text, url);
+  let { partial } = head;
+  const used = head.used;
 
   let scored: Scored, details: Record<string, unknown>;
-  if (!Object.values(inputs).some((v) => (v as { kind: string }).kind === "files") && chk.id !== "observability") {
+  if (!head.called) {
     scored = { verdict: "skipped", summary: "no matching files in the repository", findings: null };
     details = { files_used: 0 };
+  } else if (!head.called.ok) {
+    scored = { verdict: "error", summary: head.called.error, findings: null };
+    details = { files_used: used };
   } else {
-    const called = await callRuntime(url, { run_id: crypto.randomUUID(), skill: { kind: "repo", repo_skill: chk.skill }, inputs, assumptions: {}, provider: "none", model: null, timeout_s: 50, max_retries: 0 });
-    if (!called.ok) {
-      scored = { verdict: "error", summary: called.error, findings: null };
-      details = { files_used: used };
-    } else {
-      const r = called.r;
-      const outs = r.outputs.map((o) => ({ path: o.path, content_text: o.content_text }));
-      scored = r.status === "needs_input" ? { verdict: "error", summary: `the skill needs input: ${(r.needs_input?.missing ?? []).map((m) => m.name).join(", ")}`, findings: null } : chk.score(outs, r.status);
-      if (scored.verdict === "error") {
-        // say WHY, in the skill's own words (its last error line), so an error is never mistaken for a finding
-        const why = errorLine(r.logs) ?? r.error;
-        if (why) scored = { ...scored, summary: `the skill could not run: ${why}` };
+    const r = head.called.r;
+    const outs = r.outputs.map((o) => ({ path: o.path, content_text: o.content_text }));
+    scored = r.status === "needs_input" ? { verdict: "error", summary: `the skill needs input: ${(r.needs_input?.missing ?? []).map((m) => m.name).join(", ")}`, findings: null } : chk.score(outs, r.status);
+    if (scored.verdict === "error") {
+      // say WHY, in the skill's own words (its last error line), so an error is never mistaken for a finding
+      const why = errorLine(r.logs) ?? r.error;
+      if (why) scored = { ...scored, summary: `the skill could not run: ${why}` };
+    }
+    details = {
+      files_used: used, partial, runtime_status: r.status, exit_code: r.exit_code, error: r.error,
+      report: stripPaths(outs.find((o) => o.path === chk.primary)?.content_text ?? "").slice(0, REPORT_EXCERPT),
+      outputs: r.outputs.map((o) => ({ path: o.path, bytes: o.bytes, sha256: o.sha256 })), runtime: r.runtime,
+      ...(scored.verdict === "error" ? { log_tail: stripPaths(r.logs).slice(-4000) } : {}),
+    };
+    // pull request: the same skill on the base tree, and the verdict from the delta (the base run is recorded in
+    // `details.baseline`, never as a scorecard row of its own)
+    const headCsv = chk.findings ? outs.find((o) => o.path === chk.findings)?.content_text ?? null : null;
+    if (baseline && scored.verdict !== "error" && headCsv !== null) {
+      const b = await invoke(chk, baseline.tree, baseline.truncated, text, url);
+      const baseCsv = b.called?.ok ? b.called.r.outputs.find((o) => o.path === chk.findings)?.content_text ?? null : null;
+      const baseError = !b.called ? "no matching files on the base" : !b.called.ok ? b.called.error : baseCsv === null ? (errorLine(b.called.r.logs) ?? b.called.r.error ?? `no ${chk.findings} from the base run`) : null;
+      if (baseCsv !== null) {
+        const d = brownfield(headCsv, baseCsv);
+        scored = brownfieldVerdict(d, baseline.sha);
+        partial ||= b.partial;
+        details = { ...details, baseline: { base_sha: baseline.sha, known: d.known, new: d.new, new_high: d.newHigh, resolved: d.resolved, new_findings: d.newFindings.slice(0, 50), files_used: b.used, partial: b.partial, runtime_status: b.called?.ok ? b.called.r.status : null } };
+      } else {
+        // the base could not be scored: the absolute verdict stands, and the scorecard says why no delta was taken
+        scored = { ...scored, summary: `${scored.summary} (no baseline: ${baseError})` };
+        details = { ...details, baseline: { base_sha: baseline.sha, error: baseError } };
       }
-      details = {
-        files_used: used, partial, runtime_status: r.status, exit_code: r.exit_code, error: r.error,
-        report: stripPaths(outs.find((o) => o.path === chk.primary)?.content_text ?? "").slice(0, REPORT_EXCERPT),
-        outputs: r.outputs.map((o) => ({ path: o.path, bytes: o.bytes, sha256: o.sha256 })), runtime: r.runtime,
-        ...(scored.verdict === "error" ? { log_tail: stripPaths(r.logs).slice(-4000) } : {}),
-      };
     }
   }
   if (partial) scored = { ...scored, summary: `${scored.summary} (partial: repository larger than the scan limit)` };

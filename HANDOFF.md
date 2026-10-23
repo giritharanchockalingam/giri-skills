@@ -65,7 +65,7 @@ Optional model re-rank for the task router (top-3 → model pick, logged with co
 
 ## 2026-10-19 — Workflow orchestrator (Port pillar 4)
 - GitHub webhook (/api/github/webhook): HMAC-verified, de-duplicated by X-GitHub-Delivery (sf_github_deliveries), answered 202, processed in after().
-- Automations (/automations, sf_automations, 0011): on pull_request (non-draft) or push to default branch → one scorecard run at the commit → GitHub Check Run "Skills Factory: <name>" (fail/error → failure; warn → neutral). Runs in sf_automation_runs.
+- Automations (/automations, sf_automations, 0011): on pull_request (non-draft) or push to default branch → one scorecard run at the commit → GitHub Check Run "Skills Factory: <name>" (fail/error → failure; warn → neutral). Runs in sf_automation_runs. On a pull request the event carries the base sha: a check whose skill writes findings.csv (nextjs) runs on the head AND the base tree and is scored on the delta (`brownfield()` in lib/scorecards/checks.ts, keyed like lint_conventions `--baseline`: rule, file, normalised snippet) — fail only on NEW high findings, warn on any new finding; the base run lives in `details.baseline` (base_sha, known, new, new_high), never as its own row. Checks without findings.csv (rls, tenancy, observability) keep their absolute verdict; the default branch is unchanged.
 - PR results are stored with context='pull_request' and stay out of the default-branch scorecard (sf_scorecard_latest).
 - Owner config: GITHUB_WEBHOOK_SECRET + SUPABASE_SERVICE_ROLE_KEY in Vercel; App webhook URL, Checks: write, Pull requests: read, events Pull request + Push.
 - ROI: 14 baselines set as labelled estimates (owner "Claude (estimate, to be validated)"), minutes only.

@@ -83,14 +83,14 @@ export async function processEvent(e: NormEvent, deliveryId: string, origin: str
   // one scorecard run for all matching automations (union of their checks), attributed to the first automation's run
   let score: Awaited<ReturnType<typeof scoreEntity>> | null = null, failure: string | null = null;
   try {
-    score = await deps.scoreEntity(sb, ws, runs[0].a.created_by, entity.id, { ref: e.sha, context: e.kind === "pull_request" ? "pull_request" : "default", prNumber: pr, checks: unionChecks(runs.map((r) => r.a)), automationRunId: runs[0].runId });
+    score = await deps.scoreEntity(sb, ws, runs[0].a.created_by, entity.id, { ref: e.sha, context: e.kind === "pull_request" ? "pull_request" : "default", prNumber: pr, baseSha: e.kind === "pull_request" ? e.baseSha ?? undefined : undefined, checks: unionChecks(runs.map((r) => r.a)), automationRunId: runs[0].runId });
     if (!score.ok) failure = score.message;
   } catch (err) { failure = (err as Error).message; log.error({ action: "automation.score", repo: e.repo, err }, "scorecard run failed"); }
 
   for (const { a, runId, checkRun } of runs) {
     const mine = (score?.results ?? []).filter((r) => !a.checks.length || a.checks.includes(r.check));
     const out = failure ? { conclusion: "neutral" as const, title: "Could not run the scorecard", summary: `The checks did not run: ${failure}\n\nThis is a problem on the Skills Factory side, not a verdict on this code.` }
-      : checkRunOutput(mine, detailsUrl, e.kind === "pull_request" ? `Scored the head commit of #${e.pr} (\`${e.sha.slice(0, 7)}\`).` : `Scored \`${e.sha.slice(0, 7)}\` on the default branch.`);
+      : checkRunOutput(mine, detailsUrl, e.kind === "pull_request" ? `Scored the head commit of #${e.pr} (\`${e.sha.slice(0, 7)}\`)${e.baseSha ? ` against its base (\`${e.baseSha.slice(0, 7)}\`): findings checks fail only on what this PR adds` : ""}.` : `Scored \`${e.sha.slice(0, 7)}\` on the default branch.`);
     await sb.from("sf_automation_runs").update({ status: failure ? "failed" : "succeeded", error: failure, finished_at: new Date().toISOString(),
       verdicts: Object.fromEntries(mine.map((r) => [r.check, { verdict: r.verdict, summary: r.summary }])) }).eq("id", runId);
     if (checkRun) {

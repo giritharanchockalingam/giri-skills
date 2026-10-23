@@ -19,8 +19,12 @@ test("signature: valid passes; tampered body, wrong secret, missing or malformed
 const base = { installation: { id: 77 }, repository: { full_name: "acme/billing", default_branch: "main" } };
 test("normalize: PR opened/synchronize act; drafts, closes and other repos' noise are ignored", () => {
   const pr = (action: string, extra = {}) => normalize("pull_request", { ...base, action, pull_request: { number: 12, title: "Add RLS", head: { sha: SHA, repo: { full_name: "acme/billing" } }, base: { repo: { full_name: "acme/billing" } }, ...extra } });
-  assert.deepEqual(pr("opened"), { kind: "pull_request", installationId: 77, repo: "acme/billing", sha: SHA, pr: 12, title: "Add RLS", fromFork: false });
+  assert.deepEqual(pr("opened"), { kind: "pull_request", installationId: 77, repo: "acme/billing", sha: SHA, baseSha: null, pr: 12, title: "Add RLS", fromFork: false });
   assert.equal(pr("synchronize")?.kind, "pull_request");
+  // the base commit travels with the event (findings checks score the delta against it); a malformed one is dropped, not fatal
+  const BASE = "b".repeat(40);
+  assert.equal((pr("opened", { base: { sha: BASE, repo: { full_name: "acme/billing" } } }) as { baseSha: string | null }).baseSha, BASE);
+  assert.equal((pr("synchronize", { base: { sha: "not-a-sha" } }) as { baseSha: string | null }).baseSha, null);
   assert.equal(pr("closed"), null);
   assert.equal(pr("opened", { draft: true }), null);
   assert.equal(normalize("pull_request", { ...base, action: "opened", pull_request: { number: 1, head: { sha: "nope" } } }), null);

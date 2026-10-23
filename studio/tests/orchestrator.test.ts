@@ -111,7 +111,8 @@ function harness(db: FakeDb, o: { verdicts?: Record<string, Verdict>; scoreThrow
   };
   return { deps, calls };
 }
-const prEvent: NormEvent = { kind: "pull_request", installationId: INST, repo: REPO, sha: SHA, pr: 7, title: "t", fromFork: false };
+const BASE = "b".repeat(40);
+const prEvent: NormEvent = { kind: "pull_request", installationId: INST, repo: REPO, sha: SHA, baseSha: BASE, pr: 7, title: "t", fromFork: false };
 const pushEvent: NormEvent = { kind: "push", installationId: INST, repo: REPO, sha: SHA };
 const ORIGIN = "https://studio.example";
 
@@ -127,7 +128,9 @@ test("process: a passing pull request gets a success Check Run, a recorded run, 
   assert.equal(run.pr_number, 7);
   assert.equal(run.check_run_url, `https://github.com/${REPO}/runs/101`);
   assert.deepEqual(Object.keys(run.verdicts as object).sort(), ["rls", "tenancy"]);
-  assert.deepEqual(calls.scored[0], { entityId: "ent-1", ref: SHA, context: "pull_request", prNumber: 7, checks: undefined, automationRunId: run.id });
+  // the PR's base travels to the scorecard (findings checks fail only on what the PR adds) and the Check Run says so
+  assert.deepEqual(calls.scored[0], { entityId: "ent-1", ref: SHA, context: "pull_request", prNumber: 7, baseSha: BASE, checks: undefined, automationRunId: run.id });
+  assert.match(calls.completed[0].summary, /against its base \(`bbbbbbb`\): findings checks fail only on what this PR adds/);
 });
 
 test("process: a failing check makes the Check Run a failure; a warning alone is neutral", async () => {
