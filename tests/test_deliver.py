@@ -702,8 +702,10 @@ FAKE_GH = """#!/bin/sh
 printf '%s\\n' "$*" >> "$GH_LOG"
 printf 'cwd=%s\\n' "$(pwd -P)" >> "$GH_LOG"
 case "$1 $2" in
+  "api repos/acme/app") echo "${GH_PUSH:-true}" ;;
   "pr create") echo "https://github.com/acme/app/pull/7" ;;
-  "pr view") echo '{"number": 7, "url": "https://github.com/acme/app/pull/7", "headRefOid": "deadbeef"}' ;;
+  "pr view") grep -q '^pr create' "$GH_LOG" || { echo 'no pull requests found for branch' >&2; exit 1; }
+             echo '{"number": 7, "url": "https://github.com/acme/app/pull/7", "headRefOid": "deadbeef"}' ;;
 esac
 exit 0
 """
@@ -1124,3 +1126,58 @@ def test_dotfile_paths_keep_their_dot_in_files_txt_and_tasks_csv(tmp_path):
     ft = tmp_path / "files.txt"
     ft.write_text("# files\n.env.example\n./lib/a.js\n`lib/a.js`\n", encoding="utf-8")
     assert d.read_files_txt(ft) == [".env.example", "lib/a.js"]
+
+
+def _pr_fixture(tmp_path, monkeypatch, origin: str | None = None):
+    """A checkout with a bare remote and the fake gh on PATH (as test_pr_step…); returns (work, bare, out, gh_log)."""
+    bare = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(bare)], check=True)
+    work = tmp_path / "checkout"
+    shutil.copytree(REPO, work)
+    env = {**os.environ, **DEV_ENV}
+    for cmd in (["git", "init", "-q", "-b", "main"], ["git", "add", "-A"], ["git", "commit", "-q", "-m", "base"],
+                ["git", "remote", "add", "origin", str(bare)], ["git", "push", "-q", "-u", "origin", "main"]):
+        subprocess.run(cmd, cwd=work, env=env, check=True)
+    if origin:
+        subprocess.run(["git", "remote", "set-url", "origin", origin], cwd=work, env=env, check=True)
+    bindir = tmp_path / "bin"; bindir.mkdir()
+    (bindir / "gh").write_text(FAKE_GH); (bindir / "gh").chmod(0o755)
+    gh_log = tmp_path / "gh.log"
+    monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("GH_LOG", str(gh_log)); monkeypatch.setenv("GH_TOKEN", "ghp_fake"); monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    return work, bare, tmp_path / "real", gh_log
+
+
+def test_a_token_that_cannot_push_stops_the_run_before_any_stage(tmp_path, monkeypatch):
+    """First real run: the token cloned the repo but could not push; every gate passed and the run died at the pr step.
+    Now the push permission is asked of GitHub up front and the run stops with needs_input.json before stage 1."""
+    work, _, out, gh_log = _pr_fixture(tmp_path, monkeypatch, origin="https://github.com/acme/app.git")
+    monkeypatch.setenv("GH_PUSH", "false")
+    r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
+                   "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-2")
+    assert r.returncode != 0 and "no push access to acme/app" in r.stderr and "Contents: read and write" in r.stderr, r.stdout + r.stderr
+    need = json.loads((out / "needs_input.json").read_text())
+    assert need["missing"][0]["name"] == "push access" and "acme/app" in need["missing"][0]["from"]
+    assert not (out / "evidence" / "01-requirements").exists() and "api repos/acme/app --jq .permissions.push" in gh_log.read_text()
+
+
+def test_resume_after_a_failed_push_pushes_the_existing_commit_and_opens_one_pr(tmp_path, monkeypatch):
+    """The pr step is idempotent: the delivery commit made before a push failure is pushed as it is on resume (no empty
+    commit stacked on it), and an already-open PR is reused rather than created twice."""
+    work, bare, out, gh_log = _pr_fixture(tmp_path, monkeypatch)
+    hook = bare / "hooks" / "pre-receive"
+    hook.write_text("#!/bin/sh\necho 'remote: Write access to repository not granted.' >&2\nexit 1\n"); hook.chmod(0o755)
+    args = ["feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
+            "--provider", "dry", "--builder", "manual", "--approve-all", "--run-id", "r-pr-3"]
+    r = run_script(SCRIPT, *args, "--patch", str(PATCH))
+    assert r.returncode == 1 and "stopped at stage 'deploy'" in r.stdout, r.stdout + r.stderr
+    gate = json.loads((out / "evidence" / "05-deploy" / "gate.json").read_text())
+    assert "git push -u origin deliver/r-pr-3" in gate["detail"] and "not granted" in gate["detail"] and "cannot push" in gate["detail"]
+    hook.unlink()
+    r = run_script(SCRIPT, *args, "--resume")
+    assert r.returncode == 0, r.stdout + r.stderr
+    log = subprocess.run(["git", "log", "--format=%s", "main..deliver/r-pr-3"], cwd=bare, capture_output=True, text=True, check=True).stdout
+    assert log.splitlines() == [REQUEST]                                  # one delivery commit, no empty commit on top
+    assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("pr create")) == 1
+    pr = json.loads((out / "evidence" / "05-deploy" / "pr" / "pr.json").read_text())
+    assert pr["number"] == 7 and pr["branch"] == "deliver/r-pr-3"
