@@ -152,3 +152,19 @@ def test_missing_or_empty_input_exit_2(tmp_path):
     empty.write_text("nothing here\n", encoding="utf-8")
     res, d, _ = run(tmp_path, empty)
     assert res.returncode == 2 and d is None
+
+
+def test_placeholder_credentials_in_tests_are_not_secrets(tmp_path):
+    """Stand-in values a test or doc uses are not leaked credentials (found on the first real delivery run)."""
+    p = write_patch(tmp_path, "tests/unit/alerts.test.js", [
+        '  RESEND_API_KEY: "placeholder",',
+        '  WHATSAPP_TOKEN: "test-token",',
+        '  expect(out).toEqual({ token: "[redacted]", authorization: "[redacted]", password: "p" });',
+        '  const headers = { apikey: "k" };',
+    ])
+    _, data, _ = run(tmp_path, p)
+    assert not [f for f in data["findings"] if f["rule"] == "CR-SECRET"], data["findings"]
+    # a real-looking literal is still caught
+    q = write_patch(tmp_path, "lib/pay.js", ['const STRIPE_SECRET = "sk_live_51H8x9ABCDEFGH123456";'], name="y.patch")
+    _, data, _ = run(tmp_path, q)
+    assert [f for f in data["findings"] if f["rule"] == "CR-SECRET"]
