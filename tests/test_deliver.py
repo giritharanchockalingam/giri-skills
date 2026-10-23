@@ -738,7 +738,7 @@ def test_pr_step_commits_as_the_bot_pushes_and_opens_the_pr(tmp_path, monkeypatc
     assert pr == {"dry": False, "branch": "deliver/r-pr-1", "title": REQUEST, "number": 7, "url": "https://github.com/acme/app/pull/7",
                   "head_sha": "deadbeef", "committed_as": "skills-factory[bot]"}
     calls = gh_log.read_text().splitlines()
-    assert calls[0] == "auth setup-git"
+    assert calls[0].startswith("pr view deliver/r-pr-1")      # no PR yet → create; the push authenticates through `gh auth git-credential` only
     create = next(c for c in calls if c.startswith("pr create"))
     assert create == f"pr create --title {REQUEST} --body-file {out / 'evidence' / 'EVIDENCE.md'} --head deliver/r-pr-1"
     assert "pr view deliver/r-pr-1 --json number,url,headRefOid" in calls
