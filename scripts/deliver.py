@@ -1267,26 +1267,49 @@ class Run:
             hint = (f" — the token gh uses cannot push to this repository: grant Contents: read and write + Pull requests: "
                     f"read and write, then --resume (the commit is on branch {branch} already)") if "403" in why or "not granted" in why else ""
             raise StepError(f"git push -u origin {branch}: {why.strip()[:300]}{hint}")
-        existing = subprocess.run(["gh", "pr", "view", branch, "--json", "number,url,headRefOid"], cwd=str(repo),
-                                  capture_output=True, text=True, env=env)
-        r = existing if existing.returncode == 0 and existing.stdout.strip().startswith("{") else \
-            subprocess.run(["gh", "pr", "create", "--title", title, "--body-file", body, "--head", branch],
-                           cwd=str(repo), capture_output=True, text=True, env=env)
-        if r.returncode != 0:
-            raise StepError(f"gh pr create: {(r.stderr or r.stdout).strip()[:300]}")
-        v = subprocess.run(["gh", "pr", "view", branch, "--json", "number,url,headRefOid"], cwd=str(repo),
-                           capture_output=True, text=True, env=env)
-        info = {}
-        if v.returncode == 0 and v.stdout.strip():
+        # The pull request through GitHub's REST API (gh api), never `gh pr create`/`gh pr view`: those use GraphQL,
+        # which fine-grained tokens and some proxies refuse (found by the first real greenfield run). Idempotent: an
+        # open PR for the branch is reused.
+        key = github_key(self)
+        if not key:
+            raise StepError(f"pr step: cannot tell owner/name from the origin remote of {repo}; the pull request needs a GitHub repository")
+        owner = key.split("/")[0]
+        info = self._find_pr(key, owner, branch, env, repo)
+        if not info:
+            spec = {"title": title[:250], "head": branch, "base": self._default_branch(key, env, repo), "body": Path(body).read_text(encoding="utf-8", errors="replace")[:60000]}
+            spec_path = sdir / "pr-request.json"
+            write_json(spec_path, spec)
+            r = subprocess.run(["gh", "api", f"repos/{key}/pulls", "--input", str(spec_path)], cwd=str(repo), capture_output=True, text=True, env=env)
+            if r.returncode != 0:
+                raise StepError(f"gh api repos/{key}/pulls (create PR): {(r.stderr or r.stdout).strip()[:300]}")
             try:
-                info = json.loads(v.stdout)
+                data = json.loads(r.stdout)
             except ValueError:
-                info = {}
-        url = info.get("url") or next((ln.strip() for ln in r.stdout.splitlines() if ln.strip().startswith("http")), None)
+                data = {}
+            info = {"number": data.get("number"), "url": data.get("html_url"), "headRefOid": (data.get("head") or {}).get("sha")}
+        url = info.get("url")
         write_json(sdir / "pr.json", {"dry": False, "branch": branch, "title": title, "number": info.get("number"),
                                       "url": url, "head_sha": info.get("headRefOid") or head.strip(),
                                       "committed_as": BOT_NAME})
         rec["exit"] = 0
+
+    @staticmethod
+    def _find_pr(key: str, owner: str, branch: str, env: dict, cwd: Path) -> dict:
+        r = subprocess.run(["gh", "api", f"repos/{key}/pulls?state=open&head={owner}:{branch}", "--jq", ".[0] | {number, url: .html_url, headRefOid: .head.sha}"],
+                           cwd=str(cwd), capture_output=True, text=True, env=env)
+        if r.returncode == 0 and r.stdout.strip().startswith("{"):
+            try:
+                data = json.loads(r.stdout)
+                if data.get("number"):
+                    return data
+            except ValueError:
+                pass
+        return {}
+
+    @staticmethod
+    def _default_branch(key: str, env: dict, cwd: Path) -> str:
+        r = subprocess.run(["gh", "api", f"repos/{key}", "--jq", ".default_branch"], cwd=str(cwd), capture_output=True, text=True, env=env)
+        return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "main"
 
     # ---- gates
     def pre_approval_gate(self, gate: dict, stage_rec: dict) -> tuple[str, str]:
@@ -1709,7 +1732,8 @@ def github_key(run: "Run") -> str:
         return key
     if shutil.which("git") and is_git_root(run.repo):
         code, url = git(run.repo, "remote", "get-url", "origin", ok=(0, 2, 128))
-        m = re.search(r"[:/]([^/\s:]+/[^/\s:]+?)(?:\.git)?/?$", url.strip()) if code == 0 and "://" in url or ":" in url else None
+        # owner/name = the last two path segments of any origin (https, ssh, or a local path in tests)
+        m = re.search(r"[:/]([^/\s:]+/[^/\s:]+?)(?:\.git)?/?$", url.strip()) if code == 0 else None
         if m:
             return m.group(1)
     return ""
