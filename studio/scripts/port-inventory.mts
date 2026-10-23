@@ -94,6 +94,23 @@ for (const id of [...ids].filter((i) => i === BLUEPRINT_ID || i === "_mcp_server
   } catch (e) { lines.push(`- \`${md(id)}\`: could not read — ${md((e as Error).message)}`); }
 }
 
+// ── schemas of the blueprints WP1 designs against ──
+h("## Blueprint schemas (skill / MCP / repository / service)");
+for (const b of bps.items.filter((x) => { const i = str(x.identifier); return i === BLUEPRINT_ID || i === "_mcp_server" || /^skill$|skill/i.test(i) || i === "githubRepository" || i === "service"; })) {
+  const id = str(b.identifier), schema = (b.schema ?? {}) as J, props = (schema.properties ?? {}) as J, rels = (b.relations ?? {}) as J;
+  lines.push(`### \`${md(id)}\``, "", `- created: ${md(str(b.createdAt))} by ${md(str(b.createdBy))}; updated: ${md(str(b.updatedAt))} by ${md(str(b.updatedBy))}`, `- required: ${md(str(schema.required ?? []))}`, "");
+  lines.push("| property | type | format | enum | title |", "|---|---|---|---|---|");
+  for (const [k, v] of Object.entries(props)) { const p = (v ?? {}) as J; lines.push(`| \`${md(k)}\` | ${md(str(p.type))} | ${md(str(p.format ?? ""))} | ${md(Array.isArray(p.enum) ? (p.enum as unknown[]).join(", ") : "")} | ${md(str(p.title ?? ""))} |`); }
+  if (Object.keys(rels).length) { lines.push("", "| relation | target | required | many |", "|---|---|---|---|"); for (const [k, v] of Object.entries(rels)) { const r = (v ?? {}) as J; lines.push(`| \`${md(k)}\` | \`${md(str(r.target))}\` | ${md(str(r.required ?? false))} | ${md(str(r.many ?? false))} |`); } }
+  if (id !== "_mcp_server") try {
+    const r = await port.listEntities(id, 3);
+    lines.push("", `Sample identifiers (first 3): ${r.entities.map((e) => `\`${md(str(e.identifier))}\``).join(", ") || "none"}`);
+    const first = r.entities[0] as J | undefined;
+    if (first) lines.push(`First entity: created ${md(str(first.createdAt))} by ${md(str(first.createdBy))}; property keys present: ${Object.keys((first.properties ?? {}) as J).map((k) => `\`${md(k)}\``).join(", ")}`);
+  } catch (e) { lines.push("", `Entities not readable: ${md((e as Error).message)}`); }
+  lines.push("");
+}
+
 // ── actions / automations ──
 h("## Self-service actions and automations");
 const acts = await readList("/v1/actions", "actions");
