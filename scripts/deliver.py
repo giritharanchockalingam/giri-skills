@@ -156,6 +156,13 @@ class WiringError(StepError):
         super().__init__(f"pipeline wiring error: step '{step}' input '{inp}' {detail}")
 
 
+
+def repo_path(s: str) -> str:
+    """A path cell as the plan or files.txt writes it → repo-relative: backticks and a `./` prefix dropped, backslashes
+    normalised. A dotfile keeps its dot (`.env.example`): str.lstrip("./") ate it and the code step then refused the
+    diff that touched it (first real run)."""
+    return re.sub(r"^(?:\./)+", "", s.strip().strip("`").replace("\\", "/"))
+
 def read_files_txt(path: Path) -> list[str]:
     """files.txt: one repo-relative path per line; blank lines and `#` comments ignored; order kept, duplicates dropped."""
     out: list[str] = []
@@ -163,7 +170,7 @@ def read_files_txt(path: Path) -> list[str]:
         s = ln.strip()
         if not s or s.startswith("#"):
             continue
-        s = s.strip("`").lstrip("./")
+        s = repo_path(s)
         if s and s not in out:
             out.append(s)
     return out
@@ -765,7 +772,7 @@ class Run:
             if not cell or TBD_RE.search(cell):
                 return [], f"task {r.get('id') or '?'} names no files in tasks.csv"
             for f in re.split(r"[,;]+", cell):
-                f = f.strip().strip("`").lstrip("./")
+                f = repo_path(f)
                 if f and f not in files:
                     files.append(f)
         return files, ""
