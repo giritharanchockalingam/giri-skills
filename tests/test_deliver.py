@@ -1507,3 +1507,27 @@ def test_openai_compat_endpoint_down_fails_the_step_not_the_process(tmp_path, mo
     assert r.returncode == 1, r.stdout + r.stderr
     prd = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "prd-refine")
     assert prd["status"] == "failed" and "HTTP 500" in prd["error"] and len(stub.calls) == 3    # 2 retries
+
+
+def test_openai_compat_document_step_feeds_the_gates_refusal_back_as_a_repair_round(tmp_path, monkeypatch):
+    """Found with qwen2.5-coder:7b on the first local-model run: the model wrote a PRD in its own structure (no
+    'User stories and acceptance criteria' heading) and the requirements gate failed the stage. Now the gate's own
+    checks run inside the builder after each round; the refusal is the next user turn, and the corrected file passes."""
+    llm_env(monkeypatch)
+    own_structure = file_block("prd-final.md", "# Product Specification\n\n## Problem Statement\nx\n\n## Engineering Handoff\n- Acceptance criteria: y\n")
+    stub = StubLLM({"prd-refine": [own_structure, file_block("prd-final.md", PRD_FIX.read_text())], "code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-repair-doc"
+        r = openai_compat(out, stub)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    rounds = json.loads((out / "evidence" / "01-requirements" / "prd-refine" / "llm-rounds.json").read_text())
+    assert [x["round"] for x in rounds["rounds"]] == [1, 2] and rounds["ok"] is True
+    assert any("section_filled" in f or "Acceptance criteria" in f for f in rounds["rounds"][0]["checks_failed"])
+    assert rounds["rounds"][1]["checks_failed"] == []
+    prd_calls = [c for c in stub.calls if "step prd-refine" in next((m["content"] for m in c["body"]["messages"] if m["role"] == "user"), "")]
+    assert "The gate refused your file(s)" in prd_calls[1]["body"]["messages"][-1]["content"]
+    assert "keep every one of its headings" in prd_calls[0]["body"]["messages"][0]["content"]   # the system prompt now says so
+    steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
+    assert steps["prd-refine"]["llm"]["rounds"] == 2 and stage_status(out)["requirements"] == "passed"

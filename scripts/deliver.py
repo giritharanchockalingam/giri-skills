@@ -975,16 +975,33 @@ class Run:
                 return None
         return None
 
+    def step_output_checks(self, step_id: str) -> list[tuple[str, str]]:
+        """The stage gate's output checks on this step's files, as (file, check) — what the model's documents are
+        held to after each round (the same checks eval_gate runs), so a refusal is answered inside the builder."""
+        stage = next((st for st in self.spec["stages"] if any(x["id"] == step_id for x in st["steps"])), None)
+        out: list[tuple[str, str]] = []
+
+        def walk(g: dict) -> None:
+            if g.get("kind") == "output" and g.get("step") == step_id and g.get("file") and g.get("check"):
+                out.append((str(g["file"]), str(g["check"])))
+            for sub in g.get("of") or []:
+                walk(sub)
+        if stage:
+            walk(stage.get("gate") or {})
+        return out
+
     def run_llm_role(self, sdir: Path, rec: dict, packet: str, *, produce: list[str], allowed: list[str] | None,
-                     target: Path | None, repair_cmd: str | None = None) -> dict:
+                     target: Path | None, repair_cmd: str | None = None, step_id: str = "") -> dict:
         """Send the packet to the model and land its file blocks (llm_builder.run_role); the step record gets `llm`
         {provider, model, base_url_host, rounds}. A reply that parses to nothing, or a repair command still failing
         after --rounds, is a StepError that names the reply head — the gate detail then says what the model did."""
         client = self.llm_client()
         t0 = time.time()
         try:
+            checks = self.step_output_checks(step_id) if (target is None and step_id) else []
             res = llm_builder.run_role(packet, produce=produce, allowed=allowed, out_dir=sdir, target=target, client=client,
-                                       max_rounds=self.args.rounds, repair_cmd=repair_cmd)
+                                       max_rounds=self.args.rounds, repair_cmd=repair_cmd,
+                                       checks=checks, check_fn=lambda path, spec: check_output.run_check(spec, str(path), mode="real"))
         except llm_builder.LLMBuildError as e:
             rec["llm"] = {"provider": "openai-compat", "model": client.model, "base_url_host": client.host,
                           "rounds": len((read_json(sdir / "llm-rounds.json") if (sdir / "llm-rounds.json").is_file() else {}).get("rounds") or []),
@@ -1080,7 +1097,7 @@ class Run:
             return record(read_files_txt(expected), "claude-code", f"written by claude -p at {expected.relative_to(self.out)}")
         if builder == "openai-compat":
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # the packet is what the model gets
-            res = self.run_llm_role(sdir, rec, prompt, produce=[FILES_TXT], allowed=None, target=None)
+            res = self.run_llm_role(sdir, rec, prompt, produce=[FILES_TXT], allowed=None, target=None, step_id=step["id"])
             if not expected.is_file():
                 raise StepError(f"builder openai-compat did not write {expected}")
             return record(read_files_txt(expected), "openai-compat",
@@ -1151,7 +1168,7 @@ class Run:
         if builder == "openai-compat":
             rec["status"] = "ok"   # not a stop: the model answers the packet now
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
-            res = self.run_llm_role(sdir, rec, prompt, produce=[PRD_MD], allowed=None, target=None)
+            res = self.run_llm_role(sdir, rec, prompt, produce=[PRD_MD], allowed=None, target=None, step_id=step["id"])
             if not expected.is_file():
                 raise StepError(f"builder openai-compat did not write {expected}")
             rec.update(exit=0, prd_source="openai-compat")
@@ -1244,7 +1261,7 @@ class Run:
             return record("claude-code", f"written by claude -p at {sdir.relative_to(self.out)}")
         if builder == "openai-compat":
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])
-            res = self.run_llm_role(sdir, rec, prompt, produce=list(PLAN_FILES), allowed=None, target=None)
+            res = self.run_llm_role(sdir, rec, prompt, produce=list(PLAN_FILES), allowed=None, target=None, step_id=step["id"])
             absent = [f for f in PLAN_FILES if not expected[f].is_file()]
             if absent:
                 raise StepError(f"builder openai-compat did not write {', '.join(str(expected[f]) for f in absent)}")

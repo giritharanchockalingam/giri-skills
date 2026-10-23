@@ -207,7 +207,10 @@ def _system_prompt(produce: list[str], allowed: list[str] | None, target: Path |
         names = ", ".join(f"`{n}`" for n in produce)
         return (PROTOCOL + f"\n\nTHIS STEP produces exactly these file(s): {names}. Use those names as the block paths, "
                 "nothing else: one FILE block per file, every one of them, each with its complete content in the format the "
-                "packet states. Do not write any other file.")
+                "packet states. Do not write any other file.\n\nWhen the packet inlines a draft or scaffold of the file "
+                "(under Inputs), START FROM THAT TEXT: keep every one of its headings and table columns exactly as written, "
+                "fill the cells and sections, replace `[TO BE BASELINED …]` markers with what the request and inputs state, "
+                "and return the whole file. Never invent a structure of your own — the gate checks the draft's headings.")
     allow = "\n".join(f"- {f}" for f in allowed) if allowed else "- (the packet's file list)"
     return (PROTOCOL + "\n\nTHIS STEP changes the repository checkout. Block paths are repo-relative. You may write ONLY "
             f"these files:\n{allow}\nplus test files under tests/, __tests__/ or e2e/. A FILE block for a file that exists "
@@ -217,6 +220,7 @@ def _system_prompt(produce: list[str], allowed: list[str] | None, target: Path |
 
 def run_role(packet_text: str, *, produce: list[str], allowed: list[str] | None, out_dir: Path, target: Path | None,
              client: OpenAICompat, max_rounds: int = 2, repair_cmd: str | None = None, max_tokens: int = 16000,
+             checks: list[tuple[str, str]] | None = None, check_fn=None,
              timeout_s: float = 900, cmd_timeout_s: float = 1800) -> dict:
     """One role, one packet, up to `max_rounds` model turns. target None → a document step: the blocks named in
     `produce` are written to out_dir. target set → the code step: blocks land in the checkout (allowed + test paths),
@@ -276,9 +280,27 @@ def run_role(packet_text: str, *, produce: list[str], allowed: list[str] | None,
                     written_all.append(name)
             missing = [p for p in produce if not (out_dir / p).is_file()]
             if not missing:
-                record.update(ok=True, files=written_all)
+                # the gate's own checks on the documents, run here so a refusal is answered by the model, not the gate
+                failed = []
+                for fname, spec in (checks or []):
+                    if check_fn is None or not (out_dir / fname).is_file():
+                        continue
+                    r = check_fn(out_dir / fname, spec)
+                    if not r.get("pass"):
+                        failed.append(f"{fname}: {spec} — {r.get('evidence')}")
+                rnd["checks_failed"] = failed
+                if not failed:
+                    record.update(ok=True, files=written_all)
+                    save()
+                    return {"rounds": n, "files": written_all, "model": client.model, "base_url_host": client.host, "ok": True}
+                problem = "the gate refuses the output: " + " | ".join(failed)
+                if n == rounds:
+                    raise fail(f"round {n}: {problem}")
+                messages.append({"role": "user", "content": "The gate refused your file(s):\n- " + "\n- ".join(failed) +
+                                 "\n\nFix exactly that and reply again with a complete FILE block for each file (keep the "
+                                 "draft's headings verbatim; no prose outside the blocks)."})
                 save()
-                return {"rounds": n, "files": written_all, "model": client.model, "base_url_host": client.host, "ok": True}
+                continue
             problem = f"the reply did not produce {', '.join(missing)}"
             if n == rounds:
                 raise fail(f"round {n}: {problem}. Reply head: {reply[:REPLY_HEAD]!r}")
