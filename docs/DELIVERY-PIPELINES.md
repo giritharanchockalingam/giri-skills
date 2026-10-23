@@ -217,8 +217,22 @@ The build stage runs, in order:
 | `feature` | compose `feature-from-plan` | `plan.md`, `tasks.csv`, `brief.json` | `feature.md` (one criterion per task), `feature.json` | — |
 | `files` | agent, `produces: ["files.txt"]` | the refined `plan.md`, `tasks.csv`, the checkout | `files.txt` — one repo-relative path per line (source files to create or modify; `#` comments allowed), `files.json` | **derived by the executor** from the refined `tasks.csv` (header `# derived by deliver.py …`; the builder is not asked) — always, once the plan passed its gate, since every task then names files. The builder fallback stays for a pipeline without a `tasks.csv` (a composed `fix`): `--files <file>` is taken first when given; `--builder none` stops with exit 4 and `needs_builder.json` saying exactly what to write and where: `<out>/evidence/03-build/files/files.txt` (`expected`; or `<out>/build/files.txt`, where `--files <file>` copies to); `--builder manual` expects it at one of those paths (else the same stop); `--builder claude-code` prompts `claude -p` (plan, tasks.csv, stack profile) to write it, and fails the step if it does not |
 | `tests` | skill `test-strategy-tdd` | `feature.md`, `files` = `$steps.files:files.txt#csv`, the checkout | `test-plan.md`, `scaffold-report.json`, red stubs on the checkout | — |
-| `code` | agent | `plan.md`, `test-plan.md`, `files.txt`, the checkout | `diff.patch`, `files-changed.json`, `agent-summary.md` | constrained to the files in `files.txt` plus test files (`tests/`, `__tests__/`, `e2e/`); anything else is flagged `outside_plan`. `--builder none` → exit 4 (`<out>/build/diff.patch` expected, or `--patch`); `manual` → that diff recorded and **applied to the checkout** with `git apply --index` (to the dry copy under `--dry`) so conventions, perf, ui and the pr step see the change — refused with exit 1, named in the gate detail, when it touches a file outside `files.txt` + test paths or does not apply cleanly; a diff the checkout already carries (the IDE agent wrote the code itself, or a resume) is detected with `git apply --check --reverse` and skipped; `applied.json` records the files and `git diff --stat`; `claude-code` → `claude -p`, `git diff` captured |
+| `code` | agent | `plan.md`, `test-plan.md`, `files.txt`, the checkout | `diff.patch`, `files-changed.json`, `agent-summary.md`, **`install.json` + `install.log`, `tests.json` + `tests.log`** | constrained to the files in `files.txt` plus test files (`tests/`, `__tests__/`, `e2e/`); anything else is flagged `outside_plan`. `--builder none` → exit 4 (`<out>/build/diff.patch` expected, or `--patch`); `manual` → that diff recorded and **applied to the checkout** with `git apply --index` (to the dry copy under `--dry`) so conventions, perf, ui and the pr step see the change — refused with exit 1, named in the gate detail, when it touches a file outside `files.txt` + test paths or does not apply cleanly; a diff the checkout already carries (the IDE agent wrote the code itself, or a resume) is detected with `git apply --check --reverse` and skipped; `applied.json` records the files and `git diff --stat`; `claude-code` → `claude -p`, `git diff` captured; `openai-compat` → the model's file blocks land, `git diff --cached` captured. **Every builder, in this order: install → the code lands → the project's tests execute** (see "The code step executes the tests") |
 | `conventions` | skill `nextjs-enterprise-conventions`, `gate: true` | the checkout, the baseline | `report.md` | — |
+
+#### The code step executes the tests
+Found by the first local-model run (qwen3:14b): the executor's clone had no `node_modules`, `--repair-cmd auto`
+resolved to nothing, the model's code was never run, and the build gate was static only — the PR's CI was the first
+place the tests ran. The gates are deterministic and local, so the code step now runs the project's own tests, for
+every builder, before the conventions gate:
+
+| Step | What runs | Where it is recorded |
+|---|---|---|
+| Install (once per run, before the code lands) | `--install auto` (default) from the stack profile: npm → `npm ci` when `package-lock.json` exists, else `npm install --no-audit --no-fund`; pnpm / yarn → `… install --frozen-lockfile` with their lockfile, else plain install; bun → `bun install`; Python → `uv sync` / `poetry install` / `pipenv install --dev` per `package_manager`, else `python3 -m pip install -r requirements.txt`, else `pip install -e .` from a `pyproject.toml`. No manifest → skipped (`no package manifest`). `--dry` → skipped (the copy is throwaway and offline-reproducible). `none` skips; any other value runs as given. Timeout 15 min; a failing install fails the code step | `<code step dir>/install.log`, `install.json` and `run.json` step `install {cmd, exit, duration_s, log}` (or `{skipped: <reason>}`); a resume with a successful `install.json` for the same command reuses it (`reused: true`) |
+| Tests (after the code lands) | `--tests auto` (default): the package manager's `test` script (`npm test` — the fixture's and the bootstrap skeleton's script is `vitest run`; `pnpm test`, `yarn test`, `bun run test`), else `npx vitest run` / `npx jest` per `test_runner`; Python → `pytest -q` through uv / poetry / pipenv or `python3 -m pytest -q`. No runner → `skipped (no runner)`; `--dry` → `skipped (dry run)` (an explicit `--tests <cmd>` still runs there); `none` → `skipped (--tests none)`. Runs with `CI=1` (watch-mode runners run once), timeout 30 min | `<code step dir>/tests.json` `{cmd, exit, duration_s, summary, tail (last 4 KB), log}` + `tests.log`; `run.json` step `tests` (same, without the tail) |
+| Verdict | `manual` / `claude-code`: a non-zero exit fails the code step — the `StepError` quotes the summary and the output tail, so `gate.json`'s detail says `code: tests failed: \`npm test\` exit 1 (2 passed, 1 failed); tail: …` and the conventions step is skipped. `openai-compat`: `--repair-cmd` now **defaults to the resolved test command** — a failing run is the next repair turn (its tail is the user message), up to `--rounds`, then the step fails the same way; `tests.json` is the last round's run (`log: llm-cmd-<n>.txt`, `rounds: n`). `--repair-cmd none` or an override: the tests still run once after the model's last reply | the stage gate stays `exit` on `conventions`: a failed code step already fails the stage (`halted` → the gate detail names it), so no pipeline or composer change was needed |
+| Evidence | EVIDENCE.md carries a **Tests** line above the stage table — `Tests (after the change): \`npm test\` exit 0 — tests: 3 passed — [tests.log](03-build/code/tests.log); install \`npm ci\` exit 0.` (the `N passed[, M failed[, K skipped]]` summary is read best-effort from the vitest / pytest summary line, else the exit code) or `tests: skipped (<reason>)`; the build row's evidence links `tests.json`, its log, `install.json` and `install.log` whatever the template's evidence list says | `run.json` `files` hashes them with the rest |
+| `node_modules` / `.venv` | never part of the diff or the PR: when the checkout's `.gitignore` does not cover them (the fixture has none) they are added to `.git/info/exclude` — local to the clone, not a change to the repository (`install.json` `excluded_from_git`); the dry copy never contains them (`COPY_IGNORE`) | — |
 
 The product manager's step comes first: `prd` (the draft from the brief) → `prd-refine` (agent step producing
 `prd-final.md`). A brief whose `stories`/`tasks` carry acceptance criteria fills the draft's user stories and the step
@@ -241,8 +255,10 @@ and `dev/build/start/lint/typecheck/test`, `next.config.js` with security header
 `app/page`, `app/api/health/route` returning `{ok: true}`, `lib/app-info`, `tests/unit/health.test`, `.gitignore`), so the
 later stages have an application to work on: `test-strategy-tdd` scaffolds beside a real vitest config, the conventions
 linter has sources to read, and `ci.yml` has scripts to call. `bootstrap-report.json` records `stack` and
-`app_skeleton: written|kept`. No `npm install` runs in the pipeline: the first local install produces `package-lock.json`, and
-`ci.yml` runs `npm ci` once it is committed (until then it warns and runs `npm install`).
+`app_skeleton: written|kept`. The build stage's code step installs the skeleton's dependencies (`npm install --no-audit
+--no-fund`, since no `package-lock.json` exists yet) and runs `npm test` on the change (see "The code step executes the
+tests"); the lockfile the install produces is committed with the feature, and `ci.yml` runs `npm ci` once it is there
+(until then it warns and runs `npm install`).
 
 ### Stack profile and baselines (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
 Read once, before stage 1, never guessed: `flavour` (ts|js), `framework` (nextjs|…), `package_manager`, `test_runner`
@@ -338,10 +354,24 @@ After the timeout the run stops with exit 3 as it would without a portal. `--app
 
 ```
 python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --request "<text>" [--brief brief.json] [--ref <ref>]
-    [--input name=value …] [--out <dir>] --builder none|manual|claude-code [--provider dry|none|anthropic|openai]
+    [--input name=value …] [--out <dir>] --builder none|manual|claude-code|openai-compat [--provider dry|none|anthropic|openai]
+    [--model NAME] [--base-url URL] [--rounds 2] [--repair-cmd auto|none|<cmd>]                            # openai-compat
+    [--install auto|none|<cmd>] [--tests auto|none|<cmd>]                                                  # code step, every builder
     [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID]
     [--no-baseline] [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
 ```
+
+Whatever the builder, the code step installs the checkout's dependencies once (`--install`, default `auto`) and executes
+the project's tests after the code lands (`--tests`, default `auto`): a failing test command fails the build stage with
+the output tail in the gate detail — see "The code step executes the tests". Both are skipped and recorded as such in
+`--dry` and when the repository has no runner.
+
+| `--builder` | Who fills the role stops (`prd-refine`, `plan-refine`, `files`, `code`) | Stops |
+|---|---|---|
+| `none` | a person or an IDE agent, from the role packet (`PROMPT.md`); outputs dropped at the `expected` paths, then `--resume` | exit 4 at every unfilled stop |
+| `manual` | the same, with `--prd` / `--plan` / `--files` / `--patch` supplied up front (a code diff is applied to the checkout with `git apply --index`) | exit 4 where nothing was supplied |
+| `claude-code` | `claude -p <packet>` on the checkout; `git diff` captured for the code step | none (a step that writes nothing fails, exit 1) |
+| `openai-compat` | **any OpenAI-compatible model** — the packet is POSTed to `<base>/chat/completions` and the model's `=== FILE: … ===` blocks are the step's files (see "Any LLM") | none (an unusable reply fails the step, exit 1, the reply head in the gate detail) |
 
 `--out` is required unless `--run` is given, when it defaults to `runs/<run id>` under giri-skills — the command the
 portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a path, a name under `pipelines/` or
@@ -375,6 +405,44 @@ environment but the command line) and carries no secrets.
 
 Where it lands: `evidence/01-requirements/prd-refine/PROMPT.md`, `evidence/02-architecture/plan-refine/PROMPT.md`,
 `evidence/03-build/files/PROMPT.md`, `evidence/03-build/code/PROMPT.md`.
+
+### Any LLM (`--builder openai-compat`, `scripts/llm_builder.py`)
+
+The platform promise: the customer's own model plays the product manager, the architect and the builder. Anything
+that serves `POST <base>/chat/completions` — Ollama, vLLM, LM Studio, Azure OpenAI, a Bedrock or LiteLLM proxy, OpenAI
+itself — gets the role packet as the user message, unchanged (the packet is the prompt: `PROMPT.md` ==
+`messages[1]`), with a system prompt that states the output protocol. Stdlib `urllib`, no SDK, no new dependency.
+
+```
+OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=ollama \
+python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" --out runs/r1 \
+    --builder openai-compat --model qwen2.5-coder:14b --approve-all
+```
+
+| Setting | From | Note |
+|---|---|---|
+| model | `--model`, else `OPENAI_MODEL` | required |
+| base URL | `--base-url`, else `OPENAI_BASE_URL`, else `https://api.openai.com/v1` | **guard**: a model name OpenAI does not serve (`qwen…`, `llama…`) with no base URL is refused before any call (exit 2) — the request would otherwise go to api.openai.com. A loopback/LAN host bypasses `HTTP(S)_PROXY` |
+| key | `OPENAI_API_KEY` | any non-empty string for a local server (`ollama`) |
+| `--rounds N` | default 2 | model turns per step, repair turns included |
+| `--repair-cmd` | default `auto` | the code step runs it on the checkout after each round of the model's files: `auto` = the resolved `--tests` command (the project's own tests, after the executor installed the dependencies — see "The code step executes the tests"); `none` runs no repair loop (the tests still run once after the last reply and fail the step); any other value is run as given (`sh -c`). A failing command's output tail is the next user turn |
+
+**Output protocol.** The model answers only with file blocks — `=== FILE: <repo-relative path> ===` … `=== END FILE ===`
+(the whole file) and optionally `=== DELETE: <path> ===`. A `<think>…</think>` block (local reasoning models) is
+stripped first. Paths with `..`, absolute or backslash paths are refused; the code step additionally refuses any path
+outside `files.txt` + test paths (`tests/`, `__tests__/`, `e2e/`) — refused before anything is written. For
+`prd-refine` / `plan-refine` / `files` the blocks named `prd-final.md`, `plan.md` + `tasks.csv`, `files.txt` are written
+to the step folder (the `expected` paths), and the run continues exactly as if the product manager or architect had
+dropped them; for `code` they land in the checkout, `git add -A` + `git diff --cached --binary` is the recorded
+`diff.patch` (like `claude-code`), and `files-changed.json` flags anything outside the plan as before. A reply with
+no usable block, a missing produced file, or a repair command still failing after `--rounds` fails the step (exit 1)
+with the reply head in the step error. Retries: 2× on a 5xx or a timeout; a 4xx is final.
+
+**Evidence.** `<step dir>/llm-rounds.json` — `provider`, `model`, `base_url_host`, `repair_cmd`, one entry per round
+(`round`, `prompt_chars`, `reply_chars`, `files`, `deleted`, `cmd`, `cmd_exit`, `error`), `ok`; the raw replies in
+`llm-reply-<n>.txt`, the command output in `llm-cmd-<n>.txt`; `run.json` step `llm {provider, model, base_url_host,
+rounds, duration_s, ok}`; EVIDENCE.md's header prints `builder openai-compat (<model> @ <host>)`. Nothing from the
+environment reaches a prompt: the packet is already clean, the system prompt is static text plus the file lists.
 
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).

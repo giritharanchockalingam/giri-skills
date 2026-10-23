@@ -168,3 +168,21 @@ def test_placeholder_credentials_in_tests_are_not_secrets(tmp_path):
     q = write_patch(tmp_path, "lib/pay.js", ['const STRIPE_SECRET = "sk_live_51H8x9ABCDEFGH123456";'], name="y.patch")
     _, data, _ = run(tmp_path, q)
     assert [f for f in data["findings"] if f["rule"] == "CR-SECRET"]
+
+
+def test_credential_shaped_fixtures_in_test_files_are_not_secrets_but_real_key_formats_still_are(tmp_path):
+    """First local-model run: `process.env.HEALTH_CHECK_TOKEN = 'valid-token-123'` in a test file blocked the review.
+    In a test path a credential-shaped assignment is a fixture; a real key format is still caught anywhere."""
+    p = write_patch(tmp_path, "tests/unit/src-api-health-deep.test.ts", [
+        "  process.env.HEALTH_CHECK_TOKEN = 'valid-token-123';",
+        "  process.env.HEALTH_CHECK_TOKEN = 'secret-value-for-tests';",
+        "  const password = 'hunter2hunter2';",
+    ])
+    _, data, _ = run(tmp_path, p)
+    assert not [f for f in data["findings"] if f["rule"] == "CR-SECRET"], data["findings"]
+    q = write_patch(tmp_path, "tests/unit/leak.test.ts", ["  const key = 'AKIAIOSFODNN7EXAMPLE';"], name="k.patch")
+    _, data, _ = run(tmp_path, q)
+    assert [f for f in data["findings"] if f["rule"] == "CR-SECRET"]
+    r = write_patch(tmp_path, "src/api/health/deep.ts", ["  const token = 'valid-token-123';"], name="s.patch")
+    _, data, _ = run(tmp_path, r)
+    assert [f for f in data["findings"] if f["rule"] == "CR-SECRET"]     # outside tests the rule is unchanged

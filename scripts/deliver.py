@@ -3,7 +3,8 @@
 
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
-        --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
+        --builder none|manual|claude-code|openai-compat [--model NAME --base-url URL --rounds N --repair-cmd CMD] \
+        [--install auto|none|CMD] [--tests auto|none|CMD] [--provider dry|none|anthropic|openai] \
         [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--prd prd-final.md] [--dry] [--resume] [--run-id ID] \
         [--no-baseline] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
@@ -34,6 +35,23 @@ pipeline's `stack_profile.after` names), then the stages in order. Step kinds:
                                      --resume); evidence: <step>/applied.json (files, git diff --stat)
             --builder claude-code -> `claude -p` on the checkout with a prompt built from the plan, the test
                                      plan, files.txt and the constraint files; `git diff` is captured as diff.patch
+            --builder openai-compat -> the packet is sent to any OpenAI-compatible chat endpoint (scripts/llm_builder.py:
+                                     --base-url / OPENAI_BASE_URL, --model / OPENAI_MODEL, OPENAI_API_KEY) and the model's
+                                     `=== FILE: … ===` blocks are the step's output: written to the step folder for
+                                     prd-refine / plan-refine / files, into the checkout (allowed files + test paths) for
+                                     the code step, where --repair-cmd (default: the resolved --tests command) runs and a
+                                     failure goes back as a repair turn, up to --rounds (2); evidence: llm-rounds.json,
+                                     llm-reply-<n>.txt; run.json step `llm`
+            every builder, code step: the checkout's dependencies are installed once per run before the code lands
+            (--install auto: `npm ci` / `npm install` / pnpm / yarn / bun / pip / uv / poetry from the stack profile;
+            <step>/install.log + install.json; node_modules and .venv are kept out of the diff via .git/info/exclude
+            when .gitignore does not cover them) and the project's tests are EXECUTED after the code landed (--tests
+            auto: the package manager's `test` script, `npx vitest run` / `npx jest`, `pytest -q`; <step>/tests.json
+            with cmd, exit, duration, summary and the output tail + tests.log). A failing test command fails the code
+            step (the StepError quotes the tail, so the gate detail says the tests failed); for openai-compat the
+            failing output is the repair turn first, up to --rounds. Both are skipped (recorded as such) in --dry and
+            when the repository has no runner. EVIDENCE.md carries a Tests line ("tests: N passed") and the build
+            row links tests.json / tests.log / install.log.
             every exit-4 stop (prd-refine, plan-refine, files, code) also writes <step dir>/PROMPT.md — the role
             packet (Run.role_packet): role, outputs and paths, the gate checks verbatim, every input inlined, the
             role's SKILL.md and the resume command — for ANY agent or a person; needs_builder.json `prompt` names
@@ -107,6 +125,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import check_output  # noqa: E402
+import llm_builder  # noqa: E402
 import validate_pipelines as vp  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_ARGS, EXIT_APPROVAL, EXIT_BUILDER = 0, 1, 2, 3, 4
@@ -137,16 +156,103 @@ BASELINE_SKILLS = {"build/nextjs-enterprise-conventions": "nextjs", "build/perf-
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
+TEST_PATH_RE = llm_builder.TEST_PATH_RE                     # test files the code step may add beside files.txt (one definition)
 TEST_PATH_RE = re.compile(r"(^|/)(tests?|__tests__|e2e)/")   # test files the code step may add beside files.txt
 PACKET_MD = "PROMPT.md"                             # the role packet every builder stop writes (see Run.role_packet)
 PACKET_INLINE_LIMIT = 40 * 1024                     # an input this size or smaller is inlined whole in the packet
 PACKET_HEAD_LINES = 60                              # a larger one: its first lines + "(truncated)"
 # the SKILL.md that backs a role step, inlined in its packet (the code step inlines its constraint docs instead)
 PACKET_SKILLS = {PRD_MD: "skills/build/product-spec-prd/SKILL.md", TASKS_CSV: "skills/build/spec-to-plan/SKILL.md"}
+# the code step installs the checkout's dependencies once per run and executes the project's tests after the code
+# lands, for every builder (found by the first local-model run: the clone had no node_modules, the repair command
+# resolved to nothing and the PR's CI was the first place the model's code was ever run)
+INSTALL_TIMEOUT_S = 900                             # 15 min for npm ci / pip install
+TEST_TIMEOUT_S = 1800                               # 30 min for the project's test command
+TEST_TAIL = 4 * 1024                                # tests.json carries the last 4 KB of the runner's output
+TEST_TAIL_IN_ERROR = 400                            # how much of that the step error (the gate detail) quotes
+INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
+TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
+ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 
 class StepError(Exception):
     pass
+
+
+def _read_pkg(target: Path) -> dict:
+    pkg = target / "package.json"
+    if not pkg.is_file():
+        return {}
+    try:
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def install_cmd(profile: dict, target: Path) -> str | None:
+    """How the checkout's dependencies are installed, from the stack profile's package_manager and the manifests on
+    disk — or None when there is nothing to install. npm: `npm ci` with a package-lock.json, else `npm install`;
+    pnpm / yarn frozen when their lockfile is there; bun; Python: uv / poetry / pipenv, else pip from
+    requirements.txt or `pip install -e .` from a pyproject.toml."""
+    pm = str(profile.get("package_manager") or "unknown")
+    if (target / "package.json").is_file():
+        if pm == "pnpm":
+            return "pnpm install --frozen-lockfile" if (target / "pnpm-lock.yaml").is_file() else "pnpm install"
+        if pm == "yarn":
+            return "yarn install --frozen-lockfile" if (target / "yarn.lock").is_file() else "yarn install"
+        if pm == "bun":
+            return "bun install"
+        return "npm ci" if (target / "package-lock.json").is_file() else "npm install --no-audit --no-fund"
+    if pm == "uv":
+        return "uv sync"
+    if pm == "poetry":
+        return "poetry install"
+    if pm == "pipenv":
+        return "pipenv install --dev"
+    if (target / "requirements.txt").is_file():
+        return "python3 -m pip install -r requirements.txt"
+    if str(profile.get("flavour")) == "python" and (target / "pyproject.toml").is_file():
+        return "python3 -m pip install -e ."
+    return None
+
+
+def test_cmd(profile: dict, target: Path) -> str | None:
+    """The project's own test command, from the stack profile and package.json — or None when the repository has no
+    runner. Node: the package manager's `test` script when package.json declares one (`vitest run` in the fixture
+    and the bootstrap skeleton), else the detected runner directly (`npx vitest run` / `npx jest`); Python: pytest
+    through uv / poetry / pipenv when that is the package manager, else `python3 -m pytest -q`."""
+    pm = str(profile.get("package_manager") or "unknown")
+    runner = str(profile.get("test_runner") or "none")
+    pkg = _read_pkg(target)
+    if pkg or (target / "package.json").is_file():
+        if (pkg.get("scripts") or {}).get("test"):
+            return {"pnpm": "pnpm test", "yarn": "yarn test", "bun": "bun run test"}.get(pm, "npm test")
+        if runner == "vitest":
+            return "npx vitest run"
+        if runner == "jest":
+            return "npx jest"
+        return None
+    if runner == "pytest":
+        return {"uv": "uv run pytest -q", "poetry": "poetry run pytest -q", "pipenv": "pipenv run pytest -q"}.get(pm, "python3 -m pytest -q")
+    return None
+
+
+def test_summary(output: str) -> str:
+    """`N passed[, M failed[, K skipped]]` read best-effort from a vitest (`Tests  2 passed (2)`) or pytest
+    (`3 passed, 1 failed in 0.4s`) summary line; "" when the runner printed none (the exit code is the verdict)."""
+    text = ANSI_RE.sub("", output or "")
+    parts = []
+    for word in ("passed", "failed", "skipped"):
+        found = re.findall(rf"(\d+)\s+{word}\b", text)
+        if found:
+            parts.append(f"{found[-1]} {word}")
+    return ", ".join(parts)
+
+
+def output_tail(text: str, limit: int) -> str:
+    text = ANSI_RE.sub("", text or "")
+    return text if len(text) <= limit else "…" + text[-limit:]
 
 
 def new_high_detail(count: int, listed: list[str]) -> str:
@@ -459,6 +565,7 @@ class Run:
         self.repo: Path | None = None
         self.profile: dict = {}
         self.run_id = ""
+        self._llm = None   # the openai-compat client, built on first use (see llm_client)
         self.mode = "dry" if args.provider == "dry" else "real"
         self.portal: Portal | None = None
         self.profile_posted = False
@@ -926,6 +1033,192 @@ class Run:
         need["prompt"] = str(sdir / PACKET_MD)
         return packet
 
+    # ---- the openai-compat builder: the packet goes to any OpenAI-compatible model (scripts/llm_builder.py)
+    def llm_client(self) -> "llm_builder.OpenAICompat":
+        """One client per run, built from --model / --base-url and the OPENAI_* environment; a misconfiguration is a
+        StepError before any call (the same guard main() applies up front)."""
+        if self._llm is None:
+            try:
+                self._llm = llm_builder.OpenAICompat(self.args.model, self.args.base_url)
+            except llm_builder.OpenAICompatError as e:
+                raise StepError(f"builder openai-compat: {e}") from None
+        return self._llm
+
+    def builder_label(self) -> str:
+        """`openai-compat (<model> @ <host>)` for the evidence header; the builder name otherwise."""
+        if self.args.builder != "openai-compat":
+            return self.args.builder
+        try:
+            c = self.llm_client()
+        except StepError:
+            return f"openai-compat ({self.args.model or os.environ.get('OPENAI_MODEL') or '?'})"
+        return f"openai-compat ({c.model} @ {c.host})"
+
+    def repair_cmd(self, target: Path, tests: str | None) -> str | None:
+        """The command the openai-compat code step runs after each round of the model's files, whose failing output is
+        the next repair turn. --repair-cmd CMD as given; `none` → no repair loop (the resolved test command still runs
+        once after the model's last reply, and fails the step); `auto` (default) → the resolved test command."""
+        given = (self.args.repair_cmd or "").strip()
+        if given.lower() in ("", "none", "off"):
+            return None
+        return tests if given == "auto" else given
+
+    # ---- the code step's deterministic gates: install once, run the project's tests (every builder)
+    def resolve_install(self, target: Path) -> tuple[str | None, str]:
+        """(command, reason-when-none) for --install auto|none|<cmd>. `auto` reads the stack profile (install_cmd);
+        a dry run installs nothing (the copy is throwaway and offline-reproducible)."""
+        given = (getattr(self.args, "install", "auto") or "auto").strip()
+        if given.lower() in ("none", "off"):
+            return None, "--install none"
+        if given != "auto":
+            return given, ""
+        if self.args.dry:
+            return None, "dry run"
+        cmd = install_cmd(self.profile, target)
+        return cmd, ("" if cmd else "no package manifest (nothing to install)")
+
+    def resolve_tests(self, target: Path) -> tuple[str | None, str]:
+        """(command, reason-when-none) for --tests auto|none|<cmd>. `auto` reads the stack profile (test_cmd); a dry
+        run skips (its copy has no dependencies installed; an explicit --tests <cmd> still runs there)."""
+        given = (getattr(self.args, "tests", "auto") or "auto").strip()
+        if given.lower() in ("none", "off"):
+            return None, "--tests none"
+        if given != "auto":
+            return given, ""
+        if self.args.dry:
+            return None, "dry run"
+        cmd = test_cmd(self.profile, target)
+        return cmd, ("" if cmd else "no runner")
+
+    @staticmethod
+    def exclude_install_dirs(target: Path) -> list[str]:
+        """node_modules / .venv must never enter the diff or the PR (`git add -A`): when the checkout's .gitignore does
+        not cover them, add them to .git/info/exclude — local to the clone, never a change to the repository."""
+        if not shutil.which("git") or not is_git_root(target):
+            return []
+        added = []
+        code, path = git(target, "rev-parse", "--git-path", "info/exclude", ok=(0, 128))
+        if code != 0:
+            return []
+        exclude = Path(path.strip())
+        if not exclude.is_absolute():
+            exclude = target / exclude
+        for d in INSTALL_DIRS:
+            ignored, _ = git(target, "check-ignore", "-q", d, ok=(0, 1, 128))
+            if ignored == 1:
+                exclude.parent.mkdir(parents=True, exist_ok=True)
+                with exclude.open("a", encoding="utf-8") as fh:
+                    fh.write(f"{d}/\n")
+                added.append(d)
+        return added
+
+    @staticmethod
+    def _sh(cmd: str, cwd: Path, timeout_s: float) -> tuple[int, str]:
+        env = {**os.environ, "CI": os.environ.get("CI") or "1"}   # watch-mode runners (vitest, jest) run once under CI
+        try:
+            r = subprocess.run(cmd, shell=True, cwd=str(cwd), capture_output=True, text=True, timeout=timeout_s, env=env)
+            return r.returncode, (r.stdout or "") + (r.stderr or "")
+        except subprocess.TimeoutExpired as e:
+            partial = (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
+            return 124, f"timed out after {timeout_s:.0f}s\n{partial}"
+
+    def install_deps(self, target: Path, sdir: Path, rec: dict) -> None:
+        """Once per run, in the checkout, before the code lands: the stack profile's install command, its output in
+        <step>/install.log, the record in install.json and run.json `install`. A resume reuses a successful install
+        (install.json with exit 0 and the same command). A failing install fails the code step: the tests cannot run."""
+        cmd, reason = self.resolve_install(target)
+        prev = read_json(sdir / INSTALL_JSON) if (sdir / INSTALL_JSON).is_file() else {}
+        if cmd and prev.get("cmd") == cmd and prev.get("exit") == 0:
+            rec["install"] = {**prev, "reused": True}
+            return
+        excluded = self.exclude_install_dirs(target)   # even without an install: a developer's node_modules must not be staged
+        if not cmd:
+            rec["install"] = {"skipped": reason}
+            write_json(sdir / INSTALL_JSON, rec["install"])
+            return
+        t0 = time.time()
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
+        (sdir / INSTALL_LOG).write_text(output, encoding="utf-8")
+        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG}
+        if excluded:
+            info["excluded_from_git"] = excluded
+        write_json(sdir / INSTALL_JSON, info)
+        rec["install"] = info
+        if code != 0:
+            raise StepError(f"install failed: `{cmd}` exit {code} (see {INSTALL_LOG}); tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+
+    def record_tests(self, sdir: Path, rec: dict, info: dict) -> None:
+        write_json(sdir / TESTS_JSON, info)
+        rec["tests"] = {k: v for k, v in info.items() if k != "tail"}
+
+    def run_tests(self, cmd: str | None, reason: str, target: Path, sdir: Path, rec: dict) -> None:
+        """After the code landed: the project's test command on the checkout, its output in <step>/tests.log, the
+        record (cmd, exit, duration_s, summary, tail) in tests.json and run.json `tests`. Exit != 0 fails the code
+        step — the StepError names the summary and the output tail, so the gate detail says the tests failed."""
+        if not cmd:
+            self.record_tests(sdir, rec, {"skipped": reason})
+            return
+        t0 = time.time()
+        code, output = self._sh(cmd, target, TEST_TIMEOUT_S)
+        (sdir / TESTS_LOG).write_text(output, encoding="utf-8")
+        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "summary": test_summary(output),
+                "tail": output_tail(output, TEST_TAIL), "log": TESTS_LOG}
+        self.record_tests(sdir, rec, info)
+        if code != 0:
+            raise StepError(f"tests failed: `{cmd}` exit {code}" + (f" ({info['summary']})" if info["summary"] else "")
+                            + f"; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+
+    def record_llm_tests(self, cmd: str, sdir: Path, rec: dict) -> None:
+        """openai-compat: the repair command IS the test command, already run by the builder after each round — the
+        last round's result becomes tests.json (its log is that round's llm-cmd-<n>.txt)."""
+        rounds = (read_json(sdir / "llm-rounds.json") if (sdir / "llm-rounds.json").is_file() else {}).get("rounds") or []
+        last = next((r for r in reversed(rounds) if "cmd_exit" in r), None)
+        if last is None:
+            self.record_tests(sdir, rec, {"skipped": "the model's rounds ran no command"})
+            return
+        log = f"llm-cmd-{last['round']}.txt"
+        output = (sdir / log).read_text(encoding="utf-8", errors="replace") if (sdir / log).is_file() else ""
+        self.record_tests(sdir, rec, {"cmd": cmd, "exit": last["cmd_exit"], "duration_s": last.get("cmd_duration_s"),
+                                      "summary": test_summary(output), "tail": output_tail(output, TEST_TAIL), "log": log,
+                                      "rounds": last["round"]})
+
+    def step_output_checks(self, step_id: str) -> list[tuple[str, str]]:
+        """The stage gate's output checks on this step's files, as (file, check) — what the model's documents are
+        held to after each round (the same checks eval_gate runs), so a refusal is answered inside the builder."""
+        stage = next((st for st in self.spec["stages"] if any(x["id"] == step_id for x in st["steps"])), None)
+        out: list[tuple[str, str]] = []
+
+        def walk(g: dict) -> None:
+            if g.get("kind") == "output" and g.get("step") == step_id and g.get("file") and g.get("check"):
+                out.append((str(g["file"]), str(g["check"])))
+            for sub in g.get("of") or []:
+                walk(sub)
+        if stage:
+            walk(stage.get("gate") or {})
+        return out
+
+    def run_llm_role(self, sdir: Path, rec: dict, packet: str, *, produce: list[str], allowed: list[str] | None,
+                     target: Path | None, repair_cmd: str | None = None, step_id: str = "", extra_check=None) -> dict:
+        """Send the packet to the model and land its file blocks (llm_builder.run_role); the step record gets `llm`
+        {provider, model, base_url_host, rounds}. A reply that parses to nothing, or a repair command still failing
+        after --rounds, is a StepError that names the reply head — the gate detail then says what the model did."""
+        client = self.llm_client()
+        t0 = time.time()
+        try:
+            checks = self.step_output_checks(step_id) if (target is None and step_id) else []
+            res = llm_builder.run_role(packet, produce=produce, allowed=allowed, out_dir=sdir, target=target, client=client,
+                                       max_rounds=self.args.rounds, repair_cmd=repair_cmd,
+                                       checks=checks, check_fn=lambda path, spec: check_output.run_check(spec, str(path), mode="real"),
+                                       extra_check=extra_check)
+        except llm_builder.LLMBuildError as e:
+            rec["llm"] = {"provider": "openai-compat", "model": client.model, "base_url_host": client.host,
+                          "rounds": len((read_json(sdir / "llm-rounds.json") if (sdir / "llm-rounds.json").is_file() else {}).get("rounds") or []),
+                          "duration_s": round(time.time() - t0, 3), "ok": False}
+            raise StepError(f"builder openai-compat ({client.model} @ {client.host}): {e}") from None
+        rec["llm"] = {"provider": "openai-compat", "model": client.model, "base_url_host": client.host,
+                      "rounds": res["rounds"], "duration_s": round(time.time() - t0, 3), "ok": True}
+        return res
+
     # ---- the files step (agent step with produces: ["files.txt"])
     def _derive_files_txt(self, tasks_path: str) -> tuple[list[str], str]:
         """files.txt from tasks.csv when EVERY task names files (nothing invented); else ([], why-not)."""
@@ -1010,6 +1303,13 @@ class Run:
                 if dirty.strip():
                     rec["warning"] = "the files step changed the checkout; it should only read it"
             return record(read_files_txt(expected), "claude-code", f"written by claude -p at {expected.relative_to(self.out)}")
+        if builder == "openai-compat":
+            prompt = self.write_packet(step, sdir, need, packet_inputs)   # the packet is what the model gets
+            res = self.run_llm_role(sdir, rec, prompt, produce=[FILES_TXT], allowed=None, target=None, step_id=step["id"])
+            if not expected.is_file():
+                raise StepError(f"builder openai-compat did not write {expected}")
+            return record(read_files_txt(expected), "openai-compat",
+                          f"written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s) at {expected.relative_to(self.out)}")
         raise StepError(f"unknown builder {builder!r}")
 
     # ---- the plan-refine step (agent step with produces: ["plan.md", "tasks.csv"])
@@ -1031,6 +1331,56 @@ class Run:
                 elif TBD_RE.search(v):
                     gaps.append(f"{r.get('id') or '?'}: {col} is {v}")
         return gaps
+
+    def repo_layout(self, target: Path, limit: int = 400) -> str:
+        """What the architect must see before naming files: the stack profile facts and the checkout's tracked paths
+        (bounded). Found on the first local-model run — the model planned src/*.ts in a JavaScript app-router repo."""
+        prof = self.record.get("stack_profile") or self.profile or {}
+        facts = ", ".join(f"{k}={prof.get(k)}" for k in ("flavour", "framework", "package_manager", "test_runner", "e2e", "migrations_dir", "monorepo_root") if prof.get(k) not in (None, "", "none", "unknown"))
+        paths: list[str] = []
+        if shutil.which("git") and is_git_root(target):
+            code, out = git(target, "ls-files", ok=(0, 128))
+            paths = [ln for ln in out.splitlines() if ln.strip()] if code == 0 else []
+        if not paths and target.is_dir():
+            for root, dirs, files in os.walk(target):
+                dirs[:] = [d for d in dirs if d not in {".git", "node_modules", ".next", ".venv", "__pycache__", "dist", "build"}]
+                for f in files:
+                    paths.append(str(Path(root, f).relative_to(target)))
+        paths.sort()
+        shown = paths[:limit]
+        tops = sorted({p.split("/")[0] for p in paths})
+        lines = [f"Stack profile: {facts or 'unknown'}", f"Top-level entries: {', '.join(tops) or '(empty repository)'}",
+                 f"Tracked files ({len(paths)}{', first ' + str(limit) + ' shown' if len(paths) > limit else ''}):"] + [f"  {p}" for p in shown]
+        lines.append("Rule: every file a task names is a path in THIS layout — an existing file to modify, or a new file in an "
+                     "existing directory with the repository's language and framework conventions (same extension as its neighbours).")
+        return "\n".join(lines)
+
+    @staticmethod
+    def plan_fits_repo(tasks_path: str, target: Path, profile: dict) -> list[str]:
+        """Files the plan names that cannot be right for this checkout: a parent directory that does not exist (a layout
+        the model invented, e.g. src/ in an app-router repo), or an extension that contradicts the stack flavour
+        (.ts in a JavaScript repo and vice versa). Empty list = the plan fits."""
+        if not tasks_path or not Path(tasks_path).is_file():
+            return []
+        rows = list(csv.DictReader(io.StringIO(Path(tasks_path).read_text(encoding="utf-8"))))
+        flavour = str((profile or {}).get("flavour") or "")
+        has_any = any(target.rglob("*")) if target.is_dir() else False
+        problems: list[str] = []
+        for r in rows:
+            for f in [repo_path(x) for x in re.split(r"[,;]+", r.get("files") or "") if repo_path(x)]:
+                if TBD_RE.search(f):
+                    continue
+                p = target / f
+                ext = Path(f).suffix.lower()
+                if flavour == "js" and ext in (".ts", ".tsx"):
+                    problems.append(f"{r.get('id') or '?'}: {f} is TypeScript but the repository is JavaScript (flavour js)")
+                elif flavour == "ts" and ext in (".js", ".jsx") and not p.is_file():
+                    problems.append(f"{r.get('id') or '?'}: {f} is JavaScript but the repository is TypeScript (flavour ts)")
+                if has_any and not p.exists():
+                    top = f.split("/")[0]
+                    if "/" in f and not (target / top).is_dir():
+                        problems.append(f"{r.get('id') or '?'}: {f} is under {top}/, which does not exist in the repository (invented layout)")
+        return problems
 
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
@@ -1073,6 +1423,16 @@ class Run:
         packet_inputs = [{"label": "Request", "text": request or "(none)"}, {"label": f"Draft PRD ({PRD_MD})", "path": draft}]
         if brief_path:
             packet_inputs.append({"label": "Brief (brief.json)", "path": brief_path})
+        if builder == "openai-compat":
+            rec["status"] = "ok"   # not a stop: the model answers the packet now
+            prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
+            res = self.run_llm_role(sdir, rec, prompt, produce=[PRD_MD], allowed=None, target=None, step_id=step["id"])
+            if not expected.is_file():
+                raise StepError(f"builder openai-compat did not write {expected}")
+            rec.update(exit=0, prd_source="openai-compat")
+            write_json(sdir / "prd-refine.json", {"source": "openai-compat", "skipped": False, "draft": draft,
+                                                  "note": f"written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s)"})
+            return True
         self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
         write_json(self.out / "needs_builder.json", need)
         return False
@@ -1095,6 +1455,10 @@ class Run:
             if missing_cols:
                 raise StepError(f"{TASKS_CSV} from {source} lacks the columns {missing_cols} (spec-to-plan's header: {','.join(PLAN_COLUMNS)})")
             gaps = self.scaffold_gaps(str(expected[TASKS_CSV]))
+            misfit = self.plan_fits_repo(str(expected[TASKS_CSV]), target, self.record.get("stack_profile") or self.profile or {})
+            if misfit:
+                raise StepError(f"{TASKS_CSV} from {source} names files that do not fit the repository: " + "; ".join(misfit[:4])
+                                + " — name existing files or new files in existing directories with the repository's conventions")
             write_json(sdir / "plan-refine.json", {"source": source, "skipped": skipped, "tasks": len(rows), "gaps": gaps,
                                                    "scaffold": {"plan": scaffold_plan, "tasks": scaffold_tasks}, "note": note})
             rec.update(exit=0, plan_source=source, skipped=skipped, tasks=len(rows), gaps=len(gaps))
@@ -1129,6 +1493,7 @@ class Run:
                 "how": f"write both files at the expected paths (or pass --plan <dir> holding {PLAN_MD} and {TASKS_CSV}), then re-run with --resume"}
         packet_inputs = [{"label": "Gaps the gate will refuse", "text": "\n".join(f"- {g}" for g in gaps)},
                          {"label": "Request", "text": request or "(none)"}, {"label": f"PRD ({PRD_MD})", "path": prd},
+                         {"label": "Repository layout (name files that fit it)", "text": self.repo_layout(target)},
                          {"label": f"Scaffold {PLAN_MD}", "path": scaffold_plan}, {"label": f"Scaffold {TASKS_CSV}", "path": scaffold_tasks}]
         if builder in ("none", "manual"):
             rec["status"] = "awaiting_builder"
@@ -1157,6 +1522,15 @@ class Run:
                 if dirty.strip():
                     rec["warning"] = "the plan-refine step changed the checkout; it should only read it"
             return record("claude-code", f"written by claude -p at {sdir.relative_to(self.out)}")
+        if builder == "openai-compat":
+            prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])
+            prof = self.record.get("stack_profile") or self.profile or {}
+            res = self.run_llm_role(sdir, rec, prompt, produce=list(PLAN_FILES), allowed=None, target=None, step_id=step["id"],
+                                    extra_check=lambda d: self.plan_fits_repo(str(d / TASKS_CSV), target, prof))
+            absent = [f for f in PLAN_FILES if not expected[f].is_file()]
+            if absent:
+                raise StepError(f"builder openai-compat did not write {', '.join(str(expected[f]) for f in absent)}")
+            return record("openai-compat", f"written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s) at {sdir.relative_to(self.out)}")
         raise StepError(f"unknown builder {builder!r}")
 
     def _revert_superseded_patch(self, patch: Path, target: Path, sdir: Path, rec: dict) -> None:
@@ -1293,11 +1667,13 @@ class Run:
             if manual_patch.is_file():
                 rec["patch_sha256"] = sha256_file(manual_patch)
                 self._revert_superseded_patch(manual_patch, target, sdir, rec)
+                self.install_deps(target, sdir, rec)              # the project's tests need its dependencies
                 if self.args.dry:  # the checkout is a throwaway copy: land the diff so the lint stages assess the change
                     note = self._apply_to_copy(manual_patch, target)
                 else:              # the real checkout: the diff is what the gates and the PR must see
                     note = self._apply_manual(manual_patch, target, allowed, allowed_source, sdir, rec)
                 self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
+                self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the diff
                 return True
             rec["status"] = "awaiting_builder"
             self.write_packet(step, sdir, need, packet_inputs)
@@ -1311,6 +1687,7 @@ class Run:
                 raise StepError(f"builder claude-code: {target} is not a git repository root; the diff cannot be captured")
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
+            self.install_deps(target, sdir, rec)                  # before the agent: it may run the tests itself
             t0 = time.time()
             r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
                                text=True, timeout=3600)
@@ -1324,6 +1701,36 @@ class Run:
             patch.write_text(diff, encoding="utf-8")
             self._record_diff(patch, sdir, rec, plan, r.stdout, files)
             patch.unlink()
+            self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the agent's code
+            return True
+        if builder == "openai-compat":
+            if not is_git_root(target):
+                raise StepError(f"builder openai-compat: {target} is not a git repository root; the diff cannot be captured")
+            prompt = self.write_packet(step, sdir, need, packet_inputs)   # one source for every builder
+            self.install_deps(target, sdir, rec)                  # before the first round: the repair command needs the dependencies
+            tcmd, treason = self.resolve_tests(target)
+            cmd = self.repair_cmd(target, tcmd)                   # default: the test command is the repair loop
+            try:
+                res = self.run_llm_role(sdir, rec, prompt, produce=[], allowed=allowed or None, target=target, repair_cmd=cmd)
+            except StepError:
+                if cmd and cmd == tcmd:                           # the rounds are spent: the last run is the test record
+                    self.record_llm_tests(cmd, sdir, rec)
+                raise
+            git(target, "add", "-A")
+            _, diff = git(target, "diff", "--cached", "--binary")
+            if not diff.strip():
+                raise StepError(f"builder openai-compat ({res['model']}): the model's files left the checkout unchanged (wrote {res['files'] or 'nothing'})")
+            patch = sdir / "captured.patch"
+            patch.write_text(diff, encoding="utf-8")
+            summary = (f"Written by {res['model']} @ {res['base_url_host']} in {res['rounds']} round(s); files: "
+                       + (", ".join(res["files"]) or "none") + (f"; deleted: {', '.join(res['deleted'])}" if res.get("deleted") else "")
+                       + (f"; `{cmd}` exit {res.get('cmd_exit')}" if cmd else "; no repair command ran"))
+            self._record_diff(patch, sdir, rec, plan, summary, files)
+            patch.unlink()
+            if cmd and cmd == tcmd:
+                self.record_llm_tests(cmd, sdir, rec)             # the repair loop already ran the tests (exit 0 here)
+            else:                                                 # --repair-cmd none or an override: the tests run once, now
+                self.run_tests(tcmd, treason, target, sdir, rec)
             return True
         raise StepError(f"unknown builder {builder!r}")
 
@@ -1455,11 +1862,12 @@ class Run:
     # ---- evidence
     def write_evidence_md(self) -> None:
         rows = ["# Evidence", "", f"Pipeline `{self.spec['name']}` v{self.spec.get('version', '')} · run `{self.run_id}` · "
-                f"mode {self.spec.get('mode', '')} · builder {self.args.builder} · provider {self.args.provider}"
+                f"mode {self.spec.get('mode', '')} · builder {self.builder_label()} · provider {self.args.provider}"
                 + (" · DRY RUN" if self.args.dry else ""), "",
                 f"Request: {self.inputs.get('request', '')}", "",
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
                 self.baseline_row(), "",
+                self.tests_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
         for s in self.record.get("stages", []):
             g = s.get("gate") or {}
@@ -1485,6 +1893,25 @@ class Run:
             cells.append(f"{check}: {e.get('findings', 0)} finding(s), {e.get('high', 0)} high — {link}")
         return "Baseline (before the change, " + b.get("target_source", "") + "): " + ("; ".join(cells) or "no checks") + \
             ". Gates fail only on findings that are new against it."
+
+    def tests_row(self) -> str:
+        """The Tests line of EVIDENCE.md: what the code step executed on the checkout after the code landed —
+        `tests: N passed` when the runner printed a summary, else the exit code; `tests: skipped (<reason>)`."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "tests" in st), None)
+        if not code:
+            return "Tests (after the change): not run yet — executed by the build stage's code step, every builder."
+        t = code["tests"]
+        if t.get("skipped"):
+            return f"Tests (after the change): tests: skipped ({t['skipped']})."
+        sdir = self.step_dirs.get(code["id"])
+        log = sdir / str(t.get("log") or "") if sdir else None
+        link = f" — [{log.name}]({log.relative_to(self.evidence)})" if log and log.is_file() else ""
+        verdict = f"tests: {t['summary']}" if t.get("summary") else f"tests: exit {t.get('exit')}"
+        install = code.get("install") or {}
+        inst = (f"; install `{install['cmd']}` exit {install['exit']}" if install.get("cmd") else
+                f"; install skipped ({install['skipped']})" if install.get("skipped") else "")
+        return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}."
 
     def hash_files(self) -> dict:
         files = {}
@@ -1572,6 +1999,19 @@ class Run:
         # the stale review.md/findings.csv and failed again).
         keep = (prev or {}).get("status") in ("awaiting_approval", "awaiting_builder")
         done_steps = {s["id"]: s for s in (prev or {}).get("steps", []) if keep and s.get("status") in ("ok", "approved") and not s.get("exit")}
+        if (prev or {}).get("status") == "failed":
+            # a model-written document that the gate refused is not "supplied by the product manager/architect": it is
+            # removed before the step runs again, so the model gets another turn instead of the stale file being
+            # re-judged (found on the first local-model run). Files a person dropped (manual) are never touched.
+            if self.args.builder in ("openai-compat", "claude-code"):
+                drops = {PRD_MD: self.out / "build" / "prd" / PRD_MD, PLAN_MD: self.out / "build" / "plan" / PLAN_MD,
+                         TASKS_CSV: self.out / "build" / "plan" / TASKS_CSV, FILES_TXT: self.out / "build" / FILES_TXT}
+                for st in stage["steps"]:
+                    if st.get("kind") != "agent":
+                        continue
+                    for name in st.get("produces") or []:
+                        if not drops.get(name, Path("/nonexistent")).is_file():   # a person's drop wins over the model
+                            (stage_dir / st["id"] / name).unlink(missing_ok=True)
         self.stage_started = srec["started_at"]
         t_stage = time.time()
         halted = ""
@@ -1679,6 +2119,23 @@ class Run:
                     files.append(str(p.relative_to(self.evidence)))
             except StepError:
                 continue
+        # the code step's own evidence — what the executor ran on the checkout (install, the project's tests) — travels
+        # with the stage whatever the template's evidence list says: tests.json and its log, install.json and its log
+        for st in stage.get("steps") or []:
+            if st.get("kind") != "agent" or st.get("produces"):
+                continue
+            sdir = self.step_dirs.get(st["id"])
+            if not sdir or not sdir.is_dir():
+                continue
+            for name in (TESTS_JSON, INSTALL_JSON):
+                info = read_json(sdir / name) if (sdir / name).is_file() else None
+                if info is None:
+                    continue
+                for p in (sdir / name, sdir / str(info.get("log") or "")):
+                    if p.is_file():
+                        rel = str(p.relative_to(self.evidence))
+                        if rel not in files:
+                            files.append(rel)
         srec["evidence_files"] = files
         stages = self.record.setdefault("stages", [])
         for i, s in enumerate(stages):
@@ -1945,7 +2402,13 @@ def build_args(argv=None):
     ap.add_argument("--ref", help="branch or commit to start from")
     ap.add_argument("--input", action="append", default=[], metavar="NAME=VALUE", help="any other pipeline input (e.g. name=… for greenfield)")
     ap.add_argument("--out", help="run directory (evidence/, run.json, build/); default with --run: runs/<run id>")
-    ap.add_argument("--builder", choices=["none", "manual", "claude-code"], default="none")
+    ap.add_argument("--builder", choices=["none", "manual", "claude-code", "openai-compat"], default="none")
+    ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
+    ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
+    ap.add_argument("--rounds", type=int, default=2, metavar="N", help="openai-compat builder: model turns per step including repair turns (default 2)")
+    ap.add_argument("--repair-cmd", default="auto", metavar="CMD", help="openai-compat builder: shell command run on the checkout after each round of the code step's files; a failure is sent back as a repair turn. Default auto: the resolved --tests command; `none` runs no repair loop (the tests still run once after the last reply)")
+    ap.add_argument("--install", default="auto", metavar="auto|none|CMD", help="code step, every builder: install the checkout's dependencies once per run before the code lands (output in <step>/install.log). auto (default): from the stack profile — `npm ci` with a package-lock.json else `npm install --no-audit --no-fund`, pnpm/yarn/bun, pip/uv/poetry for Python; nothing in --dry. `none` skips; any other value runs as given")
+    ap.add_argument("--tests", default="auto", metavar="auto|none|CMD", help="code step, every builder: the project's test command, executed on the checkout after the code lands (tests.json + tests.log in the step dir); a failure fails the code step (openai-compat: it is the repair turn first). auto (default): from the stack profile — the package manager's `test` script, `npx vitest run` / `npx jest`, `pytest -q`; skipped (recorded) in --dry or when the repository has no runner. `none` skips; any other value runs as given")
     ap.add_argument("--provider", choices=["dry", "none", "anthropic", "openai"], default="dry")
     ap.add_argument("--approve-all", action="store_true", help="satisfy every approval step (the invoker approves)")
     ap.add_argument("--approvals", help="JSON file recording approvals: {\"approvals\": [{\"step\": id, \"by\": name, \"note\": ...}]}")
@@ -1981,6 +2444,12 @@ def build_args(argv=None):
 
 def main(argv=None) -> int:
     args = build_args(argv)
+    if args.builder == "openai-compat":
+        try:   # the guard runs before any call: a non-OpenAI model name with no base URL would go to api.openai.com
+            llm_builder.OpenAICompat(args.model, args.base_url)
+        except llm_builder.OpenAICompatError as e:
+            print(f"error: builder openai-compat: {e}", file=sys.stderr)
+            return EXIT_ARGS
     out = Path(args.out).expanduser().resolve()
     portal = Portal(args.portal, args.run, os.environ["SF_API_KEY"], out / "callback.log") if args.run else None
     spec, spec_path = load_pipeline(args.pipeline, portal, out)

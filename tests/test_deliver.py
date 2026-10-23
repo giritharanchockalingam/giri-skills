@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
 from pathlib import Path
@@ -496,6 +497,7 @@ import os
 import socket
 import stat
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -739,7 +741,7 @@ def test_pr_step_commits_as_the_bot_pushes_and_opens_the_pr(tmp_path, monkeypatc
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
     out = tmp_path / "real"
     r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
-                   "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-1")
+                   "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-1", *NO_TESTS)
     assert r.returncode == 0, r.stdout + r.stderr
     pr = json.loads((out / "evidence" / "05-deploy" / "pr" / "pr.json").read_text())
     assert pr == {"dry": False, "branch": "deliver/r-pr-1", "title": REQUEST, "number": 7, "url": "https://github.com/acme/app/pull/7",
@@ -932,9 +934,12 @@ def checkout(tmp_path: Path, src: Path = REPO, name: str = "checkout") -> Path:
     return work
 
 
-def real(out: Path, work: Path, *extra: str):
+NO_TESTS = ("--install", "none", "--tests", "none")   # non-dry runs that are not about the test gate: no real npm
+
+
+def real(out: Path, work: Path, *extra: str, gates: tuple = NO_TESTS):
     return run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
-                      "--provider", "dry", "--approve-all", *extra)
+                      "--provider", "dry", "--approve-all", *gates, *extra)
 
 
 def git_out(work: Path, *args: str) -> str:
@@ -1175,7 +1180,7 @@ def test_a_token_that_cannot_push_stops_the_run_before_any_stage(tmp_path, monke
     try:
         work, _, out, gh_log = _pr_fixture(tmp_path, monkeypatch, origin=f"http://127.0.0.1:{srv.server_port}/acme/app.git")
         r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
-                       "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-2")
+                       "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-pr-2", *NO_TESTS)
     finally:
         srv.shutdown()
     assert r.returncode != 0 and "no push access to acme/app" in r.stderr and "Contents: read and write" in r.stderr, r.stdout + r.stderr
@@ -1192,7 +1197,7 @@ def test_resume_after_a_failed_push_pushes_the_existing_commit_and_opens_one_pr(
     hook = bare / "hooks" / "pre-receive"
     hook.write_text("#!/bin/sh\necho 'remote: Write access to repository not granted.' >&2\nexit 1\n"); hook.chmod(0o755)
     args = ["feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
-            "--provider", "dry", "--builder", "manual", "--approve-all", "--run-id", "r-pr-3"]
+            "--provider", "dry", "--builder", "manual", "--approve-all", "--run-id", "r-pr-3", *NO_TESTS]
     r = run_script(SCRIPT, *args, "--patch", str(PATCH))
     assert r.returncode == 1 and "stopped at stage 'deploy'" in r.stdout, r.stdout + r.stderr
     gate = json.loads((out / "evidence" / "05-deploy" / "gate.json").read_text())
@@ -1225,7 +1230,7 @@ def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_
     out = tmp_path / "run"
     r = run_script(SCRIPT, "greenfield-app", "--repo", "acme/new", "--input", "name=harbourline", "--request", "A portal to track harbour orders",
                    "--brief", str(FIX / "delivery-build" / "brief-greenfield.json"), "--out", str(out), "--provider", "dry", "--builder", "manual",
-                   "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-1")
+                   "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-1", *NO_TESTS)
     assert r.returncode == 0, r.stdout + r.stderr
     calls = gh_log.read_text().splitlines()
     assert "api repos/acme/new --jq .name" in calls and any(c.startswith("repo create acme/new --private") for c in calls)
@@ -1242,7 +1247,7 @@ def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_
     assert stage_status(out) == {s: "passed" for s in ["bootstrap"] + STAGES}
     # a second run against the now-existing repository clones instead of creating
     r = run_script(SCRIPT, "greenfield-app", "--repo", "acme/new", "--input", "name=harbourline", "--request", "A second feature",
-                   "--brief", str(BRIEF), "--out", str(tmp_path / "run2"), "--provider", "dry", "--builder", "none", "--run-id", "r-gf-2")
+                   "--brief", str(BRIEF), "--out", str(tmp_path / "run2"), "--provider", "dry", "--builder", "none", "--run-id", "r-gf-2", *NO_TESTS)
     assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("repo create")) == 1
     assert "repo_created" not in run_json(tmp_path / "run2")
     # the second run's bootstrap wrote nothing new (the skeleton is on main already): no second bootstrap commit
@@ -1269,7 +1274,7 @@ def test_bootstrap_additions_on_a_repo_with_history_are_committed_to_main_not_le
     out = tmp_path / "run"
     r = run_script(SCRIPT, "greenfield-app", "--repo", "acme/new", "--input", "name=harbourline", "--request", "A portal to track harbour orders",
                    "--brief", str(FIX / "delivery-build" / "brief-greenfield.json"), "--out", str(out), "--provider", "dry", "--builder", "manual",
-                   "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-3")
+                   "--patch", str(FIX / "delivery-build" / "greenfield-diff.patch"), "--approve-all", "--run-id", "r-gf-3", *NO_TESTS)
     assert r.returncode == 0, r.stdout + r.stderr
     log = lambda ref: subprocess.run(["git", "log", "--format=%s", ref], cwd=bare, capture_output=True, text=True, check=True).stdout.splitlines()
     assert log("main") == ["bootstrap: harbourline", "readme"]
@@ -1384,3 +1389,433 @@ def test_code_stop_packet_lists_allowed_files_inlines_the_test_plan_and_ends_wit
     fence = md.rstrip().splitlines()
     assert fence[-1] == "```" and fence[-2].endswith(" --resume") and fence[-2].count("--resume") == 1
     assert "scripts/deliver.py feature-delivery" in fence[-2] and f"--out {out}" in fence[-2] and "--builder none" in fence[-2]
+
+
+# ---------------------------------------------------------------- --builder openai-compat (any OpenAI-compatible model)
+
+from test_llm_builder import StubLLM, canned_code_reply, file_block, llm_env, patched_files   # noqa: E402  (loopback stub, canned replies)
+
+
+def openai_compat(out: Path, stub: StubLLM, *extra: str, pipeline: str = "feature-delivery", brief=None, prd=False):
+    return deliver(out, "--builder", "openai-compat", "--base-url", stub.base_url, "--model", "stub", "--approve-all",
+                   "--repair-cmd", "none", *extra, pipeline=pipeline, brief=brief, prd=prd)
+
+
+def test_openai_compat_builder_plays_every_role_from_a_bare_request_to_pass(tmp_path, monkeypatch):
+    """No brief, no PRD, no plan, no patch: the model answers the product-manager, architect and builder packets with
+    canned file blocks (the fixtures), files.txt is derived from the architect's tasks.csv, and every stage passes."""
+    llm_env(monkeypatch)
+    stub = StubLLM({"code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm"
+        r = openai_compat(out, stub)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    ev = out / "evidence"
+    steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
+    for sid in ("prd-refine", "plan-refine", "code"):
+        assert steps[sid]["llm"] == {"provider": "openai-compat", "model": "stub", "base_url_host": "127.0.0.1", "rounds": 1,
+                                     "duration_s": steps[sid]["llm"]["duration_s"], "ok": True}, sid
+        assert steps[sid]["builder"] == "openai-compat"
+    assert steps["prd-refine"]["prd_source"] == "openai-compat" and steps["plan-refine"]["plan_source"] == "openai-compat"
+    assert steps["files"]["files_source"] == "tasks.csv" and "llm" not in steps["files"]      # derived: the model was not asked
+    assert [c["body"]["model"] for c in stub.calls] == ["stub"] * 3
+    for d in ("01-requirements/prd-refine", "02-architecture/plan-refine", "03-build/code"):
+        assert (ev / d / "llm-rounds.json").is_file() and (ev / d / "llm-reply-1.txt").is_file() and (ev / d / "PROMPT.md").is_file(), d
+        assert f"evidence/{d}/llm-rounds.json" in run_json(out)["files"]                      # hashed with the evidence
+    assert (ev / "01-requirements" / "prd-refine" / "prd-final.md").read_text() == PRD_FIX.read_text()
+    assert (ev / "02-architecture" / "plan-refine" / "tasks.csv").read_text() == (PLAN_DIR / "tasks.csv").read_text()
+    fc = json.loads((ev / "03-build" / "code" / "files-changed.json").read_text())
+    assert [f for f in fc["files"] if not f.startswith("tests/")] == ["app/api/orders/export/route.js", "lib/orders.js"]
+    assert "tests/unit/lib/orders.test.js" in fc["files"]                                        # the model's test, beside the scaffolded stubs
+    assert fc["outside_plan"] == [] and fc["plan_files_source"] == "files.txt"
+    assert "ordersToCsv" in (out / "repo" / "lib" / "orders.js").read_text()                   # landed on the dry copy
+    summary = (ev / "03-build" / "code" / "agent-summary.md").read_text()
+    assert "# Builder summary — openai-compat" in summary and "Written by stub @ 127.0.0.1 in 1 round(s)" in summary and "no repair command ran" in summary
+    md = (ev / "EVIDENCE.md").read_text()
+    assert "builder openai-compat (stub @ 127.0.0.1)" in md
+    assert run_json(out)["builder"] == "openai-compat"
+    assert not (out / "needs_builder.json").exists()
+    packet = (ev / "03-build" / "code" / "PROMPT.md").read_text()
+    assert packet == stub.calls[2]["body"]["messages"][1]["content"]                             # the packet IS the prompt
+    assert "stub-key" not in packet and "OPENAI" not in packet
+
+
+def test_openai_compat_builder_answers_the_files_step_when_files_txt_cannot_be_derived(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    stub = StubLLM({"code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-files"
+        r = openai_compat(out, stub, pipeline=str(files_step_without_tasks(tmp_path)))
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
+    assert steps["files"]["files_source"] == "openai-compat" and steps["files"]["llm"]["rounds"] == 1 and steps["files"]["files"] == 2
+    fj = json.loads((out / "evidence" / "03-build" / "files" / "files.json").read_text())
+    assert fj["derived"] is False and fj["files"] == ["lib/orders.js", "app/api/orders/export/route.js"]
+    assert (out / "evidence" / "03-build" / "files" / "llm-rounds.json").is_file()
+    assert [c["body"]["messages"][1]["content"].splitlines()[0].split(" — ")[1].split(" (")[0] for c in stub.calls] == \
+        ["step prd-refine", "step plan-refine", "step files", "step code"]
+
+
+def test_openai_compat_code_step_repair_round_is_recorded_and_the_run_passes(tmp_path, monkeypatch):
+    """The first code reply forgets lib/orders.js; --repair-cmd fails; the output tail goes back; the second reply
+    fixes it — 2 rounds in llm-rounds.json and run.json, and the stages after the build judge the repaired checkout."""
+    llm_env(monkeypatch)
+    full = patched_files()
+    first = canned_code_reply({k: v for k, v in full.items() if k != "lib/orders.js"})
+    second = canned_code_reply({"lib/orders.js": full["lib/orders.js"]})
+    stub = StubLLM({"code": [first, second]})
+    try:
+        out = tmp_path / "llm-repair"
+        r = deliver(out, "--builder", "openai-compat", "--base-url", stub.base_url, "--model", "stub", "--approve-all",
+                    "--repair-cmd", "grep -q ordersToCsv lib/orders.js", "--rounds", "2", brief=None, prd=False)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    code = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "code")
+    assert code["llm"]["rounds"] == 2 and code["llm"]["ok"] is True
+    rounds = json.loads((out / "evidence" / "03-build" / "code" / "llm-rounds.json").read_text())
+    assert [(x["round"], x["cmd_exit"]) for x in rounds["rounds"]] == [(1, 1), (2, 0)] and rounds["cmd_exit"] == 0
+    assert (out / "evidence" / "03-build" / "code" / "llm-reply-2.txt").is_file()
+    assert "`grep -q ordersToCsv lib/orders.js` exit 0" in (out / "evidence" / "03-build" / "code" / "agent-summary.md").read_text()
+    assert len(stub.calls) == 4 and stub.calls[3]["body"]["messages"][-1]["content"].startswith("`grep -q ordersToCsv lib/orders.js` exited 1")
+
+
+def test_openai_compat_reply_without_file_blocks_fails_the_step_naming_the_reply(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    stub = StubLLM({"prd-refine": "I cannot write files, but here is my thinking about the PRD…"})
+    try:
+        out = tmp_path / "llm-bad"
+        r = openai_compat(out, stub, "--rounds", "1")
+    finally:
+        stub.close()
+    assert r.returncode == 1, r.stdout + r.stderr
+    prd = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "prd-refine")
+    assert prd["status"] == "failed" and "builder openai-compat (stub @ 127.0.0.1): round 1: the reply holds no `=== FILE" in prd["error"]
+    assert "I cannot write files" in prd["error"] and prd["llm"]["ok"] is False and prd["llm"]["rounds"] == 1
+    gate = json.loads((out / "evidence" / "01-requirements" / "gate.json").read_text())
+    assert gate["verdict"] == "fail" and "step 'prd-refine' did not complete" in gate["detail"]
+    assert not (out / "needs_builder.json").exists()
+
+
+def test_openai_compat_endpoint_down_fails_the_step_not_the_process(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    stub = StubLLM(status=500)
+    try:
+        monkeypatch.setenv("OPENAI_API_KEY", "stub-key")
+        out = tmp_path / "llm-down"
+        r = openai_compat(out, stub, "--rounds", "1")
+    finally:
+        stub.close()
+    assert r.returncode == 1, r.stdout + r.stderr
+    prd = next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "prd-refine")
+    assert prd["status"] == "failed" and "HTTP 500" in prd["error"] and len(stub.calls) == 3    # 2 retries
+
+
+def test_openai_compat_document_step_feeds_the_gates_refusal_back_as_a_repair_round(tmp_path, monkeypatch):
+    """Found with qwen2.5-coder:7b on the first local-model run: the model wrote a PRD in its own structure (no
+    'User stories and acceptance criteria' heading) and the requirements gate failed the stage. Now the gate's own
+    checks run inside the builder after each round; the refusal is the next user turn, and the corrected file passes."""
+    llm_env(monkeypatch)
+    own_structure = file_block("prd-final.md", "# Product Specification\n\n## Problem Statement\nx\n\n## Engineering Handoff\n- Acceptance criteria: y\n")
+    stub = StubLLM({"prd-refine": [own_structure, file_block("prd-final.md", PRD_FIX.read_text())], "code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-repair-doc"
+        r = openai_compat(out, stub)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    rounds = json.loads((out / "evidence" / "01-requirements" / "prd-refine" / "llm-rounds.json").read_text())
+    assert [x["round"] for x in rounds["rounds"]] == [1, 2] and rounds["ok"] is True
+    assert any("section_filled" in f or "Acceptance criteria" in f for f in rounds["rounds"][0]["checks_failed"])
+    assert rounds["rounds"][1]["checks_failed"] == []
+    prd_calls = [c for c in stub.calls if "step prd-refine" in next((m["content"] for m in c["body"]["messages"] if m["role"] == "user"), "")]
+    assert "The gate refused your file(s)" in prd_calls[1]["body"]["messages"][-1]["content"]
+    assert "keep every one of its headings" in prd_calls[0]["body"]["messages"][0]["content"]   # the system prompt now says so
+    steps = {t["id"]: t for s in run_json(out)["stages"] for t in s["steps"]}
+    assert steps["prd-refine"]["llm"]["rounds"] == 2 and stage_status(out)["requirements"] == "passed"
+
+
+def test_resume_after_the_gate_refused_a_model_written_document_gives_the_model_another_turn(tmp_path, monkeypatch):
+    """First local-model run: the gate refused the model's PRD, the resume found prd-final.md already in the step dir,
+    took it as 'supplied by the product manager' and failed the same way without calling the model."""
+    llm_env(monkeypatch)
+    bad = file_block("prd-final.md", "# Product Specification\n\n## Problem Statement\nx\n")
+    stub = StubLLM({"prd-refine": [bad, bad, bad], "code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-stale"
+        r = openai_compat(out, stub, "--rounds", "1")
+        assert r.returncode == 1 and stage_status(out) == {"requirements": "failed"}, r.stdout + r.stderr
+        calls_before = len(stub.calls)
+        stub.replies["prd-refine"] = [file_block("prd-final.md", PRD_FIX.read_text())]
+        r = openai_compat(out, stub, "--rounds", "1", "--resume")
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert len(stub.calls) > calls_before                  # the model was asked again, the stale file was not re-judged
+    assert stage_status(out)["requirements"] == "passed"
+
+
+def test_architect_packet_shows_the_repo_layout_and_a_plan_that_invents_one_is_refused_then_repaired(tmp_path, monkeypatch):
+    """qwen3:14b on the first local-model run planned src/api/health/deep.ts, src/config/health.ts in a JavaScript
+    app-router repo (app/, lib/, no src/) — the packet never showed it the layout and the gate did not check the files.
+    Now the packet carries the stack profile + tracked paths, and a plan naming an invented layout is a repair turn."""
+    llm_env(monkeypatch)
+    import csv as _csv
+    good = (PLAN_DIR / "tasks.csv").read_text()
+    rows = list(_csv.DictReader(io.StringIO(good)))
+    rows[0]["files"] = "src/api/orders/export.ts, src/config/orders.ts"
+    buf = io.StringIO(); w = _csv.DictWriter(buf, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
+    invented = file_block("plan.md", (PLAN_DIR / "plan.md").read_text()) + "\n" + file_block("tasks.csv", buf.getvalue())
+    fitting = file_block("plan.md", (PLAN_DIR / "plan.md").read_text()) + "\n" + file_block("tasks.csv", good)
+    stub = StubLLM({"plan-refine": [invented, fitting], "code": canned_code_reply()})
+    try:
+        out = tmp_path / "llm-layout"
+        r = openai_compat(out, stub)
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    packet = (out / "evidence" / "02-architecture" / "plan-refine" / "PROMPT.md").read_text()
+    assert "Repository layout" in packet and "flavour=js" in packet and "  lib/orders.js" in packet and "Top-level entries: " in packet
+    rounds = json.loads((out / "evidence" / "02-architecture" / "plan-refine" / "llm-rounds.json").read_text())
+    assert len(rounds["rounds"]) == 2
+    first = " | ".join(rounds["rounds"][0]["checks_failed"])
+    assert "src/api/orders/export.ts is TypeScript but the repository is JavaScript" in first and "under src/, which does not exist" in first
+    assert rounds["rounds"][1]["checks_failed"] == []
+
+
+def test_a_manual_plan_that_does_not_fit_the_repository_is_refused_before_approval(tmp_path):
+    out = tmp_path / "misfit"
+    import csv as _csv
+    (tmp_path / "plan").mkdir()
+    shutil.copy(PLAN_DIR / "plan.md", tmp_path / "plan" / "plan.md")
+    rows = list(_csv.DictReader((PLAN_DIR / "tasks.csv").open()))
+    rows[0]["files"] = "src/api/orders/export.ts"
+    with (tmp_path / "plan" / "tasks.csv").open("w", newline="") as fh:
+        w = _csv.DictWriter(fh, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
+    r = deliver(out, "--builder", "none", "--approve-all", "--plan", str(tmp_path / "plan"), brief=None)
+    assert r.returncode == 1 and "stopped at stage 'architecture' (failed)" in r.stdout, r.stdout + r.stderr
+    steps = {s["id"]: s for s in run_json(out)["stages"][-1]["steps"]}
+    assert "names files that do not fit the repository" in steps["plan-refine"]["error"] and "src/api/orders/export.ts is TypeScript" in steps["plan-refine"]["error"]
+    assert not (out / "needs_approval.json").exists()
+
+
+# ---------------------------------------------------------------- the code step installs once and EXECUTES the project's tests (every builder)
+
+FAKE_NPM = """#!/bin/sh
+# a deterministic npm: logs every call; `ci`/`install` create node_modules; `test` answers per NPM_TEST_MODE
+printf '%s\\n' "$*" >> "$NPM_LOG"
+case "$1" in
+  ci|install) mkdir -p node_modules/.bin && echo "fake-dep" > node_modules/.package-lock.json && echo "added 3 packages in 1s"; exit 0 ;;
+  test)
+    case "${NPM_TEST_MODE:-pass}" in
+      fail) ok=1 ;;
+      check) grep -q ordersToCsv lib/orders.js 2>/dev/null; ok=$? ;;
+      *) ok=0 ;;
+    esac
+    if [ "$ok" -ne 0 ]; then
+      echo " FAIL  tests/unit/lib/orders.test.js > ordersToCsv > writes a header and one row per order"
+      echo "AssertionError: expected 'id,customer' to be 'id,customer,total,status'"
+      echo " Tests  1 failed | 2 passed (3)"
+      exit 1
+    fi
+    echo " ✓ tests/unit/lib/orders.test.js (3)"
+    echo " Tests  3 passed (3)"
+    exit 0 ;;
+esac
+exit 0
+"""
+
+
+def fake_npm(bindir: Path, monkeypatch, mode: str = "pass") -> Path:
+    """Put the fake npm first on PATH (bindir may already hold the fake gh); returns the call log path."""
+    bindir.mkdir(exist_ok=True)
+    (bindir / "npm").write_text(FAKE_NPM); (bindir / "npm").chmod(0o755)
+    log = bindir.parent / "npm.log"
+    if str(bindir) not in os.environ.get("PATH", ""):
+        monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("NPM_LOG", str(log)); monkeypatch.setenv("NPM_TEST_MODE", mode)
+    return log
+
+
+def npm_calls(log: Path) -> list[str]:
+    return log.read_text().splitlines() if log.is_file() else []
+
+
+def code_step(out: Path) -> dict:
+    return next(t for s in run_json(out)["stages"] for t in s["steps"] if t["id"] == "code")
+
+
+def test_code_step_installs_once_and_executes_the_tests_on_the_real_checkout(tmp_path, monkeypatch):
+    """First local-model run (qwen3:14b): the clone had no node_modules, `--repair-cmd auto` resolved to nothing and
+    the PR's CI was the first place the code ever ran. Now the code step installs (`npm ci`, package-lock.json is
+    there), executes `npm test` after the diff landed, records both, and node_modules never enters the diff or PR."""
+    work, bare, out, gh_log = _pr_fixture(tmp_path, monkeypatch)
+    npm_log = fake_npm(tmp_path / "bin", monkeypatch)
+    r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--brief", str(BRIEF), "--out", str(out),
+                   "--provider", "dry", "--builder", "manual", "--patch", str(PATCH), "--approve-all", "--run-id", "r-tests-1")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert npm_calls(npm_log) == ["ci", "test"]                                             # once each, in the checkout
+    code = code_step(out)
+    assert code["install"] == {"cmd": "npm ci", "exit": 0, "duration_s": code["install"]["duration_s"], "log": "install.log",
+                               "excluded_from_git": ["node_modules", ".venv"]}             # the fixture has no .gitignore
+    assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed", "log": "tests.log"}
+    sdir = out / "evidence" / "03-build" / "code"
+    assert "added 3 packages" in (sdir / "install.log").read_text() and "Tests  3 passed" in (sdir / "tests.log").read_text()
+    tj = json.loads((sdir / "tests.json").read_text())
+    assert tj["exit"] == 0 and tj["summary"] == "3 passed" and tj["tail"].rstrip().endswith("Tests  3 passed (3)")
+    assert json.loads((sdir / "install.json").read_text())["cmd"] == "npm ci"
+    # node_modules exists on the checkout, is excluded locally, and is in neither the diff nor the pushed branch
+    assert (work / "node_modules" / ".bin").is_dir()
+    exclude = subprocess.run(["git", "rev-parse", "--git-path", "info/exclude"], cwd=work, capture_output=True, text=True, check=True).stdout.strip()
+    assert "node_modules/" in (work / exclude).read_text() and ".venv/" in (work / exclude).read_text()
+    assert "node_modules" not in (sdir / "diff.patch").read_text()
+    tree = subprocess.run(["git", "ls-tree", "-r", "--name-only", "deliver/r-tests-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
+    assert "node_modules" not in tree and "lib/orders.js" in tree
+    # evidence: the Tests line and the build row carry tests.json / tests.log / install.log
+    md = (out / "evidence" / "EVIDENCE.md").read_text()
+    assert "Tests (after the change): `npm test` exit 0 — tests: 3 passed — [tests.log](03-build/code/tests.log); install `npm ci` exit 0." in md
+    build_row = next(ln for ln in md.splitlines() if ln.startswith("| build |"))
+    assert "[tests.json](03-build/code/tests.json)" in build_row and "[tests.log](03-build/code/tests.log)" in build_row and "[install.log](03-build/code/install.log)" in build_row
+    files = run_json(out)["files"]
+    assert "evidence/03-build/code/tests.json" in files and "evidence/03-build/code/tests.log" in files and "evidence/03-build/code/install.log" in files
+    assert "03-build/code/tests.json" in next(s for s in run_json(out)["stages"] if s["id"] == "build")["evidence_files"]
+
+
+def test_failing_tests_fail_the_code_step_and_the_gate_detail_quotes_the_tail(tmp_path, monkeypatch):
+    work = checkout(tmp_path)
+    npm_log = fake_npm(tmp_path / "bin", monkeypatch, mode="fail")
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(PATCH), gates=())
+    assert r.returncode == 1 and "stopped at stage 'build' (failed)" in r.stdout, r.stdout + r.stderr
+    assert npm_calls(npm_log) == ["ci", "test"]
+    gate = json.loads((out / "evidence" / "03-build" / "gate.json").read_text())
+    assert gate["verdict"] == "fail"
+    assert "code: tests failed: `npm test` exit 1 (2 passed, 1 failed)" in gate["detail"]
+    assert "FAIL  tests/unit/lib/orders.test.js" in gate["detail"] and "Tests  1 failed | 2 passed (3)" in gate["detail"]   # the tail
+    steps = {s["id"]: s for s in run_json(out)["stages"][-1]["steps"]}
+    assert steps["code"]["status"] == "failed" and steps["code"]["tests"]["exit"] == 1 and steps["code"]["tests"]["summary"] == "2 passed, 1 failed"
+    assert steps["conventions"]["status"] == "skipped"                                      # the static gate never ran: tests come first
+    tj = json.loads((out / "evidence" / "03-build" / "code" / "tests.json").read_text())
+    assert tj["exit"] == 1 and "AssertionError" in tj["tail"] and tj["log"] == "tests.log"
+    assert "tests: 2 passed, 1 failed" in (out / "evidence" / "EVIDENCE.md").read_text()
+    assert (work / "lib" / "orders.js").read_text().count("ordersToCsv") >= 1                 # the diff stays applied for the resume
+    build_row = next(ln for ln in (out / "evidence" / "EVIDENCE.md").read_text().splitlines() if ln.startswith("| build |"))
+    assert "[tests.json](03-build/code/tests.json)" in build_row
+
+
+def test_openai_compat_test_failure_is_the_repair_turn_then_the_tests_pass(tmp_path, monkeypatch):
+    """The repair command defaults to the resolved test command: the first reply forgets lib/orders.js, `npm test`
+    fails and its tail goes back to the model; the second reply fixes it; tests.json records the passing run."""
+    llm_env(monkeypatch)
+    work, bare, out, gh_log = _pr_fixture(tmp_path, monkeypatch)
+    npm_log = fake_npm(tmp_path / "bin", monkeypatch, mode="check")
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    full = patched_files()
+    first = canned_code_reply({k: v for k, v in full.items() if k != "lib/orders.js"})
+    second = canned_code_reply({"lib/orders.js": full["lib/orders.js"]})
+    stub = StubLLM({"code": [first, second]})
+    try:
+        r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--out", str(out), "--provider", "dry",
+                       "--builder", "openai-compat", "--base-url", stub.base_url, "--model", "stub", "--approve-all", "--rounds", "2", "--run-id", "r-tests-3")
+    finally:
+        stub.close()
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert npm_calls(npm_log) == ["ci", "test", "test"]                                     # install once, the tests per round
+    code = code_step(out)
+    assert code["llm"]["rounds"] == 2 and code["llm"]["ok"] is True
+    assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed",
+                             "log": "llm-cmd-2.txt", "rounds": 2}
+    rounds = json.loads((out / "evidence" / "03-build" / "code" / "llm-rounds.json").read_text())
+    assert rounds["repair_cmd"] == "npm test" and [(x["round"], x["cmd_exit"]) for x in rounds["rounds"]] == [(1, 1), (2, 0)]
+    assert all("cmd_duration_s" in x for x in rounds["rounds"])
+    assert stub.calls[-1]["body"]["messages"][-1]["content"].startswith("`npm test` exited 1") and "FAIL  tests/unit/lib/orders.test.js" in stub.calls[-1]["body"]["messages"][-1]["content"]
+    tj = json.loads((out / "evidence" / "03-build" / "code" / "tests.json").read_text())
+    assert tj["exit"] == 0 and tj["tail"].rstrip().endswith("Tests  3 passed (3)")
+    md = (out / "evidence" / "EVIDENCE.md").read_text()
+    assert "tests: 3 passed — [llm-cmd-2.txt](03-build/code/llm-cmd-2.txt)" in md
+    assert "`npm test` exit 0" in (out / "evidence" / "03-build" / "code" / "agent-summary.md").read_text()
+    tree = subprocess.run(["git", "ls-tree", "-r", "--name-only", "deliver/r-tests-3"], cwd=bare, capture_output=True, text=True, check=True).stdout
+    assert "node_modules" not in tree and "lib/orders.js" in tree
+
+
+def test_openai_compat_exhausted_repair_rounds_record_the_failing_tests(tmp_path, monkeypatch):
+    llm_env(monkeypatch)
+    work = checkout(tmp_path)
+    npm_log = fake_npm(tmp_path / "bin", monkeypatch, mode="fail")
+    stub = StubLLM({"code": canned_code_reply()})
+    try:
+        out = tmp_path / "out"
+        r = run_script(SCRIPT, "feature-delivery", "--repo", str(work), "--request", REQUEST, "--out", str(out), "--provider", "dry",
+                       "--builder", "openai-compat", "--base-url", stub.base_url, "--model", "stub", "--approve-all", "--rounds", "2")
+    finally:
+        stub.close()
+    assert r.returncode == 1 and "stopped at stage 'build' (failed)" in r.stdout, r.stdout + r.stderr
+    assert npm_calls(npm_log) == ["ci", "test", "test"]
+    code = code_step(out)
+    assert code["status"] == "failed" and "`npm test` still exits 1 after 2 round(s)" in code["error"]
+    assert code["tests"]["exit"] == 1 and code["tests"]["rounds"] == 2 and code["tests"]["log"] == "llm-cmd-2.txt"
+    assert json.loads((out / "evidence" / "03-build" / "code" / "tests.json").read_text())["summary"] == "2 passed, 1 failed"
+
+
+def test_tests_none_skips_the_test_run_and_records_it(tmp_path, monkeypatch):
+    work = checkout(tmp_path)
+    npm_log = fake_npm(tmp_path / "bin", monkeypatch, mode="fail")              # would fail if it ran
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(PATCH), gates=("--tests", "none"))
+    assert "stopped at stage 'build'" not in r.stdout, r.stdout + r.stderr          # the build stage passed (the pr step needs gh)
+    assert stage_status(out)["build"] == "passed"
+    assert npm_calls(npm_log) == ["ci"]                                              # installed, never tested
+    code = code_step(out)
+    assert code["tests"] == {"skipped": "--tests none"} and code["install"]["cmd"] == "npm ci"
+    assert json.loads((out / "evidence" / "03-build" / "code" / "tests.json").read_text()) == {"skipped": "--tests none"}
+    assert "Tests (after the change): tests: skipped (--tests none)." in (out / "evidence" / "EVIDENCE.md").read_text()
+    assert not (out / "evidence" / "03-build" / "code" / "tests.log").exists()
+
+
+def test_a_repository_without_a_runner_records_tests_skipped_no_runner(tmp_path, monkeypatch):
+    work = checkout(tmp_path)
+    for f in ("package.json", "package-lock.json"):
+        (work / f).unlink()
+    subprocess.run(["git", "commit", "-q", "-am", "no manifest"], cwd=work, env={**os.environ, **DEV_ENV}, check=True)
+    npm_log = fake_npm(tmp_path / "bin", monkeypatch, mode="fail")
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(PATCH), gates=())
+    assert stage_status(out)["build"] == "passed", r.stdout + r.stderr
+    assert npm_calls(npm_log) == []                                                   # no manifest: npm was never called
+    code = code_step(out)
+    assert code["install"] == {"skipped": "no package manifest (nothing to install)"} and code["tests"] == {"skipped": "no runner"}
+    assert "Tests (after the change): tests: skipped (no runner)." in (out / "evidence" / "EVIDENCE.md").read_text()
+    assert not (work / "node_modules").exists()
+
+
+def test_install_and_test_commands_follow_the_stack_profile(tmp_path):
+    """install_cmd / test_cmd (unit, via a tiny driver — the script is never imported in tests)."""
+    driver = tmp_path / "drive.py"
+    driver.write_text(f"""
+import json, sys
+sys.path.insert(0, {str(REPO_ROOT / 'scripts')!r})
+import deliver
+from pathlib import Path
+profile = json.loads(sys.argv[1]); target = Path(sys.argv[2])
+print(json.dumps([deliver.install_cmd(profile, target), deliver.test_cmd(profile, target)]))
+""")
+    def ask(profile: dict, files: dict[str, str]) -> list:
+        d = tmp_path / f"repo{len(list(tmp_path.iterdir()))}"; d.mkdir()
+        for name, content in files.items():
+            (d / name).write_text(content)
+        r = subprocess.run([sys.executable, str(driver), json.dumps(profile), str(d)], capture_output=True, text=True, check=True)
+        return json.loads(r.stdout)
+    pkg = json.dumps({"scripts": {"test": "vitest run"}})
+    assert ask({"package_manager": "npm", "test_runner": "vitest"}, {"package.json": pkg, "package-lock.json": "{}"}) == ["npm ci", "npm test"]
+    assert ask({"package_manager": "unknown", "test_runner": "vitest"}, {"package.json": pkg}) == ["npm install --no-audit --no-fund", "npm test"]
+    assert ask({"package_manager": "pnpm", "test_runner": "vitest"}, {"package.json": pkg, "pnpm-lock.yaml": ""}) == ["pnpm install --frozen-lockfile", "pnpm test"]
+    assert ask({"package_manager": "yarn", "test_runner": "jest"}, {"package.json": "{}"}) == ["yarn install", "npx jest"]
+    assert ask({"package_manager": "npm", "test_runner": "none"}, {"package.json": "{}"}) == ["npm install --no-audit --no-fund", None]
+    assert ask({"package_manager": "pip", "test_runner": "pytest", "flavour": "python"}, {"requirements.txt": "pytest\\n"}) == ["python3 -m pip install -r requirements.txt", "python3 -m pytest -q"]
+    assert ask({"package_manager": "uv", "test_runner": "pytest", "flavour": "python"}, {"pyproject.toml": ""}) == ["uv sync", "uv run pytest -q"]
+    assert ask({"package_manager": "unknown", "test_runner": "none", "flavour": "unknown"}, {"README.md": "x"}) == [None, None]
