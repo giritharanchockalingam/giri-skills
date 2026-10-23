@@ -7,7 +7,7 @@ Scans .ts/.tsx/.js/.jsx/.mjs (skipping node_modules, .next, dist, build, coverag
   NX1 supabase-in-component   high    `.from('…')`, `.rpc(`, `createClient(` inside components/ or app/**/page.tsx
   NX2 console-log             medium  `console.log(`
   NX3 action-without-zod      high    "use server" file: exported async function whose body has no `.parse(`/`.safeParse(`
-  NX4 service-role-exposed    high    `SUPABASE_SERVICE_ROLE` referenced outside server/, lib/supabase/server*, lib/env.ts
+  NX4 service-role-exposed    high    `SUPABASE_SERVICE_ROLE` referenced outside server/, lib/supabase/server*, lib/supabase/admin*, lib/env.ts
   NX5 raw-sql-outside-lib-db  high    sql`…` outside lib/db/
 Writes findings.csv (rule, file, line, snippet, severity, status) and report.md. Exit 1 when any
 high-severity finding exists (or on bad input), 0 otherwise. --quiet prints only the summary.
@@ -41,7 +41,7 @@ USE_SERVER = re.compile(r"^\s*['\"]use server['\"]\s*;?\s*$", re.M)
 EXPORT_FN = re.compile(r"^[ \t]*export\s+(?:default\s+)?async\s+function\s+(\w+)?\s*\(", re.M)
 SERVICE_ROLE = re.compile(r"SUPABASE_SERVICE_ROLE")
 SQL_TAG = re.compile(r"\bsql`")
-SERVICE_ROLE_OK = ("server/", "lib/supabase/server", "lib/env.ts")
+SERVICE_ROLE_OK = ("server/", "lib/supabase/server", "lib/supabase/admin", "lib/env.ts")   # admin: the service-role factory (conventions-checklist L2, rls-patterns.md)
 
 
 def die(msg: str) -> None:

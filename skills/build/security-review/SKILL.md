@@ -90,4 +90,4 @@ This skill is executable. Collect the inputs below, then run `python3 scripts/ru
 - `references/stack-specifics.md` — Next.js server actions, Supabase RLS/service-role, Vercel env pitfalls
 - `references/severity-rubric.md` — rating rules and SLA
 - `assets/review-report.md` — report template
-- `scripts/scan.py` — diff/repo scanner for SEC1–SEC6 (auth, injection, secrets, SSRF, XSS, RLS bypass) → findings.csv; `--gate` fails on critical/high
+- `scripts/scan.py` — diff/repo scanner for SEC1–SEC6 (auth, injection, secrets, SSRF, XSS, RLS bypass) → findings.csv; `--gate` fails on critical/high; a service-role call in a handler marked `// rls-lint: allow — <reason>` on its line (the marker supabase-schema-rls's rls_lint.py honours; the observability kit's read-only deep health check) is an accepted exception, not a finding

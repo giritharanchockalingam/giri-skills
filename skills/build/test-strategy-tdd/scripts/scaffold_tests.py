@@ -2,7 +2,7 @@
 """Scaffold red tests first: a vitest stub per source file and a Playwright spec per page.
 
     python3 -I scripts/scaffold_tests.py feature.md --files server/services/export.ts,app/invoices/page.tsx \
-        --target <repo> [--flavour ts|js] [--dry-run] --report scaffold-report.json --plan test-plan.md
+        --target <repo> [--tasks tasks.csv] [--flavour ts|js] [--dry-run] --report scaffold-report.json --plan test-plan.md
 
 feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each --files entry
 (.js / .jsx / .ts / .tsx alike):
@@ -10,10 +10,19 @@ feature.md: an H1 title and `-` bullets, one per acceptance criterion. For each 
   components/**/*                                                -> component -> listed for a component test; nothing written
   app/**/route.*                                                 -> API route -> <unit dir>/<path>.test.<ext>
   everything else                                                -> unit      -> <unit dir>/<path>.test.<ext>  (it.todo per criterion)
-  a non-source entry (docs/*.md, .env.example, *.yml, *.json, …)  -> skipped with a note (`non_source` in the
+  a non-code entry (*.sql, docs/*.md, .env.example, *.yml, *.json, …) -> skipped with a note (`non_source` in the
                                                                     report); no stub is ever generated for it
-Layer per file follows references/test-pyramid.md (validator / service / query / action / route /
-migration).
+Layer per file follows references/test-pyramid.md (validator / service / query / action / route).
+
+--tasks tasks.csv (the approved plan from spec-to-plan / plan-refine: id, task, acceptance, test, files, …) makes the
+plan's own test names win over the per-source-file naming above: every `tests/…(.test|.spec).(js|jsx|ts|tsx)` path a
+task's `test` cell names (`tests/unit/checker.test.js: toCsv quotes …`, or any such token in the cell) gets one stub,
+whose `it.todo`s are THAT task's acceptance text only (a file several tasks name collects each task's acceptance,
+once); a task's `files` are what the stub is headed with and imports. The stub's extension follows the repo flavour
+(a `.ts` name in a JavaScript repo is written as `.js` and the rename is reported). Source files such a stub already
+covers get no per-file stub. A task whose `test` cell names no path falls back to the per-source-file naming for its
+`files`, again with its own acceptance text; a --files entry no task mentions keeps today's behaviour (every criterion
+in feature.md). The report carries `tasks` ({path, source, tasks[], criteria[], renamed_from}) and `plan_tests`.
 
 Read before write — the target repo is inspected first and every stub matches what is there:
   flavour   --flavour ts|js wins when given (the pipeline passes the stack profile's flavour). Otherwise:
@@ -55,12 +64,14 @@ LAYERS = [  # (path marker, feature type, layer, what to cover)
     ("lib/db/", "query", "integration", "returns expected rows; tenant filter; PG error mapping"),
     ("server/actions/", "server action", "unit", "parse failure → fieldErrors; auth failure; success maps result"),
     ("app/api/", "API route", "unit + contract", "signature verify; bad payload; recorded payloads parse"),
-    ("supabase/migrations/", "migration / RLS", "integration", "positive + negative per policy"),
     ("supabase/functions/", "edge function", "unit", "handler logic with injected client"),
 ]
 SRC_EXT = r"\.(?:tsx?|jsx?|mjs|cjs)$"
-# what a stub can be written for: JS/TS source, plus SQL under supabase/ (migrations / RLS, see LAYERS)
-SCAFFOLD_EXT = r"\.(?:tsx?|jsx?|mjs|cjs|sql)$"
+# what a stub can be written for: JS/TS source only — never .sql, .md, .yaml, .json, .env* (a migration is covered by the
+# RLS lint and the integration suite, not by a vitest stub)
+SCAFFOLD_EXT = r"\.(?:tsx?|jsx?|mjs|cjs)$"
+# a test path a plan's `test` cell may name: tests/unit/checker.test.js, tests/e2e/invoices.spec.ts, …
+TEST_PATH_RE = re.compile(r"(?<![\w./-])((?:[\w.-]+/)*tests?/[\w./-]*?\.(?:test|spec)\.(?:tsx?|jsx?))(?![\w.-])")
 PAGE_NAMES = ("page", "layout", "template", "error", "not-found")
 SOURCE_DIRS = ("app", "components", "lib", "server", "src", "pages", "supabase")
 SKIP_DIRS = {"node_modules", ".git", ".next", "dist", "build", "out", "coverage", ".vercel", ".turbo"}
@@ -69,8 +80,69 @@ FLAVOURS = ("ts", "js")
 
 
 def is_source(rel: str) -> bool:
-    """A --files entry a stub can be generated for; docs, env files, YAML/JSON/Markdown and the like are not."""
+    """A --files entry a stub can be generated for: JS/TS code. SQL, docs, env files, YAML/JSON/Markdown are not."""
     return re.search(SCAFFOLD_EXT, rel.rsplit("/", 1)[-1]) is not None
+
+
+def clean_rel(f: str) -> str:
+    """`./lib/a.js` -> `lib/a.js`; a dotfile (.env.example) keeps its dot — str.lstrip("./") would eat it."""
+    return re.sub(r"^(?:\./)+", "", f.strip().replace("\\", "/"))
+
+
+def split_cell(cell: str) -> list[str]:
+    """A tasks.csv `files` cell: comma-, semicolon- or newline-separated repo paths (`; ` from spec-to-plan)."""
+    return [clean_rel(x) for x in re.split(r"[,;\n]+", cell or "") if x.strip()]
+
+
+def test_paths_in(cell: str) -> list[str]:
+    """Every test file path a `test` cell names, in order, once."""
+    out: list[str] = []
+    for m in TEST_PATH_RE.finditer(cell or ""):
+        rel = clean_rel(m.group(1))
+        if rel not in out:
+            out.append(rel)
+    return out
+
+
+def read_tasks(path: Path) -> list[dict]:
+    """tasks.csv rows (id, task, acceptance, test, files, …) — the approved plan. Exit 1 when it has no `test` column."""
+    import csv
+    with path.open(encoding="utf-8", errors="replace", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    if rows and not {"test", "acceptance", "files"} <= set(rows[0].keys()):
+        die(f"{path}: tasks.csv needs id, acceptance, test and files columns (got {', '.join(rows[0].keys())})")
+    return rows
+
+
+def plan_from_tasks(rows: list[dict], flavour: str) -> tuple[dict[str, dict], dict[str, list[str]]]:
+    """(named stubs by test path, acceptance per source file for tasks that name no test path).
+    A named stub: {"path", "sources" (the task's code files), "tasks" (ids), "criteria" (each task's acceptance, once),
+    "renamed_from" (the plan's spelling when its extension did not match the repo flavour)}."""
+    named: dict[str, dict] = {}
+    per_source: dict[str, list[str]] = {}
+    want = "ts" if flavour == "ts" else "js"
+    for row in rows:
+        tid = (row.get("id") or "").strip() or "?"
+        acceptance = (row.get("acceptance") or "").strip()
+        sources = [f for f in split_cell(row.get("files") or "") if is_source(f)]
+        paths = test_paths_in(row.get("test") or "")
+        if not paths:
+            for src in sources:
+                if acceptance and acceptance not in per_source.setdefault(src, []):
+                    per_source[src].append(acceptance)
+            continue
+        for rel in paths:
+            fixed = re.sub(r"\.(test|spec)\.(tsx?|jsx?)$",
+                           lambda m: f".{m.group(1)}." + (want + "x" if m.group(2).endswith("x") else want), rel)
+            stub = named.setdefault(fixed, {"path": fixed, "sources": [], "tasks": [], "criteria": [],
+                                            "renamed_from": rel if fixed != rel else None})
+            stub["tasks"].append(tid)
+            for src in sources:
+                if src not in stub["sources"]:
+                    stub["sources"].append(src)
+            if acceptance and acceptance not in stub["criteria"]:
+                stub["criteria"].append(acceptance)
+    return named, per_source
 
 
 def die(msg: str) -> None:
@@ -254,14 +326,17 @@ def import_path(rel: str, test_rel: str, alias: str | None) -> str:
     return (up or "./") + mod
 
 
-def unit_stub(rel: str, title: str, bullets: list[str], test_rel: str, repo: dict) -> str:
-    lines = [f"// Red first: generated by test-strategy-tdd for {rel}. Replace each todo with a failing test."]
+def unit_stub(rel: str, title: str, bullets: list[str], test_rel: str, repo: dict, sources: list[str] | None = None) -> str:
+    """One vitest/jest stub. `sources`: every code file the stub covers (a plan-named test may cover several); the
+    first is `rel`, the module the import comment names."""
+    sources = sources or [rel]
+    lines = [f"// Red first: generated by test-strategy-tdd for {', '.join(sources)}. Replace each todo with a failing test."]
     if repo["runner"] == "vitest":
         lines.append('import { describe, it, expect } from "vitest";')
     else:
         lines.append("// jest: describe / it / expect are globals")
-    lines += [f'// import {{ ... }} from "{import_path(rel, test_rel, repo["alias"])}";', "",
-              f"describe({ts_str(title + ' — ' + rel)}, () => {{"]
+    lines += [f'// import {{ ... }} from "{import_path(src, test_rel, repo["alias"])}";' for src in sources]
+    lines += ["", f"describe({ts_str(title + ' — ' + rel)}, () => {{"]
     lines += [f"  it.todo({ts_str(b)});" for b in bullets]
     lines += ["  it.todo(\"rejects invalid input / forbidden role / cross-tenant access\");", "});", ""]
     return "\n".join(lines)
@@ -299,6 +374,9 @@ def main() -> int:
     ap.add_argument("feature", help="feature.md: H1 title + one bullet per acceptance criterion")
     ap.add_argument("--files", required=True, help="comma-separated source files the feature touches (repo-relative)")
     ap.add_argument("--target", required=True, help="repo root (tests/ is created under it)")
+    ap.add_argument("--tasks", default="", help="tasks.csv of the approved plan (id, task, acceptance, test, files, …): "
+                                                "a task's `test` cell naming tests/… paths decides the stub names and each "
+                                                "stub carries that task's acceptance only")
     ap.add_argument("--flavour", default="", help="ts|js: the language flavour the stubs take (wins over detection; "
                                                   "any other value is ignored)")
     ap.add_argument("--dry-run", action="store_true")
@@ -311,45 +389,38 @@ def main() -> int:
     title, bullets = parse_feature(fpath.read_text(encoding="utf-8", errors="replace"))
     if not bullets:
         die("feature.md has no bullets (one per acceptance criterion)")
-    # `./lib/a.js` -> `lib/a.js`; a dotfile (.env.example) keeps its dot — str.lstrip("./") would eat it
-    files = [re.sub(r"^(?:\./)+", "", f.strip().replace("\\", "/")) for f in a.files.split(",") if f.strip()]
+    files = [clean_rel(f) for f in a.files.split(",") if f.strip()]
     if not files:
         die("--files is empty")
     target = Path(a.target)
     if target.exists() and not target.is_dir():
         die(f"target is not a directory: {target}")
+    tasks_rows: list[dict] = []
+    if a.tasks:
+        tpath = Path(a.tasks)
+        if not tpath.is_file():
+            die(f"tasks file not found: {tpath}")
+        tasks_rows = read_tasks(tpath)
 
     repo = detect_repo(target, files, a.flavour.strip().lower())
     ext = "ts" if repo["flavour"] == "ts" else "js"
     cext = "tsx" if repo["flavour"] == "ts" else "jsx"
     unit_dir, e2e_dir = repo["unit_dir"], repo["e2e_dir"]
     refused = repo["refused"]
+    named, per_source = plan_from_tasks(tasks_rows, repo["flavour"]) if tasks_rows else ({}, {})
+    covered = {src for st in named.values() for src in st["sources"]}   # code files a plan-named stub already covers
     report = {"target": str(target), "dry_run": a.dry_run, "title": title, "criteria": bullets, "repo": repo,
               "refused": refused, "written": [], "skipped": [], "components": [], "non_source": [], "would_write": [],
-              "files": [], "existing_tests": []}
-    if not any(is_source(f) for f in files):
+              "files": [], "existing_tests": [], "tasks_file": str(a.tasks) if a.tasks else None,
+              "plan_tests": sorted(named), "tasks": []}
+    if not any(is_source(f) for f in files) and not named:
         die("--files names no source file (" + ", ".join(files) + "): nothing to scaffold a test for")
-    for rel in files:
-        if not is_source(rel):   # docs, env, yaml, json …: no test file is ever generated for these
-            report["non_source"].append(rel)
-            report["files"].append({"source": rel, "kind": "non-source", "type": "not source", "layer": "—",
-                                    "cover": "—", "test": "", "note": "skipped: not a source file (no stub generated)"})
-            continue
-        kind, ftype, layer, cover = classify(rel)
-        if kind == "page":
-            test_rel, content = f"{e2e_dir}/{slug(rel)}.spec.{ext}", e2e_stub(rel, title, bullets, e2e_dir)
-        elif kind == "component":
-            test_rel, content = f"{unit_dir}/{slug(rel)}.test.{cext}", ""
-        else:
-            test_rel = f"{unit_dir}/{slug(rel)}.test.{ext}"
-            content = unit_stub(rel, title, bullets, test_rel, repo)
-        row = {"source": rel, "kind": kind, "type": ftype, "layer": layer, "cover": cover, "test": test_rel}
-        report["files"].append(row)
-        if kind == "component":
-            report["components"].append(test_rel)
-            continue
+
+    def emit(row: dict, test_rel: str, content: str, criteria: list[str]) -> None:
+        """Never overwrite: an existing file (or its other-flavour sibling) is kept and read; else dry-run or write."""
+        row["criteria"] = criteria
         if refused:
-            continue
+            return
         dest = target / test_rel
         existing = dest if dest.exists() else sibling_conflict(dest)
         if existing is not None:
@@ -357,16 +428,67 @@ def main() -> int:
             row["test"] = kept_rel
             report["skipped"].append(kept_rel)
             titles = existing_titles(_read(existing))
-            covered = [i for i, b in enumerate(bullets, 1) if any(covers(t, b) for t in titles)]
-            report["existing_tests"].append({"test": kept_rel, "titles": titles, "criteria_covered": covered,
-                                             "criteria_missing": [i for i in range(1, len(bullets) + 1) if i not in covered]})
-            continue
+            idx = [bullets.index(c) + 1 if c in bullets else None for c in criteria]
+            covered_i = [i for i, c in zip(idx, criteria) if i and any(covers(t, c) for t in titles)]
+            report["existing_tests"].append({"test": kept_rel, "titles": titles, "criteria_covered": covered_i,
+                                             "criteria_missing": [i for i in idx if i and i not in covered_i]})
+            return
         if a.dry_run:
             report["would_write"].append(test_rel)
-            continue
+            return
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content, encoding="utf-8")
         report["written"].append(test_rel)
+
+    for rel in files:
+        if not is_source(rel):   # .sql, docs, env, yaml, json …: no test file is ever generated for these
+            report["non_source"].append(rel)
+            report["files"].append({"source": rel, "kind": "non-source", "type": "not code", "layer": "—",
+                                    "cover": "—", "test": "", "criteria": [],
+                                    "note": "skipped: not a source file (no stub generated — only JS/TS code gets one)"})
+            continue
+        kind, ftype, layer, cover = classify(rel)
+        if rel in covered:       # the plan names the test for this file: no per-file stub beside it
+            tests = [p for p, st in named.items() if rel in st["sources"]]
+            report["files"].append({"source": rel, "kind": kind, "type": ftype, "layer": layer, "cover": cover,
+                                    "test": ", ".join(tests), "criteria": [c for p in tests for c in named[p]["criteria"]],
+                                    "note": "covered by the plan's test file(s)", "plan": True})
+            continue
+        criteria = per_source.get(rel) or bullets   # the task's own acceptance when the plan names this file; else all
+        if kind == "page":
+            test_rel, content = f"{e2e_dir}/{slug(rel)}.spec.{ext}", e2e_stub(rel, title, criteria, e2e_dir)
+        elif kind == "component":
+            test_rel, content = f"{unit_dir}/{slug(rel)}.test.{cext}", ""
+        else:
+            test_rel = f"{unit_dir}/{slug(rel)}.test.{ext}"
+            content = unit_stub(rel, title, criteria, test_rel, repo)
+        row = {"source": rel, "kind": kind, "type": ftype, "layer": layer, "cover": cover, "test": test_rel, "criteria": criteria}
+        report["files"].append(row)
+        if kind == "component":
+            report["components"].append(test_rel)
+            continue
+        emit(row, test_rel, content, criteria)
+
+    for test_rel, st in named.items():   # the plan's own test files, one stub each, that task's acceptance only
+        is_e2e = ".spec." in test_rel.rsplit("/", 1)[-1]
+        pages = [src for src in st["sources"] if classify(src)[0] == "page"]
+        primary = (pages[0] if is_e2e and pages else next((src for src in st["sources"] if classify(src)[0] != "page"), None)
+                   or (st["sources"][0] if st["sources"] else None))
+        rel = primary or re.sub(r"\.(test|spec)\.(tsx?|jsx?)$", "", test_rel.rsplit("/", 1)[-1])
+        kind, ftype, layer, cover = classify(primary) if primary else ("unit", "module", "unit", "each exported function: happy path + error branch")
+        if is_e2e:
+            content = e2e_stub(primary if pages else f"app/{rel}/page.{ext}", title, st["criteria"], e2e_dir)
+            kind = "page"
+        else:
+            content = unit_stub(rel, title, st["criteria"], test_rel, repo, st["sources"] or None)
+        row = {"source": ", ".join(st["sources"]) or "—", "kind": kind, "type": ftype, "layer": layer, "cover": cover,
+               "test": test_rel, "tasks": st["tasks"], "plan": True}
+        if st["renamed_from"]:
+            row["renamed_from"] = st["renamed_from"]
+        report["files"].append(row)
+        report["tasks"].append({"path": test_rel, "source": st["sources"], "tasks": st["tasks"], "criteria": st["criteria"],
+                                "renamed_from": st["renamed_from"]})
+        emit(row, test_rel, content, st["criteria"])
 
     rp, pp = Path(a.report), Path(a.plan)
     rp.parent.mkdir(parents=True, exist_ok=True)
@@ -380,10 +502,18 @@ def main() -> int:
               f"{len(report['written'])} stub(s) written, {len(report['skipped'])} kept (already exist), "
               f"{len(report['components'])} component test(s) to write by hand"
               + (f", {len(report['non_source'])} non-source file(s) skipped" if report["non_source"] else "")
+              + (f"; {len(named)} test file(s) named by the plan ({Path(a.tasks).name})" if named else "")
               + (" — dry run, nothing written" if a.dry_run else "") + ".**", ""]
     if report["non_source"]:
-        lines += ["Not source files — no stub generated (docs, env or config travel with the change, they are not tested here): "
+        lines += ["Not code files — no stub generated (SQL migrations are covered by the RLS lint and the integration suite; "
+                  "docs, env or config travel with the change, they are not tested here): "
                   + ", ".join(f"`{f}`" for f in report["non_source"]) + ".", ""]
+    if named:
+        lines += ["Test files named by the plan's `test` cells (each stub carries its task's acceptance only): "
+                  + ", ".join(f"`{t}` ({', '.join(named[t]['tasks'])})" for t in sorted(named)) + ".", ""]
+        renamed = [st for st in named.values() if st["renamed_from"]]
+        if renamed:
+            lines += ["Renamed to the repo flavour: " + ", ".join(f"`{st['renamed_from']}` → `{st['path']}`" for st in renamed) + ".", ""]
     lines += [
               "## Repo (read before write)", "", "| Setting | Value | Why |", "|---|---|---|",
               f"| Flavour | {flavour_name} (`.test.{ext}` / `.spec.{ext}`) | {repo['flavour_why']} |",
@@ -397,12 +527,18 @@ def main() -> int:
         if r["kind"] == "non-source":
             lines.append(f"| `{r['source']}` | {r['type']} | — | — | — | skipped (not a source file) |")
             continue
+        if r.get("note", "").startswith("covered by the plan"):
+            lines.append(f"| `{r['source']}` | {r['type']} | {r['layer']} | {r['cover']} | `{r['test']}` | covered by the plan's test |")
+            continue
         status = ("manual (component)" if r["kind"] == "component" else "refused" if refused
                   else "exists — kept" if r["test"] in report["skipped"] else "would write" if a.dry_run else "written")
+        if r.get("tasks"):
+            status += f" (plan: {', '.join(r['tasks'])})"
         lines.append(f"| `{r['source']}` | {r['type']} | {r['layer']} | {r['cover']} | `{r['test']}` | {status} |")
     lines += ["", "## Criteria map", "", "| # | Criterion | Tests |", "|---|---|---|"]
-    tests = ", ".join(f"`{r['test']}`" for r in report["files"] if r["kind"] not in ("component", "non-source")) or "—"
+    stub_rows = [r for r in report["files"] if r["kind"] not in ("component", "non-source") and not r.get("note", "").startswith("covered")]
     for i, b in enumerate(bullets, 1):
+        tests = ", ".join(f"`{r['test']}`" for r in stub_rows if b in (r.get("criteria") or [])) or "—"
         lines.append(f"| {i} | {b} | {tests} |")
     if report["existing_tests"]:
         lines += ["", "## Existing tests (kept — add the missing criteria by hand)", "",
@@ -423,6 +559,7 @@ def main() -> int:
     print(f"{'dry-run: ' if a.dry_run else ''}{len(report['written'])} written, {len(report['skipped'])} skipped, "
           f"{len(report['components'])} component(s) manual"
           + (f", {len(report['non_source'])} non-source skipped" if report["non_source"] else "")
+          + (f", {len(named)} named by the plan" if named else "")
           + f" [{flavour_name}, {repo['runner']}] -> {rp}, {pp}")
     return 0
 

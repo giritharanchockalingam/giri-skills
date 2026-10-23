@@ -59,6 +59,42 @@
       ]
     },
     {
+      "id": "agent-plan-names-the-tests",
+      "prompt": "Scaffold the red tests for the ops-status feature from the approved plan — use the test file names the plan gives.",
+      "expected": [
+        "Runs scripts/scaffold_tests.py with --tasks; tests/unit/checker.test.js and tests/unit/alerts.test.js (the plan's names) are written with their own task's acceptance only; the cron route task names no path and gets the per-file stub; nothing is written for the .sql migration"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature-ops-status.md",
+        "files": "lib/checker.js,lib/alerts.js,app/api/cron/check/route.js,supabase/migrations/0001-ops-status.sql",
+        "tasks": "evals/fixtures/tasks-ops-status.csv",
+        "target": "{out}/repo",
+        "flavour": "js"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/unit/checker.test.js",
+        "exists:repo/tests/unit/alerts.test.js",
+        "exists:repo/tests/unit/app-api-cron-check-route.test.js",
+        {
+          "file": "repo/tests/unit/checker.test.js",
+          "check": "contains:\"it.todo(\\\"the checker returns one status row per configured endpoint with latency\\\")\""
+        },
+        {
+          "file": "repo/tests/unit/checker.test.js",
+          "check": "max_lines:10"
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"supabase/migrations/0001-ops-status.sql\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"named by the plan\""
+        }
+      ]
+    },
+    {
       "id": "agent-missing-feature",
       "prompt": "Write the tests for these files.",
       "expected": [

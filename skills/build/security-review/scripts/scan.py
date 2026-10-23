@@ -14,7 +14,9 @@ Detectors (file:line evidence; secrets are redacted in the evidence column):
   SEC3 secret-in-code           critical  sk-…, JWT (eyJ….), AWS AKIA… literals
   SEC4 ssrf-user-url            high      fetch(<identifier>) — URL is a variable, not a literal (heuristic)
   SEC5 dangerous-html           medium    dangerouslySetInnerHTML
-  SEC6 rls-bypass-in-handler    high      service-role client used in a route handler or server action
+  SEC6 rls-bypass-in-handler    high      service-role client used in a route handler or server action; a line that
+                                          carries `// rls-lint: allow — <reason>` (the marker rls_lint.py honours, e.g.
+                                          the read-only deep health check) is an accepted, reasoned exception
 With --diff only added lines are scanned (--target adds a full-repo scan) (context lines count for the auth check). Writes
 findings.csv (id, category, severity, file, line, evidence, recommendation) and review.md.
 Exit 0 after writing (findings or not); the gate is a separate call so an LLM step can reason on
@@ -47,6 +49,7 @@ SECRETS = [re.compile(r"\bsk-(?:ant-|live_|test_|proj-)?[A-Za-z0-9_-]{16,}"),
 FETCH_VAR = re.compile(r"\bfetch\(\s*([A-Za-z_$][\w$.]*)\s*[,)]")
 DANGEROUS_HTML = re.compile(r"dangerouslySetInnerHTML")
 SERVICE_ROLE = re.compile(r"SUPABASE_SERVICE_ROLE|createServiceClient\(|createAdminClient\(|serviceRoleClient|service_role")
+RLS_ALLOW = re.compile(r"//\s*rls-lint:\s*allow\b")   # the same reasoned-exception marker supabase-schema-rls/rls_lint.py honours
 HTTP_EXPORT = re.compile(r"^\s*export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)\b|"
                          r"^\s*export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\s*=", re.M)
 RECOMMEND = {
@@ -147,7 +150,7 @@ def scan_file(path: str, info: dict) -> list[dict]:
                 add("SEC4", ln, text)
             if DANGEROUS_HTML.search(text):
                 add("SEC5", ln, text)
-            if handler and SERVICE_ROLE.search(text):
+            if handler and SERVICE_ROLE.search(text) and not RLS_ALLOW.search(text):
                 add("SEC6", ln, text)
     return out
 

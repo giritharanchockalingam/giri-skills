@@ -11,11 +11,18 @@ planned at all. The skeleton is the smallest app the rest of the factory can wor
 react, vitest; scripts dev/build/start/lint/typecheck/test), next.config.js with the security-header
 baseline, jsconfig.json | tsconfig.json with the `@/*` alias, .eslintrc.json, vitest.config, app/layout,
 app/page (placeholder), app/api/health/route ({ok: true} liveness, no dependency calls), lib/app-info,
-tests/unit/health.test exercising the route, .gitignore. No network, no Supabase client — that is feature
-work. After bootstrap, scripts/stack_profile.py reads framework=nextjs, flavour=js|ts, test_runner=vitest,
+tests/unit/health.test exercising the route, .gitignore — plus the observability kit of
+build/observability-setup, installed through that skill's own scripts/install.py plan (the templates live there,
+nothing is duplicated here): lib/logger, lib/logger/context, app/api/health/deep/route (readiness, bearer-protected),
+ops/alerts.yaml, docs/observability.md, with lib/supabase/admin (the service-role client factory the deep route
+imports; a NOT_CONFIGURED placeholder until supabase-schema-rls wires @supabase/supabase-js) and unit tests for the
+deep route and the logger. The kit's liveness route is not taken: the skeleton keeps its own. A fresh bootstrap
+passes `install.py --dry-run` with nothing left to write. No network, no Supabase client — that is feature work.
+After bootstrap, scripts/stack_profile.py reads framework=nextjs, flavour=js|ts, test_runner=vitest,
 package_manager=npm.
 
---report writes JSON {target, stack, written[], kept[], gaps[{path, missing[]}], app_skeleton: written|kept}.
+--report writes JSON {target, stack, written[], kept[], gaps[{path, missing[]}], app_skeleton: written|kept,
+observability: written|kept}.
 Stdlib only. Run offline:
   python3 -I scaffold.py --target <dir> --name "<project>" [--stack nextjs-js|nextjs-ts] [--multi-tenant] [--dry-run] [--report r.json]
 
@@ -31,6 +38,20 @@ import sys
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
+OBS_INSTALL = Path(__file__).resolve().parent.parent.parent / "observability-setup" / "scripts" / "install.py"
+
+
+def _load_observability_installer():
+    """build/observability-setup/scripts/install.py as a module: its PLAN, assets and never-overwrite rules are the
+    single source of the kit (the skeleton reuses them; it never carries a copy of the templates)."""
+    import importlib.util
+    if not OBS_INSTALL.is_file():
+        print(f"error: observability installer missing: {OBS_INSTALL}", file=sys.stderr)
+        sys.exit(2)
+    spec = importlib.util.spec_from_file_location("observability_install", OBS_INSTALL)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 # (template relative to assets/, destination relative to target)
 FILES: list[tuple[str, str]] = [
@@ -91,6 +112,7 @@ VERSIONS = {
     "vitest": "^2.1.8", "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^8.57.1", "eslint-config-next": "^14.2.15",
     "typescript": "^5.6.3", "@types/node": "^20.17.6", "@types/react": "^18.3.12", "@types/react-dom": "^18.3.1",
+    "server-only": "^0.0.1",   # imported by the kit's app/api/health/deep/route and lib/supabase/admin
 }
 
 NEXT_CONFIG = """// next.config.js — security-header baseline (shared/stack-conventions.md). Keep headers here, not in middleware.
@@ -170,7 +192,8 @@ def app_skeleton(name: str, stack: str) -> list[tuple[str, str]]:
             "test": "vitest run",
             "test:watch": "vitest",
         },
-        "dependencies": {"next": VERSIONS["next"], "react": VERSIONS["react"], "react-dom": VERSIONS["react-dom"]},
+        "dependencies": {"next": VERSIONS["next"], "react": VERSIONS["react"], "react-dom": VERSIONS["react-dom"],
+                         "server-only": VERSIONS["server-only"]},
         "devDependencies": dict(sorted(dev_deps.items())),
     }
     if ts:
@@ -218,6 +241,7 @@ export function appInfo() {{
 """
 
     health_route = f"""// app/api/health/route.{ext} — liveness. No dependency calls (that is /api/health/deep). Never cached.
+// Body: ok, status, name, version (deployed commit sha, "local" outside Vercel), env, ts.
 import {{ NextResponse }} from "next/server";
 import {{ appInfo }} from "@/lib/app-info";
 
@@ -295,6 +319,216 @@ describe("appInfo", () => {{
 }});
 """
 
+    # lib/supabase/admin — the service-role client factory the kit's deep health route imports. @supabase/supabase-js is
+    # not a bootstrap dependency (supabase-schema-rls adds it with the first migration), so until then every call
+    # reports NOT_CONFIGURED and /api/health/deep answers 503 `down`: the true readiness of an app with no database.
+    err_type = ": Promise<{ data: null; error: AdminError }>" if ts else ""
+    admin_type = ("export type AdminError = { code: string; message: string };" if ts
+                  else "/** @typedef {{ code: string, message: string }} AdminError */")
+    admin_client = f"""// lib/supabase/admin.{ext} — service-role Supabase client factory (server only; bypasses RLS — use from
+// server/services/** and health checks only, with the reason in a comment). Bootstrap placeholder: @supabase/supabase-js
+// is not installed yet (supabase-schema-rls adds it with the first migration). Until then every call reports
+// NOT_CONFIGURED, so /api/health/deep answers 503 "down" — the honest readiness of an app with no database wired.
+// When Supabase lands, replace the body with:
+//   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {{ auth: {{ persistSession: false }} }});
+import "server-only";
+
+{admin_type}
+
+export const NOT_CONFIGURED = "NOT_CONFIGURED";
+
+export function isConfigured(){": boolean" if ts else ""} {{
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}}
+
+export function createAdminClient() {{
+  const error{": AdminError" if ts else ""} = {{
+    code: NOT_CONFIGURED,
+    message: isConfigured()
+      ? "Supabase admin client not wired: add @supabase/supabase-js and replace lib/supabase/admin (supabase-schema-rls)"
+      : "Supabase not configured: set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, then wire lib/supabase/admin",
+  }};
+  const fail = async (){err_type} => ({{ data: null, error }});
+  return {{
+    configured: false,
+    rpc: (_fn{": string" if ts else ""}) => fail(),
+    storage: {{ listBuckets: () => fail() }},
+  }};
+}}
+"""
+
+    mock_hint = "// `server-only` throws outside a React Server Component; the deep route is a server module, so stub the marker here."
+    deep_health_test = f"""// tests/unit/health-deep.test.{ext} — readiness route (observability kit): auth, dependency checks, 503 on a required failure.
+import {{ describe, it, expect, vi, beforeEach, afterEach }} from "vitest";
+import {{ NextRequest }} from "next/server";
+
+{mock_hint}
+vi.mock("server-only", () => ({{}}));
+vi.mock("@/lib/supabase/admin", () => {{
+  const admin = {{
+    rpc: vi.fn(async () => ({{ data: null, error: null }})),
+    storage: {{ listBuckets: vi.fn(async () => ({{ data: null, error: null }})) }},
+  }};
+  return {{ createAdminClient: () => admin }};
+}});
+
+import {{ GET }} from "@/app/api/health/deep/route";
+import {{ createAdminClient }} from "@/lib/supabase/admin";
+
+const admin = createAdminClient(){" as unknown as { rpc: ReturnType<typeof vi.fn>; storage: { listBuckets: ReturnType<typeof vi.fn> } }" if ts else ""};
+const url = "http://localhost/api/health/deep";
+const request = (headers{": Record<string, string>" if ts else ""} = {{}}) => new NextRequest(url, {{ headers }});
+
+describe("GET /api/health/deep", () => {{
+  beforeEach(() => {{
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://localhost:54321");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubGlobal("fetch", vi.fn(async () => ({{ ok: true, status: 200 }})));
+    admin.rpc.mockResolvedValue({{ data: null, error: null }});
+    admin.storage.listBuckets.mockResolvedValue({{ data: null, error: null }});
+    vi.spyOn(console, "warn").mockImplementation(() => {{}});
+    vi.spyOn(console, "error").mockImplementation(() => {{}});
+  }});
+  afterEach(() => {{
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  }});
+
+  it("requires the bearer token when HEALTH_CHECK_TOKEN is set", async () => {{
+    vi.stubEnv("HEALTH_CHECK_TOKEN", "secret");
+    const denied = await GET(request());
+    expect(denied.status).toBe(401);
+    const allowed = await GET(request({{ authorization: "Bearer secret" }}));
+    expect(allowed.status).toBe(200);
+  }});
+
+  it("answers 200 ok with a per-dependency check when every dependency answers", async () => {{
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+    expect(body.checks.db.status).toBe("ok");
+    expect(body.checks.auth.status).toBe("ok");
+    expect(body.checks.storage.status).toBe("ok");
+    expect(typeof body.checks.db.latencyMs).toBe("number");
+    expect(Number.isNaN(Date.parse(body.ts))).toBe(false);
+  }});
+
+  it("answers 503 down when a required dependency (db) fails", async () => {{
+    admin.rpc.mockResolvedValue({{ data: null, error: {{ message: "connection refused" }} }});
+    const res = await GET(request());
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.status).toBe("down");
+    expect(body.checks.db).toMatchObject({{ status: "down", error: "connection refused" }});
+  }});
+
+  it("answers 200 degraded when only an optional dependency (storage) fails", async () => {{
+    admin.storage.listBuckets.mockResolvedValue({{ data: null, error: {{ message: "bucket list failed" }} }});
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("degraded");
+  }});
+}});
+"""
+
+    logger_test = f"""// tests/unit/logger.test.{ext} — structured logger (observability kit): JSON lines, redaction, request context, timing.
+import {{ describe, it, expect, vi, beforeEach, afterEach }} from "vitest";
+import {{ log, redact, serializeError }} from "@/lib/logger";
+import {{ withLogContext, enrichLogContext, getLogContext, contextFromHeaders }} from "@/lib/logger/context";
+
+const lastLine = (spy{": ReturnType<typeof vi.spyOn>" if ts else ""}) => JSON.parse(String(spy.mock.calls.at(-1)?.[0]));
+
+describe("lib/logger", () => {{
+  let out{": ReturnType<typeof vi.spyOn>" if ts else ""};
+  beforeEach(() => {{
+    out = vi.spyOn(console, "log").mockImplementation(() => {{}});
+    vi.spyOn(console, "warn").mockImplementation(() => {{}});
+    vi.spyOn(console, "error").mockImplementation(() => {{}});
+  }});
+  afterEach(() => vi.restoreAllMocks());
+
+  it("emits one JSON line with ts, level, msg, service, env and version", () => {{
+    log.info({{ action: "demo" }}, "hello");
+    const line = lastLine(out);
+    expect(line).toMatchObject({{ level: "info", msg: "hello", action: "demo" }});
+    for (const k of ["ts", "service", "env", "version"]) expect(line).toHaveProperty(k);
+    expect(Number.isNaN(Date.parse(line.ts))).toBe(false);
+  }});
+
+  it("redacts secrets and PII keys at any depth", () => {{
+    const r = redact({{ password: "p", nested: {{ token: "t", email: "e@x.io", ok: "keep" }}, list: [{{ authorization: "a" }}] }}){" as Record<string, any>" if ts else ""};
+    expect(r.password).toBe("[redacted]");
+    expect(r.nested).toEqual({{ token: "[redacted]", email: "[redacted]", ok: "keep" }});
+    expect(r.list[0].authorization).toBe("[redacted]");
+    log.info({{ cookie: "c" }}, "with cookie");
+    expect(lastLine(out).cookie).toBe("[redacted]");
+  }});
+
+  it("serializes errors with name, message and code", () => {{
+    const e = Object.assign(new Error("boom"), {{ code: "E_BOOM" }});
+    expect(serializeError(e)).toMatchObject({{ name: "Error", message: "boom", code: "E_BOOM" }});
+    expect(serializeError("plain")).toEqual({{ name: "NonError", message: "plain" }});
+  }});
+
+  it("carries the request context set with withLogContext and enrichLogContext", () => {{
+    withLogContext({{ requestId: "req-1" }}, () => {{
+      enrichLogContext({{ userId: "u-1" }});
+      expect(getLogContext()).toEqual({{ requestId: "req-1", userId: "u-1" }});
+      log.info("inside");
+    }});
+    expect(lastLine(out)).toMatchObject({{ requestId: "req-1", userId: "u-1" }});
+    expect(getLogContext()).toEqual({{}});
+    const ctx = contextFromHeaders(new Headers({{ "x-request-id": "abc", "x-vercel-id": "v1" }}), "/api/x");
+    expect(ctx).toEqual({{ requestId: "abc", vercelId: "v1", route: "/api/x" }});
+    expect(contextFromHeaders(new Headers()).requestId).toMatch(/[0-9a-f-]{{36}}/);
+  }});
+
+  it("times an operation and logs ok or THREW", async () => {{
+    await expect(log.time("demo.ok", async () => 42)).resolves.toBe(42);
+    expect(lastLine(out)).toMatchObject({{ action: "demo.ok", outcome: "ok" }});
+    expect(typeof lastLine(out).durationMs).toBe("number");
+    const err = vi.mocked(console.error);
+    await expect(log.time("demo.fail", async () => {{ throw new Error("nope"); }})).rejects.toThrow("nope");
+    const line = JSON.parse(String(err.mock.calls.at(-1)?.[0]));
+    expect(line).toMatchObject({{ action: "demo.fail", outcome: "THREW", err: {{ message: "nope" }} }});
+  }});
+}});
+"""
+
+    admin_test = f"""// tests/unit/supabase-admin.test.{ext} — the bootstrap placeholder reports NOT_CONFIGURED until Supabase is wired.
+import {{ describe, it, expect, vi, afterEach }} from "vitest";
+
+vi.mock("server-only", () => ({{}}));
+import {{ createAdminClient, isConfigured, NOT_CONFIGURED }} from "@/lib/supabase/admin";
+
+describe("lib/supabase/admin (bootstrap placeholder)", () => {{
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("is not configured without the Supabase env vars and says so on every call", async () => {{
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+    expect(isConfigured()).toBe(false);
+    const admin = createAdminClient();
+    expect(admin.configured).toBe(false);
+    const {{ error }} = await admin.rpc("health_ping");
+    expect(error.code).toBe(NOT_CONFIGURED);
+    expect(error.message).toMatch(/NEXT_PUBLIC_SUPABASE_URL/);
+    expect((await admin.storage.listBuckets()).error.code).toBe(NOT_CONFIGURED);
+  }});
+
+  it("points at the client library once the env vars are set", async () => {{
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://localhost:54321");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role");
+    expect(isConfigured()).toBe(true);
+    const {{ error }} = await createAdminClient().rpc("health_ping");
+    expect(error.message).toMatch(/supabase-js/);
+  }});
+}});
+"""
+
     files: list[tuple[str, str]] = [
         ("package.json", json.dumps(package_json, indent=2) + "\n"),
         ("next.config.js", NEXT_CONFIG),
@@ -305,10 +539,45 @@ describe("appInfo", () => {{
         (f"app/page.{xext}", page),
         (f"app/api/health/route.{ext}", health_route),
         (f"lib/app-info.{ext}", app_info),
+        (f"lib/supabase/admin.{ext}", admin_client),
         (f"tests/unit/health.test.{ext}", health_test),
+        (f"tests/unit/health-deep.test.{ext}", deep_health_test),
+        (f"tests/unit/logger.test.{ext}", logger_test),
+        (f"tests/unit/supabase-admin.test.{ext}", admin_test),
         (".gitignore", GITIGNORE),
     ]
     return files
+
+
+def observability_kit(target: Path, name: str, stack: str) -> tuple[list[tuple[Path, str]], list[dict]]:
+    """The observability kit for the app skeleton, planned by observability-setup's own install.py (its PLAN, assets
+    and never-overwrite rules). Returns (files to write, decisions it made for pieces it will not write). The kit's
+    liveness route is left out: the skeleton ships its own app/api/health/route (install.py later reports it
+    `exists, kept`, gap-free)."""
+    obs = _load_observability_installer()
+    flavour = "ts" if stack == "nextjs-ts" else "js"
+    files: list[tuple[Path, str]] = []
+    decisions: list[dict] = []
+    # project label = the target directory name, install.py's own default, so a later `install.py --dry-run` on the
+    # bootstrapped repo finds every piece identical (skipped), not "proposed"
+    for item in obs.build_plan(target, flavour, target.resolve().name or name):
+        if item["asset"].startswith("assets/health-route."):
+            continue   # liveness is the skeleton's own route
+        if item["action"] == "written":
+            files.append((target / item["path"], item["content"]))
+        else:
+            decisions.append({"path": item.get("existing") or item["path"], "planned": item["path"],
+                              "action": item["action"], "reason": item.get("reason", "")})
+    return files, decisions
+
+
+def kit_env_vars(files: list[tuple[Path, str]]) -> list[str]:
+    """Env vars the written kit files read (install.py's rule: only for files written in this run, platform vars excluded)."""
+    obs = _load_observability_installer()
+    needed: set[str] = set()
+    for _, content in files:
+        needed |= set(obs.ENV_RE.findall(content)) - obs.PLATFORM_VARS
+    return sorted(needed)
 
 
 def section_names(markdown: str) -> list[str]:
@@ -344,16 +613,27 @@ def render(text: str, name: str, tenancy: str) -> str:
     )
 
 
-def plan(target: Path, name: str, multi_tenant: bool, stack: str = "nextjs-js") -> list[tuple[Path, str]]:
-    """Docs/ADR/CI files always; the application skeleton only when the target has no package.json yet."""
+def plan(target: Path, name: str, multi_tenant: bool, stack: str = "nextjs-js",
+         decisions: list[dict] | None = None) -> list[tuple[Path, str]]:
+    """Docs/ADR/CI files always; the application skeleton (with the observability kit) only when the target has no
+    package.json yet. `decisions`, when given, collects the kit pieces install.py's plan declines to write (exists in
+    either flavour, differs, or conflicts) so the report can say why."""
     tenancy = "multi-tenant (tenant_id on every scoped table; RLS)" if multi_tenant else "single-tenant"
     out: list[tuple[Path, str]] = []
+    kit: list[tuple[Path, str]] = []
+    if not (target / "package.json").is_file():
+        kit, kit_decisions = observability_kit(target, name, stack)
+        if decisions is not None:
+            decisions.extend(kit_decisions)
     for src, dst in FILES:
         tpl = ASSETS / src
         if not tpl.exists():
             print(f"error: template missing: {tpl}", file=sys.stderr)
             sys.exit(2)
-        out.append((target / dst, render(tpl.read_text(encoding="utf-8"), name, tenancy)))
+        content = render(tpl.read_text(encoding="utf-8"), name, tenancy)
+        if dst == ".env.example" and kit:
+            content = with_env_vars(content, kit_env_vars(kit))
+        out.append((target / dst, content))
     adr = STACK_ADR.format(
         date=_dt.date.today().isoformat(),
         name=name,
@@ -362,7 +642,27 @@ def plan(target: Path, name: str, multi_tenant: bool, stack: str = "nextjs-js") 
     out.append((target / "docs/adr/0001-stack.md", adr))
     if not (target / "package.json").is_file():
         out += [(target / rel, content) for rel, content in app_skeleton(name, stack)]
+        out += kit
     return out
+
+
+ENV_LINE_RE = re.compile(r"^\s*([A-Z][A-Z0-9_]*)\s*=", re.M)
+
+
+def env_vars_present(text: str) -> set[str]:
+    return set(ENV_LINE_RE.findall(text))
+
+
+def with_env_vars(env_text: str, needed: list[str]) -> str:
+    """The .env.example contract plus any kit variable it does not list yet (documented from install.py's ENV_DOC)."""
+    missing = [v for v in needed if v not in env_vars_present(env_text)]
+    if not missing:
+        return env_text
+    obs = _load_observability_installer()
+    block = ["", "# --- Observability kit (lib/logger, /api/health/deep; see docs/observability.md) ---"]
+    block += [f"{v}=  # {obs.ENV_DOC.get(v, 'see docs/observability.md')}" for v in missing]
+    sep = "" if env_text.endswith("\n") else "\n"
+    return env_text + sep + "\n".join(block) + "\n"
 
 
 def main() -> int:
@@ -387,12 +687,22 @@ def main() -> int:
     has_app = (target / "package.json").is_file()
     report = {"target": str(target), "dry_run": args.dry_run, "stack": args.stack,
               "app_skeleton": "kept" if has_app else "written",
+              "observability": "kept" if has_app else "written",
               "written": [], "kept": [], "gaps": []}
     if has_app:
         skipped += 1
         report["kept"].append("package.json")
         print(f"keep   package.json (application present; no {args.stack} skeleton written)")
-    for path, content in plan(target, args.name, args.multi_tenant, args.stack):
+    decisions: list[dict] = []
+    planned = plan(target, args.name, args.multi_tenant, args.stack, decisions)
+    for d in decisions:   # kit pieces install.py's plan keeps (exists in either flavour / differs / conflicts)
+        skipped += 1
+        report["kept"].append(d["path"])
+        print(f"keep   {d['path']} (observability: {d['reason']})")
+    if not has_app and not any(rel.startswith(("lib/logger", "app/api/health/deep/", "ops/alerts", "docs/observability"))
+                               for rel in (p.relative_to(target).as_posix() for p, _ in planned) if not (target / rel).exists()):
+        report["observability"] = "kept"
+    for path, content in planned:
         rel = path.relative_to(target).as_posix()
         if path.exists():
             skipped += 1
@@ -403,6 +713,12 @@ def main() -> int:
                 if miss:
                     report["gaps"].append({"path": rel, "missing": miss})
                     print(f"gap    {rel}: missing sections — {', '.join(miss)}")
+            elif rel == ".env.example" and not has_app:
+                miss = [v for v in kit_env_vars([(p, c) for p, c in planned if p.suffix in (".js", ".ts")])
+                        if v not in env_vars_present(path.read_text(encoding="utf-8", errors="replace"))]
+                if miss:
+                    report["gaps"].append({"path": rel, "missing": miss})
+                    print(f"gap    {rel}: missing variables — {', '.join(miss)}")
             continue
         written += 1
         report["written"].append(rel)

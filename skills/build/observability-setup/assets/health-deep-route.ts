@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   }
   const simulate = process.env.VERCEL_ENV !== "production" ? req.nextUrl.searchParams.get("simulate") : null;
 
-  const admin = createAdminClient();
+  const admin = createAdminClient(); // rls-lint: allow — health check only, read-only (select 1 / list buckets)
   const checks = Object.fromEntries(
     await Promise.all([
       run("db", async () => {

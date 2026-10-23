@@ -211,6 +211,7 @@
             "inputs": {
               "feature": "$steps.feature:feature.md",
               "files": "$steps.files:files.txt#csv",
+              "tasks": "$steps.plan-refine:tasks.csv",
               "target": "$repo",
               "flavour": "$profile.flavour"
             }

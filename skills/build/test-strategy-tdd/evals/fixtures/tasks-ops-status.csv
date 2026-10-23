@@ -1,0 +1,5 @@
+id,task,acceptance,test,rollback,files,size
+T1,Checker library,the checker returns one status row per configured endpoint with latency,tests/unit/checker.test.js: returns a row per endpoint and marks timeouts down,remove lib/checker.js,lib/checker.js,S
+T2,Alert routing,an alert is emitted once per transition from ok to down,tests/unit/alerts.test.js: emits once per ok→down transition,remove lib/alerts.js,lib/alerts.js,S
+T3,Cron route,GET /api/cron/check answers 200 and writes a run record,route test asserts 200 and the record,remove the route,app/api/cron/check/route.js,S
+T4,Migration,ops_status table exists with RLS,migration integration test (RLS lint + integration suite),drop the table,supabase/migrations/0001-ops-status.sql,S

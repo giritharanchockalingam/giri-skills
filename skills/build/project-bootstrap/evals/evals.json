@@ -34,7 +34,7 @@
       "id": "agent-happy-path",
       "prompt": "Bootstrap a new multi-tenant Next.js + Supabase app called demo-app.",
       "expected": [
-        "Runs scripts/scaffold.py; SPEC, CLAUDE, HANDOFF, ADR, CI workflows and the runnable nextjs-js skeleton (package.json, app/api/health/route.js, tests/unit/health.test.js) exist"
+        "Runs scripts/scaffold.py; SPEC, CLAUDE, HANDOFF, ADR, CI workflows, the runnable nextjs-js skeleton (package.json, app/api/health/route.js, tests/unit/health.test.js) and the observability kit (lib/logger.js, app/api/health/deep/route.js, ops/alerts.yaml, docs/observability.md) exist"
       ],
       "inputs": {
         "target": "{out}/proj",
@@ -51,7 +51,17 @@
         },
         "exists:proj/package.json",
         "exists:proj/app/api/health/route.js",
-        "exists:proj/tests/unit/health.test.js"
+        "exists:proj/tests/unit/health.test.js",
+        "exists:proj/lib/logger.js",
+        "exists:proj/lib/logger/context.js",
+        "exists:proj/app/api/health/deep/route.js",
+        "exists:proj/ops/alerts.yaml",
+        "exists:proj/docs/observability.md",
+        "exists:proj/tests/unit/health-deep.test.js",
+        {
+          "file": "bootstrap-report.json",
+          "check": "contains:\"\\\"observability\\\": \\\"written\\\"\""
+        }
       ]
     },
     {
@@ -88,7 +98,7 @@
       "id": "agent-stack-nextjs-ts",
       "prompt": "Bootstrap demo-app as a TypeScript Next.js app.",
       "expected": [
-        "Writes the nextjs-ts skeleton: tsconfig.json, app/page.tsx, app/api/health/route.ts, tests/unit/health.test.ts; the report records stack nextjs-ts"
+        "Writes the nextjs-ts skeleton: tsconfig.json, app/page.tsx, app/api/health/route.ts, tests/unit/health.test.ts, and the kit as .ts (lib/logger.ts, app/api/health/deep/route.ts); the report records stack nextjs-ts"
       ],
       "inputs": {
         "target": "{out}/proj",
@@ -103,7 +113,10 @@
         {
           "file": "bootstrap-report.json",
           "check": "contains:\"nextjs-ts\""
-        }
+        },
+        "exists:proj/lib/logger.ts",
+        "exists:proj/app/api/health/deep/route.ts",
+        "exists:proj/tests/unit/health-deep.test.ts"
       ]
     },
     {
@@ -168,6 +181,15 @@
         "Yes: the scaffold never overwrites existing files, so the edited CLAUDE.md is kept",
         "Recommends a --dry-run first, which should report 0 writes if nothing is missing",
         "Any skeleton file still missing is listed as create; existing ones as keep"
+      ]
+    },
+    {
+      "id": "x-observability-gate-first-pr",
+      "prompt": "We bootstrapped a new Next.js repo with project-bootstrap yesterday. Will the portal's 'Observability (logging, health, alerts)' PR gate pass on the first PR, or do we need to run observability-setup first?",
+      "expected": [
+        "Yes: the skeleton ships the observability kit (lib/logger, lib/logger/context, app/api/health/deep/route, ops/alerts.yaml, docs/observability.md) taken from observability-setup's own assets, so install.py --dry-run reports nothing to write",
+        "Explains that lib/supabase/admin is a NOT_CONFIGURED placeholder until supabase-schema-rls wires the client, so /api/health/deep answers 503 until then — honest readiness, not a fake pass",
+        "Points at observability-setup only for a repo that already had a package.json before bootstrap (the kit is not written there)"
       ]
     },
     {

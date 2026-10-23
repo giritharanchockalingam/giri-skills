@@ -71,3 +71,23 @@ def test_bad_input_exits_1(tmp_path):
     bad = tmp_path / "bad.patch"
     bad.write_text("not a diff\n", encoding="utf-8")
     assert run_script(SCRIPT, "--diff", str(bad), "--findings", str(tmp_path / "f.csv")).returncode == 1
+
+
+def test_rls_allow_marker_is_a_reasoned_exception_to_rls_bypass(tmp_path):
+    """The observability kit's deep health route calls createAdminClient() in a handler, read-only, with the marker
+    rls_lint.py honours (`// rls-lint: allow — <reason>`); the scan accepts the marked line and flags an unmarked one."""
+    repo = tmp_path / "repo"
+    (repo / "app/api/health/deep").mkdir(parents=True)
+    (repo / "app/api/admin").mkdir(parents=True)
+    (repo / "app/api/health/deep/route.ts").write_text(
+        'import { createAdminClient } from "@/lib/supabase/admin";\n'
+        'export async function GET() {\n'
+        '  const admin = createAdminClient(); // rls-lint: allow — health check only, read-only\n'
+        '  return Response.json({ ok: !(await admin.rpc("health_ping")).error });\n}\n', encoding="utf-8")
+    (repo / "app/api/admin/route.ts").write_text(
+        'import { createAdminClient } from "@/lib/supabase/admin";\n'
+        'export async function GET() {\n  const admin = createAdminClient();\n  return Response.json(await admin.from("users").select("*"));\n}\n', encoding="utf-8")
+    res, rows, _ = run(tmp_path, "--target", str(repo))
+    assert res.returncode == 0, res.stderr
+    bypass = {(r["file"], r["line"]) for r in rows if r["category"] == "rls-bypass"}
+    assert bypass == {("app/api/admin/route.ts", "3")}

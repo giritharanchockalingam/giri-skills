@@ -92,7 +92,7 @@ Missing facts do not stop the plan: use the stated defaults, mark thresholds and
 - `references/health-endpoints.md` — liveness vs readiness vs deep; response contract
 - `references/alerts-and-slos.md` — alert catalogue, SLO starter, error-budget policy, dashboard panels
 - `assets/logger.ts`, `assets/logger-context.ts`, `assets/health-route.ts`, `assets/health-deep-route.ts` (+ the `.js` twins `assets/logger.js`, `assets/logger-context.js`, `assets/health-route.js`, `assets/health-deep-route.js`, functionally identical), `assets/alert-rules.yaml`
-- `scripts/install.py` — detects the flavour, installs the matching assets without overwriting or creating `.ts`/`.js` siblings (`exists, kept` + gap table for health routes, `.proposed` twins otherwise), appends env vars for written files to `.env.example`
+- `scripts/install.py` — detects the flavour, installs the matching assets (project-bootstrap imports it to ship the kit inside a fresh app skeleton) without overwriting or creating `.ts`/`.js` siblings (`exists, kept` + gap table for health routes, `.proposed` twins otherwise), appends env vars for written files to `.env.example`
 - `scripts/check_siblings.py` — fails when any route or module exists in two source extensions (used by the eval checks)
 
 ## How to run (automation, when commands can run)
