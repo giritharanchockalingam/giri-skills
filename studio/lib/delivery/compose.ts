@@ -23,6 +23,7 @@ export interface ComposeInput { stacks: string[]; requestKind: string; mode?: Pi
 export const COMPOSE_VERSION = "0.1.0";
 const NOTE = "Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback (the gate refuses a plan with TBD cells)";
 /** The architecture gate on the refined tasks.csv (plan-refine): files and acceptance filled, no scaffold TBD cell left. */
+const PRD_CHECKS = ['sections:["Acceptance criteria"]', 'section_filled:"user stories"'];
 const PLAN_CHECKS = ["csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"];
 
 interface LibStep {
@@ -41,15 +42,21 @@ export const LIBRARY: Record<string, LibStep[]> = {
   requirements: [
     { id: "brief", kind: "compose", derive: "brief-from-request", inputs: { request: "$in.request", brief: "$in.brief" }, outputs: ["brief.json"], evidence: ["$steps.brief:brief.json"] },
     { id: "prd", kind: "skill", skill: "build/product-spec-prd", requires: ["brief"], inputs: { brief: "$steps.brief:brief.json", draft_only: "$run.draft_only" },
-      gate: { kind: "output", step: "prd", file: "prd-final.md", check: "sections:[\"Acceptance criteria\"]" }, evidence: ["$steps.prd:prd-final.md"] },
+      evidence: ["$steps.prd:prd-final.md"] },
+    // the product manager's step: the draft is taken as is when its stories carry acceptance criteria (a brief with
+    // stories/tasks); otherwise the run stops for the product manager (needs_builder, role product-manager)
+    { id: "prd-refine", kind: "agent", agent: "claude-code", produces: ["prd-final.md"], requires: ["prd"],
+      inputs: { prd: "$steps.prd:prd-final.md", request: "$in.request", brief: "$steps.brief:brief.json" },
+      gate: { kind: "all", of: PRD_CHECKS.map((check) => ({ kind: "output", step: "prd-refine", file: "prd-final.md", check })) },
+      evidence: ["$steps.prd-refine:prd-final.md"] },
   ],
   architecture: [
-    { id: "spec", kind: "compose", derive: "spec-from-prd", requires: ["brief"], optional: ["prd"],
-      inputs: { brief: "$steps.brief:brief.json", prd: "$steps.prd:prd-final.md", request: "$in.request" }, outputs: ["spec.md", "spec.json"] },
+    { id: "spec", kind: "compose", derive: "spec-from-prd", requires: ["brief"], optional: ["prd-refine"],
+      inputs: { brief: "$steps.brief:brief.json", prd: "$steps.prd-refine:prd-final.md", request: "$in.request" }, outputs: ["spec.md", "spec.json"] },
     { id: "plan", kind: "skill", skill: "build/spec-to-plan", requires: ["spec"], inputs: { spec: "$steps.spec:spec.md", section: "$steps.spec:spec.json#section", repo: "$repo" },
       evidence: ["$steps.plan:plan.md", "$steps.plan:tasks.csv"] },
-    { id: "plan-refine", kind: "agent", agent: "claude-code", produces: ["plan.md", "tasks.csv"], requires: ["plan"], optional: ["prd"],
-      inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", prd: "$steps.prd:prd-final.md", request: "$in.request", target: "$repo" },
+    { id: "plan-refine", kind: "agent", agent: "claude-code", produces: ["plan.md", "tasks.csv"], requires: ["plan"], optional: ["prd-refine"],
+      inputs: { plan: "$steps.plan:plan.md", tasks: "$steps.plan:tasks.csv", prd: "$steps.prd-refine:prd-final.md", request: "$in.request", target: "$repo" },
       plan_fallback: ["$steps.plan:plan.md"],
       gate: { kind: "all", of: PLAN_CHECKS.map((check) => ({ kind: "output", step: "plan-refine", file: "tasks.csv", check })) },
       evidence: ["$steps.plan-refine:plan.md", "$steps.plan-refine:tasks.csv"] },
@@ -71,7 +78,7 @@ export const LIBRARY: Record<string, LibStep[]> = {
       gate: { kind: "exit", step: "conventions" }, evidence: ["$steps.conventions:report.md"] },
   ],
   evaluate: [
-    { id: "review", kind: "skill", skill: "build/code-review-runner", requires: ["code"], optional: ["prd"], inputs: { diff: "$steps.code:diff.patch", spec: "$steps.prd:prd-final.md" },
+    { id: "review", kind: "skill", skill: "build/code-review-runner", requires: ["code"], optional: ["prd-refine"], inputs: { diff: "$steps.code:diff.patch", spec: "$steps.prd-refine:prd-final.md" },
       gate: { kind: "output", step: "review", file: "review.md", check: "contains:\"Verdict: **PASS**\"" }, evidence: ["$steps.review:review.md"] },
     { id: "security", kind: "skill", skill: "build/security-review", requires: ["code"], inputs: { diff: "$steps.code:diff.patch", draft_only: "$run.draft_only" },   // brownfield: the gate judges the change; greenfield adds target below
       gate: { kind: "exit", step: "security" }, evidence: ["$steps.security:security-review.md"] },
@@ -219,8 +226,8 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
       }
       const missing = (st.requires ?? []).filter((r) => !available(r) && !canCarry(r));
       let planRef: string | null = null;
-      if (st.kind === "agent") {
-        planRef = st.plan_fallback!.find((p) => available(stepOf(p)) || canCarry(stepOf(p))) ?? null;
+      if (st.kind === "agent" && st.plan_fallback) {   // prd-refine has no plan: its requires carry it
+        planRef = st.plan_fallback.find((p) => available(stepOf(p)) || canCarry(stepOf(p))) ?? null;
         if (!planRef) missing.push("plan");
       }
       if (missing.length) {
@@ -230,6 +237,7 @@ export function compose(input: ComposeInput, catalog: ComposeCatalog, kinds: Req
       }
       if (planRef && !available(stepOf(planRef))) carry(stepOf(planRef));
       add(st, st.kind === "skill" ? "fits the stack and the request kind; every input resolves"
+        : st.kind === "agent" && st.produces?.includes("prd-final.md") ? "the prd-refine step: the product manager fills the acceptance criteria; skipped when the brief's stories already carry them"
         : st.kind === "agent" && st.produces?.includes("tasks.csv") ? `the plan-refine step (scaffold: ${planRef}): the architect fills the scaffold — file table, acceptance, test, rollback, files; skipped when the scaffold is already complete`
         : st.kind === "agent" && st.produces ? `the files step (plan: ${planRef}): the files the change touches, derived from tasks.csv when every task names them`
         : st.kind === "agent" ? `the build step (plan: ${planRef})`

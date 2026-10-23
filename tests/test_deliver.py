@@ -22,11 +22,18 @@ REQUEST = "Export orders as CSV"
 STAGES = ["requirements", "architecture", "build", "evaluate", "deploy", "operate"]
 
 
+PRD_FIX = FIX / "delivery-build" / "prd-final.md"      # the PRD with its stories filled (prd.py draft of brief.json)
+
+
 def deliver(out: Path, *extra: str, pipeline: str = "feature-delivery", request: str = REQUEST, repo: Path = REPO,
-            brief: Path | None = BRIEF):
+            brief: Path | None = BRIEF, prd: Path | None | bool = None):
+    """A dry run. Without a brief the product manager's PRD is supplied (--prd) so the run reaches the architect;
+    prd=False leaves it out (the run then stops at prd-refine for the product manager)."""
     args = [pipeline, "--repo", str(repo), "--request", request, "--out", str(out), "--provider", "dry", "--dry"]
     if brief:
         args += ["--brief", str(brief)]
+    elif prd is not False and "--resume" not in extra:
+        args += ["--prd", str(prd or PRD_FIX)]
     return run_script(SCRIPT, *args, *extra)
 
 
@@ -115,9 +122,9 @@ def test_scaffold_with_tbd_cells_stops_at_plan_refine_for_the_architect(tmp_path
                                 "tasks.csv": str(out / "evidence" / "02-architecture" / "plan-refine" / "tasks.csv")}
     assert need["alternative"] == {"plan.md": str(out / "build" / "plan" / "plan.md"), "tasks.csv": str(out / "build" / "plan" / "tasks.csv")}
     assert need["plan"].endswith("02-architecture/plan/plan.md") and need["tasks"].endswith("02-architecture/plan/tasks.csv")
-    assert need["prd"].endswith("01-requirements/prd/prd-final.md") and need["request"] == REQUEST
-    assert need["why"].startswith("the scaffold plan is not a plan yet: T1: acceptance is [TO BE BASELINED")
-    assert "T1: files is [TO BE BASELINED" in need["why"] and "T1: test is [TO BE BASELINED" in need["why"]
+    assert need["prd"].endswith("01-requirements/prd-refine/prd-final.md") and need["request"] == REQUEST
+    assert need["why"].startswith("the scaffold plan is not a plan yet: T1: files is [TO BE BASELINED")   # acceptance now comes from the PRD stories
+    assert "T1: files is [TO BE BASELINED" in need["why"] and "T2: files is [TO BE BASELINED" in need["why"]   # 3 stories → 3 tasks
     assert "nothing invented beyond what the PRD and the request state" in need["rule"] and "--plan <dir>" in need["how"]
     assert "id,task,acceptance,test,rollback,files,size,repo_check" in need["format"]
     assert stage_status(out) == {"requirements": "passed", "architecture": "awaiting_builder"}
@@ -167,9 +174,10 @@ def test_gate_refuses_a_refined_tasks_csv_that_still_has_tbd_cells(tmp_path):
     assert "stopped at stage 'architecture' (failed): gate failed" in r.stdout
     gate = json.loads((out / "evidence" / "02-architecture" / "gate.json").read_text())
     assert gate["verdict"] == "fail"
-    assert "[fail] tasks.csv: csv_rows:acceptance!tbd — 1 of 1 rows still [TO BE BASELINED] in 'acceptance' (rows ['T1'])" in gate["detail"]
-    assert "[fail] tasks.csv: csv_rows:files!tbd — 1 of 1 rows still [TO BE BASELINED] in 'files' (rows ['T1'])" in gate["detail"]
-    assert "[fail] tasks.csv: csv_rows:test!tbd" in gate["detail"] and "[fail] not approved" in gate["detail"]
+    # acceptance and test come from the PRD stories now; the files column is what the architect still owes
+    assert "[pass] tasks.csv: csv_rows:acceptance!tbd" in gate["detail"] and "[pass] tasks.csv: csv_rows:test!tbd" in gate["detail"]
+    assert "[fail] tasks.csv: csv_rows:files!tbd — 3 of 3 rows still [TO BE BASELINED] in 'files' (rows ['T1', 'T2', 'T3'])" in gate["detail"]
+    assert "[fail] not approved" in gate["detail"]
     steps = {t["id"]: t for t in run_json(out)["stages"][-1]["steps"]}
     assert steps["plan-refine"]["status"] == "ok" and steps["plan-refine"]["gaps"] == 3
     assert steps["plan-approval"]["status"] == "failed" and steps["plan-approval"]["error"].startswith("not submitted for approval — the stage gate refuses the outputs")
@@ -1226,7 +1234,7 @@ def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_
     assert log("main") == ["skills-factory[bot]|bootstrap: harbourline"]
     assert log("deliver/r-gf-1")[1:] == log("main") and log("deliver/r-gf-1")[0].startswith("skills-factory[bot]|")
     files = subprocess.run(["git", "ls-tree", "-r", "--name-only", "deliver/r-gf-1"], cwd=bare, capture_output=True, text=True, check=True).stdout
-    assert "docs/SPEC.md" in files and "app/page.js" in files
+    assert "docs/SPEC.md" in files and "app/page.js" in files and "app/orders/page.js" in files and "package.json" in files
     pr = json.loads((out / "evidence" / "06-deploy" / "pr" / "pr.json").read_text())
     assert pr["branch"] == "deliver/r-gf-1" and pr["number"] == 7
     assert stage_status(out) == {s: "passed" for s in ["bootstrap"] + STAGES}
@@ -1235,3 +1243,31 @@ def test_greenfield_on_github_creates_the_repo_commits_the_scaffold_to_main_and_
                    "--brief", str(BRIEF), "--out", str(tmp_path / "run2"), "--provider", "dry", "--builder", "none", "--run-id", "r-gf-2")
     assert sum(1 for c in gh_log.read_text().splitlines() if c.startswith("repo create")) == 1
     assert "repo_created" not in run_json(tmp_path / "run2")
+
+
+def test_request_only_run_stops_for_the_product_manager_and_resumes_with_the_prd(tmp_path):
+    """First greenfield run: a request with no brief produced a template PRD that the requirements gate waved through.
+    Now the run stops at prd-refine (exit 4, role product-manager); the PRD dropped at the expected path resumes it."""
+    out = tmp_path / "pm"
+    r = deliver(out, "--builder", "none", "--approve-all", brief=None, prd=False)
+    assert r.returncode == 4 and "needs the product-manager (prd-refine)" in r.stdout, r.stdout + r.stderr
+    need = json.loads((out / "needs_builder.json").read_text())
+    assert need["role"] == "product-manager" and need["step"] == "prd-refine" and need["produce"] == ["prd-final.md"]
+    assert "no acceptance criteria" in need["why"] and need["prd"].endswith("01-requirements/prd/prd-final.md")
+    assert stage_status(out) == {"requirements": "awaiting_builder"}
+    shutil.copy(PRD_FIX, need["expected"]["prd-final.md"])
+    r = deliver(out, "--builder", "none", "--approve-all", "--resume", brief=None)
+    assert r.returncode == 4 and "needs the architect (plan-refine)" in r.stdout, r.stdout + r.stderr
+    steps = {s["id"]: s for s in run_json(out)["stages"][0]["steps"]}
+    assert steps["prd-refine"]["prd_source"] == "product-manager" and stage_status(out)["requirements"] == "passed"
+    # everything downstream reads the refined PRD
+    spec = (out / "evidence" / "02-architecture" / "spec" / "spec.md").read_text()
+    assert "GET /api/orders/export answers 200" in spec
+
+
+def test_a_brief_with_stories_fills_the_prd_and_the_product_manager_is_not_asked(happy):
+    out, _ = happy
+    steps = {s["id"]: s for s in run_json(out)["stages"][0]["steps"]}
+    assert steps["prd-refine"]["prd_source"] == "draft" and steps["prd-refine"]["skipped"] is True
+    prd = (out / "evidence" / "01-requirements" / "prd-refine" / "prd-final.md").read_text()
+    assert "### S1 — As Operations lead, I want: CSV export of the current order list" in prd and "[TO BE BASELINED" not in prd.split("## User stories")[1].split("## Experience")[0]

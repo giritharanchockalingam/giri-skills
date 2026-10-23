@@ -34,7 +34,7 @@
       "id": "agent-happy-path",
       "prompt": "Bootstrap a new multi-tenant Next.js + Supabase app called demo-app.",
       "expected": [
-        "Runs scripts/scaffold.py; SPEC, CLAUDE, HANDOFF, ADR and CI workflows exist"
+        "Runs scripts/scaffold.py; SPEC, CLAUDE, HANDOFF, ADR, CI workflows and the runnable nextjs-js skeleton (package.json, app/api/health/route.js, tests/unit/health.test.js) exist"
       ],
       "inputs": {
         "target": "{out}/proj",
@@ -48,7 +48,10 @@
         {
           "file": "proj/docs/SPEC.md",
           "check": "contains:\"multi-tenant\""
-        }
+        },
+        "exists:proj/package.json",
+        "exists:proj/app/api/health/route.js",
+        "exists:proj/tests/unit/health.test.js"
       ]
     },
     {
@@ -79,6 +82,28 @@
         "exit:0",
         "exists:proj/CLAUDE.md",
         "exists:proj/docs/HANDOFF.md"
+      ]
+    },
+    {
+      "id": "agent-stack-nextjs-ts",
+      "prompt": "Bootstrap demo-app as a TypeScript Next.js app.",
+      "expected": [
+        "Writes the nextjs-ts skeleton: tsconfig.json, app/page.tsx, app/api/health/route.ts, tests/unit/health.test.ts; the report records stack nextjs-ts"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "name": "demo-app",
+        "stack": "nextjs-ts"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/tsconfig.json",
+        "exists:proj/app/api/health/route.ts",
+        "exists:proj/tests/unit/health.test.ts",
+        {
+          "file": "bootstrap-report.json",
+          "check": "contains:\"nextjs-ts\""
+        }
       ]
     },
     {
@@ -255,7 +280,7 @@
       "prompt": "Our preview deploys on GitHub Actions now take 14 minutes. Tune the workflow caching and the Vercel preview step.",
       "routes_to": "ci-cd-vercel-github",
       "expected": [
-        "Routes to ci-cd-vercel-github for pipeline tuning",
+        "Plan table marks README.md, package.json and ci.yml as keep (not overwritten) and the missing skeleton files as create; because package.json exists, no application skeleton (app/, lib/, next.config.js) is written",
         "Explains that project-bootstrap only writes the initial workflow skeletons"
       ]
     },

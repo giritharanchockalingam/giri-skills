@@ -108,17 +108,42 @@
               "brief": "$steps.brief:brief.json",
               "draft_only": "$run.draft_only"
             }
+          },
+          {
+            "id": "prd-refine",
+            "kind": "agent",
+            "agent": "claude-code",
+            "inputs": {
+              "prd": "$steps.prd:prd-final.md",
+              "request": "$in.request",
+              "brief": "$steps.brief:brief.json"
+            },
+            "produces": [
+              "prd-final.md"
+            ]
           }
         ],
         "gate": {
-          "kind": "output",
-          "step": "prd",
-          "file": "prd-final.md",
-          "check": "sections:[\"Acceptance criteria\"]"
+          "kind": "all",
+          "of": [
+            {
+              "kind": "output",
+              "step": "prd-refine",
+              "file": "prd-final.md",
+              "check": "sections:[\"Acceptance criteria\"]"
+            },
+            {
+              "kind": "output",
+              "step": "prd-refine",
+              "file": "prd-final.md",
+              "check": "section_filled:\"user stories\""
+            }
+          ]
         },
         "evidence": [
           "$steps.brief:brief.json",
-          "$steps.prd:prd-final.md"
+          "$steps.prd:prd-final.md",
+          "$steps.prd-refine:prd-final.md"
         ]
       },
       {
@@ -132,7 +157,7 @@
             "derive": "spec-from-prd",
             "inputs": {
               "brief": "$steps.brief:brief.json",
-              "prd": "$steps.prd:prd-final.md",
+              "prd": "$steps.prd-refine:prd-final.md",
               "request": "$in.request"
             },
             "outputs": [
@@ -157,7 +182,7 @@
             "inputs": {
               "plan": "$steps.plan:plan.md",
               "tasks": "$steps.plan:tasks.csv",
-              "prd": "$steps.prd:prd-final.md",
+              "prd": "$steps.prd-refine:prd-final.md",
               "request": "$in.request",
               "target": "$repo"
             },
@@ -312,7 +337,7 @@
             "skill": "build/code-review-runner",
             "inputs": {
               "diff": "$steps.code:diff.patch",
-              "spec": "$steps.prd:prd-final.md"
+              "spec": "$steps.prd-refine:prd-final.md"
             }
           },
           {
@@ -491,6 +516,13 @@
       "skill": "build/product-spec-prd",
       "decision": "chosen",
       "why": "fits the stack and the request kind; every input resolves"
+    },
+    {
+      "stage": "requirements",
+      "role": "ai-product-manager",
+      "step": "prd-refine",
+      "decision": "chosen",
+      "why": "the prd-refine step: the product manager fills the acceptance criteria; skipped when the brief's stories already carry them"
     },
     {
       "stage": "requirements",

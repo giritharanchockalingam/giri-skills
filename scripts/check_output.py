@@ -12,6 +12,8 @@ Check spec syntax (a string):
                                blank in every row is an unfilled llm slot and is skipped (!empty, ~regex)
   yaml                       file is non-empty and parses with the repo's YAML subset
   sections:[A,B]               a Markdown heading contains each listed text (case-insensitive)
+  section_filled:"text"        the section under the heading containing text has a body with no `[TO BE BASELINED`
+                               marker, no `<placeholder>` and no template ellipsis line (nobody filled it)
   no_unowned_tbd               every `[TO BE BASELINED` marker names an owner (real mode);
                                dry mode only verifies the marker format `— owner:`
   numbers_trace_to:<file>      every number (ISO dates excluded) in the output with >= 3 significant digits, or
@@ -149,7 +151,7 @@ def run_command(argv: list[str], cwd=None, timeout: int = 900, inproc: bool | No
     return r.returncode, r.stdout, r.stderr
 
 VOCAB = {
-    "exists", "json", "csv", "csv_rows", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
+    "exists", "json", "csv", "csv_rows", "yaml", "sections", "section_filled", "no_unowned_tbd", "numbers_trace_to",
     "cites_source_ids", "mermaid_parses", "max_lines", "contains", "cmd", "exit", "needs_input",
 }
 RUN_LEVEL = {"exit", "needs_input"}
@@ -350,6 +352,27 @@ def run_check(spec, path=None, *, mode: str = "dry", exit_code=None, out_dir=Non
         want = arg if isinstance(arg, list) else ([arg] if arg else [])
         missing = [w for w in want if not any(w.lower() in h for h in heads)]
         return _result(spec, not missing, f"missing headings {missing}" if missing else f"found {want}")
+    if name == "section_filled":
+        want = str(arg or "").strip().strip('"').lower()
+        lines = text.splitlines()
+        start = next((i for i, ln in enumerate(lines) if ln.startswith("#") and want in ln.lstrip("#").strip().lower()), None)
+        if start is None:
+            return _result(spec, False, f"no heading containing {want!r}")
+        level = len(lines[start]) - len(lines[start].lstrip("#"))
+        body = []
+        for ln in lines[start + 1:]:
+            if ln.startswith("#") and (len(ln) - len(ln.lstrip("#"))) <= level:
+                break
+            body.append(ln)
+        joined = "\n".join(body)
+        if not joined.strip():
+            return _result(spec, False, f"section {want!r} is empty")
+        if TBD_RE.search(joined):
+            return _result(spec, False, f"section {want!r} carries a [TO BE BASELINED marker — nobody filled it")
+        ph = re.search(r"<[a-z][a-z /_-]{1,40}>|…|\.\.\.", joined)
+        if ph:
+            return _result(spec, False, f"section {want!r} still holds the template placeholder {ph.group(0)!r}")
+        return _result(spec, True, f"section {want!r}: {sum(1 for ln in body if ln.strip())} line(s), no placeholders")
     if name == "no_unowned_tbd":
         bad = []
         for m in TBD_RE.finditer(text):

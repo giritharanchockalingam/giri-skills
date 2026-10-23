@@ -55,13 +55,28 @@
       "id": "prd",
       "kind": "skill",
       "skill": "build/product-spec-prd"
+     },
+     {
+      "id": "prd-refine",
+      "kind": "agent"
      }
     ],
     "gate": {
-     "kind": "output",
-     "step": "prd",
-     "file": "prd-final.md",
-     "check": "sections:[\"Acceptance criteria\"]"
+     "kind": "all",
+     "of": [
+      {
+       "kind": "output",
+       "step": "prd-refine",
+       "file": "prd-final.md",
+       "check": "sections:[\"Acceptance criteria\"]"
+      },
+      {
+       "kind": "output",
+       "step": "prd-refine",
+       "file": "prd-final.md",
+       "check": "section_filled:\"user stories\""
+      }
+     ]
     }
    },
    {
@@ -322,13 +337,28 @@
       "id": "prd",
       "kind": "skill",
       "skill": "build/product-spec-prd"
+     },
+     {
+      "id": "prd-refine",
+      "kind": "agent"
      }
     ],
     "gate": {
-     "kind": "output",
-     "step": "prd",
-     "file": "prd-final.md",
-     "check": "sections:[\"Acceptance criteria\"]"
+     "kind": "all",
+     "of": [
+      {
+       "kind": "output",
+       "step": "prd-refine",
+       "file": "prd-final.md",
+       "check": "sections:[\"Acceptance criteria\"]"
+      },
+      {
+       "kind": "output",
+       "step": "prd-refine",
+       "file": "prd-final.md",
+       "check": "section_filled:\"user stories\""
+      }
+     ]
     }
    },
    {

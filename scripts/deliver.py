@@ -4,7 +4,7 @@
     python3 scripts/deliver.py feature-delivery --repo ./app --request "Export orders as CSV" \
         [--brief brief.json] [--ref main] [--input name=value ...] --out ./runs/r1 \
         --builder none|manual|claude-code [--provider dry|none|anthropic|openai] \
-        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID] \
+        [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--prd prd-final.md] [--dry] [--resume] [--run-id ID] \
         [--no-baseline] \
         [--run <portal run uuid> --portal https://<studio> [--approval-timeout 3600] [--poll-interval 30]]
 
@@ -125,6 +125,7 @@ STAGE_STATUS = {"passed": "succeeded", "failed": "blocked", "awaiting_approval":
 FILES_TXT = "files.txt"
 PLAN_MD, TASKS_CSV = "plan.md", "tasks.csv"
 PLAN_FILES = (PLAN_MD, TASKS_CSV)                   # what the plan-refine step produces (see step_plan_refine)
+PRD_MD = "prd-final.md"                              # what the prd-refine step produces (see step_prd_refine)
 PLAN_COLUMNS = ["id", "task", "acceptance", "test", "rollback", "files", "size", "repo_check"]   # spec-to-plan's tasks.csv
 PLAN_FILLED = ("acceptance", "test", "files")       # a scaffold is complete when none of these is TBD or empty in any task
 # skills whose `baseline` input is a findings.csv of recorded debt, and the stack-profile check each one is wired from
@@ -329,6 +330,28 @@ def _task_bullet(text: str, fields: dict) -> str:
     return f"- {text}" + (f" ({inline})" if inline else "")
 
 
+def prd_stories(md: str) -> list[dict]:
+    """The PRD's 'User stories and acceptance criteria' section as tasks: one per `### S<n> — … I want: <what>` (or
+    `### S<n> — <what>`) heading, acceptance from its `Then …` and test from `Verified by: …`. Template placeholders
+    (`<persona>`, `…`, TBD markers) yield nothing — those stories are not written yet."""
+    sec = re.search(r"^##\s+[^\n]*user stories[^\n]*\n(.*?)(?=^##\s|\Z)", md, re.I | re.M | re.S)
+    if not sec:
+        return []
+    out: list[dict] = []
+    for block in re.split(r"^###\s+", sec.group(1), flags=re.M)[1:]:
+        head, _, body = block.partition("\n")
+        head = re.sub(r"^S\d+\s*[—-]\s*", "", head.strip())
+        what = re.sub(r"^As [^,]+,\s*I want:?\s*", "", head, flags=re.I).strip().rstrip(".")
+        then = re.search(r"\bThen\s+(.+)", body)
+        accept = then.group(1).strip() if then else ""
+        test = re.search(r"Verified by:\s*(.+)", body)
+        text = what + " " + accept
+        if not what or re.search(r"<[a-z][a-z /_-]*>|…|TO BE BASELINED", text):
+            continue
+        out.append({"task": what, "accept": accept, "test": test.group(1).strip() if test else ""})
+    return out
+
+
 def derive_spec(inputs: dict, sdir: Path) -> None:
     brief = read_json(Path(inputs["brief"])) if inputs.get("brief") else {}
     request = str(inputs.get("request", ""))
@@ -347,6 +370,12 @@ def derive_spec(inputs: dict, sdir: Path) -> None:
                                                                      "files": files, "size": t.get("size", "")}))
             elif isinstance(t, str) and t.strip():
                 bullets.append(_task_bullet(t.strip(), {"files": files_all}))
+    if not bullets and inputs.get("prd") and Path(str(inputs["prd"])).is_file():
+        # the product manager's PRD: its user stories (S1..Sn with Then … / Verified by …) are the tasks
+        stories = prd_stories(Path(str(inputs["prd"])).read_text(encoding="utf-8", errors="replace"))
+        if stories:
+            source = "prd.stories"
+            bullets = [_task_bullet(st["task"], {"accept": st.get("accept", ""), "test": st.get("test", ""), "files": files_all}) for st in stories]
     if not bullets:
         phases = brief.get("phases") or []
         scope = (phases[0].get("scope") if phases and isinstance(phases[0], dict) else None) or []
@@ -877,6 +906,43 @@ class Run:
                     gaps.append(f"{r.get('id') or '?'}: {col} is {v}")
         return gaps
 
+    def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
+        """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
+        is when its user stories / acceptance criteria are filled (a brief with stories or tasks); otherwise the run
+        stops for the product manager — exit 4, needs_builder.json role 'product-manager' — who writes prd-final.md
+        at the expected path. Found by the first greenfield run: a request with no brief produced a template PRD
+        that the requirements gate waved through, and the architect planned against nothing."""
+        builder = self.args.builder
+        rec["builder"] = builder
+        draft = str(self.resolve(step["inputs"].get("prd"), "prd-refine prd"))
+        request = str(self.resolve(step["inputs"].get("request", ""), "prd-refine request") or self.inputs.get("request", ""))
+        expected = sdir / PRD_MD
+        dropped = self.out / "build" / "prd" / PRD_MD
+        if not expected.is_file() and dropped.is_file():
+            shutil.copy(dropped, expected)
+        if expected.is_file():
+            rec.update(exit=0, prd_source="product-manager")
+            write_json(sdir / "prd-refine.json", {"source": "product-manager", "skipped": False, "draft": draft})
+            return True
+        verdict = check_output.run_check('section_filled:"user stories"', draft, mode="real")
+        if verdict.get("pass"):
+            shutil.copy(draft, expected)
+            rec.update(exit=0, prd_source="draft", skipped=True)
+            write_json(sdir / "prd-refine.json", {"source": "draft", "skipped": True, "draft": draft, "note": verdict.get("evidence")})
+            return True
+        rec["status"] = "awaiting_builder"
+        write_json(self.out / "needs_builder.json", {
+            "run_id": self.run_id, "pipeline": self.spec["name"], "stage": rec["stage"], "step": step["id"],
+            "role": "product-manager", "builder": builder, "prd": draft, "request": request,
+            "why": "the PRD draft has no acceptance criteria: " + str(verdict.get("evidence")),
+            "produce": [PRD_MD], "expected": {PRD_MD: str(expected)}, "alternative": {PRD_MD: str(dropped)},
+            "format": "the draft with every [TO BE BASELINED] cell the request answers filled, and the 'User stories and "
+                      "acceptance criteria' section written as S1..Sn with Given/When/Then lines (nothing invented beyond the request)",
+            "rule": "fill the PRD from the request and what the requester can confirm; mark what you cannot know "
+                    "[TO BE BASELINED — owner: <role>] outside the stories; the gate refuses stories with TBD or template placeholders",
+            "how": f"write {PRD_MD} at the expected path, then re-run with --resume"})
+        return False
+
     def step_plan_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         builder = self.args.builder
         rec["builder"] = builder
@@ -1084,6 +1150,8 @@ class Run:
             return self.step_files(step, sdir, rec)
         if TASKS_CSV in produces:
             return self.step_plan_refine(step, sdir, rec)
+        if PRD_MD in produces:
+            return self.step_prd_refine(step, sdir, rec)
         builder = self.args.builder
         rec["builder"] = builder
         plan = str(self.resolve(step["inputs"].get("plan"), "agent plan"))
@@ -1427,7 +1495,8 @@ class Run:
                         rec["duration_s"] = round(time.time() - t0, 3)
                         srec["steps"].append(rec)
                         srec.update(status="awaiting_builder", duration_s=round(time.time() - t_stage, 3))
-                        who = "architect (the refined plan.md / tasks.csv)" if TASKS_CSV in (step.get("produces") or []) else "builder"
+                        who = ("architect (the refined plan.md / tasks.csv)" if TASKS_CSV in (step.get("produces") or [])
+                               else "product manager (prd-final.md with acceptance criteria)" if PRD_MD in (step.get("produces") or []) else "builder")
                         srec["gate"] = {"verdict": "pending", "kind": stage["gate"]["kind"], "detail": f"waiting for the {who} at step '{sid}'",
                                         "role": stage.get("role"), "approved_by": "", "at": now()}
                         write_json(stage_dir / "gate.json", srec["gate"])
@@ -1747,6 +1816,7 @@ def build_args(argv=None):
     ap.add_argument("--approve-all", action="store_true", help="satisfy every approval step (the invoker approves)")
     ap.add_argument("--approvals", help="JSON file recording approvals: {\"approvals\": [{\"step\": id, \"by\": name, \"note\": ...}]}")
     ap.add_argument("--patch", help="copy this diff to <out>/build/diff.patch before running (manual builder)")
+    ap.add_argument("--prd", help="copy this prd-final.md (the PRD with its user stories / acceptance criteria filled) to <out>/build/prd/ before running: the prd-refine step takes it instead of stopping for the product manager")
     ap.add_argument("--files", help="copy this files.txt (one repo-relative path per line) to <out>/build/files.txt before running: the files step takes it when tasks.csv does not name every task's files")
     ap.add_argument("--plan", metavar="DIR", help="copy DIR/plan.md and DIR/tasks.csv (the architect's refined plan) to <out>/build/plan/ before running: the plan-refine step takes them instead of asking")
     ap.add_argument("--dry", action="store_true", help="work on a copy of the repo under <out>/repo; the pr step opens nothing")
@@ -1837,13 +1907,13 @@ def main(argv=None) -> int:
     else:
         base = hashlib.sha256(f"{spec['name']}|{given.get('request', '')}|{repo_key}".encode()).hexdigest()[:10]
         run.run_id = args.run_id or (base if args.dry else f"{base}-{int(time.time())}")
-    for src, name in ((args.patch, "diff.patch"), (args.files, FILES_TXT)):
+    for src, name, sub in ((args.patch, "diff.patch", ""), (args.files, FILES_TXT, ""), (args.prd, PRD_MD, "prd")):
         if src:
             if not Path(src).is_file():
                 print(f"error: {name} not found: {src}", file=sys.stderr)
                 return EXIT_ARGS
-            (out / "build").mkdir(exist_ok=True)
-            shutil.copy(src, out / "build" / name)
+            (out / "build" / sub).mkdir(parents=True, exist_ok=True)
+            shutil.copy(src, out / "build" / sub / name)
     if args.plan:
         absent = [f for f in PLAN_FILES if not (Path(args.plan) / f).is_file()]
         if absent:

@@ -31,7 +31,8 @@ request ─► pipeline (template) ─► stages ─► role ─► skills ─�
 ## Pipeline file (`pipelines/<name>.json`)
 
 `pipelines/feature-delivery.json` as shipped (validated by `scripts/validate_pipelines.py`; `pipelines/greenfield-app.json`
-is the same with a `bootstrap` stage in front):
+is the same with a `bootstrap` stage in front and an optional `stack` input — `nextjs-js` (default) or `nextjs-ts` — passed to
+`project-bootstrap` as `"stack": "$in.stack"`):
 
 ```json
 {
@@ -219,6 +220,13 @@ The build stage runs, in order:
 | `code` | agent | `plan.md`, `test-plan.md`, `files.txt`, the checkout | `diff.patch`, `files-changed.json`, `agent-summary.md` | constrained to the files in `files.txt` plus test files (`tests/`, `__tests__/`, `e2e/`); anything else is flagged `outside_plan`. `--builder none` → exit 4 (`<out>/build/diff.patch` expected, or `--patch`); `manual` → that diff recorded and **applied to the checkout** with `git apply --index` (to the dry copy under `--dry`) so conventions, perf, ui and the pr step see the change — refused with exit 1, named in the gate detail, when it touches a file outside `files.txt` + test paths or does not apply cleanly; a diff the checkout already carries (the IDE agent wrote the code itself, or a resume) is detected with `git apply --check --reverse` and skipped; `applied.json` records the files and `git diff --stat`; `claude-code` → `claude -p`, `git diff` captured |
 | `conventions` | skill `nextjs-enterprise-conventions`, `gate: true` | the checkout, the baseline | `report.md` | — |
 
+The product manager's step comes first: `prd` (the draft from the brief) → `prd-refine` (agent step producing
+`prd-final.md`). A brief whose `stories`/`tasks` carry acceptance criteria fills the draft's user stories and the step
+is skipped; a request alone leaves the template, and the run stops for the product manager (exit 4, `needs_builder.json`
+role `product-manager`, `--prd <file>` or the expected path). The requirements gate is `sections:["Acceptance criteria"]`
+and `section_filled:"user stories"` on the refined PRD; `spec-from-prd` reads its stories as the tasks when the brief
+names none, so the architect's scaffold already carries acceptance and test per task.
+
 `--resume` picks up at the first incomplete step of the stage: after the architect drops the refined `plan.md` /
 `tasks.csv` in place the run continues with `plan-approval`; after the builder drops `files.txt` in place the run
 continues with `tests`, then stops again at `code` until the diff is there. A resume removes the `needs_*.json` it
@@ -227,7 +235,14 @@ gate **failed** runs every step again, so the gate judges fresh outputs. A `buil
 build stage passed supersedes that stage and every stage after it (`superseded` on the record, printed on the
 resume): the code step takes the earlier diff off the checkout with `git apply --reverse` and lands the new one, and
 the later stages re-run on it. `greenfield-app` runs the same architecture and build stages (`project-bootstrap` names its files in
-`bootstrap-report.json`; the refined `tasks.csv` is what `files.txt` derives from).
+`bootstrap-report.json`; the refined `tasks.csv` is what `files.txt` derives from). The bootstrap stage writes the docs/CI
+skeleton **and a minimal runnable Next.js app** when the directory has no `package.json` (`package.json` with next/react/vitest
+and `dev/build/start/lint/typecheck/test`, `next.config.js` with security headers, `jsconfig.json`|`tsconfig.json`, `app/layout`,
+`app/page`, `app/api/health/route` returning `{ok: true}`, `lib/app-info`, `tests/unit/health.test`, `.gitignore`), so the
+later stages have an application to work on: `test-strategy-tdd` scaffolds beside a real vitest config, the conventions
+linter has sources to read, and `ci.yml` has scripts to call. `bootstrap-report.json` records `stack` and
+`app_skeleton: written|kept`. No `npm install` runs in the pipeline: the first local install produces `package-lock.json`, and
+`ci.yml` runs `npm ci` once it is committed (until then it warns and runs `npm install`).
 
 ### Stack profile and baselines (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
 Read once, before stage 1, never guessed: `flavour` (ts|js), `framework` (nextjs|…), `package_manager`, `test_runner`
@@ -237,7 +252,8 @@ Read once, before stage 1, never guessed: `flavour` (ts|js), `framework` (nextjs
 was read from); a missing or empty directory profiles as unknowns. `flavour` is `ts | js | python | unknown`.
 Skills that write files must honour it; skills that lint read it for file selection.
 A greenfield pipeline sets `"stack_profile": {"after": "bootstrap"}`: the profile is read after that stage, because
-before it there is nothing to read.
+before it there is nothing to read; after it the skeleton profiles as `framework: nextjs`, `flavour: js|ts` (per `stack`),
+`test_runner: vitest`, `package_manager: npm`, `deploy_target: vercel`.
 
 **Brownfield baselines — the gate rule is "no NEW high findings from this change", never "the repository is clean".**
 A repository with 77 pre-existing conventions findings must not fail a one-file feature on debt it did not add. So,

@@ -4,108 +4,453 @@
   "title": "New application from a brief",
   "description": "Greenfield: bootstrap the enterprise skeleton (SPEC, CLAUDE.md, HANDOFF, ADR, CI, .env contract) in an empty directory, then the same requirements, architecture, build, evaluate, deploy and operate stages as feature-delivery. The stack profile is read after bootstrap, because before it there is nothing to read.",
   "mode": "greenfield",
-  "fits": { "stacks": ["nextjs"], "request_kinds": ["new-app"] },
+  "fits": {
+    "stacks": [
+      "nextjs"
+    ],
+    "request_kinds": [
+      "new-app"
+    ]
+  },
   "inputs": [
-    { "name": "repo",    "type": "repo",   "required": true,  "from": "directory to create the application in (created if absent)" },
-    { "name": "name",    "type": "string", "required": true,  "from": "project name" },
-    { "name": "request", "type": "text",   "required": true,  "from": "what the application must do, in the requester's words" },
-    { "name": "brief",   "type": "json",   "required": false, "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json); may carry `files` or `tasks`" }
-  ],
-  "stack_profile": { "from": "repo", "detect": "scripts/stack_profile.py", "after": "bootstrap" },
-  "stages": [
     {
-      "id": "bootstrap", "adlc_stage": "build", "role": "full-stack-engineer",
-      "steps": [
-        { "id": "scaffold", "kind": "skill", "skill": "build/project-bootstrap", "inputs": { "target": "$repo", "name": "$in.name" } }
-      ],
-      "gate": { "kind": "output", "step": "scaffold", "file": "bootstrap-report.json", "check": "json" },
-      "evidence": ["$steps.scaffold:bootstrap-report.json"]
+      "name": "repo",
+      "type": "repo",
+      "required": true,
+      "from": "directory to create the application in (created if absent)"
     },
     {
-      "id": "requirements", "adlc_stage": "requirements", "role": "ai-product-manager",
-      "steps": [
-        { "id": "brief", "kind": "compose", "derive": "brief-from-request",
-          "inputs": { "request": "$in.request", "brief": "$in.brief" }, "outputs": ["brief.json"] },
-        { "id": "prd", "kind": "skill", "skill": "build/product-spec-prd",
-          "inputs": { "brief": "$steps.brief:brief.json", "draft_only": "$run.draft_only" } }
-      ],
-      "gate": { "kind": "output", "step": "prd", "file": "prd-final.md", "check": "sections:[\"Acceptance criteria\"]" },
-      "evidence": ["$steps.brief:brief.json", "$steps.prd:prd-final.md"]
+      "name": "name",
+      "type": "string",
+      "required": true,
+      "from": "project name"
     },
     {
-      "id": "architecture", "adlc_stage": "architecture", "role": "ai-solution-architect",
-      "steps": [
-        { "id": "spec", "kind": "compose", "derive": "spec-from-prd",
-          "inputs": { "brief": "$steps.brief:brief.json", "prd": "$steps.prd:prd-final.md", "request": "$in.request" },
-          "outputs": ["spec.md", "spec.json"] },
-        { "id": "plan", "kind": "skill", "skill": "build/spec-to-plan",
-          "inputs": { "spec": "$steps.spec:spec.md", "section": "$steps.spec:spec.json#section", "repo": "$repo" } },
-        { "id": "plan-refine", "kind": "agent", "agent": "claude-code", "produces": ["plan.md", "tasks.csv"],
-          "inputs": { "plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd:prd-final.md", "request": "$in.request", "target": "$repo" } },
-        { "id": "plan-approval", "kind": "approval", "role": "ai-solution-architect", "note": "Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback (the gate refuses a plan with TBD cells)" }
-      ],
-      "gate": { "kind": "all", "of": [
-        { "kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": "csv_rows:files!empty" },
-        { "kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": "csv_rows:acceptance!empty" },
-        { "kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": "csv_rows:files!tbd" },
-        { "kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": "csv_rows:acceptance!tbd" },
-        { "kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": "csv_rows:test!tbd" },
-        { "kind": "approval", "step": "plan-approval" }
-      ] },
-      "evidence": ["$steps.plan:plan.md", "$steps.plan:tasks.csv", "$steps.plan-refine:plan.md", "$steps.plan-refine:tasks.csv"]
+      "name": "stack",
+      "type": "string",
+      "required": false,
+      "default": "nextjs-js",
+      "from": "application skeleton project-bootstrap writes when the directory has no package.json: nextjs-js (default) or nextjs-ts"
     },
     {
-      "id": "build", "adlc_stage": "build", "role": "full-stack-engineer",
-      "steps": [
-        { "id": "feature", "kind": "compose", "derive": "feature-from-plan",
-          "inputs": { "plan": "$steps.plan-refine:plan.md", "tasks": "$steps.plan-refine:tasks.csv", "brief": "$steps.brief:brief.json" },
-          "outputs": ["feature.md", "feature.json"] },
-        { "id": "files", "kind": "agent", "agent": "claude-code", "produces": ["files.txt"],
-          "inputs": { "plan": "$steps.plan-refine:plan.md", "tasks": "$steps.plan-refine:tasks.csv", "target": "$repo" } },
-        { "id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd",
-          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo", "flavour": "$profile.flavour" } },
-        { "id": "code", "kind": "agent", "agent": "claude-code",
-          "inputs": { "plan": "$steps.plan-refine:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo" },
-          "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"] },
-        { "id": "conventions", "kind": "skill", "skill": "build/nextjs-enterprise-conventions",
-          "inputs": { "target": "$repo", "baseline": "$profile.baselines.nextjs" }, "gate": true }
-      ],
-      "gate": { "kind": "exit", "step": "conventions" },
-      "evidence": ["$steps.files:files.txt", "$steps.tests:test-plan.md", "$steps.tests:scaffold-report.json", "$steps.code:diff.patch", "$steps.code:agent-summary.md", "$steps.conventions:report.md"]
+      "name": "request",
+      "type": "text",
+      "required": true,
+      "from": "what the application must do, in the requester's words"
     },
     {
-      "id": "evaluate", "adlc_stage": "evaluate", "role": "ai-quality-red-team",
-      "steps": [
-        { "id": "review",   "kind": "skill", "skill": "build/code-review-runner",  "inputs": { "diff": "$steps.code:diff.patch", "spec": "$steps.prd:prd-final.md" } },
-        { "id": "security", "kind": "skill", "skill": "build/security-review",     "inputs": { "diff": "$steps.code:diff.patch", "target": "$repo", "draft_only": "$run.draft_only" } },
-        { "id": "perf",     "kind": "skill", "skill": "build/perf-review-runner",  "inputs": { "target": "$repo", "baseline": "$profile.baselines.perf" } },
-        { "id": "ui",       "kind": "skill", "skill": "build/ui-component-quality", "inputs": { "target": "$repo", "baseline": "$profile.baselines.ui" } }
-      ],
-      "gate": { "kind": "all", "of": [
-        { "kind": "output", "step": "review", "file": "review.md", "check": "contains:\"Verdict: **PASS**\"" },
-        { "kind": "exit", "step": "security" },
-        { "kind": "exit", "step": "perf" },
-        { "kind": "exit", "step": "ui" }
-      ] },
-      "evidence": ["$steps.review:review.md", "$steps.security:security-review.md", "$steps.perf:report.md", "$steps.ui:report.md"]
-    },
-    {
-      "id": "deploy", "adlc_stage": "deploy", "role": "mlops-platform-engineer",
-      "steps": [
-        { "id": "ci", "kind": "skill", "skill": "build/ci-cd-vercel-github", "inputs": { "target": "$repo" } },
-        { "id": "pr", "kind": "pr", "title": "$in.request", "branch": "deliver/$run.id", "body": "$evidence" }
-      ],
-      "gate": { "kind": "external", "what": "CI green on the pull request" },
-      "evidence": ["$steps.ci:ci-report.md", "$steps.pr:pr.json"]
-    },
-    {
-      "id": "operate", "adlc_stage": "operate", "role": "ai-ops-sre",
-      "steps": [
-        { "id": "handoff", "kind": "skill", "skill": "build/handoff-and-thread-close", "inputs": { "target": "$repo", "state": "$run.state" } }
-      ],
-      "gate": { "kind": "output", "step": "handoff", "file": "HANDOFF.md", "check": "exists" },
-      "evidence": ["$steps.handoff:HANDOFF.md"]
+      "name": "brief",
+      "type": "json",
+      "required": false,
+      "from": "product brief for product-spec-prd (layout: skills/build/product-spec-prd/assets/brief-template.json); may carry `files` or `tasks`"
     }
   ],
-  "outputs": ["$steps.pr:pr.json", "$evidence"]
+  "stack_profile": {
+    "from": "repo",
+    "detect": "scripts/stack_profile.py",
+    "after": "bootstrap"
+  },
+  "stages": [
+    {
+      "id": "bootstrap",
+      "adlc_stage": "build",
+      "role": "full-stack-engineer",
+      "steps": [
+        {
+          "id": "scaffold",
+          "kind": "skill",
+          "skill": "build/project-bootstrap",
+          "inputs": {
+            "target": "$repo",
+            "name": "$in.name",
+            "stack": "$in.stack"
+          }
+        }
+      ],
+      "gate": {
+        "kind": "output",
+        "step": "scaffold",
+        "file": "bootstrap-report.json",
+        "check": "json"
+      },
+      "evidence": [
+        "$steps.scaffold:bootstrap-report.json"
+      ]
+    },
+    {
+      "id": "requirements",
+      "adlc_stage": "requirements",
+      "role": "ai-product-manager",
+      "steps": [
+        {
+          "id": "brief",
+          "kind": "compose",
+          "derive": "brief-from-request",
+          "inputs": {
+            "request": "$in.request",
+            "brief": "$in.brief"
+          },
+          "outputs": [
+            "brief.json"
+          ]
+        },
+        {
+          "id": "prd",
+          "kind": "skill",
+          "skill": "build/product-spec-prd",
+          "inputs": {
+            "brief": "$steps.brief:brief.json",
+            "draft_only": "$run.draft_only"
+          }
+        },
+        {
+          "id": "prd-refine",
+          "kind": "agent",
+          "agent": "claude-code",
+          "produces": [
+            "prd-final.md"
+          ],
+          "inputs": {
+            "prd": "$steps.prd:prd-final.md",
+            "request": "$in.request",
+            "brief": "$steps.brief:brief.json"
+          }
+        }
+      ],
+      "gate": {
+        "kind": "all",
+        "of": [
+          {
+            "kind": "output",
+            "step": "prd-refine",
+            "file": "prd-final.md",
+            "check": "sections:[\"Acceptance criteria\"]"
+          },
+          {
+            "kind": "output",
+            "step": "prd-refine",
+            "file": "prd-final.md",
+            "check": "section_filled:\"user stories\""
+          }
+        ]
+      },
+      "evidence": [
+        "$steps.brief:brief.json",
+        "$steps.prd:prd-final.md",
+        "$steps.prd-refine:prd-final.md"
+      ]
+    },
+    {
+      "id": "architecture",
+      "adlc_stage": "architecture",
+      "role": "ai-solution-architect",
+      "steps": [
+        {
+          "id": "spec",
+          "kind": "compose",
+          "derive": "spec-from-prd",
+          "inputs": {
+            "brief": "$steps.brief:brief.json",
+            "prd": "$steps.prd-refine:prd-final.md",
+            "request": "$in.request"
+          },
+          "outputs": [
+            "spec.md",
+            "spec.json"
+          ]
+        },
+        {
+          "id": "plan",
+          "kind": "skill",
+          "skill": "build/spec-to-plan",
+          "inputs": {
+            "spec": "$steps.spec:spec.md",
+            "section": "$steps.spec:spec.json#section",
+            "repo": "$repo"
+          }
+        },
+        {
+          "id": "plan-refine",
+          "kind": "agent",
+          "agent": "claude-code",
+          "produces": [
+            "plan.md",
+            "tasks.csv"
+          ],
+          "inputs": {
+            "plan": "$steps.plan:plan.md",
+            "tasks": "$steps.plan:tasks.csv",
+            "prd": "$steps.prd-refine:prd-final.md",
+            "request": "$in.request",
+            "target": "$repo"
+          }
+        },
+        {
+          "id": "plan-approval",
+          "kind": "approval",
+          "role": "ai-solution-architect",
+          "note": "Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback (the gate refuses a plan with TBD cells)"
+        }
+      ],
+      "gate": {
+        "kind": "all",
+        "of": [
+          {
+            "kind": "output",
+            "step": "plan-refine",
+            "file": "tasks.csv",
+            "check": "csv_rows:files!empty"
+          },
+          {
+            "kind": "output",
+            "step": "plan-refine",
+            "file": "tasks.csv",
+            "check": "csv_rows:acceptance!empty"
+          },
+          {
+            "kind": "output",
+            "step": "plan-refine",
+            "file": "tasks.csv",
+            "check": "csv_rows:files!tbd"
+          },
+          {
+            "kind": "output",
+            "step": "plan-refine",
+            "file": "tasks.csv",
+            "check": "csv_rows:acceptance!tbd"
+          },
+          {
+            "kind": "output",
+            "step": "plan-refine",
+            "file": "tasks.csv",
+            "check": "csv_rows:test!tbd"
+          },
+          {
+            "kind": "approval",
+            "step": "plan-approval"
+          }
+        ]
+      },
+      "evidence": [
+        "$steps.plan:plan.md",
+        "$steps.plan:tasks.csv",
+        "$steps.plan-refine:plan.md",
+        "$steps.plan-refine:tasks.csv"
+      ]
+    },
+    {
+      "id": "build",
+      "adlc_stage": "build",
+      "role": "full-stack-engineer",
+      "steps": [
+        {
+          "id": "feature",
+          "kind": "compose",
+          "derive": "feature-from-plan",
+          "inputs": {
+            "plan": "$steps.plan-refine:plan.md",
+            "tasks": "$steps.plan-refine:tasks.csv",
+            "brief": "$steps.brief:brief.json"
+          },
+          "outputs": [
+            "feature.md",
+            "feature.json"
+          ]
+        },
+        {
+          "id": "files",
+          "kind": "agent",
+          "agent": "claude-code",
+          "produces": [
+            "files.txt"
+          ],
+          "inputs": {
+            "plan": "$steps.plan-refine:plan.md",
+            "tasks": "$steps.plan-refine:tasks.csv",
+            "target": "$repo"
+          }
+        },
+        {
+          "id": "tests",
+          "kind": "skill",
+          "skill": "build/test-strategy-tdd",
+          "inputs": {
+            "feature": "$steps.feature:feature.md",
+            "files": "$steps.files:files.txt#csv",
+            "target": "$repo",
+            "flavour": "$profile.flavour"
+          }
+        },
+        {
+          "id": "code",
+          "kind": "agent",
+          "agent": "claude-code",
+          "inputs": {
+            "plan": "$steps.plan-refine:plan.md",
+            "tests": "$steps.tests:test-plan.md",
+            "files": "$steps.files:files.txt",
+            "target": "$repo"
+          },
+          "constraints": [
+            "skills/build/nextjs-enterprise-conventions/SKILL.md",
+            "shared/stack-conventions.md"
+          ]
+        },
+        {
+          "id": "conventions",
+          "kind": "skill",
+          "skill": "build/nextjs-enterprise-conventions",
+          "inputs": {
+            "target": "$repo",
+            "baseline": "$profile.baselines.nextjs"
+          },
+          "gate": true
+        }
+      ],
+      "gate": {
+        "kind": "exit",
+        "step": "conventions"
+      },
+      "evidence": [
+        "$steps.files:files.txt",
+        "$steps.tests:test-plan.md",
+        "$steps.tests:scaffold-report.json",
+        "$steps.code:diff.patch",
+        "$steps.code:agent-summary.md",
+        "$steps.conventions:report.md"
+      ]
+    },
+    {
+      "id": "evaluate",
+      "adlc_stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "steps": [
+        {
+          "id": "review",
+          "kind": "skill",
+          "skill": "build/code-review-runner",
+          "inputs": {
+            "diff": "$steps.code:diff.patch",
+            "spec": "$steps.prd-refine:prd-final.md"
+          }
+        },
+        {
+          "id": "security",
+          "kind": "skill",
+          "skill": "build/security-review",
+          "inputs": {
+            "diff": "$steps.code:diff.patch",
+            "target": "$repo",
+            "draft_only": "$run.draft_only"
+          }
+        },
+        {
+          "id": "perf",
+          "kind": "skill",
+          "skill": "build/perf-review-runner",
+          "inputs": {
+            "target": "$repo",
+            "baseline": "$profile.baselines.perf"
+          }
+        },
+        {
+          "id": "ui",
+          "kind": "skill",
+          "skill": "build/ui-component-quality",
+          "inputs": {
+            "target": "$repo",
+            "baseline": "$profile.baselines.ui"
+          }
+        }
+      ],
+      "gate": {
+        "kind": "all",
+        "of": [
+          {
+            "kind": "output",
+            "step": "review",
+            "file": "review.md",
+            "check": "contains:\"Verdict: **PASS**\""
+          },
+          {
+            "kind": "exit",
+            "step": "security"
+          },
+          {
+            "kind": "exit",
+            "step": "perf"
+          },
+          {
+            "kind": "exit",
+            "step": "ui"
+          }
+        ]
+      },
+      "evidence": [
+        "$steps.review:review.md",
+        "$steps.security:security-review.md",
+        "$steps.perf:report.md",
+        "$steps.ui:report.md"
+      ]
+    },
+    {
+      "id": "deploy",
+      "adlc_stage": "deploy",
+      "role": "mlops-platform-engineer",
+      "steps": [
+        {
+          "id": "ci",
+          "kind": "skill",
+          "skill": "build/ci-cd-vercel-github",
+          "inputs": {
+            "target": "$repo"
+          }
+        },
+        {
+          "id": "pr",
+          "kind": "pr",
+          "title": "$in.request",
+          "branch": "deliver/$run.id",
+          "body": "$evidence"
+        }
+      ],
+      "gate": {
+        "kind": "external",
+        "what": "CI green on the pull request"
+      },
+      "evidence": [
+        "$steps.ci:ci-report.md",
+        "$steps.pr:pr.json"
+      ]
+    },
+    {
+      "id": "operate",
+      "adlc_stage": "operate",
+      "role": "ai-ops-sre",
+      "steps": [
+        {
+          "id": "handoff",
+          "kind": "skill",
+          "skill": "build/handoff-and-thread-close",
+          "inputs": {
+            "target": "$repo",
+            "state": "$run.state"
+          }
+        }
+      ],
+      "gate": {
+        "kind": "output",
+        "step": "handoff",
+        "file": "HANDOFF.md",
+        "check": "exists"
+      },
+      "evidence": [
+        "$steps.handoff:HANDOFF.md"
+      ]
+    }
+  ],
+  "outputs": [
+    "$steps.pr:pr.json",
+    "$evidence"
+  ]
 }
