@@ -63,8 +63,11 @@ SECRET_PATTERNS = [
         r"(?i)\b\w*(?:password|passwd|pwd|secret|api[_-]?key|access[_-]?key|token)"
         r"\w*\s*[:=]\s*[\"']([^\"'\s]{8,})[\"']")),
 ]
+# Values that are plainly not credentials: templates, env lookups, and the words tests and docs use for a stand-in
+# ("placeholder", "[redacted]", "test-token", "fake", "sample", "secret" by itself, a single character).
 PLACEHOLDER = re.compile(r"(?i)^(?:<[^>]+>|\$\{[^}]+\}|x{4,}|\*{4,}|your[_-]|example|placeholder|changeme$|dummy|"
-                         r"process\.env|os\.environ|getenv)")
+                         r"process\.env|os\.environ|getenv|\[?redacted\]?$|\[[a-z _-]+\]$|(?:test|fake|sample|mock|stub)[_-]?|"
+                         r"(?:secret|token|key|password|pass)$|.{0,2}$)")
 STRING_LIT = re.compile(r"[\"']([A-Za-z0-9+/=_\-]{16,})[\"']")
 EVAL = re.compile(r"(?<![.\w])(?:eval|exec)\s*\(|\bnew\s+Function\s*\(")
 TLS = re.compile(r"verify\s*=\s*False|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=?\s*[\"']?0|"

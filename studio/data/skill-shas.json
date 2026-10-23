@@ -43,7 +43,7 @@
  "ai-platform/red-team-suite": "8f8c69e9b7a77fd45d9cbd99385855faa8a236134faabccef809326b29d83f0d",
  "ai-platform/slm-demo-builder": "c1cd83bb8201b6b253c7a2b4c81300ee80e67ddfff824d9a0576a5be7b031269",
  "build/ci-cd-vercel-github": "05383232a8a0da68d508c585f9a21610ef3055c9af3d23dd1567423df372941b",
- "build/code-review-runner": "136044eaaefd5ed3a86e86f54703caff015e44459a12d56ee60a148ad4334c87",
+ "build/code-review-runner": "79115d0e24bfa04eae3e5752eb28bff7cbdc1999ca59eb2e51ac3faa067147f7",
  "build/domain-modeling-runner": "3948ec43196992572a50c09edf65fb637278338ed477c3cdfe93018686305f86",
  "build/handoff-and-thread-close": "8cd08160d13cf4d79f6625971b4f7962ed3f2df7432fa35a2aa994ed3fb192a3",
  "build/multi-tenant-saas-patterns": "1c5ec378ea48fb4e331633679beba56ced3df564df0ac5b6bcd6f893f9f236bf",
