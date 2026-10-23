@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -44,6 +45,19 @@ def run_json(out: Path) -> dict:
 
 def stage_status(out: Path) -> dict:
     return {s["id"]: s["status"] for s in run_json(out)["stages"]}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def runs_dir(tmp_path_factory):
+    """Every run in this module registers under a scratch runs dir (SF_RUNS_DIR), never under the repo's runs/."""
+    d = tmp_path_factory.mktemp("runs")
+    before = os.environ.get("SF_RUNS_DIR")
+    os.environ["SF_RUNS_DIR"] = str(d)
+    yield d
+    if before is None:
+        os.environ.pop("SF_RUNS_DIR", None)
+    else:
+        os.environ["SF_RUNS_DIR"] = before
 
 
 @pytest.fixture(scope="module")
@@ -1819,3 +1833,180 @@ print(json.dumps([deliver.install_cmd(profile, target), deliver.test_cmd(profile
     assert ask({"package_manager": "pip", "test_runner": "pytest", "flavour": "python"}, {"requirements.txt": "pytest\\n"}) == ["python3 -m pip install -r requirements.txt", "python3 -m pytest -q"]
     assert ask({"package_manager": "uv", "test_runner": "pytest", "flavour": "python"}, {"pyproject.toml": ""}) == ["uv sync", "uv run pytest -q"]
     assert ask({"package_manager": "unknown", "test_runner": "none", "flavour": "unknown"}, {"README.md": "x"}) == [None, None]
+
+
+# ---------------------------------------------------------------- local mode (no portal): list / status / approve / reject / audit
+
+def local(*args: str) -> subprocess.CompletedProcess:
+    return run_script(SCRIPT, *args)
+
+
+def registry_lines(runs_dir: Path) -> list[dict]:
+    p = runs_dir / "registry.jsonl"
+    return [json.loads(ln) for ln in p.read_text().splitlines() if ln.strip()] if p.is_file() else []
+
+
+def test_list_status_approve_resume_round_trip_without_a_portal(tmp_path, runs_dir):
+    """A dry run stops at the plan approval (exit 3); `list` shows it, `status` names the stop and the resume command,
+    `approve` writes <out>/approvals.json and the resume continues to the next stop — nothing on the network."""
+    out = tmp_path / "local"
+    assert deliver(out, "--builder", "none").returncode == 3
+    run_id = run_json(out)["run_id"]
+    r = local("list", "--json")
+    assert r.returncode == 0, r.stderr
+    runs = [x for x in json.loads(r.stdout)["runs"] if x["out"] == str(out)]     # every run of this module registers here (dry ids repeat)
+    assert len(runs) == 1 and runs[0]["run_id"] == run_id                        # --out elsewhere: found through registry.jsonl
+    assert runs[0] == {**runs[0], "pipeline": "feature-delivery", "repo": str(REPO), "status": "awaiting_approval", "stage": "architecture", "out": str(out), "dry": True}
+    r = local("list")
+    assert r.returncode == 0 and run_id in r.stdout and "awaiting_approval" in r.stdout and "architecture" in r.stdout
+    assert run_id in local("list", "--runs", str(runs_dir)).stdout
+    r = local("status", str(out), "--json")
+    assert r.returncode == 0, r.stderr
+    st = json.loads(r.stdout)
+    assert st["run_id"] == run_id and st["status"] == "awaiting_approval" and st["stage"] == "architecture"
+    assert [(s["id"], s["status"]) for s in st["stages"]] == [("requirements", "passed"), ("architecture", "awaiting_approval")]
+    assert st["stop"]["kind"] == "needs_approval" and st["stop"]["step"] == "plan-approval" and st["stop"]["role"] == "ai-solution-architect"
+    assert "evidence/02-architecture/plan-refine/tasks.csv" in st["stop"]["review"]
+    assert st["resume_command"].endswith("--resume") and f"--out {out}" in st["resume_command"] and "--resume --resume" not in st["resume_command"]
+    assert st["cwd"] and st["argv"][0] == "feature-delivery" and "--resume" not in st["argv"]
+    assert json.loads(local("status", run_id, "--json").stdout)["run_id"] == run_id          # a run id resolves through the registry
+    text = local("status", str(out)).stdout
+    assert "Stop: needs approval — step 'plan-approval'" in text and "approve " in text and "--resume" in text
+    assert not text.lstrip().startswith("|") and "Stage         Role" in text                  # a plain table, no markdown
+    r = local("approve", str(out), "--step", "plan-approval", "--by", "giri", "--note", "plan ok")
+    assert r.returncode == 0, r.stderr
+    assert "approved step 'plan-approval' by giri" in r.stdout and "--resume" in r.stdout
+    ap = json.loads((out / "approvals.json").read_text())["approvals"]
+    assert ap == [{**ap[0], "step": "plan-approval", "by": "giri", "note": "plan ok", "source": "file"}] and ap[0]["at"]
+    r = deliver(out, "--builder", "none", "--resume")                                          # no --approvals: <out>/approvals.json is read
+    assert r.returncode == 4, r.stdout + r.stderr
+    assert stage_status(out) == {"requirements": "passed", "architecture": "passed", "build": "awaiting_builder"}
+    aj = json.loads((out / "evidence" / "02-architecture" / "plan-approval" / "approval.json").read_text())
+    assert aj["by"] == "giri" and aj["note"] == "plan ok" and aj["source"] == "file"
+    st = json.loads(local("status", str(out), "--json").stdout)
+    assert st["stop"]["kind"] == "needs_builder" and st["stop"]["step"] == "code" and st["stop"]["prompt"].endswith("03-build/code/PROMPT.md")
+    assert st["approvals"][0]["by"] == "giri"
+    assert "Stop: needs the builder — step 'code'" in local("status", str(out)).stdout
+    lines = [e for e in registry_lines(runs_dir) if e["out"] == str(out)]          # dry run ids repeat across this module: filter by out
+    assert all(e["run_id"] == run_id for e in lines)
+    assert [e["status"] for e in lines] == ["running", "passed", "awaiting_approval", "approved", "running", "passed", "awaiting_builder"]
+    assert all(e["pipeline"] == "feature-delivery" and e["repo"] == str(REPO) and e["out"] == str(out) and e["at"] for e in lines)
+    assert [e["stage"] for e in lines][:3] == ["", "requirements", "architecture"] and lines[3]["by"] == "giri" and lines[3]["step"] == "plan-approval"
+    assert lines[-1]["stage"] == "build"
+    assert not (REPO_ROOT / "runs" / "registry.jsonl").exists() or str(out) not in (REPO_ROOT / "runs" / "registry.jsonl").read_text()
+
+
+def test_reject_stops_a_resume_with_exit_3_until_the_step_is_approved_again(tmp_path, runs_dir):
+    out = tmp_path / "rej"
+    assert deliver(out, "--builder", "none").returncode == 3
+    r = local("reject", str(out), "--step", "plan-approval", "--by", "giri", "--note", "T2 names no rollback")
+    assert r.returncode == 0, r.stderr
+    assert "rejected step 'plan-approval' by giri: T2 names no rollback" in r.stdout
+    rj = json.loads((out / "rejections.json").read_text())["rejections"]
+    assert rj == [{**rj[0], "step": "plan-approval", "stage": "architecture", "by": "giri", "note": "T2 names no rollback", "source": "file"}]
+    assert run_json(out)["status"] == "rejected" and run_json(out)["rejection"]["note"] == "T2 names no rollback"
+    assert run_json(out)["base_sha"] is not None and "files" in run_json(out)                  # the record is kept, only the status changed
+    st = json.loads(local("status", str(out), "--json").stdout)
+    assert st["status"] == "rejected" and st["stop"]["kind"] == "rejected" and st["stop"]["rejection"]["by"] == "giri"
+    r = deliver(out, "--builder", "none", "--resume")
+    assert r.returncode == 3, r.stdout + r.stderr
+    assert "rejected at step 'plan-approval' by giri: T2 names no rollback" in r.stderr
+    need = json.loads((out / "needs_approval.json").read_text())
+    assert need["step"] == "plan-approval" and need["rejected"]["note"] == "T2 names no rollback" and "approve" in need["how"]
+    assert stage_status(out) == {"requirements": "passed", "architecture": "awaiting_approval"}   # nothing ran
+    assert [e["status"] for e in registry_lines(runs_dir) if e["out"] == str(out)][-2:] == ["rejected", "rejected"]
+    # an --approvals file written by hand (no timestamp) counts as a new approval; so does `approve` after the rejection
+    assert local("approve", str(out), "--step", "plan-approval", "--by", "giri", "--note", "rollback added").returncode == 0
+    r = deliver(out, "--builder", "none", "--resume")
+    assert r.returncode == 4, r.stdout + r.stderr
+    assert stage_status(out)["architecture"] == "passed"
+    prov = json.loads((out / "evidence" / "provenance.json").read_text())
+    assert [x["note"] for x in prov["rejections"]] == ["T2 names no rollback"] and prov["approvals"][0]["note"] == "rollback added"
+    # a rejection recorded after that approval stands again
+    assert local("reject", str(out), "--step", "plan-approval", "--by", "lead", "--note", "no").returncode == 0
+    assert deliver(out, "--builder", "none", "--resume").returncode == 3
+    assert deliver(out, "--builder", "none", "--resume", "--approve-all").returncode == 4         # --approve-all answers it
+
+
+def test_provenance_json_records_every_skill_with_version_and_sha_and_the_approvals(happy):
+    out, _ = happy
+    prov = json.loads((out / "evidence" / "provenance.json").read_text())
+    rj = run_json(out)
+    assert prov["run_id"] == rj["run_id"] and prov["status"] == "passed"
+    assert prov["pipeline"]["name"] == "feature-delivery" and prov["pipeline"]["version"] == "0.1.0"
+    assert prov["pipeline"]["sha256"] == hashlib.sha256((REPO_ROOT / "pipelines" / "feature-delivery.json").read_bytes()).hexdigest()
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(REPO_ROOT), capture_output=True, text=True)
+    assert prov["executor"] == {"repo": "giri-skills", "git_sha": head.stdout.strip() if head.returncode == 0 else "", "script": "scripts/deliver.py", "dry": True}
+    assert prov["builder"] == {"builder": "manual", "provider": "dry", "model": None, "base_url_host": None}
+    ran = [(s["id"], st["id"], st["skill"]) for s in rj["stages"] for st in s["steps"] if st.get("kind") == "skill"]
+    assert ran and {(x["stage"], x["step"], x["skill"]) for x in prov["skills"]} >= set(ran)
+    by_skill = {x["skill"]: x for x in prov["skills"]}
+    assert {"00-baseline", "requirements", "architecture", "build", "evaluate", "deploy", "operate"} <= {x["stage"] for x in prov["skills"]}
+    for x in prov["skills"]:
+        assert len(x["sha256"]) == 64 and x["version"] and x["name"] and x["files"] > 0 and x["path"] == f"skills/{x['skill']}", x
+    md = (REPO_ROOT / "skills" / "build" / "spec-to-plan" / "SKILL.md").read_text()
+    assert f"version: {by_skill['build/spec-to-plan']['version']}" in md and by_skill["build/spec-to-plan"]["name"] == "spec-to-plan"
+    assert prov["approvals"] == [{"stage": "architecture", "step": "plan-approval", "by": "--approve-all", "note": "approved on the command line",
+                                  "at": prov["approvals"][0]["at"], "source": "cli"}] and prov["approvals"][0]["at"]
+    assert prov["rejections"] == []
+    assert [(g["stage"], g["verdict"]) for g in prov["gates"]] == [(s, "pass") for s in STAGES[:4]] + [("deploy", "recorded"), ("operate", "pass")]
+    assert all(g["at"] and g["kind"] for g in prov["gates"])
+    assert "evidence/provenance.json" in rj["files"]
+    md = (out / "evidence" / "EVIDENCE.md").read_text()
+    assert "## Provenance" in md and f"sha256 `{prov['pipeline']['sha256']}`" in md and "architecture/plan-approval: --approve-all (cli)" in md
+    assert f"`build/spec-to-plan` · {by_skill['build/spec-to-plan']['version']} · `{by_skill['build/spec-to-plan']['sha256']}`" in md
+    assert "[provenance.json](provenance.json)" in md and prov["approvals"][0]["at"] not in md     # no timestamps: the bundle stays reproducible
+
+
+def test_skill_fingerprint_is_deterministic_and_changes_with_the_skill_directory(tmp_path):
+    driver = tmp_path / "fp.py"
+    driver.write_text(f"""import sys; sys.path.insert(0, {str(REPO_ROOT / 'scripts')!r})
+import json, deliver
+print(json.dumps([deliver.skill_fingerprint(a) for a in sys.argv[1:]]))
+""")
+    def fp(*skills):
+        r = subprocess.run([sys.executable, str(driver), *skills], capture_output=True, text=True, check=True)
+        return json.loads(r.stdout)
+    a, b = fp("build/spec-to-plan")[0], fp("build/spec-to-plan")[0]
+    assert a == b and a["version"] and len(a["sha256"]) == 64
+    assert fp("build/spec-to-plan", "build/security-review")[0]["sha256"] != fp("build/security-review")[0]["sha256"]
+    missing = fp("build/no-such-skill")[0]
+    assert missing["sha256"] == "" and missing["error"] == "skill directory not found"
+    # the hash is over sorted relative paths + bytes: recomputed by hand from the skill directory, ignoring runs/ and __pycache__
+    sdir = REPO_ROOT / "skills" / "build" / "spec-to-plan"
+    h = hashlib.sha256()
+    files = [p for p in sdir.rglob("*") if p.is_file() and not ({"__pycache__", "runs", ".DS_Store"} & set(p.relative_to(sdir).parts)) and p.suffix != ".pyc"]
+    for p in sorted(files, key=lambda x: x.relative_to(sdir).as_posix()):
+        h.update(p.relative_to(sdir).as_posix().encode() + b"\0" + p.read_bytes() + b"\0")
+    assert a["sha256"] == h.hexdigest() and a["files"] == len(files)
+
+
+def test_audit_prints_the_provenance_as_markdown_with_the_approver_or_as_json(tmp_path, runs_dir):
+    out = tmp_path / "audit"
+    assert deliver(out, "--builder", "none").returncode == 3
+    assert local("approve", str(out), "--step", "plan-approval", "--by", "giri@example.com", "--note", "plan ok").returncode == 0
+    assert deliver(out, "--builder", "none", "--resume").returncode == 4
+    r = local("audit", str(out), "--md")
+    assert r.returncode == 0, r.stderr
+    md = r.stdout
+    assert md.startswith(f"# Audit — run {run_json(out)['run_id']}") and "DRY RUN" in md
+    assert "| architecture | plan-approval | giri@example.com | plan ok | " in md and "| file |" in md
+    assert "| architecture | plan | `build/spec-to-plan` |" in md and "| 00-baseline | nextjs | `build/nextjs-enterprise-conventions` |" in md
+    assert "## Gates" in md and "| architecture | all | pass | giri@example.com |" in md and "| build | exit | pending |" in md
+    assert local("audit", str(out)).stdout == md                                               # markdown is the default
+    j = json.loads(local("audit", str(out), "--json").stdout)
+    assert j == json.loads((out / "evidence" / "provenance.json").read_text()) and j["approvals"][0]["by"] == "giri@example.com"
+    r = local("audit", str(tmp_path / "nowhere"))
+    assert r.returncode != 0 and "no run found" in r.stderr
+
+
+def test_local_commands_do_not_break_the_run_form_and_name_their_errors(tmp_path):
+    r = local("status", str(tmp_path / "missing"))
+    assert r.returncode != 0 and "no run found" in r.stderr
+    r = local("approve", str(tmp_path), "--by", "x")
+    assert r.returncode == 2 and "--step" in r.stderr
+    r = local("reject", str(tmp_path), "--step", "s", "--by", "x")
+    assert r.returncode == 2 and "--note" in r.stderr
+    assert local("list", "--runs", str(tmp_path / "empty")).stdout.startswith("no delivery runs under")
+    r = run_script(SCRIPT)                                                                     # the run form is still the default
+    assert r.returncode == 2 and "a pipeline is required" in r.stderr

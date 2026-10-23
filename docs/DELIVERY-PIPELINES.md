@@ -311,6 +311,7 @@ evidence; an approval step is satisfied only by a member assigned to the stage's
 |---|---|---|
 | Portal → Deliver | GitHub Actions `.github/workflows/delivery.yml` in giri-skills, dispatched (`workflow_dispatch`) with `run_id, pipeline, mode, repo, ref, request, callback` | approval in the portal (the executor polls for it); merge on the PR |
 | IDE (Claude Code, Cursor) → MCP `deliver` | the same `scripts/deliver.py` on the developer's machine with `--run <id> --portal <url>` (the portal prints the command); evidence posted to the portal. **The architect fills the plan**: with `--builder none` the run stops at `plan-refine` (exit 4) and the IDE agent or the developer writes the refined `plan.md` / `tasks.csv` at the paths `needs_builder.json` names (or passes `--plan <dir>`), then `--resume` | approval in the portal or the terminal; merge on the PR |
+| **Local (no portal)** → `scripts/deliver.py` subcommands, or the local MCP server `scripts/mcp_local.py` | the same executor on the developer's machine or CI; runs registered in `<runs dir>/registry.jsonl`, approvals in `<out>/approvals.json`, provenance in `<out>/evidence/provenance.json` — see "Local mode (no portal)" | `deliver.py approve` / `reject` on the terminal, or the MCP `approve` / `reject` tools; merge on the PR |
 | CI (`deliver.py --dry`) | `validate.yml` step "Delivery pipelines (dry)" runs feature-delivery on `tests/fixtures/delivery-repo`; `tests/test_deliver.py` dry-runs both templates | none |
 
 ### The GitHub executor (`delivery.yml`)
@@ -359,6 +360,8 @@ python3 scripts/deliver.py <pipeline> | --pipeline <name> --repo <path> --reques
     [--install auto|none|<cmd>] [--tests auto|none|<cmd>]                                                  # code step, every builder
     [--approve-all | --approvals approvals.json] [--patch diff.patch] [--files files.txt] [--plan DIR] [--dry] [--resume] [--run-id ID]
     [--no-baseline] [--run <portal run id> --portal <url> [--approval-timeout 3600] [--poll-interval 30]]   # SF_API_KEY in env
+python3 scripts/deliver.py list [--runs DIR] [--json] | status <out|run id> [--json] | approve <out|run id> --step ID --by NAME [--note …]
+    | reject <out|run id> --step ID --by NAME --note … | audit <out|run id> [--json|--md]                    # local mode, no portal
 ```
 
 Whatever the builder, the code step installs the checkout's dependencies once (`--install`, default `auto`) and executes
@@ -383,7 +386,7 @@ portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a pa
 | 0 | every stage passed |
 | 1 | a gate or step failed — the evidence so far is in `<out>/evidence/` (including a refined plan the architecture gate refused: TBD cells or no files in `tasks.csv`, named in `gate.json`, before any approval was asked) |
 | 2 | bad arguments, a missing pipeline input (`needs_input.json`), or a **pipeline wiring error** (`wiring_error.json`: a step input no earlier step produced — fix the pipeline, never a gate verdict) |
-| 3 | waiting for an approval (`needs_approval.json`); re-run with `--resume` and `--approvals` |
+| 3 | waiting for an approval (`needs_approval.json`); re-run with `--resume` after `deliver.py approve <out> --step … --by …` (or with `--approvals` / `--approve-all`). Also a run that `deliver.py reject` marked rejected: the resume prints the rejection note and stops here until the step is approved again |
 | 4 | waiting for the builder or the architect (`needs_builder.json`, its `step` and `role` say which): `plan-refine` → the architect writes the refined `plan.md` and `tasks.csv` at the two `expected` paths (or passes `--plan <dir>`); `files` → write `files.txt` at `expected` (or pass `--files`); `code` → drop the diff at `<out>/build/diff.patch` (or pass `--patch`); re-run with `--resume` |
 
 ### The role packet (`<step dir>/PROMPT.md`) — any IDE, any LLM
@@ -443,6 +446,80 @@ with the reply head in the step error. Retries: 2× on a 5xx or a timeout; a 4xx
 `llm-reply-<n>.txt`, the command output in `llm-cmd-<n>.txt`; `run.json` step `llm {provider, model, base_url_host,
 rounds, duration_s, ok}`; EVIDENCE.md's header prints `builder openai-compat (<model> @ <host>)`. Nothing from the
 environment reaches a prompt: the packet is already clean, the system prompt is static text plus the file lists.
+
+## Local mode (no portal)
+
+The platform promise: a customer team runs the whole ADLC loop on its own machines or CI with no portal and no SaaS.
+Everything below reads and writes the run directories and one local file; nothing in it opens a network connection.
+The portal is an optional mirror of the same executor (`--run`/`--portal` behave as before).
+
+### The run registry — `scripts/deliver.py` subcommands
+
+The positional / flag form (`deliver.py <pipeline> --repo … --out …`) stays the default; these subcommands sit beside it:
+
+| Command | Does | Output |
+|---|---|---|
+| `deliver.py list [--runs DIR] [--json]` | every delivery run directly under the runs dir (`$SF_RUNS_DIR`, else `runs/` under giri-skills) plus every run `registry.jsonl` names (a run started with `--out` elsewhere), read from each `<out>/run.json` (`run_skill.py` run directories are skipped) | table: run id, pipeline, repo, status, stage, started, out dir |
+| `deliver.py status <out \| run id> [--json]` | the stage table (role, status, gate kind + verdict + detail), the current stop with that file's contents — `needs_approval` (step, role, note, files to review), `needs_builder` (role, step, why, expected paths, `prompt` = the role packet), `needs_input`, `wiring_error`, or `rejected` — and the resume command (this run's recorded command line + `--resume`, with the directory it was started from) | text or JSON (`stages[]`, `stop`, `approvals`, `rejections`, `resume_command`, `argv`, `cwd`) |
+| `deliver.py approve <out \| run id> --step <id> --by <name> [--note …] [--json]` | writes or merges `<out>/approvals.json` — the `{"approvals": [{"step", "by", "note", "at", "source"}]}` shape `--approvals` reads; one approval per step, the newest replaces it — and prints the resume command. A resume reads `<out>/approvals.json` by itself (`--approvals` on top of it) | the approval and the resume command |
+| `deliver.py reject <out \| run id> --step <id> --by <name> --note <why> [--json]` | appends to `<out>/rejections.json` and marks the run `rejected` in `run.json` (the record is otherwise kept). The next `--resume` stops with exit 3, prints the note and writes `needs_approval.json` with the rejection — until an approval of the same step recorded after it (`approve`, a hand-written `--approvals` file, or `--approve-all`) | — |
+| `deliver.py audit <out \| run id> [--json \| --md]` | prints `<out>/evidence/provenance.json` as it is, or (default) as an EVIDENCE-style Markdown record for an auditor: skills with version and hash, approvals and rejections with who / note / when / source, gate verdicts with timestamps | — |
+
+A run id resolves through `registry.jsonl`, then by scanning `<runs dir>/*/run.json`. `approval.json` in the step folder
+and the step record carry `source`: `file` (approvals.json / `--approvals`), `cli` (`--approve-all`), `portal` (a portal
+approval the executor polled) or `mcp` (the local MCP server's `approve` tool).
+
+**`<runs dir>/registry.jsonl`** — the local audit trail. Every run appends one line per status change (`SF_RUNS_DIR`
+overrides the directory; the default is `runs/` under giri-skills): `{"run_id", "pipeline", "repo", "status", "stage",
+"at", "out"}` with `status` one of `running` (the run or a resume started), `passed` / `failed` / `awaiting_approval` /
+`awaiting_builder` / `wiring_error` after each stage, `approved` / `rejected` (also carrying `step` and `by`) when
+`approve` / `reject` record a decision, and `rejected` again when a resume is stopped by a standing rejection. A runs
+dir that cannot be written is a warning, never a failed run.
+
+### The local MCP server — `scripts/mcp_local.py`
+
+stdio, JSON-RPC 2.0, stdlib only; `initialize`, `ping`, `tools/list`, `tools/call` (notifications get no reply). Every
+tool shells out to `scripts/deliver.py`, so there is one code path: what the IDE agent does through the server is what
+the terminal does, with the same evidence bundle, registry line and provenance record. Register it in the IDE —
+Claude Code and Cursor both read `.mcp.json` at the project root:
+
+```json
+{"mcpServers": {"skills-factory": {"command": "python3", "args": ["scripts/mcp_local.py"]}}}
+```
+
+(`"env": {"SF_RUNS_DIR": "/srv/runs"}` moves the runs dir; `"cwd"` or an absolute `args` path when the IDE is not opened
+on the giri-skills checkout.)
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `deliver` | `pipeline`, `repo`, `request` (required); `brief`, `ref`, `builder` (default `none`), `model`, `base_url`, `provider` (default `dry`), `dry`, `approve_all`, `no_baseline`, `install`, `tests`, `inputs {name: value}`, `run_id`, `out` | starts the run (`<runs dir>/<run id>` unless `out` is given; the run id derived as the CLI derives it) and answers with the run id, out dir, status, exit code and the first stop — the `status --json` record plus `exit` / `exit_meaning`; `isError` on exit 1 or 2 |
+| `delivery_status` | `run` — an out directory or a run id | the `status --json` record: stages with gate verdicts, the current stop, the resume command |
+| `approve` | `run`, `step`, `by`; `note`; `resume` (default true) | records the approval with `source: mcp` and resumes the run from its recorded command line (in the directory it was started from); the reply is the status after the resume — the stage passed and the next stop, or the finished run. `resume: false` only records |
+| `reject` | `run`, `step`, `by`, `note` | records the rejection (`source: mcp`), marks the run rejected; the status |
+| `list_runs` | `runs_dir` (optional) | the `list --json` rows |
+| `role_packet` | `run` | the current builder stop's `PROMPT.md` text (and `step`, `role`, `expected` / `alternative` paths, `resume_command`) so the IDE agent can act on it: write the outputs at the expected paths, then resume with the command the packet ends with. A run waiting for an approval returns what is under review; a rejected or finished run says so |
+
+The shapes mirror the portal's MCP tools (`studio/lib/factory/mcp.ts` — `deliver`, `delivery_status`): the same
+`content[0].text` summary plus `structuredContent`, JSON-RPC `-32602` for missing arguments, `-32601` for an unknown
+method. `tests/test_mcp_local.py` drives the server over stdio on the fixture repo.
+
+### Provenance — `<out>/evidence/provenance.json`
+
+Written with every `run.json` save (so it is current at every stop) and summarised, without timestamps, in the
+**Provenance** section at the end of `EVIDENCE.md` (a dry run stays byte-for-byte reproducible):
+
+| Key | Holds |
+|---|---|
+| `pipeline` | `name`, `version`, `path`, `sha256` of the pipeline JSON file the run executes (`pipelines/<name>.json`, a composed file, or `<out>/pipeline.json` from the portal) |
+| `executor` | `repo: giri-skills`, `git_sha` (HEAD of the giri-skills checkout the executor runs from, `""` when it is not a git checkout), `script`, `dry` |
+| `builder` | `builder`, `provider`, `model` (`--model` / `OPENAI_MODEL` for openai-compat), `base_url_host` |
+| `skills[]` | one entry per skill step that ran — the stage steps and the `00-baseline` captures — with `stage`, `step`, `skill` (`build/spec-to-plan`), `name` and `version` from the SKILL.md frontmatter (`metadata.version`), `sha256` of the skill directory contents (every file under `skills/<skill>/`, sorted by relative posix path, each hashed as `<path>\0<bytes>\0`; `runs/`, `__pycache__` and `.pyc` files excluded), `files` (how many), `exit`, `status` |
+| `approvals[]` | `stage`, `step`, `by`, `note`, `at`, `source` (`file` \| `cli` \| `portal` \| `mcp`) for every approval step that was satisfied |
+| `rejections[]` | the contents of `<out>/rejections.json` (`step`, `stage`, `by`, `note`, `at`, `source`) |
+| `gates[]` | per stage: `kind`, `verdict`, `detail`, `approved_by`, `at`, `status` |
+| `status`, `generated_at`, `run_id` | the run's status when the record was written |
+
+`run.json` `files` hashes `evidence/provenance.json` with the rest of the bundle. `deliver.py audit` prints it.
 
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).

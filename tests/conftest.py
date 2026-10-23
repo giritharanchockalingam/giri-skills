@@ -5,6 +5,7 @@ and never imported (the scripts are not packages).
 """
 from __future__ import annotations
 
+import os
 import shutil
 import socket
 import subprocess
@@ -116,6 +117,20 @@ def examples(tmp_path) -> dict[str, Path]:
         shutil.copy(src, dest)
         out[src.name] = dest
     return out
+
+
+@pytest.fixture(scope="session", autouse=True)
+def scratch_runs_dir(tmp_path_factory):
+    """scripts/deliver.py appends every status change to <runs dir>/registry.jsonl (SF_RUNS_DIR, else runs/ under
+    the repo): the whole suite registers under a session scratch dir, never under the checkout's runs/."""
+    d = tmp_path_factory.mktemp("sf-runs")
+    before = os.environ.get("SF_RUNS_DIR")
+    os.environ["SF_RUNS_DIR"] = str(d)
+    yield d
+    if before is None:
+        os.environ.pop("SF_RUNS_DIR", None)
+    else:
+        os.environ["SF_RUNS_DIR"] = before
 
 
 @pytest.fixture(autouse=True)
