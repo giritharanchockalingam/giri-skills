@@ -99,8 +99,18 @@ in place. --resume continues an existing <out> from the first incomplete stage (
 
 Exit codes: 0 every stage passed · 1 a gate or step failed · 2 bad arguments / missing pipeline input
 (needs_input.json) / pipeline wiring error — a step input no earlier step produced (wiring_error.json, never a
-gate failure) · 3 waiting for an approval (needs_approval.json) · 4 waiting for the builder (needs_builder.json).
+gate failure) · 3 waiting for an approval (needs_approval.json; also a run `reject` marked rejected, until the step
+is approved again) · 4 waiting for the builder (needs_builder.json).
 Stdlib only; deterministic apart from the timestamps in run.json.
+
+Local mode (docs/DELIVERY-PIPELINES.md → Local mode (no portal)) — the run registry without a portal, no network:
+    deliver.py list [--runs DIR] [--json]                      runs under $SF_RUNS_DIR (default runs/), from each <out>/run.json
+    deliver.py status <out|run id> [--json]                    stage table, the current stop, the resume command
+    deliver.py approve <out|run id> --step ID --by NAME [--note …]   writes <out>/approvals.json (read by the next --resume)
+    deliver.py reject <out|run id> --step ID --by NAME --note …     writes <out>/rejections.json, marks the run rejected
+    deliver.py audit <out|run id> [--json|--md]                <out>/evidence/provenance.json (skills + versions + sha256,
+                                                               executor sha, pipeline sha, approvals, rejections, gates)
+Every status change appends a line to <runs dir>/registry.jsonl. scripts/mcp_local.py exposes the same over MCP.
 """
 from __future__ import annotations
 
@@ -126,6 +136,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import check_output  # noqa: E402
 import llm_builder  # noqa: E402
+import skillmeta  # noqa: E402
 import validate_pipelines as vp  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_ARGS, EXIT_APPROVAL, EXIT_BUILDER = 0, 1, 2, 3, 4
@@ -172,6 +183,79 @@ TEST_TAIL_IN_ERROR = 400                            # how much of that the step 
 INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
 TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+# local mode (docs/DELIVERY-PIPELINES.md → Local mode): the run registry and the local approval files, no portal needed
+REGISTRY_JSONL = "registry.jsonl"                   # <runs dir>/registry.jsonl — one line per status change of every run
+APPROVALS_JSON, REJECTIONS_JSON = "approvals.json", "rejections.json"   # <out>/…, written by `deliver.py approve|reject`
+PROVENANCE_JSON = "provenance.json"                 # <out>/evidence/provenance.json — skills, versions, hashes, approvals, gates
+LOCAL_COMMANDS = ("list", "status", "approve", "reject", "audit")
+SKILL_HASH_IGNORE = {"__pycache__", "runs", ".DS_Store"}   # never part of a skill's fingerprint (local, gitignored)
+
+
+def runs_dir() -> Path:
+    """Where runs live by default and where registry.jsonl is kept: SF_RUNS_DIR, else runs/ under giri-skills."""
+    return Path(os.environ.get("SF_RUNS_DIR") or (ROOT / "runs")).expanduser()
+
+
+def registry_append(entry: dict) -> None:
+    """One line per status change — the local audit trail. Never aborts a run (a read-only runs dir is a warning)."""
+    try:
+        d = runs_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        with (d / REGISTRY_JSONL).open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, sort_keys=True) + "\n")
+    except OSError as e:
+        print(f"warning: registry {runs_dir() / REGISTRY_JSONL} not written: {e}", file=sys.stderr)
+
+
+_SKILL_FP: dict[str, dict] = {}
+
+
+def skill_fingerprint(skill: str) -> dict:
+    """{name, version, sha256, path} of a library skill (`build/spec-to-plan`): the name and version from its SKILL.md
+    frontmatter, the sha256 of the skill directory's contents — every file under it, sorted by relative posix path,
+    each hashed as `<path>\\0<bytes>\\0` — so the same skill tree gives the same hash on every machine."""
+    if skill in _SKILL_FP:
+        return _SKILL_FP[skill]
+    sdir = ROOT / "skills" / skill
+    info = {"skill": skill, "name": skill.rsplit("/", 1)[-1], "version": "", "sha256": "", "path": str(sdir.relative_to(ROOT))}
+    if sdir.is_dir():
+        md = sdir / "SKILL.md"
+        if md.is_file():
+            try:
+                fm = skillmeta.parse_frontmatter(md.read_text(encoding="utf-8"))
+                info["name"] = str(fm.get("name") or info["name"])
+                meta = fm.get("metadata") if isinstance(fm.get("metadata"), dict) else {}
+                info["version"] = str(meta.get("version") or fm.get("version") or "")
+            except Exception:   # a frontmatter the subset parser cannot read: the hash still stands
+                pass
+        h = hashlib.sha256()
+        files = []
+        for p in sdir.rglob("*"):
+            if p.is_file() and not (set(p.relative_to(sdir).parts) & SKILL_HASH_IGNORE) and p.suffix != ".pyc":
+                files.append(p)
+        for p in sorted(files, key=lambda x: x.relative_to(sdir).as_posix()):
+            h.update(p.relative_to(sdir).as_posix().encode("utf-8") + b"\0" + p.read_bytes() + b"\0")
+        info["sha256"] = h.hexdigest()
+        info["files"] = len(files)
+    else:
+        info["error"] = "skill directory not found"
+    _SKILL_FP[skill] = info
+    return info
+
+
+_EXECUTOR_SHA: str | None = None
+
+
+def executor_sha() -> str:
+    """HEAD of the giri-skills checkout this executor runs from, "" when it is not a git checkout."""
+    global _EXECUTOR_SHA
+    if _EXECUTOR_SHA is None:
+        _EXECUTOR_SHA = ""
+        if shutil.which("git") and (ROOT / ".git").exists():
+            r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True)
+            if r.returncode == 0:
+                _EXECUTOR_SHA = r.stdout.strip()
+    return _EXECUTOR_SHA
 
 
 class StepError(Exception):
@@ -569,6 +653,7 @@ class Run:
         self.portal: Portal | None = None
         self.profile_posted = False
         self.baseline: dict = {}          # run.json `baseline`: {status, target, checks: {check: {skill, source, findings, high, path}}}
+        self.spec_path: Path | None = None   # the pipeline file this run executes (hashed into provenance.json)
 
     # ---- references
     def resolve(self, value, where: str = ""):
@@ -840,8 +925,10 @@ class Run:
     def step_approval(self, step: dict, sdir: Path, rec: dict, approvals: dict) -> bool:
         rec["role"], rec["note"] = step.get("role", ""), step.get("note", "")
         ap = approvals.get(step["id"])
+        if ap is not None:
+            ap = {"source": "file", **ap}            # --approvals / <out>/approvals.json; `approve --source mcp` says mcp
         if self.args.approve_all and ap is None:
-            ap = {"by": "--approve-all", "note": "approved on the command line"}
+            ap = {"by": "--approve-all", "note": "approved on the command line", "source": "cli"}
         if ap is None and self.portal and not self.args.approvals:
             ap = self.poll_approval(step, rec)
         if ap is None:
@@ -853,9 +940,10 @@ class Run:
                 "how": "re-run with --resume and --approvals approvals.json "
                        f"({{\"approvals\": [{{\"step\": \"{step['id']}\", \"by\": \"<name>\", \"note\": \"...\"}}]}}), or --approve-all"})
             return False
-        rec.update(status="approved", approved_by=str(ap.get("by", "")), at=now(), exit=0)
+        rec.update(status="approved", approved_by=str(ap.get("by", "")), at=now(), exit=0, approval_source=str(ap.get("source") or "file"))
         write_json(sdir / "approval.json", {"step": step["id"], "role": step.get("role", ""), "status": "approved",
-                                            "by": str(ap.get("by", "")), "note": str(ap.get("note", "")), "at": rec["at"]})
+                                            "by": str(ap.get("by", "")), "note": str(ap.get("note", "")), "at": rec["at"],
+                                            "source": rec["approval_source"]})
         return True
 
     def poll_approval(self, step: dict, rec: dict) -> dict | None:
@@ -873,7 +961,7 @@ class Run:
             polls += 1
             if a:
                 rec["polls"] = polls
-                return {"by": str(a.get("approved_by", "")), "note": str(a.get("note", "")), "portal_approval_id": a.get("id", "")}
+                return {"by": str(a.get("approved_by", "")), "note": str(a.get("note", "")), "portal_approval_id": a.get("id", ""), "source": "portal"}
             if time.time() >= deadline:
                 rec["polls"] = polls
                 self.portal._log(f"approval poll for stage {stage_id} timed out after {polls} polls")
@@ -1851,7 +1939,85 @@ class Run:
             verdict = {"pass": "PASS", "fail": "FAIL", "recorded": "RECORDED"}.get(g.get("verdict", ""), s.get("status", "").upper())
             rows.append(f"| {s['id']} | {s['role']} | {g.get('kind', '')} | {verdict} | {ev} |")
         rows += ["", "Gate detail per stage is in `<stage>/gate.json`; step logs in `<stage>/<step>/`.", ""]
+        rows += self.provenance_rows()
         (self.evidence / "EVIDENCE.md").write_text("\n".join(rows), encoding="utf-8")
+
+    # ---- provenance (docs/DELIVERY-PIPELINES.md → Local mode): what ran, at which version, approved by whom
+    def provenance(self) -> dict:
+        """<out>/evidence/provenance.json: every skill step with its name, version and directory sha256; the executor's
+        own git sha; the pipeline name, version and file sha256; builder / provider / model; every approval and
+        rejection with its source (file | portal | mcp | cli); every gate verdict with its timestamp."""
+        spec_path = getattr(self, "spec_path", None)
+        pipeline = {"name": self.spec.get("name", ""), "version": self.spec.get("version", ""),
+                    "path": str(spec_path) if spec_path else "", "sha256": sha256(spec_path) if spec_path and Path(spec_path).is_file() else ""}
+        skills, seen = [], set()
+        for check, e in sorted(((self.record.get("baseline") or {}).get("checks") or {}).items()):
+            if e.get("source") == "captured" and e.get("skill"):
+                skills.append({"stage": BASELINE_DIR, "step": check, **skill_fingerprint(e["skill"]), "exit": e.get("exit")})
+                seen.add((BASELINE_DIR, check))
+        for s in self.record.get("stages", []):
+            for st in s.get("steps", []):
+                if st.get("kind") == "skill" and st.get("skill") and (s["id"], st["id"]) not in seen:
+                    skills.append({"stage": s["id"], "step": st["id"], **skill_fingerprint(st["skill"]), "exit": st.get("exit"),
+                                   "status": st.get("status")})
+                    seen.add((s["id"], st["id"]))
+        approvals, gates = [], []
+        for s in self.record.get("stages", []):
+            for st in s.get("steps", []):
+                if st.get("kind") == "approval" and st.get("status") == "approved":
+                    aj = self.step_dirs.get(st["id"], Path("/nonexistent")) / "approval.json"
+                    a = read_json(aj) if aj.is_file() else {}
+                    approvals.append({"stage": s["id"], "step": st["id"], "by": st.get("approved_by", ""), "note": a.get("note", ""),
+                                      "at": st.get("at", ""), "source": st.get("approval_source") or a.get("source") or "file"})
+            g = s.get("gate") or {}
+            if g:
+                gates.append({"stage": s["id"], "kind": g.get("kind", ""), "verdict": g.get("verdict", ""), "detail": str(g.get("detail", ""))[:GATE_DETAIL_LIMIT],
+                              "approved_by": g.get("approved_by", ""), "at": g.get("at", ""), "status": s.get("status", "")})
+        rj = self.out / REJECTIONS_JSON
+        rejections = (read_json(rj).get("rejections") or []) if rj.is_file() else []
+        model = self.args.model or (os.environ.get("OPENAI_MODEL") if self.args.builder == "openai-compat" else None) or None
+        host = ""
+        if self.args.builder == "openai-compat":
+            try:
+                host = self.llm_client().host
+            except StepError:
+                host = ""
+        return {"run_id": self.run_id, "pipeline": pipeline,
+                "executor": {"repo": "giri-skills", "git_sha": executor_sha(), "script": "scripts/deliver.py", "dry": bool(self.args.dry)},
+                "builder": {"builder": self.args.builder, "provider": self.args.provider, "model": model, "base_url_host": host or None},
+                "skills": skills, "approvals": approvals, "rejections": rejections, "gates": gates,
+                "status": self.record.get("status", ""), "generated_at": now()}
+
+    def write_provenance(self) -> dict:
+        prov = self.provenance()
+        write_json(self.evidence / PROVENANCE_JSON, prov)
+        return prov
+
+    def provenance_rows(self) -> list[str]:
+        """The Provenance section of EVIDENCE.md — bullets, no timestamps (a dry run stays byte-for-byte reproducible);
+        the full record with timestamps is provenance.json beside it."""
+        prov = self.write_provenance()
+        p, b = prov["pipeline"], prov["builder"]
+        lines = ["## Provenance", "",
+                 f"- Executor: giri-skills `{prov['executor']['git_sha'] or 'not a git checkout'}` · `scripts/deliver.py`",
+                 f"- Pipeline: `{p['name']}` v{p['version']} · sha256 `{p['sha256']}`",
+                 f"- Builder: {b['builder']}" + (f" · model {b['model']}" if b.get("model") else "") + (f" @ {b['base_url_host']}" if b.get("base_url_host") else "")
+                 + f" · provider {b['provider']}"]
+        if prov["skills"]:
+            lines.append("- Skills (step · skill · version · sha256 of the skill directory):")
+            lines += [f"  - {s['stage']}/{s['step']} · `{s['skill']}` · {s['version'] or '?'} · `{s['sha256']}`" for s in prov["skills"]]
+        else:
+            lines.append("- Skills: none run yet")
+        if prov["approvals"]:
+            lines.append("- Approvals:")
+            lines += [f"  - {a['stage']}/{a['step']}: {a['by']} ({a['source']})" + (f" — {a['note']}" if a.get("note") else "") for a in prov["approvals"]]
+        else:
+            lines.append("- Approvals: none")
+        if prov["rejections"]:
+            lines.append("- Rejections:")
+            lines += [f"  - {r.get('step')}: {r.get('by')} ({r.get('source', 'file')})" + (f" — {r['note']}" if r.get("note") else "") for r in prov["rejections"]]
+        lines += [f"- Full record with timestamps and gate verdicts: [{PROVENANCE_JSON}]({PROVENANCE_JSON})", ""]
+        return lines
 
     def baseline_row(self) -> str:
         """The Baseline line of EVIDENCE.md: findings per check before the change (the gates fail only on new high ones)."""
@@ -1898,11 +2064,18 @@ class Run:
                         files[str(p.relative_to(self.out))] = sha256(p)
         return files
 
+    def current_stage(self) -> str:
+        """The stage the run is at: the first recorded stage that has not passed, else the last one recorded."""
+        stages = self.record.get("stages") or []
+        return next((s["id"] for s in stages if s.get("status") != "passed"), stages[-1]["id"] if stages else "")
+
     def save(self, status: str, exit_code: int) -> None:
         self.record.update(status=status, exit_code=exit_code, finished_at=now())
         self.write_evidence_md()
         self.record["files"] = self.hash_files()
         write_json(self.out / "run.json", self.record)
+        registry_append({"run_id": self.run_id, "pipeline": self.spec["name"], "repo": str(self.record.get("repo_input") or self.inputs.get("repo", "")),
+                         "status": status, "stage": self.current_stage(), "at": self.record["finished_at"], "out": str(self.out)})
 
     # ---- portal callback
     def stage_evidence(self, srec: dict) -> list[dict]:
@@ -2417,7 +2590,307 @@ def build_args(argv=None):
     return args
 
 
+# ------------------------------------------------------------------ local mode: the run registry without a portal
+# docs/DELIVERY-PIPELINES.md → Local mode (no portal). `deliver.py list | status | approve | reject | audit` read and
+# write the run directories and <runs dir>/registry.jsonl only; nothing here touches the network.
+
+def resume_command(base_argv: list[str]) -> str:
+    """This run's command line with --resume added once — what `status` prints and the role packet ends with."""
+    return shlex.join([sys.executable or "python3", str((HERE / "deliver.py").resolve())] + list(base_argv) + ["--resume"])
+
+
+def load_rejections(out: Path) -> list[dict]:
+    p = out / REJECTIONS_JSON
+    if not p.is_file():
+        return []
+    data = read_json(p)
+    items = data.get("rejections") if isinstance(data, dict) else None
+    return [r for r in (items or []) if isinstance(r, dict) and r.get("step")]
+
+
+def active_rejection(out: Path, approvals: dict, approve_all: bool) -> dict | None:
+    """The latest rejection of a step that no later approval of the same step answers. `--approve-all` answers every
+    rejection; an approval entry without a timestamp (a hand-written --approvals file) counts as new."""
+    if approve_all:
+        return None
+    latest: dict[str, dict] = {}
+    for r in load_rejections(out):
+        if r["step"] not in latest or str(r.get("at", "")) >= str(latest[r["step"]].get("at", "")):
+            latest[r["step"]] = r
+    for step, r in latest.items():
+        a = approvals.get(step)
+        if a is None or (a.get("at") and str(a["at"]) < str(r.get("at", ""))):
+            return r
+    return None
+
+
+def find_run(arg: str) -> Path:
+    """An out directory, or a run id looked up in the runs dir (registry.jsonl first, then every <dir>/run.json)."""
+    p = Path(arg).expanduser()
+    if (p / "run.json").is_file():
+        return p.resolve()
+    d = runs_dir()
+    if (d / arg / "run.json").is_file():
+        return (d / arg).resolve()
+    reg = d / REGISTRY_JSONL
+    if reg.is_file():
+        for line in reversed(reg.read_text(encoding="utf-8").splitlines()):
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            if e.get("run_id") == arg and e.get("out") and Path(e["out"], "run.json").is_file():
+                return Path(e["out"]).resolve()
+    for rj in sorted(d.glob("*/run.json")) if d.is_dir() else []:
+        try:
+            if read_json(rj).get("run_id") == arg:
+                return rj.parent.resolve()
+        except (OSError, ValueError):
+            continue
+    sys.exit(f"error: no run found for {arg!r} (an out directory holding run.json, or a run id under {d})")
+
+
+def list_runs(d: Path) -> list[dict]:
+    """Every delivery run directly under the runs dir — a <dir>/run.json with run_id, pipeline and stages (run_skill.py
+    run directories live there too and are skipped)."""
+    candidates = list(sorted(d.glob("*/run.json"))) if d.is_dir() else []
+    reg = d / REGISTRY_JSONL   # runs started with --out elsewhere are known through the registry
+    if reg.is_file():
+        for line in reg.read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(e, dict) and e.get("out") and Path(e["out"], "run.json").is_file() and Path(e["out"], "run.json") not in candidates:
+                candidates.append(Path(e["out"], "run.json"))
+    rows, seen = [], set()
+    for rj in candidates:
+        if rj.resolve() in seen:
+            continue
+        seen.add(rj.resolve())
+        try:
+            rec = read_json(rj)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(rec, dict) or not rec.get("run_id") or not rec.get("pipeline") or "stages" not in rec:
+            continue
+        stages = rec.get("stages") or []
+        rows.append({"run_id": rec["run_id"], "pipeline": rec["pipeline"], "repo": str(rec.get("repo_input") or (rec.get("inputs") or {}).get("repo", "")),
+                     "status": rec.get("status", ""), "stage": next((s["id"] for s in stages if s.get("status") != "passed"), stages[-1]["id"] if stages else ""),
+                     "started": rec.get("started_at", ""), "finished": rec.get("finished_at", ""), "out": str(rj.parent.resolve()),
+                     "dry": bool(rec.get("dry")), "builder": rec.get("builder", "")})
+    rows.sort(key=lambda r: (r["started"], r["run_id"]))
+    return rows
+
+
+def table(headers: list[str], rows: list[list[str]]) -> str:
+    widths = [max(len(str(h)), *(len(str(r[i])) for r in rows)) if rows else len(str(h)) for i, h in enumerate(headers)]
+    fmt = "  ".join("{:<" + str(w) + "}" for w in widths)
+    return "\n".join([fmt.format(*headers), fmt.format(*["-" * w for w in widths])] + [fmt.format(*[str(c) for c in r]) for r in rows])
+
+
+def run_status(out: Path) -> dict:
+    """The run as `status` reports it: stages with gate verdicts, the current stop (needs_approval / needs_builder /
+    needs_input / wiring_error / rejected, with that file's contents) and the resume command."""
+    rec = read_json(out / "run.json")
+    stages = []
+    for s in rec.get("stages") or []:
+        g = s.get("gate") or {}
+        stages.append({"id": s["id"], "role": s.get("role", ""), "status": s.get("status", ""), "gate": {"kind": g.get("kind", ""), "verdict": g.get("verdict", ""), "detail": str(g.get("detail", ""))},
+                       "steps": [{"id": st["id"], "kind": st.get("kind", ""), "status": st.get("status", ""), "approved_by": st.get("approved_by", "")} for st in s.get("steps") or []],
+                       "approved_by": g.get("approved_by", ""), "evidence_files": s.get("evidence_files") or []})
+    stop: dict = {"kind": "none"}
+    for name in ("needs_approval.json", "needs_builder.json", "needs_input.json", "wiring_error.json"):
+        if (out / name).is_file():
+            stop = {"kind": name[:-5], "file": str(out / name), **read_json(out / name)}
+            break
+    if rec.get("status") == "rejected":   # a rejection stands whatever else waits: the next resume stops on it
+        stop = {**stop, "kind": "rejected", "rejection": rec.get("rejection") or {}, **({"also": stop["kind"]} if stop["kind"] != "none" else {})}
+    approvals = load_approvals(str(out / APPROVALS_JSON)) if (out / APPROVALS_JSON).is_file() else {}
+    cmd = rec.get("resume_command") or resume_command(rec.get("argv") or [])
+    return {"run_id": rec.get("run_id", ""), "pipeline": rec.get("pipeline", ""), "version": rec.get("version", ""), "repo": str(rec.get("repo_input") or ""),
+            "out": str(out), "status": rec.get("status", ""), "exit_code": rec.get("exit_code"), "dry": bool(rec.get("dry")),
+            "builder": rec.get("builder", ""), "provider": rec.get("provider", ""),
+            "stage": next((s["id"] for s in stages if s["status"] != "passed"), stages[-1]["id"] if stages else ""),
+            "started_at": rec.get("started_at", ""), "finished_at": rec.get("finished_at", ""), "stages": stages, "stop": stop,
+            "approvals": list(approvals.values()), "rejections": load_rejections(out), "resume_command": cmd, "cwd": rec.get("cwd", ""),
+            "argv": rec.get("argv") or [],
+            "evidence": str(out / "evidence" / "EVIDENCE.md"), "provenance": str(out / "evidence" / PROVENANCE_JSON)}
+
+
+def render_status(d: dict) -> str:
+    lines = [f"Run {d['run_id']} — pipeline {d['pipeline']} v{d.get('version', '')} · repo {d['repo']} · {d['status']}"
+             + (f" · at {d['stage']}" if d.get("stage") else "") + (" · DRY" if d.get("dry") else "") + f" · builder {d.get('builder', '')}",
+             f"Out: {d['out']}", ""]
+    rows = [[s["id"], s["role"], s["status"], f"{s['gate']['kind']} {s['gate']['verdict']}".strip(), s["gate"]["detail"][:100]] for s in d["stages"]]
+    lines.append(table(["Stage", "Role", "Status", "Gate", "Detail"], rows) if rows else "(no stage has run)")
+    stop = d["stop"]
+    lines.append("")
+    if stop["kind"] == "none":
+        lines.append("Stop: none" + (" — every stage passed" if d["status"] == "passed" else ""))
+    elif stop["kind"] == "rejected":
+        r = stop.get("rejection") or {}
+        lines.append(f"Stop: rejected — step '{r.get('step', '')}' by {r.get('by', '')}: {r.get('note', '')}")
+        lines.append(f"  approve it again: python3 scripts/deliver.py approve {d['out']} --step {r.get('step', '')} --by <name> [--note …]")
+    elif stop["kind"] == "needs_approval":
+        lines.append(f"Stop: needs approval — step '{stop.get('step', '')}' (role {stop.get('role', '')}): {stop.get('note', '')}")
+        for p in stop.get("review") or []:
+            lines.append(f"  review: {p}")
+        lines.append(f"  approve: python3 scripts/deliver.py approve {d['out']} --step {stop.get('step', '')} --by <name> [--note …]")
+    elif stop["kind"] == "needs_builder":
+        lines.append(f"Stop: needs the {stop.get('role') or 'builder'} — step '{stop.get('step', '')}': {stop.get('why', '')}")
+        exp = stop.get("expected")
+        for name, path in (exp.items() if isinstance(exp, dict) else [(stop.get("produce", ""), exp)]):
+            lines.append(f"  write {name} at {path}")
+        if stop.get("prompt"):
+            lines.append(f"  role packet: {stop['prompt']}")
+    elif stop["kind"] == "needs_input":
+        lines.append("Stop: needs input — " + ", ".join(f"{m.get('name')} ({m.get('from', '')})" for m in stop.get("missing") or []))
+    elif stop["kind"] == "wiring_error":
+        lines.append(f"Stop: pipeline wiring error — {stop.get('message', '')}")
+    lines += ["", "Resume" + (f" (from {d['cwd']})" if d.get("cwd") else "") + ":", f"  {d['resume_command']}"]
+    return "\n".join(lines)
+
+
+def cmd_list(args) -> int:
+    d = Path(args.runs).expanduser() if args.runs else runs_dir()
+    rows = list_runs(d)
+    if args.json:
+        print(json.dumps({"runs_dir": str(d), "runs": rows}, indent=2))
+        return 0
+    if not rows:
+        print(f"no delivery runs under {d}")
+        return 0
+    print(table(["Run", "Pipeline", "Repo", "Status", "Stage", "Started", "Out"],
+                [[r["run_id"], r["pipeline"], r["repo"], r["status"], r["stage"], r["started"], r["out"]] for r in rows]))
+    return 0
+
+
+def cmd_status(args) -> int:
+    out = find_run(args.run)
+    d = run_status(out)
+    print(json.dumps(d, indent=2) if args.json else render_status(d))
+    return 0
+
+
+def _write_decision(out: Path, name: str, key: str, entry: dict) -> list[dict]:
+    """Merge one approval / rejection into <out>/<name> ({key: [ … ]}); the latest entry per step wins on read."""
+    p = out / name
+    data = read_json(p) if p.is_file() else {}
+    items = [x for x in (data.get(key) if isinstance(data, dict) else None) or [] if isinstance(x, dict)]
+    if name == APPROVALS_JSON:
+        items = [x for x in items if x.get("step") != entry["step"]]   # one approval per step: the newest replaces it
+    items.append(entry)
+    write_json(p, {key: items})
+    return items
+
+
+def cmd_approve(args) -> int:
+    out = find_run(args.run)
+    rec = read_json(out / "run.json")
+    entry = {"step": args.step, "by": args.by, "note": args.note or "", "at": now(), "source": args.source}
+    _write_decision(out, APPROVALS_JSON, "approvals", entry)
+    registry_append({"run_id": rec.get("run_id", ""), "pipeline": rec.get("pipeline", ""), "repo": str(rec.get("repo_input") or ""),
+                     "status": "approved", "stage": next((s["id"] for s in rec.get("stages") or [] if any(st.get("id") == args.step for st in s.get("steps") or [])), ""),
+                     "step": args.step, "by": args.by, "at": entry["at"], "out": str(out)})
+    cmd = rec.get("resume_command") or resume_command(rec.get("argv") or [])
+    if args.json:
+        print(json.dumps({"run_id": rec.get("run_id", ""), "out": str(out), "approval": entry, "file": str(out / APPROVALS_JSON), "resume_command": cmd}, indent=2))
+    else:
+        print(f"approved step '{args.step}' by {args.by} — recorded in {out / APPROVALS_JSON}", "", "Resume:", f"  {cmd}", sep="\n")
+    return 0
+
+
+def cmd_reject(args) -> int:
+    out = find_run(args.run)
+    rec = read_json(out / "run.json")
+    stage = next((s["id"] for s in rec.get("stages") or [] if any(st.get("id") == args.step for st in s.get("steps") or [])), "")
+    entry = {"step": args.step, "stage": stage, "by": args.by, "note": args.note, "at": now(), "source": args.source}
+    _write_decision(out, REJECTIONS_JSON, "rejections", entry)
+    rec.update(status="rejected", exit_code=EXIT_APPROVAL, rejection=entry, finished_at=entry["at"])
+    write_json(out / "run.json", rec)
+    registry_append({"run_id": rec.get("run_id", ""), "pipeline": rec.get("pipeline", ""), "repo": str(rec.get("repo_input") or ""),
+                     "status": "rejected", "stage": stage, "step": args.step, "by": args.by, "at": entry["at"], "out": str(out)})
+    cmd = rec.get("resume_command") or resume_command(rec.get("argv") or [])
+    if args.json:
+        print(json.dumps({"run_id": rec.get("run_id", ""), "out": str(out), "rejection": entry, "file": str(out / REJECTIONS_JSON), "resume_command": cmd}, indent=2))
+    else:
+        print(f"rejected step '{args.step}' by {args.by}: {args.note} — recorded in {out / REJECTIONS_JSON}; the run is marked rejected "
+              f"(a resume stops with exit 3 until the step is approved again: deliver.py approve {out} --step {args.step} --by <name>)")
+    return 0
+
+
+def render_audit_md(prov: dict) -> str:
+    """provenance.json as an auditor reads it: what ran, at which version and hash, who approved what and when."""
+    p, b, e = prov.get("pipeline") or {}, prov.get("builder") or {}, prov.get("executor") or {}
+    lines = [f"# Audit — run {prov.get('run_id', '')}", "",
+             f"Pipeline `{p.get('name', '')}` v{p.get('version', '')} (sha256 `{p.get('sha256', '')}`) · status {prov.get('status', '')}"
+             + (" · DRY RUN" if e.get("dry") else ""), "",
+             f"Executor: giri-skills `{e.get('git_sha') or 'not a git checkout'}` · `{e.get('script', '')}` · builder {b.get('builder', '')}"
+             + (f" · model {b['model']}" if b.get("model") else "") + (f" @ {b['base_url_host']}" if b.get("base_url_host") else "")
+             + f" · provider {b.get('provider', '')} · generated {prov.get('generated_at', '')}", "",
+             "## Skills", "", "| Stage | Step | Skill | Version | sha256 (skill directory) |", "|---|---|---|---|---|"]
+    lines += [f"| {s.get('stage', '')} | {s.get('step', '')} | `{s.get('skill', '')}` | {s.get('version') or '?'} | `{s.get('sha256', '')}` |" for s in prov.get("skills") or []] or ["| — | — | none run | | |"]
+    lines += ["", "## Approvals", "", "| Stage | Step | By | Note | At | Source |", "|---|---|---|---|---|---|"]
+    lines += [f"| {a.get('stage', '')} | {a.get('step', '')} | {a.get('by', '')} | {a.get('note', '')} | {a.get('at', '')} | {a.get('source', '')} |" for a in prov.get("approvals") or []] or ["| — | — | none | | | |"]
+    lines += ["", "## Rejections", "", "| Stage | Step | By | Note | At | Source |", "|---|---|---|---|---|---|"]
+    lines += [f"| {r.get('stage', '')} | {r.get('step', '')} | {r.get('by', '')} | {r.get('note', '')} | {r.get('at', '')} | {r.get('source', '')} |" for r in prov.get("rejections") or []] or ["| — | — | none | | | |"]
+    lines += ["", "## Gates", "", "| Stage | Kind | Verdict | Approved by | At | Detail |", "|---|---|---|---|---|---|"]
+    lines += [f"| {g.get('stage', '')} | {g.get('kind', '')} | {g.get('verdict', '')} | {g.get('approved_by', '')} | {g.get('at', '')} | {str(g.get('detail', '')).replace('|', '¦')[:200]} |" for g in prov.get("gates") or []] or ["| — | — | none | | | |"]
+    return "\n".join(lines) + "\n"
+
+
+def cmd_audit(args) -> int:
+    out = find_run(args.run)
+    pj = out / "evidence" / PROVENANCE_JSON
+    if not pj.is_file():
+        sys.exit(f"error: {pj} not found — the run has not written its evidence yet")
+    prov = read_json(pj)
+    print(json.dumps(prov, indent=2) if args.json else render_audit_md(prov), end="" if not args.json else "\n")
+    return 0
+
+
+def local_main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="deliver.py", description="Local mode — the run registry without a portal (docs/DELIVERY-PIPELINES.md → Local mode)")
+    sub = ap.add_subparsers(dest="command", required=True)
+    p = sub.add_parser("list", help="table of the delivery runs under the runs dir (SF_RUNS_DIR, else runs/)")
+    p.add_argument("--runs", metavar="DIR", help="runs directory (default: $SF_RUNS_DIR or runs/)")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_list)
+    p = sub.add_parser("status", help="stage table, the current stop and the resume command of one run")
+    p.add_argument("run", help="the run's out directory, or its run id")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_status)
+    p = sub.add_parser("approve", help="record an approval of a step in <out>/approvals.json; prints the resume command")
+    p.add_argument("run", help="the run's out directory, or its run id")
+    p.add_argument("--step", required=True, help="the approval step id (needs_approval.json `step`)")
+    p.add_argument("--by", required=True, help="who approves")
+    p.add_argument("--note", default="", help="why")
+    p.add_argument("--source", default="file", choices=["file", "mcp"], help=argparse.SUPPRESS)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_approve)
+    p = sub.add_parser("reject", help="record a rejection in <out>/rejections.json and mark the run rejected")
+    p.add_argument("run", help="the run's out directory, or its run id")
+    p.add_argument("--step", required=True)
+    p.add_argument("--by", required=True)
+    p.add_argument("--note", required=True, help="why — a resume prints it until the step is approved again")
+    p.add_argument("--source", default="file", choices=["file", "mcp"], help=argparse.SUPPRESS)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_reject)
+    p = sub.add_parser("audit", help="print the run's provenance (skills, versions, hashes, approvals, gates)")
+    p.add_argument("run", help="the run's out directory, or its run id")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--json", action="store_true", help="provenance.json as it is")
+    g.add_argument("--md", action="store_true", help="an EVIDENCE-style Markdown record for an auditor (default)")
+    p.set_defaults(fn=cmd_audit)
+    args = ap.parse_args(argv)
+    return args.fn(args)
+
+
 def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in LOCAL_COMMANDS:
+        return local_main(argv)
     args = build_args(argv)
     if args.builder == "openai-compat":
         try:   # the guard runs before any call: a non-OpenAI model name with no base URL would go to api.openai.com
@@ -2500,12 +2973,34 @@ def main(argv=None) -> int:
         (out / "build" / "plan").mkdir(parents=True, exist_ok=True)
         for f in PLAN_FILES:
             shutil.copy(Path(args.plan) / f, out / "build" / "plan" / f)
-    approvals = load_approvals(args.approvals)
+    # approvals: <out>/approvals.json (written by `deliver.py approve`, or by hand) first, --approvals on top
+    approvals = {**load_approvals(str(out / APPROVALS_JSON) if (out / APPROVALS_JSON).is_file() else None), **load_approvals(args.approvals)}
 
+    run.spec_path = spec_path if spec_path.is_file() else ((out / "pipeline.json") if (out / "pipeline.json").is_file() else None)
+    base_argv = [a for a in argv if a != "--resume"]
     run.record = {"run_id": run.run_id, "pipeline": spec["name"], "version": spec.get("version", ""), "mode": spec.get("mode", ""),
                   "dry": bool(args.dry), "builder": args.builder, "provider": args.provider, "inputs": given,
                   "repo_input": repo_key, "out": str(out), "started_at": (prev_record or {}).get("started_at") or now(),
-                  "resumed": bool(prev_record), "stages": list((prev_record or {}).get("stages") or [])}
+                  "resumed": bool(prev_record), "stages": list((prev_record or {}).get("stages") or []),
+                  "argv": base_argv, "cwd": os.getcwd(), "resume_command": resume_command(base_argv)}
+    rejection = active_rejection(out, approvals, bool(args.approve_all))
+    if rejection:
+        # `deliver.py reject` stands until the same step is approved again (an approval recorded after it, or --approve-all)
+        kept = dict(prev_record or run.record)   # the earlier record stands (base_sha, baseline, hashes); only the status changes
+        kept.update(status="rejected", exit_code=EXIT_APPROVAL, rejection=rejection, finished_at=now())
+        write_json(out / "run.json", kept)
+        write_json(out / "needs_approval.json", {
+            "run_id": run.run_id, "pipeline": spec["name"], "stage": rejection.get("stage", ""), "step": rejection["step"],
+            "rejected": rejection, "note": rejection.get("note", ""),
+            "how": f"rejected by {rejection.get('by', '')}: {rejection.get('note', '')} — record a new approval of step "
+                   f"'{rejection['step']}' (deliver.py approve {out} --step {rejection['step']} --by <name>), then re-run with --resume"})
+        registry_append({"run_id": run.run_id, "pipeline": spec["name"], "repo": repo_key, "status": "rejected",
+                         "stage": rejection.get("stage", ""), "at": now(), "out": str(out)})
+        print(f"{spec['name']} run {run.run_id}: rejected at step '{rejection['step']}' by {rejection.get('by', '')}: "
+              f"{rejection.get('note', '')} — approve the step again, then --resume", file=sys.stderr)
+        return EXIT_APPROVAL
+    registry_append({"run_id": run.run_id, "pipeline": spec["name"], "repo": repo_key, "status": "running",
+                     "stage": run.current_stage(), "at": now(), "out": str(out)})
     supersede_stale_build(spec, run)
     first_pending = next((st["id"] for st in spec["stages"] if prev_stages_status(run.record, st["id"]) != "passed"), spec["stages"][-1]["id"])
     try:
