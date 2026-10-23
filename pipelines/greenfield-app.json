@@ -63,7 +63,7 @@
         { "id": "files", "kind": "agent", "agent": "claude-code", "produces": ["files.txt"],
           "inputs": { "plan": "$steps.plan-refine:plan.md", "tasks": "$steps.plan-refine:tasks.csv", "target": "$repo" } },
         { "id": "tests", "kind": "skill", "skill": "build/test-strategy-tdd",
-          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo" } },
+          "inputs": { "feature": "$steps.feature:feature.md", "files": "$steps.files:files.txt#csv", "target": "$repo", "flavour": "$profile.flavour" } },
         { "id": "code", "kind": "agent", "agent": "claude-code",
           "inputs": { "plan": "$steps.plan-refine:plan.md", "tests": "$steps.tests:test-plan.md", "files": "$steps.files:files.txt", "target": "$repo" },
           "constraints": ["skills/build/nextjs-enterprise-conventions/SKILL.md", "shared/stack-conventions.md"] },

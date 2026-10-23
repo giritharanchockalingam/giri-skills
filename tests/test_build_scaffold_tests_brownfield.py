@@ -138,3 +138,56 @@ def test_fixture_is_never_written_to():
                      "package.json", "playwright.config.js", "tests/e2e/smoke.spec.js", "tests/unit/lib-coach.test.js",
                      "vitest.config.js"]
     assert shutil.which("python3") is not None
+
+
+# ---- flavour: --flavour wins; only source files count; build output is never evidence; non-source files are skipped
+
+def test_js_repo_with_docs_and_env_in_the_files_list_gets_js_stubs_and_skips_them_with_a_note(tmp_path):
+    """Defect from the first real delivery run: files.txt carried .env.example and docs/RUNBOOK.md, the all-JS rule
+    failed and TypeScript stubs (plus docs-runbook-md.test.ts) were written into a JavaScript repo."""
+    repo = seeded(tmp_path)
+    (repo / "docs").mkdir(exist_ok=True)
+    (repo / "docs" / "RUNBOOK.md").write_text("# Runbook\n", encoding="utf-8")
+    (repo / ".env.example").write_text("APP_URL=\n", encoding="utf-8")
+    res, data, plan = scaffold(tmp_path, repo, files="lib/coach.js,app/api/health/route.js,.env.example,docs/RUNBOOK.md")
+    assert res.returncode == 0, res.stderr
+    assert data["repo"]["flavour"] == "js"
+    assert data["non_source"] == [".env.example", "docs/RUNBOOK.md"]
+    assert all(t.endswith(".test.js") for t in data["written"]) and data["written"]
+    assert not list(repo.rglob("*.test.ts")) and not list(repo.rglob("docs-runbook-md.test.*")) and not list(repo.rglob("env-example.test.*"))
+    rows = {f["source"]: f for f in data["files"]}
+    assert rows["docs/RUNBOOK.md"]["kind"] == "non-source" and rows["docs/RUNBOOK.md"]["test"] == ""
+    assert "2 non-source file(s) skipped" in plan and "`docs/RUNBOOK.md`" in plan and "skipped (not a source file)" in plan
+    assert "non-source skipped" in res.stdout
+
+
+def test_flavour_flag_wins_over_detection(tmp_path):
+    repo = seeded(tmp_path)                                                   # a JavaScript repo
+    res, data, _ = scaffold(tmp_path, repo, "--flavour", "ts", files="lib/other.js")
+    assert res.returncode == 0 and data["repo"]["flavour"] == "ts" and "--flavour ts" in data["repo"]["flavour_why"]
+    assert data["written"] == ["tests/unit/lib-other.test.ts"]
+    ts_repo = tmp_path / "ts"
+    ts_repo.mkdir(); (ts_repo / "tsconfig.json").write_text("{}", encoding="utf-8")
+    res, data, _ = scaffold(tmp_path, ts_repo, "--flavour", "js", files="lib/a.ts")
+    assert res.returncode == 0 and data["repo"]["flavour"] == "js" and data["written"] == ["tests/unit/lib-a.test.js"]
+    res, data, _ = scaffold(tmp_path / "u", ts_repo, "--flavour", "unknown", files="lib/b.ts")   # a profile's unknown flavour
+    assert res.returncode == 0 and data["repo"]["flavour"] == "ts" and "ignored" in data["repo"]["flavour_why"]
+
+
+def test_build_output_and_jsconfig_never_make_a_js_repo_typescript(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "app").mkdir(parents=True)
+    (repo / "app" / "page.js").write_text("export default function Page() { return null }\n", encoding="utf-8")
+    (repo / "package.json").write_text('{"name": "x", "devDependencies": {"vitest": "1"}}', encoding="utf-8")
+    for junk in (".next/types/app/page.ts", "app/.next/types/layout.ts", "lib/dist/index.ts", "lib/node_modules/pkg/index.ts",
+                 "src/coverage/lcov.ts", "lib/.cache/x.ts"):
+        (repo / junk).parent.mkdir(parents=True, exist_ok=True)
+        (repo / junk).write_text("export {};\n", encoding="utf-8")
+    res, data, _ = scaffold(tmp_path, repo, files="app/page.js,docs/README.md")
+    assert res.returncode == 0, res.stderr
+    assert data["repo"]["flavour"] == "js" and data["written"] == ["tests/e2e/app-page.spec.js"]
+    (repo / "jsconfig.json").write_text('{"compilerOptions": {"paths": {"@/*": ["./*"]}}}', encoding="utf-8")
+    res, data, _ = scaffold(tmp_path / "j", repo, files="lib/util.js,docs/README.md")
+    assert data["repo"]["flavour"] == "js" and data["repo"]["flavour_why"] == "jsconfig.json present, no tsconfig.json"
+    res, data, _ = scaffold(tmp_path / "n", repo, files="docs/README.md,.env.example")
+    assert res.returncode == 1 and "names no source file" in res.stderr
