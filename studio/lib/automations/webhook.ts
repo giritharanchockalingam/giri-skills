@@ -11,13 +11,13 @@ export function verifySignature(raw: string, header: string | null, secret: stri
 }
 
 export type NormEvent =
-  | { kind: "pull_request"; installationId: number; repo: string; sha: string; pr: number; title: string; fromFork: boolean }
+  | { kind: "pull_request"; installationId: number; repo: string; sha: string; baseSha: string | null; pr: number; title: string; fromFork: boolean }
   | { kind: "push"; installationId: number; repo: string; sha: string }
   | { kind: "repos_changed"; installationId: number };
 
 type Payload = Record<string, unknown> & {
   action?: string; installation?: { id?: number }; repository?: { full_name?: string; default_branch?: string };
-  pull_request?: { number?: number; title?: string; head?: { sha?: string; repo?: { full_name?: string } | null }; base?: { repo?: { full_name?: string } }; draft?: boolean };
+  pull_request?: { number?: number; title?: string; head?: { sha?: string; repo?: { full_name?: string } | null }; base?: { sha?: string; repo?: { full_name?: string } }; draft?: boolean };
   ref?: string; after?: string; deleted?: boolean;
 };
 const SHA = /^[0-9a-f]{40}$/;
@@ -36,7 +36,9 @@ export function normalize(event: string, p: Payload): NormEvent | null {
     const sha = p.pull_request?.head?.sha ?? "";
     const pr = Number(p.pull_request?.number);
     if (!SHA.test(sha) || !Number.isSafeInteger(pr)) return null;
-    return { kind: "pull_request", installationId, repo, sha, pr, title: String(p.pull_request?.title ?? "").slice(0, 200),
+    // the base commit lets findings.csv checks score only what the PR adds; a payload without one still scores (absolute)
+    const baseSha = p.pull_request?.base?.sha ?? "";
+    return { kind: "pull_request", installationId, repo, sha, baseSha: SHA.test(baseSha) ? baseSha : null, pr, title: String(p.pull_request?.title ?? "").slice(0, 200),
       fromFork: (p.pull_request?.head?.repo?.full_name ?? repo) !== (p.pull_request?.base?.repo?.full_name ?? repo) };
   }
   if (event === "push" && !p.deleted && p.ref === `refs/heads/${p.repository?.default_branch}` && SHA.test(p.after ?? "")) {

@@ -6,7 +6,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CHECKS, bound, checksFor, commonDir, errorLine, MAX_FILES, type TreeFile } from "../lib/scorecards/checks.ts";
+import { CHECKS, bound, checksFor, commonDir, errorLine, brownfield, brownfieldVerdict, observabilityMissing, parseCsv, MAX_FILES, type TreeFile } from "../lib/scorecards/checks.ts";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const ROOT = new URL("../..", import.meta.url).pathname;
 const check = (id: string) => CHECKS.find((c) => c.id === id)!;
@@ -89,6 +90,79 @@ test("bound: caps files and bytes, and says so", () => {
   assert.equal(b.files.length, MAX_FILES); assert.equal(b.partial, true);
   assert.deepEqual(bound([{ path: "a", sha: "s", size: 10 }]), { files: [{ path: "a", sha: "s", size: 10 }], partial: false });
   assert.equal(commonDir(["a/b/c.sql", "a/b/d/e.sql"]), "a/b");
+});
+
+const CSV_HEAD = "rule,file,line,snippet,severity,status\n";
+test("brownfield: the PR delta keys on (rule, file, normalised snippet) like lint_conventions --baseline; line moves are known", () => {
+  const base = CSV_HEAD
+    + 'NX1,components/A.tsx,10,"supabase.from(\'orders\')",high,new\n'
+    + 'NX2,lib/x.ts,3,"console.log(  a,   b )",medium,new\n'
+    + 'NX2,lib/x.ts,4,"console.log(  a,   b )",medium,new\n'
+    + 'NX5,lib/gone.ts,1,sql`select 1`,high,new\n';
+  const head = CSV_HEAD
+    + 'NX1,components/A.tsx,42,"supabase.from(\'orders\')",high,new\n'     // moved: known
+    + 'NX2,lib/x.ts,3,"console.log( a, b )",medium,new\n'                  // whitespace runs collapsed (norm_snippet): known
+    + 'NX2,lib/x.ts,9,"  console.log( a,  b ) ",medium,new\n'               // second identical snippet: the base had two → known
+    + 'NX2,lib/x.ts,12,"console.log( a, b )",medium,new\n'                  // a third: new (one base row matches one finding)
+    + 'NX4,app/api/r/route.js,5,process.env.SUPABASE_SERVICE_ROLE_KEY,high,new\n'   // new high
+    + '# comment,x,1,y,high,new\n';
+  const d = brownfield(head, base);
+  assert.deepEqual(d, { new: 2, known: 3, newHigh: 1, resolved: 1, total: 5, newFindings: ["NX2 lib/x.ts:12", "NX4 app/api/r/route.js:5"] });
+  assert.deepEqual(brownfieldVerdict(d, "b".repeat(40)), { verdict: "fail", summary: "1 new high finding(s) against base bbbbbbb (3 known, 1 new medium, 1 resolved)", findings: 5 });
+  // 77 pre-existing high findings and nothing added: pass, every one of them known
+  const debt = CSV_HEAD + Array.from({ length: 77 }, (_, i) => `NX1,components/C${i}.tsx,${i},"createClient()",high,new\n`).join("");
+  const same = brownfield(debt, debt);
+  assert.deepEqual(brownfieldVerdict(same, "abc1234" + "0".repeat(33)), { verdict: "pass", summary: "0 new high finding(s) against base abc1234 (77 known)", findings: 77 });
+  // a new medium only warns; an empty base makes everything new; a header-only CSV is zero findings
+  assert.equal(brownfieldVerdict(brownfield(CSV_HEAD + "NX2,a.ts,1,console.log(1),medium,new\n", debt), "c".repeat(40)).verdict, "warn");
+  assert.equal(brownfield(debt, "").newHigh, 77);
+  assert.deepEqual(brownfield(CSV_HEAD, CSV_HEAD), { new: 0, known: 0, newHigh: 0, resolved: 0, total: 0, newFindings: [] });
+  assert.deepEqual(parseCsv('a,b\r\n1,"x, ""y"""\r\n'), [{ a: "1", b: 'x, "y"' }]);
+  assert.equal(check("nextjs").findings, "findings.csv");
+  for (const id of ["rls", "tenancy", "observability"]) assert.equal(check(id).findings, undefined, id);
+});
+
+test("brownfield: REAL lint of a base tree and a head tree → only the head's added high finding is new", () => {
+  const root = temp("bf-");
+  const write = (rel: string, body: string) => { mkdirSync(join(root, rel, ".."), { recursive: true }); writeFileSync(join(root, rel), body); };
+  for (const t of ["base", "head"]) {
+    write(`${t}/components/Old.tsx`, "export function Old() {\n  console.log('debt');\n  return supabase.from('t').select('*');\n}\n");   // NX2 + NX1: pre-existing debt
+    write(`${t}/package.json`, "{}");
+  }
+  write("head/components/Old.tsx", "// a comment line moves the debt down one line\nexport function Old() {\n  console.log('debt');\n  return supabase.from('t').select('*');\n}\n");
+  write("head/app/api/export/route.js", "const sql = require('x');\nexport async function GET() { return sql`select 1`; }\n");   // NX5: new high
+  const b = runSkill("build/nextjs-enterprise-conventions", { target: join(root, "base") });
+  const h = runSkill("build/nextjs-enterprise-conventions", { target: join(root, "head") });
+  const csv = (r: { outs: { path: string; content_text: string }[] }) => r.outs.find((o) => o.path === "findings.csv")!.content_text;
+  const d = brownfield(csv(h), csv(b));
+  assert.deepEqual({ new: d.new, known: d.known, newHigh: d.newHigh, resolved: d.resolved }, { new: 1, known: 2, newHigh: 1, resolved: 0 });
+  assert.match(d.newFindings[0], /^NX5 app\/api\/export\/route\.js:2$/);
+  // the absolute verdict on the head would fail on the base's own debt; the delta fails on the one new high finding only
+  assert.equal(check("nextjs").score(b.outs, b.status).verdict, "fail");
+  assert.deepEqual(brownfield(csv(h), csv(h)).newHigh, 0);
+});
+
+test("observability: a JavaScript app's logger and routes are selected (install.py's sibling extensions), the context helper is not a capability", () => {
+  const files = (paths: string[]): TreeFile[] => paths.map((p) => ({ path: p, sha: p, size: 10 }));
+  const sel = (paths: string[]) => check("observability").select(files(paths))[0].files.map((f) => f.path);
+  assert.deepEqual(sel(["package.json", "jsconfig.json", "lib/logger.js", "lib/logger/context.js", "lib/logger.d.ts", "app/api/health/route.js", "ops/alerts.yaml", "docs/observability.md", "lib/other.js", "node_modules/lib/logger.js"]),
+    ["package.json", "jsconfig.json", "lib/logger.js", "lib/logger/context.js", "app/api/health/route.js", "ops/alerts.yaml", "docs/observability.md"]);
+  for (const ext of ["ts", "tsx", "js", "jsx", "mjs", "cjs"]) assert.deepEqual(sel([`lib/logger.${ext}`, `lib/logger/context.${ext}`]), [`lib/logger.${ext}`, `lib/logger/context.${ext}`], ext);
+  assert.deepEqual(sel(["web/next.config.js", "web/lib/logger.js", "lib/logger.js", "web/tsconfig.json"]), ["web/lib/logger.js", "web/tsconfig.json"]);   // monorepo: the app folder
+  assert.deepEqual(observabilityMissing(["lib/logger/context.js", "ops/alerts.yaml"]), ["ops/alerts.yaml"]);
+  assert.deepEqual(observabilityMissing(["lib/logger.ts", "lib/logger/context.ts"]), ["lib/logger.ts", "lib/logger/context.ts"]);
+  // REAL dry run on a JavaScript seed with its own logger (no context helper), health route, alerts and runbook → in place
+  const seed = temp("obs-js-");
+  const write = (rel: string, body: string) => { mkdirSync(join(seed, rel, ".."), { recursive: true }); writeFileSync(join(seed, rel), body); };
+  write("package.json", "{}"); write("jsconfig.json", "{}");
+  write("lib/logger.js", "module.exports = { info() {}, error() {} };\n");
+  write("app/api/health/route.js", "export const dynamic = 'force-dynamic';\nexport async function GET() { return Response.json({ ok: true, ts: new Date().toISOString(), sha: '' }, { headers: { 'Cache-Control': 'no-store' } }); }\n");
+  write("app/api/health/deep/route.js", "export async function GET() { return new Response('ok'); }\n");
+  write("ops/alerts.yaml", "rules: []\n"); write("docs/observability.md", "# SLOs\n"); write(".env.example", "LOG_LEVEL=info\n");
+  const r = runSkill("build/observability-setup", { seed, target: join(temp("obs-"), "repo"), dry_run: "true" });
+  const s = check("observability").score(r.outs, r.status);
+  assert.equal(s.verdict, "pass", s.summary);
+  assert.match(JSON.parse(r.outs.find((o) => o.path === "install-report.json")!.content_text).written.join(","), /^lib\/logger\/context\.js$/);   // the installer still proposes the helper
 });
 
 test("errorLine: the skill's own last error, without runtime paths", () => {
