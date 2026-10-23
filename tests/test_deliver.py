@@ -1,6 +1,7 @@
 """scripts/deliver.py — dry end-to-end runs of the pipeline templates on the fixture repo (no model, no network)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -1050,3 +1051,63 @@ def test_gate_detail_names_the_full_count_the_first_ten_and_how_many_more():
     assert d.startswith("14 new high finding(s) against the baseline: NX5 app/f1.js:1; ") and d.endswith("NX5 app/f10.js:10 … and 4 more")
     assert "f11" not in d
     assert mod.new_high_detail(3, items[:3]) == "3 new high finding(s) against the baseline: NX5 app/f1.js:1; NX5 app/f2.js:2; NX5 app/f3.js:3"
+
+
+# ---- resume after a failed gate, and a build/diff.patch replaced after the build stage passed (first real run, P-8)
+
+def test_resume_after_a_failed_gate_runs_the_stage_steps_again(tmp_path):
+    """Defect: a stage whose gate failed kept its step records as 'done' on resume, so the fixed reviewer/security
+    skills never ran again — the resume re-judged the stale review.md / findings.csv and failed the same way."""
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(RISKY_PATCH), "--approve-all")
+    assert r.returncode == 1 and "stopped at stage 'evaluate' (failed)" in r.stdout
+    first = (out / "evidence" / "04-evaluate" / "review" / "run.json").stat().st_mtime_ns
+    r = deliver(out, "--resume", "--builder", "manual", "--approve-all")
+    assert r.returncode == 1 and "stopped at stage 'evaluate' (failed)" in r.stdout, r.stdout + r.stderr
+    steps = {s["id"]: s for s in run_json(out)["stages"][-1]["steps"]}
+    assert steps["review"]["skill"] == "build/code-review-runner" and not steps["review"].get("resumed")
+    assert (out / "evidence" / "04-evaluate" / "review" / "run.json").stat().st_mtime_ns > first   # the reviewer ran again
+    assert stage_status(out)["build"] == "passed"   # the stage that stopped for nothing is not re-run
+
+
+def test_a_changed_patch_after_the_build_stage_passed_supersedes_build_and_later_stages(tmp_path):
+    """Defect: the builder fixed diff.patch after the review failed; the resume kept the passed build stage and the
+    evaluate steps judged the OLD evidence copy. Now the build stage and everything after run again on the new diff,
+    the old diff is taken off the checkout first, and the evidence carries the new one."""
+    out = tmp_path / "out"
+    r = deliver(out, "--builder", "manual", "--patch", str(RISKY_PATCH), "--approve-all")
+    assert r.returncode == 1 and stage_status(out) == {"requirements": "passed", "architecture": "passed", "build": "passed", "evaluate": "failed"}
+    old_sha = hashlib.sha256(RISKY_PATCH.read_bytes()).hexdigest()
+    steps = {s["id"]: s for s in run_json(out)["stages"][2]["steps"]}
+    assert steps["code"]["patch_sha256"] == old_sha
+    r = deliver(out, "--resume", "--builder", "manual", "--patch", str(PATCH), "--approve-all")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "build/diff.patch changed since stage 'build' passed — re-running build, evaluate" in r.stdout
+    assert stage_status(out) == {s: "passed" for s in STAGES}
+    build = run_json(out)["stages"][2]
+    steps = {s["id"]: s for s in build["steps"]}
+    assert steps["code"]["patch_sha256"] == hashlib.sha256(PATCH.read_bytes()).hexdigest() and not steps["code"].get("resumed")
+    assert steps["code"]["superseded_patch"]["previous_sha256"] == old_sha
+    assert (out / "evidence" / "03-build" / "code" / "diff.patch").read_bytes() == PATCH.read_bytes()
+    review = (out / "evidence" / "04-evaluate" / "review" / "review.md").read_text()
+    assert "Verdict: **PASS**" in review and "app/reports/export.py" not in review
+
+
+def test_the_earlier_diff_is_taken_off_a_real_checkout_before_the_new_one_lands(tmp_path):
+    """The real checkout carries the diff the build stage applied; a replaced diff.patch is applied on the pre-change
+    tree (git apply --reverse --index of the earlier one first), not on top of it."""
+    work = checkout(tmp_path, brownfield_repo(tmp_path))
+    out = tmp_path / "out"
+    r = real(out, work, "--builder", "manual", "--patch", str(NEW_VIOLATION_PATCH))
+    assert r.returncode == 1 and "stopped at stage 'build'" in r.stdout, r.stdout + r.stderr
+    assert "select * from orders" in (work / "app" / "api" / "orders" / "export" / "route.js").read_text()
+    r = real(out, work, "--resume", "--builder", "manual", "--patch", str(PATCH))
+    assert "stopped at stage 'build'" not in r.stdout, r.stdout + r.stderr
+    route = (work / "app" / "api" / "orders" / "export" / "route.js").read_text()
+    assert "select * from orders" not in route and "listOrders" in route           # the new diff, not both
+    changed = git_out(work, "diff", "--name-only", run_json(out)["base_sha"], "--", "app", "lib").split()
+    assert sorted(changed) == ["app/api/orders/export/route.js", "lib/orders.js"]   # the new diff's files; nothing of the old one survives
+    steps = {s["id"]: s for s in run_json(out)["stages"][2]["steps"]}
+    assert steps["code"]["superseded_patch"]["reverted"] is True and steps["code"]["applied"] == "applied"
+    assert stage_status(out)["build"] == "passed"
+    assert [f["status"] for f in findings(out, "03-build/conventions")] == ["known"]

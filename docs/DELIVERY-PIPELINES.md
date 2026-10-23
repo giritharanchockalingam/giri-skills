@@ -222,7 +222,11 @@ The build stage runs, in order:
 `--resume` picks up at the first incomplete step of the stage: after the architect drops the refined `plan.md` /
 `tasks.csv` in place the run continues with `plan-approval`; after the builder drops `files.txt` in place the run
 continues with `tests`, then stops again at `code` until the diff is there. A resume removes the `needs_*.json` it
-answers. `greenfield-app` runs the same architecture and build stages (`project-bootstrap` names its files in
+answers. Completed steps are kept only in a stage that **stopped** (awaiting an approval or a builder); a stage whose
+gate **failed** runs every step again, so the gate judges fresh outputs. A `build/diff.patch` that changed after the
+build stage passed supersedes that stage and every stage after it (`superseded` on the record, printed on the
+resume): the code step takes the earlier diff off the checkout with `git apply --reverse` and lands the new one, and
+the later stages re-run on it. `greenfield-app` runs the same architecture and build stages (`project-bootstrap` names its files in
 `bootstrap-report.json`; the refined `tasks.csv` is what `files.txt` derives from).
 
 ### Stack profile and baselines (`scripts/stack_profile.py <repo>` → `stack-profile.json`)
@@ -338,8 +342,9 @@ portal prints (`deliverCommand`) therefore runs as printed. The pipeline is a pa
 
 `--dry` works on a copy of the repo under `<out>/repo` (git-initialised with a fixed identity and date so the run is
 reproducible; a manual diff is applied to that copy so the lint and review stages assess the change; nothing is pushed).
-Without `--dry` the checkout is used in place and the `pr` step needs `gh`. `--resume` keeps every completed step of
-the first incomplete stage and re-runs the rest. The run id is derived from pipeline + request + repo (plus a time
+Without `--dry` the checkout is used in place and the `pr` step needs `gh`. `--resume` keeps the completed steps of
+a stage that stopped (approval, builder), re-runs a failed stage in full, and re-runs the build stage and everything
+after it when `build/diff.patch` changed since the build stage passed. The run id is derived from pipeline + request + repo (plus a time
 suffix outside `--dry`), so a dry run is deterministic apart from the timestamps in `run.json` and `gate.json`.
 
 ## When no template fits
