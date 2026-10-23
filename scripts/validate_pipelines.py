@@ -50,8 +50,11 @@ DERIVATIONS = {"brief-from-request": ["brief.json"], "spec-from-prd": ["spec.md"
 AGENTS = {"claude-code"}
 AGENT_OUTPUTS = ["diff.patch", "agent-summary.md", "files-changed.json"]
 # what an agent step may declare under `produces` (the executor knows how to ask a builder for each set):
-# the files step writes files.txt; the plan-refine step writes the refined plan.md + tasks.csv together
-AGENT_PRODUCE_SETS = [["files.txt"], ["plan.md", "tasks.csv"]]
+# the files step writes files.txt; the plan-refine step writes the refined plan.md + tasks.csv together; the
+# prd-refine step writes the PRD with its acceptance criteria (the product manager's step)
+AGENT_PRODUCE_SETS = [["files.txt"], ["plan.md", "tasks.csv"], ["prd-final.md"]]
+# what each produce set needs as inputs (the code step — no `produces` — needs plan + target)
+AGENT_NEEDS = {("prd-final.md",): ("prd",), ("plan.md", "tasks.csv"): ("plan", "target"), ("files.txt",): ("plan", "target")}
 AGENT_PRODUCES = {f for s in AGENT_PRODUCE_SETS for f in s}
 TEXT_MODIFIERS = {"csv", "lines"}       # $steps.<id>:<text file>#csv | #lines
 PR_OUTPUTS = ["pr.json"]
@@ -274,7 +277,8 @@ def validate_pipeline(spec: dict, ctx: dict, filename: str | None = None) -> lis
             elif kind == "agent":
                 if step.get("agent") not in AGENTS:
                     e.append(f"{sw}: agent {step.get('agent')!r} not in {sorted(AGENTS)}")
-                for k in ("plan", "target"):
+                needs = AGENT_NEEDS.get(tuple(sorted(step.get("produces") or [])), ("plan", "target")) if step.get("produces") else ("plan", "target")
+                for k in needs:
                     if k not in (step.get("inputs") or {}):
                         e.append(f"{sw}: agent step needs input '{k}'")
                 for k, v in (step.get("inputs") or {}).items():

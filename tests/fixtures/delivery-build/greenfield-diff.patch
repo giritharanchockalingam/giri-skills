@@ -57,11 +57,11 @@ index 0000000..3333333
 +    expect(csv).toBe("id,customer,total,status\nord_1,Alder & Co,1.50,paid\n");
 +  });
 +});
-diff --git a/app/page.js b/app/page.js
+diff --git a/app/orders/page.js b/app/orders/page.js
 new file mode 100644
 index 0000000..4444444
 --- /dev/null
-+++ b/app/page.js
++++ b/app/orders/page.js
 @@ -0,0 +1,12 @@
 +import { listOrders } from "@/lib/orders";
 +

@@ -35,6 +35,8 @@ KINDS_FILE = ROOT / "shared" / "request-kinds.json"
 VERSION = "0.1.0"
 NOTE = ("Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback "
         "(the gate refuses a plan with TBD cells)")
+# the requirements gate on the refined PRD (prd-refine): the acceptance-criteria heading present and the stories filled
+PRD_CHECKS = ['sections:["Acceptance criteria"]', 'section_filled:"user stories"']
 # the architecture gate on the refined tasks.csv (plan-refine): files and acceptance filled, no scaffold TBD cell left
 PLAN_CHECKS = ["csv_rows:files!empty", "csv_rows:acceptance!empty", "csv_rows:files!tbd", "csv_rows:acceptance!tbd", "csv_rows:test!tbd"]
 
@@ -55,18 +57,23 @@ LIBRARY: dict[str, list[dict]] = {
          "outputs": ["brief.json"], "evidence": ["$steps.brief:brief.json"]},
         {"id": "prd", "kind": "skill", "skill": "build/product-spec-prd", "requires": ["brief"],
          "inputs": {"brief": "$steps.brief:brief.json", "draft_only": "$run.draft_only"},
-         "gate": {"kind": "output", "step": "prd", "file": "prd-final.md", "check": "sections:[\"Acceptance criteria\"]"},
          "evidence": ["$steps.prd:prd-final.md"]},
+        # the product manager's step: the draft is taken as is when its stories carry acceptance criteria (a brief with
+        # stories/tasks); otherwise the run stops for the product manager (needs_builder, role product-manager)
+        {"id": "prd-refine", "kind": "agent", "agent": "claude-code", "produces": ["prd-final.md"], "requires": ["prd"],
+         "inputs": {"prd": "$steps.prd:prd-final.md", "request": "$in.request", "brief": "$steps.brief:brief.json"},
+         "gate": {"kind": "all", "of": [{"kind": "output", "step": "prd-refine", "file": "prd-final.md", "check": c} for c in PRD_CHECKS]},
+         "evidence": ["$steps.prd-refine:prd-final.md"]},
     ],
     "architecture": [
-        {"id": "spec", "kind": "compose", "derive": "spec-from-prd", "requires": ["brief"], "optional": ["prd"],
-         "inputs": {"brief": "$steps.brief:brief.json", "prd": "$steps.prd:prd-final.md", "request": "$in.request"},
+        {"id": "spec", "kind": "compose", "derive": "spec-from-prd", "requires": ["brief"], "optional": ["prd-refine"],
+         "inputs": {"brief": "$steps.brief:brief.json", "prd": "$steps.prd-refine:prd-final.md", "request": "$in.request"},
          "outputs": ["spec.md", "spec.json"]},
         {"id": "plan", "kind": "skill", "skill": "build/spec-to-plan", "requires": ["spec"],
          "inputs": {"spec": "$steps.spec:spec.md", "section": "$steps.spec:spec.json#section", "repo": "$repo"},
          "evidence": ["$steps.plan:plan.md", "$steps.plan:tasks.csv"]},
-        {"id": "plan-refine", "kind": "agent", "agent": "claude-code", "produces": ["plan.md", "tasks.csv"], "requires": ["plan"], "optional": ["prd"],
-         "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd:prd-final.md", "request": "$in.request", "target": "$repo"},
+        {"id": "plan-refine", "kind": "agent", "agent": "claude-code", "produces": ["plan.md", "tasks.csv"], "requires": ["plan"], "optional": ["prd-refine"],
+         "inputs": {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd-refine:prd-final.md", "request": "$in.request", "target": "$repo"},
          "plan_fallback": ["$steps.plan:plan.md"],
          "gate": {"kind": "all", "of": [{"kind": "output", "step": "plan-refine", "file": "tasks.csv", "check": c} for c in PLAN_CHECKS]},
          "evidence": ["$steps.plan-refine:plan.md", "$steps.plan-refine:tasks.csv"]},
@@ -95,8 +102,8 @@ LIBRARY: dict[str, list[dict]] = {
          "gate": {"kind": "exit", "step": "conventions"}, "evidence": ["$steps.conventions:report.md"]},
     ],
     "evaluate": [
-        {"id": "review", "kind": "skill", "skill": "build/code-review-runner", "requires": ["code"], "optional": ["prd"],
-         "inputs": {"diff": "$steps.code:diff.patch", "spec": "$steps.prd:prd-final.md"},
+        {"id": "review", "kind": "skill", "skill": "build/code-review-runner", "requires": ["code"], "optional": ["prd-refine"],
+         "inputs": {"diff": "$steps.code:diff.patch", "spec": "$steps.prd-refine:prd-final.md"},
          "gate": {"kind": "output", "step": "review", "file": "review.md", "check": "contains:\"Verdict: **PASS**\""},
          "evidence": ["$steps.review:review.md"]},
         {"id": "security", "kind": "skill", "skill": "build/security-review", "requires": ["code"],
@@ -278,7 +285,7 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
                 inputs = {}
                 for k, v in st["inputs"].items():
                     if st["kind"] == "agent" and k == "plan":
-                        inputs[k] = next(p for p in st["plan_fallback"] if available(_step_of(p)))
+                        inputs[k] = next(p for p in st["plan_fallback"] if available(_step_of(p)))   # agent steps with a plan
                         continue
                     if isinstance(v, str) and v.startswith("$steps.") and not available(_step_of(v)):
                         continue   # an optional input whose step is absent (required ones were checked before)
@@ -328,7 +335,7 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
                     decide(st["id"], "rejected", why, st["skill"]); continue
             missing = [r for r in (st.get("requires") or []) if not available(r) and not can_carry(r)]
             plan_ref = None
-            if k == "agent":
+            if k == "agent" and st.get("plan_fallback"):   # prd-refine has no plan: its requires carry it
                 plan_ref = next((p for p in st["plan_fallback"] if available(_step_of(p)) or can_carry(_step_of(p))), None)
                 if plan_ref is None:
                     missing.append("plan")
@@ -339,7 +346,9 @@ def compose(stacks: list[str], kind: str, catalog: dict, kinds: dict, mode: str 
             if plan_ref and not available(_step_of(plan_ref)):
                 carry(_step_of(plan_ref))
             add(st, {"skill": "fits the stack and the request kind; every input resolves",
-                     "agent": (f"the plan-refine step (scaffold: {plan_ref}): the architect fills the scaffold — file table, acceptance, test, rollback, files; skipped when the scaffold is already complete"
+                     "agent": ("the prd-refine step: the product manager fills the acceptance criteria; skipped when the brief's stories already carry them"
+                               if "prd-final.md" in (st.get("produces") or []) else
+                               f"the plan-refine step (scaffold: {plan_ref}): the architect fills the scaffold — file table, acceptance, test, rollback, files; skipped when the scaffold is already complete"
                                if "tasks.csv" in (st.get("produces") or []) else
                                f"the files step (plan: {plan_ref}): the files the change touches, derived from tasks.csv when every task names them"
                                if st.get("produces") else f"the build step (plan: {plan_ref})"), "approval": "follows the refined plan",

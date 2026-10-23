@@ -420,13 +420,6 @@
       "stage": "architecture",
       "role": "ai-solution-architect",
       "step": "spec",
-      "decision": "note",
-      "why": "optional input `prd` dropped: step prd is not in this pipeline"
-    },
-    {
-      "stage": "architecture",
-      "role": "ai-solution-architect",
-      "step": "spec",
       "decision": "chosen",
       "why": "compose spec-from-prd (its home stage): a later step needs spec.md"
     },
@@ -437,13 +430,6 @@
       "skill": "build/spec-to-plan",
       "decision": "chosen",
       "why": "fits the stack and the request kind; every input resolves"
-    },
-    {
-      "stage": "architecture",
-      "role": "ai-solution-architect",
-      "step": "plan-refine",
-      "decision": "note",
-      "why": "optional input `prd` dropped: step prd is not in this pipeline"
     },
     {
       "stage": "architecture",

@@ -161,7 +161,7 @@ def test_plan_refine_step_produces_the_refined_plan_and_the_gate_checks_it(tmp_p
         spec = load(name)
         refine = step(spec, "architecture", "plan-refine")
         assert refine["kind"] == "agent" and refine["produces"] == ["plan.md", "tasks.csv"]
-        assert refine["inputs"] == {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd:prd-final.md", "request": "$in.request", "target": "$repo"}
+        assert refine["inputs"] == {"plan": "$steps.plan:plan.md", "tasks": "$steps.plan:tasks.csv", "prd": "$steps.prd-refine:prd-final.md", "request": "$in.request", "target": "$repo"}
         assert [t["id"] for t in stage(spec, "architecture")["steps"]] == ["spec", "plan", "plan-refine", "plan-approval"]
         gate = stage(spec, "architecture")["gate"]
         assert gate["kind"] == "all" and gate["of"][-1] == {"kind": "approval", "step": "plan-approval"}
@@ -209,7 +209,7 @@ def test_gate_kinds_and_shapes(tmp_path):
     code, out = validate(spec, tmp_path)
     assert code == 1 and "output gate file 'prd.md' is not an output step 'prd' declares" in out
     spec = load("feature-delivery")
-    stage(spec, "requirements")["gate"]["check"] = "exit:0"      # run-level check is not a file check
+    stage(spec, "requirements")["gate"]["of"][0]["check"] = "exit:0"      # run-level check is not a file check
     code, out = validate(spec, tmp_path)
     assert code == 1 and "not a file-level check" in out
     spec = load("feature-delivery")
@@ -290,3 +290,19 @@ def test_delivery_workflow_parses_when_pyyaml_is_available():
     assert any(s.get("uses", "").startswith("actions/setup-python") for s in steps)
     assert any(s.get("uses", "").startswith("actions/setup-node") for s in steps)
     assert d["concurrency"]["group"] == "delivery-${{ inputs.run_id }}"
+
+
+def test_prd_refine_step_is_the_product_managers_stop_and_the_gate_refuses_template_stories():
+    """First greenfield run: a request with no brief produced a template PRD that the requirements gate waved
+    through. Now prd → prd-refine (agent, produces prd-final.md) and the gate needs the stories filled."""
+    for name in ("feature-delivery", "greenfield-app"):
+        spec = load(name)
+        refine = step(spec, "requirements", "prd-refine")
+        assert refine["kind"] == "agent" and refine["produces"] == ["prd-final.md"]
+        assert refine["inputs"]["prd"] == "$steps.prd:prd-final.md" and refine["inputs"]["request"] == "$in.request"
+        gate = stage(spec, "requirements")["gate"]
+        assert gate["kind"] == "all" and [g["check"] for g in gate["of"]] == ['sections:["Acceptance criteria"]', 'section_filled:"user stories"']
+        assert all(g["step"] == "prd-refine" and g["file"] == "prd-final.md" for g in gate["of"])
+        # everything downstream reads the refined PRD, never the draft
+        assert step(spec, "architecture", "spec")["inputs"]["prd"] == "$steps.prd-refine:prd-final.md"
+        assert step(spec, "evaluate", "review")["inputs"]["spec"] == "$steps.prd-refine:prd-final.md"

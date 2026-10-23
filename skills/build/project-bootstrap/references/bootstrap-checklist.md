@@ -17,17 +17,19 @@ Every row ends Done, Skipped (reason), or `[TO BE BASELINED — owner: ___]`.
 | A10 | `.github/CODEOWNERS` | Review ownership | |
 | A11 | `.github/pull_request_template.md` | PR checklist with gates | |
 
-## B. App skeleton (create with the framework CLI, not by hand)
+## B. App skeleton (scaffold writes the minimal runnable app when no package.json exists)
 | # | Item | Command / note | Done |
 |---|---|---|---|
-| B1 | Next.js app (App Router, TS, ESLint, Tailwind, `src/` off) | `npx create-next-app@latest <name> --ts --eslint --tailwind --app --no-src-dir --import-alias "@/*"` | |
-| B2 | Folder layout per `shared/stack-conventions.md` | `mkdir -p components/ui components/features lib/supabase lib/db lib/utils server/actions server/services server/validators supabase/migrations tests/unit tests/e2e tests/fixtures` | |
-| B3 | `env.ts` zod parser at boot | `lib/env.ts`; import in `next.config.ts` to fail fast | |
-| B4 | Supabase clients | `lib/supabase/server.ts` (cookies), `lib/supabase/browser.ts` (anon only) | |
-| B5 | Logger | copy `observability-setup/assets/logger.ts` → `lib/logger.ts` | |
-| B6 | Result type | `lib/result.ts` — see `nextjs-enterprise-conventions/references/error-result-pattern.md` | |
-| B7 | Vitest + Playwright | copy configs from `test-strategy-tdd/assets/` | |
-| B8 | `package.json` scripts | `dev, build, lint, typecheck, test, test:e2e, db:migrate, db:reset, db:types` | |
+| B1 | Minimal Next.js app (App Router, `@/*` alias, ESLint, vitest) | written by `scaffold.py --stack nextjs-js\|nextjs-ts`: `package.json`, `next.config.js` (security headers), `jsconfig.json`/`tsconfig.json`, `.eslintrc.json`, `vitest.config.*`, `app/layout`, `app/page`, `app/api/health/route`, `lib/app-info`, `tests/unit/health.test`, `.gitignore`. A repo with a package.json keeps its app untouched. | |
+| B2 | Lockfile committed | `npm install` once locally, commit `package-lock.json` — `ci.yml` runs `npm ci` only with it (until then it warns and runs `npm install`) | |
+| B3 | Folder layout per `shared/stack-conventions.md` | `mkdir -p components/ui components/features lib/supabase lib/db lib/utils server/actions server/services server/validators supabase/migrations tests/e2e tests/fixtures` | |
+| B4 | `env.ts` zod parser at boot | `lib/env.ts`; import in `next.config.js` to fail fast | |
+| B5 | Supabase clients | `lib/supabase/server.ts` (cookies), `lib/supabase/browser.ts` (anon only) — feature work, not bootstrap | |
+| B6 | Logger | copy `observability-setup/assets/logger.ts` → `lib/logger.ts` | |
+| B7 | Result type | `lib/result.ts` — see `nextjs-enterprise-conventions/references/error-result-pattern.md` | |
+| B8 | Playwright | copy the e2e config from `test-strategy-tdd/assets/` (vitest is already configured) | |
+| B9 | `package.json` scripts beyond the skeleton | `test:e2e, db:migrate, db:reset, db:types` (`dev, build, start, lint, typecheck, test` are written) | |
+| B10 | Tailwind / UI kit | only if the first feature needs it (`shadcn` vendor skill) | |
 
 ## C. Supabase
 | # | Item | Note | Done |

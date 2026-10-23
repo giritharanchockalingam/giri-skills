@@ -292,13 +292,6 @@
       "stage": "build",
       "role": "full-stack-engineer",
       "step": "spec",
-      "decision": "note",
-      "why": "optional input `prd` dropped: step prd is not in this pipeline"
-    },
-    {
-      "stage": "build",
-      "role": "full-stack-engineer",
-      "step": "spec",
       "decision": "chosen",
       "why": "compose spec-from-prd (carried from the absent architecture stage): a later step needs spec.md"
     },

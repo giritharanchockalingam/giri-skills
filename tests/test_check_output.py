@@ -26,7 +26,7 @@ def ok(spec, path=None, **kw):
 
 
 def test_vocabulary_is_complete():
-    expected = {"exists", "json", "csv", "csv_rows", "yaml", "sections", "no_unowned_tbd", "numbers_trace_to",
+    expected = {"exists", "json", "csv", "csv_rows", "yaml", "sections", "section_filled", "no_unowned_tbd", "numbers_trace_to",
                 "cites_source_ids", "mermaid_parses", "max_lines", "contains", "cmd", "exit", "needs_input"}
     assert co.VOCAB == expected
 
@@ -251,3 +251,17 @@ def test_mermaid_parses_accepts_er_diagram_cardinality(tmp_path):
     g = tmp_path / "n.md"
     g.write_text("```mermaid\nerDiagram\n  CUSTOMER\n  ORDER\n```\n", encoding="utf-8")
     assert check_output.run_check("mermaid_parses", g, cwd=tmp_path, mode="real")["pass"] is False
+
+
+def test_section_filled_refuses_template_and_tbd_bodies(tmp_path):
+    """First greenfield run: the requirements gate passed a PRD whose stories were the untouched template."""
+    tpl = "# PRD\n\n## User stories and acceptance criteria (v1)\n### S1 — As a <persona>, I want <capability>\n- Given … When … Then …\n\n## Experience notes\nx\n"
+    assert not ok('section_filled:"user stories"', w(tmp_path, "t.md", tpl))
+    tbd = "## User stories (v1)\n- Acceptance: [TO BE BASELINED — owner: Product owner]\n\n## Next\n"
+    r = co.run_check('section_filled:"user stories"', str(w(tmp_path, "b.md", tbd)))
+    assert not r["pass"] and "TO BE BASELINED" in r["evidence"]
+    assert not ok('section_filled:"user stories"', w(tmp_path, "e.md", "## User stories\n\n## Next\nx\n"))
+    assert not ok('section_filled:"user stories"', w(tmp_path, "m.md", "## Goals\nx\n"))
+    good = "## User stories and acceptance criteria (v1)\n### S1 — As an ops lead, I want: CSV export\n- Given the v1 build, When the user exports, Then GET /api/orders/export answers 200 text/csv\n\n## Experience notes\n"
+    r = co.run_check('section_filled:"user stories"', str(w(tmp_path, "g.md", good)))
+    assert r["pass"] and "2 line(s)" in r["evidence"]

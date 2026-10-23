@@ -64,7 +64,7 @@ def replace_section(md: str, heading_startswith: str, body: list[str]) -> str:
     return "\n".join(out) + "\n"
 
 
-FROM_BRIEF = {"Exec summary", "Problem", "Users", "Goals", "Non-goals", "Metrics", "Phases", "Engineering handoff"}
+FROM_BRIEF = {"Exec summary", "Problem", "Users", "Goals", "Non-goals", "Metrics", "Phases", "User stories", "Engineering handoff"}
 REDLINE_SECTIONS = ["Exec summary", "Problem", "Users", "Goals", "Non-goals", "Metrics", "Phases",
                     "User stories", "Risks", "Open questions", "Engineering handoff"]
 NUM_RE = re.compile(r"(?<![\w.])[$€£]?\d[\d,]*(?:\.\d+)?%?(?![\w])")
@@ -277,8 +277,24 @@ def main() -> int:
     if not phases:
         gaps.append("phases")
     md = replace_section(md, "Phases", ph)
+    # user stories + acceptance criteria from the brief's stories/tasks (task, accept[, test]) — the draft never
+    # invents them; without them the section stays the template and the pipeline stops for the product manager
+    stories = [t for t in (as_list(brief.get("stories")) or as_list(brief.get("tasks"))) if isinstance(t, dict) and (t.get("accept") or t.get("acceptance"))]
+    if stories:
+        st = []
+        for i, t in enumerate(stories, 1):
+            who = cell(t.get("persona")) if t.get("persona") else (str(users[0]) if users else "a user")
+            what, accept = cell(t.get("task") or t.get("story") or t.get("name")), cell(t.get("accept") or t.get("acceptance"))
+            st += [f"### S{i} — As {who}, I want: {what}", f"- Given the v1 build, When the user exercises \"{what}\", Then {accept}"]
+            if t.get("test"):
+                st.append(f"- Verified by: {cell(t.get('test'))}")
+        md = replace_section(md, "User stories", st)
+        accept_line = "; ".join(cell(t.get("accept") or t.get("acceptance")) for t in stories)
+    else:
+        gaps.append("stories")
+        accept_line = f"{TBD} (derive from the v1 scope rows above)"
     md = replace_section(md, "Engineering handoff", [
-        f"- Acceptance criteria: {TBD} (derive from the v1 scope rows above)",
+        f"- Acceptance criteria: {accept_line}",
         f"- Entities for supabase-schema-rls: {TBD}",
         f"- RBAC rows to add: {TBD}",
         "- Metrics instrumentation: events `action=<…>` with `outcome`" + (f" for {', '.join(cell(m.get('name')) for m in metrics)}" if metrics else ""),

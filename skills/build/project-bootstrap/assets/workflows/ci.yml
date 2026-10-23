@@ -24,10 +24,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        if: hashFiles('package-lock.json') != ''
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - uses: actions/setup-node@v4
+        if: hashFiles('package-lock.json') == ''
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install (npm ci with the committed lockfile; a fresh bootstrap has none yet)
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else
+            echo "::warning::no package-lock.json — run 'npm install' locally and commit the lockfile (bootstrap checklist B2)"
+            npm install --no-audit --no-fund; fi
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test -- --coverage
@@ -56,7 +65,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: RLS lint (fails on tables without RLS or policies without tenant predicate)
+        if: hashFiles('scripts/rls_lint.py') != ''
         run: python3 -I scripts/rls_lint.py supabase/migrations --client-dirs app components lib/supabase/browser.ts
+      - name: RLS lint not installed yet
+        if: hashFiles('scripts/rls_lint.py') == ''
+        run: echo "::warning::scripts/rls_lint.py absent — install it with supabase-schema-rls before the first migration"
 
   secrets-scan:
     runs-on: ubuntu-latest
