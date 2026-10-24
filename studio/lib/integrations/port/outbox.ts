@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PortClient, portConfig } from "./client";
 import { BLUEPRINT_ID, skillEntity } from "./map";
 import { ensureSkillBlueprint, loadSkillsForPort } from "./sync";
+import { ensureSkillQualityScorecard } from "./scorecard";
 
 export const MAX_ATTEMPTS = 5;
 export const backoffMs = (attempt: number) => Math.min(2 ** attempt, 64) * 60_000;
@@ -27,7 +28,7 @@ export async function drainPortOutbox(admin: SupabaseClient, opts: { portalBase:
   if (!rows.length) return out;
 
   const port = new PortClient(cfg, opts.f);
-  try { await ensureSkillBlueprint(port); } catch (e) {
+  try { await ensureSkillBlueprint(port); await ensureSkillQualityScorecard(port); } catch (e) {
     // the blueprint is a precondition for every row: record the failure on each and stop
     for (const r of rows) await markFailed(admin, r, (e as Error).message, now, out);
     return out;
