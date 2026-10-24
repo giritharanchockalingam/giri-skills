@@ -22,4 +22,37 @@ Code: `studio/lib/integrations/port/{map,repoRun,scorecard,client}.ts`, `studio/
 5. Skill scorecard Silver (WP2).
 6. Fresh-eyes test: a person who did not build this, given only the Port page, says what the skill is, whether it is trusted, and how to run it. **Owner to name the person.**
 
-Live output: _to be appended_.
+## Live acceptance — PR #165, 2026-10-24 (UTC), run from Port in the owner's browser
+
+| # | §7 criterion | Evidence | Result |
+|---|---|---|---|
+| 1 | Run from Port on a fresh feature PR | PR #165 (reconcile default workspace, real fix). Port run `wfr_kZSEAaTRv5llrMhm` → factory run `e1a1d006-d126-4d49-8ae9-9a75aab6f887`, succeeded 6/6, head `07807024`. Run entity related to **giri-skills**, **giri-skills-pr-165**, **Code review**, **Triggered by: giritharan.c@acldigital.com** | ✅ |
+| 1b | Result posted to the PR | GitHub check "Skills Factory: code-review-runner — v2 succeeded (6/6 checks)", success, on `07807024`, details → factory run | ✅ |
+| 1c | Gate = Reviewed | 04:14 — `sf_passing_head_reviews = 1`, `pr_review_gate` **Reviewed** | ✅ |
+| 2 | New commit drops the gate | Commit `b4aea15` pushed 04:14; factory webhook marked run `e1a1d006` off-head within ~30 s; 04:40 — aggregation 0, **Not reviewed** | ✅ |
+| 2b | Re-run restores it | Port run `wfr_QoUAA7l247H4XgoA` → factory run `b947ff8d-59a0-4b56-907b-a4ad75757381`, succeeded 6/6 on `b4aea15`; 05:08 — aggregation 1, **Reviewed** (old run off-head, new run on-head) | ✅ |
+| 3 | Trace ≤ 3 clicks from the repo page | Repository page widget "Governed skill runs on this repository" → run (1) → **Code review** skill (2) → **Release page** evidence link (3) | ✅ |
+| 4 | Port run ↔ factory run, no duplicate on retry | WP3 (forced replay → same run, `deduplicated: true`, 1 row) | ✅ (WP3) |
+| 5 | Skill scorecard Silver (Gold per D3) | code-review-runner **Gold** after D3 (trigger 1.00, lift +0.31, 6 cases, approval valid); tenant: Gold 21 · Silver 22 · Bronze 23 | ✅ |
+| 6 | Fresh-eyes test | **Owner-run, not independent.** First read: what ✅, trust ❌, how-to-run ❌ → fixed in code (Start-here summary, #166). Second read: 3/3 from the page alone | ⚠️ owner-run |
+
+### Found live and fixed in code (not in data)
+
+| PR | Finding |
+|---|---|
+| #166 | Skill page did not explain trust or how to run → `sf_summary` "Start here" tab (first tab) on every AI Skill |
+| #167 | D3: Gold = Silver + trigger ≥ 0.90 + lift ≥ 0.30 + ≥ 6 cases |
+| #168 | Every AI Skill read "Library status: blocked" — the sync ignored frozen snapshots; now 1 current · 65 library_updated, matching the factory's own pages |
+| #169 | A full push left rows pending (one 50-row pass) → kick drains in passes within 40 s; outbox 0/0/0 |
+
+Port UI changes made in the owner's tenant (configuration, not data): Skill-runs table on the repository page; all properties shown and saved on AI Skill and Skill run detail cards; Governed AI Skills table columns switched to verdict / trigger / lift / approval valid / skill quality / release page; Start here tab first.
+
+### Observed Port behaviour
+
+Aggregation properties recalculated at 04:14, 04:40 and 05:08 — about every 26 minutes on this tenant, not the documented 15. The gate therefore lags the factory by up to ~30 minutes; the factory's own state (run on/off head, GitHub check) is immediate.
+
+### Not done / carried
+
+- Retire test — skipped by owner decision (unit-tested only).
+- Independent fresh-eyes read — owner-run only.
+- PR #165 left open for the owner to merge.
