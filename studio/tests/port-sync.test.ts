@@ -5,13 +5,14 @@ import { PortClient } from "../lib/integrations/port/client.ts";
 import { operatorAuthorized } from "../lib/integrations/port/serverAuth.ts";
 import { drainPortOutbox, backoffMs, MAX_ATTEMPTS } from "../lib/integrations/port/outbox.ts";
 import { reconcilePort, reconcileText } from "../lib/integrations/port/reconcile.ts";
+import { syncMcpServerEntity, allowedTools, isFactoryServer } from "../lib/integrations/port/mcpEntity.ts";
 import { ensureSkillQualityScorecard, readbackLevels, SKILL_QUALITY_SCORECARD } from "../lib/integrations/port/scorecard.ts";
 
 const cfg = { apiUrl: "https://port.test", clientId: "id", clientSecret: "secret" };
 const H = "a".repeat(64), H2 = "b".repeat(64);
 
 /* ── a Port stand-in: records every call, serves one blueprint and the entities it has been given ── */
-function fakePort(opts: { blueprint?: Record<string, unknown> | null; entities?: Record<string, unknown>[]; failUpsert?: boolean; hasRegistry?: boolean; scorecards?: Record<string, unknown>[] } = {}) {
+function fakePort(opts: { blueprint?: Record<string, unknown> | null; entities?: Record<string, unknown>[]; failUpsert?: boolean; hasRegistry?: boolean; scorecards?: Record<string, unknown>[]; mcp?: Record<string, unknown>[] } = {}) {
   const calls: { method: string; path: string; body?: unknown }[] = [];
   const entities = new Map((opts.entities ?? []).map((e) => [String(e.identifier), e]));
   const scorecards = new Map((opts.scorecards ?? []).map((s) => [String(s.identifier), s]));
@@ -31,6 +32,8 @@ function fakePort(opts: { blueprint?: Record<string, unknown> | null; entities?:
     if (path === "/v1/blueprints/aiSkill/scorecards" && method === "GET") return json(200, { scorecards: [...scorecards.values()] });
     if (path === "/v1/blueprints/aiSkill/scorecards" && method === "POST") { scorecards.set(String(body.identifier), body); return json(201, {}); }
     if (path.startsWith("/v1/blueprints/aiSkill/scorecards/") && method === "PUT") { scorecards.set(String(body.identifier), body); return json(200, {}); }
+    if (path === "/v1/blueprints/_mcp_server/entities/search") return json(200, { entities: (opts.mcp ?? []) });
+    if (path.startsWith("/v1/blueprints/_mcp_server/entities?upsert") && method === "POST") { const e = (opts.mcp ?? []).find((m) => m.identifier === body.identifier); if (e) Object.assign(e.properties as object, body.properties); return json(200, {}); }
     if (path.startsWith("/v1/blueprints/aiSkill/entities/") && method === "GET") { const e = entities.get(decodeURIComponent(path.split("/").pop()!)); return e ? json(200, { entity: e }) : json(404, {}); }
     return json(404, { message: `unhandled ${method} ${path}` });
   }) as typeof fetch;
@@ -211,4 +214,22 @@ test("scorecard: created once with Bronze/Silver only (Gold fenced by D3); uncha
   p.entities.set("not-evaluated-one", { identifier: "not-evaluated-one", properties: { sf_status: "published", sf_eval_verdict: "not-evaluated", sf_approval_valid: true }, scorecards: { skill_quality: { level: "Bronze", rules: [{ identifier: "published_with_verdict", status: "SUCCESS" }, { identifier: "healthy_and_approved", status: "FAILURE" }] } } });
   const rb = await readbackLevels(c, ["healthy-one", "not-evaluated-one", "missing"]);
   assert.deepEqual(rb.map((r) => [r.slug, r.level]), [["healthy-one", "Silver"], ["not-evaluated-one", "Bronze"], ["missing", null]]);
+});
+
+test("WP5 MCP server entity: allowed_tools = helpers + published slugs; only the factory's own unscoped server is touched; merge-upsert of that one property; unchanged → no write; not registered → said so", async () => {
+  assert.deepEqual(allowedTools(["b", "a", "a", "find_skill"]), ["find_skill", "get_run", "a", "b"]);
+  assert.ok(isFactoryServer("https://f.app/api/mcp", "https://f.app/")); assert.ok(!isFactoryServer("https://other/api/mcp", "https://f.app"));
+  const mine = { identifier: "skills_factory", properties: { url: "https://f.app/api/mcp", headers: { Authorization: "Bearer {{ .secrets[\"SF_API_KEY\"] }}" }, allowed_tools: ["find_skill", "get_run", "old-retired"] } };
+  const scoped = { identifier: "sf_role", properties: { url: "https://f.app/api/mcp/role/reviewer", allowed_tools: ["x"] } };
+  const other = { identifier: "github", properties: { url: "https://api.githubcopilot.com/mcp", allowed_tools: ["y"] } };
+  const p = fakePort({ mcp: [scoped, other, mine] });
+  const c = new PortClient(cfg, p.f);
+  const r = await syncMcpServerEntity(c, "https://f.app", ["code-review-runner", "llm-cost-model"]);
+  assert.equal(r.status, "updated"); assert.equal(r.identifier, "skills_factory"); assert.deepEqual(r.removed, ["old-retired"]); assert.deepEqual(r.added, ["code-review-runner", "llm-cost-model"]);
+  assert.deepEqual(mine.properties.allowed_tools, ["find_skill", "get_run", "code-review-runner", "llm-cost-model"]);
+  assert.ok(mine.properties.headers, "auth header untouched"); assert.deepEqual(scoped.properties.allowed_tools, ["x"]); assert.deepEqual(other.properties.allowed_tools, ["y"]);
+  const upserts = p.calls.filter((x) => x.path.startsWith("/v1/blueprints/_mcp_server/entities?upsert"));
+  assert.equal(upserts.length, 1); assert.ok((upserts[0].path).includes("merge=true")); assert.deepEqual(Object.keys((upserts[0].body as { properties: object }).properties), ["allowed_tools"]);
+  assert.equal((await syncMcpServerEntity(c, "https://f.app", ["code-review-runner", "llm-cost-model"])).status, "current");
+  assert.equal((await syncMcpServerEntity(new PortClient(cfg, fakePort({ mcp: [other] }).f), "https://f.app", ["a"])).status, "not-registered");
 });
