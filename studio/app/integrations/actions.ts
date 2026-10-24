@@ -22,17 +22,21 @@ export async function syncIntegration(_: SyncState | null, fd: FormData): Promis
   return { ok: r.ok, message: r.message, problems: r.problems.slice(0, 20) };
 }
 
-/** Push published skills to Port as "AI Skill" entities (admins). */
+/** Push every published / retired skill to Port (admins): enqueue one outbox event per skill, then drain. The outbox is
+ *  the record; what did not reach Port stays there with its error and is listed on this page. */
 export async function syncToPort(_: SyncState | null, fd?: FormData): Promise<SyncState> {
   NoFields.parse(fd);
   const ctx = await requireWorkspace();
   if (ctx.role !== "admin") return { ok: false, message: "Administrators push skills to Port.", problems: [] };
-  const { headers } = await import("next/headers");
-  const h = await headers();
-  const base = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-  const { syncSkillsToPort } = await import("@/lib/integrations/port/sync");
-  const r = await syncSkillsToPort(ctx.supabase, ctx.workspace.id, base);
-  await ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: "integration.sync.port", p_entity_type: "integration", p_entity_id: "port", p_details: { ok: r.ok, pushed: r.pushed, blueprint: r.blueprint ?? null, problems: r.problems.length } });
+  const { data: enq, error } = await ctx.supabase.rpc("sf_port_enqueue_all", { p_workspace: ctx.workspace.id });
+  if (error) return { ok: false, message: error.message, problems: [] };
+  const { kickPortSync } = await import("@/lib/integrations/port/kick");
+  await kickPortSync();
+  const { reconcilePort } = await import("@/lib/integrations/port/reconcile");
+  const r = await reconcilePort(ctx.supabase, ctx.workspace.id);
+  await ctx.supabase.rpc("sf_audit", { p_workspace: ctx.workspace.id, p_action: "integration.sync.port", p_entity_type: "integration", p_entity_id: "port", p_details: { ok: r.mismatches.length === 0 && !r.error, enqueued: (enq as { events?: number })?.events ?? null, matched: r.matched, mismatches: r.mismatches.length } });
   revalidatePath("/integrations");
-  return { ok: r.ok, message: r.message, problems: r.problems.slice(0, 20) };
+  if (r.error) return { ok: false, message: r.error, problems: [] };
+  const total = r.factory.published + r.factory.retired;
+  return { ok: r.mismatches.length === 0, message: `${r.matched} of ${total} skills match in Port (hash and release state); Port holds ${r.port.published} published, factory ${r.factory.published}.`, problems: r.mismatches.slice(0, 20).map((m) => `${m.slug}: ${m.reason} — ${m.detail}`) };
 }
