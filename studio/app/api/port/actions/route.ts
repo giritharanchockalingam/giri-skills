@@ -16,7 +16,7 @@ import { callerFromKey, type ApiCaller } from "@/lib/factory/apikey";
 import { runPublishedSkill, type ApiRunOutcome } from "@/lib/factory/apiRun";
 import { log } from "@/lib/logger";
 import { adminConfigured, createAdminSupabase } from "@/lib/supabase/server-admin";
-import { resolveRepoRun, declaresInput, recordRunInPort, type RepoRunContext } from "@/lib/integrations/port/repoRun";
+import { resolveRepoRun, declaresInput, recordRunInPort, resolveTriggerEmail, postReviewCheck, type RepoRunContext } from "@/lib/integrations/port/repoRun";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -79,12 +79,21 @@ export async function POST(req: Request) {
     if (!cfg.ok || out.http >= 400 || !b.run_id || b.deduplicated) return {};
     const checks = b.checks ?? [];
     try {
-      return await recordRunInPort(new PortClient(cfg), {
+      const port = new PortClient(cfg);
+      // Port workflows leave the trigger user's e-mail empty in the body; resolve it from the workflow run instead
+      const requestedBy = run.requestedBy && /@/.test(run.requestedBy) ? run.requestedBy : await resolveTriggerEmail(port, run.portRunId);
+      const recorded = await recordRunInPort(port, {
         runId: b.run_id, slug: run.skill, version: b.version ?? null, manifestHash: b.manifest_hash ?? null, status: String(b.status ?? "failed"),
         checksPassed: checks.filter((c) => c.pass).length, checksTotal: checks.length, durationMs: b.duration_ms ?? null, finishedAt: new Date().toISOString(),
         factoryUrl: `${base}/runs/${b.run_id}`, portRunId: run.portRunId, repository: run.action === "run_sf_skill_on_repo" ? run.target : null,
-        pr: repoCtx?.pr ?? null, headSha: repoCtx?.headSha ?? null, prUrl: repoCtx?.prUrl ?? null, requestedBy: run.requestedBy || null,
+        pr: repoCtx?.pr ?? null, headSha: repoCtx?.headSha ?? null, prUrl: repoCtx?.prUrl ?? null, requestedBy,
       });
+      // §7 step 4: the result lands on the PR as a check on the reviewed commit
+      if (repoCtx) {
+        try { await postReviewCheck(repoCtx, { slug: run.skill, version: b.version ?? null, status: String(b.status ?? "failed"), checksPassed: checks.filter((c) => c.pass).length, checksTotal: checks.length, factoryUrl: `${base}/runs/${b.run_id}`, portRunEntity: recorded.identifier, portAppUrl: process.env.PORT_APP_URL?.trim() || "https://app.port.io" }); }
+        catch (e) { log.warn({ action: "port.run.check_failed", run: b.run_id, err: e }, "could not post the GitHub check"); return { ...recorded, error: `GitHub check not posted: ${(e as Error).message}` }; }
+      }
+      return recorded;
     } catch (e) { log.error({ action: "port.run_entity.failed", run: b.run_id, err: e }, "could not record the run in Port"); return { error: (e as Error).message }; }
   };
 

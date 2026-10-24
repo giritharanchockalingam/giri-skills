@@ -115,7 +115,7 @@ test("WP4 run entity: deterministic id, relations to skill + repository + user, 
   const base = { runId: "807815d7-8d45-49fd-97a3-af023f477cd7", slug: "code-review-runner", version: 2, manifestHash: "d8".repeat(32), status: "failed", checksPassed: 5, checksTotal: 6, durationMs: 1840, finishedAt: "2026-10-24T02:00:00.000Z", factoryUrl: "https://f/runs/807815d7", portRunId: "wfr_X", repository: "giri-skills", pr: 162, headSha: "abc123", prUrl: "https://github.com/o/r/pull/162", requestedBy: "a@b.c" };
   const e = runEntity(base);
   assert.equal(e.identifier, "run_807815d7-8d45-49fd-97a3-af023f477cd7");
-  assert.deepEqual(e.relations, { skill: "code-review-runner", target: "giri-skills", triggered_by: "a@b.c" });
+  assert.deepEqual(e.relations, { skill: "code-review-runner", target: "giri-skills", triggered_by: "a@b.c", pull_request: "giri-skills-pr-162" });
   assert.equal(e.properties.sf_status, "failed"); assert.equal(e.properties.sf_checks, "5/6"); assert.equal(e.properties.sf_skill_version, "2");
   assert.equal(e.properties.sf_started_at, "2026-10-24T01:59:58.160Z"); assert.equal(e.properties.sf_duration_s, 1.8);
   for (const k of Object.keys(e.properties)) assert.ok(k in SKILL_RUN_BLUEPRINT.schema.properties, `${k} declared`);

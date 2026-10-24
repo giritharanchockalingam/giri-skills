@@ -137,6 +137,38 @@ export class PortClient {
     return (r.json.entity ?? null) as Record<string, unknown> | null;
   }
 
+  /** A workflow run (Port: GET /v1/workflows/runs/{id} → { workflowRun }); null when unknown. */
+  async getWorkflowRun(id: string): Promise<Record<string, unknown> | null> {
+    const r = await this.call("GET", `/v1/workflows/runs/${encodeURIComponent(id)}`);
+    if (r.status === 404) return null;
+    if (r.status >= 400) this.fail(`read workflow run ${id}`, r);
+    return (r.json.workflowRun ?? null) as Record<string, unknown> | null;
+  }
+  /** Organisation users (Port: GET /v1/users → { users }); id + email are what the factory needs. */
+  async listUsers(): Promise<{ id: string; email: string }[]> {
+    const r = await this.call("GET", "/v1/users");
+    if (r.status >= 400) this.fail("list users", r);
+    return ((Array.isArray(r.json.users) ? r.json.users : []) as { id?: unknown; email?: unknown }[]).filter((u) => typeof u.id === "string" && typeof u.email === "string").map((u) => ({ id: u.id as string, email: u.email as string }));
+  }
+  /** Entities matching a Port search query (rules on properties / relations). */
+  async searchEntities(blueprint: string, query: { combinator: "and" | "or"; rules: unknown[] }, limit = 200): Promise<Record<string, unknown>[]> {
+    const r = await this.call("POST", `/v1/blueprints/${encodeURIComponent(blueprint)}/entities/search`, { query, limit });
+    if (r.status >= 400) this.fail(`search ${blueprint}`, r);
+    return (Array.isArray(r.json.entities) ? r.json.entities : []) as Record<string, unknown>[];
+  }
+  /** Add aggregation properties a blueprint lacks (Port computes them; nothing the tenant added is touched). */
+  async ensureAggregations(blueprint: string, want: Record<string, unknown>): Promise<"extended" | "current"> {
+    const have = await this.getBlueprint(blueprint);
+    if (!have) throw new Error(`Port has no ${blueprint} blueprint`);
+    const agg = { ...((have.aggregationProperties ?? {}) as Record<string, unknown>) };
+    const missing = Object.keys(want).filter((k) => !(k in agg));
+    if (!missing.length) return "current";
+    for (const k of missing) agg[k] = want[k];
+    const r = await this.call("PATCH", `/v1/blueprints/${encodeURIComponent(blueprint)}`, { aggregationProperties: agg });
+    if (r.status >= 400) this.fail(`add aggregation to ${blueprint}`, r);
+    return "extended";
+  }
+
   async runLog(runId: string, message: string, end?: { status: "SUCCESS" | "FAILURE"; label?: string }): Promise<void> {
     const body: Record<string, unknown> = { message: message.slice(0, 4000) };
     if (end) { body.terminationStatus = end.status; if (end.label) body.statusLabel = end.label.slice(0, 200); }
