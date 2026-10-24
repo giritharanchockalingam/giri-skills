@@ -16,4 +16,14 @@ Plan note: Port Free plan limits are not published. If creating `sf_skill_run` i
 
 From Port, on the `giri-skills` repository entity, run **Run governed skill on a PR** with skill `code-review-runner` on an open PR → a `sf_skill_run` entity exists related to both `code-review-runner` and `giri-skills`, carrying the PR's head commit.
 
-Live output: _to be appended_.
+## Live acceptance (2026-10-24 ~02:58 UTC, run from Port in the owner's browser)
+
+| Check | Result |
+|---|---|
+| `sf_skill_run` blueprint created on the Free plan | yes — no plan refusal |
+| Workflow `run_sf_skill_on_repo` created in Port | yes |
+| Port run `wfr_j3lE8sSay6g47kuy`: repository `giri-skills`, PR **#162**, skill `code-review-runner` | HTTP 200 → factory run `74b0c31a-6bb6-45d7-bee4-53bcdc4c2e78`, **succeeded, 6/6 checks** |
+| Diff fetched by the factory through its GitHub App | `giritharanchockalingam/giri-skills` PR #162, head `7acc70d13c885d844339d7dcd3d66e97fed48367`, 7 files / 15 hunks / +310 −9 (the WP4 change itself) |
+| Run entity | `run_74b0c31a-6bb6-45d7-bee4-53bcdc4c2e78` — "code-review-runner v2 — succeeded · PR #162", related to **Repository: giri-skills** and **Skill: Code review** |
+
+Open item from this run: **Triggered by** is empty. Either Port's workflow context does not fill `{{ .trigger.by.user.email }}`, or the user lookup failed and the run was recorded without that link. To be checked in WP6 with the Port-documented workflow variable; the run evidence itself is complete.
