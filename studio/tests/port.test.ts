@@ -105,3 +105,7 @@ test("port webhook body (WP3): action identifier parsed and allow-listed; both a
   const webhook = wf.nodes.find((n) => n.config.type === "WEBHOOK")!.config as { body: { action: string; port_run_id: string } };
   assert.equal(webhook.body.action, "run_ai_skill"); assert.equal(webhook.body.port_run_id, "{{ .workflowRun.identifier }}");
 });
+
+test("port webhook body: a key-shaped port_run_id is refused so a secret can never be persisted as an idempotency key", () => {
+  assert.match(parsePortRun({ action: "run_ai_skill", port_run_id: "sf_live_abcdefghijklmnop", skill: "x-y", inputs: {} }) as string, /API key/);
+});
