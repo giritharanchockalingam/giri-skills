@@ -248,3 +248,13 @@ test("Start here summary (fresh-eyes fix): trust verdict matches the Silver rule
   assert.match(r, /No — retired/); assert.doesNotMatch(r, /How to run it/);
   assert.ok("sf_summary" in AI_SKILL_BLUEPRINT.schema.properties);
 });
+
+test("library status in Port matches the factory: a published version with frozen files is never 'blocked' (live bug 2026-10-24: all 66 read blocked)", async () => {
+  const { loadSkillsForPort } = await import("../lib/integrations/port/sync.ts");
+  const t = factoryTables();
+  (t.sf_skill_versions.find((v) => v.id === "v1")!.source as Record<string, unknown>).content_sha = "an-old-pin-the-deployment-no-longer-has";
+  const without = await loadSkillsForPort(fakeSupabase({ ...t, sf_version_snapshots: [] }), WS, { slugs: ["llm-cost-model"] });
+  assert.equal(without.rows[0].drift, "blocked", "without frozen files the stale pin really is blocked");
+  const withFrozen = await loadSkillsForPort(fakeSupabase({ ...factoryTables(), sf_skill_versions: t.sf_skill_versions, sf_version_snapshots: [{ workspace_id: WS, version_id: "v1", sha256: "frozen-sha" }] }), WS, { slugs: ["llm-cost-model"] });
+  assert.notEqual(withFrozen.rows[0].drift, "blocked");
+});
