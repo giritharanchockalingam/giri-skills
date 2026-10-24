@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { portSignature, verifyPortSignature } from "../lib/integrations/port/signature.ts";
-import { skillEntity, parsePortRun, runSkillAction, runSkillWorkflow, AI_SKILL_BLUEPRINT, portId, KNOWN_ACTIONS } from "../lib/integrations/port/map.ts";
+import { skillEntity, parsePortRun, runSkillAction, runSkillWorkflow, runSkillOnRepoWorkflow, runEntity, SKILL_RUN_BLUEPRINT, AI_SKILL_BLUEPRINT, portId, KNOWN_ACTIONS } from "../lib/integrations/port/map.ts";
+import { fullNameFromUrl } from "../lib/integrations/port/repoRun.ts";
 import { PortClient, portConfig } from "../lib/integrations/port/client.ts";
 
 test("port signature: HMAC-SHA256 over `ts.body`, base64, `v1,` prefix; stale, tampered and unsigned requests rejected", () => {
@@ -108,4 +109,30 @@ test("port webhook body (WP3): action identifier parsed and allow-listed; both a
 
 test("port webhook body: a key-shaped port_run_id is refused so a secret can never be persisted as an idempotency key", () => {
   assert.match(parsePortRun({ action: "run_ai_skill", port_run_id: "sf_live_abcdefghijklmnop", skill: "x-y", inputs: {} }) as string, /API key/);
+});
+
+test("WP4 run entity: deterministic id, relations to skill + repository + user, factory status words kept, started_at from duration, nulls not zeros", () => {
+  const base = { runId: "807815d7-8d45-49fd-97a3-af023f477cd7", slug: "code-review-runner", version: 2, manifestHash: "d8".repeat(32), status: "failed", checksPassed: 5, checksTotal: 6, durationMs: 1840, finishedAt: "2026-10-24T02:00:00.000Z", factoryUrl: "https://f/runs/807815d7", portRunId: "wfr_X", repository: "giri-skills", pr: 162, headSha: "abc123", prUrl: "https://github.com/o/r/pull/162", requestedBy: "a@b.c" };
+  const e = runEntity(base);
+  assert.equal(e.identifier, "run_807815d7-8d45-49fd-97a3-af023f477cd7");
+  assert.deepEqual(e.relations, { skill: "code-review-runner", target: "giri-skills", triggered_by: "a@b.c" });
+  assert.equal(e.properties.sf_status, "failed"); assert.equal(e.properties.sf_checks, "5/6"); assert.equal(e.properties.sf_skill_version, "2");
+  assert.equal(e.properties.sf_started_at, "2026-10-24T01:59:58.160Z"); assert.equal(e.properties.sf_duration_s, 1.8);
+  for (const k of Object.keys(e.properties)) assert.ok(k in SKILL_RUN_BLUEPRINT.schema.properties, `${k} declared`);
+  for (const k of Object.keys(e.relations)) assert.ok(k in SKILL_RUN_BLUEPRINT.relations, `${k} relation declared`);
+  const bare = runEntity({ ...base, repository: null, pr: null, headSha: null, prUrl: null, requestedBy: null, durationMs: null, status: "weird" }, { withUser: false });
+  assert.deepEqual(bare.relations, { skill: "code-review-runner" }); assert.equal(bare.properties.sf_started_at, null); assert.equal(bare.properties.sf_status, "failed", "unknown status never invented");
+  assert.ok(SKILL_RUN_BLUEPRINT.description.length <= 200);
+});
+
+test("WP4 repo workflow + body: repository/PR/skill inputs; body carries action, target, pr; parser normalises entity inputs and PR numbers", () => {
+  const wf = runSkillOnRepoWorkflow("https://x/api/port/actions");
+  assert.equal(wf.identifier, "run_sf_skill_on_repo"); assert.ok(KNOWN_ACTIONS.has("run_sf_skill_on_repo"));
+  const body = (wf.nodes[1].config as { body: Record<string, string> }).body;
+  assert.equal(body.action, "run_sf_skill_on_repo"); assert.equal(body.target, "{{ .outputs.trigger.repository }}"); assert.equal(body.pr, "{{ .outputs.trigger.pr }}");
+  const p = parsePortRun({ action: "run_sf_skill_on_repo", port_run_id: "wfr_abc1", skill: { identifier: "code-review-runner" }, target: '{"identifier":"giri-skills"}', pr: "#162", inputs: "" });
+  assert.ok(typeof p !== "string"); assert.equal(p.target, "giri-skills"); assert.equal(p.pr, 162); assert.deepEqual(p.inputs, {});
+  assert.match(parsePortRun({ action: "run_sf_skill_on_repo", port_run_id: "wfr_abc1", skill: "x-y", target: "r", pr: "abc", inputs: {} }) as string, /pull request number/);
+  assert.equal(fullNameFromUrl("https://github.com/giritharanchockalingam/giri-skills"), "giritharanchockalingam/giri-skills");
+  assert.equal(fullNameFromUrl("https://github.com/o/r.git/"), "o/r"); assert.equal(fullNameFromUrl("https://gitlab.com/o/r"), null);
 });
