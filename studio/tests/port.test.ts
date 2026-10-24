@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { portSignature, verifyPortSignature } from "../lib/integrations/port/signature.ts";
-import { skillEntity, parsePortRun, runSkillAction, AI_SKILL_BLUEPRINT, portId } from "../lib/integrations/port/map.ts";
+import { skillEntity, parsePortRun, runSkillAction, runSkillWorkflow, AI_SKILL_BLUEPRINT, portId, KNOWN_ACTIONS } from "../lib/integrations/port/map.ts";
 import { PortClient, portConfig } from "../lib/integrations/port/client.ts";
 
 test("port signature: HMAC-SHA256 over `ts.body`, base64, `v1,` prefix; stale, tampered and unsigned requests rejected", () => {
@@ -63,7 +63,6 @@ test("port client: token once, blueprint 409 = exists, upsert with merge, run lo
   assert.deepEqual(portConfig({}), { ok: false, missing: ["PORT_CLIENT_ID", "PORT_CLIENT_SECRET"] });
 });
 
-import { runSkillWorkflow } from "../lib/integrations/port/map.ts";
 test("port workflow: entity input as object/JSON/identifier; sync mode; workflow wiring", () => {
   for (const skill of [{ identifier: "llm-cost-model", title: "LLM cost model" }, '{"identifier":"llm-cost-model"}', "llm-cost-model"]) {
     const r = parsePortRun({ mode: "sync", port_run_id: "wfr_ab12cd", skill, inputs: { workload: "x" } });
@@ -93,4 +92,16 @@ test("port client: entities paged through search (limit/from), falling back to t
   assert.deepEqual((await c.listBlueprints()).map((b) => b.identifier), ["a", "b"]);
   assert.deepEqual((await c.listEntities("a")).entities.map((e) => e.identifier), ["a1", "a2"]);
   assert.deepEqual((await c.listEntities("b")).entities.map((e) => e.identifier), ["b1"]);
+});
+
+test("port webhook body (WP3): action identifier parsed and allow-listed; both action and workflow templates carry it; target kept for WP4", () => {
+  const ok = parsePortRun({ action: "run_ai_skill", port_run_id: "r_abc123", skill: "x-y", inputs: {}, target: "giri-skills" });
+  assert.ok(typeof ok !== "string" && ok.action === "run_ai_skill" && ok.target === "giri-skills");
+  assert.equal((parsePortRun({ port_run_id: "r_abc123", skill: "x-y", inputs: {} }) as { action: string | null }).action, null, "legacy bodies without an action still parse (receiver logs them)");
+  assert.match(parsePortRun({ action: "bad id!", port_run_id: "r_abc123", skill: "x-y", inputs: {} }) as string, /action/);
+  assert.ok(!KNOWN_ACTIONS.has("delete_everything") && KNOWN_ACTIONS.has("run_ai_skill"));
+  assert.equal(runSkillAction("https://x").invocationMethod.body.action, "run_ai_skill");
+  const wf = runSkillWorkflow("https://x");
+  const webhook = wf.nodes.find((n) => n.config.type === "WEBHOOK")!.config as { body: { action: string; port_run_id: string } };
+  assert.equal(webhook.body.action, "run_ai_skill"); assert.equal(webhook.body.port_run_id, "{{ .workflowRun.identifier }}");
 });

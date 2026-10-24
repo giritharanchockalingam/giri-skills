@@ -10,7 +10,7 @@
  * id is the idempotency key, so a retried call never runs a skill twice. */
 import { after, NextResponse } from "next/server";
 import { verifyPortSignature } from "@/lib/integrations/port/signature";
-import { parsePortRun } from "@/lib/integrations/port/map";
+import { parsePortRun, KNOWN_ACTIONS } from "@/lib/integrations/port/map";
 import { PortClient, portConfig } from "@/lib/integrations/port/client";
 import { callerFromKey, type ApiCaller } from "@/lib/factory/apikey";
 import { runPublishedSkill, type ApiRunOutcome } from "@/lib/factory/apiRun";
@@ -20,6 +20,7 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const SYNC_BUDGET_MS = 8_000;
+const MAX_BODY_BYTES = 1_048_576;                       // spec §6.2: mirror Port's own 1 MiB limit, reject rather than truncate
 const reply = (status: number, body: Record<string, unknown>) => NextResponse.json(body, { status });
 
 type RunBody = { run_id?: string; status?: string; checks?: { pass?: boolean; check?: string }[]; outputs?: unknown; error?: { code?: string; message?: string; details?: unknown } };
@@ -31,7 +32,8 @@ const summarize = (out: ApiRunOutcome, base: string) => {
 };
 
 export async function POST(req: Request) {
-  const raw = (await req.text()).slice(0, 1_000_000);
+  const raw = await req.text();
+  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) return reply(413, { error: "body exceeds Port's 1 MiB request limit" });
   const base = new URL(req.url).origin;
   const cfg = portConfig(process.env);
 
@@ -55,6 +57,8 @@ export async function POST(req: Request) {
   try { parsed = parsePortRun(JSON.parse(raw)); } catch { parsed = "body is not JSON"; }
   if (typeof parsed === "string") return reply(400, { error: parsed });
   const run = parsed;
+  if (run.action && !KNOWN_ACTIONS.has(run.action)) { log.warn({ action: "port.webhook.rejected", reason: "unknown action", port_action: run.action }, "port webhook rejected"); return reply(400, { error: `unknown action identifier “${run.action}”` }); }
+  if (!run.action) log.warn({ action: "port.webhook.legacy_body", port_run: run.portRunId }, "Port body carries no action identifier; re-import the workflow JSON from Integrations");
   const exec = () => runPublishedSkill(caller as ApiCaller, run.skill, { inputs: run.inputs }, `port:${run.portRunId}`, `${base}/api/v1/skills/${run.skill}/run`);
 
   // ── Port workflows: answer within Port's 10-second window ──
@@ -69,7 +73,8 @@ export async function POST(req: Request) {
     const s = summarize(first, base);
     log.info({ action: "port.run.done", port_run: run.portRunId, run: s.b.run_id, status: s.b.status ?? s.b.error?.code }, "port workflow run");
     if (first.http >= 400 || !s.b.run_id) return reply(first.http >= 400 ? first.http : 500, { ok: false, error: s.b.error?.message ?? "rejected", code: s.b.error?.code ?? null, details: s.b.error?.details ?? null });
-    return reply(200, { ok: s.b.status === "succeeded", status: s.b.status, checks_passed: `${s.passed}/${s.total}`, run_id: s.b.run_id, link: s.link, outputs: s.b.outputs ?? null });
+    // a replayed Port run (same port_run_id) returns the existing factory run: one run, never two (spec §5.3)
+    return reply(200, { ok: s.b.status === "succeeded", status: s.b.status, checks_passed: `${s.passed}/${s.total}`, run_id: s.b.run_id, port_run_id: run.portRunId, deduplicated: Boolean((s.b as { deduplicated?: boolean }).deduplicated), link: s.link, outputs: s.b.outputs ?? null });
   }
 
   // ── Classic self-service actions: acknowledge, then report to the action run ──
