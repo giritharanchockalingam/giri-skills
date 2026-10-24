@@ -21,4 +21,12 @@ Owner action after merge: re-import the workflow JSON from Integrations → Port
 1. In Port, run **Run governed skill** on `code-review-runner` with its sample inputs → workflow run shows SUCCESS and the factory link; the factory run page shows "Port run <id>".
 2. Forced duplicate: replay the same body (same `port_run_id`) to `/api/port/actions` with the `SF_API_KEY` bearer → reply has the **same** `run_id` and `deduplicated: true`; `sf_runs` has exactly one row with that key.
 
-Live output: _to be appended_.
+## Live acceptance (2026-10-24 01:59–02:04 UTC)
+
+| Check | Result |
+|---|---|
+| Run from Port (workflow `run_governed_skill`, run `wfr_Rkf7AtnzJ9HFrluU`, skill `code-review-runner`, input = the skill's own eval fixture `change-risky.patch`) | HTTP 200 → factory run `807815d7-8d45-49fd-97a3-af023f477cd7`, link back to the factory, verdict BLOCK (status `failed`, 5/6 checks — the expected result for that diff) |
+| Forced duplicate (same `port_run_id`, replayed to `/api/port/actions`) | same `run_id`, `deduplicated: true` |
+| One factory run per Port run | `sf_runs` where `idempotency_key = 'port:wfr_Rkf7AtnzJ9HFrluU'` → **1** |
+
+Found live and fixed in code: the copyable workflow identifier didn't match the org's (#160); a workspace key passed as `port_run_id` was stored as an idempotency key — the receiver now refuses key-shaped run ids (#161). The exposed key was revoked and replaced in Port's `SF_API_KEY` by the owner.
