@@ -37,6 +37,24 @@ Then redeploy **the latest `main`**: Vercel → giri-skills-studio → Deploymen
    - Header: `Authorization: Bearer {{ .secrets["SF_API_KEY"] }}`, with a workspace key stored as the Port secret `SF_API_KEY`
    - Allowed tools: the skills Port's agents may call
 
+## Publish sync (WP1, 2026-10-23 — spec §5.1, §6.1, §6.3)
+
+Publishing or retiring a version writes a row to `sf_port_outbox` **inside the same transaction** (trigger `sf_port_enqueue_trg`, migration 0025). A worker (`lib/integrations/port/outbox.ts`, service role) upserts the skill's *current* state onto its `aiSkill` entity and records the result in `sf_port_links` (hash, version, state, time, last error). Port being down never blocks a release; a failed push backs off (2, 4, 8, 16, 32 min) and is dead-lettered after 5 attempts, listed under Integrations → Port → *Needs attention*. Nothing is marked processed until Port acknowledged it.
+
+| Path | When | Auth |
+|---|---|---|
+| in-process kick | right after every publish / retire (and after **Push skills to Port**) | the acting user's session starts it; the worker itself uses the service role |
+| `POST /api/port/sync` | catch-up: run it from a scheduler or by hand | `Authorization: Bearer $HEALTH_CHECK_TOKEN` (or `CRON_SECRET`) |
+| `GET /api/port/reconcile?format=text` | factory vs Port, one line per difference (sync-pending / sync-failed / dead-lettered / hash-drift / status-drift / edited-in-port / missing-in-port / unknown-in-factory) | same |
+
+**Entity properties.** The `aiSkill` blueprint now also carries the factory-owned `sf_*` properties (`sf_version`, `sf_content_hash`, `sf_status`, `sf_eval_verdict`, `sf_trigger_score`, `sf_lift`, `sf_eval_cases`, `sf_eval_model`, `sf_eval_at`, `sf_approval_valid`, `sf_factory_url`, `sf_mcp_tool`, `sf_owner`, `sf_synced_at`). They are overwritten on every sync and Port never recomputes them; an edit made in Port shows up in reconcile as *edited-in-port*. Null means the factory does not have the value — never 0. The first sync after this release **extends** the existing blueprint in place (PATCH adds the missing properties; nothing the tenant added is removed).
+
+**Registry relation.** When the tenant has Port's Skills-registry `skill` blueprint and `PORT_REGISTRY_REPO` (plain env, `<owner>/<repo>`) names the repository Port scanned, each repo-sourced skill is related to its `SKILL.md` registry entity (`registry_file`). The registry stays Port's; the factory never writes into it (owner decision D7, docs/PORT-INTEGRATION-WP0.md).
+
+**Retire.** `sf_status = retired`, `sf_mcp_tool = null`; the entity is kept (audit trail), never deleted.
+
+**Tokens.** One token per server, refreshed single-flight at the earlier of Port's `expiresIn` and 2.5 h (Port keeps one active token per credential set).
+
 ## Security
 
 - The webhook only accepts requests signed by Port: HMAC-SHA256 of `timestamp.body` with the Port client secret. Requests older than 5 minutes are refused.

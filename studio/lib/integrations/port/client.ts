@@ -28,14 +28,23 @@ export class PortClient {
     throw new Error(`Port ${what} failed (${r.status})${msg ? `: ${msg}` : ""}`);
   }
 
+  private refreshing: Promise<string> | null = null;
+  /** One cached token per client, refreshed single-flight (spec §6.1: Port keeps one active token per credential set,
+   *  so concurrent refreshers must share one call). Renewed at the earlier of Port's expiry and 2.5 h. */
   async accessToken(): Promise<string> {
     if (this.token && this.token.until > Date.now()) return this.token.value;
-    const r = await this.call("POST", "/v1/auth/access_token", { clientId: this.cfg.clientId, clientSecret: this.cfg.clientSecret }, false);
-    const t = r.json.accessToken;
-    if (r.status >= 400 || typeof t !== "string") this.fail("authentication (check PORT_CLIENT_ID / PORT_CLIENT_SECRET and PORT_API_URL region)", r);
-    const ttl = typeof r.json.expiresIn === "number" ? r.json.expiresIn * 1000 : 50 * 60_000;
-    this.token = { value: t as string, until: Date.now() + ttl - 60_000 };
-    return t as string;
+    if (this.refreshing) return this.refreshing;
+    this.refreshing = (async () => {
+      try {
+        const r = await this.call("POST", "/v1/auth/access_token", { clientId: this.cfg.clientId, clientSecret: this.cfg.clientSecret }, false);
+        const t = r.json.accessToken;
+        if (r.status >= 400 || typeof t !== "string") this.fail("authentication (check PORT_CLIENT_ID / PORT_CLIENT_SECRET and PORT_API_URL region)", r);
+        const ttl = Math.min(typeof r.json.expiresIn === "number" ? r.json.expiresIn * 1000 : 50 * 60_000, 150 * 60_000);
+        this.token = { value: t as string, until: Date.now() + ttl - 60_000 };
+        return t as string;
+      } finally { this.refreshing = null; }
+    })();
+    return this.refreshing;
   }
 
   /** Create the blueprint; an existing one is left as is (Port returns 409 for a duplicate identifier). */
@@ -44,6 +53,29 @@ export class PortClient {
     if (r.status === 201 || r.status === 200) return "created";
     if (r.status === 409) return "exists";
     this.fail(`create blueprint ${bp.identifier}`, r);
+  }
+
+  /** The blueprint as Port holds it, or null when it does not exist. */
+  async getBlueprint(identifier: string): Promise<Record<string, unknown> | null> {
+    const r = await this.call("GET", `/v1/blueprints/${encodeURIComponent(identifier)}`);
+    if (r.status === 404) return null;
+    if (r.status >= 400) this.fail(`read blueprint ${identifier}`, r);
+    return (r.json.blueprint ?? null) as Record<string, unknown> | null;
+  }
+
+  /** Make the blueprint carry every property/relation in `want`, keeping whatever else the tenant added. Returns what changed. */
+  async ensureBlueprintSchema(want: { identifier: string; title: string; icon?: string; description?: string; schema: { properties: Record<string, unknown>; required?: readonly string[] }; relations: Record<string, unknown> }): Promise<"created" | "extended" | "current"> {
+    const have = await this.getBlueprint(want.identifier);
+    if (!have) { await this.ensureBlueprint(want); return "created"; }
+    const schema = (have.schema ?? {}) as { properties?: Record<string, unknown>; required?: string[] };
+    const props = { ...(schema.properties ?? {}) }, rels = { ...((have.relations ?? {}) as Record<string, unknown>) };
+    let changed = false;
+    for (const [k, v] of Object.entries(want.schema.properties)) if (!(k in props)) { props[k] = v; changed = true; }
+    for (const [k, v] of Object.entries(want.relations)) if (!(k in rels)) { rels[k] = v; changed = true; }
+    if (!changed) return "current";
+    const r = await this.call("PATCH", `/v1/blueprints/${encodeURIComponent(want.identifier)}`, { description: want.description ?? have.description, schema: { properties: props, required: schema.required ?? [] }, relations: rels });
+    if (r.status >= 400) this.fail(`extend blueprint ${want.identifier}`, r);
+    return "extended";
   }
 
   async upsertEntity(blueprint: string, entity: { identifier: string }): Promise<void> {

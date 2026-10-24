@@ -4,11 +4,35 @@
 
 export const BLUEPRINT_ID = "aiSkill";
 
+/** Port blueprint identifier the factory's skills live under (owner decision D7, 2026-10-23: keep `aiSkill`, extend it
+ *  with the spec's `sf_` properties, relate it to Port's own Skills-registry `skill` blueprint rather than writing into it). */
+export const REGISTRY_BLUEPRINT_ID = "skill";
+
+/** Properties the factory owns on the Port entity (spec §4.1). Everything here is overwritten on every sync; Port never
+ *  recomputes any of it. A value the factory does not have is null — never 0, never a placeholder (house rule 1). */
+export const SF_PROPERTIES = {
+  sf_skill_slug: { type: "string", title: "Skill slug" },
+  sf_version: { type: "string", title: "Published version", description: "Exact published version. Never a range." },
+  sf_content_hash: { type: "string", title: "Content hash", description: "Manifest hash pinned at approval. A mismatch with the factory means the entity is stale." },
+  sf_status: { type: "string", title: "Release state", enum: ["published", "retired"], enumColors: { published: "green", retired: "darkGray" } },
+  sf_eval_verdict: { type: "string", title: "Eval verdict", enum: ["healthy", "being-improved", "not-evaluated"], enumColors: { healthy: "green", "being-improved": "orange", "not-evaluated": "lightGray" }, description: "From the Skills Factory eval harness." },
+  sf_trigger_score: { type: "number", title: "Trigger score (0–1)", description: "Routing accuracy from the latest behavioural eval. Null when not evaluated." },
+  sf_lift: { type: "number", title: "Lift", description: "Quality lift with the skill versus the model alone. Null when not evaluated." },
+  sf_eval_cases: { type: "number", title: "Eval cases" },
+  sf_eval_model: { type: "string", title: "Eval model" },
+  sf_eval_at: { type: "string", title: "Evaluated", format: "date-time" },
+  sf_approval_valid: { type: "boolean", title: "Approval valid", description: "True only when the approval hash equals the current content hash." },
+  sf_factory_url: { type: "string", title: "Release page", format: "url" },
+  sf_mcp_tool: { type: "string", title: "MCP tool" },
+  sf_owner: { type: "string", title: "Owner" },
+  sf_synced_at: { type: "string", title: "Synced", format: "date-time" },
+} as const;
+
 export const AI_SKILL_BLUEPRINT = {
   identifier: BLUEPRINT_ID,
   title: "AI Skill",
   icon: "AI",
-  description: "A governed AI skill from Skills Factory: evaluated, approved and version-pinned. Callable over MCP, the API, and Port actions.",
+  description: "A governed AI skill from Skills Factory. Quality verdicts come from the Skills Factory eval harness. Properties starting sf_ are managed by the factory and overwritten on sync. Run skills from here or from your IDE via MCP.",
   schema: {
     properties: {
       purpose: { type: "string", title: "Purpose", format: "markdown" },
@@ -24,22 +48,36 @@ export const AI_SKILL_BLUEPRINT = {
       manifest_hash: { type: "string", title: "Manifest hash" },
       portal_url: { type: "string", title: "Skills Factory page", format: "url" },
       mcp_tool: { type: "string", title: "MCP tool name" },
+      ...SF_PROPERTIES,
     },
     required: [],
   },
   relations: {},
 } as const;
 
+/** Relation added only when the tenant has Port's Skills-registry blueprint (`skill`): the SKILL.md entity Port's
+ *  GitHub integration discovered for the same skill. Set, never created: the registry stays Port's. */
+export const REGISTRY_RELATION = { registry_file: { title: "Registry file (SKILL.md)", target: REGISTRY_BLUEPRINT_ID, required: false, many: false } } as const;
+
+export type EvalVerdict = "healthy" | "being-improved" | "not-evaluated";
+
 export interface SkillForPort {
   slug: string; name: string; purpose: string; version: number; published_at: string | null; manifest_hash: string;
   inputs: { name: string; required: boolean }[]; usesModel: boolean; evalPassRate: number | null; evalCases: number;
   approved: boolean; drift: "current" | "library_updated" | "blocked" | "n/a"; stage: string | null;
+  /** spec §4.1 — all optional so the pre-WP1 callers and tests keep working; absent means "not known", synced as null */
+  status?: "published" | "retired";
+  verdict?: EvalVerdict; triggerScore?: number | null; lift?: number | null; evalModel?: string | null; evalAt?: string | null;
+  owner?: string | null;
+  /** `<owner>/<repo>/<path>/SKILL.md` as Port's registry identifies it, when the tenant has the registry blueprint */
+  registryFileId?: string | null;
 }
 
 /** Port identifiers allow letters, digits and - _ @ . (max 100); slugs already fit. */
 export const portId = (slug: string) => slug.replace(/[^A-Za-z0-9_@.-]/g, "-").slice(0, 100);
 
-export function skillEntity(s: SkillForPort, portalBase: string) {
+export function skillEntity(s: SkillForPort, portalBase: string, syncedAt: string = new Date().toISOString()) {
+  const base = portalBase.replace(/\/$/, "");
   return {
     identifier: portId(s.slug),
     title: s.name,
@@ -55,12 +93,31 @@ export function skillEntity(s: SkillForPort, portalBase: string) {
       inputs: s.inputs.map((i) => `${i.name}${i.required ? "" : " (optional)"}`),
       uses_model: s.usesModel,
       manifest_hash: s.manifest_hash,
-      portal_url: `${portalBase.replace(/\/$/, "")}/skills/${s.slug}`,
+      portal_url: `${base}/skills/${s.slug}`,
       mcp_tool: s.slug,
+      // spec §4.1 (factory-owned, overwritten on every sync)
+      sf_skill_slug: s.slug,
+      sf_version: String(s.version),
+      sf_content_hash: s.manifest_hash,
+      sf_status: s.status ?? "published",
+      sf_eval_verdict: s.verdict ?? "not-evaluated",
+      sf_trigger_score: s.triggerScore ?? null,
+      sf_lift: s.lift ?? null,
+      sf_eval_cases: s.evalCases,
+      sf_eval_model: s.evalModel ?? null,
+      sf_eval_at: s.evalAt ?? null,
+      sf_approval_valid: s.approved,
+      sf_factory_url: `${base}/skills/${s.slug}/release`,
+      sf_mcp_tool: s.status === "retired" ? null : s.slug,
+      sf_owner: s.owner ?? null,
+      sf_synced_at: syncedAt,
     },
-    relations: {},
+    relations: s.registryFileId ? { registry_file: s.registryFileId } : {},
   };
 }
+
+/** The factory's verdict codes → the three words Port shows (spec §4.1 keeps the factory's wording). */
+export const verdictForPort = (code: "OK" | "DESC" | "BODY" | "BOTH" | null | undefined): EvalVerdict => (code == null ? "not-evaluated" : code === "OK" ? "healthy" : "being-improved");
 
 /** The "Run skill" day-2 action on AI Skill entities. Port sends this body (JQ templates) to our signed webhook. */
 export function runSkillAction(webhookUrl: string) {

@@ -11,6 +11,7 @@ import { PortSync } from "@/components/integrations/PortSync";
 import { CopyButton } from "@/components/CopyButton";
 import { portConfig } from "@/lib/integrations/port/client";
 import { AI_SKILL_BLUEPRINT, runSkillAction, runSkillWorkflow } from "@/lib/integrations/port/map";
+import { portSyncState } from "@/lib/integrations/port/state";
 import { headers } from "next/headers";
 
 export const metadata = { title: "Integrations · Skills Factory" };
@@ -75,6 +76,7 @@ export default async function IntegrationsPage() {
               <div><div className="caption mb-1"><b>Read</b> the delivery catalog (pull requests, CI, deployments, environments, teams){syncs.port ? <> · last <LocalTime iso={syncs.port.started_at} /> — {syncs.port.status}{syncs.port.error ? `: ${syncs.port.error}` : ""}</> : ""}</div><IntegrationSync provider="port" disabled={!pc.ok} /></div>
               <div><div className="caption mb-1"><b>Publish</b> governed skills so Port&apos;s engine can use them</div><PortSync disabled={!pc.ok} /></div>
             </div>}
+            <PortSyncState workspaceId={ctx.workspace.id} />
             <details className="mt-3"><summary className="caption" style={{ cursor: "pointer" }}><b>Run governed skill workflow</b>: in Port, Workflows → + Workflow → workflow JSON, paste. Needs the Port secret <code>SF_API_KEY</code> (a workspace API key).</summary>
               <div className="flex justify-end mb-1"><CopyButton text={workflowJson} /></div><pre className="run-raw">{workflowJson}</pre></details>
             <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>Classic self-service action</b> (older Port orgs): Self-service → + Action → Edit JSON</summary>
@@ -85,5 +87,18 @@ export default async function IntegrationsPage() {
           </section>);
       })()}
     </>
+  );
+}
+
+/** Outbox state (spec §5.1 / §6.3): what is waiting for Port, what failed and why. Read from the factory only — cheap,
+ *  always honest. The full factory-vs-Port comparison runs on "Push skills to Port" or GET /api/port/reconcile. */
+async function PortSyncState({ workspaceId }: { workspaceId: string }) {
+  const ctx = await requireWorkspace();
+  const st = await portSyncState(ctx.supabase, workspaceId);
+  return (
+    <div className="mt-3 caption">
+      <b>Sync state</b>: {st.linked} skill{st.linked === 1 ? "" : "s"} linked to Port entities{st.lastSyncedAt ? <> · last sync <LocalTime iso={st.lastSyncedAt} /></> : null} · outbox: {st.pending} pending, {st.failing} retrying, {st.deadLettered} dead-lettered.
+      {st.deadLetters.length ? <details className="mt-1"><summary style={{ cursor: "pointer" }}>Needs attention ({st.deadLetters.length})</summary><ul>{st.deadLetters.map((d) => <li key={d.id}><code>{d.skill_slug}</code> {d.event_type} — {d.last_error}</li>)}</ul></details> : null}
+    </div>
   );
 }

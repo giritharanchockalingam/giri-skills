@@ -17,6 +17,8 @@ import { currentPin } from "@/lib/factory/pins";
 import { contractKey } from "@/lib/factory/drift";
 import { libraryCasesStale } from "@/lib/factory/libraryContract";
 import { ensureSnapshot } from "@/lib/factory/snapshot";
+import { after } from "next/server";
+import { kickPortSync } from "@/lib/integrations/port/kick";
 import {
   fromForm, NoFields, EmptyForm, CreateWorkspaceForm, SelectWorkspaceForm, CreateSkillForm, UpdateSkillForm, SaveManifestForm, SaveFileForm, DeleteFileForm,
   CreateDraftForm, UpdateFromLibraryForm, VersionForm, ReviewVersionForm, PublishVersionForm, RetireVersionForm, SaveEvalCaseForm, DeleteEvalCaseForm, ImportFromRepoForm,
@@ -342,6 +344,7 @@ export async function publishVersion(_: ActionResult | null, fd: FormData): Prom
   return guarded("version.publish", async (ctx) => {
     const { error } = await ctx.supabase.rpc("sf_publish_version", { p_version: input.version_id });
     if (error) return fail(error.message);
+    after(() => kickPortSync());                                   // the outbox row is already written (trigger); push it now
     revalidatePath("/", "layout");
     return okay("Published. Consumers and the API now run this version; it is immutable.");
   });
@@ -352,6 +355,7 @@ export async function retireVersion(_: ActionResult | null, fd: FormData): Promi
   return guarded("version.retire", async (ctx) => {
     const { error } = await ctx.supabase.rpc("sf_retire_version", { p_version: input.version_id, p_note: input.note });
     if (error) return fail(error.message);
+    after(() => kickPortSync());
     revalidatePath("/", "layout");
     return okay("Retired. It can no longer be run.");
   });
