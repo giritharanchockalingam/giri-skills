@@ -172,6 +172,7 @@ export function parsePortRun(body: unknown): PortRunRequest | string {
   if (typeof rawSkill === "string" && rawSkill.trim().startsWith("{")) { try { rawSkill = JSON.parse(rawSkill); } catch { /* keep string */ } }
   const skill = (typeof rawSkill === "string" ? rawSkill : rawSkill && typeof rawSkill === "object" ? String((rawSkill as { identifier?: unknown }).identifier ?? "") : "").trim();
   if (!/^[A-Za-z0-9_-]{4,100}$/.test(portRunId)) return "port_run_id missing or malformed";
+  if (/^sf_live_/i.test(portRunId)) return "port_run_id looks like an API key — refusing to store it";   // a key pasted in the wrong field must never land in a run record
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(skill)) return "skill missing or malformed";
   let inputs: unknown = b.inputs ?? {};
   if (typeof inputs === "string") { try { inputs = inputs.trim() ? JSON.parse(inputs) : {}; } catch { return "inputs is not valid JSON"; } }
