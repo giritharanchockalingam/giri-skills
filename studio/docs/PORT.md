@@ -45,7 +45,7 @@ Publishing or retiring a version writes a row to `sf_port_outbox` **inside the s
 |---|---|---|
 | in-process kick | right after every publish / retire (and after **Push skills to Port**) | the acting user's session starts it; the worker itself uses the service role |
 | `POST /api/port/sync` | catch-up: run it from a scheduler or by hand | `Authorization: Bearer $HEALTH_CHECK_TOKEN` (or `CRON_SECRET`) |
-| `GET /api/port/reconcile?format=text` | factory vs Port, one line per difference (sync-pending / sync-failed / dead-lettered / hash-drift / status-drift / edited-in-port / missing-in-port / unknown-in-factory) | same |
+| `GET /api/port/reconcile?format=text` (workspace defaults to the one with published skills; `&workspace=<uuid>` to choose) | factory vs Port, one line per difference (sync-pending / sync-failed / dead-lettered / hash-drift / status-drift / edited-in-port / missing-in-port / unknown-in-factory) | same |
 
 **Entity properties.** The `aiSkill` blueprint now also carries the factory-owned `sf_*` properties (`sf_version`, `sf_content_hash`, `sf_status`, `sf_eval_verdict`, `sf_trigger_score`, `sf_lift`, `sf_eval_cases`, `sf_eval_model`, `sf_eval_at`, `sf_approval_valid`, `sf_factory_url`, `sf_mcp_tool`, `sf_owner`, `sf_synced_at`). They are overwritten on every sync and Port never recomputes them; an edit made in Port shows up in reconcile as *edited-in-port*. Null means the factory does not have the value — never 0. The first sync after this release **extends** the existing blueprint in place (PATCH adds the missing properties; nothing the tenant added is removed).
 
