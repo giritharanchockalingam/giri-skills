@@ -90,7 +90,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
               <dt>Exit code</dt><dd>{f.exit_code ?? "—"}</dd>
               <dt>Runtime</dt><dd className="mono-sm">{f.runtime ? `${f.runtime.runtime_version} · python ${f.runtime.python} · ${f.runtime.runner_version}` : "—"}</dd>
               <dt>Invoked by</dt><dd>{run.api_key_id ? `API key ${run.api_key_id.slice(0, 8)}…` : run.invoked_by === ctx.user.id ? "you" : run.invoked_by?.slice(0, 8) ?? "—"}</dd>
-              <dt>Idempotency key</dt><dd className="mono-sm">{run.idempotency_key ?? "—"}</dd>
+              <dt>{run.idempotency_key?.startsWith("port:") ? "Port run" : "Idempotency key"}</dt><dd className="mono-sm">{run.idempotency_key?.startsWith("port:") ? run.idempotency_key.slice(5) : run.idempotency_key ?? "—"}</dd>
             </dl>
           </div>
           <div className="card card-pad">

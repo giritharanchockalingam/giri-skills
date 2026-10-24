@@ -146,6 +146,7 @@ export function runSkillAction(webhookUrl: string) {
       synchronized: false,
       method: "POST",
       body: {
+        action: "run_ai_skill",
         port_run_id: "{{ .run.id }}",
         skill: "{{ .entity.identifier }}",
         inputs: "{{ .inputs.inputs }}",
@@ -157,8 +158,11 @@ export function runSkillAction(webhookUrl: string) {
   };
 }
 
+/** Action / workflow identifiers the receiver accepts (spec §6.2: unknown identifiers are rejected). */
+export const KNOWN_ACTIONS: ReadonlySet<string> = new Set(["run_ai_skill", "run_sf_skill", "run_sf_skill_on_repo"]);
+
 /** The webhook body, tolerant of Port rendering `inputs` as an object or as a JSON string. */
-export interface PortRunRequest { portRunId: string; skill: string; inputs: Record<string, unknown>; note: string; requestedBy: string; sync: boolean }
+export interface PortRunRequest { portRunId: string; skill: string; inputs: Record<string, unknown>; note: string; requestedBy: string; sync: boolean; action: string | null; target: string | null }
 export function parsePortRun(body: unknown): PortRunRequest | string {
   if (!body || typeof body !== "object") return "body must be a JSON object";
   const b = body as Record<string, unknown>;
@@ -172,7 +176,11 @@ export function parsePortRun(body: unknown): PortRunRequest | string {
   let inputs: unknown = b.inputs ?? {};
   if (typeof inputs === "string") { try { inputs = inputs.trim() ? JSON.parse(inputs) : {}; } catch { return "inputs is not valid JSON"; } }
   if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) return "inputs must be a JSON object keyed by input name";
-  return { portRunId, skill, inputs: inputs as Record<string, unknown>, note: typeof b.note === "string" ? b.note.slice(0, 500) : "", requestedBy: typeof b.requested_by === "string" ? b.requested_by.slice(0, 200) : "", sync: b.mode === "sync" };
+  const action = typeof b.action === "string" && b.action.trim() ? b.action.trim().slice(0, 100) : null;
+  if (action !== null && !/^[A-Za-z0-9_-]{1,100}$/.test(action)) return "action identifier malformed";
+  // the repository / service entity the run targets (WP4); identifier only, resolved against Port later
+  const target = typeof b.target === "string" && b.target.trim() ? b.target.trim().slice(0, 200) : null;
+  return { portRunId, skill, inputs: inputs as Record<string, unknown>, note: typeof b.note === "string" ? b.note.slice(0, 500) : "", requestedBy: typeof b.requested_by === "string" ? b.requested_by.slice(0, 200) : "", sync: b.mode === "sync", action, target };
 }
 
 /** Port workflows (the current self-service model): a self-serve trigger on an AI Skill plus a WEBHOOK node that waits
@@ -219,8 +227,10 @@ export function runSkillWorkflow(webhookUrl: string) {
           onTimeout: "continue",
           headers: { Authorization: "Bearer {{ .secrets[\"SF_API_KEY\"] }}", "Content-Type": "application/json" },
           body: {
+            action: "run_ai_skill",
             mode: "sync",
             port_run_id: "{{ .workflowRun.identifier }}",
+            requested_by: "{{ .trigger.by.user.email }}",
             skill: "{{ .outputs.trigger.skill }}",
             inputs: "{{ .outputs.trigger.inputs }}",
             note: "{{ .outputs.trigger.note }}",
