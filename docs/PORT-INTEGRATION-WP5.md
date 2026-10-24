@@ -58,4 +58,20 @@ In each client (Cursor, Devin):
 1. "Using Port, what approved skills can review a PR for giri-skills? Include each skill's version, eval verdict and scorecard level." → answer from Port entities (expected to include `code-review-runner` v2).
 2. "Run code-review-runner from the skills-factory MCP on this diff: <diff>" → factory run id; its version must equal the version Port reported.
 
-Live output: _to be appended_.
+## Live acceptance — Cursor (2026-10-24 03:37–03:38 UTC)
+
+Cursor → Customize → MCPs: **port-eu** connected (63 tools, Port OAuth), **skills-factory** connected (71 tools = 66 published skills + `find_skill`, `get_run`, `deliver`, `delivery_status`, `compose`).
+
+1. Discovery via port-eu — "what approved skills can review a PR for giri-skills?" — answered from `aiSkill` entities (approved, `sf_status = published`, `registry_file` under giri-skills) and the `skill_quality` scorecard:
+
+| Skill | sf_version | sf_eval_verdict | skill_quality |
+|---|---|---|---|
+| code-review-runner | 2 | healthy | **Silver** |
+| security-review | 1 | being-improved | Bronze |
+| ui-component-quality | 2 | not-evaluated | Bronze |
+
+2. Execution via skills-factory MCP — `code-review-runner` on the diff of a giri-skills commit (`7500a61…`, docs only) → run `d81a68a3-cbd4-49e7-9106-3932a789c45c`, **version 2**, succeeded 6/6, verdict PASS. Confirmed in `sf_runs`: `code-review-runner` v2, status `succeeded`, source `api`.
+
+**Same skill, same version on both sides (2 = 2).** WP5 acceptance met.
+
+Not done: Devin Desktop — its MCP settings location could not be confirmed; the documented path is Devin's web app (Customize → MCPs). Carried as an optional follow-up.
