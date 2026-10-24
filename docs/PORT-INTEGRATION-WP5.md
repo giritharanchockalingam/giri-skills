@@ -27,9 +27,34 @@ unset SFK
 
 Discovery-only clients (CI, other agents) add `--header "x-read-only-mode: 1"` instead of the allowed-actions header.
 
+## Cursor setup
+
+`~/.cursor/mcp.json` (merged in place, file mode 600 — the key stays on the owner's machine):
+
+```json
+{ "mcpServers": {
+  "port-eu":        { "url": "https://mcp.port.io/v1", "headers": { "x-allowed-actions-to-run": "run_governed_skill,run_sf_skill_on_repo" } },
+  "skills-factory": { "url": "https://giri-skills-studio.vercel.app/api/mcp", "headers": { "Authorization": "Bearer <sf_live_ key>" } } } }
+```
+
+Cursor → Settings → MCP → port-eu → Login (Port OAuth).
+
+## Devin setup
+
+Customize → MCPs → Add MCP → Add custom MCP (Port is not in Devin's marketplace):
+
+| Field | port-eu | skills-factory |
+|---|---|---|
+| Transport | HTTP | HTTP |
+| URL | `https://mcp.port.io/v1` | `https://giri-skills-studio.vercel.app/api/mcp` |
+| Auth | OAuth, Personal → Connect | Auth Header `Authorization: Bearer <key from Devin Secrets>` |
+| Header | `x-allowed-actions-to-run: run_governed_skill,run_sf_skill_on_repo` | — |
+
+One workspace key per agent (`cursor`, `devin`), so runs are attributable and revocable independently. Verify with **Test tools**.
+
 ## Acceptance (spec WP5)
 
-In Claude Code:
+In each client (Cursor, Devin):
 1. "Using Port, what approved skills can review a PR for giri-skills? Include each skill's version, eval verdict and scorecard level." → answer from Port entities (expected to include `code-review-runner` v2).
 2. "Run code-review-runner from the skills-factory MCP on this diff: <diff>" → factory run id; its version must equal the version Port reported.
 
