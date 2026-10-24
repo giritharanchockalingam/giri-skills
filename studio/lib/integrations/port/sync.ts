@@ -5,7 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PortClient, portConfig } from "./client";
 import { AI_SKILL_BLUEPRINT, BLUEPRINT_ID, REGISTRY_BLUEPRINT_ID, REGISTRY_RELATION, skillEntity, verdictForPort, type SkillForPort } from "./map";
 import { skillDrift, contractKey } from "@/lib/factory/drift";
-import { currentPin } from "@/lib/factory/pins";
+import { currentPin, currentSkillSha } from "@/lib/factory/pins";
+import { loadFrozenShas } from "@/lib/db/skills";
 import { libraryContract } from "@/lib/factory/libraryContract";
 import { stageOfRepoSkill, scoreFor, meta } from "@/lib/data";
 import { skillTitle } from "@/lib/names";
@@ -26,9 +27,11 @@ export async function loadSkillsForPort(sb: SupabaseClient, workspaceId: string,
   if (error) return { rows: [], error: error.message };
   const ids = (skills ?? []).map((s) => s.id);
   if (!ids.length) return { rows: [] };
-  const [{ data: versions }, { data: states }] = await Promise.all([
+  const [{ data: versions }, { data: states }, frozen] = await Promise.all([
     sb.from("sf_skill_versions").select("id, skill_id, version, status, source, manifest, manifest_hash, published_at").in("skill_id", ids),
     sb.from("sf_version_release_state").select("version_id, latest_eval_pass_rate, eval_case_count, approval_valid, latest_eval_model, latest_eval_at").eq("workspace_id", workspaceId),
+    // a version with frozen files keeps running whatever the library does; without these every repo skill reads "blocked"
+    loadFrozenShas(sb, { workspaceId }),
   ]);
   const stateOf = new Map(((states ?? []) as StateRow[]).map((s) => [s.version_id, s]));
   const rows: SkillForPort[] = [];
@@ -46,7 +49,8 @@ export async function loadSkillsForPort(sb: SupabaseClient, workspaceId: string,
       slug: s.slug, name: skillTitle(s.name), purpose: s.purpose ?? "", version: live.version, published_at: live.published_at, manifest_hash: live.manifest_hash,
       inputs: live.manifest.inputs.map((i) => ({ name: i.name, required: i.required })), usesModel: live.manifest.model_config.provider !== "none",
       evalPassRate: st?.latest_eval_pass_rate == null ? null : Number(st.latest_eval_pass_rate), evalCases: score?.evalCases ?? dbEvalCases, approved: !!st?.approval_valid,
-      drift: skillDrift(vs.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(repo)),
+      // same inputs as the factory's own skill page (app/skills/[slug]/layout.tsx), so Port and the factory agree
+      drift: skillDrift(vs.map((v) => ({ ...v, contract: contractKey(v.manifest as never) })), currentPin, libraryContract(repo), false, frozen, currentSkillSha),
       stage: repo ? stageOfRepoSkill(repo) : null,
       status,
       verdict: verdictForPort(score?.verdict ?? null),
