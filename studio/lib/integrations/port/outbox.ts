@@ -8,12 +8,13 @@ import { PortClient, portConfig } from "./client";
 import { BLUEPRINT_ID, skillEntity } from "./map";
 import { ensureSkillBlueprint, loadSkillsForPort } from "./sync";
 import { ensureSkillQualityScorecard } from "./scorecard";
+import { syncMcpServerEntity, type McpEntitySync } from "./mcpEntity";
 
 export const MAX_ATTEMPTS = 5;
 export const backoffMs = (attempt: number) => Math.min(2 ** attempt, 64) * 60_000;
 
 export interface OutboxRow { id: string; workspace_id: string; skill_id: string; skill_slug: string; event_type: "publish" | "retire"; payload: Record<string, unknown>; attempts: number; last_error: string | null; next_attempt_at: string; processed_at: string | null; created_at: string }
-export interface DrainResult { configured: boolean; picked: number; synced: number; failed: number; deadLettered: number; problems: string[] }
+export interface DrainResult { configured: boolean; picked: number; synced: number; failed: number; deadLettered: number; problems: string[]; mcp?: McpEntitySync }
 
 /** `registryRepo` is `<owner>/<repo>` of the repository Port's Skills registry scanned (the factory's own library). */
 export async function drainPortOutbox(admin: SupabaseClient, opts: { portalBase: string; limit?: number; f?: typeof fetch; now?: Date; registryRepo?: string | null }): Promise<DrainResult> {
@@ -59,6 +60,15 @@ export async function drainPortOutbox(admin: SupabaseClient, opts: { portalBase:
         for (const r of group) await markFailed(admin, r, (e as Error).message, now, out);
         await admin.from("sf_port_links").upsert({ workspace_id: ws, skill_id: group[0].skill_id, port_blueprint: BLUEPRINT_ID, port_entity_id: entity.identifier, last_error: (e as Error).message }, { onConflict: "workspace_id,skill_id" });
       }
+    }
+  }
+  // the MCP server's tool list follows the published set (spec §5.4, §6.5: a retired skill leaves the tool list)
+  if (out.synced) {
+    for (const ws of byWorkspace.keys()) {
+      try {
+        const { data: pub } = await admin.from("sf_skills").select("slug").eq("workspace_id", ws).eq("status", "published");
+        out.mcp = await syncMcpServerEntity(port, opts.portalBase, ((pub ?? []) as { slug: string }[]).map((p) => p.slug));
+      } catch (e) { out.problems.push(`MCP server entity: ${(e as Error).message}`); }
     }
   }
   return out;
