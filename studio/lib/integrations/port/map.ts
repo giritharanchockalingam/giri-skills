@@ -188,7 +188,7 @@ export function parsePortRun(body: unknown): PortRunRequest | string {
  *  Authenticated with a workspace API key stored as the Port secret SF_API_KEY. */
 export function runSkillWorkflow(webhookUrl: string) {
   return {
-    identifier: "run_ai_skill",
+    identifier: "run_governed_skill",                      // the identifier the live org created on 2026-10-20; the body's `action` stays run_ai_skill
     title: "Run governed skill",
     icon: "AI",
     description: "Run a published Skills Factory skill under its evaluation, approval and audit. Inputs are JSON keyed by the skill's input names (see the Inputs column).",
