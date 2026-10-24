@@ -26,6 +26,7 @@ export const SF_PROPERTIES = {
   sf_mcp_tool: { type: "string", title: "MCP tool" },
   sf_owner: { type: "string", title: "Owner" },
   sf_synced_at: { type: "string", title: "Synced", format: "date-time" },
+  sf_summary: { type: "string", format: "markdown", title: "Start here", description: "What the skill does, whether to trust it, and how to run it — in plain words, from the factory's own data." },
 } as const;
 
 export const AI_SKILL_BLUEPRINT = {
@@ -112,9 +113,43 @@ export function skillEntity(s: SkillForPort, portalBase: string, syncedAt: strin
       sf_mcp_tool: s.status === "retired" ? null : s.slug,
       sf_owner: s.owner ?? null,
       sf_synced_at: syncedAt,
+      sf_summary: skillSummary(s, portalBase),
     },
     relations: s.registryFileId ? { registry_file: s.registryFileId } : {},
   };
+}
+
+/** Plain-language summary for a reader who knows nothing about the factory (the §7 fresh-eyes bar). Every sentence is
+ *  derived from the same data the sf_ properties carry; nothing is added that the factory does not know. */
+export function skillSummary(s: SkillForPort, portalBase: string): string {
+  const base = portalBase.replace(/\/$/, "");
+  const verdict = s.verdict ?? "not-evaluated";
+  const silver = (s.status ?? "published") === "published" && verdict === "healthy" && s.approved;
+  const lines: string[] = [];
+  lines.push("## What it does", "", (s.purpose || s.name).trim(), "");
+  lines.push("## Can I trust it?", "");
+  if ((s.status ?? "published") === "retired") lines.push("**No — retired.** It can no longer be run; this page is kept as the record.", "");
+  else if (silver) lines.push("**Yes — trusted for use (Silver).** It passed the factory's evaluation and is approved for exactly the content that runs.", "");
+  else if (verdict === "being-improved") lines.push("**Use with care (Bronze).** It is published and evaluated, but below the factory's quality bar and being improved.", "");
+  else if (verdict === "not-evaluated") lines.push("**Use with care (Bronze).** It is published but has not been through the factory's behavioural evaluation yet.", "");
+  else lines.push("**Use with care (Bronze).** Its approval does not cover the current content.", "");
+  const ev = verdict === "healthy" ? "passed the factory's evaluation" : verdict === "being-improved" ? "was evaluated and is below the quality bar" : "has not been evaluated yet";
+  const nums = [s.triggerScore != null ? `picked for its own tasks ${Math.round(s.triggerScore * 100)}% of the time` : null, s.lift != null ? `improves answers by ${s.lift >= 0 ? "+" : ""}${s.lift.toFixed(2)} over the model alone` : null, s.evalCases ? `${s.evalCases} test cases` : null].filter(Boolean);
+  lines.push(`- **Evaluation:** ${ev}${nums.length ? ` — ${nums.join(", ")}` : ""}${s.evalModel ? ` (graded with ${s.evalModel})` : ""}.`);
+  lines.push(`- **Approval:** ${s.approved ? "a reviewer approved this exact version; any edit would void it" : "no valid approval for the current content"}.`);
+  lines.push(`- **What runs:** published version ${s.version}, pinned to content hash \`${s.manifest_hash.slice(0, 12)}\`.`);
+  if (s.drift === "library_updated") lines.push("- **Library:** a newer copy exists in the skill library; version " + s.version + " is still what runs until a new version is approved.");
+  if (s.drift === "blocked") lines.push("- **Library:** the library copy has changed since this version was approved; version " + s.version + " keeps running as approved, and the update needs a new version and review.");
+  lines.push(`- **Evidence:** [release page](${base}/skills/${s.slug}/release) — evaluation runs, approval and history.`, "");
+  if ((s.status ?? "published") !== "retired") {
+    lines.push("## How to run it", "");
+    lines.push(`- **In Port:** Workflows → **Run governed skill**, choose “${s.name}”, give the inputs as JSON.`);
+    if (s.inputs.some((i) => i.name === "diff")) lines.push("- **On a pull request:** Workflows → **Run governed skill on a PR**, choose the repository, the PR number and this skill — the factory fetches the diff itself.");
+    lines.push(`- **From your IDE** (Cursor, Claude Code, any MCP client): tool \`${s.slug}\` on the **skills-factory** MCP server.`);
+    if (s.inputs.length) lines.push(`- **Inputs:** ${s.inputs.map((i) => `\`${i.name}\`${i.required ? "" : " (optional)"}`).join(", ")}.`);
+    lines.push("- Every run is checked and recorded in Skills Factory, with a link back here.");
+  }
+  return lines.join("\n");
 }
 
 /** The factory's verdict codes → the three words Port shows (spec §4.1 keeps the factory's wording). */

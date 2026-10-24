@@ -233,3 +233,15 @@ test("WP5 MCP server entity: allowed_tools = helpers + published slugs; only the
   assert.equal((await syncMcpServerEntity(c, "https://f.app", ["code-review-runner", "llm-cost-model"])).status, "current");
   assert.equal((await syncMcpServerEntity(new PortClient(cfg, fakePort({ mcp: [other] }).f), "https://f.app", ["a"])).status, "not-registered");
 });
+
+test("Start here summary (fresh-eyes fix): trust verdict matches the Silver rule, numbers only when known, run paths named, retired says so", async () => {
+  const { skillSummary } = await import("../lib/integrations/port/map.ts");
+  const s = { slug: "code-review-runner", name: "Code review", purpose: "Reviews a diff.", version: 2, published_at: null, manifest_hash: H, inputs: [{ name: "diff", required: true }], usesModel: true, evalPassRate: 1, evalCases: 6, approved: true, drift: "blocked" as const, stage: null, status: "published" as const, verdict: "healthy" as const, triggerScore: 1, lift: 0.31, evalModel: "gpt-4.1-mini" };
+  const t = skillSummary(s, "https://f");
+  assert.match(t, /Yes — trusted for use \(Silver\)/); assert.match(t, /100% of the time/); assert.match(t, /\+0\.31/); assert.match(t, /Run governed skill on a PR/); assert.match(t, /tool `code-review-runner`/); assert.match(t, /library copy has changed/);
+  const ne = skillSummary({ ...s, verdict: "not-evaluated", triggerScore: null, lift: null, evalCases: 0, inputs: [{ name: "x", required: true }], drift: "current" }, "https://f");
+  assert.match(ne, /Use with care \(Bronze\).*not been through/); assert.doesNotMatch(ne, /% of the time|over the model/); assert.doesNotMatch(ne, /on a PR/); assert.doesNotMatch(ne, /Library:/);
+  const r = skillSummary({ ...s, status: "retired" }, "https://f");
+  assert.match(r, /No — retired/); assert.doesNotMatch(r, /How to run it/);
+  assert.ok("sf_summary" in AI_SKILL_BLUEPRINT.schema.properties);
+});
