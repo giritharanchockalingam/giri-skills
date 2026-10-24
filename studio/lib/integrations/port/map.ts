@@ -32,7 +32,8 @@ export const AI_SKILL_BLUEPRINT = {
   identifier: BLUEPRINT_ID,
   title: "AI Skill",
   icon: "AI",
-  description: "A governed AI skill from Skills Factory. Quality verdicts come from the Skills Factory eval harness. Properties starting sf_ are managed by the factory and overwritten on sync. Run skills from here or from your IDE via MCP.",
+  // Port caps blueprint descriptions at 200 characters (422 otherwise); the longer §8 copy goes on the catalog page.
+  description: "Governed AI skill from Skills Factory. Verdicts come from its eval harness; sf_ properties are factory-managed and overwritten on sync. Run from here or your IDE via MCP.",
   schema: {
     properties: {
       purpose: { type: "string", title: "Purpose", format: "markdown" },

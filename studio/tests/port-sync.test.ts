@@ -182,3 +182,7 @@ test("reconcile: counts come from both sides; hash drift, status drift, pending,
   assert.equal(bad.outbox.failing, 1); assert.equal(bad.matched, 0);
   assert.match(reconcileText(bad), /hash match on all: NO/);
 });
+
+test("blueprint description respects Port's 200-character cap (live 422 on 2026-10-23)", () => {
+  assert.ok(AI_SKILL_BLUEPRINT.description.length <= 200, `${AI_SKILL_BLUEPRINT.description.length} chars`);
+});
