@@ -51,6 +51,10 @@ export class PortClient {
     if (r.status >= 400) this.fail(`upsert ${blueprint}/${entity.identifier}`, r);
   }
 
+  /** Read-only GET used by discovery (WP0 tenant inventory): returns the status and Port's JSON body unparsed, so a
+   *  route this account's plan or region does not offer (403/404) is reported as such rather than thrown. */
+  async read(path: string): Promise<{ status: number; json: Record<string, unknown> }> { return this.call("GET", path); }
+
   /** Every blueprint (Port: GET /v1/blueprints → { blueprints }). */
   async listBlueprints(): Promise<Record<string, unknown>[]> {
     const r = await this.call("GET", "/v1/blueprints");
