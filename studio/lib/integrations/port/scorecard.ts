@@ -1,6 +1,7 @@
 /* skill_quality scorecard on the AI Skill blueprint (spec §4.2). Rules test synced sf_ properties only — Port displays
- * and enforces, it never recomputes trigger/lift. Levels Basic → Bronze → Silver; Gold is fenced behind owner decision
- * D3 and is NOT created until the thresholds are confirmed (house rule 1: no invented numbers). */
+ * and enforces, it never recomputes trigger/lift. Levels Basic → Bronze → Silver → Gold. Gold thresholds are owner
+ * decision D3 (2026-10-24): Silver + trigger ≥ 0.90 + lift ≥ +0.30 + ≥ 6 eval cases. */
+export const GOLD = { minTrigger: 0.9, minLift: 0.3, minCases: 6 } as const;
 import type { PortClient } from "./client";
 import { BLUEPRINT_ID } from "./map";
 
@@ -13,7 +14,7 @@ export const SKILL_QUALITY_SCORECARD = {
     { title: "Basic", color: "lightGray" },
     { title: "Bronze", color: "bronze" },
     { title: "Silver", color: "silver" },
-    // { title: "Gold", color: "gold" }  ← D3: thresholds undecided; added by the owner's decision, never by default
+    { title: "Gold", color: "gold" },
   ],
   rules: [
     {
@@ -31,6 +32,18 @@ export const SKILL_QUALITY_SCORECARD = {
         { property: "sf_status", operator: "=", value: "published" },
         { property: "sf_eval_verdict", operator: "=", value: "healthy" },
         { property: "sf_approval_valid", operator: "=", value: true },
+      ] },
+    },
+    {
+      identifier: "gold_quality", title: "Routes reliably and clearly improves answers", level: "Gold",
+      description: "Silver, and trigger ≥ 0.90, lift ≥ +0.30 and at least 6 eval cases (owner decision D3).",
+      query: { combinator: "and", conditions: [
+        { property: "sf_status", operator: "=", value: "published" },
+        { property: "sf_eval_verdict", operator: "=", value: "healthy" },
+        { property: "sf_approval_valid", operator: "=", value: true },
+        { property: "sf_trigger_score", operator: ">=", value: GOLD.minTrigger },
+        { property: "sf_lift", operator: ">=", value: GOLD.minLift },
+        { property: "sf_eval_cases", operator: ">=", value: GOLD.minCases },
       ] },
     },
   ],

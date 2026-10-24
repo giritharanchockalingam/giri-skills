@@ -19,6 +19,6 @@ export async function GET(req: NextRequest) {
   try {
     const scorecard = await ensureSkillQualityScorecard(port);
     const levels = await readbackLevels(port, slugs);
-    return NextResponse.json({ scorecard, definition: { levels: SKILL_QUALITY_SCORECARD.levels.map((l) => l.title), rules: SKILL_QUALITY_SCORECARD.rules.map((r) => `${r.level}: ${r.identifier}`) }, gold: "not created — owner decision D3 pending", levels });
+    return NextResponse.json({ scorecard, definition: { levels: SKILL_QUALITY_SCORECARD.levels.map((l) => l.title), rules: SKILL_QUALITY_SCORECARD.rules.map((r) => `${r.level}: ${r.identifier}`) }, levels });
   } catch (e) { return NextResponse.json({ error: { code: "PORT", message: (e as Error).message } }, { status: 502 }); }
 }

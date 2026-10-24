@@ -129,6 +129,7 @@ export function skillSummary(s: SkillForPort, portalBase: string): string {
   lines.push("## What it does", "", (s.purpose || s.name).trim(), "");
   lines.push("## Can I trust it?", "");
   if ((s.status ?? "published") === "retired") lines.push("**No — retired.** It can no longer be run; this page is kept as the record.", "");
+  else if (silver && (s.triggerScore ?? -1) >= 0.9 && (s.lift ?? -1) >= 0.3 && s.evalCases >= 6) lines.push("**Yes — trusted for use (Gold).** It passed the factory's evaluation with strong routing and a clear quality gain, and is approved for exactly the content that runs.", "");
   else if (silver) lines.push("**Yes — trusted for use (Silver).** It passed the factory's evaluation and is approved for exactly the content that runs.", "");
   else if (verdict === "being-improved") lines.push("**Use with care (Bronze).** It is published and evaluated, but below the factory's quality bar and being improved.", "");
   else if (verdict === "not-evaluated") lines.push("**Use with care (Bronze).** It is published but has not been through the factory's behavioural evaluation yet.", "");

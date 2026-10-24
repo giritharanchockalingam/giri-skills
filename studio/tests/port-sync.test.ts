@@ -196,13 +196,15 @@ test("blueprint description respects Port's 200-character cap (live 422 on 2026-
   assert.ok(AI_SKILL_BLUEPRINT.description.length <= 200, `${AI_SKILL_BLUEPRINT.description.length} chars`);
 });
 
-test("scorecard: created once with Bronze/Silver only (Gold fenced by D3); unchanged → no write; drifted rules → replaced; levels read back from Port, not computed here", async () => {
+test("scorecard: created once with Bronze/Silver/Gold (Gold per D3); unchanged → no write; drifted rules → replaced; levels read back from Port, not computed here", async () => {
   const p = fakePort();
   const c = new PortClient(cfg, p.f);
   assert.equal(await ensureSkillQualityScorecard(c), "created");
   const sc = p.scorecards.get("skill_quality")!;
-  assert.deepEqual((sc.levels as { title: string }[]).map((l) => l.title), ["Basic", "Bronze", "Silver"]);
-  assert.deepEqual((sc.rules as { level: string }[]).map((r) => r.level), ["Bronze", "Silver"]);
+  assert.deepEqual((sc.levels as { title: string }[]).map((l) => l.title), ["Basic", "Bronze", "Silver", "Gold"]);
+  assert.deepEqual((sc.rules as { level: string }[]).map((r) => r.level), ["Bronze", "Silver", "Gold"]);
+  const gold = (sc.rules as { level: string; query: { conditions: { property: string; operator: string; value: unknown }[] } }[]).find((r) => r.level === "Gold")!;
+  assert.deepEqual(gold.query.conditions.slice(3), [{ property: "sf_trigger_score", operator: ">=", value: 0.9 }, { property: "sf_lift", operator: ">=", value: 0.3 }, { property: "sf_eval_cases", operator: ">=", value: 6 }]);
   for (const r of SKILL_QUALITY_SCORECARD.rules) for (const cond of r.query.conditions) assert.ok(cond.property.startsWith("sf_"), "rules test synced properties only");
   assert.equal(await ensureSkillQualityScorecard(c), "current");
   assert.equal(p.calls.filter((x) => x.method === "POST" && x.path.endsWith("/scorecards")).length, 1);
@@ -238,7 +240,8 @@ test("Start here summary (fresh-eyes fix): trust verdict matches the Silver rule
   const { skillSummary } = await import("../lib/integrations/port/map.ts");
   const s = { slug: "code-review-runner", name: "Code review", purpose: "Reviews a diff.", version: 2, published_at: null, manifest_hash: H, inputs: [{ name: "diff", required: true }], usesModel: true, evalPassRate: 1, evalCases: 6, approved: true, drift: "blocked" as const, stage: null, status: "published" as const, verdict: "healthy" as const, triggerScore: 1, lift: 0.31, evalModel: "gpt-4.1-mini" };
   const t = skillSummary(s, "https://f");
-  assert.match(t, /Yes — trusted for use \(Silver\)/); assert.match(t, /100% of the time/); assert.match(t, /\+0\.31/); assert.match(t, /Run governed skill on a PR/); assert.match(t, /tool `code-review-runner`/); assert.match(t, /library copy has changed/);
+  assert.match(t, /Yes — trusted for use \(Gold\)/);
+  assert.match(skillSummary({ ...s, lift: 0.24 }, "https://f"), /Yes — trusted for use \(Silver\)/); assert.match(t, /100% of the time/); assert.match(t, /\+0\.31/); assert.match(t, /Run governed skill on a PR/); assert.match(t, /tool `code-review-runner`/); assert.match(t, /library copy has changed/);
   const ne = skillSummary({ ...s, verdict: "not-evaluated", triggerScore: null, lift: null, evalCases: 0, inputs: [{ name: "x", required: true }], drift: "current" }, "https://f");
   assert.match(ne, /Use with care \(Bronze\).*not been through/); assert.doesNotMatch(ne, /% of the time|over the model/); assert.doesNotMatch(ne, /on a PR/); assert.doesNotMatch(ne, /Library:/);
   const r = skillSummary({ ...s, status: "retired" }, "https://f");
