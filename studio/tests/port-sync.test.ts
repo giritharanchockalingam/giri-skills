@@ -5,14 +5,16 @@ import { PortClient } from "../lib/integrations/port/client.ts";
 import { operatorAuthorized } from "../lib/integrations/port/serverAuth.ts";
 import { drainPortOutbox, backoffMs, MAX_ATTEMPTS } from "../lib/integrations/port/outbox.ts";
 import { reconcilePort, reconcileText } from "../lib/integrations/port/reconcile.ts";
+import { ensureSkillQualityScorecard, readbackLevels, SKILL_QUALITY_SCORECARD } from "../lib/integrations/port/scorecard.ts";
 
 const cfg = { apiUrl: "https://port.test", clientId: "id", clientSecret: "secret" };
 const H = "a".repeat(64), H2 = "b".repeat(64);
 
 /* ── a Port stand-in: records every call, serves one blueprint and the entities it has been given ── */
-function fakePort(opts: { blueprint?: Record<string, unknown> | null; entities?: Record<string, unknown>[]; failUpsert?: boolean; hasRegistry?: boolean } = {}) {
+function fakePort(opts: { blueprint?: Record<string, unknown> | null; entities?: Record<string, unknown>[]; failUpsert?: boolean; hasRegistry?: boolean; scorecards?: Record<string, unknown>[] } = {}) {
   const calls: { method: string; path: string; body?: unknown }[] = [];
   const entities = new Map((opts.entities ?? []).map((e) => [String(e.identifier), e]));
+  const scorecards = new Map((opts.scorecards ?? []).map((s) => [String(s.identifier), s]));
   let blueprint = opts.blueprint === undefined ? { identifier: "aiSkill", schema: { properties: { purpose: {} } }, relations: {} } : opts.blueprint;
   const f = (async (url: string | URL | Request, init?: RequestInit) => {
     const u = String(url), method = init?.method ?? "GET", body = init?.body ? JSON.parse(String(init.body)) : undefined;
@@ -26,9 +28,13 @@ function fakePort(opts: { blueprint?: Record<string, unknown> | null; entities?:
     if (path === "/v1/blueprints/aiSkill" && method === "PATCH") { blueprint = { ...blueprint, ...body }; return json(200, {}); }
     if (path.startsWith("/v1/blueprints/aiSkill/entities?upsert") && method === "POST") { if (opts.failUpsert) return json(500, { message: "port down" }); entities.set(String(body.identifier), body); return json(200, {}); }
     if (path === "/v1/blueprints/aiSkill/entities/search") return json(200, { entities: [...entities.values()] });
+    if (path === "/v1/blueprints/aiSkill/scorecards" && method === "GET") return json(200, { scorecards: [...scorecards.values()] });
+    if (path === "/v1/blueprints/aiSkill/scorecards" && method === "POST") { scorecards.set(String(body.identifier), body); return json(201, {}); }
+    if (path.startsWith("/v1/blueprints/aiSkill/scorecards/") && method === "PUT") { scorecards.set(String(body.identifier), body); return json(200, {}); }
+    if (path.startsWith("/v1/blueprints/aiSkill/entities/") && method === "GET") { const e = entities.get(decodeURIComponent(path.split("/").pop()!)); return e ? json(200, { entity: e }) : json(404, {}); }
     return json(404, { message: `unhandled ${method} ${path}` });
   }) as typeof fetch;
-  return { f, calls, entities, blueprint: () => blueprint };
+  return { f, calls, entities, scorecards, blueprint: () => blueprint };
 }
 
 /* ── a Supabase stand-in: in-memory tables with the chainable subset the worker and reconcile use ── */
@@ -185,4 +191,24 @@ test("reconcile: counts come from both sides; hash drift, status drift, pending,
 
 test("blueprint description respects Port's 200-character cap (live 422 on 2026-10-23)", () => {
   assert.ok(AI_SKILL_BLUEPRINT.description.length <= 200, `${AI_SKILL_BLUEPRINT.description.length} chars`);
+});
+
+test("scorecard: created once with Bronze/Silver only (Gold fenced by D3); unchanged → no write; drifted rules → replaced; levels read back from Port, not computed here", async () => {
+  const p = fakePort();
+  const c = new PortClient(cfg, p.f);
+  assert.equal(await ensureSkillQualityScorecard(c), "created");
+  const sc = p.scorecards.get("skill_quality")!;
+  assert.deepEqual((sc.levels as { title: string }[]).map((l) => l.title), ["Basic", "Bronze", "Silver"]);
+  assert.deepEqual((sc.rules as { level: string }[]).map((r) => r.level), ["Bronze", "Silver"]);
+  for (const r of SKILL_QUALITY_SCORECARD.rules) for (const cond of r.query.conditions) assert.ok(cond.property.startsWith("sf_"), "rules test synced properties only");
+  assert.equal(await ensureSkillQualityScorecard(c), "current");
+  assert.equal(p.calls.filter((x) => x.method === "POST" && x.path.endsWith("/scorecards")).length, 1);
+  p.scorecards.set("skill_quality", { identifier: "skill_quality", levels: sc.levels, rules: [{ identifier: "x", level: "Bronze", query: {} }] });
+  assert.equal(await ensureSkillQualityScorecard(c), "updated");
+  assert.equal(p.calls.filter((x) => x.method === "PUT").length, 1);
+
+  p.entities.set("healthy-one", { identifier: "healthy-one", properties: { sf_status: "published", sf_eval_verdict: "healthy", sf_approval_valid: true }, scorecards: { skill_quality: { level: "Silver", rules: [{ identifier: "published_with_verdict", status: "SUCCESS" }, { identifier: "healthy_and_approved", status: "SUCCESS" }] } } });
+  p.entities.set("not-evaluated-one", { identifier: "not-evaluated-one", properties: { sf_status: "published", sf_eval_verdict: "not-evaluated", sf_approval_valid: true }, scorecards: { skill_quality: { level: "Bronze", rules: [{ identifier: "published_with_verdict", status: "SUCCESS" }, { identifier: "healthy_and_approved", status: "FAILURE" }] } } });
+  const rb = await readbackLevels(c, ["healthy-one", "not-evaluated-one", "missing"]);
+  assert.deepEqual(rb.map((r) => [r.slug, r.level]), [["healthy-one", "Silver"], ["not-evaluated-one", "Bronze"], ["missing", null]]);
 });

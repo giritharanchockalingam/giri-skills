@@ -115,6 +115,28 @@ export class PortClient {
     return { entities: out.slice(0, max), truncated: out.length >= max };
   }
 
+  /** Scorecards on a blueprint (Port: GET /v1/blueprints/{id}/scorecards → { scorecards }). */
+  async listScorecards(blueprint: string): Promise<Record<string, unknown>[]> {
+    const r = await this.call("GET", `/v1/blueprints/${encodeURIComponent(blueprint)}/scorecards`);
+    if (r.status >= 400) this.fail(`list scorecards of ${blueprint}`, r);
+    return (Array.isArray(r.json.scorecards) ? r.json.scorecards : []) as Record<string, unknown>[];
+  }
+  async createScorecard(blueprint: string, sc: { identifier: string }): Promise<void> {
+    const r = await this.call("POST", `/v1/blueprints/${encodeURIComponent(blueprint)}/scorecards`, sc);
+    if (r.status >= 400) this.fail(`create scorecard ${sc.identifier}`, r);
+  }
+  async replaceScorecard(blueprint: string, sc: { identifier: string }): Promise<void> {
+    const r = await this.call("PUT", `/v1/blueprints/${encodeURIComponent(blueprint)}/scorecards/${encodeURIComponent(sc.identifier)}`, sc);
+    if (r.status >= 400) this.fail(`update scorecard ${sc.identifier}`, r);
+  }
+  /** One entity with Port's computed scorecard results, or null when it does not exist. */
+  async getEntity(blueprint: string, identifier: string): Promise<Record<string, unknown> | null> {
+    const r = await this.call("GET", `/v1/blueprints/${encodeURIComponent(blueprint)}/entities/${encodeURIComponent(identifier)}`);
+    if (r.status === 404) return null;
+    if (r.status >= 400) this.fail(`read entity ${blueprint}/${identifier}`, r);
+    return (r.json.entity ?? null) as Record<string, unknown> | null;
+  }
+
   async runLog(runId: string, message: string, end?: { status: "SUCCESS" | "FAILURE"; label?: string }): Promise<void> {
     const body: Record<string, unknown> = { message: message.slice(0, 4000) };
     if (end) { body.terminationStatus = end.status; if (end.label) body.statusLabel = end.label.slice(0, 200); }

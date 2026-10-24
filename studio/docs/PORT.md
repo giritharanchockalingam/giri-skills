@@ -55,6 +55,18 @@ Publishing or retiring a version writes a row to `sf_port_outbox` **inside the s
 
 **Tokens.** One token per server, refreshed single-flight at the earlier of Port's `expiresIn` and 2.5 h (Port keeps one active token per credential set).
 
+## Scorecard `skill_quality` (WP2, spec §4.2)
+
+Created on the `aiSkill` blueprint by the sync worker (and by `GET /api/port/scorecard`), rules test synced `sf_` properties only:
+
+| Level | Rule |
+|---|---|
+| Bronze | `sf_status = published` and `sf_eval_verdict` not empty |
+| Silver | Bronze and `sf_eval_verdict = healthy` and `sf_approval_valid = true` |
+| Gold | **not created** — thresholds are owner decision D3 (docs/PORT-INTEGRATION-WP0.md); nothing is defaulted |
+
+Readback (the contract test — levels are Port's own computation): `GET /api/port/scorecard?slugs=llm-cost-model,perf-review-runner,effort-estimator` with the operator bearer.
+
 ## Security
 
 - The webhook only accepts requests signed by Port: HMAC-SHA256 of `timestamp.body` with the Port client secret. Requests older than 5 minutes are refused.
