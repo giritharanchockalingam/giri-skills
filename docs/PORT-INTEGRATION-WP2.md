@@ -10,4 +10,12 @@ Spec §4.2 / §5.2. Bronze and Silver only; Gold is fenced by D3 and not created
 
 Contract test subjects (from the factory's own data, 2026-10-24): `llm-cost-model` — healthy, approval valid → expected **Silver**; `perf-review-runner` — published, no eval row → `not-evaluated` → expected **Bronze**; `effort-estimator` — `being-improved` → expected **Bronze**.
 
-Live readback: _to be appended after deploy_.
+Live readback (2026-10-24 01:19 UTC, `GET /api/port/scorecard`, scorecard `created` on this call; levels are Port's computation):
+
+| slug | sf_eval_verdict | sf_approval_valid | Port level |
+|---|---|---|---|
+| llm-cost-model | healthy | true | **Silver** |
+| perf-review-runner | not-evaluated | true | **Bronze** |
+| effort-estimator | being-improved | true | **Bronze** |
+
+Gold: not created (D3). Screenshot of an entity page: owner to attach to PR #158.
