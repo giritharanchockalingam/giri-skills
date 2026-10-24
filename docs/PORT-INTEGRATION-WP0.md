@@ -40,7 +40,7 @@ cd .. && git add docs/PORT-TENANT-INVENTORY.md && git commit -m "wp0: Port tenan
 
 The script is read-only (`GET` plus the token call and entity search), writes no secret or token to the file (covered by `studio/tests/port-inventory.test.ts`), and marks any route the account does not expose as "not available" rather than guessing.
 
-Still to be filled in by hand in that file (not readable through the API): plan name and blueprint/action limits (Port → Settings → Billing), and the workflows list (Port → Workflows).
+Plan name came back from the API (FREEMIUM); limits are not published in the API or UI (see §4a). Workflows were read from the Port UI (§4a).
 
 ## 4. Owner decisions surfaced by WP0
 
@@ -49,9 +49,30 @@ Still to be filled in by hand in that file (not readable through the API): plan 
 | D6 (new) | Closed loop for §5.3 on a workflow-only org: (a) keep the existing sync workflow (result returned inline, ≤10 s, 202 + link beyond that) and treat the factory run page as the record, or (b) require classic actions and verify the tenant still allows them. | (a) — it is live and verified; the `sf_skill_run` entity (§4.3) still gives Port the trace. |
 | D7 (new) | Blueprint identity: extend the live `aiSkill` blueprint with `sf_` properties, or rename/re-create as `sf_skill` (loses the 23 existing entities' history). | Extend `aiSkill`. |
 
+## 4a. Tenant findings (from `docs/PORT-TENANT-INVENTORY.md` + Port UI, 2026-10-23)
+
+| Item | Finding | Consequence |
+|---|---|---|
+| Org / plan | `giritharanC` (`org_bAav62aTcjp5QCsv`), base `https://api.port.io`, plan **FREEMIUM**. Blueprint/action limits are not shown in the API or in the UI's Billing page. | Limits are unknown, not invented. WP1 creates at most **one** new blueprint (`sf_skill_run`, needed by WP4 anyway) and one scorecard; a 4xx from Port on either is the empirical limit and is reported, not worked around. 14 custom blueprints exist today. |
+| Native skill blueprint | `skill` exists: created 2026-10-20 18:49 UTC from Port's **Skills registry** solution (the MCP-registry guide), entities written by `github-ocean` from every `SKILL.md` in `giri-skills` — **83 entities**, identifiers are file paths (`<owner>/<repo>/<path>/SKILL.md`), properties `description, instructions, fileUrl, version, location, publish_status`, relation `group → _team`. | This is the native blueprint §4.0 anticipated, but it is file-discovery, owned by Port's GitHub integration, and its identifier space (file path) differs from the factory's (slug). See D7. |
+| Factory blueprint | `aiSkill`: 13 properties, 23 entities, last written 2026-10-20 19:19 UTC (stale: factory now has 66 published). No relations. | Either extended or retired per D7. |
+| `_mcp_server` | present, 1 entity (the "Skills Factory" connector; `allowed_tools`, `exposed` flags available). | WP5 updates this entity; never creates a second blueprint. |
+| Workflows (UI) | 2: **Run governed skill** (Governed AI Skills — the factory webhook, sync) and **Propose a new skill** (Skills registry — opens a PR adding a SKILL.md, status `pending` until merged). | 0 classic actions on the tenant → D6 default (a) stands. |
+| Repos / services | `githubRepository` 7, `service` 4 (incl. `giri-skills`), rich DORA/PR properties from Ocean; `githubPullRequest` blueprint present (12 props, 8 relations). | §7 proof slice can relate `sf_skill_run → service:giri-skills` and `→ githubPullRequest` without any factory-side catalog work. |
+| Scorecards | 13 (DORA/reliability on service/team/org), levels Basic→Bronze→Silver→Gold. | `skill_quality` follows the same four-level shape. |
+
+### D7 — restated with the tenant facts
+
+| Option | What WP1 does | Risk |
+|---|---|---|
+| **(a) Extend `skill`** (spec §4.0 literal) | Add `sf_` properties to the registry blueprint; upsert the 66 published skills onto the Ocean-created entities by computing the SKILL.md path from each version's repo source. | Two writers on one entity (Ocean and the factory): a registry resync may overwrite or drop `sf_` values — unverified. Factory-authored skills with no SKILL.md in the repo have no registry entity to land on. Identifier is a 70-char path, awkward in actions/MCP. |
+| **(b) Keep `aiSkill` as the factory-owned blueprint and relate it to `skill`** (recommended) | Add the `sf_` properties to `aiSkill` (slug identifiers, already live), add relation `registry_file → skill` (set when the path resolves), add `sf_skill_run` + `skill_quality` scorecard on `aiSkill`. Registry stays Port's; quality stays the factory's. | One extra custom blueprint stays in use (already counted). Two "skill" catalogs visible in Port — mitigated by the relation and page copy (§8). |
+
+**Default if unanswered: (b).** It is the only option that keeps the spec's own authority split (§2: Port owns discovery of what exists in repos; the factory owns quality) without two systems writing the same entity.
+
 ## 5. WP0 acceptance
 
 - [x] Factory-side inventory committed (this file).
 - [x] Read-only inventory script + test committed.
-- [ ] `docs/PORT-TENANT-INVENTORY.md` generated by the owner and committed (needs the credentials; see §3).
+- [x] `docs/PORT-TENANT-INVENTORY.md` generated by the owner and committed (2026-10-23 23:53 UTC).
 - [x] No blueprint, action, scorecard or entity created.
