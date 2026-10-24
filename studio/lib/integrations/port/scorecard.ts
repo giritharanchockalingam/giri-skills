@@ -63,3 +63,15 @@ export async function readbackLevels(port: PortClient, slugs: string[]): Promise
   }
   return out;
 }
+
+/** Generic create-or-replace of a scorecard on any blueprint (used for the PR review gate). */
+export async function ensureScorecard(port: PortClient, blueprint: string, def: { identifier: string; levels: readonly { title: string }[]; rules: readonly unknown[] }): Promise<"created" | "updated" | "current"> {
+  const existing = (await port.listScorecards(blueprint)).find((s) => s.identifier === def.identifier);
+  if (!existing) { await port.createScorecard(blueprint, def); return "created"; }
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const rulesMatch = same((existing.rules as unknown[] | undefined)?.map((r) => strip(r as Record<string, unknown>)), def.rules.map((r) => strip(r as Record<string, unknown>)));
+  const levelsMatch = same(((existing.levels as { title: string }[] | undefined) ?? []).map((l) => l.title), def.levels.map((l) => l.title));
+  if (rulesMatch && levelsMatch) return "current";
+  await port.replaceScorecard(blueprint, def);
+  return "updated";
+}

@@ -10,6 +10,8 @@ import { githubConfig, installationToken, getRepo, createCheckRun, completeCheck
 import { profileRepo, syncWorkspace } from "@/lib/github/sync";
 import { scoreEntity } from "@/lib/scorecards/run";
 import { log } from "@/lib/logger";
+import { PortClient, portConfig } from "@/lib/integrations/port/client";
+import { supersedeHeadReviews } from "@/lib/integrations/port/repoRun";
 import { matchAutomations, unionChecks, checkRunOutput, type NormEvent, type AutomationRow } from "./webhook";
 
 export const CHECK_NAME_PREFIX = "Skills Factory";
@@ -41,6 +43,15 @@ export async function processEvent(e: NormEvent, deliveryId: string, origin: str
   if (e.kind === "repos_changed") {
     const r = await deps.syncWorkspace(sb, ws, inst.verified_by as string, c.cfg);
     return { handled: `catalog re-synced: ${r.message}` };
+  }
+
+  // Port PR review gate (WP6): a PR that moved to a new head loses the "reviewed" status of its earlier commits
+  if (e.kind === "pull_request") {
+    const pc = portConfig(process.env);
+    if (pc.ok) {
+      try { const n = await supersedeHeadReviews(new PortClient(pc), e.repo.split("/").pop() ?? e.repo, e.pr, e.sha); if (n) log.info({ action: "port.review.superseded", repo: e.repo, pr: e.pr, runs: n }, "earlier head reviews superseded"); }
+      catch (err) { log.warn({ action: "port.review.supersede_failed", repo: e.repo, pr: e.pr, err }, "could not supersede head reviews in Port"); }
+    }
   }
 
   const token = await deps.installationToken(c.cfg, e.installationId);

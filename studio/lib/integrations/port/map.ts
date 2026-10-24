@@ -259,6 +259,11 @@ export function runSkillWorkflow(webhookUrl: string) {
 
 export const RUN_BLUEPRINT_ID = "sf_skill_run";
 export const REPOSITORY_BLUEPRINT_ID = "githubRepository";
+export const PR_BLUEPRINT_ID = "githubPullRequest";
+/** Port's GitHub (Ocean) integration names PR entities `<repository entity id>-pr-<number>` (verified on the tenant, 2026-10-24). */
+export const prEntityId = (repository: string, pr: number) => `${repository}-pr-${pr}`;
+/** The skill whose succeeded run on a PR's current head counts as "reviewed" (§7). */
+export const REVIEW_SKILL = "code-review-runner";
 
 /** One entity per factory run that started from Port. Status words are the factory's own (never a skip shown as a pass). */
 export const SKILL_RUN_BLUEPRINT = {
@@ -281,6 +286,7 @@ export const SKILL_RUN_BLUEPRINT = {
       sf_pr_number: { type: "number", title: "Pull request" },
       sf_head_sha: { type: "string", title: "Head commit" },
       sf_pr_url: { type: "string", title: "Pull request URL", format: "url" },
+      sf_is_head_review: { type: "boolean", title: "On the PR's current head", description: "True while the reviewed commit is the PR's head; the factory sets it false when the PR moves on." },
     },
     required: ["sf_run_id", "sf_skill_slug", "sf_status"],
   },
@@ -288,7 +294,35 @@ export const SKILL_RUN_BLUEPRINT = {
     skill: { title: "Skill", target: BLUEPRINT_ID, required: false, many: false },
     target: { title: "Repository", target: REPOSITORY_BLUEPRINT_ID, required: false, many: false },
     triggered_by: { title: "Triggered by", target: "_user", required: false, many: false },
+    pull_request: { title: "Pull request", target: PR_BLUEPRINT_ID, required: false, many: false },
   },
+} as const;
+
+/** On every PR: how many succeeded code reviews exist for its CURRENT head (Port computes it from the runs). */
+export const PR_REVIEW_AGGREGATION = {
+  sf_passing_head_reviews: {
+    title: "Passing reviews on head",
+    type: "number",
+    target: RUN_BLUEPRINT_ID,
+    calculationSpec: { calculationBy: "entities", func: "count" },
+    query: { combinator: "and", rules: [
+      { property: "sf_status", operator: "=", value: "succeeded" },
+      { property: "sf_skill_slug", operator: "=", value: REVIEW_SKILL },
+      { property: "sf_is_head_review", operator: "=", value: true },
+    ] },
+  },
+} as const;
+
+/** The release gate (§7 step 4): a PR is "reviewed" in Port only with a succeeded code review on its head commit. */
+export const PR_REVIEW_GATE_SCORECARD = {
+  identifier: "pr_review_gate",
+  title: "PR review gate",
+  levels: [{ title: "Not reviewed", color: "red" }, { title: "Reviewed", color: "green" }],
+  rules: [{
+    identifier: "has_passing_review_run", title: "Succeeded code review on the head commit", level: "Reviewed",
+    description: "A Skills Factory code-review-runner run succeeded on this PR's current head commit (recorded as a Skill run).",
+    query: { combinator: "and", conditions: [{ property: "sf_passing_head_reviews", operator: ">", value: 0 }] },
+  }],
 } as const;
 
 export interface RunForPort {
@@ -299,11 +333,12 @@ export interface RunForPort {
 
 const RUN_STATUSES = new Set<string>(SKILL_RUN_BLUEPRINT.schema.properties.sf_status.enum);
 
-export function runEntity(r: RunForPort, opts: { withUser: boolean } = { withUser: true }) {
+export function runEntity(r: RunForPort, opts: { withUser: boolean; withPr?: boolean } = { withUser: true }) {
   const started = r.durationMs != null ? new Date(new Date(r.finishedAt).getTime() - r.durationMs).toISOString() : null;
   const relations: Record<string, string> = { skill: portId(r.slug) };
   if (r.repository) relations.target = r.repository;
   if (opts.withUser && r.requestedBy && /@/.test(r.requestedBy)) relations.triggered_by = r.requestedBy;
+  if (opts.withPr !== false && r.repository && r.pr) relations.pull_request = prEntityId(r.repository, r.pr);
   return {
     identifier: `run_${r.runId}`,
     title: `${r.slug} v${r.version ?? "?"} — ${r.status}${r.pr ? ` · PR #${r.pr}` : ""}`.slice(0, 200),
@@ -322,6 +357,7 @@ export function runEntity(r: RunForPort, opts: { withUser: boolean } = { withUse
       sf_pr_number: r.pr,
       sf_head_sha: r.headSha,
       sf_pr_url: r.prUrl,
+      sf_is_head_review: r.pr ? true : null,
     },
     relations,
   };
