@@ -10,7 +10,7 @@ import { IntegrationSync } from "@/components/integrations/SyncButton";
 import { PortSync } from "@/components/integrations/PortSync";
 import { CopyButton } from "@/components/CopyButton";
 import { portConfig } from "@/lib/integrations/port/client";
-import { AI_SKILL_BLUEPRINT, runSkillAction, runSkillWorkflow } from "@/lib/integrations/port/map";
+import { AI_SKILL_BLUEPRINT, runSkillAction, runSkillWorkflow, runSkillOnRepoWorkflow } from "@/lib/integrations/port/map";
 import { portSyncState } from "@/lib/integrations/port/state";
 import { headers } from "next/headers";
 
@@ -67,6 +67,7 @@ export default async function IntegrationsPage() {
         const missing = [...(pc.ok ? [] : pc.missing), ...(keySet ? [] : ["PORT_SF_API_KEY"])];
         const actionJson = JSON.stringify(runSkillAction(`${origin}/api/port/actions`), null, 2);
         const workflowJson = JSON.stringify(runSkillWorkflow(`${origin}/api/port/actions`), null, 2);
+        const repoWorkflowJson = JSON.stringify(runSkillOnRepoWorkflow(`${origin}/api/port/actions`), null, 2);
         return (
           <section className="card card-pad mt-6">
             <div className="h3" style={{ margin: 0 }}>Port <span className={`pill pill-sm ${ready ? "pill-sage" : "pill-hold"}`}>{ready ? "configured" : "not set up"}</span> <span className="caption">writes to Port</span></div>
@@ -79,6 +80,8 @@ export default async function IntegrationsPage() {
             <PortSyncState workspaceId={ctx.workspace.id} />
             <details className="mt-3"><summary className="caption" style={{ cursor: "pointer" }}><b>Run governed skill workflow</b>: in Port, Workflows → + Workflow → workflow JSON, paste. Needs the Port secret <code>SF_API_KEY</code> (a workspace API key).</summary>
               <div className="flex justify-end mb-1"><CopyButton text={workflowJson} /></div><pre className="run-raw">{workflowJson}</pre></details>
+            <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>Run governed skill on a PR</b> (on a GitHub Repository; the factory fetches the diff and records a Skill run): Workflows → + Workflow → JSON, paste. Same <code>SF_API_KEY</code> secret.</summary>
+              <div className="flex justify-end mb-1"><CopyButton text={repoWorkflowJson} /></div><pre className="run-raw">{repoWorkflowJson}</pre></details>
             <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>Classic self-service action</b> (older Port orgs): Self-service → + Action → Edit JSON</summary>
               <div className="flex justify-end mb-1"><CopyButton text={actionJson} /></div><pre className="run-raw">{actionJson}</pre></details>
             <details className="mt-2"><summary className="caption" style={{ cursor: "pointer" }}><b>MCP connector</b>: Port → Settings → Data sources → + Connector → MCP Servers → Custom Server</summary>

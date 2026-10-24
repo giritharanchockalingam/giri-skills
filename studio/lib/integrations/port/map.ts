@@ -162,7 +162,15 @@ export function runSkillAction(webhookUrl: string) {
 export const KNOWN_ACTIONS: ReadonlySet<string> = new Set(["run_ai_skill", "run_sf_skill", "run_sf_skill_on_repo"]);
 
 /** The webhook body, tolerant of Port rendering `inputs` as an object or as a JSON string. */
-export interface PortRunRequest { portRunId: string; skill: string; inputs: Record<string, unknown>; note: string; requestedBy: string; sync: boolean; action: string | null; target: string | null }
+export interface PortRunRequest { portRunId: string; skill: string; inputs: Record<string, unknown>; note: string; requestedBy: string; sync: boolean; action: string | null; target: string | null; pr: number | null }
+
+/** An entity input as Port renders it in a workflow body: the entity object, its JSON, or its identifier. */
+export function entityId(v: unknown): string | null {
+  let x: unknown = v;
+  if (typeof x === "string" && x.trim().startsWith("{")) { try { x = JSON.parse(x); } catch { /* keep string */ } }
+  const id = typeof x === "string" ? x : x && typeof x === "object" ? String((x as { identifier?: unknown }).identifier ?? "") : "";
+  return id.trim() ? id.trim() : null;
+}
 export function parsePortRun(body: unknown): PortRunRequest | string {
   if (!body || typeof body !== "object") return "body must be a JSON object";
   const b = body as Record<string, unknown>;
@@ -179,9 +187,13 @@ export function parsePortRun(body: unknown): PortRunRequest | string {
   if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) return "inputs must be a JSON object keyed by input name";
   const action = typeof b.action === "string" && b.action.trim() ? b.action.trim().slice(0, 100) : null;
   if (action !== null && !/^[A-Za-z0-9_-]{1,100}$/.test(action)) return "action identifier malformed";
-  // the repository / service entity the run targets (WP4); identifier only, resolved against Port later
-  const target = typeof b.target === "string" && b.target.trim() ? b.target.trim().slice(0, 200) : null;
-  return { portRunId, skill, inputs: inputs as Record<string, unknown>, note: typeof b.note === "string" ? b.note.slice(0, 500) : "", requestedBy: typeof b.requested_by === "string" ? b.requested_by.slice(0, 200) : "", sync: b.mode === "sync", action, target };
+  // the repository entity the run targets (WP4); a workflow entity input may render as object, JSON or identifier
+  const target = entityId(b.target);
+  if (target !== null && !/^[A-Za-z0-9_@.\/-]{1,200}$/.test(target)) return "target identifier malformed";
+  const prRaw = typeof b.pr === "number" ? b.pr : typeof b.pr === "string" && b.pr.trim() ? Number(b.pr.trim().replace(/^#/, "")) : null;
+  if (prRaw !== null && !(Number.isInteger(prRaw) && prRaw > 0 && prRaw < 10_000_000)) return "pr must be a pull request number";
+  const pr = prRaw;
+  return { portRunId, skill, inputs: inputs as Record<string, unknown>, note: typeof b.note === "string" ? b.note.slice(0, 500) : "", requestedBy: typeof b.requested_by === "string" ? b.requested_by.slice(0, 200) : "", sync: b.mode === "sync", action, target, pr };
 }
 
 /** Port workflows (the current self-service model): a self-serve trigger on an AI Skill plus a WEBHOOK node that waits
@@ -232,6 +244,139 @@ export function runSkillWorkflow(webhookUrl: string) {
             mode: "sync",
             port_run_id: "{{ .workflowRun.identifier }}",
             requested_by: "{{ .trigger.by.user.email }}",
+            skill: "{{ .outputs.trigger.skill }}",
+            inputs: "{{ .outputs.trigger.inputs }}",
+            note: "{{ .outputs.trigger.note }}",
+          },
+        },
+      },
+    ],
+    connections: [{ sourceIdentifier: "trigger", targetIdentifier: "run_in_skills_factory", description: null }],
+  };
+}
+
+/* ── WP4 — run evidence (spec §4.3) and running a skill on a repository (spec §5.3, §7 steps 2–3) ── */
+
+export const RUN_BLUEPRINT_ID = "sf_skill_run";
+export const REPOSITORY_BLUEPRINT_ID = "githubRepository";
+
+/** One entity per factory run that started from Port. Status words are the factory's own (never a skip shown as a pass). */
+export const SKILL_RUN_BLUEPRINT = {
+  identifier: RUN_BLUEPRINT_ID,
+  title: "Skill run",
+  icon: "AI",
+  description: "One Skills Factory run started from Port: the exact skill version, its status in the factory's own words, and a link to the evidence.",
+  schema: {
+    properties: {
+      sf_run_id: { type: "string", title: "Factory run id" },
+      sf_skill_slug: { type: "string", title: "Skill" },
+      sf_skill_version: { type: "string", title: "Skill version" },
+      sf_content_hash: { type: "string", title: "Content hash" },
+      sf_status: { type: "string", title: "Status", enum: ["succeeded", "failed", "timeout", "needs_input", "skipped-steps"], enumColors: { succeeded: "green", failed: "red", timeout: "orange", needs_input: "yellow", "skipped-steps": "orange" } },
+      sf_checks: { type: "string", title: "Output checks passed" },
+      sf_started_at: { type: "string", title: "Started", format: "date-time" },
+      sf_duration_s: { type: "number", title: "Duration (s)" },
+      sf_factory_run_url: { type: "string", title: "Factory run", format: "url" },
+      sf_port_run_id: { type: "string", title: "Port run" },
+      sf_pr_number: { type: "number", title: "Pull request" },
+      sf_head_sha: { type: "string", title: "Head commit" },
+      sf_pr_url: { type: "string", title: "Pull request URL", format: "url" },
+    },
+    required: ["sf_run_id", "sf_skill_slug", "sf_status"],
+  },
+  relations: {
+    skill: { title: "Skill", target: BLUEPRINT_ID, required: false, many: false },
+    target: { title: "Repository", target: REPOSITORY_BLUEPRINT_ID, required: false, many: false },
+    triggered_by: { title: "Triggered by", target: "_user", required: false, many: false },
+  },
+} as const;
+
+export interface RunForPort {
+  runId: string; slug: string; version: number | null; manifestHash: string | null; status: string; checksPassed: number; checksTotal: number;
+  durationMs: number | null; finishedAt: string; factoryUrl: string; portRunId: string;
+  repository: string | null; pr: number | null; headSha: string | null; prUrl: string | null; requestedBy: string | null;
+}
+
+const RUN_STATUSES = new Set<string>(SKILL_RUN_BLUEPRINT.schema.properties.sf_status.enum);
+
+export function runEntity(r: RunForPort, opts: { withUser: boolean } = { withUser: true }) {
+  const started = r.durationMs != null ? new Date(new Date(r.finishedAt).getTime() - r.durationMs).toISOString() : null;
+  const relations: Record<string, string> = { skill: portId(r.slug) };
+  if (r.repository) relations.target = r.repository;
+  if (opts.withUser && r.requestedBy && /@/.test(r.requestedBy)) relations.triggered_by = r.requestedBy;
+  return {
+    identifier: `run_${r.runId}`,
+    title: `${r.slug} v${r.version ?? "?"} — ${r.status}${r.pr ? ` · PR #${r.pr}` : ""}`.slice(0, 200),
+    properties: {
+      sf_run_id: r.runId,
+      sf_skill_slug: r.slug,
+      sf_skill_version: r.version == null ? null : String(r.version),
+      sf_content_hash: r.manifestHash,
+      // an unknown factory status is reported as failed rather than invented into a new word
+      sf_status: RUN_STATUSES.has(r.status) ? r.status : "failed",
+      sf_checks: `${r.checksPassed}/${r.checksTotal}`,
+      sf_started_at: started,
+      sf_duration_s: r.durationMs == null ? null : Math.round(r.durationMs / 100) / 10,
+      sf_factory_run_url: r.factoryUrl,
+      sf_port_run_id: r.portRunId,
+      sf_pr_number: r.pr,
+      sf_head_sha: r.headSha,
+      sf_pr_url: r.prUrl,
+    },
+    relations,
+  };
+}
+
+/** Workflow on a GitHub Repository: pick a pull request and a governed skill; the factory pulls the PR diff itself. */
+export function runSkillOnRepoWorkflow(webhookUrl: string) {
+  return {
+    identifier: "run_sf_skill_on_repo",
+    title: "Run governed skill on a PR",
+    icon: "AI",
+    description: "Run a published Skills Factory skill (e.g. Code review) on a pull request of this repository; the run is recorded as a Skill run entity.",
+    category: "Governed AI Skills",
+    allowAnyoneToViewRuns: true,
+    nodes: [
+      {
+        identifier: "trigger",
+        title: "Run governed skill on a PR",
+        icon: null,
+        description: null,
+        config: {
+          type: "SELF_SERVE_TRIGGER",
+          userInputs: {
+            properties: {
+              repository: { title: "Repository", type: "string", format: "entity", blueprint: REPOSITORY_BLUEPRINT_ID },
+              pr: { title: "Pull request number", type: "number" },
+              skill: { title: "Skill", type: "string", format: "entity", blueprint: BLUEPRINT_ID },
+              inputs: { title: "Other inputs (JSON, optional)", type: "string", description: "The PR diff is fetched by the factory; add only the skill's other inputs, e.g. {\"spec\": \"…\"}" },
+              note: { title: "Why (kept with the run)", type: "string" },
+            },
+            required: ["repository", "pr", "skill"],
+            order: ["repository", "pr", "skill", "inputs", "note"],
+          },
+        },
+      },
+      {
+        identifier: "run_in_skills_factory",
+        title: "Run in Skills Factory",
+        icon: null,
+        description: "The factory fetches the PR diff, runs the published version, and records a Skill run entity.",
+        config: {
+          type: "WEBHOOK",
+          url: webhookUrl,
+          method: "POST",
+          synchronized: true,
+          verbose: true,
+          onTimeout: "continue",
+          headers: { Authorization: "Bearer {{ .secrets[\"SF_API_KEY\"] }}", "Content-Type": "application/json" },
+          body: {
+            action: "run_sf_skill_on_repo",
+            mode: "sync",
+            port_run_id: "{{ .workflowRun.identifier }}",
+            requested_by: "{{ .trigger.by.user.email }}",
+            target: "{{ .outputs.trigger.repository }}",
+            pr: "{{ .outputs.trigger.pr }}",
             skill: "{{ .outputs.trigger.skill }}",
             inputs: "{{ .outputs.trigger.inputs }}",
             note: "{{ .outputs.trigger.note }}",

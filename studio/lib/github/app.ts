@@ -77,7 +77,7 @@ export async function gh<T>(path: string, auth: string, init: { method?: string;
     throw new GithubError(res.status, `GitHub ${init.method ?? "GET"} ${path.replace(GITHUB_API, "")}: ${msg}`);
   }
   const next = /<([^>]+)>;\s*rel="next"/.exec(res.headers.get("link") ?? "")?.[1] ?? null;
-  const raw = (init.accept ?? "").includes(".raw");
+  const raw = /\.(raw|diff)\b/.test(init.accept ?? "");                       // raw file text or a unified diff
   return { data: (res.status === 204 ? null : raw ? await res.text() : await res.json()) as T, next };
 }
 
