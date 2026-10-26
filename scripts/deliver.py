@@ -164,6 +164,11 @@ PLAN_FILLED = ("acceptance", "test", "files")       # a scaffold is complete whe
 # skills whose `baseline` input is a findings.csv of recorded debt, and the stack-profile check each one is wired from
 BASELINE_SKILLS = {"build/nextjs-enterprise-conventions": "nextjs", "build/perf-review-runner": "perf",
                    "build/ui-component-quality": "ui", "build/tech-debt-audit-runner": "debt"}
+NONINTERACTIVE_RULES = ("You are running non-interactively inside a delivery pipeline: nobody can answer questions or approve "
+                        "anything. Shell commands are not available. Inspect with Read, Grep and Glob; create and change files "
+                        "only with Write and Edit, writing every file the task asks for at the exact paths given. Do not write "
+                        "helper scripts. Where something is unknown, record it in the file as the task's rules say instead of "
+                        "asking. Finish by writing the files, then reply with one short summary.")
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
@@ -1515,7 +1520,13 @@ class Run:
         file write is silently refused and the step fails with "did not write" (found running feature-delivery with
         --builder claude-code): edits are accepted, and the run directory is added so a step that produces evidence
         files (prd-final.md, plan.md, tasks.csv, files.txt) can write them outside the checkout."""
-        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()), "-p", prompt, "--output-format", "text"]
+        # No shell: a non-interactive run cannot approve one, and a model that reaches for a helper script then stops to
+        # ask (seen live at plan-refine: "the shell keeps asking for approval … tell me whether to approve"). The file
+        # tools are allowed outright and the run is told so; the executor itself runs installs and tests.
+        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
+                "--allowedTools", "Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "LS",
+                "--disallowedTools", "Bash",
+                "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "text"]
 
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
