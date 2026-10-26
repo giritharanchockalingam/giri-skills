@@ -30,12 +30,32 @@ Without --baseline every finding is `new`. Stdlib, offline, deterministic.
 from __future__ import annotations
 
 import argparse
+import subprocess
 import csv
 import re
 import sys
 from pathlib import Path
 
 SKIP_DIRS = {"node_modules", ".next", "out", "dist", "build", "coverage", ".git", "tests", "test", "__tests__", "storybook-static"}
+
+_GIT_VISIBLE: dict = {}
+
+
+def git_ignored(root: Path, rel: Path) -> bool:
+    """True for a file git ignores in a repository: build output under any name (a custom distDir such as `bo11/`,
+    `.next-*`), caches, local env files. Found on a real repo where 1,500 findings came from a build folder the fixed
+    SKIP_DIRS list did not name. Outside a git repository nothing is filtered beyond SKIP_DIRS."""
+    key = str(root.resolve())
+    if key not in _GIT_VISIBLE:
+        try:
+            r = subprocess.run(["git", "-C", key, "ls-files", "-co", "--exclude-standard", "-z"],
+                               capture_output=True, text=True, timeout=120)
+            _GIT_VISIBLE[key] = (set(r.stdout.split("\0")) - {""}) if r.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError):
+            _GIT_VISIBLE[key] = None
+    visible = _GIT_VISIBLE[key]
+    return visible is not None and rel.as_posix() not in visible
+
 SKIP_SUFFIXES = tuple(f".{kind}.{ext}" for kind in ("test", "spec", "stories") for ext in ("tsx", "jsx", "js", "ts", "mjs", "cjs")) + (".d.ts",)
 JSX_EXTS = {".tsx", ".jsx"}          # always component files
 MAYBE_JSX_EXTS = {".js", ".ts"}      # component files only when they contain JSX (JavaScript Next.js repos)
@@ -144,7 +164,7 @@ def source_files(root: Path):
         if p.suffix not in EXTS or not p.is_file() or p.name.endswith(SKIP_SUFFIXES):
             continue
         rel = p.relative_to(root)
-        if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+        if any(part in SKIP_DIRS for part in rel.parts[:-1]) or git_ignored(root, rel):
             continue
         if p.suffix in MAYBE_JSX_EXTS and (p.stem in NEVER_COMPONENT_STEMS or p.stem.endswith(".config")):
             continue
