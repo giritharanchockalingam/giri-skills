@@ -125,9 +125,11 @@ ATTR_ONCLICK = re.compile(r"\bonClick\s*=")
 ATTR_ROLE = re.compile(r"\brole\s*=")
 ATTR_TABINDEX = re.compile(r"\btabIndex\s*=")
 ATTR_KEY = re.compile(r"\bonKey(Down|Up|Press)\s*=")
-ATTR_ID = re.compile(r"""\bid\s*=\s*(?:["']([^"']+)["']|\{\s*([\w.]+)\s*\})""")
+# a template-literal id/htmlFor ({`move-${c.id}`}) pairs by its exact template text — found on a real UI run where
+# <label htmlFor={`move-${c.id}`}> + <select id={`move-${c.id}`}> was flagged UI4 (unlabelled) though it is labelled
+ATTR_ID = re.compile(r"""\bid\s*=\s*(?:["']([^"']+)["']|\{\s*([\w.]+)\s*\}|\{\s*`([^`]+)`\s*\})""")
 ATTR_TYPE = re.compile(r"""\btype\s*=\s*["'](hidden|submit|button|reset|image)["']""")
-HTML_FOR = re.compile(r"""\bhtmlFor\s*=\s*(?:["']([^"']+)["']|\{\s*([\w.]+)\s*\})""")
+HTML_FOR = re.compile(r"""\bhtmlFor\s*=\s*(?:["']([^"']+)["']|\{\s*([\w.]+)\s*\}|\{\s*`([^`]+)`\s*\})""")
 ARIA_LABELLED = re.compile(r"\baria-label(ledby)?\s*=")
 DANGEROUS = re.compile(r"\bdangerouslySetInnerHTML\b")
 ASYNC_HOOK = re.compile(r"\b(useQuery|useInfiniteQuery|useSWR|useSWRInfinite)\s*\(")
@@ -270,7 +272,7 @@ def lint_file(text: str, rel: str) -> list[dict]:
         name, sev, _ = RULES[rule]
         out.append({"rule": rule, "file": rel, "line": ln, "snippet": lines[ln - 1].strip()[:120], "severity": sev})
 
-    html_for = {v1 or v2 for v1, v2 in HTML_FOR.findall(text)}
+    html_for = {v1 or v2 or v3 for v1, v2, v3 in HTML_FOR.findall(text)}
     labelled_ids = set(re.findall(r"""\baria-labelledby\s*=\s*["']([^"']+)["']""", text))
 
     for m in TAG_OPEN.finditer(text):
@@ -295,7 +297,7 @@ def lint_file(text: str, rel: str) -> list[dict]:
             if spread or ATTR_TYPE.search(tag) or ARIA_LABELLED.search(tag) or ATTR_NAME.search(tag):
                 continue
             idm = ATTR_ID.search(tag)
-            ident = (idm.group(1) or idm.group(2)) if idm else None
+            ident = (idm.group(1) or idm.group(2) or idm.group(3)) if idm else None
             if ident and ident in html_for:
                 continue
             before = text[:start]
