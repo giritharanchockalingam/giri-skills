@@ -67,7 +67,8 @@ def dir_files(d: Path) -> list[dict]:
         if p.is_file():
             rel = p.relative_to(d).as_posix()
             if not ignored(rel):
-                out.append({"path": rel, "content": p.read_text(encoding="utf-8")})
+                with open(p, encoding="utf-8", newline="") as fh:   # byte-faithful: \r\n stays \r\n
+                    out.append({"path": rel, "content": fh.read()})
     return out
 
 
@@ -196,7 +197,8 @@ def write(p: dict, plugin: Path) -> str:
     for rel, content in p["files"].items():
         dest = plugin.joinpath(*rel.split("/"))
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content, encoding="utf-8")
+        with open(dest, "w", encoding="utf-8", newline="") as fh:   # never translate line endings
+            fh.write(content)
     (plugin / "governed.lock.json").write_text(lock_text(p["lock"]), encoding="utf-8")
     manifest_path = plugin / ".claude-plugin" / "plugin.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
