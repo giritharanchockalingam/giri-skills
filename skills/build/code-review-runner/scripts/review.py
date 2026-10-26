@@ -148,6 +148,16 @@ def redact(text: str, secret: str) -> str:
     return text.replace(secret, f"{keep}[redacted]").strip()[:160]
 
 
+# package-manager lockfiles are generated, not written: their integrity hashes read as high-entropy "secrets" (found on
+# a greenfield run: 481 blocking CR-SECRET findings, every one a sha512 integrity value in package-lock.json)
+LOCKFILES = {"package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "bun.lock",
+             "poetry.lock", "Pipfile.lock", "uv.lock", "Cargo.lock", "Gemfile.lock", "composer.lock", "go.sum"}
+
+
+def is_lockfile(path: str) -> bool:
+    return Path(path).name in LOCKFILES
+
+
 def is_test(path: str) -> bool:
     return bool(TEST_PATH.search(path))
 
@@ -166,6 +176,8 @@ def detect(files: list[dict], entropy: float, min_len: int) -> list[dict]:
                     "detail": detail})
 
     for f in files:
+        if is_lockfile(f["path"]):
+            continue
         path, ext, test = f["path"], Path(f["path"]).suffix.lower(), is_test(f["path"])
         added = f["added"]
         for idx, (ln, text) in enumerate(added):
@@ -227,6 +239,8 @@ def detect_duplicates(files: list[dict], window: int = 3) -> list[dict]:
     seen: dict[tuple, tuple] = {}
     out, reported = [], set()
     for f in files:
+        if is_lockfile(f["path"]):
+            continue
         lines = [(ln, t.strip()) for ln, t in f["added"]]
         for i in range(len(lines) - window + 1):
             chunk = lines[i:i + window]
