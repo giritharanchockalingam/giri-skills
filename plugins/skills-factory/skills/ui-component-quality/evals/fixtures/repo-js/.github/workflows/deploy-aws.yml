@@ -1,0 +1,10 @@
+# Fictional fixture (ui-component-quality evals): brownfield deploys to AWS, not Vercel.
+name: deploy-aws
+on: { push: { branches: [main] } }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci && npm run build
+      - run: aws s3 sync .next/static s3://example-bucket/_next/static

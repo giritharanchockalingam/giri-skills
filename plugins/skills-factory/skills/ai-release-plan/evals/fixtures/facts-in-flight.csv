@@ -1,0 +1,16 @@
+# fictional fixture — invented live readings for a rollout already under way (Claims summariser v2 at Canary 1); not a real system
+key,value,source,notes
+system_name,Claims summariser v2,fixture,fictional fixture
+risk_tier,medium,fixture,fictional fixture
+eval_pass_rate,0.93,fixture,offline result at sign-off (fictional)
+redteam_pass_rate,0.98,fixture,offline result at sign-off (fictional)
+latency_p95_ms,1950,fixture,live reading at Canary 1 (fictional)
+error_rate,0.006,fixture,live reading at Canary 1 (fictional)
+daily_requests,48000,fixture,fictional fixture
+min_observed_requests,2000,fixture,fictional fixture
+rollback_time_min,15,fixture,fictional fixture
+current_stage,canary_1,fixture,rollout started 2026-10-12 (fictional)
+current_stage_observed_requests,2350,fixture,requests served by v2 at Canary 1 so far (fictional)
+owner_eval_lead,Eval Lead (fictional),fixture,fictional fixture
+owner_sre_oncall,SRE Rota (fictional),fixture,fictional fixture
+owner_release_manager,Release Manager (fictional),fixture,fictional fixture

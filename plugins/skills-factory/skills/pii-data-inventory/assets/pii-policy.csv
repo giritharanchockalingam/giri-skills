@@ -1,0 +1,10 @@
+pii_type,handling,notes
+email,,mask | tokenize | drop | allow
+phone,,
+ssn,,
+payment_card,,
+ipv4,,
+ipv6,,
+dob,,
+name,,
+address,,

@@ -1,0 +1,6 @@
+play_id,play,type,addresses,owner,date,success_measure,status
+"# fictional fixture — last quarter's Northwind plays for the account-plan evals; invented",,,,,,,
+P1,Open white space: Data and AI,white-space,white-space cell Data and AI (none),Priya,2026-07-31,discovery booked,open
+P2,Open white space: API platform engineering,white-space,white-space cell API platform engineering (none),Giri,2026-07-15,proposal sent,done
+P3,Move Dana Ortiz (CFO) from stance -1 to +1,stakeholder,"stakeholder Dana Ortiz: influence 5, stance -1",Priya,2026-08-30,CFO sponsor meeting,open
+P4,Re-establish contact with Raj Patel (VP Supply Chain),coverage,no contact in 90 days,Giri,2026-07-20,meeting held,open

@@ -1,0 +1,9 @@
+rule,file,line,snippet,severity,status
+"# fictional fixture — the debt recorded by an earlier perf review of repo-violations (perf-review-runner evals)",,,,,
+PF3,app/orders/page.tsx,8,"const { data: orders } = await supabase.from(""orders"").select(""*"").eq(""tenant_id"", ""t1"");",high,new
+PF4,app/orders/page.tsx,8,"const { data: orders } = await supabase.from(""orders"").select(""*"").eq(""tenant_id"", ""t1"");",high,new
+PF1,app/orders/page.tsx,11,"const { data: items } = await supabase.from(""order_items"").select(""sku, qty"").eq(""order_id"", order.id).limit(100);",high,new
+PF3,server/services/order-service.ts,6,"const { data } = await supabase.from(""orders"").select(""*"").order(""created_at"");",high,new
+PF4,server/services/order-service.ts,6,"const { data } = await supabase.from(""orders"").select(""*"").order(""created_at"");",high,new
+PF1,server/services/order-service.ts,20,"const { data } = await supabase.from(""orders"").select(""total"").eq(""customer_id"", id).limit(500);",high,new
+PF4,lib/legacy-report.ts,9,"const { data } = await supabase.from(""orders"").select(""id, total"").order(""created_at"");",high,new

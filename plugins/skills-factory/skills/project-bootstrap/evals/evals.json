@@ -1,0 +1,113 @@
+{
+  "skill": "project-bootstrap",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Start a new repo for 'Fleet Portal', a multi-tenant Next.js + Supabase app on Vercel. Set up the project skeleton so we can start the first feature.",
+      "expected": [
+        "Presents a create/keep/skip plan table and waits for go before writing",
+        "Runs scripts/scaffold.py with --multi-tenant; re-run reports 0 writes",
+        "docs/SPEC.md filled with purpose, scope, NFRs; unknowns marked [TO BE BASELINED — owner: ___]",
+        "CLAUDE.md commands verified against package.json, not assumed",
+        "Branch-protection gh commands given, not executed without approval",
+        "docs/HANDOFF.md ends with the next-thread prompt"
+      ]
+    },
+    {
+      "id": "existing-files",
+      "prompt": "This repo already has a CLAUDE.md and docs/SPEC.md. Bring it up to the bootstrap standard.",
+      "expected": [
+        "Existing CLAUDE.md and SPEC.md are kept, not overwritten",
+        "Only missing files (HANDOFF, ADRs, workflows, .env.example) are added",
+        "Diff of gaps between existing docs and the template is reported as a table"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Bootstrap a new project.",
+      "expected": [
+        "Asks once for project name, purpose, target dir and tenancy model",
+        "Does not invent a project name or scaffold into cwd unasked"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Bootstrap a new multi-tenant Next.js + Supabase app called demo-app.",
+      "expected": [
+        "Runs scripts/scaffold.py; SPEC, CLAUDE, HANDOFF, ADR and CI workflows exist"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "name": "demo-app",
+        "multi_tenant": "true"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/docs/SPEC.md",
+        "exists:proj/.github/workflows/ci.yml",
+        {
+          "file": "proj/docs/SPEC.md",
+          "check": "contains:\"multi-tenant\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-name",
+      "prompt": "Scaffold the repo skeleton.",
+      "expected": [
+        "Asks for the project name"
+      ],
+      "inputs": {
+        "target": "{out}/proj"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:name"
+      ]
+    },
+    {
+      "id": "agent-single-tenant-default",
+      "prompt": "Bootstrap demo-app; tenancy is not decided yet.",
+      "expected": [
+        "Scaffolds without the multi-tenant marker; tenancy decision left open in the ADR"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "name": "demo-app"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/CLAUDE.md",
+        "exists:proj/docs/HANDOFF.md"
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "This repo already has a CLAUDE.md and docs/SPEC.md. Bring it up to the bootstrap standard without overwriting them.",
+      "expected": [
+        "CLAUDE.md and docs/SPEC.md are kept verbatim; the rest of the skeleton is written; the sections each kept file lacks (e.g. SPEC Risks, CLAUDE Gates) are reported as gaps"
+      ],
+      "inputs": {
+        "target": "{out}/proj",
+        "seed": "evals/fixtures/repo-existing",
+        "name": "tidewater-booking"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proj/.github/workflows/ci.yml",
+        {
+          "file": "proj/docs/SPEC.md",
+          "check": "contains:\"instead of calling the harbour office\""
+        },
+        {
+          "file": "bootstrap-report.json",
+          "check": "contains:\"Non-functional requirements\""
+        },
+        {
+          "file": "scaffold.log",
+          "check": "contains:\"gap    CLAUDE.md: missing sections — Stack conventions, Gates, Where things live, Do not\""
+        }
+      ]
+    }
+  ]
+}

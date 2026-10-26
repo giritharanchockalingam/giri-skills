@@ -1,0 +1,7 @@
+key,value,unit,source,as_of_date,notes
+daily_active_users,1200,count,fictional,2026-09-01,
+requests_per_user_per_day,15,count,fictional,2026-09-01,
+tokens_in_per_request,1800,tokens,fictional,2026-09-01,
+tokens_out_per_request,350,tokens,fictional,2026-09-01,
+active_hours_per_day,10,hours,fictional,2026-09-01,
+peak_factor,2.5,multiplier,fictional,2026-09-01,

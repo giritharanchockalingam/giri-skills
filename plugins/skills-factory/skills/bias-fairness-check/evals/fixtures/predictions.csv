@@ -1,0 +1,24 @@
+record_id,group,label,prediction,score,notes
+R001,A,1,1,0.8,fictional fixture
+R002,A,1,1,0.8,fictional fixture
+R003,A,1,1,0.8,fictional fixture
+R004,A,1,1,0.8,fictional fixture
+R005,A,1,0,0.2,fictional fixture
+R006,A,0,1,0.8,fictional fixture
+R007,A,0,0,0.2,fictional fixture
+R008,A,0,0,0.2,fictional fixture
+R009,A,0,0,0.2,fictional fixture
+R010,A,0,0,0.2,fictional fixture
+R011,B,1,1,0.8,fictional fixture
+R012,B,1,1,0.8,fictional fixture
+R013,B,1,0,0.2,fictional fixture
+R014,B,1,0,0.2,fictional fixture
+R015,B,0,1,0.8,fictional fixture
+R016,B,0,0,0.2,fictional fixture
+R017,B,0,0,0.2,fictional fixture
+R018,B,0,0,0.2,fictional fixture
+R019,B,0,0,0.2,fictional fixture
+R020,B,0,0,0.2,fictional fixture
+R021,C,1,1,0.8,fictional fixture
+R022,C,0,0,0.2,fictional fixture
+R023,C,0,0,0.2,fictional fixture

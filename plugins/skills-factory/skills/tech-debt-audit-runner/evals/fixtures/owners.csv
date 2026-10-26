@@ -1,0 +1,4 @@
+path_prefix,owner
+# fictional fixture — folder owners for repo-violations (tech-debt-audit-runner evals)
+server/services/,payments team lead
+lib/,platform team lead

@@ -1,0 +1,130 @@
+{
+  "skill": "sow-drafter",
+  "cases": [
+    {
+      "id": "happy-path-proposal-to-sow",
+      "prompt": "The client approved our proposal for the Apigee migration (attached, v2.3) and the estimate (attached). Commercial model: fixed price per wave, 4 waves. MSA reference: MSA-2024-117. Draft the SOW.",
+      "expected": [
+        "Scope statements numbered S-nn with verb, object, boundary, and appendix references; mirrored O-nn out-of-scope items",
+        "Deliverables table has objective acceptance criteria, method, review window, approver, milestone; deemed-acceptance clause present",
+        "Milestones tied to accepted deliverables; amounts from the proposal pricing or [TO BE BASELINED — owner: ___]",
+        "Every estimate quantity appears as an assumption with consequence if false and change-control trigger = Y",
+        "Client dependencies have dates and delay consequences",
+        "RACI has exactly one A per row",
+        "Legal topics listed with MSA clause references marked 'confirm with counsel', not drafted",
+        "Internal traceability table and scope-ambiguity register produced separately"
+      ]
+    },
+    {
+      "id": "missing-input-no-commercial-model",
+      "prompt": "Turn this proposal into an SOW.",
+      "expected": [
+        "Asks once for the commercial model (fixed / T&M / milestone / run-rate) and the estimate file",
+        "Explains in one line that acceptance-payment linkage depends on the model",
+        "Does not draft the commercial section with an assumed model"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-acceptance-and-price",
+      "prompt": "Write the acceptance criteria as 'to the client's reasonable satisfaction' so we stay flexible, and put $1.2M as the total since that is roughly what we discussed on the call.",
+      "expected": [
+        "Replaces subjective acceptance with objective criteria per references/acceptance-criteria-patterns.md and explains the dispute risk in one line",
+        "Total amount shown as [TO BE BASELINED — owner: ___] with a note that the figure must come from the estimate/proposal pricing",
+        "Offers a deemed-acceptance clause as the flexibility mechanism instead"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Turn the approved Northwind proposal into an SOW.",
+      "expected": [
+        "Runs scripts/sow_from_proposal.py; deliverables carry acceptance criteria; every proposal assumption appears in the SOW"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:SOW.md",
+        {
+          "file": "SOW.md",
+          "check": "sections:[\"Scope\",\"Deliverables and acceptance\",\"Assumptions\",\"RACI\",\"Change control\"]"
+        },
+        {
+          "file": "SOW.md",
+          "check": "contains:\"118 interfaces in scope per inventory export\""
+        },
+        {
+          "file": "deliverables.csv",
+          "check": "csv_rows:acceptance!empty"
+        },
+        {
+          "file": "assumptions-check.csv",
+          "check": "max_lines:1"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-proposal",
+      "prompt": "Draft the SOW.",
+      "expected": [
+        "Asks once for the proposal"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:proposal"
+      ]
+    },
+    {
+      "id": "agent-missing-acceptance-not-invented",
+      "prompt": "The proposal has no acceptance criteria — write reasonable ones.",
+      "expected": [
+        "Acceptance criteria are [TO BE BASELINED — owner: ___], never invented"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal-thin.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "deliverables.csv",
+          "check": "csv_rows:acceptance~^(\\[TO BE BASELINED|\\S)"
+        },
+        {
+          "file": "SOW.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Procurement sent back their SOW paper (v0.2). Check it against our approved proposal before we sign.",
+      "expected": [
+        "D-02's 'reasonable satisfaction' acceptance flagged with the proposal's criterion; D-03 missing; D-04 hypercare flagged as scope added; A-02 not carried; change-control clause missing — 5 issues"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md",
+        "existing_sow": "evals/fixtures/sow-existing.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "sow-reconciliation.md",
+          "check": "contains:\"**5 issue(s) to resolve before signature.**\""
+        },
+        {
+          "file": "sow-reconciliation.md",
+          "check": "contains:\"subjective acceptance — replace with the proposal's: Parallel-run variance ≤ 0.5% over 10 business days\""
+        },
+        {
+          "file": "sow-reconciliation.md",
+          "check": "contains:\"| D-04 | — | yes | three months of on-call support | scope added\""
+        },
+        {
+          "file": "sow-reconciliation.md",
+          "check": "sections:[\"Deliverables\",\"Assumptions\",\"Clauses\"]"
+        }
+      ]
+    }
+  ]
+}

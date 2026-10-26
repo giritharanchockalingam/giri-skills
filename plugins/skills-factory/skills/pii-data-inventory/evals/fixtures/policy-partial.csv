@@ -1,0 +1,4 @@
+pii_type,handling,notes
+email,mask,fictional fixture policy
+phone,allow,fictional fixture policy
+name,tokenize,fictional fixture policy

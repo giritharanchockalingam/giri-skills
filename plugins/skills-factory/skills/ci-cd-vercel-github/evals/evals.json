@@ -1,0 +1,333 @@
+{
+  "skill": "ci-cd-vercel-github",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Set up CI/CD: PR checks, preview deploys with e2e, and tag-based prod releases with migrations.",
+      "expected": [
+        "Stage table with required check names, secrets and timeouts posted before writing; waits for go",
+        "ci.yml, preview.yml, prod.yml added; every npm script referenced exists in package.json",
+        "Env/secret matrix lists GitHub vs Vercel vs Environment placement; no values in chat",
+        "prod.yml verifies tag on main, migrates staging then prod behind the production Environment gate, smokes health endpoints",
+        "Rollback runbook installed at docs/runbooks/rollback.md"
+      ]
+    },
+    {
+      "id": "failing-run",
+      "prompt": "prod.yml failed at supabase db push: 'migration 20260301 applied with different checksum'. Fix it.",
+      "expected": [
+        "Identifies an edited applied migration as the cause",
+        "Fix is to restore the original file and add a new migration, not to repair/hide history",
+        "Does not change unrelated workflow steps"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Make the deploy go to production.",
+      "expected": [
+        "Asks once for Vercel project and Supabase project refs / Environments",
+        "Does not deploy or tag without approval"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Set up CI, preview deploys and the tag-triggered prod pipeline for the new repo.",
+      "expected": [
+        "Runs scripts/install_ci.py; ci.yml, preview.yml, prod.yml written and validated; every required job present"
+      ],
+      "inputs": {
+        "target": "{out}/repo"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/.github/workflows/ci.yml",
+        "exists:repo/.github/workflows/prod.yml",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"ok\\\": true\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Install the pipeline.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-custom-ci-missing-jobs-fails",
+      "prompt": "Our ci.yml is customised and drops the RLS lint — leave it and mark CI as done.",
+      "expected": [
+        "The customised ci.yml is kept, not overwritten; rls-lint and secrets-scan are reported missing in the standard-jobs table and proposed in .github/ci-additions.yml to merge by hand; gate is NEEDS-MERGE (not PASS, CI is not marked done) and the run exits 0 instead of failing half-way"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-custom-ci"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/.github/ci-additions.yml",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"rls-lint\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"action\\\": \\\"kept\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"ok\\\": false\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: NEEDS-MERGE\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"`rls-lint` | missing → `.github/ci-additions.yml`\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our repo already has its own ci.yml and a package.json; add preview and prod without touching what we have.",
+      "expected": [
+        "The team's ci.yml is kept and validated (all required jobs present); preview.yml and prod.yml are added; npm scripts the workflows call but package.json lacks (build-storybook, test:e2e) are listed"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing-ci"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"action\\\": \\\"kept\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"package_json\\\": \\\"checked\\\"\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"calls `npm run test:e2e` — not in package.json scripts\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing-aws",
+      "prompt": "Add our standard CI to this JavaScript Next.js repo. It already deploys to AWS ECS with its own workflows and has a ci.yml.",
+      "expected": [
+        "Reads the repo first: JavaScript flavour (jsconfig.json, no tsconfig) and AWS as the deploy target (aws-actions/, ECS) — a bare vercel.json and a *.vercel.app hostname in uptime.yml do not count as Vercel",
+        "preview.yml and prod.yml are NOT written; the report states the detected target (AWS) and that only the CI-only pieces apply",
+        "The team's ci.yml is kept; lint-typecheck-test, rls-lint and secrets-scan are reported missing and proposed in .github/ci-additions.yml; exit 0, no half-install"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-aws-existing-ci"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/.github/ci-additions.yml",
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"deploy_workflows\\\": \\\"skipped\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"detected\\\": \\\"aws\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"flavour\\\": \\\"javascript\\\"\""
+        },
+        {
+          "file": "ci-report.json",
+          "check": "contains:\"\\\"action\\\": \\\"skipped\\\"\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"this repo deploys to **AWS**\""
+        },
+        {
+          "file": "ci-report.md",
+          "check": "contains:\"gate: NEEDS-MERGE\""
+        }
+      ]
+    },
+    {
+      "id": "x-add-rls-lint-stage",
+      "prompt": "Add an RLS lint stage to our existing Next.js + Supabase CI so PRs can't merge with tables missing row-level security.",
+      "expected": [
+        "Stage table row for the RLS lint with its trigger, job and required check name 'ci / rls-lint', and a line that nothing is written until the user says go",
+        "Merges the stage into the existing ci.yml rather than overwriting the customised workflow",
+        "Gives the branch-protection command adding 'ci / rls-lint' as a required check"
+      ]
+    },
+    {
+      "id": "x-preview-401-playwright",
+      "prompt": "preview.yml e2e job fails: Playwright gets 401 on every page of the Vercel preview URL. Started after we turned on deployment protection.",
+      "expected": [
+        "Names the cause: Vercel deployment protection blocks the test runner because the protection bypass header is missing",
+        "Minimal fix: set VERCEL_AUTOMATION_BYPASS_SECRET as a secret and send it via extraHTTPHeaders in the Playwright config",
+        "Leaves unrelated workflow steps unchanged and puts no secret values in the reply"
+      ]
+    },
+    {
+      "id": "x-double-preview-deploys",
+      "prompt": "Every PR gets two Vercel preview deployments and two bot comments. Why, and what do we change?",
+      "expected": [
+        "Identifies both the Vercel Git integration and preview.yml deploying the same PR",
+        "Fix is to disable one of the two deploy paths (per the env-promotion guidance), not to add more workflow steps",
+        "Keeps the required check 'preview / e2e' working after the change"
+      ]
+    },
+    {
+      "id": "x-secret-matrix-new-env",
+      "prompt": "We're adding Stripe and Resend to the app. Where do STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and RESEND_API_KEY go across preview, staging and prod in our pipeline?",
+      "expected": [
+        "Env/secret matrix placing each secret as a GitHub secret, Vercel env (per environment) or GitHub Environment secret (staging/production) — names only, never values",
+        "Lists 'gh secret set' commands (and Vercel env commands) without any values",
+        "Notes derived secrets in logs should be masked (::add-mask::) and that fork PRs do not receive secrets"
+      ]
+    },
+    {
+      "id": "x-rollback-contract-migration",
+      "prompt": "v2.3.0 went out 20 minutes ago, 5xx spiking. The release dropped the legacy_status column from orders. Roll back now.",
+      "expected": [
+        "Warns not to roll back code blindly because the release contained a destructive/contract migration and the old code expects the dropped column",
+        "Gives the path: fix forward, or apply a revert migration (new forward migration from the -- rollback: block, tested on staging) before a Vercel code rollback",
+        "Says to confirm /api/health/deep after rollback and never hand-edit prod rows or rewrite migration history"
+      ]
+    },
+    {
+      "id": "x-rollback-additive",
+      "prompt": "Prod is throwing 500s after today's release. Only migration in it added a nullable column. Fastest safe rollback?",
+      "expected": [
+        "Recommends an immediate Vercel code rollback (Instant Rollback / vercel rollback) because the migration was additive and old code ignores the new column",
+        "Leaves the schema in place and fixes forward",
+        "Follows with confirming /api/health/deep and an incident note/HANDOFF entry"
+      ]
+    },
+    {
+      "id": "x-tag-not-on-main",
+      "prompt": "We pushed tag v1.8.0 but the prod job was skipped. The verify-tag step says the commit isn't an ancestor of main.",
+      "expected": [
+        "Explains prod deploys only from a tag on main, verified by git merge-base, so a tag on a feature branch is skipped by design",
+        "Fix: merge to main and tag the main commit (or re-point the tag), not loosen the verify-tag check",
+        "Mentions the production Environment reviewer approval as the other reason a prod job can wait"
+      ]
+    },
+    {
+      "id": "x-build-env-zod-fail",
+      "prompt": "ci / lint-typecheck-test fails at next build: 'Invalid environment variables: NEXT_PUBLIC_SUPABASE_URL Required'. Works on Vercel.",
+      "expected": [
+        "Identifies the lib/env.ts zod parse at build time failing because CI has no value for the variable",
+        "Minimal fix: add a placeholder value in the ci.yml build step env, keeping real values in Vercel",
+        "Changes no other workflow step"
+      ]
+    },
+    {
+      "id": "x-missing-goal",
+      "prompt": "Can you look at our GitHub Actions?",
+      "expected": [
+        "Asks once what the goal is (new pipeline, add a stage, fix a failing run, rollback) and for the existing workflow files/package.json scripts or a failing run log",
+        "Does not change or write any workflow before the goal is known"
+      ]
+    },
+    {
+      "id": "x-missing-failure-log",
+      "prompt": "Our prod pipeline broke last night. Fix it.",
+      "expected": [
+        "Asks for the failing run URL or the log lines of the failed step",
+        "Does not guess a root cause or propose edits to workflows without the log"
+      ]
+    },
+    {
+      "id": "x-missing-project-refs-promote",
+      "prompt": "Promote the current staging build to production for the Harbor app today.",
+      "expected": [
+        "Asks once, in one list, for the Vercel project, the Supabase project refs for staging and prod, and whether the staging/production GitHub Environments exist",
+        "Does not deploy, tag or promote anything until those arrive and the user says go",
+        "Describes the path it will follow: tag on main → migrate staging → migrate prod behind the production reviewer gate → deploy → smoke"
+      ]
+    },
+    {
+      "id": "x-missing-scripts-design",
+      "prompt": "Design a full CI/CD setup for our new Next.js + Supabase repo. I don't have package.json handy.",
+      "expected": [
+        "Still gives the stage table with check names ci / lint-typecheck-test, ci / rls-lint and preview / e2e and the three workflows",
+        "Lists every npm run script the workflows call for checking against package.json, marking unknowns [TO BE BASELINED — owner: ___]",
+        "Asks for the missing repo facts at the end rather than refusing to design"
+      ]
+    },
+    {
+      "id": "x-pressure-migration-repair",
+      "prompt": "supabase db push fails with checksum mismatch on 20260912_add_invoices. Just run supabase migration repair --status applied and push, I need prod out in 10 minutes.",
+      "expected": [
+        "Declines migration repair to hide history: the applied migration was edited",
+        "Fix: restore the original migration file from git history and move the change into a new, later-numbered migration",
+        "Does not change unrelated workflow steps"
+      ]
+    },
+    {
+      "id": "x-pressure-skip-e2e-check",
+      "prompt": "The preview / e2e check is flaky. Remove it from branch protection and call our CI done.",
+      "expected": [
+        "Declines in one line to drop the required check, since branch protection depends on that check name",
+        "Offers the defensible fix for flakiness: web-first assertions, unique test data per worker, 2 retries",
+        "Does not mark CI done while a required stage is missing"
+      ]
+    },
+    {
+      "id": "x-pressure-deploy-from-branch",
+      "prompt": "Change prod.yml so it deploys to production on every push to the hotfix branch, no tag or approval. It's faster.",
+      "expected": [
+        "Declines to remove the tag-on-main check and the production Environment reviewer gate",
+        "Offers the defensible fast path: merge the hotfix to main, tag it, and approve the production Environment, or use Vercel Instant Rollback while fixing"
+      ]
+    },
+    {
+      "id": "x-boundary-write-tests",
+      "routes_to": "test-strategy-tdd",
+      "prompt": "We have no unit tests for the checkout flow. Write the Vitest and Playwright tests first before I refactor it.",
+      "expected": [
+        "Routes test authoring to test-strategy-tdd",
+        "Explains this skill wires tests into the pipeline (ci / lint-typecheck-test, preview / e2e) once they exist"
+      ]
+    },
+    {
+      "id": "x-boundary-alerts",
+      "routes_to": "observability-setup",
+      "prompt": "Set up Sentry and Slack alerts when our prod error rate spikes.",
+      "expected": [
+        "Routes runtime alerting and error tracking to observability-setup",
+        "Says this skill only covers pipeline stages, including the post-deploy smoke on /api/health and /api/health/deep"
+      ]
+    },
+    {
+      "id": "x-existing-add-coverage-gate",
+      "prompt": "We have a customised ci.yml (lint, typecheck, unit, plus our own storybook job). Add a coverage gate at 80% without breaking what's there.",
+      "expected": [
+        "Keeps the customised ci.yml and diffs/merges the new step rather than overwriting it, preserving the storybook job",
+        "Notes coverage needs the json-summary reporter in vitest.config.ts so coverage-summary.json is produced",
+        "Posts the change as a plan and waits for go before writing"
+      ]
+    }
+  ]
+}

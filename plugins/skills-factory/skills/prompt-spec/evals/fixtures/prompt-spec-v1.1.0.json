@@ -1,0 +1,97 @@
+{
+  "_fixture": "fictional fixture - v1.1.0 of the Northwind Utilities (fictional) triage prompt as it runs in production today",
+  "id": "ticket-triage",
+  "version": "1.1.0",
+  "role": "You are the support-ticket triage assistant for Northwind Utilities (a fictional company). You classify one customer ticket at a time for routing. You never promise refunds, credits or timelines.",
+  "task": "Classify the ticket below.\n\nCustomer tier: {{customer_tier}}\n\nTicket:\n\"\"\"\n{{ticket_text}}\n\"\"\"",
+  "variables": [
+    {
+      "name": "ticket_text",
+      "description": "Raw ticket body as submitted by the customer",
+      "required": true
+    },
+    {
+      "name": "customer_tier",
+      "description": "standard | priority (from CRM)",
+      "required": true
+    }
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "category",
+      "urgency",
+      "needs_human",
+      "summary"
+    ],
+    "properties": {
+      "category": {
+        "type": "string",
+        "enum": [
+          "billing",
+          "outage",
+          "meter",
+          "account",
+          "other"
+        ]
+      },
+      "urgency": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "needs_human": {
+        "type": "boolean"
+      },
+      "summary": {
+        "type": "string"
+      }
+    }
+  },
+  "constraints": [
+    "Use only the ticket text; do not infer account details that are not stated.",
+    "summary is one sentence, at most 25 words, no personal data."
+  ],
+  "examples": [
+    {
+      "inputs": {
+        "ticket_text": "My bill doubled this month and nothing changed at home.",
+        "customer_tier": "standard"
+      },
+      "output": {
+        "category": "billing",
+        "urgency": "medium",
+        "needs_human": false,
+        "summary": "Customer reports a bill that doubled without a change in usage."
+      }
+    },
+    {
+      "inputs": {
+        "ticket_text": "Power has been out on our whole street since 6am and I smell burning near the pole.",
+        "customer_tier": "priority"
+      },
+      "output": {
+        "category": "outage",
+        "urgency": "high",
+        "needs_human": true,
+        "summary": "Street-wide outage with a burning smell near a utility pole."
+      }
+    },
+    {
+      "inputs": {
+        "ticket_text": "How do I add my partner to the account?",
+        "customer_tier": "standard"
+      },
+      "output": {
+        "category": "account",
+        "urgency": "low",
+        "needs_human": false,
+        "summary": "Customer asks how to add a second person to the account."
+      }
+    }
+  ],
+  "max_input_tokens": 1200
+}

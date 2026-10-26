@@ -1,0 +1,4 @@
+key,value,unit,source,as_of_date,notes
+tokens_in_per_request,,tokens,,,prompt + retrieved context + history (average)
+tokens_out_per_request,,tokens,,,average
+requests_per_month,,count,,,

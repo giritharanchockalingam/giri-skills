@@ -1,0 +1,6 @@
+model,provider,hosting,region,context_tokens,price_in_per_1m,price_out_per_1m,p95_latency_ms,task_accuracy,groundedness,source,as_of,notes
+Atlas-L (fictional),Provider One (fictional),api,us,200000,3.00,15.00,2400,0.86,0.91,fictional eval run EV-01 + fictional price sheet,2026-09-15,fictional fixture - not a real model
+Atlas-S (fictional),Provider One (fictional),api,us,200000,0.80,4.00,900,0.78,0.88,fictional eval run EV-01 + fictional price sheet,2026-09-15,fictional fixture - not a real model
+Birch-70 (fictional),Open weights (fictional),self-host,eu,128000,0.60,0.60,1500,0.81,0.85,fictional eval run EV-01 + fictional amortised hosting cost,2026-09-15,fictional fixture - price is a fictional amortised $/1M tokens
+Cedar-8 (fictional),Open weights (fictional),self-host,eu,32000,0.15,0.15,600,0.69,0.80,fictional eval run EV-01 + fictional amortised hosting cost,2026-09-15,fictional fixture - not a real model
+Delta-Pro (fictional),Provider Two (fictional),api,eu,1000000,5.00,20.00,3000,0.88,0.90,fictional eval run EV-01 + fictional price sheet,2026-09-15,fictional fixture - not a real model

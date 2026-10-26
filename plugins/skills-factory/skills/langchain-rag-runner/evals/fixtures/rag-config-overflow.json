@@ -1,0 +1,10 @@
+{
+  "_note": "fictional fixture — top_k x chunk size deliberately exceeds the context budget; overlap is 0",
+  "chunk_size_chars": 2000,
+  "chunk_overlap_chars": 0,
+  "embedding_price_per_1m_tokens": 0.02,
+  "top_k": 20,
+  "reranker": "no",
+  "vector_store": "inmemory",
+  "context_budget_tokens": 4000
+}

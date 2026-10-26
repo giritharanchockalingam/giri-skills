@@ -1,0 +1,9 @@
+rank,id,use_case,business_owner,value_V,feasibility_F,data_readiness_D,risk_R,score,quartile,band,band_reason,baseline_metric,evidence
+1,UC-001,Invoice extraction and three-way match,AP Manager,4,5,3,2,30.0,1,Now,"top quartile, R<=3, D>=3, owner and baseline named",manual touch rate,fictional fixture - Northwind (fictional) portfolio from the Q2 2026 review
+2,UC-003,Internal policy assistant (RAG),HR Ops,3,3,3,2,13.5,1,Now,"top quartile, R<=3, D>=3, owner and baseline named",HR inbox volume,fictional fixture
+3,UC-002,Support ticket triage and routing,Support Lead,3,4,2,2,12.0,2,Next,second quartile,mean time to assign,fictional fixture
+4,UC-007,Contract clause review,Legal Ops,4,3,3,3,12.0,2,Next,second quartile,review hours per contract,fictional fixture
+5,UC-010,Field service visit summariser,Field Ops,3,3,2,2,9.0,3,Later,quartile 3,report write-up time,fictional fixture - dropped from the backlog since
+6,UC-004,Customer churn prediction,Retention Lead,4,3,2,3,8.0,3,Later,quartile 3,churn rate,fictional fixture
+7,UC-006,Sales email generator,Sales Ops,2,4,3,3,8.0,4,Stop,"V<=2, F=1 or R=5 (rubric Stop rule)",emails/day,fictional fixture
+8,UC-008,Credit limit auto-decision,Credit Manager,5,2,3,5,6.0,4,Stop,"V<=2, F=1 or R=5 (rubric Stop rule)",decision time,fictional fixture

@@ -1,0 +1,6 @@
+term,definition,avoid
+"# fictional fixture — invented glossary for the domain-modeling-runner evals",,
+Student,A person admitted to take courses in a term.,Learner; user; pupil
+Course,A unit of study in the catalog with a fixed code and credit value.,Class; subject
+Enrollment,A student's registration in one course.,Registration; signup
+Offering,,

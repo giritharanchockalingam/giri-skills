@@ -1,0 +1,124 @@
+{
+  "skill": "llm-eval-harness",
+  "cases": [
+    {
+      "id": "happy-path-support-bot",
+      "prompt": "Our support bot answers billing questions from a policy KB. We have 80 real Q&A pairs from the help desk and it goes to customers next month. Build the eval harness and a CI gate.",
+      "expected": [
+        "Golden set CSV with categories incl. abstention and safety; synthetic share labeled",
+        "Rubric with deterministic correctness/format/safety and a judge for grounding, with thresholds and zero-tolerance flags",
+        "Runner adapted with call_system; baseline scorecard table by category",
+        "Gate thresholds justified by customer-facing risk tier; CI snippet included",
+        "No claim of quality without the scorecard"
+      ]
+    },
+    {
+      "id": "missing-examples",
+      "prompt": "Add evals to my agent.",
+      "expected": [
+        "Asks once for the system interface, task definition/failure types, real examples, and risk tier",
+        "Does not generate a fully synthetic golden set silently"
+      ]
+    },
+    {
+      "id": "judge-only-request",
+      "prompt": "Just use GPT to grade all the outputs 1-10 and average it.",
+      "expected": [
+        "Pushes back: deterministic checks first, judge only for non-deterministic criteria, judge model different from generator, calibration against human labels",
+        "Explains why averaging hides zero-tolerance failures",
+        "Short, table-based response"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build a golden set from these cases and run the regression gate on the recorded outputs.",
+      "expected": [
+        "Writes golden-set.csv with GS ids; runs run_evals.py and reports the gate"
+      ],
+      "inputs": {
+        "cases": "evals/fixtures/cases.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "golden-set.csv",
+          "check": "csv:[id,input,must_contain]"
+        },
+        "exists:scorecard.json",
+        {
+          "file": "scorecard.txt",
+          "check": "contains:\"GATE\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-cases",
+      "prompt": "Set up the eval harness for our support bot.",
+      "expected": [
+        "Asks for cases or a transcript"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:cases"
+      ]
+    },
+    {
+      "id": "agent-transcript-no-invented-criteria",
+      "prompt": "Turn this transcript into a golden set and make up pass criteria for each case.",
+      "expected": [
+        "must_contain is left empty with notes `must_contain [TO BE BASELINED — owner: SME]`; nothing invented"
+      ],
+      "inputs": {
+        "cases": "evals/fixtures/transcript.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "golden-set.csv",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Add these new production cases to our golden set, score the release candidate, and compare with last release's scorecard — no more than 2 points of regression.",
+      "expected": [
+        "Keeps GS-0001..GS-0005, skips the duplicate refund-window case, adds GS-0006 and GS-0007; scores 7/7; vs baseline 0.8333 the delta is +0.167 with GS-0005 newly passing and nothing newly failing; gate passes"
+      ],
+      "inputs": {
+        "cases": "evals/fixtures/cases-new.csv",
+        "existing_golden": "evals/fixtures/golden-set-v1.csv",
+        "baseline": "evals/fixtures/scorecard-baseline.json",
+        "max_regression": "0.02"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "golden-set.csv",
+          "check": "csv:[id,category,difficulty,input,must_contain,must_not_contain,source]"
+        },
+        {
+          "file": "golden-merge.json",
+          "check": "contains:\"\\\"duplicates_skipped\\\": 1\""
+        },
+        {
+          "file": "scorecard.txt",
+          "check": "contains:\"newly_failing=- newly_passing=GS-0005 new_cases=2\""
+        },
+        {
+          "file": "scorecard.txt",
+          "check": "contains:\"GATE PASSED\""
+        },
+        {
+          "file": "golden-merge.json",
+          "check": "contains:\"\\\"added\\\": 2\""
+        },
+        {
+          "file": "scorecard.json",
+          "check": "contains:\"\\\"newly_failing\\\": []\""
+        }
+      ]
+    }
+  ]
+}

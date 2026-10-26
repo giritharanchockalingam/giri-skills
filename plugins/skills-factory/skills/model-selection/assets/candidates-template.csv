@@ -1,0 +1,2 @@
+model,provider,hosting,region,context_tokens,price_in_per_1m,price_out_per_1m,p95_latency_ms,your_eval_score,source,as_of,notes
+,,api,,,,,,,,,"hosting is api or self-host; replace your_eval_score with one column per benchmark/eval you ran (add more columns as needed); source and as_of cite where every number came from"

@@ -1,0 +1,6 @@
+# Review ownership. Replace @org/team with real handles.
+*                      @org/maintainers
+/supabase/             @org/data-owners
+/server/               @org/backend-owners
+/.github/              @org/platform-owners
+/docs/adr/             @org/architects

@@ -1,0 +1,9 @@
+risk_id,use_case,category,scenario,likelihood_1_5,impact_1_5,inherent_score,control_ids,control_status,control_owner,evidence,residual_likelihood,residual_impact,residual_score,decision,review_date
+R-001,,bias,,,,,,,,,,,,,
+R-002,,privacy,,,,,,,,,,,,,
+R-003,,hallucination,,,,,,,,,,,,,
+R-004,,ip,,,,,,,,,,,,,
+R-005,,security,,,,,,,,,,,,,
+R-006,,misuse,,,,,,,,,,,,,
+R-007,,operational,,,,,,,,,,,,,
+R-008,,transparency,,,,,,,,,,,,,

@@ -1,0 +1,29 @@
+{
+  "system": "Order Hub",
+  "actors": ["Store associate", {"name": "Marketplace partner", "external": true}],
+  "containers": [
+    {"id": "gw", "name": "API gateway", "tech": "Apigee X", "responsibility": "AuthN/Z, routing, rate limits"},
+    {"id": "orders", "name": "Order service", "tech": "Java 21 / Spring Boot", "responsibility": "Order orchestration and promise"},
+    {"id": "events", "name": "Event backbone", "tech": "Kafka (managed)", "responsibility": "Async integration, replay, DLQ"},
+    {"id": "db", "name": "Order store", "tech": "PostgreSQL 16", "responsibility": "Orders and fulfilment state"}
+  ],
+  "external_systems": [
+    {"id": "erp", "name": "ERP (SAP S/4)"},
+    {"id": "wms", "name": "Warehouse management"},
+    {"id": "pos", "name": "Store POS"}
+  ],
+  "integrations": [
+    {"from": "gw", "to": "orders", "pattern": "sync REST", "protocol": "HTTPS/JSON", "data": "order create/read", "wave": 1},
+    {"from": "orders", "to": "db", "pattern": "sync SQL", "protocol": "TLS", "data": "order state", "wave": 1},
+    {"from": "orders", "to": "events", "pattern": "event", "protocol": "Kafka", "data": "OrderPlaced, OrderPicked", "wave": 1},
+    {"from": "events", "to": "wms", "pattern": "event", "protocol": "connector", "data": "pick requests", "wave": 2},
+    {"from": "erp", "to": "orders", "pattern": "batch file", "protocol": "SFTP nightly", "data": "inventory positions", "wave": 2},
+    {"from": "pos", "to": "gw", "pattern": "sync REST", "protocol": "HTTPS/JSON", "data": "pickup confirmation"}
+  ],
+  "nfrs": [
+    {"category": "Availability", "requirement": "Order API available during peak", "target": "99.9% monthly", "measure": "synthetic probe, 1-min interval", "source": "RFP §4.2"},
+    {"category": "Performance", "requirement": "Order create p95 latency", "target": "", "measure": "gateway analytics", "source": ""},
+    {"category": "Recoverability", "requirement": "Order store RPO/RTO", "target": "RPO 5 min / RTO 1 h", "measure": "DR drill twice a year", "source": "CTO statement 2026-09-02"},
+    {"category": "Security", "requirement": "PCI scope excluded from Order Hub", "target": "", "measure": ""}
+  ]
+}

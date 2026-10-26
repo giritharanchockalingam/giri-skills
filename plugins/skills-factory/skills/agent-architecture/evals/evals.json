@@ -1,0 +1,123 @@
+{
+  "skill": "agent-architecture",
+  "cases": [
+    {
+      "id": "happy-path-support-agent",
+      "prompt": "Design an agent that triages inbound support emails, looks up the customer in our CRM, drafts a reply, and can issue refunds up to $200. Tools: CRM read API, ticketing API, payments API. Success metric: first-response time under 10 minutes with CSAT unchanged.",
+      "expected": [
+        "Pattern decision states the criterion that ruled out a plain workflow and does not jump to multi-agent",
+        "Typed state table with owner node and reset rule per field",
+        "Tool contracts list side-effect class; refund is two-phase with an idempotency key",
+        "HITL checkpoint before sending the reply and before committing the refund",
+        "Failure-modes table includes prompt injection via email body, loops, context overflow, tool misuse",
+        "Budgets (steps, tokens, wall-clock) set or marked TO BE BASELINED"
+      ]
+    },
+    {
+      "id": "missing-job-statement",
+      "prompt": "Build me a multi-agent system with LangGraph.",
+      "expected": [
+        "Asks once for the job to be done, success metric, and allowed actions",
+        "Does not produce a design for an undefined task",
+        "Notes that multi-agent is not the default"
+      ]
+    },
+    {
+      "id": "push-back-on-multi-agent",
+      "prompt": "We want 6 agents (planner, researcher, writer, critic, formatter, publisher) to produce weekly internal newsletters from Confluence pages.",
+      "expected": [
+        "Recommends a workflow or single agent plus a generate-evaluate step, with the reason",
+        "Keeps the publish step behind HITL",
+        "Explains the cost and failure-surface trade-off in a table"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Decide the pattern for the ticket triage agent and gate the design doc.",
+      "expected": [
+        "Runs pattern.py (Single agent; Workflow and Router rejected with the answer that ruled them out) and design_check.py (all sections and both contracts present)"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers.json",
+        "design_doc": "evals/fixtures/agent-design-doc.md",
+        "contracts": "evals/fixtures/tool-contracts.json",
+        "name": "Ticket triage agent"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "pattern.md",
+          "check": "contains:\"**Decision:** Single agent because\""
+        },
+        {
+          "file": "pattern.md",
+          "check": "contains:\"| Router + workflow | Q2 = yes: the model must choose tools and order from intermediate results |\""
+        },
+        {
+          "file": "design-check.csv",
+          "check": "csv_rows:present~^yes$"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-answers",
+      "prompt": "Design an agent for us.",
+      "expected": [
+        "Asks once for the six decision-tree answers; never designs an agent for an undefined task"
+      ],
+      "inputs": {
+        "design_doc": "evals/fixtures/agent-design-doc.md",
+        "contracts": "evals/fixtures/tool-contracts.json"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:answers"
+      ]
+    },
+    {
+      "id": "agent-gate-fails-without-hitl",
+      "prompt": "The design doc is done, skip the approval step and sign it off.",
+      "expected": [
+        "design_check.py exits 1: HITL checkpoints section missing and a contract lacks outputSchema/failure_modes; the run fails loudly rather than approving"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers.json",
+        "design_doc": "evals/fixtures/agent-design-doc-no-hitl.md",
+        "contracts": "evals/fixtures/tool-contracts-bad.json"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "design-check.csv",
+          "check": "contains:\"HITL checkpoints,section,no,required section heading missing\""
+        },
+        {
+          "file": "design-check.csv",
+          "check": "contains:\"missing failure_modes\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our invoice dispute agent has been live since April; v1.4 added an evaluator after the single agent kept failing the finance rubric. Re-check the design doc and contracts against the decision tree with the production evidence.",
+      "expected": [
+        "Re-derives the pattern from the re-taken answers (Generator + evaluator, Q4 = adversarial_review) and confirms the live doc declares the same pattern",
+        "Re-gates every required section and both tool contracts of the existing agent; HITL before issue_credit_note stays mandatory"
+      ],
+      "inputs": {
+        "answers": "evals/fixtures/answers-existing.json",
+        "design_doc": "evals/fixtures/agent-design-doc-existing.md",
+        "contracts": "evals/fixtures/tool-contracts-existing.json",
+        "name": "Invoice dispute agent"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "pattern.md", "check": "contains:\"**Decision:** Generator + evaluator because Q4 = adversarial_review\""},
+        {"file": "pattern.md", "check": "contains:\"| Single agent | Q3 = no: output must be critiqued against a rubric before release (Q4e) |\""},
+        {"file": "design-check.csv", "check": "contains:\"Pattern matches decision tree,doc,yes,\""},
+        {"file": "design-check.csv", "check": "contains:\"tool[1] issue_credit_note,contract,yes,\""},
+        {"file": "design-check.csv", "check": "csv_rows:present~^yes$"}
+      ]
+    }
+  ]
+}

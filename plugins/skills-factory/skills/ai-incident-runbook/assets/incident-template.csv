@@ -1,0 +1,15 @@
+key,value,notes
+system_name,,AI system or feature
+summary,,one line: what users saw
+category,,hallucination | data-leak | prompt-injection | outage | cost-spike | harmful-output
+users_affected,,whole number or unknown
+data_exposed,,yes | no | unknown
+regulated_data,,yes | no | unknown (unknown escalates)
+started_at,,ISO 8601 with timezone e.g. 2026-10-01T14:05:00Z
+detected_at,,ISO 8601
+detected_by,,alert / user report / staff
+owner_incident_commander,,name
+owner_engineering_lead,,name
+owner_comms_lead,,name
+owner_legal_privacy,,name
+owner_security_lead,,name

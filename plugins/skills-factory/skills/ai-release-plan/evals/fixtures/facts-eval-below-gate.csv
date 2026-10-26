@@ -1,0 +1,13 @@
+# fictional fixture — invented values for tests only; not a real system
+key,value,source,notes
+system_name,Claims summariser v2,fixture,fictional fixture
+risk_tier,medium,fixture,fictional fixture
+eval_pass_rate,0.82,fixture,fictional fixture
+redteam_pass_rate,0.98,fixture,fictional fixture
+latency_p95_ms,1800,fixture,fictional fixture
+error_rate,0.004,fixture,fictional fixture
+daily_requests,48000,fixture,fictional fixture
+min_observed_requests,2000,fixture,fictional fixture
+rollback_time_min,15,fixture,fictional fixture
+owner_eval_lead,Eval Lead (fictional),fixture,fictional fixture
+owner_sre_oncall,SRE Rota (fictional),fixture,fictional fixture

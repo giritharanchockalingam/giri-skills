@@ -1,0 +1,102 @@
+{
+  "skill": "langgraph-runner",
+  "cases": [
+    {
+      "id": "happy-path-validate-and-scaffold",
+      "prompt": "Here is my ticket-triage graph spec. Check it and give me the LangGraph code.",
+      "expected": [
+        "Runs scripts/build_graph.py and reports validation.json (valid, warnings)",
+        "graph.md shows the Mermaid diagram, validation table, node table and how to run",
+        "States graph.py was generated and syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Validate the attached graph spec and generate the StateGraph scaffold.",
+      "expected": ["Valid spec; graph.py, graph.md and validation.json written; scaffold syntax-checked"],
+      "inputs": {"spec": "evals/fixtures/graph-spec.json"},
+      "checks": [
+        "exit:0",
+        "exists:graph.py",
+        {"file": "validation.json", "check": "contains:\"\\\"valid\\\": true\""},
+        {"file": "graph.md", "check": "sections:[\"Diagram\",\"Validation\",\"Nodes\",\"How to run\"]"},
+        {"file": "graph.md", "check": "mermaid_parses"},
+        {"file": "graph.py", "check": "contains:\"add_conditional_edges('check_reply'\""},
+        {"file": "graph.md", "check": "contains:\"not executed\""}
+      ]
+    },
+    {
+      "id": "agent-missing-spec",
+      "prompt": "Generate a LangGraph for my support bot.",
+      "expected": ["Asks for the graph spec instead of inventing nodes"],
+      "inputs": {},
+      "checks": ["exit:2", "needs_input:spec"]
+    },
+    {
+      "id": "agent-infinite-loop-rejected",
+      "prompt": "Scaffold this plan/act loop graph.",
+      "expected": ["Fails validation: static loop with no conditional exit, orphan node, dangling edge, one-route router, undeclared field; no graph.py written"],
+      "inputs": {"spec": "evals/fixtures/graph-spec-broken.json"},
+      "checks": [
+        "exit:1",
+        {"file": "validation.json", "check": "contains:\"has no conditional exit\""},
+        {"file": "validation.json", "check": "contains:\"dangling edge\""},
+        {"file": "validation.json", "check": "contains:\"undeclared state field 'plan_text'\""},
+        {"file": "graph.md", "check": "contains:\"No scaffold was written\""}
+      ]
+    },
+    {
+      "id": "agent-with-review",
+      "prompt": "Validate the graph and review it against the LangGraph fundamentals guidance.",
+      "expected": ["Script outputs plus graph-review.md on the review template, with the upstream skill as context"],
+      "inputs": {"spec": "evals/fixtures/graph-spec.json", "review": "yes"},
+      "checks": [
+        "exit:0",
+        {"file": "graph-review.md", "check": "sections:[\"Upstream conformance\",\"Design risks\",\"Next changes\"]"},
+        {"file": "graph-review.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is the triage graph we run today and the v2 spec that adds a reply check with a retry loop. Validate v2 and tell me exactly what changes and whether in-flight threads survive the deploy.",
+      "expected": [
+        "Validates v2, diffs it against the live spec: 1 node, 5 edge and 2 state changes; flags the draft field (list/add -> str) as breaking resume of persisted threads; scaffold generated"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/graph-spec.json",
+        "current_spec": "evals/fixtures/graph-spec-live.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "validation.json",
+          "check": "contains:\"\\\"resume_breaking_fields\\\": [\""
+        },
+        {
+          "file": "validation.json",
+          "check": "contains:\"\\\"total_changes\\\": 8\""
+        },
+        {
+          "file": "graph.md",
+          "check": "sections:[\"Diagram\",\"Validation\",\"Nodes\",\"Changes vs current graph\",\"How to run\"]"
+        },
+        {
+          "file": "graph.md",
+          "check": "contains:\"| draft | list/add -> str/no reducer | yes |\""
+        },
+        {
+          "file": "graph.md",
+          "check": "contains:\"| check_reply | search_kb | retry | added |\""
+        },
+        {
+          "file": "graph.md",
+          "check": "mermaid_parses"
+        },
+        {
+          "file": "graph.py",
+          "check": "cmd:\"python3 scripts/check_syntax.py {path} --require State --require build_graph\""
+        }
+      ]
+    }
+  ]
+}

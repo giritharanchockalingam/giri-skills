@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM trace span (recommended)",
+  "description": "One JSON object per line (JSONL). One span per model call or per user request; keep the same trace_id across the spans of one request. Field names align in spirit with the OpenTelemetry GenAI semantic conventions; map them in your exporter.",
+  "type": "object",
+  "required": ["trace_id", "ts", "feature", "model", "latency_ms", "input_tokens", "output_tokens", "status"],
+  "properties": {
+    "trace_id": {"type": "string", "description": "Correlates spans of one request; also links feedback and eval failures."},
+    "span_id": {"type": "string"},
+    "ts": {"type": "string", "format": "date-time", "description": "Span start, ISO 8601 with timezone (UTC recommended)."},
+    "feature": {"type": "string", "description": "Product feature or route; `route` is accepted as an alias."},
+    "route": {"type": "string"},
+    "model": {"type": "string", "description": "Provider model id and version actually called."},
+    "prompt_version": {"type": "string", "description": "Prompt/template version, so drift can be attributed."},
+    "latency_ms": {"type": "number", "minimum": 0, "description": "End-to-end latency of the span."},
+    "ttft_ms": {"type": "number", "minimum": 0, "description": "Time to first token (streaming)."},
+    "input_tokens": {"type": "integer", "minimum": 0},
+    "output_tokens": {"type": "integer", "minimum": 0},
+    "cost_usd": {"type": "number", "minimum": 0, "description": "Billed or metered cost for this span. Omit when unknown; never estimate."},
+    "status": {"type": "string", "enum": ["ok", "error"]},
+    "error_type": {"type": "string"},
+    "eval_score": {"type": "number", "description": "Online eval / judge score on the scale your eval harness uses."},
+    "user_feedback": {"type": "string", "enum": ["up", "down"]},
+    "tenant_id": {"type": "string", "description": "Pseudonymous; never raw PII."}
+  },
+  "additionalProperties": true
+}

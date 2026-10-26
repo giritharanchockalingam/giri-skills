@@ -1,0 +1,4 @@
+criterion,weight,direction,hard_min,hard_max,hard_in,notes
+hosting,0,,,,self-host,fictional fixture - self-host required (constraint only)
+task_accuracy,0.6,higher,0.85,,,fictional fixture - accuracy floor no self-host candidate meets
+p95_latency_ms,0.4,lower,,,,fictional fixture

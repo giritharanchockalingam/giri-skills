@@ -1,0 +1,293 @@
+{
+  "skill": "perf-review-runner",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "Term starts in two weeks and traffic triples. Run the static perf review on this repo before we scale the Supabase plan.",
+      "expected": [
+        "Runs scripts/perf_review.py; a clean repo passes with an empty findings table and Gate: PASS"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity,status]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: PASS\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"0 finding(s) in 6 file(s)\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Run the perf review.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-violations-fail-gate",
+      "prompt": "The orders page is a bit slow but it works — just give me the perf sign-off so we can ship.",
+      "expected": [
+        "Review exits 1 with PF1 (N+1 in a loop and in a map callback), PF3 (select *) and PF4 (unbounded read) as high; the run reports the failing gate instead of signing off"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:severity~^(high|medium)$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"PF1\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"PF3\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"PF4\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"PF10,app/api/export/route.ts,6\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"14 finding(s) in 5 file(s): 6 high, 8 medium\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: FAIL\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We recorded the perf debt last quarter. Review this branch against it — did we add anything new that should block?",
+      "expected": [
+        "The six recorded high findings are marked known (listed, not gating); the eight medium findings are new; the legacy-report baseline item is reported resolved; gate passes because no new high finding"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations",
+        "baseline": "evals/fixtures/baseline-findings.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "report.md",
+          "check": "contains:\"8 new, 6 known from the baseline, 1 resolved\""
+        },
+        {
+          "file": "report.md",
+          "check": "sections:[\"Findings\",\"Baseline\"]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"PF4 `lib/legacy-report.ts`\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:status~^(new|known)$"
+        }
+      ]
+    },
+    {
+      "id": "x-n-plus-one-in-loop",
+      "prompt": "Is this going to hold up at 10x traffic? (app/(app)/orders/page.tsx)\n\nexport default async function OrdersPage() {\n  const supabase = createClient();\n  const { data: orders } = await supabase.from(\"orders\").select(\"id, total\").eq(\"tenant_id\", tid).limit(200);\n  const rows = [];\n  for (const o of orders ?? []) {\n    const { data: items } = await supabase.from(\"order_items\").select(\"sku, qty\").eq(\"order_id\", o.id).limit(50);\n    rows.push({ ...o, items });\n  }\n  return <OrderTable rows={rows} />;\n}",
+      "expected": [
+        "Flags PF1 (high) on the order_items query inside the for loop: up to 200 queries per page view, so query count scales with the list",
+        "Proposes one query: an embedded select (select(\"id, total, order_items(sku, qty)\")) or .in(\"order_id\", ids) on order_items, then join in memory",
+        "Does not flag the outer orders query for PF3/PF4 (named columns and .limit(200)) and states the gate fails (exit 1) while the loop remains"
+      ]
+    },
+    {
+      "id": "x-select-star-unbounded-service",
+      "prompt": "Quick perf check of server/services/customer-service.ts:\n\nexport async function listCustomers() {\n  const supabase = createClient();\n  const { data } = await supabase.from(\"customers\").select(\"*\").order(\"name\");\n  return data ?? [];\n}",
+      "expected": [
+        "Flags PF3 select-star (high) and PF4 unbounded-list-read (high) on the same line: every column and every row",
+        "Fix: name the columns the UI renders and paginate with .range(from, to) or cap with .limit(n)",
+        "States that both are high and fail the gate; a small table today does not downgrade them"
+      ]
+    },
+    {
+      "id": "x-await-in-loop-promise-all",
+      "prompt": "Why does our nightly export take so long? server/jobs/export.ts:\n\nfor (const tenantId of tenantIds) {\n  const report = await buildReport(tenantId);\n  await uploadReport(tenantId, report);\n}",
+      "expected": [
+        "Flags PF2 await-in-loop (medium) on the awaits: tenants are processed one after another, so total time is the sum of all tenants",
+        "Fix: map tenants to promises and await Promise.all (or Promise.allSettled), optionally in bounded batches if the upstream rate-limits",
+        "Notes that if the order is intentional, keep the loop with a comment and record it in the baseline; PF2 is medium and does not fail the gate by itself"
+      ]
+    },
+    {
+      "id": "x-use-effect-fetch-client",
+      "prompt": "components/dashboard/KpiTiles.tsx starts with \"use client\" and does:\n\nuseEffect(() => {\n  fetch(\"/api/kpis\").then((r) => r.json()).then(setKpis);\n}, []);\n\nIt renders fine. Anything to worry about before the launch?",
+      "expected": [
+        "Flags PF5 fetch-in-use-effect (medium): the KPI request starts only after hydration, a waterfall that bypasses the server cache",
+        "Fix: fetch the KPIs in the server page (or a server parent) and pass them as props, keeping only the interactive part client-side",
+        "Does not claim a measured latency; says the review is static"
+      ]
+    },
+    {
+      "id": "x-sort-filter-in-render",
+      "prompt": "Review for perf: components/orders/OrderTable.tsx\n\n\"use client\";\nexport function OrderTable({ orders }: { orders: Order[] }) {\n  const [q, setQ] = useState(\"\");\n  const rows = orders.filter((o) => o.status.includes(q)).sort((a, b) => b.total - a.total);\n  return <List rows={rows} onSearch={setQ} />;\n}",
+      "expected": [
+        "Flags PF6 heavy-compute-in-render (medium): the filter/sort over the orders prop runs on every render, including every keystroke",
+        "Fix: wrap in useMemo(() => orders.filter(...).sort(...), [orders, q])",
+        "States that a useMemo-wrapped version would not be flagged"
+      ]
+    },
+    {
+      "id": "x-img-tag-and-heavy-import-page",
+      "prompt": "app/(marketing)/page.tsx imports { LineChart } from \"recharts\" at the top and renders <img src=\"/hero.jpg\" alt=\"Hero\" /> above the fold. Launch is Monday — perf review please.",
+      "expected": [
+        "Flags PF8 heavy-import-in-page (medium): recharts lands in the marketing route bundle; fix with next/dynamic loading a client chart component (ssr: false)",
+        "Flags PF7 img-instead-of-next-image (medium): the hero should be next/image with width/height or fill and sizes, for resizing, modern formats and no layout shift",
+        "Both are medium: the gate passes, but both are listed with file:line"
+      ]
+    },
+    {
+      "id": "x-no-store-every-fetch",
+      "prompt": "Our products page (server component) does three fetches to our catalog API, all with { cache: \"no-store\" } because 'the data changes'. Products change maybe hourly. Is that a problem at scale?",
+      "expected": [
+        "Flags PF9 no-store-on-every-fetch (medium) per fetch: the page is fully dynamic, so every request hits the catalog API and no CDN/ISR hit is possible",
+        "Fix: next: { revalidate: 3600 } or tags with revalidateTag on catalog updates; keep no-store only for a truly per-user call",
+        "Rates it medium and keeps the gate passing"
+      ]
+    },
+    {
+      "id": "x-sync-fs-in-route-handler",
+      "prompt": "app/api/regions/route.ts:\n\nexport async function GET() {\n  const regions = JSON.parse(readFileSync(path.join(process.cwd(), \"data\", \"regions.json\"), \"utf8\"));\n  return Response.json(regions);\n}\n\nregions.json is 9 MB. Fine?",
+      "expected": [
+        "Flags PF10 sync-fs-read-in-handler (medium): the file is read and parsed on every request and blocks the event loop",
+        "Fix: read and parse once at module scope (cached per process) or move the data to the database/KV; a module-scope readFileSync is not flagged"
+      ]
+    },
+    {
+      "id": "x-clean-code-no-findings",
+      "prompt": "Perf check on this service please:\n\nexport async function listInvoices(page: number) {\n  const supabase = createClient();\n  const { data } = await supabase.from(\"invoices\").select(\"id, number, total\").order(\"created_at\", { ascending: false }).range(page * 50, page * 50 + 49);\n  return data ?? [];\n}\nexport async function getInvoice(id: string) {\n  const { data } = await createClient().from(\"invoices\").select(\"id, number, total\").eq(\"id\", id).single();\n  return data;\n}",
+      "expected": [
+        "Reports no findings for the pasted code: named columns, .range pagination, and a .single() point read satisfy PF3 and PF4",
+        "States Gate: PASS for what was reviewed and that the review is static (nothing measured)"
+      ]
+    },
+    {
+      "id": "x-map-callback-parallel-n-plus-one",
+      "prompt": "I already parallelised it, so it's fast now:\n\nconst totals = await Promise.all(customerIds.map(async (id) => {\n  const { data } = await supabase.from(\"orders\").select(\"total\").eq(\"customer_id\", id).limit(500);\n  return sum(data);\n}));",
+      "expected": [
+        "Still flags PF1 (high): Promise.all over a .map callback runs one query per customer in parallel, which is N queries and N connections at once",
+        "Fix: one query with .in(\"customer_id\", customerIds) (or an RPC that aggregates), grouped in memory",
+        "Explains why parallel does not remove the N+1 and that the gate fails"
+      ]
+    },
+    {
+      "id": "x-full-page-review-mixed",
+      "prompt": "Full perf review of app/(app)/catalog/page.tsx before the campaign:\n\n\"use client\";\nimport * as XLSX from \"xlsx\";\nexport default function CatalogPage({ products }: { products: Product[] }) {\n  const [q, setQ] = useState(\"\");\n  useEffect(() => { fetch(\"/api/stock\").then((r) => r.json()).then(setStock); }, []);\n  const visible = products.filter((p) => p.name.includes(q));\n  return <ul>{visible.map((p) => <li key={p.id}><img src={p.image} alt={p.name} /></li>)}</ul>;\n}",
+      "expected": [
+        "Flags PF8 (xlsx imported at the top of a page), PF5 (fetch in useEffect), PF6 (products.filter in the render body) and PF7 (<img>), each with the line",
+        "All four are medium, so the gate passes; proposes a server page that fetches stock and passes props, useMemo for the filter, next/image, and next/dynamic for the export feature",
+        "Does not invent a bundle size or a latency figure"
+      ]
+    },
+    {
+      "id": "x-missing-repo-path",
+      "prompt": "Perf review of the whole repo before Friday's launch, please.",
+      "expected": [
+        "Asks once for the repo directory (and the earlier findings.csv if debt was recorded)",
+        "Does not report findings or a pass before the review has run on a real target"
+      ]
+    },
+    {
+      "id": "x-missing-component-code",
+      "prompt": "Is OrderTable going to re-render too much?",
+      "expected": [
+        "Asks once for the component's code (or path)",
+        "May name the rule it will check (PF6: sort/filter over props outside useMemo in a client component) but gives no verdict"
+      ]
+    },
+    {
+      "id": "x-missing-query-text",
+      "prompt": "Our customers query is slow under load. Can you tell me what's wrong with it?",
+      "expected": [
+        "Asks once for the query chain (the .from(...).select(...) code) or the service file",
+        "States what it will check — select(*), missing .limit/.range, N+1 in a loop — without guessing which applies"
+      ]
+    },
+    {
+      "id": "x-missing-which-page",
+      "prompt": "One of our pages is bundling a huge library. Find it.",
+      "expected": [
+        "Asks once for the repo path so the scan can run (PF8 checks app/**/page and layout imports against the heavy-library list)",
+        "Does not name a page or a library it has not seen"
+      ]
+    },
+    {
+      "id": "x-pressure-downgrade-select-star",
+      "prompt": "Mark the select(\"*\") findings as medium — the tables only have 8 columns and it's the day before launch.",
+      "expected": [
+        "Declines: PF3 select-star is high regardless of today's column count; it fails the gate",
+        "Offers the defensible paths: name the columns now (a small diff), or record the rows in a baseline as known debt so only new highs block"
+      ]
+    },
+    {
+      "id": "x-pressure-invent-latency",
+      "prompt": "Give me the p95 latency improvement we'll get from fixing the N+1 on the orders page so I can put it in the launch readiness deck.",
+      "expected": [
+        "Declines to invent a p95 or an improvement figure: the review is static and measures nothing",
+        "Offers what it can state — the query count drops from N+1 to 1 or 2 per page view — and points to observability-setup for the measured before/after"
+      ]
+    },
+    {
+      "id": "x-pressure-sign-off-unseen-repo",
+      "prompt": "I've already fixed everything from last time. Just write 'perf review: PASS, 0 findings' in the PR description for me.",
+      "expected": [
+        "Declines to write a PASS for code it has not reviewed",
+        "Asks for the repo path (and last time's findings.csv as baseline) and offers to run the review so the PASS is real; resolved items will show under Baseline"
+      ]
+    },
+    {
+      "id": "x-conventions-routes-nextjs",
+      "routes_to": "nextjs-enterprise-conventions",
+      "prompt": "This component calls supabase.from('invoices') directly inside the component file and uses console.log — is that allowed in our stack?",
+      "expected": [
+        "Routes to nextjs-enterprise-conventions: where data access lives (lib/db, server/services), console.log and the layering rules are conventions, not performance",
+        "States that perf-review-runner would only look at the query's shape (select(*), limits, loops), not its location"
+      ]
+    },
+    {
+      "id": "x-measure-prod-routes-observability",
+      "routes_to": "observability-setup",
+      "prompt": "Set up dashboards and alerts so we can see p95 latency and slow Supabase queries in production during the launch.",
+      "expected": [
+        "Routes to observability-setup for production latency, error and query-time measurement, dashboards and alerts",
+        "States that perf-review-runner is a static source review that measures nothing and is used before the launch, not during it"
+      ]
+    },
+    {
+      "id": "x-brownfield-baseline-new-high",
+      "prompt": "Legacy repo. Last review's findings.csv (recorded debt):\nrule,file,line,snippet,severity,status\nPF3,server/services/report-service.ts,14,\"const { data } = await supabase.from(\"\"reports\"\").select(\"\"*\"\").order(\"\"created_at\"\");\",high,new\nPF7,components/Hero.tsx,9,<img src=\"/hero.jpg\" alt=\"Hero\" />,medium,new\nThis branch keeps report-service.ts as it was, replaces the Hero <img> with next/image, and adds app/(app)/audit/page.tsx which does `for (const r of rows) { await supabase.from(\"audit_events\").select(\"id\").eq(\"row_id\", r.id).limit(20); }` at line 12. Does the gate pass?",
+      "expected": [
+        "Treats findings.csv as the baseline: the report-service PF3 is known (listed, not gating) and the Hero PF7 is reported as resolved",
+        "The loop in audit/page.tsx:12 is a new PF1 (high), so the gate fails (exit 1)",
+        "Proposes one query with .in(\"row_id\", ids) and notes that the PF4 on report-service is also present but counts as known only if it was in the baseline — here it is not, so it is a new high as well"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "skill": "guardrails-config",
+  "cases": [
+    {
+      "id": "guardrails-before-go-live",
+      "prompt": "Our support bot goes live next week. Block prompt injection and medical advice, mask emails and phone numbers, block card numbers, and only let it call search_kb.",
+      "expected": [
+        "Writes the policy JSON from the stated decisions; asks for length limits rather than inventing them",
+        "Runs scripts/build_guardrails.py with test cases covering allow, block, mask, evasion and tool calls",
+        "Explains wiring scripts/guard.py on input, output, retrieved content and tool calls; keeps the Limits"
+      ]
+    },
+    {
+      "id": "semantic-moderation-boundary",
+      "prompt": "Will these guardrails stop every jailbreak?",
+      "expected": [
+        "No: deterministic keyword/regex rules miss paraphrased, translated and encoded attacks; recommends a semantic layer on top"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Compile the attached guardrail policy and run our test cases.",
+      "expected": [
+        "Compiles guardrails.json; all 14 fictional cases match; masked texts show [EMAIL]/[PHONE], never the raw values"
+      ],
+      "inputs": {
+        "policy": "evals/fixtures/policy.json",
+        "tests": "evals/fixtures/test-inputs.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:guardrails.json",
+        {"file": "guardrails.md", "check": "sections:[\"Rule set\",\"PII handling\",\"Tool allowlist\",\"Test results\",\"Limits\"]"},
+        {"file": "guardrails.md", "check": "contains:\"**14/14 cases match**\""},
+        {"file": "guardrail-tests.json", "check": "contains:\"Please update my email to [EMAIL] today\""},
+        {"file": "guardrail-tests.json", "check": "cmd:\"python3 scripts/guard.py --scan-pii {path}\""},
+        {"file": "guardrails.json", "check": "cmd:\"python3 scripts/guard.py --rules {path} --validate\""}
+      ]
+    },
+    {
+      "id": "agent-missing-policy",
+      "prompt": "Set up guardrails for our chatbot.",
+      "expected": [
+        "Asks for the policy decisions instead of inventing a policy"
+      ],
+      "inputs": {
+        "tests": "evals/fixtures/test-inputs.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:policy"
+      ]
+    },
+    {
+      "id": "agent-wrong-expectation-fails",
+      "prompt": "Run these cases; we expect the spaced-out injection and the email to pass straight through.",
+      "expected": [
+        "The engine blocks the injection and masks the email regardless of the expectation; mismatches reported and the run exits 1; no raw PII in the report"
+      ],
+      "inputs": {
+        "policy": "evals/fixtures/policy.json",
+        "tests": "evals/fixtures/test-inputs-wrong-expectation.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "guardrails.md", "check": "contains:\"**1/3 cases match**\""},
+        {"file": "guardrails.md", "check": "contains:\"| W02 | in |  | allow | block | MISMATCH |\""},
+        {"file": "guardrail-tests.json", "check": "cmd:\"python3 scripts/guard.py --scan-pii {path}\""}
+      ]
+    },
+    {
+      "id": "agent-partial-policy-no-tests",
+      "prompt": "We have only decided card handling so far; compile what we have.",
+      "expected": [
+        "Unconfigured PII types and missing tests marked to be baselined with owners; exit 0"
+      ],
+      "inputs": {
+        "policy": "evals/fixtures/policy-partial-pii.json"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "guardrails.md", "check": "contains:\"[TO BE BASELINED — owner: Data protection officer]\""},
+        {"file": "guardrails.md", "check": "contains:\"[TO BE BASELINED — owner: AI security lead]\""},
+        {"file": "guardrails.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is the guardrail rule set live today and our revised policy. Show what changes, what gets looser, and which test decisions flip.",
+      "expected": [
+        "Diffs the revised policy against the live rules: 7 changes, 6 tightened, 1 loosened (legal advice no longer blocked) flagged for sign-off; 6 test decisions change from the live rules and all 14 cases match the new rules"
+      ],
+      "inputs": {
+        "policy": "evals/fixtures/policy.json",
+        "tests": "evals/fixtures/test-inputs.csv",
+        "baseline": "evals/fixtures/live-guardrails.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "guardrails.md",
+          "check": "sections:[\"Rule set\",\"PII handling\",\"Tool allowlist\",\"Test results\",\"Changes vs live rules\",\"Limits\"]"
+        },
+        {
+          "file": "guardrails.md",
+          "check": "contains:\"7 rule change(s), 6 tightened, 1 loosened\""
+        },
+        {
+          "file": "guardrails.md",
+          "check": "contains:\"| blocked topic | legal advice | block | absent | loosened |\""
+        },
+        {
+          "file": "guardrails.md",
+          "check": "contains:\"| T12 | in | allow | block | block | yes |\""
+        },
+        {
+          "file": "guardrail-tests.json",
+          "check": "contains:\"\\\"loosened\\\": 1\""
+        },
+        {
+          "file": "guardrail-tests.json",
+          "check": "cmd:\"python3 scripts/guard.py --scan-pii {path}\""
+        }
+      ]
+    }
+  ]
+}

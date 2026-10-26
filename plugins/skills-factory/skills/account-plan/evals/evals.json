@@ -1,0 +1,150 @@
+{
+  "skill": "account-plan",
+  "cases": [
+    {
+      "id": "happy-path-quarterly-refresh",
+      "prompt": "Refresh the Q1 account plan for Oakridge University. Attached: last quarter's plan, the CRM export (revenue, two active engagements ending in Q2 and Q4, pipeline with stage and probability), the stakeholder list with last-contact dates, and our service catalog. The CIO who sponsored us announced she is leaving in March.",
+      "expected": [
+        "Posture stated on line 1 (likely Defend) with the driving facts: sponsor departure and Q2 engagement end",
+        "Snapshot cells sourced to the CRM export date; weighted pipeline computed only because CRM supplies probabilities",
+        "Stakeholder map flags the departing CIO as a departure exposure and computes coverage gaps",
+        "White-space matrix uses current/qualified/hypothesis/no fit/unknown with signals cited",
+        "90-day plays include a coverage play for the successor relationship and a renewal/defense play for the Q2 engagement, each with owner, date, success measure",
+        "Change log vs prior plan present",
+        "Page 1 stands alone"
+      ]
+    },
+    {
+      "id": "missing-input-no-account-facts",
+      "prompt": "Write an account plan for Pioneer Foods. We should be able to sell them a lot.",
+      "expected": [
+        "Asks once for account facts (engagements, revenue, stakeholders, pipeline) and the service catalog, and the quarter",
+        "Does not estimate current spend, wallet share, or stakeholder dispositions",
+        "Offers the Enter posture template with every cell marked if the account is a target with no history"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-pipeline-probabilities",
+      "prompt": "Our CRM does not track win probability. Assign 60% to the two late-stage deals and 30% to the rest so leadership sees a weighted number, and put the account target at $4M since that is what we usually aim for.",
+      "expected": [
+        "Shows unweighted pipeline only and states in one line that probabilities are not invented; offers to add them if the user records them in CRM as their own judgment, labeled as such",
+        "Target shown as [TO BE BASELINED — owner: ___] unless the user confirms $4M as the official target with its source",
+        "Gap-to-target reported as a marker until the target and weighting are confirmed"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Refresh the Northwind account plan for the quarter from the CRM export and stakeholder list.",
+      "expected": [
+        "Runs scripts/account_plan.py; stakeholder map, white-space matrix, pipeline total, 90-day plays"
+      ],
+      "inputs": {
+        "stakeholders": "evals/fixtures/stakeholders.csv",
+        "pipeline": "evals/fixtures/pipeline.csv",
+        "services": "evals/fixtures/services.csv",
+        "client": "Northwind",
+        "as_of": "2026-10-01"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "account-plan.md",
+          "check": "sections:[\"Stakeholder map\",\"White-space matrix\",\"Pipeline\",\"90-day plays\"]"
+        },
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"1,652,000\""
+        },
+        {
+          "file": "plays.csv",
+          "check": "csv_rows:owner!empty"
+        },
+        {
+          "file": "plays.csv",
+          "check": "contains:\"Open white space: Data and AI\""
+        },
+        {
+          "file": "plays.csv",
+          "check": "contains:\"Dana Ortiz\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-pipeline",
+      "prompt": "Build the account plan from the stakeholder list.",
+      "expected": [
+        "Asks once for the pipeline export"
+      ],
+      "inputs": {
+        "stakeholders": "evals/fixtures/stakeholders.csv",
+        "services": "evals/fixtures/services.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:pipeline"
+      ]
+    },
+    {
+      "id": "agent-unvalued-pipeline-not-estimated",
+      "prompt": "The CRM has no value on the deal — assume a typical $2M.",
+      "expected": [
+        "Value shown as [TO BE BASELINED — owner: ___] and excluded from the total; play owners are TBD, not assigned"
+      ],
+      "inputs": {
+        "stakeholders": "evals/fixtures/stakeholders.csv",
+        "pipeline": "evals/fixtures/pipeline-thin.csv",
+        "services": "evals/fixtures/services.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"excludes 1 unvalued\""
+        },
+        {
+          "file": "plays.csv",
+          "check": "csv_rows:owner~^\\[TO BE BASELINED"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Quarterly refresh of the Northwind plan: here are this quarter's exports and last quarter's plays and pipeline.",
+      "expected": [
+        "Since last plan: P2 done, Data and AI and Dana Ortiz plays carried over with last quarter's owner to confirm, Raj Patel play closed by events; pipeline delta shows Apigee added, EDI renewal removed, Order Hub stage/value/date changes"
+      ],
+      "inputs": {
+        "stakeholders": "evals/fixtures/stakeholders.csv",
+        "pipeline": "evals/fixtures/pipeline.csv",
+        "services": "evals/fixtures/services.csv",
+        "client": "Northwind",
+        "as_of": "2026-10-01",
+        "previous_plays": "evals/fixtures/plays-previous.csv",
+        "previous_pipeline": "evals/fixtures/pipeline-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "account-plan.md",
+          "check": "sections:[\"Since last plan\",\"90-day plays\"]"
+        },
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"| P4 | Re-establish contact with Raj Patel (VP Supply Chain) | closed by events\""
+        },
+        {
+          "file": "account-plan.md",
+          "check": "contains:\"| Order Hub wave 1 | changed | stage discovery → proposal; value 1200000 → 1472000\""
+        },
+        {
+          "file": "plays.csv",
+          "check": "contains:\"Priya (last quarter's owner — confirm)\""
+        }
+      ]
+    }
+  ]
+}

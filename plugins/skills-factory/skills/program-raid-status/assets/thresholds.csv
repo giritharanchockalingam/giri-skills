@@ -1,0 +1,5 @@
+# Default RAG thresholds — this skill's own convention (references/method.md). Override per program.
+key,value,notes
+green_max_slip_days,0,slip <= this is green
+amber_max_slip_days,10,slip <= this (and > green) is amber; above is red
+red_exposure,20,an overdue open RAID item with exposure >= this makes overall RAG red

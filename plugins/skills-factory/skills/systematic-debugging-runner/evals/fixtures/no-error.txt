@@ -1,0 +1,8 @@
+# fictional fixture — a log with no exception in it; the runner must refuse to invent one
+============================= test session starts ==============================
+collected 3 items
+
+tests/test_invoice.py ...                                                [100%]
+
+============================== 3 passed in 0.08s ===============================
+The build was slow today and the user says "it is broken somehow".

@@ -1,0 +1,339 @@
+{
+  "skill": "observability-setup",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "We go live next week. Set up logging, error tracking, health checks and alerts for this Next.js/Supabase app on Vercel.",
+      "expected": [
+        "Asks once for critical journeys, vendor/DSN availability and notification channel",
+        "Plan table posted and approved before changes",
+        "lib/logger.ts with redaction + request context; console.* replaced in minimal diffs; no-console lint rule",
+        "/api/health (no deps) and /api/health/deep (bearer, timeouts, 503 on down) added with tests",
+        "Alert rules each have threshold, window, tier, runbook, owner; SLO table per journey",
+        "Synthetic failure verified to fire an alert on preview"
+      ]
+    },
+    {
+      "id": "existing-partial",
+      "prompt": "We already have Sentry wired. Add health endpoints and alerts only.",
+      "expected": [
+        "Inventories existing Sentry config and keeps it",
+        "Adds only health routes and alert rules; no logger rewrite unless console.* found",
+        "Tags requestId in existing Sentry setup if missing, as a minimal diff"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Add observability.",
+      "expected": [
+        "Asks once for critical journeys and alert channel",
+        "Does not invent SLO numbers; marks them to be baselined with owner"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Add structured logging, health endpoints and alert rules to the new app before the first production release.",
+      "expected": [
+        "Runs scripts/install.py; logger, health routes, alerts YAML and SLO starter are written; env vars appended to .env.example"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "project": "demo-app"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/lib/logger.ts",
+        "exists:repo/app/api/health/deep/route.ts",
+        "exists:repo/ops/alerts.yaml",
+        "exists:repo/docs/observability.md",
+        {
+          "file": "repo/.env.example",
+          "check": "contains:\"HEALTH_CHECK_TOKEN\""
+        },
+        {
+          "file": "repo/docs/observability.md",
+          "check": "sections:[\"SLOs\",\"Endpoints\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Set up observability.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-never-overwrites",
+      "prompt": "We already have a lib/logger.ts; just replace it with the standard one.",
+      "expected": [
+        "The existing logger is not overwritten; the report lists lib/logger.ts under proposed with a .proposed twin; dry run writes nothing"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-existing",
+        "dry_run": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "install-report.json",
+          "check": "contains:\"lib/logger.ts.proposed\""
+        },
+        {
+          "file": "install-report.json",
+          "check": "contains:\"\\\"dry_run\\\": true\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"Dry run\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We already have a hand-rolled logger and an .env.example; add health checks and alerts without clobbering anything.",
+      "expected": [
+        "lib/logger.ts is kept and the standard one is written beside it as lib/logger.ts.proposed; missing env vars are appended to the existing .env.example; the two console.* calls in app/api/orders/route.ts are listed"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing",
+        "project": "harborline"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/lib/logger.ts.proposed",
+        "exists:repo/app/api/health/route.ts",
+        {
+          "file": "repo/lib/logger.ts",
+          "check": "contains:\"hand-rolled logger\""
+        },
+        {
+          "file": "repo/.env.example",
+          "check": "contains:\"SUPABASE_ANON_KEY=\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"`app/api/orders/route.ts:7` — `console.error`\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing-js",
+      "prompt": "This is a JavaScript Next.js 14 app on AWS (no tsconfig, JSX in .js files) that already has its own app/api/health/route.js. Add logging, the deep health check and alerts without breaking routing.",
+      "expected": [
+        "Detects the JavaScript flavour and writes lib/logger.js, lib/logger/context.js and app/api/health/deep/route.js (no .ts files); app/api/health/route.js is reported 'exists, kept' with no route.ts sibling and a gap table (liveness probes Supabase — move to deep); env vars appended only for files written; console.* calls listed; exit 0"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-js-existing-health",
+        "project": "vg-portal"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/lib/logger.js",
+        "exists:repo/lib/logger/context.js",
+        "exists:repo/app/api/health/deep/route.js",
+        {
+          "file": "repo",
+          "check": "cmd:\"python3 scripts/check_siblings.py {path}\""
+        },
+        {
+          "file": "install-report.json",
+          "check": "contains:\"\\\"flavour\\\": \\\"js\\\"\""
+        },
+        {
+          "file": "install-report.json",
+          "check": "contains:\"exists, kept\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"`app/api/health/route.js` — responds (exports GET)\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "contains:\"liveness has no dependency calls | MISSING\""
+        },
+        {
+          "file": "install-report.md",
+          "check": "sections:[\"Kept\",\"Existing health route vs the standard\"]"
+        },
+        {
+          "file": "repo/.env.example",
+          "check": "contains:\"# public-export:end\""
+        }
+      ]
+    },
+    {
+      "id": "x-saas-journeys-given",
+      "prompt": "Multi-tenant invoicing app (Next.js 15, Supabase, Vercel) for Fernwood Accounting goes to prod in 10 days. Critical journeys: sign-in, create invoice, export PDF. Sentry DSN is ready. Alerts go to Slack #fw-ops. Product wants sign-in at 99.5% over 30 days; nothing agreed for the others. Plan the observability setup.",
+      "expected": [
+        "Plan table of component → file → add/change → why (logger, request context, error tracking, health endpoints, alert rules, SLOs, dashboard) with a line that nothing changes until 'go'",
+        "SLO table per journey: sign-in at the stated 99.5% (0.5% error budget); create invoice and export PDF targets [TO BE BASELINED — owner: ___]",
+        "Error tracking tags requestId and tenantId, with Sentry user set by id only (never email)",
+        "Alert table rows carry threshold, window, severity tier, runbook, owner and channel #fw-ops"
+      ]
+    },
+    {
+      "id": "x-no-visibility-after-incident",
+      "prompt": "Last night customers couldn't check out for 40 minutes and we only found out from Twitter. Our Next.js/Supabase store on Vercel has basically console.log and nothing else. Make sure this never happens silently again.",
+      "expected": [
+        "Treats it as an observability setup (not a fix of the outage) and asks once for critical journeys, vendor/DSN and the alert channel, proceeding with defaults (checkout as a likely journey, Sentry)",
+        "Replaces console.* with lib/logger.ts JSON logs (ts, level, msg, service, env, requestId) in minimal diffs and adds ESLint no-console: error",
+        "Adds symptom alerts (health failures, 5xx rate, error spikes) as page vs notify tiers, each with a runbook and owner",
+        "Verification step: force a synthetic failure on preview (deep health 503) and confirm the alert fires end to end"
+      ]
+    },
+    {
+      "id": "x-health-endpoint-design",
+      "prompt": "What exactly should /api/health and /api/health/deep do for our app? DB is Supabase Postgres, we also use Supabase Storage and a Resend email API.",
+      "expected": [
+        "/api/health is liveness only: no dependency calls, returns build info, no auth",
+        "/api/health/deep checks DB, auth, storage and the critical external (email) dependency, bearer-protected with HEALTH_CHECK_TOKEN, per-dependency timeout ≤ 3 s",
+        "Returns 503 when a required dependency is down and 200 for ok/degraded, with a per-check status in the JSON body",
+        "Includes tests for both routes (200 and 503 on simulated DB failure)"
+      ]
+    },
+    {
+      "id": "x-redaction-pii-logging",
+      "prompt": "Our devs log `logger.info(`user ${email} logged in`, {headers})` everywhere. Security flagged it. How should our logging look?",
+      "expected": [
+        "msg must be a static phrase ('user signed in'), with ids passed as context fields, not interpolated",
+        "Redaction in the logger covers at least email, token, password, authorization, cookie and key, replaced by [redacted]",
+        "Use userId rather than email; request headers should not be logged wholesale"
+      ]
+    },
+    {
+      "id": "x-edge-function-job-service",
+      "prompt": "We added a Supabase edge function that syncs orders from Shopify every 10 minutes and a nightly reconciliation job. Neither has any logs or alerts. Cover them.",
+      "expected": [
+        "Log lines use service values edge-fn:<name> and job:<name> with the same JSON schema",
+        "Adds a stuck/late job alert (e.g. pending older than a threshold) with a runbook and owner",
+        "Thresholds the user has not given are [TO BE BASELINED — owner: ___]",
+        "Asks once for the alert channel and whether these are critical journeys"
+      ]
+    },
+    {
+      "id": "x-datadog-vendor",
+      "prompt": "We're a Datadog shop, not Sentry. Same Next.js/Supabase/Vercel stack. Set up error tracking, logs and alerts accordingly.",
+      "expected": [
+        "Adapts the error-tracking wiring to the stated vendor instead of installing Sentry, keeping server/client/edge coverage, requestId tags and PII scrubbing",
+        "Keeps the same JSON log schema and Log Drain to the vendor",
+        "Alert table still has threshold, window, tier, runbook, owner, channel for every alert"
+      ]
+    },
+    {
+      "id": "x-exec-error-budget",
+      "prompt": "I'm the VP. Explain in one page what an SLO and error budget would mean for our customer portal releases, and what we'd do when we burn it.",
+      "expected": [
+        "Explains SLO per critical journey with an error budget (e.g. 99.5% leaves 0.5%) and asks which journeys and targets the business commits to",
+        "Gives the error-budget policy tiers: normal releases above 50% remaining, extra rollback plan and sign-off at 20–50%, feature freeze below 20%, postmortem when exhausted",
+        "Does not invent the portal's SLO targets; marks them [TO BE BASELINED — owner: ___]"
+      ]
+    },
+    {
+      "id": "x-oncall-paging-tiers",
+      "prompt": "Our on-call is 2 engineers on PagerDuty and they're already burned out. Which alerts should page vs just post to Slack?",
+      "expected": [
+        "Two tiers: page (wake someone) for user-felt outages such as health failures and error spikes; notify (channel, next business hour) for latency, new issues, capacity, budgets",
+        "Alert on symptoms users feel, not causes like CPU; require consecutive breaches for page alerts",
+        "Every alert has a runbook link and an owner"
+      ]
+    },
+    {
+      "id": "x-missing-everything-monitoring",
+      "prompt": "we need monitoring",
+      "expected": [
+        "Asks once, in one list, for critical journeys and the alert/notification channel (and vendor/DSN), with defaults",
+        "Shows the plan skeleton with SLO targets and alert thresholds as [TO BE BASELINED — owner: ___]",
+        "Does not reply with only a request for the repo"
+      ]
+    },
+    {
+      "id": "x-missing-dsn",
+      "prompt": "Set up Sentry for our Next.js app — but we haven't created the Sentry project yet so no DSN.",
+      "expected": [
+        "Proceeds with the plan and wiring, using SENTRY_DSN / NEXT_PUBLIC_SENTRY_DSN env vars appended to .env.example as placeholders",
+        "Notes events will not flow until the DSN is set, and verification (a test error tagged with requestId reaches the tracker) is pending until then",
+        "Asks once for critical journeys and the alert channel"
+      ]
+    },
+    {
+      "id": "x-missing-journeys-slo-demand",
+      "prompt": "Give me the SLO table for our app.",
+      "expected": [
+        "Asks for the critical user journeys (≤5) since SLOs are defined per journey",
+        "Does not invent SLO targets; shows the table structure with targets [TO BE BASELINED — owner: ___]",
+        "Includes an error-budget policy with the table"
+      ]
+    },
+    {
+      "id": "x-missing-channel",
+      "prompt": "Journeys: login, book appointment, pay deposit. Sentry is set up. Write the alert rules for Harborview Clinics' booking app.",
+      "expected": [
+        "Asks for the notification channel / on-call target (asked once) and continues with a stated default",
+        "Alert table rows each have threshold, window, severity tier, runbook, owner and channel",
+        "Thresholds not given by the user are [TO BE BASELINED — owner: ___] rather than invented"
+      ]
+    },
+    {
+      "id": "x-adversarial-invent-sla-numbers",
+      "prompt": "Sales promised Kestrel Freight a 99.99% SLA. Just write SLOs at 99.99% for every journey and say we're compliant — we don't have any measurements yet.",
+      "expected": [
+        "Declines to state compliance without measurements; SLO attainment must come from measured SLIs",
+        "Does not invent per-journey targets beyond what the owner commits; marks them [TO BE BASELINED — owner: ___] or records 99.99% only as the stated contractual target",
+        "Offers the path: instrument SLIs, baseline for a window, then set SLOs and the error-budget policy"
+      ]
+    },
+    {
+      "id": "x-adversarial-overwrite-sentry",
+      "prompt": "Delete our existing sentry.server.config.ts and global-error.tsx and drop in your standard ones — I don't care what the old ones did.",
+      "expected": [
+        "Declines the overwrite in one line because it loses the team's existing wiring",
+        "Proposes the standard files beside them as .proposed twins for a manual merge",
+        "Inventories what the existing config has (tags, scrubbing, source maps) to guide the merge"
+      ]
+    },
+    {
+      "id": "x-adversarial-log-bodies",
+      "prompt": "For debugging, log full request bodies and auth headers at info level in production and send user emails to Sentry so support can find people faster.",
+      "expected": [
+        "Declines logging auth headers, passwords and emails; the redaction list replaces them with [redacted]",
+        "Sentry user is set by id only, never email; beforeSend drops cookies, authorization and request bodies",
+        "Offers the defensible path: find a user's requests by requestId / userId in logs"
+      ]
+    },
+    {
+      "id": "x-brownfield-health-touches-db",
+      "prompt": "We already have app/api/health/route.ts — it runs `select 1` against Supabase and returns 500 if that fails. Also a pino logger in lib/log.ts. Add the rest of the observability without wrecking what we have.",
+      "expected": [
+        "Inventories the existing health route and logger and keeps them; differing standard files are written as .proposed twins, not overwritten",
+        "Flags that liveness must not touch a dependency (a DB outage would make the app look dead) and proposes moving the DB check to /api/health/deep",
+        "Adds only missing pieces (deep health, alerts, SLOs, requestId context) as minimal diffs"
+      ]
+    },
+    {
+      "id": "x-boundary-debug-specific-500",
+      "prompt": "POST /api/checkout started returning 500 after this morning's deploy. Here's the stack trace: TypeError: Cannot read properties of undefined (reading 'id') at createOrder. Fix it.",
+      "routes_to": "safe-fix",
+      "expected": [
+        "Routes debugging and fixing this specific failure to safe-fix",
+        "Explains this skill sets up logging, error tracking, health checks and alerts rather than fixing a bug"
+      ]
+    },
+    {
+      "id": "x-boundary-ci-pipeline",
+      "prompt": "Set up GitHub Actions so PRs get preview deploys on Vercel and we get notified when the production deploy fails.",
+      "routes_to": "ci-cd-vercel-github",
+      "expected": [
+        "Routes the CI/CD pipeline and deploy-failure notifications to ci-cd-vercel-github",
+        "Explains this skill covers runtime logging, error tracking, health endpoints and alerts"
+      ]
+    }
+  ]
+}

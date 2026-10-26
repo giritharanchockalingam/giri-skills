@@ -1,0 +1,5 @@
+id,use_case,business_owner,sponsor,value_V,feasibility_F,data_readiness_D,risk_R,baseline_metric,baseline_value,target_value,evidence
+UC-001,Invoice extraction and three-way match,AP Manager,CFO,4,5,4,2,manual touch rate,62%,20%,AP cycle-time report FY26 (fictional)
+UC-002,Support ticket triage and routing,Support Lead,COO,3,4,,2,mean time to assign,4.1h,1h,data readiness not assessed
+UC-003,Internal policy assistant (RAG),HR Ops,CHRO,,,,,,,,not yet scored
+UC-004,Customer churn prediction,Retention Lead,CRO,4,3,2,3,churn rate,,,CRM lacks usage events

@@ -1,0 +1,56 @@
+{
+  "_note": "fictional fixture \u2014 the support-triage showroom demo's data as it ships today (generated from demo-spec.md, seed 7); all values synthetic",
+  "demo": "Support triage showroom",
+  "spec": "demo-spec.md",
+  "seed": 7,
+  "demo_date": "2026-01-15",
+  "pii_guard": "passed",
+  "email_domain": "example.com",
+  "label": "Sample data \u2014 generated for demonstration",
+  "entities": [
+    {
+      "entity": "customers",
+      "rows": 50,
+      "columns": [
+        "customer_id",
+        "name",
+        "email",
+        "segment",
+        "created",
+        "active"
+      ],
+      "file": "data/customers.csv",
+      "column_types": {
+        "customer_id": "id",
+        "name": "name",
+        "email": "email",
+        "segment": "enum",
+        "created": "date",
+        "active": "bool"
+      }
+    },
+    {
+      "entity": "tickets",
+      "rows": 120,
+      "columns": [
+        "ticket_id",
+        "customer_id",
+        "status",
+        "priority",
+        "opened",
+        "subject",
+        "csat"
+      ],
+      "file": "data/tickets.csv",
+      "column_types": {
+        "ticket_id": "id",
+        "customer_id": "ref",
+        "status": "enum",
+        "priority": "int",
+        "opened": "date",
+        "subject": "text",
+        "csat": "float"
+      }
+    }
+  ]
+}

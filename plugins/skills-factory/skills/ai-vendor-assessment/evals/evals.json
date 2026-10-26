@@ -1,0 +1,113 @@
+{
+  "skill": "ai-vendor-assessment",
+  "cases": [
+    {
+      "id": "prompt-compare-vendors",
+      "prompt": "We have three AI platform vendors and an in-house build option for our billing assistant. Score them on our criteria, tell us if the winner holds if we change the weights, and flag any contract risks.",
+      "expected": [
+        "Asks for the scores CSV with sources and the criteria weights; runs scripts/vendor_assess.py",
+        "Reports weighted scores, ±20% sensitivity and rank stability, and red flags from the risk questionnaire",
+        "Never imputes a missing score; states it is a decision aid, not a contract review"
+      ]
+    },
+    {
+      "id": "prompt-routes-model-selection",
+      "prompt": "Which LLM should we use for summarisation given these eval scores, token prices and latency numbers?",
+      "expected": [
+        "Routes model choice on eval, price and latency facts to model-selection; offers this skill for vendor and contract risk comparison"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Compare the attached (fictional) vendors and build option on our weights and the risk questionnaire answers.",
+      "expected": [
+        "Fabrikam 4.150 rank 1, Tailspin 3.850 with red flag TPR-02, Build 3.250, Litware incomplete; stability 100.0%; recommend Fabrikam"
+      ],
+      "inputs": {
+        "options": "evals/fixtures/options.csv",
+        "criteria": "evals/fixtures/criteria.csv",
+        "risk": "evals/fixtures/risk.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:sensitivity.csv",
+        {"file": "scores.csv", "check": "contains:\"Fabrikam AI (fictional),4.150,1,yes,none,none,none\""},
+        {"file": "scores.csv", "check": "contains:\"Tailspin Models (fictional),3.850,2,yes,TPR-02,none,TPR-07\""},
+        {"file": "scores.csv", "check": "contains:\"Litware GenAI (fictional),n/a,n/a,no,none,security_compliance [TO BE BASELINED — owner: Procurement lead]\""},
+        {"file": "sensitivity.csv", "check": "contains:\"answer_quality,-20%,0.4000,0.3478,Fabrikam AI (fictional),4.076,Tailspin Models (fictional),0.239,no\""},
+        {"file": "vendor-report.md", "check": "contains:\"Rank stability under ±20% weight changes: 100.0% (8 of 8 runs\""},
+        {"file": "vendor-report.md", "check": "contains:\"Recommendation: **Fabrikam AI (fictional)** (weighted score 4.150).\""}
+      ]
+    },
+    {
+      "id": "agent-missing-criteria",
+      "prompt": "Rank these vendors; use whatever weights make sense.",
+      "expected": [
+        "Asks once for the criteria weights; never invents weights"
+      ],
+      "inputs": {
+        "options": "evals/fixtures/options.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:criteria"
+      ]
+    },
+    {
+      "id": "agent-no-risk-not-invented",
+      "prompt": "We have no vendor risk answers yet; assume the big vendors are compliant.",
+      "expected": [
+        "Risk is not assessed (owner: Third-party risk manager); no answer is assumed; recommendation is conditional"
+      ],
+      "inputs": {
+        "options": "evals/fixtures/options.csv",
+        "criteria": "evals/fixtures/criteria.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "scores.csv", "check": "contains:\"4.150,1,yes,not assessed,none,[TO BE BASELINED — owner: Third-party risk manager] risk not assessed\""},
+        {"file": "vendor-report.md", "check": "contains:\"Conditional on a third-party risk review [TO BE BASELINED — owner: Third-party risk manager].\""},
+        {"file": "vendor-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-red-flag-no-clear-winner-gate",
+      "prompt": "Gate the decision: fail unless there is a clear winner. Fabrikam now says it trains on customer data by default.",
+      "expected": [
+        "Top option Fabrikam has red flag TPR-01: no clear winner; with --require-clear-winner the run exits 1"
+      ],
+      "inputs": {
+        "options": "evals/fixtures/options.csv",
+        "criteria": "evals/fixtures/criteria.csv",
+        "risk": "evals/fixtures/risk-redflag.csv",
+        "require_clear_winner": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "scores.csv", "check": "contains:\"Fabrikam AI (fictional),4.150,1,yes,TPR-01,\""},
+        {"file": "vendor-report.md", "check": "contains:\"**No clear winner.** Reasons: top-scoring Fabrikam AI (fictional) has red flags: TPR-01.\""},
+        {"file": "vendor-report.md", "check": "contains:\"Highest-scoring option without red flags: Build in-house (3.250).\""}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our Tailspin contract is up for renewal. Re-assess the options and compare with last year's assessment.",
+      "expected": [
+        "Reads last year's scores: Fabrikam rises to rank 1 (+0.250), Tailspin falls to rank 2 with new red flag TPR-02, Build in-house is new, Contoso no longer assessed"
+      ],
+      "inputs": {
+        "options": "evals/fixtures/options.csv",
+        "criteria": "evals/fixtures/criteria.csv",
+        "risk": "evals/fixtures/risk.csv",
+        "previous": "evals/fixtures/previous-scores.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "vendor-report.md", "check": "sections:[\"Recommendation\",\"Changes since last assessment\",\"Method\"]"},
+        {"file": "vendor-report.md", "check": "contains:\"| Tailspin Models (fictional) | 4.050 | 3.850 | -0.200 | 1 | 2 | TPR-02 | none |\""},
+        {"file": "vendor-report.md", "check": "contains:\"| Contoso Copilot (fictional) | 3.400 | n/a | no longer assessed | 3 | — |\""},
+        {"file": "vendor-report.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

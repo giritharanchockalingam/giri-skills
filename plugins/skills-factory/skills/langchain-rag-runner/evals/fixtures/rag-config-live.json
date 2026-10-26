@@ -1,0 +1,14 @@
+{
+  "_note": "fictional fixture — the config the live index was built with (illustrative values, not a real price quote or model)",
+  "chunk_size_chars": 1500,
+  "chunk_overlap_chars": 150,
+  "embedding_price_per_1m_tokens": 0.02,
+  "price_date": "2026-10-01 (fictional)",
+  "currency": "USD",
+  "top_k": 4,
+  "reranker": "no",
+  "vector_store": "chroma",
+  "context_budget_tokens": 6000,
+  "embedding_provider": "openai",
+  "embedding_model": "fixture-embedding-model"
+}

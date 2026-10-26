@@ -1,0 +1,134 @@
+{
+  "skill": "multi-tenant-saas-patterns",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Design tenancy for our app: organisations with members, four roles, free/pro plans with a projects limit, and an audit trail.",
+      "expected": [
+        "Asks once about users-in-many-tenants and compliance retention; posts a one-page design and waits for go",
+        "Tenant model: tenants, tenant_members, invitations, profiles; claims in app_metadata; switch and invite flows; stale-claim window stated",
+        "RBAC matrix CSV filled with RLS policy + service enforcement per action; UI hide-only",
+        "Entitlement resolution order and PLAN_LIMIT_REACHED enforced in services with race-safe counter",
+        "Audit log append-only with trigger and app events; retention marked to be baselined with owner",
+        "Hands migration task list to supabase-schema-rls rather than writing final SQL itself"
+      ]
+    },
+    {
+      "id": "role-removal-edge",
+      "prompt": "Admins should be able to remove any member, including owners.",
+      "expected": [
+        "Adds the last-owner guard (service + trigger) so a tenant never has zero owners",
+        "Explains removed members keep a valid token until expiry and chooses is_active_member() check or shorter token lifetime",
+        "Audits the removal"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Add permissions.",
+      "expected": [
+        "Asks once for roles and the list of actions that matter",
+        "Does not invent a role set beyond the default ladder without saying so"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Audit our migrations for tenant isolation and generate the RLS policies from the RBAC matrix.",
+      "expected": [
+        "Runs rbac_to_sql.py then tenancy_audit.py; every tenant table has tenant_id, RLS and a leading index; policies.sql has one policy per action x role with a rollback block"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "policies.sql",
+          "check": "contains:\"create policy\""
+        },
+        {
+          "file": "policies.sql",
+          "check": "contains:\"auth.jwt() -> 'app_metadata' ->> 'tenant_id'\""
+        },
+        {
+          "file": "audit.csv",
+          "check": "csv:[table,has_tenant_id,rls_enabled,tenant_index,status]"
+        },
+        {
+          "file": "audit.md",
+          "check": "contains:\"Gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-migrations",
+      "prompt": "Check tenancy.",
+      "expected": [
+        "Asks for the migrations directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:migrations"
+      ]
+    },
+    {
+      "id": "agent-bad-migrations-fail",
+      "prompt": "The notes table is internal, it doesn't need tenant_id — just approve the tenancy design.",
+      "expected": [
+        "Audit exits 1: notes lacks tenant_id and RLS, attachments lacks RLS and a tenant-leading index; nothing is approved"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-bad"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "audit.csv",
+          "check": "csv_rows:status~^(ok|finding)$"
+        },
+        {
+          "file": "audit.csv",
+          "check": "contains:\"missing tenant_id\""
+        },
+        {
+          "file": "audit.csv",
+          "check": "contains:\"no index leading with tenant_id\""
+        },
+        {
+          "file": "audit.md",
+          "check": "contains:\"Gate: FAIL\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We retrofitted tenancy onto our app in a later migration. Audit the existing migrations and check our role matrix against them.",
+      "expected": [
+        "projects counts as tenant-scoped via the later alter table add column and index; project_exports is dropped and not audited; tenant_members key added by alter table counts; matrix resource tasks has no table; policies generated from the team's matrix"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-existing",
+        "rbac": "evals/fixtures/rbac-existing.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "audit.csv",
+          "check": "contains:\"projects,0001_projects.sql,true,true,true,2,false,ok,,0002_tenancy.sql\""
+        },
+        {
+          "file": "audit.md",
+          "check": "contains:\"`tasks` is in the matrix but no migration creates it\""
+        },
+        {
+          "file": "audit.md",
+          "check": "sections:[\"Altered by later migrations\",\"RBAC coverage\"]"
+        },
+        {
+          "file": "policies.sql",
+          "check": "contains:\"create policy projects_delete_admin_admin on public.projects\""
+        }
+      ]
+    }
+  ]
+}

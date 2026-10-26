@@ -1,0 +1,121 @@
+{
+  "skill": "nextjs-enterprise-conventions",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Add a 'create invoice' form page under app/(app)/invoices/new with a server action.",
+      "expected": [
+        "Files placed per layer: validator, service, action, client form component, server page",
+        "Action order: zod parse -> requireRole -> service -> toActionState -> revalidateTag scoped by tenant",
+        "Form uses useActionState; tenant id never read from formData",
+        "No Supabase call in app/ or components/",
+        "Conventions table returned with rule -> pass/fail -> file:line; lint/typecheck/unit run"
+      ]
+    },
+    {
+      "id": "review-violation",
+      "prompt": "Review components/features/invoices/invoice-list.tsx — it calls supabase.from('invoices') inside a useEffect and console.logs the rows.",
+      "expected": [
+        "Flags L1 (data access in component), P1 (useEffect fetch), G1 (console.log)",
+        "Proposes moving the query to lib/db + server component fetch, minimal diff",
+        "Does not rewrite unrelated parts of the file"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Make this component follow our conventions.",
+      "expected": [
+        "Asks once which file/diff",
+        "Does not guess the component"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Check this repo against our Next.js conventions before I open the PR.",
+      "expected": [
+        "Runs scripts/lint_conventions.py; a compliant repo passes with an empty findings table"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[rule,file,line,snippet,severity]"
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: PASS\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-target",
+      "prompt": "Lint the conventions.",
+      "expected": [
+        "Asks for the repo directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:target"
+      ]
+    },
+    {
+      "id": "agent-violations-fail-gate",
+      "prompt": "The component queries Supabase directly but it works — just sign off the conventions check.",
+      "expected": [
+        "Lint exits 1 with NX1 (Supabase in component), NX3 (action without zod) and NX2 (console.log); the run reports the failing gate instead of signing off"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:severity~^(high|medium|low)$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"NX1\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"NX3\""
+        },
+        {
+          "file": "report.md",
+          "check": "contains:\"Gate: FAIL\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our legacy repo has known convention debt recorded from the last lint. Check this branch — did we add anything new?",
+      "expected": [
+        "The three recorded high findings are marked known (listed, not gating); the console.log is new (medium); the raw-SQL baseline item is reported resolved; gate passes because no new high finding"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-violations",
+        "baseline": "evals/fixtures/baseline-findings.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "report.md",
+          "check": "contains:\"1 new, 3 known from the baseline, 1 resolved\""
+        },
+        {
+          "file": "report.md",
+          "check": "sections:[\"Findings\",\"Baseline\"]"
+        },
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:status~^(new|known)$"
+        }
+      ]
+    }
+  ]
+}

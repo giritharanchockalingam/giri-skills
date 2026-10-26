@@ -1,0 +1,10 @@
+pii_type,handling,notes
+email,mask,fictional fixture policy
+phone,mask,fictional fixture policy
+ssn,drop,fictional fixture policy
+payment_card,tokenize,fictional fixture policy
+ipv4,mask,fictional fixture policy
+ipv6,mask,fictional fixture policy
+dob,drop,fictional fixture policy
+name,tokenize,fictional fixture policy
+address,drop,fictional fixture policy

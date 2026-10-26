@@ -1,0 +1,17 @@
+{
+  "cmd": "python3 -m unittest -v",
+  "exit_code": 0,
+  "parser": "unittest",
+  "tests": {
+    "test_calc.py::TestCalc::test_add": "passed",
+    "test_calc.py::TestCalc::test_multiply": "passed"
+  },
+  "counts": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": null
+  },
+  "stdout": "",
+  "stderr": "test_add (test_calc.TestCalc.test_add) ... ok\ntest_multiply (test_calc.TestCalc.test_multiply) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n",
+  "mode": "baseline"
+}

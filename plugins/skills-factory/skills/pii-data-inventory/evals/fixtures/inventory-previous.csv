@@ -1,0 +1,13 @@
+column,pii_types,match_rate,rows_scanned,handling,matches,basis,notes
+customer_id,none,0.000,6,n/a,0,none,fictional fixture: last quarter's inventory of the same made-up table
+full_name,name,0.000,6,tokenize,0,name-hint,fictional fixture
+email,email,1.000,6,mask,6,values,fictional fixture
+phone,phone,1.000,6,mask,6,values,fictional fixture
+ssn,ssn,1.000,6,drop,6,values,fictional fixture
+card_number,payment_card,1.000,6,mask,6,values,fictional fixture: policy then masked cards
+date_of_birth,dob,1.000,6,drop,6,values,fictional fixture
+mailing_address,address,0.000,6,drop,0,name-hint,fictional fixture
+product_name,none,0.000,6,n/a,0,none,fictional fixture
+comment,none,0.000,6,n/a,0,none,fictional fixture: free text had no PII last quarter
+fax_number,phone,1.000,6,mask,6,values,fictional fixture: column since dropped
+notes,none,0.000,6,n/a,0,none,fictional fixture

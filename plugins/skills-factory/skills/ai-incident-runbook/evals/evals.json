@@ -1,0 +1,95 @@
+{
+  "skill": "ai-incident-runbook",
+  "cases": [
+    {
+      "id": "incident-from-chat",
+      "prompt": "Our benefits assistant just showed one member another member's claim details. It started about an hour ago. What do we do?",
+      "expected": [
+        "Asks once for the facts it needs (users affected, whether regulated data is involved, start time) and treats unknowns as escalating",
+        "Contain first: disable the leaking path, preserve evidence",
+        "Regulator track flagged for Legal / privacy without inventing deadlines",
+        "No names or times invented"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the incident runbook for the attached incident facts.",
+      "expected": [
+        "Runs scripts/runbook.py with the skill's default matrix; SEV1 from D01; data-leak playbook; regulator track present; time to detect 75 minutes"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident-data-leak.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "runbook.md", "check": "sections:[\"Severity\",\"Immediate actions\",\"Containment\",\"Recovery\",\"Communications\",\"Postmortem\"]"},
+        {"file": "runbook.md", "check": "contains:\"**SEV1**\""},
+        {"file": "runbook.md", "check": "contains:\"the skill's default matrix\""},
+        {"file": "runbook.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-missing-incident",
+      "prompt": "We had an AI incident, give me the runbook.",
+      "expected": [
+        "Asks for the incident facts CSV"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:incident"
+      ]
+    },
+    {
+      "id": "agent-unknowns-escalate-not-invented",
+      "prompt": "Prompt injection through a shared document; we don't know yet if regulated data was touched or how many users. Assume it's fine and keep it low severity.",
+      "expected": [
+        "Unknown regulated status escalates: SEV2 via D03, regulator track present with the unknown-escalates basis",
+        "Owners, detection time and users are TBD with owner roles; nothing invented"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident-injection-unknowns.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "runbook.md", "check": "contains:\"**SEV2**\""},
+        {"file": "runbook.md", "check": "contains:\"unknown escalates: treat as regulated\""},
+        {"file": "runbook.md", "check": "contains:\"Incident commander: [TO BE BASELINED — owner: On-call engineering manager]\""},
+        {"file": "runbook.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-matrix-without-baseline",
+      "prompt": "Use our own severity matrix for this cost spike.",
+      "expected": [
+        "No row of the supplied matrix fires; exits 1 and asks for a baseline row instead of guessing a severity"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident-cost-spike.csv",
+        "matrix": "evals/fixtures/matrix-no-baseline.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "incident.json", "check": "contains:\"\\\"severity\\\": null\""}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Overnight cost spike on the billing assistant, no users affected. Classify it with our team's severity matrix, not a generic one.",
+      "expected": [
+        "Applies the team's own matrix (stated as supplied) instead of the skill default; SEV3 from rule NW-05 with the baseline row also listed; unknown detection time and system name stay TBD"
+      ],
+      "inputs": {
+        "incident": "evals/fixtures/incident-cost-spike.csv",
+        "matrix": "evals/fixtures/matrix-team.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "runbook.md", "check": "contains:\"**SEV3** — most severe of the rows that fired. Matrix: supplied (matrix-team.csv).\""},
+        {"file": "runbook.md", "check": "contains:\"| NW-05 | `category=cost-spike;users_affected=0` | SEV3 |\""},
+        {"file": "incident.json", "check": "contains:\"\\\"severity\\\": \\\"SEV3\\\"\""},
+        {"file": "runbook.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

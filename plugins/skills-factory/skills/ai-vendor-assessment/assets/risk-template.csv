@@ -1,0 +1,4 @@
+option,question_id,answer,evidence
+Vendor A,TPR-01,no,DPA section 4.2
+Vendor A,TPR-02,30,Data usage policy
+Build,TPR-01,n/a,Internal build - no third party

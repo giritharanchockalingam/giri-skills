@@ -1,0 +1,114 @@
+{
+  "_note": "fictional fixture \u2014 estimate.json of the earlier Acme estimate (v0.1 WBS: 20/10 interfaces, no environment task) for the effort-estimator evals",
+  "as_of_version": "v0.1",
+  "total": {
+    "10": 175.6716197380645,
+    "50": 203.76525247509352,
+    "80": 224.85866961503334,
+    "90": 237.12743525436755
+  },
+  "phases": {
+    "Phase 1 - Assess": {
+      "50": 9.688419834860149,
+      "80": 11.429728539287561,
+      "90": 12.405582238284206
+    },
+    "Phase 2 - Build": {
+      "50": 112.09977450516041,
+      "80": 131.92678838855053,
+      "90": 143.31741683921823
+    },
+    "Cross-phase": {
+      "50": 81.23805766419625,
+      "80": 87.9642330344974,
+      "90": 91.4850226590875
+    }
+  },
+  "basis_mix": {
+    "JUD": 0.42187500000000006,
+    "PAR": 0.3697916666666667,
+    "ANA": 0.20833333333333334
+  },
+  "unresolved": [],
+  "duration": "[TO BE BASELINED \u2014 owner: Estimation lead]",
+  "dependency_issues": [],
+  "cost": {
+    "rows": [
+      {
+        "role": "Engagement Manager",
+        "location": "onshore",
+        "pd_p50": 33.93315224891354,
+        "pd_p80": 37.44585191956474,
+        "cost_rate": 900.0,
+        "bill_rate": 1400.0,
+        "rate_currency": "USD",
+        "fx_to_report": 1.0,
+        "valid_until": "2027-06-30",
+        "validity_issue": "",
+        "cost_p50": 30539.837024022185,
+        "cost_p80": 33701.266727608265,
+        "price_p50": 47506.413148478954,
+        "price_p80": 52424.192687390634
+      },
+      {
+        "role": "Integration Architect",
+        "location": "onshore",
+        "pd_p50": 65.87023671847922,
+        "pd_p80": 72.68900666739037,
+        "cost_rate": 800.0,
+        "bill_rate": 1250.0,
+        "rate_currency": "USD",
+        "fx_to_report": 1.0,
+        "valid_until": "2027-06-30",
+        "validity_issue": "",
+        "cost_p50": 52696.189374783375,
+        "cost_p80": 58151.2053339123,
+        "price_p50": 82337.79589809902,
+        "price_p80": 90861.25833423797
+      },
+      {
+        "role": "Integration Engineer",
+        "location": "offshore",
+        "pd_p50": 78.17932135779098,
+        "pd_p80": 86.27230589311483,
+        "cost_rate": 300.0,
+        "bill_rate": 520.0,
+        "rate_currency": "USD",
+        "fx_to_report": 1.0,
+        "valid_until": "2027-06-30",
+        "validity_issue": "",
+        "cost_p50": 23453.796407337293,
+        "cost_p80": 25881.69176793445,
+        "price_p50": 40653.24710605131,
+        "price_p80": 44861.599064419715
+      },
+      {
+        "role": "Test Lead",
+        "location": "offshore",
+        "pd_p50": 25.78254214990979,
+        "pd_p80": 28.4515051349634,
+        "cost_rate": 320.0,
+        "bill_rate": 560.0,
+        "rate_currency": "USD",
+        "fx_to_report": 1.0,
+        "valid_until": "2027-06-30",
+        "validity_issue": "",
+        "cost_p50": 8250.413487971133,
+        "cost_p80": 9104.481643188288,
+        "price_p50": 14438.223603949482,
+        "price_p80": 15932.842875579505
+      }
+    ],
+    "missing_roles": [],
+    "currency": "USD",
+    "fx_used": {},
+    "example_rates": false,
+    "rate_validity_issues": [],
+    "cost_p50": 114940.23629411399,
+    "cost_p80": 126838.6454726433,
+    "price_p50": 184935.67975657876,
+    "price_p80": 204079.89296162783,
+    "margin_p50": 0.3784853390897643,
+    "margin_p80": 0.3784853390897644
+  }
+}

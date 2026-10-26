@@ -1,0 +1,25 @@
+key,value,unit,source,as_of_date,notes
+daily_active_users,,count,,,
+requests_per_user_per_day,,count,,,
+tokens_in_per_request,,tokens,,,prompt + context
+tokens_out_per_request,,tokens,,,
+active_hours_per_day,,hours,,,
+peak_factor,,multiplier,,,assumption if not measured
+calls_per_request,1,count,,,agentic multiplier
+decode_tokens_per_s_per_gpu,,tokens/s,,,measured at target batch size — never invented
+prefill_tokens_per_s_per_gpu,,tokens/s,,,measured
+utilization_target,0.6,fraction,,,assumption
+spare_gpus,1,count,,,redundancy
+gpus_per_replica,1,count,,,tensor parallel degree
+slo_tokens_per_s_per_stream,,tokens/s,,,
+batch_size_at_measurement,,count,,,
+rental_usd_per_gpu_hour,,USD,,,dated price
+rental_hours_per_month,730,hours,,,730 = always on; lower with autoscaling
+selfhost_capex_per_gpu,,USD,,,server share per GPU
+amortization_months,,months,,,
+selfhost_hosting_per_gpu_month,,USD,,,power/cooling/rack
+ops_fte,,count,,,shared ops staffing
+fte_cost_per_year,,USD,,,
+software_per_month,,USD,,,support/licences
+api_usd_per_1m_input_tokens,,USD,,,
+api_usd_per_1m_output_tokens,,USD,,,

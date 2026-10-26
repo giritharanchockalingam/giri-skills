@@ -1,0 +1,6 @@
+rule,file,line,snippet,severity,status
+"# fictional fixture — the debt recorded by an earlier conventions-lint run on repo-violations (nextjs-enterprise-conventions evals)",,,,,
+NX1,components/features/invoices/InvoiceList.tsx,5,const supabase = createClient();,high,new
+NX1,components/features/invoices/InvoiceList.tsx,6,"const { data } = await supabase.from(""invoices"").select(""*"").eq(""tenant_id"", tenantId);",high,new
+NX3,server/actions/create-invoice.ts,5,export async function createInvoiceAction(input: { number: string; amount: number }) {,high,new
+NX5,app/reports/page.tsx,12,const rows = await sql`select * from invoices`;,high,new

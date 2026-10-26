@@ -1,0 +1,119 @@
+{
+  "skill": "pii-data-inventory",
+  "cases": [
+    {
+      "id": "prompt-scan-for-pii",
+      "prompt": "Before we load this customer extract into the RAG index, tell me which columns are PII and what our policy says to do with each.",
+      "expected": [
+        "Runs scripts/scan_pii.py with the policy file",
+        "Per-column types, match rate, handling; masked examples only, never raw values",
+        "Flags name/address hints for human confirmation; states it is not a legal determination"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Inventory PII in the attached customer sample against the attached policy.",
+      "expected": [
+        "Every PII column has a handling from the policy; no raw values in outputs"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/customers-sample.csv",
+        "policy": "evals/fixtures/policy.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:pii-inventory.csv",
+        {"file": "pii-inventory.csv", "check": "contains:\"card_number,payment_card,1.000,8,tokenize\""},
+        {"file": "pii-inventory.csv", "check": "contains:\"comment,email,0.375,8,mask\""},
+        {"file": "pii-report.md", "check": "contains:\"None: every PII column has a policy handling.\""},
+        {"file": "pii-report.md", "check": "contains:\"***-**-6780\""}
+      ]
+    },
+    {
+      "id": "agent-missing-data",
+      "prompt": "Scan our customer table for PII.",
+      "expected": [
+        "Asks once for the sample CSV"
+      ],
+      "inputs": {
+        "policy": "evals/fixtures/policy.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:data"
+      ]
+    },
+    {
+      "id": "agent-no-policy-handling-not-invented",
+      "prompt": "We don't have a privacy policy file yet; just recommend masking for everything.",
+      "expected": [
+        "Handling for every PII column is TBD for the Privacy officer; no handling invented; exit 0 without strict"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/customers-sample.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "pii-inventory.csv", "check": "contains:\"ssn,ssn,1.000,8,[TO BE BASELINED — owner: Privacy officer]\""},
+        {"file": "pii-report.md", "check": "no_unowned_tbd"},
+        {"file": "pii-report.md", "check": "contains:\"Columns with a handling gap: 9.\""}
+      ]
+    },
+    {
+      "id": "agent-strict-policy-gap-exits-1",
+      "prompt": "Gate this extract: fail if any PII column is not covered by the policy.",
+      "expected": [
+        "Partial policy leaves ssn, card, ip, dob, address uncovered; strict fails the run with exit 1"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/customers-sample.csv",
+        "policy": "evals/fixtures/policy-partial.csv",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "pii-report.md", "check": "contains:\"`--strict` was set: the run fails (exit 1).\""},
+        {"file": "pii-inventory.csv", "check": "contains:\"phone,phone,1.000,8,allow\""}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Re-scan this quarter's customer extract against our policy and tell me what changed since last quarter's PII inventory.",
+      "expected": [
+        "Reads last quarter's inventory: last_login_ip is a new PII column, comment now carries email, fax_number was removed, card_number handling moved from mask to tokenize; raw values never written"
+      ],
+      "inputs": {
+        "data": "evals/fixtures/customers-sample.csv",
+        "policy": "evals/fixtures/policy.csv",
+        "previous": "evals/fixtures/inventory-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "pii-inventory.csv",
+          "check": "csv:[column,pii_types,match_rate,rows_scanned,handling,change_vs_previous]"
+        },
+        {
+          "file": "pii-inventory.csv",
+          "check": "contains:\"comment,email,0.375,8,mask,3,values,pii-added\""
+        },
+        {
+          "file": "pii-report.md",
+          "check": "sections:[\"Summary\",\"Column inventory\",\"Handling gaps\",\"Changes since last inventory\",\"Method\"]"
+        },
+        {
+          "file": "pii-report.md",
+          "check": "contains:\"| fax_number | removed | was phone | mask |\""
+        },
+        {
+          "file": "pii-report.md",
+          "check": "contains:\"PII that was not in the last inventory: last_login_ip, comment.\""
+        },
+        {
+          "file": "pii-report.md",
+          "check": "cmd:\"python3 -I scripts/scan_pii.py --leak-check {path} --data evals/fixtures/customers-sample.csv\""
+        }
+      ]
+    }
+  ]
+}

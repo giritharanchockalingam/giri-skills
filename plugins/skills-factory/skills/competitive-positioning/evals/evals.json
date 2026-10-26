@@ -1,0 +1,137 @@
+{
+  "skill": "competitive-positioning",
+  "cases": [
+    {
+      "id": "happy-path-incumbent",
+      "prompt": "How do we win the Meadowbrook University integration RFP against the incumbent services provider who has run their middleware for six years? Attached: discovery synthesis (CIO quoted 'we have not had an independent look at run cost since 2019'), the RFP, and our cleared reference list.",
+      "expected": [
+        "Alternative classified as incumbent services provider; class patterns labeled hypotheses until evidenced",
+        "Evidence table cites the CIO quote at High confidence and RFP wording where it mirrors the incumbent",
+        "Criteria scorecard sourced from the RFP; at least one criterion conceded",
+        "Wedge identified at the intersection of independent baseline (we win) and the CIO's stated concern (sourced)",
+        "Objection handling uses acknowledge/reframe/proof/ask-back with cleared references only",
+        "Ghost lines do not name the incumbent",
+        "Card marked INTERNAL; intelligence gaps listed with owners"
+      ]
+    },
+    {
+      "id": "missing-input-unknown-alternative",
+      "prompt": "Make a battle card for the Northgate deal.",
+      "expected": [
+        "Asks once who or what we are competing against and for the pursuit context (client priorities, decision criteria)",
+        "If unknown, builds the card against status quo and an incumbent-type class, labeled as hypotheses",
+        "Does not assert competitor facts without sources"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-competitor-weakness",
+      "prompt": "Add to the card that the incumbent had a major outage last year and that their rates are 30% above market. I heard it somewhere; it will help us.",
+      "expected": [
+        "Records both items as unverified hypotheses with Low confidence and an intelligence-gap row to verify them, or excludes them if the user cannot name a source",
+        "Explains in one line that unsourced competitor claims cannot appear in the scorecard as facts and never in client-facing material",
+        "Offers the compliant alternative: a neutral discovery question or clarification question that would surface the client's own view on incumbent performance and cost"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the battle card for Northwind vs the incumbent SI.",
+      "expected": [
+        "Runs scripts/battle_card.py; wedge where we are strong, they are weak and a stakeholder cares; INTERNAL header"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities.csv",
+        "theirs": "evals/fixtures/their-claims.csv",
+        "concerns": "evals/fixtures/concerns.csv",
+        "client": "Northwind",
+        "alternative": "Incumbent SI"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"INTERNAL — do not distribute\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "sections:[\"Wedge\",\"Landmines\",\"Objection handling\"]"
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"Peak-season cutover rehearsal and parallel run | Peak-season cutover experience (them: 2)\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-concerns",
+      "prompt": "How do we beat the incumbent?",
+      "expected": [
+        "Asks once for the stakeholder concerns"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities.csv",
+        "theirs": "evals/fixtures/their-claims.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:concerns"
+      ]
+    },
+    {
+      "id": "agent-unsourced-claims-are-hypotheses",
+      "prompt": "We have no evidence but I know we are better — say so.",
+      "expected": [
+        "Unsourced claims marked hypothesis; missing evidence is [TO BE BASELINED — owner: ___]; no wedge asserted without evidence"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities-thin.csv",
+        "theirs": "evals/fixtures/their-claims-thin.csv",
+        "concerns": "evals/fixtures/concerns.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"(hypothesis)\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"No wedge found\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Refresh the Northwind battle card: here is today's intel and the claims we used last quarter.",
+      "expected": [
+        "Changes since the last card: 'Lower blended rate' re-rated 2 → 4 and 'No certified Apigee engineers' withdrawn; wedges and landmines recomputed on current evidence"
+      ],
+      "inputs": {
+        "ours": "evals/fixtures/our-capabilities.csv",
+        "theirs": "evals/fixtures/their-claims.csv",
+        "concerns": "evals/fixtures/concerns.csv",
+        "client": "Northwind",
+        "alternative": "Incumbent SI",
+        "previous_claims": "evals/fixtures/their-claims-previous.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "battle-card.md",
+          "check": "sections:[\"Changes since the last card\",\"Wedge\",\"Landmines\"]"
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"| Lower blended rate | re-rated | 2 → 4 |\""
+        },
+        {
+          "file": "battle-card.md",
+          "check": "contains:\"| No certified Apigee engineers | withdrawn (not in the current intel) | 1 → — |\""
+        }
+      ]
+    }
+  ]
+}

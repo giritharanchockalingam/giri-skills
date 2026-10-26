@@ -1,0 +1,11 @@
+task_id,phase,work_package,task,role,driver_group,count,unit_o,unit_m,unit_p,optimistic,most_likely,pessimistic,basis,predecessors,notes
+1.1,Phase 1 - Assess,Mobilize,Kick-off and governance setup,Engagement Manager,,,,,,2,3,5,JUD,,fictional fixture
+1.2,Phase 1 - Assess,Inventory,Interface inventory and complexity scoring,Integration Architect,interfaces,24,0.2,0.3,0.6,,,,PAR,1.1,per-interface effort
+2.1,Phase 2 - Build,Wave 1,Migrate simple interfaces,Integration Engineer,interfaces,12,1.5,2.5,5,,,,PAR,1.2,unit effort from fictional prior actuals
+2.2,Phase 2 - Build,Wave 2,Migrate medium interfaces,Integration Engineer,interfaces,8,3,5,9,,,,PAR,2.1,
+2.3,Phase 2 - Build,Wave 3,Migrate complex interfaces,Integration Architect,interfaces,4,6,10,18,,,,ANA,2.2,
+3.1,Phase 3 - Cutover,Environments,Environment build and pipelines,DevOps Engineer,,,,,,8,12,20,JUD,1.1,
+9.1,Cross-phase,PM,Project management,Engagement Manager,,,,,,20,30,45,JUD,,
+9.2,Cross-phase,QA,Test management and automation,Test Lead,,,,,,15,25,40,JUD,,
+9.3,Cross-phase,Cutover,Cutover rehearsal and hypercare,Integration Architect,,,,,,10,15,30,JUD,2.3,
+9.4,Cross-phase,KT,Knowledge transfer,Integration Engineer,,,,,,5,8,12,JUD,9.3,

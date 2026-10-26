@@ -1,0 +1,19 @@
+{
+  "feature": "Invoice export",
+  "problem": "Tenant admins copy invoices into spreadsheets by hand every month-end because the app has no export",
+  "users": ["Tenant admin", "Finance analyst (viewer)"],
+  "goals": ["Admins export a month of invoices in one click", "Exports never leak another tenant's rows"],
+  "non_goals": ["Scheduled or emailed exports", "XLSX formatting", "Export of attachments"],
+  "metrics": [
+    {"name": "Monthly active tenants using export", "baseline": "0 (feature absent)", "target": "40% of active tenants", "source": "logs action=invoice.export outcome=ok", "by": "2027-01-31"},
+    {"name": "Support tickets asking for export", "baseline": "[TO BE BASELINED — owner: support lead]", "target": "-80%", "source": "helpdesk tag export"}
+  ],
+  "phases": [
+    {"name": "v1", "scope": ["CSV export of the current filter", "Admin role only", "Audit entry per export"], "excludes": ["Scheduling", "XLSX"], "exit": "40% of active tenants exported at least once in 30 days"},
+    {"name": "v1.1", "scope": ["Date-range picker", "Column selection"], "exit": "needs evidence: ticket volume"},
+    {"name": "Later", "scope": ["Scheduled exports to email"], "exit": "needs evidence: customer requests"}
+  ],
+  "evidence": [{"claim": "11 tickets in Q3 asked for an export", "source": "helpdesk report Q3", "date": "2026-10-01"}],
+  "constraints": ["No schema change to invoices", "Behind feature.exports flag"],
+  "flag": "feature.exports"
+}

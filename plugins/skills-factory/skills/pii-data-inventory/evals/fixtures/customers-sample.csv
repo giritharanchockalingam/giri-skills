@@ -1,0 +1,9 @@
+customer_id,full_name,email,phone,ssn,card_number,last_login_ip,date_of_birth,mailing_address,product_name,comment,notes
+CUST-0001,Test Person Alpha,alpha.tester@example.com,(612) 555-0142,123-45-6780,4111 1111 1111 1111,192.0.2.10,1970-01-15,"100 Example Street, Testville",Widget,Prefers email at alpha.tester@example.com,fictional fixture - all values are test values
+CUST-0002,Test Person Bravo,bravo.tester@example.com,+1 612-555-0199,123-45-6781,5555 5555 5555 4444,192.0.2.11,1971-02-15,"101 Example Street, Testville",Gadget,no comment,fictional fixture - all values are test values
+CUST-0003,Test Person Charlie,charlie.tester@example.com,612.555.0123,123-45-6782,4012 8888 8888 1881,192.0.2.12,1972-03-15,"102 Example Street, Testville",Widget,no comment,fictional fixture - all values are test values
+CUST-0004,Test Person Delta,delta.tester@example.com,+16125550188,123-45-6783,4111-1111-1111-1111,192.0.2.13,1973-04-15,"103 Example Street, Testville",Gadget,Prefers email at delta.tester@example.com,fictional fixture - all values are test values
+CUST-0005,Test Person Echo,echo.tester@example.com,(612) 555-0142,123-45-6784,4111 1111 1111 1111,192.0.2.14,1974-05-15,"104 Example Street, Testville",Widget,no comment,fictional fixture - all values are test values
+CUST-0006,Test Person Foxtrot,foxtrot.tester@example.com,+1 612-555-0199,123-45-6785,5555 5555 5555 4444,192.0.2.15,1975-06-15,"105 Example Street, Testville",Gadget,no comment,fictional fixture - all values are test values
+CUST-0007,Test Person Golf,golf.tester@example.com,612.555.0123,123-45-6786,4012 8888 8888 1881,2001:db8::6,1976-07-15,"106 Example Street, Testville",Widget,Prefers email at golf.tester@example.com,fictional fixture - all values are test values
+CUST-0008,Test Person Hotel,hotel.tester@example.com,+16125550188,123-45-6787,4111-1111-1111-1111,2001:db8::7,1977-08-15,"107 Example Street, Testville",Gadget,no comment,fictional fixture - all values are test values

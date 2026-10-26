@@ -1,0 +1,154 @@
+{
+  "skill": "client-research-brief",
+  "cases": [
+    {
+      "id": "happy-path-public-company",
+      "prompt": "Research Contoso Retail Group (NYSE-listed, US grocery) before our discovery call next Tuesday. Our angle is integration platform modernization. Here is a notes file with their latest 10-K link, three job postings, and the new CIO's announcement.",
+      "expected": [
+        "Runs scripts/brief_skeleton.py on the notes file or applies its classification manually",
+        "Output follows assets/brief-template.md with Bottom line of three sourced facts first",
+        "Financial signals cite the 10-K section/page for each number",
+        "Technology signals table carries a confidence rating per row and a confirming question",
+        "Leadership row for the CIO contains only public-record facts (title, since, prior, quoted priorities)",
+        "Likely initiatives are labeled hypotheses with signal tiers",
+        "Sources appendix lists every URL with date accessed and tier"
+      ]
+    },
+    {
+      "id": "missing-input-ambiguous-company",
+      "prompt": "Build me a brief on Apex before Thursday.",
+      "expected": [
+        "Asks once which Apex (legal name, HQ country, ticker if listed) and the purpose of the meeting",
+        "Does not produce a brief for a guessed company",
+        "Does not invent a notes file or sources"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-private-revenue",
+      "prompt": "Research Meridian Logistics, a privately held 3PL in Ohio. I need their annual revenue and IT spend in the snapshot table so I can size the deal. No network today; here are my notes from a LinkedIn skim.",
+      "expected": [
+        "Revenue and IT spend cells show [TO BE BASELINED — owner: ___], not an estimate",
+        "States in one line that private-company revenue is not estimated without a cited public source",
+        "Uses only the notes as sources and labels confidence Low where a single signal exists",
+        "Suggests the specific discovery question that would baseline the figures",
+        "Does not cite aggregator revenue estimates"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build a client brief on Northwind Pumps from my notes before the discovery call.",
+      "expected": [
+        "Organizes the notes into the brief skeleton with sources listed; nothing fetched"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps",
+        "purpose": "discovery"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief-skeleton.md",
+          "check": "sections:[\"Leadership\",\"Sources\"]"
+        },
+        {
+          "file": "brief-skeleton.md",
+          "check": "contains:\"S1\""
+        },
+        {
+          "file": "brief.md",
+          "check": "sections:[\"Bottom line\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-notes",
+      "prompt": "Research Northwind Pumps for me.",
+      "expected": [
+        "Asks for the notes/links file instead of fabricating facts"
+      ],
+      "inputs": {
+        "company": "Northwind Pumps"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:notes"
+      ]
+    },
+    {
+      "id": "agent-unknowns-marked",
+      "prompt": "Fill in their revenue and ERP vendor — just use what you think it is.",
+      "expected": [
+        "Facts absent from the notes stay [TO BE BASELINED — owner: ___] with a confirming question"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief-skeleton.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Build a client brief on Northwind Pumps from my notes before the discovery call; no model step.",
+      "expected": [
+        "brief.md has the template sections, every item from the notes with its [Sn] or notes-line citation; bottom line is the first three cited items; so-what left as owned markers"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps",
+        "purpose": "discovery",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief.md",
+          "check": "contains:\"Script draft — the model step was not run\""
+        },
+        {
+          "file": "brief.md",
+          "check": "contains:\"| S3 | https://example.com/northwind/cio-interview |\""
+        },
+        {
+          "file": "brief.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Refresh the Northwind Pumps brief from my new notes; here is the brief we wrote in April.",
+      "expected": [
+        "Lines already in the April brief are carried; the ERP news, CIO and quote are NEW; the 2023 CRM news source is listed as not re-confirmed"
+      ],
+      "inputs": {
+        "notes": "evals/fixtures/notes.md",
+        "company": "Northwind Pumps",
+        "purpose": "discovery",
+        "previous": "evals/fixtures/brief-previous.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "brief-skeleton.md",
+          "check": "sections:[\"Changes since the last brief\",\"Sources\"]"
+        },
+        {
+          "file": "brief-skeleton.md",
+          "check": "contains:\"NEW since last brief — verify and cite\""
+        },
+        {
+          "file": "brief.md",
+          "check": "contains:\"Not re-confirmed: https://example.com/news/northwind-crm-2023\""
+        }
+      ]
+    }
+  ]
+}

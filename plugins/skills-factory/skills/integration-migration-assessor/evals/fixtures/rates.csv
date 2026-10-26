@@ -1,0 +1,18 @@
+key,value,unit,source,notes
+currency,USD,,,fictional fixture
+current_licence,420000,USD/yr,fictional contract p.4,
+current_infrastructure,90000,USD/yr,fictional cloud bill FY25,
+current_run_team,360000,USD/yr,fictional client CIO statement,3 FTE
+current_support_contract,60000,USD/yr,fictional contract p.9,
+target_licence,180000,USD/yr,fictional vendor quote Q-1182,
+target_infrastructure,70000,USD/yr,fictional sizing memo,
+target_run_team,240000,USD/yr,fictional client CIO statement,2 FTE
+target_support_contract,40000,USD/yr,fictional vendor quote Q-1182,
+unit_cost_simple,6000,USD,fictional estimate-memo v0.1,
+unit_cost_medium,14000,USD,fictional estimate-memo v0.1,
+unit_cost_complex,32000,USD,fictional estimate-memo v0.1,
+unit_cost_very_complex,60000,USD,fictional estimate-memo v0.1,
+training_one_time,25000,USD,fictional estimate-memo v0.1,
+decommission_one_time,15000,USD,fictional estimate-memo v0.1,
+decommission_month,14,months,fictional wave plan,
+horizon_years,3,years,,

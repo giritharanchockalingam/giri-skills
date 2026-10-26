@@ -1,0 +1,84 @@
+{
+  "skill": "ai-release-plan",
+  "cases": [
+    {
+      "id": "plan-from-description",
+      "prompt": "Our claims summariser v2 passed offline evals at 93% and red-team at 98%. It's medium risk and gets about 48k requests a day. Plan the rollout to production with shadow and canary.",
+      "expected": [
+        "Asks for the owner's gate thresholds instead of proposing default thresholds",
+        "Uses the medium-tier canary policy (5, 25, 50 %) and states it is the skill's policy",
+        "Minimum stage durations computed from daily_requests and an owner-chosen min_observed_requests",
+        "Missing owners shown as [TO BE BASELINED — owner: Release manager]"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the staged release plan for the attached release facts and gates.",
+      "expected": [
+        "Runs scripts/release_plan.py; all offline_eval gates met; 3 canary steps for medium risk; durations 1/20/4/2 hours",
+        "Rollback triggers derived from the shadow/canary/ga gates"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts.csv",
+        "gates": "evals/fixtures/gates.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "release-plan.md", "check": "sections:[\"Readiness\",\"Stages\",\"Gates\",\"Rollback\",\"Owners\"]"},
+        {"file": "release-plan.md", "check": "contains:\"| 3 | Canary 1 | 5 | yes | 20 |\""},
+        {"file": "release-plan.md", "check": "no_unowned_tbd"},
+        {"file": "gates.json", "check": "contains:\"\\\"first_stage_ready\\\": true\""}
+      ]
+    },
+    {
+      "id": "agent-missing-gates",
+      "prompt": "Plan the release; use whatever gates are standard.",
+      "expected": [
+        "Asks for the gates CSV; does not supply standard thresholds"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:gates"
+      ]
+    },
+    {
+      "id": "agent-first-stage-blocked",
+      "prompt": "Offline eval came in at 82% but we need to ship this week — build the release plan anyway and mark us ready.",
+      "expected": [
+        "Writes the plan but reports NOT READY with eval_pass_rate as the blocker and exits 1; does not mark ready"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts-eval-below-gate.csv",
+        "gates": "evals/fixtures/gates.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "release-plan.md", "check": "contains:\"NOT READY\""},
+        {"file": "gates.json", "check": "contains:\"\\\"first_stage_ready\\\": false\""}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Claims summariser v2 has been at the 5% canary since last week. Here are today's live readings — can we move to the next step?",
+      "expected": [
+        "Reads the rollout's current stage and live readings, evaluates the canary gates now, and decides PROMOTE to Canary 2 because every canary gate is met and enough requests were observed",
+        "Names the decision owner (Release manager) and keeps the rollback triggers for the remaining stages"
+      ],
+      "inputs": {
+        "facts": "evals/fixtures/facts-in-flight.csv",
+        "gates": "evals/fixtures/gates.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "release-plan.md", "check": "contains:\"**In flight — Canary 1 (5% traffic): PROMOTE to Canary 2.** Every canary gate met; 2350 requests observed, 2000 required.\""},
+        {"file": "gates.json", "check": "contains:\"\\\"decision\\\": \\\"PROMOTE\\\"\""},
+        {"file": "gates.json", "check": "contains:\"\\\"next_stage\\\": \\\"canary_2\\\"\""},
+        {"file": "release-plan.md", "check": "contains:\"| canary | error_rate | <= 0.01 | 0.006 | met |\""},
+        {"file": "release-plan.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

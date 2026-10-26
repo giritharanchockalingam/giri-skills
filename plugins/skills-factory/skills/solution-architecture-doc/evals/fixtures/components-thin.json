@@ -1,0 +1,5 @@
+{"system": "Order Hub",
+ "containers": [{"id": "gw", "name": "API gateway"}, {"id": "orders", "name": "Order service"}],
+ "integrations": [{"from": "gw", "to": "orders"}],
+ "nfrs": [{"category": "Availability", "requirement": "Order API available during peak"},
+          {"category": "Performance", "requirement": "Order create p95 latency", "target": ""}]}

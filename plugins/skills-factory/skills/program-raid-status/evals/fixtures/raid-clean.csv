@@ -1,0 +1,3 @@
+# fictional fixture — Northwind Billing Assistant; every item owned and in date
+id,type,description,owner,likelihood,impact,due,status,mitigation,raised
+R1,risk,Billing agents distrust AI suggestions,Change lead,3,4,2026-11-13,open,Champions network,2026-08-17

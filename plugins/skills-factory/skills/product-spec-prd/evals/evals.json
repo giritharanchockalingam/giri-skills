@@ -1,0 +1,157 @@
+{
+  "skill": "product-spec-prd",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Write a PRD for letting tenant admins export invoices to CSV.",
+      "expected": [
+        "Asks <= 5 framing questions with defaults in one round",
+        "PRD first line states outcome and the metric it moves; baseline marked to be baselined with owner if unknown",
+        ">= 3 non-goals; stories with Given/When/Then incl. permission-denied case",
+        "v1 scope small enough for one spec-to-plan plan; v1.1 and later listed",
+        "Engineering handoff section lists criteria, entities, RBAC rows, flag name, metric events",
+        "No invented customer names or numbers"
+      ]
+    },
+    {
+      "id": "redline-existing",
+      "prompt": "Here is our existing PRD for exports (pasted). Tighten it.",
+      "expected": [
+        "Keeps the storyline; applies [KEEP]/[SHARPEN]/[CUT]/[ADD]/[TBD] redlines section by section",
+        "Adds missing metrics/non-goals rather than rewriting the narrative",
+        "Flags unsourced numbers as [TBD] with owner"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Spec the new dashboard.",
+      "expected": [
+        "Asks once for the problem, persona and success metric",
+        "Does not draft a PRD on guesses"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Write the PRD for invoice export from this brief.",
+      "expected": [
+        "Runs scripts/prd.py; goals, metrics, non-goals and phases come from the brief; sharpen step fills the template without inventing figures"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "PRD.md",
+          "check": "sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]"
+        },
+        {
+          "file": "PRD.md",
+          "check": "contains:\"| v1 | CSV export of the current filter; Admin role only; Audit entry per export |\""
+        },
+        {
+          "file": "PRD.md",
+          "check": "contains:\"40% of active tenants\""
+        },
+        "exists:prd-final.md"
+      ]
+    },
+    {
+      "id": "agent-missing-brief",
+      "prompt": "Spec the export feature.",
+      "expected": [
+        "Asks for the brief (problem, users, goals, metrics)"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:brief"
+      ]
+    },
+    {
+      "id": "agent-thin-brief-not-invented",
+      "prompt": "I only have the problem statement — fill in reasonable goals, metrics and personas so it looks complete.",
+      "expected": [
+        "Users, goals, non-goals, metrics and phases are [TO BE BASELINED — owner: ___] rows; no invented numbers or personas"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "PRD.md",
+          "check": "contains:\"| G1 (primary) | [TO BE BASELINED — owner: Product owner] |\""
+        },
+        {
+          "file": "PRD.md",
+          "check": "contains:\"(no evidence supplied — assumption)\""
+        },
+        {
+          "file": "PRD.md",
+          "check": "sections:[\"Problem\",\"Goals\",\"Non-goals\",\"Metrics\",\"Phases\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Write the PRD for invoice export from this brief; no model step, I want the checked draft.",
+      "expected": [
+        "prd-final.md is the script draft, labelled as such; goals, metrics, non-goals and phases come from the brief"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief.json",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"Script draft — the model sharpen step was not run\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"40% of active tenants\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our existing PRD for exports (v0.3). Tighten it against the brief — keep our storyline.",
+      "expected": [
+        "Problem and Users kept; Goals, Non-goals, Metrics, Open questions sharpened with reasons; Phases, Exec summary and Engineering handoff added from the brief; Stories and Risks added as owned TBD; the unsourced 35% marked [TBD]"
+      ],
+      "inputs": {
+        "brief": "evals/fixtures/brief.json",
+        "existing": "evals/fixtures/prd-existing.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "PRD-redline.md",
+          "check": "contains:\"| Goals | [SHARPEN] | no goal names a measurable target |\""
+        },
+        {
+          "file": "PRD-redline.md",
+          "check": "contains:\"figure 35% is not in the brief\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"Admins spend hours every month-end copying invoices into spreadsheets.\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "contains:\"> [ADD] missing — added from the brief\""
+        },
+        {
+          "file": "prd-final.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    }
+  ]
+}

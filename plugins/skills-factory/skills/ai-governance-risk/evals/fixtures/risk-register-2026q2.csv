@@ -1,0 +1,11 @@
+# fictional fixture — last quarter's (2026-Q2) reviewed risk register for the invented Benefits enquiry assistant; tests only
+risk_id,category,description,likelihood,impact,rating,control_id,control,owner,basis
+R-101,bias,Answers differ in quality across employee groups,2,3,Low,C08,,Head of HR Analytics (fictional),reviewed 2026-06-20 by AI risk lead (fictional)
+R-102,privacy,Employee records exposed in prompts,4,3,Medium,C01; C02,,Data Protection Officer (fictional),reviewed 2026-06-20
+R-103,hallucination,Wrong policy clause quoted,3,3,Medium,C05,,HR Ops Lead,reviewed 2026-06-20
+R-104,ip,Policy library content reused outside HR,TBD,TBD,TBD,,,TBD,not scored
+R-105,security,Prompt injection via employee email text,2,3,Low,C12; C99,,Security Architect (fictional),C99 was a legacy WAF rule
+R-106,misuse,Used for payroll disputes it was not designed for,TBD,TBD,TBD,,,TBD,not scored
+R-107,operational,Vendor model change alters answers,2,3,Low,,,Platform Lead (fictional),reviewed 2026-06-20
+R-108,transparency,Employees unaware drafts are AI-generated,3,3,Medium,,,HR Ops Lead,reviewed 2026-06-20
+R-109,reputational,Press coverage of a wrong answer,2,2,Low,,,Comms lead (fictional),category retired in the 2026 taxonomy

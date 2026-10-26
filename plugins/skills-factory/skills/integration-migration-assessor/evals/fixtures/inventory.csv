@@ -1,0 +1,9 @@
+interface_id,name,source_system,target_system,owner,pattern,transformation,target_connector,endpoint_count,volume_class,error_handling,security,test_coverage,documentation,criticality,calls_90d,endpoint_status,freeze_tag,depends_on,notes
+INT-001,Order sync,ERP,CRM,Team A,sync,mapping,native,2,medium,default,basic,automated,current,medium,120000,active,,,fictional
+INT-002,Invoice feed,ERP,Finance DW,Team A,batch,moderate,partial,3,high,custom,oauth-pii,manual,partial,high,9000,active,,INT-001,fictional
+INT-003,Customer events,CRM,Event bus,Team B,async,mapping,native,1,low,default,basic,automated,current,low,300,active,,,fictional
+INT-004,Payroll export,HRIS,Payroll vendor,Team C,batch,heavy,none,6,medium,compensation,regulated,none,none,high,60,active,,,fictional
+INT-005,Legacy stock lookup,Mainframe,Web shop,Team B,sync,heavy,none,5,high,custom,basic,none,partial,high,0,decommissioning,,,fictional retirement candidate
+INT-006,Shipment status,TMS,CRM,Team B,sync,none,native,1,low,default,basic,automated,current,low,4000,active,,,fictional
+INT-007,Product catalog,PIM,Web shop,Team A,async,moderate,partial,4,medium,custom,basic,manual,current,medium,15000,active,erp-go-live,INT-006,fictional
+INT-008,Returns orchestration,Web shop,ERP,Team C,orchestration,heavy,partial,7,medium,compensation,oauth-pii,manual,partial,high,2000,active,,INT-001;INT-003,fictional

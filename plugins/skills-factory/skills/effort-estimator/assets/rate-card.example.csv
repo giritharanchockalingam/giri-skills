@@ -1,0 +1,7 @@
+role,grade,location,cost_rate,bill_rate,currency,valid_until,notes
+Engagement Manager,EXAMPLE,onshore,0,0,USD,2099-12-31,EXAMPLE placeholder — replace with real rates; never ship this file
+Integration Architect,EXAMPLE,onshore,0,0,USD,2099-12-31,EXAMPLE placeholder
+Integration Engineer,EXAMPLE,offshore,0,0,USD,2099-12-31,EXAMPLE placeholder
+Test Lead,EXAMPLE,offshore,0,0,USD,2099-12-31,EXAMPLE placeholder
+Test Engineer,EXAMPLE,offshore,0,0,USD,2099-12-31,EXAMPLE placeholder
+DevOps Engineer,EXAMPLE,offshore,0,0,USD,2099-12-31,EXAMPLE placeholder

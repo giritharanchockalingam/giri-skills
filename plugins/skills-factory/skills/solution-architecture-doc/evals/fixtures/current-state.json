@@ -1,0 +1,25 @@
+{
+  "_note": "fictional fixture — the current Order management estate for the solution-architecture-doc evals; invented",
+  "system": "Order management (current)",
+  "actors": ["Store associate"],
+  "containers": [
+    {"id": "gw", "name": "API gateway", "tech": "MuleSoft CloudHub", "responsibility": "Routing"},
+    {"id": "orders", "name": "Order service", "tech": "Java 21 / Spring Boot", "responsibility": "Order capture"},
+    {"id": "legacy_oms", "name": "Legacy OMS", "tech": "Oracle Forms", "responsibility": "Fulfilment and inventory promise"},
+    {"id": "db", "name": "Order store", "tech": "Oracle 12c", "responsibility": "Orders"}
+  ],
+  "external_systems": [
+    {"id": "erp", "name": "ERP (SAP S/4)"},
+    {"id": "wms", "name": "Warehouse management"},
+    {"id": "pos", "name": "Store POS"},
+    {"id": "fax", "name": "Supplier fax gateway"}
+  ],
+  "integrations": [
+    {"from": "gw", "to": "orders", "pattern": "sync REST", "protocol": "HTTPS/JSON", "data": "order create/read", "wave": 1},
+    {"from": "orders", "to": "db", "pattern": "sync SQL", "protocol": "TLS", "data": "order state", "wave": 1},
+    {"from": "legacy_oms", "to": "wms", "pattern": "batch file", "protocol": "SFTP hourly", "data": "pick lists", "wave": 1},
+    {"from": "erp", "to": "orders", "pattern": "sync SOAP", "protocol": "HTTPS/XML", "data": "inventory positions", "wave": 1},
+    {"from": "legacy_oms", "to": "fax", "pattern": "batch file", "protocol": "SMTP-to-fax", "data": "supplier orders", "wave": 1},
+    {"from": "pos", "to": "gw", "pattern": "sync REST", "protocol": "HTTPS/JSON", "data": "pickup confirmation", "wave": 1}
+  ]
+}

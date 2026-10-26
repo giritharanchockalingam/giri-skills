@@ -1,0 +1,16 @@
+{
+  "q1_steps_enumerable": "no",
+  "q2_model_chooses_tools": "yes",
+  "q3_single_agent_fits": "no",
+  "q4_blocker": "adversarial_review",
+  "q5_rubric_exists": "yes",
+  "q6_irreversible_actions": "yes",
+  "evidence": {
+    "q1_steps_enumerable": "fictional fixture (invented agent in production): dispute paths depend on contract terms and payment history, per a review of 60 production traces",
+    "q2_model_chooses_tools": "chooses between lookup_invoice, read_contract_clause and payment_history per dispute",
+    "q3_single_agent_fits": "v1.0 single agent released credit notes that failed the finance rubric in 7 of 200 sampled runs (fictional)",
+    "q4_blocker": "every credit-note proposal must be checked against the finance rubric before a human sees it",
+    "q5_rubric_exists": "finance rubric FR-3: amount within contract tolerance, clause cited, customer tier respected (fictional)",
+    "q6_irreversible_actions": "issue_credit_note posts to the ledger"
+  }
+}

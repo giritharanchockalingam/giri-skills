@@ -1,0 +1,21 @@
+input,symbol,value,unit,source,as_of_date,notes
+documents,D,,count,,,
+avg_tokens_per_doc,T_doc,,tokens,,,
+chunks_per_doc,C_doc,,count,,,derived from chunking strategy
+embedding_price,P_emb,,USD per 1M tokens,,,vendor price list or internal allocation
+reindex_per_year,R,,count,,,
+incremental_update_rate,U,,fraction per month,,,
+vector_storage_price,P_store,,USD per GB-month,,,
+embedding_dim,dim,,count,,,
+bytes_per_dim,b,,bytes,,,4=float32 2=float16
+index_overhead_factor,,,multiplier,,,assumption
+queries_per_day,Q,,count,,,
+query_tokens,T_q,,tokens,,,
+rerank_price,P_rr,,USD per 1k pairs,,,
+rerank_pool,N,,count,,,
+gen_input_tokens,T_in,,tokens,,,prompt + context
+gen_output_tokens,T_out,,tokens,,,
+gen_input_price,P_in,,USD per 1M tokens,,,
+gen_output_price,P_out,,USD per 1M tokens,,,
+infra_fixed,P_infra,,USD per month,,,
+ops_people,P_ops,,USD per month,,,labeled assumption
