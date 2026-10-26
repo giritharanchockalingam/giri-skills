@@ -1,9 +1,9 @@
 {
-  "description": "Before a Skills Factory skill loads: check its files against the approved hash (block if they were changed) and report the use.",
+  "description": "Before a Skills Factory skill loads or its scripts run: check its files against the approved hash (block if they were changed) and report the use.",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Skill",
+        "matcher": "Skill|Bash",
         "hooks": [
           { "type": "command", "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/governed_skill.py\"", "timeout": 10 }
         ]
