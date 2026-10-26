@@ -1223,6 +1223,22 @@ class Run:
                 raise StepError(f"builder openai-compat: {e}") from None
         return self._llm
 
+    def honesty_row(self) -> str:
+        """What this run did NOT prove, stated where nobody can miss it (found: a dry run with --approve-all read as
+        "7 stages passed" though no person approved anything, no PR was opened and no CI ran)."""
+        notes = []
+        if self.args.dry:
+            notes.append("DRY RUN on a copy: no pull request, no CI, nothing deployed")
+        if self.args.approve_all:
+            notes.append("every approval AUTO-APPROVED (--approve-all): no person reviewed the requirements or the plan")
+        repairs = sum(len(st.get("repairs") or []) for s in self.record.get("stages", []) for st in s.get("steps", []))
+        if repairs:
+            notes.append(f"the builder needed {repairs} repair turn(s) after failing tests")
+        model = self.args.model or ("Claude Code's default model" if self.args.builder == "claude-code" else None)
+        if model:
+            notes.append(f"builder model: {model}")
+        return ("**What this run does not prove:** " + "; ".join(notes) + ".") if notes else ""
+
     def builder_label(self) -> str:
         """`openai-compat (<model> @ <host>)` for the evidence header; the builder name otherwise."""
         if self.args.builder != "openai-compat":
@@ -1597,7 +1613,8 @@ class Run:
         # No shell: a non-interactive run cannot approve one, and a model that reaches for a helper script then stops to
         # ask (seen live at plan-refine: "the shell keeps asking for approval … tell me whether to approve"). The file
         # tools are allowed outright and the run is told so; the executor itself runs installs and tests.
-        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
+        model = ["--model", self.args.model] if getattr(self.args, "model", None) else []
+        return [exe, *model, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
                 "--allowedTools", "Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "LS",
                 "--disallowedTools", "Bash",
                 "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "text"]
@@ -2127,7 +2144,9 @@ class Run:
             ok = all(v == "pass" for v in verdicts) if kind == "all" else any(v == "pass" for v in verdicts)
             return ("pass" if ok else "fail"), " | ".join(f"[{v}] {d}" for v, d in results)
         if kind == "external":
-            return "recorded", f"satisfied outside the run: {gate.get('what', '')}"
+            if self.args.dry:   # nothing outside the run happened: never report a dry run's deploy as satisfied
+                return "not_run", f"dry run: no pull request was opened and CI never ran ({gate.get('what', '')} was not checked)"
+            return "recorded", f"to be confirmed outside the run: {gate.get('what', '')}"
         return "fail", f"unknown gate kind {kind!r}"
 
     # ---- evidence
@@ -2139,11 +2158,16 @@ class Run:
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
                 self.baseline_row(), "",
                 self.tests_row(), "",
+                self.honesty_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
         for s in self.record.get("stages", []):
             g = s.get("gate") or {}
             ev = ", ".join(f"[{Path(p).name}]({p})" for p in s.get("evidence_files") or []) or "—"
-            verdict = {"pass": "PASS", "fail": "FAIL", "recorded": "RECORDED"}.get(g.get("verdict", ""), s.get("status", "").upper())
+            verdict = {"pass": "PASS", "fail": "FAIL", "recorded": "RECORDED (not verified)", "not_run": "NOT RUN"}.get(
+                g.get("verdict", ""), s.get("status", "").upper())
+            auto = [st["id"] for st in s.get("steps", []) if st.get("kind") == "approval" and st.get("approved_by") == "--approve-all"]
+            if auto and verdict == "PASS":
+                verdict = "PASS (approval AUTO-APPROVED, no person reviewed)"
             rows.append(f"| {s['id']} | {s['role']} | {g.get('kind', '')} | {verdict} | {ev} |")
         rows += ["", "Gate detail per stage is in `<stage>/gate.json`; step logs in `<stage>/<step>/`.", ""]
         rows += self.provenance_rows()
@@ -2461,7 +2485,7 @@ class Run:
         srec["gate"] = {"verdict": verdict, "kind": stage["gate"]["kind"], "detail": detail, "role": stage.get("role"),
                         "approved_by": approved, "at": now()}
         write_json(stage_dir / "gate.json", srec["gate"])
-        srec["status"] = "passed" if verdict in ("pass", "recorded") else "failed"
+        srec["status"] = "passed" if verdict in ("pass", "recorded", "not_run") else "failed"
         srec["duration_s"] = round(time.time() - t_stage, 3)
         self._finish_stage(srec, stage)
         return srec["status"], (EXIT_OK if srec["status"] == "passed" else EXIT_FAIL)
@@ -3301,7 +3325,11 @@ def main(argv=None) -> int:
                 return EXIT_FAIL
         print(f"  stage {stage['id']}: {status} — {run.record['stages'][-1]['gate']['detail'][:120]}")
     run.save("passed", EXIT_OK)
-    print(f"{spec['name']} run {run.run_id}: {len(spec['stages'])} stages passed — evidence in {run.evidence / 'EVIDENCE.md'}")
+    verdicts = [(st.get("gate") or {}).get("verdict") for st in run.record.get("stages", [])]
+    passed, not_run = sum(v == "pass" for v in verdicts), sum(v == "not_run" for v in verdicts)
+    auto = sum(1 for st in run.record.get("stages", []) for x in st.get("steps", []) if x.get("approved_by") == "--approve-all")
+    extra = (f", {not_run} not run (dry)" if not_run else "") + (f", {auto} approval(s) auto-approved" if auto else "")
+    print(f"{spec['name']} run {run.run_id}: {passed} of {len(spec['stages'])} stages passed{extra} — evidence in {run.evidence / 'EVIDENCE.md'}")
     return EXIT_OK
 
 

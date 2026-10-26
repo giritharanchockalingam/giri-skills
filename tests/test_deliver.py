@@ -231,7 +231,8 @@ def test_evidence_md_has_one_row_per_stage(happy):
     rows = [ln for ln in md.splitlines() if ln.startswith("| ") and not ln.startswith("| Stage")]
     assert [r.split("|")[1].strip() for r in rows] == STAGES
     assert "| Stage | Role | Gate | Verdict | Evidence |" in md
-    assert md.count("PASS") >= 5 and "RECORDED" in md     # deploy gate is external: recorded, not judged
+    assert md.count("PASS") >= 5 and "NOT RUN" in md      # dry: no PR opened, CI never ran; never shown as passed
+    assert "AUTO-APPROVED" in md and "DRY RUN" in md      # the header says who did (not) review and that nothing shipped
     assert str(out) not in md                              # relative links only: the bundle travels
 
 
@@ -242,7 +243,7 @@ def test_evidence_bundle_layout_and_hashes(happy):
     for n, sid in enumerate(STAGES, 1):
         gate = json.loads((ev / f"{n:02d}-{sid}" / "gate.json").read_text())
         assert set(gate) == {"verdict", "kind", "detail", "role", "approved_by", "at"}
-        assert gate["verdict"] in ("pass", "recorded")
+        assert gate["verdict"] in ("pass", "recorded", "not_run")
     assert (ev / "02-architecture" / "plan-approval" / "approval.json").is_file()
     assert (ev / "03-build" / "code" / "diff.patch").read_text() == PATCH.read_text()
     assert json.loads((ev / "05-deploy" / "pr" / "pr.json").read_text())["dry"] is True
@@ -633,7 +634,7 @@ def test_portal_receives_the_profile_then_one_record_per_stage(tmp_path, monkeyp
         assert len(e["sha256"]) == 64 and e["bytes"] > 0
         assert e["sha256"] == run_json(out)["files"]["evidence/" + e["path"]]
     deploy = portal.posts[5]
-    assert deploy["gate"]["verdict"] == "pass" and "pr" not in deploy       # dry: no PR to report
+    assert deploy["gate"]["verdict"] == "pending" and "pr" not in deploy    # dry: CI never ran, so the portal never sees "pass"
     for p in portal.posts:
         assert p["started_at"].endswith("Z") and p.get("finished_at", "Z").endswith("Z")
     log = (out / "callback.log").read_text()
@@ -1955,7 +1956,7 @@ def test_provenance_json_records_every_skill_with_version_and_sha_and_the_approv
     assert prov["approvals"] == [{"stage": "architecture", "step": "plan-approval", "by": "--approve-all", "note": "approved on the command line",
                                   "at": prov["approvals"][0]["at"], "source": "cli"}] and prov["approvals"][0]["at"]
     assert prov["rejections"] == []
-    assert [(g["stage"], g["verdict"]) for g in prov["gates"]] == [(s, "pass") for s in STAGES[:4]] + [("deploy", "recorded"), ("operate", "pass")]
+    assert [(g["stage"], g["verdict"]) for g in prov["gates"]] == [(s, "pass") for s in STAGES[:4]] + [("deploy", "not_run"), ("operate", "pass")]
     assert all(g["at"] and g["kind"] for g in prov["gates"])
     assert "evidence/provenance.json" in rj["files"]
     md = (out / "evidence" / "EVIDENCE.md").read_text()
