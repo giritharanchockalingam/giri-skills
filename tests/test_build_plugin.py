@@ -180,3 +180,20 @@ def test_hook_governs_scripts_run_straight_from_the_plugin_folder(plugin, tmp_pa
     assert blocked.returncode == 2 and "will not run" in blocked.stderr
     unknown = hook(plugin, "", tool="Bash", command=f"bash {plugin}/skills/not-approved/x.sh")
     assert unknown.returncode == 2 and "approved list" in unknown.stderr
+
+
+def test_hook_governs_a_typed_slash_command(plugin, tmp_path):
+    """Seen live: /skills-factory:code-review-runner typed by the person expands with no tool call, so PreToolUse never fires."""
+    build(plugin, [export("build/code-review-runner", "code-review-runner")], tmp_path)
+    def expand(name):
+        ev = {"session_id": "s-slash", "hook_event_name": "UserPromptExpansion", "expansion_type": "slash_command",
+              "command_name": name, "command_source": "plugin", "prompt": f"/{name} review"}
+        return subprocess.run([sys.executable, "-I", str(plugin / "hooks" / "governed_skill.py")], input=json.dumps(ev),
+                              capture_output=True, text=True, env={"CLAUDE_PLUGIN_ROOT": str(plugin), "PATH": "/usr/bin:/bin", "CLAUDE_PLUGIN_DATA": str(tmp_path / "d")})
+    ok = expand("skills-factory:code-review-runner")
+    assert ok.returncode == 0 and "no API key" in ok.stdout
+    assert expand("other:thing").returncode == 0 and expand("other:thing").stdout == ""
+    (plugin / "skills" / "code-review-runner" / "SKILL.md").write_text("tampered", encoding="utf-8")
+    assert expand("skills-factory:code-review-runner").returncode == 2
+    hooks = json.loads((PLUGIN_SRC / "hooks" / "hooks.json").read_text())["hooks"]
+    assert set(hooks) == {"PreToolUse", "UserPromptExpansion"} and hooks["PreToolUse"][0]["matcher"] == "Skill|Bash"

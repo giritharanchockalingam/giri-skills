@@ -34,6 +34,17 @@ jobs:
         env:
           SF_API_KEY: ${{ secrets.SF_API_KEY }}
         run: python3 scripts/build_plugin.py
+      - name: Prove the plugin can report uses (key, route and database function), writing nothing
+        env:
+          SF_API_KEY: ${{ secrets.SF_API_KEY }}
+        run: |
+          slug=$(python3 -c "import json;print(sorted(json.load(open('plugins/skills-factory/governed.lock.json'))['skills'])[0])")
+          code=$(curl -sS -o /tmp/uses.json -w '%{http_code}' -X POST https://giri-skills-studio.vercel.app/api/v1/uses \
+            -H "Authorization: Bearer $SF_API_KEY" -H 'Content-Type: application/json' \
+            -d "{\"slug\":\"$slug\",\"version\":999999,\"event\":\"loaded\",\"integrity\":\"verified\"}")
+          echo "POST /api/v1/uses (version 999999 of $slug) -> HTTP $code: $(cat /tmp/uses.json)"
+          # 404 "unknown version" means the key resolved, the route is deployed and sf_record_use ran; anything else is a break
+          [ "$code" = "404" ] && grep -q "unknown version" /tmp/uses.json
       - name: Open a pull request when the plugin changed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
