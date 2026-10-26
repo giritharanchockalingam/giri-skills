@@ -44,15 +44,21 @@ def plugin(tmp_path):
     return root
 
 
+def bumped() -> str:
+    """The repo plugin's version with the patch number raised by one (what a build that changed something writes)."""
+    major, minor, patch = json.loads((PLUGIN_SRC / ".claude-plugin" / "plugin.json").read_text())["version"].split(".")
+    return f"{major}.{minor}.{int(patch) + 1}"
+
+
 def build(plugin: Path, snaps: list, tmp_path: Path, *extra: str):
     src = tmp_path / "snapshots.json"
     src.write_text(json.dumps({"snapshots": snaps}), encoding="utf-8")
     return subprocess.run([sys.executable, "-I", str(BUILD), "--from-json", str(src), "--plugin", str(plugin), *extra], capture_output=True, text=True)
 
 
-def hook(plugin: Path, skill: str, tool: str = "Skill"):
-    event = {"session_id": "s-1", "hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {"skill": skill}}
-    env = {"CLAUDE_PLUGIN_ROOT": str(plugin), "PATH": "/usr/bin:/bin"}   # no API key: the decision never needs the network
+def hook(plugin: Path, skill: str, tool: str = "Skill", session: str = "s-1", **env_extra: str):
+    event = {"session_id": session, "hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {"skill": skill}}
+    env = {"CLAUDE_PLUGIN_ROOT": str(plugin), "PATH": "/usr/bin:/bin", **env_extra}   # no API key unless given: the decision never needs the network
     return subprocess.run([sys.executable, "-I", str(plugin / "hooks" / "governed_skill.py")], input=json.dumps(event), capture_output=True, text=True, env=env)
 
 
@@ -68,7 +74,7 @@ def test_build_packages_frozen_files_with_paths_resolving_inside_the_plugin(plug
     e = lock["skills"]["code-review-runner"]
     assert e["version"] == 3 and e["factory_sha256"] != e["installed_sha256"]          # one documented rewrite
     assert set(lock["references"]) == {"shared", "vendor/code-review"}
-    assert json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["version"] == "1.0.1"
+    assert json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["version"] == bumped()
 
 
 def test_rebuild_is_idempotent_and_check_detects_drift(plugin, tmp_path):
@@ -76,7 +82,7 @@ def test_rebuild_is_idempotent_and_check_detects_drift(plugin, tmp_path):
     assert build(plugin, snaps, tmp_path).returncode == 0
     again = build(plugin, snaps, tmp_path)
     assert again.returncode == 0 and "current" in again.stdout
-    assert json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["version"] == "1.0.1", "no bump without a change"
+    assert json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())["version"] == bumped(), "no bump without a change"
     snaps.append(export("build/safe-fix", "safe-fix", version=1))
     stale = build(plugin, snaps, tmp_path, "--check")
     assert stale.returncode == 1 and "stale" in stale.stderr
@@ -135,3 +141,21 @@ def test_repo_marketplace_points_at_the_governed_plugin():
         src = REPO / p["source"]
         assert p["source"].startswith("./") and (src / ".claude-plugin" / "plugin.json").is_file(), p["source"]
     assert [p["name"] for p in m["plugins"]] == ["skills-factory"]
+
+
+def test_hook_says_why_a_use_was_not_reported_without_changing_the_decision(plugin, tmp_path):
+    build(plugin, [export("build/code-review-runner", "code-review-runner")], tmp_path)
+    data = tmp_path / "plugin-data"
+    first = hook(plugin, "skills-factory:code-review-runner", CLAUDE_PLUGIN_DATA=str(data))
+    assert first.returncode == 0 and "no API key is set" in json.loads(first.stdout)["systemMessage"]
+    again = hook(plugin, "skills-factory:code-review-runner", CLAUDE_PLUGIN_DATA=str(data))
+    assert again.returncode == 0 and again.stdout == "", "the missing key is mentioned once per session"
+    other = hook(plugin, "skills-factory:code-review-runner", session="s-2", CLAUDE_PLUGIN_DATA=str(data))
+    assert "no API key" in other.stdout, "a new session is told again"
+    down = hook(plugin, "skills-factory:code-review-runner", CLAUDE_PLUGIN_OPTION_API_KEY="sf_live_" + "x" * 32,
+                CLAUDE_PLUGIN_OPTION_FACTORY_URL="https://127.0.0.1:9")
+    assert down.returncode == 0 and "reporting the use failed" in json.loads(down.stdout)["systemMessage"]
+    assert "sf_live_" not in down.stdout, "the key is never echoed"
+    http = hook(plugin, "skills-factory:code-review-runner", CLAUDE_PLUGIN_OPTION_API_KEY="sf_live_" + "x" * 32,
+                CLAUDE_PLUGIN_OPTION_FACTORY_URL="http://insecure.example")
+    assert "must start with https://" in json.loads(http.stdout)["systemMessage"]

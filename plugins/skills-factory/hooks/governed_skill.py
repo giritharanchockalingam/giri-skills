@@ -6,8 +6,9 @@ Before Claude Code loads one of this plugin's skills:
      factory published for the approved version;
   2. changed → block the load (exit 2: Claude Code shows the reason to Claude and the person) — a skill edited after
      approval is no longer the approved skill; not in the lock at all → block too (fail closed); intact → allow;
-  3. report the load to the factory (POST /api/v1/uses) when an API key is configured: best effort, 3-second limit,
-     never changes the decision. The session id is sent hashed, never raw.
+  3. report the load to the factory (POST /api/v1/uses): best effort, 3-second limit, never changes the decision. The
+     session id is sent hashed, never raw. When the use is not reported (no API key — said once per session — or the
+     factory refused or was unreachable) the person is told why, so a missing record is never silent.
 
 Skills from other plugins or the person's own ~/.claude/skills are not this hook's business: exit 0, no output.
 """
@@ -17,6 +18,7 @@ import hashlib
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -58,13 +60,14 @@ def decide(root: Path, slug: str) -> tuple[str, dict | None]:
     return ("verified" if files_sha(d) == entry.get("installed_sha256") else "modified"), entry
 
 
-def report(slug: str, entry: dict, event: str, integrity: str, session: str) -> None:
+def report(slug: str, entry: dict, event: str, integrity: str, session: str) -> str:
+    """'reported', 'no_key', or 'failed: <reason>'. Never raises: the decision never depends on the network."""
     key = os.environ.get("CLAUDE_PLUGIN_OPTION_API_KEY", "").strip()
     if not key.startswith("sf_live_"):
-        return
+        return "no_key"
     url = (os.environ.get("CLAUDE_PLUGIN_OPTION_FACTORY_URL", "").strip() or "https://giri-skills-studio.vercel.app").rstrip("/")
     if not url.startswith("https://"):
-        return
+        return "failed: the factory URL must start with https://"
     body = {"slug": slug, "version": entry.get("version"), "sha256": entry.get("factory_sha256"), "event": event, "integrity": integrity}
     if session:
         body["session"] = hashlib.sha256(session.encode("utf-8")).hexdigest()[:32]
@@ -72,8 +75,34 @@ def report(slug: str, entry: dict, event: str, integrity: str, session: str) -> 
                                  headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "skills-factory-plugin"})
     try:
         urllib.request.urlopen(req, timeout=3).close()
-    except Exception:  # reporting is best effort: an offline laptop still gets the integrity check
-        pass
+        return "reported"
+    except urllib.error.HTTPError as e:
+        try:
+            msg = json.loads(e.read().decode("utf-8", "replace")).get("error", {}).get("message", "")
+        except Exception:
+            msg = ""
+        return f"failed: HTTP {e.code}{' ' + msg[:160] if msg else ''}"
+    except Exception as e:   # offline, DNS, timeout: the integrity check still applied
+        return f"failed: {type(e).__name__}"
+
+
+def notice(status: str, session: str) -> str | None:
+    """What to tell the person about reporting: a missing key once per session, every failure."""
+    if status == "reported":
+        return None
+    if status == "no_key":
+        data = os.environ.get("CLAUDE_PLUGIN_DATA", "")
+        if data and session:
+            flag = Path(data) / "told" / hashlib.sha256(session.encode("utf-8")).hexdigest()[:16]
+            if flag.exists():
+                return None
+            try:
+                flag.parent.mkdir(parents=True, exist_ok=True); flag.touch()
+            except OSError:
+                pass
+        return ("Skills Factory: skill checked against its approved version, but this use was not reported because no "
+                "API key is set. Run /plugin configure skills-factory@giri-skills and add your sf_live_ key.")
+    return f"Skills Factory: skill checked against its approved version, but reporting the use {status}."
 
 
 def main() -> int:
@@ -99,7 +128,10 @@ def main() -> int:
         print(f"Skills Factory: '{slug}' is not in this plugin's approved list (governed.lock.json), so it will not "
               f"load. Reinstall the plugin (/plugin → skills-factory → update).", file=sys.stderr)
         return 2
-    report(slug, entry, "loaded", integrity, str(event.get("session_id", "")))
+    session = str(event.get("session_id", ""))
+    msg = notice(report(slug, entry, "loaded", integrity, session), session)
+    if msg:
+        print(json.dumps({"systemMessage": msg}))   # shown to the person; the skill still loads
     return 0
 
 
