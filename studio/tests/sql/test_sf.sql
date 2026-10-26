@@ -216,6 +216,28 @@ select test_assert(sf_api_skill(repeat('1', 64), 'nope') is null, 'unknown slug 
 select test_expect_error($$select sf_api_skills(repeat('2', 64))$$, 'invalid api key');
 select (sf_record_run(repeat('1', 64), 'invoice-check', '[]'::jsonb, 'api-idem-1')->>'run_id') as apirun \gset
 select test_assert((sf_record_run(repeat('1', 64), 'invoice-check', '[]'::jsonb, 'api-idem-1')->>'existing')::boolean, 'api idempotency');
+-- 0026: governed Claude Code plugin — frozen files for the published version, and skill uses
+reset role;
+insert into sf_api_keys (workspace_id, name, key_hash, prefix, created_by) values (:'ws', 'plugin', repeat('6', 64), 'sf_live_plg1', '00000000-0000-0000-0000-000000000001');
+select latest_version_id as inv_v from sf_skills where slug = 'invoice-check' \gset
+select test_assert(sf_api_skill_snapshot(repeat('6', 64), 'invoice-check') is null, 'snapshot: none until the version is frozen');
+insert into sf_version_snapshots (version_id, workspace_id, repo_skill, content_sha, sha256, files, bytes)
+  values (:'inv_v', :'ws', 'build/invoice-check', repeat('c', 64), repeat('d', 64), '[{"path":"SKILL.md","content":"x"}]'::jsonb, 9);
+select test_assert((sf_api_skill_snapshot(repeat('6', 64), 'invoice-check')->>'sha256') = repeat('d', 64)
+                   and (sf_api_skill_snapshot(repeat('6', 64), 'invoice-check')->>'version')::int = 3, 'snapshot: published version frozen files');
+select test_assert(sf_api_skill_snapshot(repeat('6', 64), 'nope') is null, 'snapshot: unknown slug -> null');
+select test_expect_error($$select sf_api_skill_snapshot(repeat('9', 64), 'invoice-check')$$, 'invalid api key');
+select test_assert((sf_record_use(repeat('6', 64), 'invoice-check', 3, repeat('d', 64), 'loaded', 'verified', 'sess-1')->>'currency') = 'current', 'use: published version is current');
+select coalesce(min(version)::text, '') as old_ver from sf_skill_versions where skill_id = (select id from sf_skills where slug = 'invoice-check') and status not in ('draft', 'published') \gset
+select test_assert(:'old_ver' = '' or (sf_record_use(repeat('6', 64), 'invoice-check', nullif(:'old_ver', '')::int, null, 'blocked', 'modified', null)->>'currency') = 'stale', 'use: an older released version is stale');
+select test_expect_error($$select sf_record_use(repeat('6', 64), 'invoice-check', 999, null, 'loaded', 'verified', null)$$, 'unknown version');
+select test_expect_error($$select sf_record_use(repeat('6', 64), 'nope', 1, null, 'loaded', 'verified', null)$$, 'unknown skill');
+select test_expect_error($$select sf_record_use(repeat('6', 64), 'invoice-check', 3, null, 'ran', 'verified', null)$$, 'check');
+select test_expect_error($$select sf_record_use(repeat('9', 64), 'invoice-check', 3, null, 'loaded', 'verified', null)$$, 'invalid api key');
+select test_as('00000000-0000-0000-0000-000000000005');
+select test_assert((select count(*) from sf_skill_uses) = 0, 'outsider sees no skill uses');
+reset role;
+select test_as_anon();
 select sf_api_run_update(repeat('1', 64), :'apirun', '{"status":"succeeded","provider":"none","duration_ms":12}');
 select test_assert((sf_api_run_get(repeat('1', 64), :'apirun')->>'status') = 'succeeded', 'api run readback');
 select test_expect_error($$select count(*) from sf_skills$$, 'permission denied');  -- anon has no table grants at all
