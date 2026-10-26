@@ -38,7 +38,7 @@ Update after a plugin PR merges: `/plugin` → skills-factory → update.
 
 1. Apply migration `studio/supabase/migrations/0026_sf_skill_uses.sql` (table `sf_skill_uses`, RPCs
    `sf_api_skill_snapshot` and `sf_record_use`).
-2. Repository secret `SF_API_KEY`: a factory API key of the publishing workspace. The delivery workflow already uses this secret.
+2. Repository secret `SF_API_KEY`: a factory API key of the publishing workspace. Set it with `read -rs K && printf %s "$K" | gh secret set SF_API_KEY --repo giritharanchockalingam/giri-skills`.
 3. Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
 4. Run the workflow once:
 
