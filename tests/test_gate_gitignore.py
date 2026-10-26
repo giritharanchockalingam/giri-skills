@@ -45,7 +45,7 @@ def findings(tool: str, repo: Path, tmp: Path) -> list[dict]:
     script, flag = SCANNERS[tool]
     out = tmp / f"{tool}.csv"
     subprocess.run([sys.executable, "-I", str(REPO / script), *flag, str(repo), "--findings", str(out)],
-                   capture_output=True, text=True)
+                   capture_output=True, text=True, cwd=tmp)   # a scanner's default report lands in tmp, not the repo
     with open(out, encoding="utf-8", newline="") as fh:
         return list(csv.DictReader(fh))
 
