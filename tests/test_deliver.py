@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -1679,7 +1680,9 @@ def test_code_step_installs_once_and_executes_the_tests_on_the_real_checkout(tmp
     assert npm_calls(npm_log) == ["ci", "test"]                                             # once each, in the checkout
     code = code_step(out)
     assert code["install"] == {"cmd": "npm ci", "exit": 0, "duration_s": code["install"]["duration_s"], "log": "install.log",
+                               "manifest_sha": code["install"]["manifest_sha"],              # a later manifest change reinstalls
                                "excluded_from_git": ["node_modules", ".venv"]}             # the fixture has no .gitignore
+    assert re.fullmatch(r"[0-9a-f]{64}", code["install"]["manifest_sha"])
     assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed", "log": "tests.log"}
     sdir = out / "evidence" / "03-build" / "code"
     assert "added 3 packages" in (sdir / "install.log").read_text() and "Tests  3 passed" in (sdir / "tests.log").read_text()
