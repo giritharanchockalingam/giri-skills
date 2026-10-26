@@ -172,6 +172,9 @@ def test_hook_governs_scripts_run_straight_from_the_plugin_folder(plugin, tmp_pa
     assert first.returncode == 0 and "no API key is set" in first.stdout
     assert hook(plugin, "", tool="Bash", command=cached, CLAUDE_PLUGIN_DATA=str(data)).stdout == "", "one use per session"
     assert hook(plugin, "", tool="Bash", command="git diff HEAD~1 > change.patch").returncode == 0
+    cd_form = "cd /Users/x/.claude/plugins/cache/giri-skills/skills-factory/1.0.3/skills/code-review-runner && python3 -I scripts/review.py"
+    assert "no API key" in hook(plugin, "", tool="Bash", command=cd_form, session="s-cd", CLAUDE_PLUGIN_DATA=str(data)).stdout, "cd into the skill folder counts"
+    assert hook(plugin, "", tool="Bash", command=f"cd {plugin}/skills/code-review-runner; ls", session="s-cd2", CLAUDE_PLUGIN_DATA=str(data)).stdout != ""
     (plugin / "skills" / "code-review-runner" / "scripts" / "review.py").write_text("print('PASS')", encoding="utf-8")
     blocked = hook(plugin, "", tool="Bash", command=cached, session="s-9")
     assert blocked.returncode == 2 and "will not run" in blocked.stderr
