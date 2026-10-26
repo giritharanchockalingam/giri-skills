@@ -264,6 +264,35 @@ def executor_sha() -> str:
     return _EXECUTOR_SHA
 
 
+
+RULE_RE = re.compile(r'^\s*"([A-Z]{2,3}\d+)":\s*\("([^"]+)",\s*"(high|medium|low)",\s*"((?:[^"\\]|\\.)*)"', re.M)
+
+
+def gate_rules_section(spec: dict) -> str:
+    """The rules the later gate skills will judge the change by, for the code step's packet. Found live on tradesignal:
+    the builder wrote `.select('*', { count: 'exact' })`, the perf gate (PF3) failed the run after the code was done.
+    A builder told the rules before it writes avoids that. Read from each gate skill's own rule table, so the packet
+    never drifts from what the gates enforce; a skill whose table cannot be read is simply not listed."""
+    gate_skills = []
+    for st in spec.get("stages", []):
+        for step in st.get("steps", []):
+            if step.get("kind") == "skill" and step.get("skill") in BASELINE_SKILLS and step["skill"] not in gate_skills:
+                gate_skills.append(step["skill"])
+    lines = []
+    for skill in gate_skills:
+        for script in sorted((ROOT / "skills" / skill / "scripts").glob("*.py")):
+            rows = RULE_RE.findall(script.read_text(encoding="utf-8", errors="replace"))
+            if rows:
+                lines.append(f"\n**{skill}** (high blocks the run; medium is reported):")
+                lines += [f"- {rid} {name} ({sev}): {desc.replace(chr(92) + chr(34), chr(34))}" for rid, name, sev, desc in rows]
+                break
+    if not lines:
+        return ""
+    return ("\n\n## Rules the gates will apply to your change\n\nAfter you finish, these checks run on the lines you add or "
+            "change. A new high finding fails the run, even on a line you only edited (keep `select('*')` and the gate "
+            "counts it as yours). Write the change so none of them fire:\n" + "\n".join(lines) + "\n")
+
+
 class StepError(Exception):
     pass
 
@@ -1162,6 +1191,8 @@ class Run:
     def write_packet(self, step: dict, sdir: Path, need: dict, inputs: list[dict], skill: str = "") -> str:
         """Write <step dir>/PROMPT.md, point needs_builder.json at it (need['prompt']) and return the packet text."""
         packet = self.role_packet(step, need, inputs, skill)
+        if step.get("kind") == "agent" and not (step.get("produces") or []):   # the code step: show it the gates up front
+            packet += gate_rules_section(self.spec)
         (sdir / PACKET_MD).write_text(packet, encoding="utf-8")
         need["prompt"] = str(sdir / PACKET_MD)
         return packet
