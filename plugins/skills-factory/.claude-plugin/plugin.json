@@ -1,6 +1,6 @@
 {
   "name": "skills-factory",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Governed skills from the Skills Factory: only published, approved versions, checked against their approved hash before each use, and each use reported back to the factory.",
   "author": {
     "name": "Giritharan Chockalingam"

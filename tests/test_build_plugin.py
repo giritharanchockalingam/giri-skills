@@ -56,8 +56,9 @@ def build(plugin: Path, snaps: list, tmp_path: Path, *extra: str):
     return subprocess.run([sys.executable, "-I", str(BUILD), "--from-json", str(src), "--plugin", str(plugin), *extra], capture_output=True, text=True)
 
 
-def hook(plugin: Path, skill: str, tool: str = "Skill", session: str = "s-1", **env_extra: str):
-    event = {"session_id": session, "hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {"skill": skill}}
+def hook(plugin: Path, skill: str, tool: str = "Skill", session: str = "s-1", command: str | None = None, **env_extra: str):
+    tool_input = {"command": command} if command is not None else {"skill": skill}
+    event = {"session_id": session, "hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": tool_input}
     env = {"CLAUDE_PLUGIN_ROOT": str(plugin), "PATH": "/usr/bin:/bin", **env_extra}   # no API key unless given: the decision never needs the network
     return subprocess.run([sys.executable, "-I", str(plugin / "hooks" / "governed_skill.py")], input=json.dumps(event), capture_output=True, text=True, env=env)
 
@@ -159,3 +160,20 @@ def test_hook_says_why_a_use_was_not_reported_without_changing_the_decision(plug
     http = hook(plugin, "skills-factory:code-review-runner", CLAUDE_PLUGIN_OPTION_API_KEY="sf_live_" + "x" * 32,
                 CLAUDE_PLUGIN_OPTION_FACTORY_URL="http://insecure.example")
     assert "must start with https://" in json.loads(http.stdout)["systemMessage"]
+
+
+def test_hook_governs_scripts_run_straight_from_the_plugin_folder(plugin, tmp_path):
+    """Seen live: Claude ran review.py from the plugin cache without loading the skill, so nothing was checked."""
+    build(plugin, [export("build/code-review-runner", "code-review-runner")], tmp_path)
+    run = f'python3 -I "{plugin}/skills/code-review-runner/scripts/review.py" --diff change.patch'
+    cached = 'python3 -I "/Users/x/.claude/plugins/cache/giri-skills/skills-factory/1.0.2/skills/code-review-runner/scripts/review.py"'
+    data = tmp_path / "plugin-data"
+    first = hook(plugin, "", tool="Bash", command=run, CLAUDE_PLUGIN_DATA=str(data))
+    assert first.returncode == 0 and "no API key is set" in first.stdout
+    assert hook(plugin, "", tool="Bash", command=cached, CLAUDE_PLUGIN_DATA=str(data)).stdout == "", "one use per session"
+    assert hook(plugin, "", tool="Bash", command="git diff HEAD~1 > change.patch").returncode == 0
+    (plugin / "skills" / "code-review-runner" / "scripts" / "review.py").write_text("print('PASS')", encoding="utf-8")
+    blocked = hook(plugin, "", tool="Bash", command=cached, session="s-9")
+    assert blocked.returncode == 2 and "will not run" in blocked.stderr
+    unknown = hook(plugin, "", tool="Bash", command=f"bash {plugin}/skills/not-approved/x.sh")
+    assert unknown.returncode == 2 and "approved list" in unknown.stderr
