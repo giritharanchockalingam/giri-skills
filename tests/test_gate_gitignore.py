@@ -104,3 +104,17 @@ def test_code_review_does_not_read_lockfile_integrity_hashes_as_secrets(tmp_path
                         "--json", str(tmp_path / "r.json"), "--md", str(tmp_path / "r.md")], capture_output=True, text=True, cwd=tmp_path)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "CR-SECRET" not in (tmp_path / "r.md").read_text(encoding="utf-8")
+
+
+def test_ui_lint_pairs_template_literal_label_and_control(tmp_path):
+    """Found on the CAPE UI run: <label htmlFor={`move-${c.id}`}> + <select id={`move-${c.id}`}> was flagged UI4."""
+    comp = tmp_path / "app" / "Picker.tsx"
+    comp.parent.mkdir(parents=True)
+    comp.write_text('export function P({ c }) {\n  return (<div>\n    <label htmlFor={`move-${c.id}`}>Move to</label>\n'
+                    '    <select id={`move-${c.id}`} onChange={() => {}}><option>a</option></select>\n'
+                    '    <select id={`bare-${c.id}`} onChange={() => {}}><option>b</option></select>\n  </div>);\n}\n', encoding="utf-8")
+    subprocess.run([sys.executable, "-I", str(REPO / "skills/build/ui-component-quality/scripts/ui_lint.py"), "--target", str(tmp_path),
+                    "--findings", str(tmp_path / "f.csv"), "--report", str(tmp_path / "r.md"), "--checklist", str(tmp_path / "c.md")],
+                   capture_output=True, text=True, cwd=tmp_path)
+    rows = [r for r in csv.DictReader(open(tmp_path / "f.csv", encoding="utf-8")) if r.get("rule") == "UI4"]
+    assert [r["line"] for r in rows] == ["5"], rows      # the labelled select passes; the bare one is still caught
