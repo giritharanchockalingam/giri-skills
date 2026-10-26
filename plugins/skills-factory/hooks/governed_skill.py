@@ -50,17 +50,18 @@ def skill_slug(tool_input: dict) -> str | None:
     return name[len(prefix):] if name.startswith(prefix) else None
 
 
-SCRIPT_PATH = re.compile(r"skills-factory/[^/\\s'\"]+/skills/([a-z0-9-]{1,80})/")
+SCRIPT_PATH = re.compile(r"skills-factory/[^/\s'\"]+/skills/([a-z0-9-]{1,80})(?=[/\s'\";&|)]|$)")
 
 
 def bash_slugs(tool_input: dict, root: Path) -> list[str]:
-    """Governed skills a shell command runs files from: this plugin's installed path (any version) + /skills/<slug>/.
+    """Governed skills a shell command uses: this plugin's installed path (any version) + /skills/<slug>, whether it names
+    a file inside the skill or the folder itself (`cd …/skills/<slug> && python3 scripts/x.py`, seen live).
     Claude often runs a skill's scripts straight from the plugin cache without loading the skill first."""
     cmd = str((tool_input or {}).get("command", ""))
     found = set(SCRIPT_PATH.findall(cmd))
     marker = f"{root.as_posix().rstrip('/')}/skills/"
     for part in cmd.split(marker)[1:]:
-        m = re.match(r"([a-z0-9-]{1,80})/", part)
+        m = re.match(r"([a-z0-9-]{1,80})(?=[/\s'\";&|)]|$)", part)
         if m:
             found.add(m.group(1))
     return sorted(found)
