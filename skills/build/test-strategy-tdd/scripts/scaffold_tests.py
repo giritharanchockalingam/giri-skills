@@ -456,6 +456,13 @@ def main() -> int:
                                     "test": rel, "criteria": [], "note": "skipped: already a test file (no stub for a test)"})
             continue
         kind, ftype, layer, cover = classify(rel)
+        stem, dot, ext_ = rel.rpartition(".")
+        beside = [f"{stem}.test.{ext_}", f"{stem}.spec.{ext_}"]
+        if dot and any(b in files for b in beside):   # the plan writes the test right beside the source (route.test.ts)
+            report["files"].append({"source": rel, "kind": kind, "type": ftype, "layer": layer, "cover": cover,
+                                    "test": next(b for b in beside if b in files), "criteria": [],
+                                    "note": "covered by the co-located test the plan lists"})
+            continue
         if rel in covered:       # the plan names the test for this file: no per-file stub beside it
             tests = [p for p, st in named.items() if rel in st["sources"]]
             report["files"].append({"source": rel, "kind": kind, "type": ftype, "layer": layer, "cover": cover,
