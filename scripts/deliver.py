@@ -1384,7 +1384,7 @@ class Run:
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # prompt.txt is the packet: one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
-            r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
+            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
                                text=True, timeout=1800)
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
@@ -1477,6 +1477,13 @@ class Run:
                         problems.append(f"{r.get('id') or '?'}: {f} is under {top}/, which does not exist in the repository (invented layout)")
         return problems
 
+    def claude_cmd(self, exe: str, prompt: str) -> list[str]:
+        """`claude -p` for a builder step. Non-interactive runs cannot ask for permission, so without these flags every
+        file write is silently refused and the step fails with "did not write" (found running feature-delivery with
+        --builder claude-code): edits are accepted, and the run directory is added so a step that produces evidence
+        files (prd-final.md, plan.md, tasks.csv, files.txt) can write them outside the checkout."""
+        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()), "-p", prompt, "--output-format", "text"]
+
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
         is when its user stories / acceptance criteria are filled (a brief with stories or tasks); otherwise the run
@@ -1518,6 +1525,30 @@ class Run:
         packet_inputs = [{"label": "Request", "text": request or "(none)"}, {"label": f"Draft PRD ({PRD_MD})", "path": draft}]
         if brief_path:
             packet_inputs.append({"label": "Brief (brief.json)", "path": brief_path})
+        if builder == "claude-code":
+            # the product manager is Claude Code on the person's own subscription (no API key): it reads the packet and
+            # writes prd-final.md at the expected path; the requirements gate then judges it like any other PRD
+            exe = shutil.which("claude")
+            if not exe:
+                raise StepError("builder claude-code: `claude` is not on PATH (install Claude Code, or use --builder manual with --prd <file>)")
+            rec["status"] = "ok"
+            prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
+            (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
+            target = self.repo if self.repo and self.repo.is_dir() else self.out   # reads the checkout, writes only the PRD
+            t0 = time.time()
+            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
+                               text=True, timeout=1800)
+            rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
+            (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
+            (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
+            if r.returncode != 0:
+                raise StepError(f"claude -p exited {r.returncode}: {r.stderr.strip().splitlines()[-1:] or ''}"[:300])
+            if not expected.is_file():
+                raise StepError(f"builder claude-code did not write {expected}")
+            rec.update(exit=0, prd_source="claude-code")
+            write_json(sdir / "prd-refine.json", {"source": "claude-code", "skipped": False, "draft": draft,
+                                                  "note": f"written by claude -p in {rec['agent_duration_s']}s"})
+            return True
         if builder == "openai-compat":
             rec["status"] = "ok"   # not a stop: the model answers the packet now
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[PRD_MD])
@@ -1602,7 +1633,7 @@ class Run:
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
-            r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
+            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
                                text=True, timeout=1800)
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
@@ -1784,7 +1815,7 @@ class Run:
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             self.install_deps(target, sdir, rec)                  # before the agent: it may run the tests itself
             t0 = time.time()
-            r = subprocess.run([exe, "-p", prompt, "--output-format", "text"], cwd=str(target), capture_output=True,
+            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
                                text=True, timeout=3600)
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
