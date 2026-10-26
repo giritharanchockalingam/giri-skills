@@ -286,6 +286,19 @@ def gate_rules_section(spec: dict) -> str:
                 lines.append(f"\n**{skill}** (high blocks the run; medium is reported):")
                 lines += [f"- {rid} {name} ({sev}): {desc.replace(chr(92) + chr(34), chr(34))}" for rid, name, sev, desc in rows]
                 break
+    review = ROOT / "skills" / "build" / "code-review-runner" / "scripts" / "review.py"
+    if review.is_file():   # the review gate: "CR-X": ("blocking"|"warning"|"info", "what", "fix")
+        rows = re.findall(r'^\s*"(CR-[A-Z-]+)":\s*\("(blocking|warning|info)",\s*"([^"]+)",\s*"([^"]+)"', review.read_text(encoding="utf-8"), re.M)
+        if rows:
+            lines.append("\n**build/code-review-runner** (blocking fails the run):")
+            lines += [f"- {rid} ({sev}): {what} — {fix}" for rid, sev, what, fix in rows]
+    lines.append("\n**build/security-review** (critical/high fail the run): authorization on every route; no SQL text built "
+                 "from variables; secrets only from the environment; no server fetch to a caller-supplied URL; no raw HTML from "
+                 "data; no service-role access from client code.")
+    lines.append("\n**SQL text is never assembled from variables, not even an allow-listed table name.** Both the review "
+                 "(CR-SQL-CONCAT) and the security scan (SEC2) block a template literal such as `select * from ${table}`. When a "
+                 "statement must vary by table, keep one constant SQL string per table in a map keyed by the allow-listed name "
+                 "and look it up (found on the CAPE sync spike: 9 blocking findings on allow-listed identifiers).")
     if not lines:
         return ""
     return ("\n\n## Rules the gates will apply to your change\n\nAfter you finish, these checks run on the lines you add or "
