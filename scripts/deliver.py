@@ -164,6 +164,11 @@ PLAN_FILLED = ("acceptance", "test", "files")       # a scaffold is complete whe
 # skills whose `baseline` input is a findings.csv of recorded debt, and the stack-profile check each one is wired from
 BASELINE_SKILLS = {"build/nextjs-enterprise-conventions": "nextjs", "build/perf-review-runner": "perf",
                    "build/ui-component-quality": "ui", "build/tech-debt-audit-runner": "debt"}
+NONINTERACTIVE_RULES = ("You are running non-interactively inside a delivery pipeline: nobody can answer questions or approve "
+                        "anything. Shell commands are not available. Inspect with Read, Grep and Glob; create and change files "
+                        "only with Write and Edit, writing every file the task asks for at the exact paths given. Do not write "
+                        "helper scripts. Where something is unknown, record it in the file as the task's rules say instead of "
+                        "asking. Finish by writing the files, then reply with one short summary.")
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
@@ -870,11 +875,44 @@ class Run:
         write_json(bdir / "baseline.json", base)
 
     # ---- steps
+    def _postchange_target(self) -> Path | None:
+        """What a baselined gate skill lints after the change: the same file universe as the baseline (`git archive`
+        of the base commit) with the code step's changed files laid over it from the checkout. Linting the working
+        copy instead also reads untracked leftovers the baseline never saw — found on a real repo where a stale
+        `.next.dead317/` build folder gave 62 'new high' findings the builder never touched. None when there is no
+        exported baseline (no git, greenfield, --no-baseline): the checkout is linted as before."""
+        base_export = self.out / "baseline-repo"
+        if self.baseline.get("status") != "captured" or not base_export.is_dir():
+            return None
+        records = sorted(self.evidence.rglob("files-changed.json"))
+        changed = read_json(records[-1]).get("files", []) if records else []
+        dest = self.out / "postchange-repo"
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(base_export, dest, symlinks=True)
+        for rel in changed:
+            if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+                continue
+            src, out = self.repo / rel, dest / rel
+            if src.is_file():
+                out.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, out)
+            elif out.exists():
+                out.unlink()                       # deleted by the change
+        return dest
+
     def step_skill(self, step: dict, sdir: Path, rec: dict) -> None:
         argv = [sys.executable, "-I", str(HERE / "run_skill.py"), step["skill"], "--out", str(sdir),
                 "--provider", self.args.provider]
         given = {}
+        post = self._postchange_target() if step.get("skill") in BASELINE_SKILLS and "target" in (step.get("inputs") or {}) else None
+        if post is not None:
+            rec["target_source"] = "base commit + the code step's changed files (same file set as the baseline)"
         for k, v in (step.get("inputs") or {}).items():
+            if k == "target" and post is not None:
+                given[k] = str(post)
+                argv += ["--input", f"target={post}"]
+                continue
             val = self.resolve(v, f"step '{step['id']}' input '{k}'")
             if val is None or str(val) == "":
                 continue  # optional input not available: the skill applies its own rule
@@ -1482,7 +1520,13 @@ class Run:
         file write is silently refused and the step fails with "did not write" (found running feature-delivery with
         --builder claude-code): edits are accepted, and the run directory is added so a step that produces evidence
         files (prd-final.md, plan.md, tasks.csv, files.txt) can write them outside the checkout."""
-        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()), "-p", prompt, "--output-format", "text"]
+        # No shell: a non-interactive run cannot approve one, and a model that reaches for a helper script then stops to
+        # ask (seen live at plan-refine: "the shell keeps asking for approval … tell me whether to approve"). The file
+        # tools are allowed outright and the run is told so; the executor itself runs installs and tests.
+        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
+                "--allowedTools", "Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "LS",
+                "--disallowedTools", "Bash",
+                "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "text"]
 
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
