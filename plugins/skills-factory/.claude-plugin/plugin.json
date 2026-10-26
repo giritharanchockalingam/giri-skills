@@ -1,0 +1,25 @@
+{
+  "name": "skills-factory",
+  "version": "1.0.0",
+  "description": "Governed skills from the Skills Factory: only published, approved versions, checked against their approved hash before each use, and each use reported back to the factory.",
+  "author": { "name": "Giritharan Chockalingam" },
+  "homepage": "https://giri-skills-studio.vercel.app",
+  "repository": "https://github.com/giritharanchockalingam/giri-skills",
+  "license": "MIT",
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "Skills Factory API key",
+      "description": "A factory API key (sf_live_…) from Settings → API keys. Optional: without it skills still load and are still checked, but uses are not reported to the factory.",
+      "sensitive": true,
+      "required": false
+    },
+    "factory_url": {
+      "type": "string",
+      "title": "Skills Factory URL",
+      "description": "Where uses are reported.",
+      "default": "https://giri-skills-studio.vercel.app",
+      "required": false
+    }
+  }
+}

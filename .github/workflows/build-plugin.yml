@@ -1,0 +1,54 @@
+# Governed Claude Code plugin — docs/CLAUDE-CODE.md.
+# Rebuilds plugins/skills-factory/ from the factory's published versions (scripts/build_plugin.py) and opens a pull
+# request when anything changed: a skill published, a new version, or a skill retired. Merging that PR is what ships
+# the change to everyone who installed the plugin (`/plugin` → update).
+#
+# Secrets (repository → Settings → Secrets and variables → Actions):
+#   SF_API_KEY   a factory API key (sf_live_…) of the publishing workspace (the same secret the delivery workflow uses)
+# Repository setting: Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
+name: build-plugin
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 11 * * *"        # daily 11:17 UTC; a publish can also run it at once from the Actions tab
+  repository_dispatch:
+    types: [skill-released]
+
+concurrency:
+  group: build-plugin
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build the plugin from the factory's published versions
+        env:
+          SF_API_KEY: ${{ secrets.SF_API_KEY }}
+        run: python3 scripts/build_plugin.py
+      - name: Open a pull request when the plugin changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$(git status --porcelain plugins/skills-factory)" ]; then echo "Plugin current — nothing to ship."; exit 0; fi
+          version=$(python3 -c "import json;print(json.load(open('plugins/skills-factory/.claude-plugin/plugin.json'))['version'])")
+          count=$(python3 -c "import json;print(len(json.load(open('plugins/skills-factory/governed.lock.json'))['skills']))")
+          branch="plugin/v${version}"
+          git config user.name "skills-factory-bot"
+          git config user.email "skills-factory-bot@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add plugins/skills-factory
+          git commit -m "plugin: skills-factory v${version} (${count} governed skills)"
+          git push -u origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "plugin: skills-factory v${version} (${count} governed skills)" \
+            --body "Rebuilt by the build-plugin workflow from the factory's published versions. governed.lock.json lists each skill's version and approved hash. Merge to ship it to everyone who installed the plugin." \
+            || echo "::warning::Branch $branch pushed, but the pull request could not be opened (enable 'Allow GitHub Actions to create and approve pull requests')."
