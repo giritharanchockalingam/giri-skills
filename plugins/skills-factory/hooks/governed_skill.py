@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""PreToolUse hook (matchers: Skill, Bash) of the skills-factory plugin. Stdlib only; never needs the network to decide.
+"""Hook of the skills-factory plugin: PreToolUse (Skill, Bash) and UserPromptExpansion (a typed /skills-factory:<slug>). Stdlib only; never needs the network to decide.
 
-Before Claude Code loads one of this plugin's skills, or runs a shell command that uses its files (Claude often runs a
+Before Claude Code loads one of this plugin's skills (by the Skill tool or because the person typed its slash command), or runs a shell command that uses its files (Claude often runs a
 skill's scripts straight from the plugin folder without loading the skill):
   1. hash the skill's installed files (interpreter caches ignored) and compare with governed.lock.json, the hash the
      factory published for the approved version;
@@ -164,7 +164,9 @@ def main() -> int:
         return 0
     root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT") or Path(__file__).resolve().parent.parent)
     tool, tool_input = event.get("tool_name"), event.get("tool_input") or {}
-    if tool == "Skill":
+    if event.get("hook_event_name") == "UserPromptExpansion":   # the person typed /skills-factory:<slug>: no tool call
+        slugs, how = [s for s in [skill_slug({"skill": event.get("command_name", "")})] if s], "load"
+    elif tool == "Skill":
         slugs, how = [s for s in [skill_slug(tool_input)] if s], "load"
     elif tool == "Bash":
         slugs, how = bash_slugs(tool_input, root), "run"
