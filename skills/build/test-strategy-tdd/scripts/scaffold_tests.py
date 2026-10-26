@@ -79,6 +79,10 @@ UNSUPPORTED_RUNNERS = ("mocha", "jasmine", "ava", "tap", "node:test", "node --te
 FLAVOURS = ("ts", "js")
 
 
+# found on a real run: files.txt listed route.test.ts beside route.ts and the scaffold wrote route-test.test.ts
+IS_TEST = re.compile(r"(\.(test|spec)\.[cm]?[jt]sx?$)|(^|/)(tests?|__tests__|e2e)/")
+
+
 def is_source(rel: str) -> bool:
     """A --files entry a stub can be generated for: JS/TS code. SQL, docs, env files, YAML/JSON/Markdown are not."""
     return re.search(SCAFFOLD_EXT, rel.rsplit("/", 1)[-1]) is not None
@@ -446,6 +450,10 @@ def main() -> int:
             report["files"].append({"source": rel, "kind": "non-source", "type": "not code", "layer": "—",
                                     "cover": "—", "test": "", "criteria": [],
                                     "note": "skipped: not a source file (no stub generated — only JS/TS code gets one)"})
+            continue
+        if IS_TEST.search(rel):   # a test the plan lists as a file to write: it IS the test, never stub a test for it
+            report["files"].append({"source": rel, "kind": "test", "type": "test file", "layer": "—", "cover": "—",
+                                    "test": rel, "criteria": [], "note": "skipped: already a test file (no stub for a test)"})
             continue
         kind, ftype, layer, cover = classify(rel)
         if rel in covered:       # the plan names the test for this file: no per-file stub beside it

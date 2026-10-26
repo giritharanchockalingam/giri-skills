@@ -870,11 +870,44 @@ class Run:
         write_json(bdir / "baseline.json", base)
 
     # ---- steps
+    def _postchange_target(self) -> Path | None:
+        """What a baselined gate skill lints after the change: the same file universe as the baseline (`git archive`
+        of the base commit) with the code step's changed files laid over it from the checkout. Linting the working
+        copy instead also reads untracked leftovers the baseline never saw — found on a real repo where a stale
+        `.next.dead317/` build folder gave 62 'new high' findings the builder never touched. None when there is no
+        exported baseline (no git, greenfield, --no-baseline): the checkout is linted as before."""
+        base_export = self.out / "baseline-repo"
+        if self.baseline.get("status") != "captured" or not base_export.is_dir():
+            return None
+        records = sorted(self.evidence.rglob("files-changed.json"))
+        changed = read_json(records[-1]).get("files", []) if records else []
+        dest = self.out / "postchange-repo"
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(base_export, dest, symlinks=True)
+        for rel in changed:
+            if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+                continue
+            src, out = self.repo / rel, dest / rel
+            if src.is_file():
+                out.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, out)
+            elif out.exists():
+                out.unlink()                       # deleted by the change
+        return dest
+
     def step_skill(self, step: dict, sdir: Path, rec: dict) -> None:
         argv = [sys.executable, "-I", str(HERE / "run_skill.py"), step["skill"], "--out", str(sdir),
                 "--provider", self.args.provider]
         given = {}
+        post = self._postchange_target() if step.get("skill") in BASELINE_SKILLS and "target" in (step.get("inputs") or {}) else None
+        if post is not None:
+            rec["target_source"] = "base commit + the code step's changed files (same file set as the baseline)"
         for k, v in (step.get("inputs") or {}).items():
+            if k == "target" and post is not None:
+                given[k] = str(post)
+                argv += ["--input", f"target={post}"]
+                continue
             val = self.resolve(v, f"step '{step['id']}' input '{k}'")
             if val is None or str(val) == "":
                 continue  # optional input not available: the skill applies its own rule
