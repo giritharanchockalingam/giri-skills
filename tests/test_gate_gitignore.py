@@ -77,3 +77,18 @@ def test_dry_copy_commits_preexisting_work_so_the_diff_is_only_the_builders(tmp_
     assert r.returncode == 0, r.stderr
     status = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True).stdout
     assert status.strip() == "", "pre-existing work is in the baseline commit, so the builder's diff starts clean"
+
+
+@pytest.mark.parametrize("tool", sorted(SCANNERS))
+def test_a_tree_nested_inside_another_repo_is_scanned_in_full(tool, tmp_path):
+    """Found live: the pipeline lints <out>/postchange-repo under giri-skills/runs/, which giri-skills git-ignores;
+    the export must not inherit the outer repository's ignore rules (0 files were linted and the gate failed)."""
+    outer = tmp_path / "outer"
+    outer.mkdir()
+    (outer / ".gitignore").write_text("/runs/\n", encoding="utf-8")
+    git(outer, "init", "-q")
+    inner = outer / "runs" / "x" / "postchange-repo" / "src"
+    inner.mkdir(parents=True)
+    (inner / "route.ts").write_text(LEAK + SLOW, encoding="utf-8")
+    rows = findings(tool, outer / "runs" / "x" / "postchange-repo", tmp_path)
+    assert [r for r in rows if "route.ts" in str(r)], "the nested export's own files must be linted"

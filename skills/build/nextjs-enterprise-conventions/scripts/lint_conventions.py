@@ -39,6 +39,13 @@ def git_ignored(root: Path, rel: Path) -> bool:
     key = str(root.resolve())
     if key not in _GIT_VISIBLE:
         try:
+            # only when `root` IS a repository's top level: a tree exported inside another repository (the delivery
+            # pipeline's <out>/postchange-repo under giri-skills/runs/, which giri-skills ignores) must not inherit
+            # that repository's ignore rules — found live: every file of the export read as ignored, 0 files linted
+            top = subprocess.run(["git", "-C", key, "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=30)
+            if top.returncode != 0 or Path(top.stdout.strip()).resolve() != Path(key):
+                _GIT_VISIBLE[key] = None
+                return False
             r = subprocess.run(["git", "-C", key, "ls-files", "-co", "--exclude-standard", "-z"],
                                capture_output=True, text=True, timeout=120)
             _GIT_VISIBLE[key] = (set(r.stdout.split("\0")) - {""}) if r.returncode == 0 else None
