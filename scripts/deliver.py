@@ -1192,7 +1192,9 @@ class Run:
         """Write <step dir>/PROMPT.md, point needs_builder.json at it (need['prompt']) and return the packet text."""
         packet = self.role_packet(step, need, inputs, skill)
         if step.get("kind") == "agent" and not (step.get("produces") or []):   # the code step: show it the gates up front
-            packet += gate_rules_section(self.spec)
+            rules = gate_rules_section(self.spec)
+            head, sep, tail = packet.rpartition("\n## When done")
+            packet = (head + rules + sep + tail) if sep else packet + rules   # before "When done": the packet ends with the resume command
         (sdir / PACKET_MD).write_text(packet, encoding="utf-8")
         need["prompt"] = str(sdir / PACKET_MD)
         return packet
