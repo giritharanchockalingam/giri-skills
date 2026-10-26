@@ -29,7 +29,7 @@ def sha(files):
 
 def export(repo_skill: str, slug: str, version: int = 3) -> dict:
     d = REPO / "skills" / repo_skill
-    files = [{"path": p.relative_to(d).as_posix(), "content": p.read_text(encoding="utf-8")}
+    files = [{"path": p.relative_to(d).as_posix(), "content": open(p, encoding="utf-8", newline="").read()}
              for p in sorted(d.rglob("*")) if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"]
     return {"slug": slug, "version": version, "version_id": "00000000-0000-0000-0000-000000000001", "published_at": "2026-10-24T00:00:00Z",
             "manifest_hash": "m" * 8, "repo_skill": repo_skill, "sha256": sha(files), "files": files}
@@ -197,3 +197,14 @@ def test_hook_governs_a_typed_slash_command(plugin, tmp_path):
     assert expand("skills-factory:code-review-runner").returncode == 2
     hooks = json.loads((PLUGIN_SRC / "hooks" / "hooks.json").read_text())["hooks"]
     assert set(hooks) == {"PreToolUse", "UserPromptExpansion"} and hooks["PreToolUse"][0]["matcher"] == "Skill|Bash"
+
+
+def test_files_with_windows_line_endings_install_and_verify(plugin, tmp_path):
+    """Seen live: 9 skills ship CSV fixtures with \\r\\n; reading them with newline translation changed their hash and
+    the hook blocked approved skills (perf-review-runner)."""
+    s = export("build/perf-review-runner", "perf-review-runner")
+    assert any("\r\n" in f["content"] for f in s["files"]), "fixture with \\r\\n expected"
+    assert build(plugin, [s], tmp_path).returncode == 0
+    ok = hook(plugin, "skills-factory:perf-review-runner")
+    assert ok.returncode == 0, ok.stderr
+    assert build(plugin, [s], tmp_path, "--check").returncode == 0, "a rebuild sees the same bytes"

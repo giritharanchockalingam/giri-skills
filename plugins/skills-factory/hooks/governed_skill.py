@@ -36,7 +36,8 @@ def files_sha(d: Path) -> str:
         if any(part == "__pycache__" or part.endswith(".pyc") or part == ".DS_Store" for part in rel.split("/")):
             continue
         try:
-            content = p.read_text(encoding="utf-8")
+            with open(p, encoding="utf-8", newline="") as fh:   # keep \r\n: CSV fixtures carry it
+                content = fh.read()
         except (UnicodeDecodeError, OSError):
             return "unreadable"
         h.update(rel.encode("utf-8") + b"\0" + content.encode("utf-8") + b"\0")
