@@ -4,7 +4,7 @@
 # the change to everyone who installed the plugin (`/plugin` → update).
 #
 # Secrets (repository → Settings → Secrets and variables → Actions):
-#   SF_API_KEY   a factory API key (sf_live_…) of the publishing workspace (the same secret the delivery workflow uses)
+#   SF_API_KEY   a factory API key (sf_live_…) of the publishing workspace
 # Repository setting: Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
 name: build-plugin
 on:
