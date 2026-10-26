@@ -1197,6 +1197,12 @@ class Run:
         return tests if given == "auto" else given
 
     # ---- the code step's deterministic gates: install once, run the project's tests (every builder)
+    def real_builder(self) -> bool:
+        """Claude Code writes the code: then even a dry run installs and runs the project's tests on its isolated copy —
+        found on the CAPE greenfield run, where a dry run reported every stage passed while one of the app's own tests
+        failed. openai-compat keeps its own --repair-cmd path; manual/none in --dry (fixtures, CI) keep skipping."""
+        return getattr(self.args, "builder", "none") == "claude-code"
+
     def resolve_install(self, target: Path) -> tuple[str | None, str]:
         """(command, reason-when-none) for --install auto|none|<cmd>. `auto` reads the stack profile (install_cmd);
         a dry run installs nothing (the copy is throwaway and offline-reproducible)."""
@@ -1205,7 +1211,7 @@ class Run:
             return None, "--install none"
         if given != "auto":
             return given, ""
-        if self.args.dry:
+        if self.args.dry and not self.real_builder():
             return None, "dry run"
         cmd = install_cmd(self.profile, target)
         return cmd, ("" if cmd else "no package manifest (nothing to install)")
@@ -1218,7 +1224,7 @@ class Run:
             return None, "--tests none"
         if given != "auto":
             return given, ""
-        if self.args.dry:
+        if self.args.dry and not self.real_builder():
             return None, "dry run"
         cmd = test_cmd(self.profile, target)
         return cmd, ("" if cmd else "no runner")
@@ -1865,13 +1871,40 @@ class Run:
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             if r.returncode != 0:
                 raise StepError(f"claude -p exited {r.returncode}: {r.stderr.strip().splitlines()[-1:] or ''}"[:300])
-            git(target, "add", "-A")
-            _, diff = git(target, "diff", "--cached", "--binary")
-            patch = sdir / "captured.patch"
-            patch.write_text(diff, encoding="utf-8")
-            self._record_diff(patch, sdir, rec, plan, r.stdout, files)
-            patch.unlink()
-            self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the agent's code
+            def capture(summary: str) -> None:
+                git(target, "add", "-A")
+                _, diff = git(target, "diff", "--cached", "--binary")
+                patch = sdir / "captured.patch"
+                patch.write_text(diff, encoding="utf-8")
+                self._record_diff(patch, sdir, rec, plan, summary, files)
+                patch.unlink()
+
+            capture(r.stdout)
+            # the project's tests judge the agent's code; a failure goes back to Claude Code as a repair turn (like the
+            # openai-compat builder) — found on the CAPE greenfield run: 95 of 96 tests passed and nobody was asked to
+            # fix the one co-requisite failure. 1 + max(1, --rounds) turns in all; the last result stands.
+            tcmd, treason = self.resolve_tests(target)
+            repairs = max(1, int(getattr(self.args, "rounds", 2) or 2))
+            for turn in range(repairs + 1):
+                try:
+                    self.run_tests(tcmd, treason, target, sdir, rec)
+                    break
+                except StepError as failure:
+                    if turn == repairs or not tcmd:
+                        raise
+                    ask = (f"The project's tests fail after your change. Fix the code so `{tcmd}` passes: change only the files "
+                           f"the plan allows and their tests. Do not delete or weaken a test unless it contradicts the plan's "
+                           f"acceptance criteria; if one does, fix the test and say why in one line. The full test log is at "
+                           f"{sdir / TESTS_LOG}.\n\nFailure:\n{failure}")
+                    (sdir / f"repair-{turn + 1}-prompt.txt").write_text(ask, encoding="utf-8")
+                    t1 = time.time()
+                    rr = subprocess.run(self.claude_cmd(exe, ask), cwd=str(target), capture_output=True, text=True, timeout=3600)
+                    (sdir / f"repair-{turn + 1}-stderr.txt").write_text(rr.stderr, encoding="utf-8")
+                    rec.setdefault("repairs", []).append({"turn": turn + 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
+                                                          "reason": str(failure)[:300]})
+                    if rr.returncode != 0:
+                        raise StepError(f"claude -p (repair {turn + 1}) exited {rr.returncode}: {rr.stderr.strip().splitlines()[-1:] or ''}"[:300])
+                    capture(rr.stdout)
             return True
         if builder == "openai-compat":
             if not is_git_root(target):
