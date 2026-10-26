@@ -188,6 +188,7 @@ TEST_TAIL = 4 * 1024                                # tests.json carries the las
 TEST_TAIL_IN_ERROR = 400                            # how much of that the step error (the gate detail) quotes
 INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
 TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
+VISUAL_DIR, VISUAL_TIMEOUT_S, VISUAL_MAX_ROUTES = "visual", 900, 6   # scripts/visual_check.py: a person's first look
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # local mode (docs/DELIVERY-PIPELINES.md → Local mode): the run registry and the local approval files, no portal needed
 REGISTRY_JSONL = "registry.jsonl"                   # <runs dir>/registry.jsonl — one line per status change of every run
@@ -1391,6 +1392,54 @@ class Run:
             raise StepError(f"tests failed: `{cmd}` exit {code}" + (f" ({info['summary']})" if info["summary"] else "")
                             + f"; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
 
+    @staticmethod
+    def visual_routes(target: Path) -> list[str]:
+        """The pages a person would open: Next.js app/ (or src/app/) page files without dynamic segments, / first."""
+        routes = []
+        for base in (target / "app", target / "src" / "app"):
+            if base.is_dir():
+                for page in sorted(base.rglob("page.*")):
+                    if page.suffix not in (".tsx", ".jsx", ".ts", ".js") or "node_modules" in page.parts:
+                        continue
+                    parts = [x for x in page.parent.relative_to(base).parts if not (x.startswith("(") or x.startswith("@"))]
+                    if any(x.startswith("[") or x.startswith("_") for x in parts):
+                        continue
+                    routes.append("/" + "/".join(parts))
+        routes = sorted(set(routes), key=lambda r: (r != "/", r.count("/"), r))
+        return routes[:VISUAL_MAX_ROUTES] or ["/"]
+
+    def run_visual(self, target: Path, sdir: Path, rec: dict) -> None:
+        """After the tests pass: scripts/visual_check.py starts the app and looks at every page at desktop and phone
+        width. Found on the CAPE greenfield run: 85/85 tests and every gate passed on a page with no styling at all.
+        A failure is a StepError (so a claude-code builder gets a repair turn); no web UI is recorded as not
+        applicable, never as a pass; --visual off records that it was switched off."""
+        if getattr(self.args, "visual", "auto") == "off":
+            rec["visual"] = {"verdict": "off", "detail": "switched off with --visual off"}
+            return
+        out = sdir / VISUAL_DIR
+        cmd = [sys.executable, str(HERE / "visual_check.py"), "--target", str(target), "--out", str(out)]
+        for r in self.visual_routes(target):
+            cmd += ["--route", r]
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=VISUAL_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            rec["visual"] = {"verdict": "fail", "detail": f"the visual check did not finish in {VISUAL_TIMEOUT_S} s"}
+            raise StepError(rec["visual"]["detail"])
+        res = read_json(out / "visual.json") if (out / "visual.json").is_file() else {}
+        verdict = res.get("verdict") or ("error" if r.returncode == 2 else "fail")
+        rec["visual"] = {"verdict": verdict, "routes": res.get("routes"), "start_cmd": res.get("start_cmd"), "reason": res.get("start_reason"),
+                         "failures": (res.get("failures") or [])[:12], "warnings": (res.get("warnings") or [])[:6],
+                         "screenshots": [f"{VISUAL_DIR}/{x}" for x in res.get("screenshots") or []],
+                         "detail": (r.stdout.strip() or r.stderr.strip())[-400:]}
+        if verdict in ("fail", "error"):
+            raise StepError("visual check failed: " + "; ".join(rec["visual"]["failures"][:6] or [rec["visual"]["detail"]])
+                            + f" — screenshots in {out}")
+
+    def verify(self, cmd: str | None, reason: str, target: Path, sdir: Path, rec: dict) -> None:
+        """What judges the builder's code: the project's tests, then (when they pass) a look at the running app."""
+        self.run_tests(cmd, reason, target, sdir, rec)
+        self.run_visual(target, sdir, rec)
+
     def record_llm_tests(self, cmd: str, sdir: Path, rec: dict) -> None:
         """openai-compat: the repair command IS the test command, already run by the builder after each round — the
         last round's result becomes tests.json (its log is that round's llm-cmd-<n>.txt)."""
@@ -1934,7 +1983,7 @@ class Run:
                 else:              # the real checkout: the diff is what the gates and the PR must see
                     note = self._apply_manual(manual_patch, target, allowed, allowed_source, sdir, rec)
                 self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
-                self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the diff
+                self.verify(*self.resolve_tests(target), target, sdir, rec)   # the tests, then a look at the running app, judge the diff
                 return True
             rec["status"] = "awaiting_builder"
             self.write_packet(step, sdir, need, packet_inputs)
@@ -1972,12 +2021,16 @@ class Run:
             repairs = max(1, int(getattr(self.args, "rounds", 2) or 2))
             for turn in range(repairs + 1):
                 try:
-                    self.run_tests(tcmd, treason, target, sdir, rec)
+                    self.verify(tcmd, treason, target, sdir, rec)
                     break
                 except StepError as failure:
-                    if turn == repairs or not tcmd:
+                    if turn == repairs or (not tcmd and not str(failure).startswith("visual check")):
                         raise
-                    ask = (f"The project's tests fail after your change. Fix the code so `{tcmd}` passes: change only the files "
+                    what = ("The running app failed the visual check (a browser opened each page at 1440 and 390 px wide; "
+                            f"screenshots and visual.json are in {sdir / VISUAL_DIR}). Fix the UI so every page is styled, "
+                            "not empty, loads without errors and does not scroll sideways on a phone; keep `" + str(tcmd) + "` passing"
+                            if str(failure).startswith("visual check") else f"The project's tests fail after your change. Fix the code so `{tcmd}` passes")
+                    ask = (f"{what}: change only the files "
                            f"the plan allows and their tests. Do not delete or weaken a test unless it contradicts the plan's "
                            f"acceptance criteria; if one does, fix the test and say why in one line. The full test log is at "
                            f"{sdir / TESTS_LOG}.\n\nFailure:\n{failure}")
@@ -2019,6 +2072,7 @@ class Run:
                 self.record_llm_tests(cmd, sdir, rec)             # the repair loop already ran the tests (exit 0 here)
             else:                                                 # --repair-cmd none or an override: the tests run once, now
                 self.run_tests(tcmd, treason, target, sdir, rec)
+            self.run_visual(target, sdir, rec)
             return True
         raise StepError(f"unknown builder {builder!r}")
 
@@ -2158,6 +2212,7 @@ class Run:
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
                 self.baseline_row(), "",
                 self.tests_row(), "",
+                self.visual_row(), "",
                 self.honesty_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
         for s in self.record.get("stages", []):
@@ -2285,6 +2340,24 @@ class Run:
         inst = (f"; install `{install['cmd']}` exit {install['exit']}" if install.get("cmd") else
                 f"; install skipped ({install['skipped']})" if install.get("skipped") else "")
         return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}."
+
+    def visual_row(self) -> str:
+        """The Visual line of EVIDENCE.md: what a browser saw when it opened the built app (scripts/visual_check.py)."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "visual" in st), None)
+        if not code:
+            return "Visual check (the running app): NOT RUN — no code step reached it."
+        v = code["visual"]
+        label = {"pass": "PASS", "fail": "FAIL", "error": "FAIL (could not run)", "not_applicable": "NOT APPLICABLE (no web UI)",
+                 "off": "NOT RUN (switched off)",
+                 "not_run": f"NOT RUN ({v.get('reason') or 'see visual.json'})"}.get(v.get("verdict"), str(v.get("verdict")).upper())
+        sdir = self.step_dirs.get(code["id"])
+        shots = [f"[{Path(x).name}]({(sdir / x).relative_to(self.evidence)})" for x in v.get("screenshots") or []
+                 if sdir and (sdir / x).is_file()]
+        routes = ", ".join(v.get("routes") or [])
+        fails = ("; failures: " + "; ".join(v["failures"][:4])) if v.get("failures") else ""
+        return (f"Visual check (the running app, desktop 1440 px and phone 390 px): {label}" + (f" — pages {routes}" if routes else "")
+                + fails + (f"; screenshots: {', '.join(shots)}" if shots else "") + ".")
 
     def hash_files(self) -> dict:
         files = {}
@@ -2815,6 +2888,8 @@ def build_args(argv=None):
     ap.add_argument("--builder", choices=["none", "manual", "claude-code", "openai-compat"], default="none")
     ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
     ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
+    ap.add_argument("--visual", choices=["auto", "off"], default="auto",
+                    help="after the tests pass, open the built web app in a browser and fail an empty or unstyled page (default auto)")
     ap.add_argument("--rounds", type=int, default=2, metavar="N", help="openai-compat builder: model turns per step including repair turns (default 2)")
     ap.add_argument("--repair-cmd", default="auto", metavar="CMD", help="openai-compat builder: shell command run on the checkout after each round of the code step's files; a failure is sent back as a repair turn. Default auto: the resolved --tests command; `none` runs no repair loop (the tests still run once after the last reply)")
     ap.add_argument("--install", default="auto", metavar="auto|none|CMD", help="code step, every builder: install the checkout's dependencies once per run before the code lands (output in <step>/install.log). auto (default): from the stack profile — `npm ci` with a package-lock.json else `npm install --no-audit --no-fund`, pnpm/yarn/bun, pip/uv/poetry for Python; nothing in --dry. `none` skips; any other value runs as given")
