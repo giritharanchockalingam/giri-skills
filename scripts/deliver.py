@@ -1311,13 +1311,34 @@ class Run:
         t0 = time.time()
         code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
         (sdir / INSTALL_LOG).write_text(output, encoding="utf-8")
-        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG}
+        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG,
+                "manifest_sha": manifest_sha(target)}
         if excluded:
             info["excluded_from_git"] = excluded
         write_json(sdir / INSTALL_JSON, info)
         rec["install"] = info
         if code != 0:
             raise StepError(f"install failed: `{cmd}` exit {code} (see {INSTALL_LOG}); tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+
+    def reinstall_if_manifest_changed(self, target: Path, sdir: Path, rec: dict) -> None:
+        """The code step may add dependencies (package.json, requirements…): install again before the tests when the
+        manifests changed since the install. Found on the CAPE sync spike: the builder added `pg`, the install had run
+        before the code landed, and 7 test files failed with "Failed to load url pg" through three repair turns."""
+        prev = read_json(sdir / INSTALL_JSON) if (sdir / INSTALL_JSON).is_file() else {}
+        if prev.get("exit") != 0 or not prev.get("cmd") or prev.get("manifest_sha") == manifest_sha(target):
+            return
+        cmd = str(prev["cmd"])
+        if cmd.startswith("npm ci"):
+            cmd = "npm install --no-audit --no-fund"     # the lockfile is behind package.json: ci would refuse
+        t0 = time.time()
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
+        (sdir / "reinstall.log").write_text(output, encoding="utf-8")
+        info = {**prev, "reinstall": {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": "reinstall.log"},
+                "manifest_sha": manifest_sha(target)}
+        write_json(sdir / INSTALL_JSON, info)
+        rec["install"] = info
+        if code != 0:
+            raise StepError(f"reinstall after a dependency change failed: `{cmd}` exit {code}; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
 
     def record_tests(self, sdir: Path, rec: dict, info: dict) -> None:
         write_json(sdir / TESTS_JSON, info)
@@ -1330,6 +1351,7 @@ class Run:
         if not cmd:
             self.record_tests(sdir, rec, {"skipped": reason})
             return
+        self.reinstall_if_manifest_changed(target, sdir, rec)
         t0 = time.time()
         code, output = self._sh(cmd, target, TEST_TIMEOUT_S)
         (sdir / TESTS_LOG).write_text(output, encoding="utf-8")
@@ -2502,6 +2524,20 @@ def load_approvals(path: str | None) -> dict:
     if items is None and isinstance(data, dict):
         return {k: (v if isinstance(v, dict) else {"by": str(v)}) for k, v in data.items()}
     return {str(a.get("step")): a for a in (items or []) if isinstance(a, dict) and a.get("step")}
+
+
+MANIFESTS = ("package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "requirements.txt",
+             "pyproject.toml", "poetry.lock", "uv.lock")
+
+
+def manifest_sha(repo: Path) -> str:
+    """Hash of the dependency manifests present in the checkout (what an install depends on)."""
+    h = hashlib.sha256()
+    for name in MANIFESTS:
+        f = repo / name
+        if f.is_file():
+            h.update(name.encode() + b"\0" + f.read_bytes() + b"\0")
+    return h.hexdigest()
 
 
 def baseline_commit(repo: Path) -> None:
