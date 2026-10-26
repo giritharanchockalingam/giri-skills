@@ -1,0 +1,9 @@
+{
+  "_note": "fictional fixture — embedding price deliberately omitted; the skill must not assume one",
+  "chunk_size_chars": 1000,
+  "chunk_overlap_chars": 200,
+  "top_k": 5,
+  "reranker": "no",
+  "vector_store": "chroma",
+  "context_budget_tokens": 6000
+}

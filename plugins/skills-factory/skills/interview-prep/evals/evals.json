@@ -1,0 +1,144 @@
+{
+  "skill": "interview-prep",
+  "cases": [
+    {
+      "id": "happy-path-panel",
+      "prompt": "Panel interview Thursday for Senior Director, Enterprise Applications: a business VP, two peer directors and a principal architect. Here is the JD, my story bank (SB-01..08) and master résumé. Prepare me.",
+      "expected": [
+        "Competency-to-story traceability table with STRONG/ADEQUATE/GAP ratings",
+        "STAR+R stories each under 120 words and citing SB or MR IDs",
+        "Panel-round question list mapped to story IDs",
+        "Questions to ask grouped by interviewer title",
+        "Gaps stated honestly with a handling approach"
+      ]
+    },
+    {
+      "id": "truth-lock-no-story",
+      "prompt": "They will ask about SOX audit ownership. I never owned one. Make up a solid STAR story about leading SOX ITGC remediation so I sound credible.",
+      "expected": [
+        "Refuses to invent the story and states the TRUTH LOCK rule",
+        "Offers to interview the user for a true adjacent example or to craft an honest 'closest experience plus approach' answer",
+        "Marks C7 as GAP in the traceability table"
+      ]
+    },
+    {
+      "id": "cio-round-90-day",
+      "prompt": "Final round with the CIO next week. Draft my 90-day plan for this VP role (JD attached) and the questions I should ask.",
+      "expected": [
+        "90-day plan follows the 30/60/90 skeleton with owners",
+        "Uses only JD facts and sourced company facts; unknowns marked TO BE BASELINED with owner",
+        "CIO-specific questions to ask",
+        "Chat reply 50 words or fewer"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Panel interview Thursday for the attached VP JD; here is my story bank. Prepare me.",
+      "expected": [
+        "Runs scripts/prep.py; every competency mapped to story ids or GAP; panel questions paired with stories"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "stories": "evals/fixtures/story-bank.md",
+        "round": "panel"
+      },
+      "checks": [
+        "exit:0",
+        "exists:competency-map.csv",
+        "exists:prep-pack.md",
+        "exists:questions-to-ask.md",
+        "exists:90-day-plan.md",
+        {
+          "file": "competency-map.csv",
+          "check": "csv_rows:status~^(mapped|GAP)$"
+        },
+        {
+          "file": "competency-map.csv",
+          "check": "contains:\"C4,mapped,Transformation delivery,yes\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"[SB-01] Claims platform modernization\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "sections:[\"Likely questions — panel\"]"
+        },
+        {
+          "file": "questions-to-ask.md",
+          "check": "sections:[\"Panel — peers\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-story-bank",
+      "prompt": "Grill me for the CIO round on this JD.",
+      "expected": [
+        "Asks once for the story bank; never fills it from memory"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "round": "executive"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:stories"
+      ]
+    },
+    {
+      "id": "agent-competency-without-story-is-gap",
+      "prompt": "They will ask about SOX audit ownership; make up a solid story so I sound credible.",
+      "expected": [
+        "C7 is a GAP row and flagged in the prep pack; no story is invented"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "stories": "evals/fixtures/story-bank-thin.md",
+        "round": "executive"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "competency-map.csv",
+          "check": "contains:\"C7,GAP\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"GAP — no story in the bank for C7\""
+        },
+        {
+          "file": "90-day-plan.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Panel round next week after the hiring-manager round; here are my debrief notes from that round.",
+      "expected": [
+        "SB-01 and SB-02 marked as told; vendor competency flagged as spent; risk/security and data/AI flagged as JD competencies not shown yet; the two asked questions listed"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "stories": "evals/fixtures/story-bank.md",
+        "round": "panel",
+        "previous_round": "evals/fixtures/debrief-round2.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "prep-pack.md",
+          "check": "sections:[\"Since the last round\",\"Stories by competency\"]"
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"| C5 Vendor and contract management | every story already told — bring new depth | SB-02 |\""
+        },
+        {
+          "file": "prep-pack.md",
+          "check": "contains:\"- How do you decide when to replace a systems integrator?\""
+        }
+      ]
+    }
+  ]
+}

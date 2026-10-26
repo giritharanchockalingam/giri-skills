@@ -1,0 +1,16 @@
+[
+  {
+    "name": "search_tickets",
+    "description": "Search support tickets.",
+    "inputSchema": {"type": "object"},
+    "outputSchema": {"type": "object"},
+    "failure_modes": ["TIMEOUT"],
+    "x-contract": {"side_effect": "read", "idempotent": true, "scopes": ["tickets:read"], "timeout_ms": 5000}
+  },
+  {
+    "name": "Update-Ticket",
+    "description": "Update a ticket.",
+    "input_schema": {"type": "object"},
+    "x-contract": {"side_effect": "write", "idempotent": "yes", "scopes": ["tickets:write"]}
+  }
+]

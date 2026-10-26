@@ -1,0 +1,20 @@
+{
+  "_fixture": "fictional fixture - valid spec whose budget is too small: max_input_tokens 60 is below the rendered prompt's chars/4 estimate",
+  "id": "ticket-triage-tight",
+  "version": "0.1.0",
+  "role": "You are the support-ticket triage assistant for Northwind Utilities (a fictional company). You classify one customer ticket at a time for routing.",
+  "task": "Classify this ticket: {{ticket_text}}",
+  "variables": [
+    {"name": "ticket_text", "description": "Raw ticket body", "required": true}
+  ],
+  "output_schema": {
+    "type": "object",
+    "required": ["category"],
+    "properties": {"category": {"type": "string", "enum": ["billing", "outage", "other"]}}
+  },
+  "constraints": ["Use only the ticket text."],
+  "examples": [
+    {"inputs": {"ticket_text": "My bill doubled this month and nothing changed at home."}, "output": {"category": "billing"}}
+  ],
+  "max_input_tokens": 60
+}

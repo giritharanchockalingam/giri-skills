@@ -1,0 +1,18 @@
+# fictional fixture - vendor names are invented (Fabrikam, Tailspin, Litware); scores are test values
+option,criterion,score,source
+Fabrikam AI (fictional),answer_quality,5,Golden-set eval run (fictional)
+Fabrikam AI (fictional),total_cost,3,Price sheet (fictional)
+Fabrikam AI (fictional),security_compliance,4,Security questionnaire (fictional)
+Fabrikam AI (fictional),integration_effort,4,Architecture spike (fictional)
+Tailspin Models (fictional),answer_quality,4,Golden-set eval run (fictional)
+Tailspin Models (fictional),total_cost,4,Price sheet (fictional)
+Tailspin Models (fictional),security_compliance,4,Security questionnaire (fictional)
+Tailspin Models (fictional),integration_effort,3,Architecture spike (fictional)
+Build in-house,answer_quality,3,Prototype eval (fictional)
+Build in-house,total_cost,3,Internal estimate (fictional)
+Build in-house,security_compliance,5,Internal controls (fictional)
+Build in-house,integration_effort,2,Internal estimate (fictional)
+Litware GenAI (fictional),answer_quality,4,Golden-set eval run (fictional)
+Litware GenAI (fictional),total_cost,5,Price sheet (fictional)
+Litware GenAI (fictional),security_compliance,,
+Litware GenAI (fictional),integration_effort,4,Architecture spike (fictional)

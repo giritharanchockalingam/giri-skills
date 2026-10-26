@@ -1,0 +1,5 @@
+metric,threshold,notes
+demographic_parity_difference,0.25,fictional fixture
+disparate_impact_ratio,0.8,fictional fixture (four-fifths rule chosen as the policy)
+equal_opportunity_difference,0.6,fictional fixture
+equalized_odds_difference,0.6,fictional fixture

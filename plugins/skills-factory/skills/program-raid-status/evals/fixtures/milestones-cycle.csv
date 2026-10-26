@@ -1,0 +1,5 @@
+# fictional fixture — Northwind Billing Assistant; M2 and M3 depend on each other (cycle)
+id,milestone,baseline_date,forecast_date,duration_days,depends_on,status
+M1,Discovery,2026-07-31,2026-07-31,20,,done
+M2,Data extract,2026-08-28,2026-09-11,25,M1|M3,done
+M3,RAG index,2026-09-25,2026-10-23,20,M2,in_progress

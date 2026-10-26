@@ -1,0 +1,7 @@
+criterion,weight,direction,hard_min,hard_max,hard_in,notes
+your_eval_score,,higher,,,,one row per scored column in the candidates file
+monthly_cost_usd,,lower,,,,derived; needs the workload input
+p95_latency_ms,,lower,,,,set hard_max to your latency SLO if it is a must-have
+context_tokens,0,,,,,weight 0 = constraint only; set hard_min to the context you need
+hosting,0,,,,self-host,example categorical hard constraint; delete the row if not required
+region,0,,,,eu;uk,example data-residency constraint; delete the row if not required

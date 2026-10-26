@@ -1,0 +1,25 @@
+# fictional fixture — invented diff for the systematic-debugging-runner evals; not from a real repository
+diff --git a/billing/tax.py b/billing/tax.py
+index 1111111..2222222 100644
+--- a/billing/tax.py
++++ b/billing/tax.py
+@@ -10,9 +10,9 @@ from frozendict import frozendict
+ RATES = frozendict({
+     "US": {"standard": 0.0},
+-    "EU": {"standard": 0.21},
++    "EU-NL": {"standard": 0.21},
+ })
+
+
+ def tax_rate_for(region: str) -> float:
+     """Standard tax rate for a region code."""
+     return RATES[region.upper()]["standard"]
+diff --git a/README.md b/README.md
+index 3333333..4444444 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,4 @@
+ # acme-billing
++Region codes now follow the EU-<country> scheme.
+
+ Fictional fixture project.

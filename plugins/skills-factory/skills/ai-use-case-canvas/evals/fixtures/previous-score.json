@@ -1,0 +1,13 @@
+{
+  "_note": "Fictional fixture: score.json from the first canvas review of the (fictional) Northwind HR benefits enquiry assistant, before the data task.",
+  "name": "Benefits enquiry assistant",
+  "scores": {"value": 3, "feasibility": 4, "data_readiness": 2, "risk": 3},
+  "evidence": {"value": "baseline from HR ticket export (fictional)", "feasibility": "RAG pattern proven on IT policies", "data_readiness": "no data owner named yet", "risk": "employee-facing with human in the loop; PII"},
+  "missing_axes": [],
+  "priority": 8.0,
+  "verdict": "Proceed after data readiness",
+  "verdict_reason": "V>=3, F>=3 but D<=2 — next step is a data task",
+  "decision": "wait",
+  "decision_reason": "data readiness = 2: fund the data task first; revisit build/buy after",
+  "factors": {"build": ["data_sensitivity", "product_fit", "team_capability"], "buy": ["differentiation", "time_to_value"], "partner": []}
+}

@@ -1,0 +1,115 @@
+{
+  "skill": "application-tracker",
+  "cases": [
+    {
+      "id": "log-event",
+      "prompt": "Log it: I had the hiring manager interview with Helix Logistics for VP Enterprise Apps today (2026-10-16). Next step is panel, date TBD. Here is my tracker.csv.",
+      "expected": [
+        "Row moved to stage HM with last_touch 2026-10-16",
+        "Next action set (e.g., send thank-you / confirm panel date) with a date; asks the user if unsure",
+        "CSV header and other rows unchanged",
+        "Reply 50 words or fewer with the updated row shown"
+      ]
+    },
+    {
+      "id": "weekly-review",
+      "prompt": "Run my weekly review as of 2026-10-16 on this tracker.csv.",
+      "expected": [
+        "Funnel table by stage",
+        "Flags table with MISSING/OVERDUE/STALE/DUE/WATCH per aging rules and the rule that fired",
+        "Actions due this week with dates",
+        "Ends with one decision sentence",
+        "Does not close or change rows without user confirmation"
+      ]
+    },
+    {
+      "id": "missing-stage",
+      "prompt": "Add Northgate Insurance, Senior Director IT, to my tracker.",
+      "expected": [
+        "Asks once for stage and event date (and next action)",
+        "Does not default stage or invent a date"
+      ]
+    },
+    {
+      "id": "agent-happy-path-add",
+      "prompt": "Log that I applied to Acme for Director on 2026-10-01 and show my pipeline and what is stale.",
+      "expected": [
+        "Adds the row with next action, lists the pipeline, runs the aging report"
+      ],
+      "inputs": {
+        "tracker": "evals/fixtures/tracker.csv",
+        "action": "add",
+        "args": "--company Acme --role Director --stage Applied --date 2026-10-01 --next \"Follow up\" --next-date 2026-10-08",
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tracker.csv",
+          "check": "contains:\"Acme\""
+        },
+        "exists:pipeline.json",
+        "exists:aging.json",
+        "exists:weekly-review.md"
+      ]
+    },
+    {
+      "id": "agent-missing-tracker",
+      "prompt": "What is stale in my pipeline?",
+      "expected": [
+        "Asks for the tracker CSV"
+      ],
+      "inputs": {
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:tracker"
+      ]
+    },
+    {
+      "id": "agent-report-only",
+      "prompt": "Weekly review, please.",
+      "expected": [
+        "No event added; pipeline and aging reports only"
+      ],
+      "inputs": {
+        "tracker": "evals/fixtures/tracker.csv",
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:0",
+        "exists:aging.json",
+        "exists:weekly-review.md"
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Start my job-search tracker: I applied to Bluewater Freight (fictional) for Director, Integration on 2026-10-10.",
+      "expected": [
+        "The empty tracker gets row 1 at stage Applied with the follow-up; pipeline and aging reports cover that one application"
+      ],
+      "inputs": {
+        "tracker": "evals/fixtures/new/tracker.csv",
+        "action": "add",
+        "args": "--company \"Bluewater Freight (fictional)\" --role \"Director, Integration\" --stage Applied --date 2026-10-10 --next \"Follow up with recruiter\" --next-date 2026-10-17 --notes fictional",
+        "as_of": "2026-10-17"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tracker.csv",
+          "check": "contains:\"1,Bluewater Freight (fictional),\"Director, Integration\"\""
+        },
+        {
+          "file": "pipeline.json",
+          "check": "contains:\"Bluewater Freight (fictional)\""
+        },
+        {
+          "file": "aging.json",
+          "check": "json"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# fictional fixture — Northwind Billing Assistant RAID log (invented items)
+id,type,description,owner,likelihood,impact,due,status,mitigation,raised
+R1,risk,Knowledge-base articles out of date reduce answer accuracy,Content lead,4,5,2026-10-09,open,Content refresh sprint before index build,2026-08-03
+R2,risk,Billing agents distrust AI suggestions and do not adopt,Change lead,3,4,2026-11-13,open,Champions network in each team,2026-08-17
+R3,risk,PII in ticket notes reaches the model,,3,5,2026-10-20,open,Mask notes before indexing,2026-09-01
+R4,risk,Token cost exceeds budget at full rollout,Finance controller,2,3,2026-11-30,open,,2026-09-15
+R5,risk,Vendor model deprecation during pilot,Platform lead,2,4,2026-12-15,open,Pin model version and test fallback,2026-09-20
+R6,risk,Eval set too small for the gate,Eval lead,3,3,2026-09-30,closed,Added 200 labelled cases,2026-08-10
+I1,issue,Billing system API rate limit blocks bulk extract,Integration lead,,4,2026-10-02,open,Negotiate temporary limit increase,2026-09-10
+A1,assumption,Agent desktop vendor ships plugin API by end October,Integration lead,2,4,2026-10-31,open,Confirm in vendor QBR,2026-08-03
+D1,dependency,Identity team provisions SSO groups for pilot users,Identity team lead,3,3,2026-10-14,open,,2026-09-01

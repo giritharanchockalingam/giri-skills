@@ -1,0 +1,6 @@
+# fictional fixture - criteria for choosing a platform for the (fictional) Northwind Billing Assistant
+criterion,weight,description
+answer_quality,40,Accuracy on the billing golden eval set
+total_cost,25,Three-year total cost of ownership
+security_compliance,20,Security and compliance posture
+integration_effort,15,Effort to integrate with billing systems (5 = least effort)

@@ -1,0 +1,95 @@
+{
+  "skill": "finetune-dataset-builder",
+  "cases": [
+    {
+      "id": "prompt-build-sft-set",
+      "prompt": "Here are our helpdesk Q&A pairs. Clean them up and give me train/val/test files in chat format for fine-tuning.",
+      "expected": [
+        "Runs scripts/build_dataset.py; reports usable count, duplicates removed, split sizes and leakage 0",
+        "States defaults used (split 0.8/0.1/0.1, seed 42, min rows 10) and that token counts are estimates",
+        "Points to pii-data-inventory before training"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the fine-tune dataset from the attached helpdesk examples with default settings.",
+      "expected": [
+        "15 usable after removing 1 empty, 1 exact and 1 normalised duplicate; 11/2/2 split; leakage 0"
+      ],
+      "inputs": {
+        "examples": "evals/fixtures/helpdesk-examples.csv"
+      },
+      "checks": [
+        "exit:0",
+        "exists:train.jsonl",
+        {"file": "dataset-stats.json", "check": "contains:\"\\\"usable\\\": 15\""},
+        {"file": "data-card.md", "check": "contains:\"split 0.8,0.1,0.1 (default); seed 42 (default); min_rows 10 (default)\""},
+        {"file": "data-card.md", "check": "contains:\"| Exact duplicates removed | 1 |\""},
+        {"file": "data-card.md", "check": "contains:\"Leakage (normalised prompts shared across splits): 0.\""}
+      ]
+    },
+    {
+      "id": "agent-missing-examples",
+      "prompt": "Make me a fine-tune dataset for our helpdesk bot.",
+      "expected": [
+        "Asks once for the raw examples; does not generate examples"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:examples"
+      ]
+    },
+    {
+      "id": "agent-too-few-rows-exits-1",
+      "prompt": "Build train/val/test from these few JSONL examples.",
+      "expected": [
+        "Only 4 usable after rejecting invalid/empty/no-assistant rows and a duplicate; below min_rows 10 so exit 1, no examples invented"
+      ],
+      "inputs": {
+        "examples": "evals/fixtures/too-few-examples.jsonl"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "data-card.md", "check": "contains:\"Not built: 4 usable examples is below min_rows 10.\""},
+        {"file": "dataset-stats.json", "check": "contains:\"\\\"invalid JSON\\\": 1\""}
+      ]
+    },
+    {
+      "id": "agent-supplied-split-and-seed",
+      "prompt": "Use a 70/15/15 split with seed 7 and reject anything over 400 characters.",
+      "expected": [
+        "Supplied parameters are labelled (supplied), not (default); leakage 0"
+      ],
+      "inputs": {
+        "examples": "evals/fixtures/helpdesk-examples.csv",
+        "split": "0.7,0.15,0.15",
+        "seed": "7",
+        "max_chars": "400"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "data-card.md", "check": "contains:\"split 0.7,0.15,0.15 (supplied); seed 7 (supplied)\""},
+        {"file": "dataset-stats.json", "check": "contains:\"\\\"leakage_prompts_across_splits\\\": 0\""}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Add the new helpdesk examples to our current fine-tune set without reshuffling it.",
+      "expected": [
+        "Reads the current set (8 train, 1 val, 1 test): every record keeps its split; 11 new rows already in the set are dropped; 5 new examples added (3 train, 1 val, 1 test); leakage 0"
+      ],
+      "inputs": {
+        "examples": "evals/fixtures/helpdesk-examples.csv",
+        "existing": "evals/fixtures/current-dataset"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "data-card.md", "check": "contains:\"Extends the existing dataset `current-dataset/` (8 train, 1 val, 1 test records read)\""},
+        {"file": "data-card.md", "check": "contains:\"| train | 8 | 3 | 11 |\""},
+        {"file": "dataset-stats.json", "check": "contains:\"\\\"new_already_in_dataset\\\": 11\""},
+        {"file": "dataset-stats.json", "check": "contains:\"\\\"leakage_prompts_across_splits\\\": 0\""}
+      ]
+    }
+  ]
+}

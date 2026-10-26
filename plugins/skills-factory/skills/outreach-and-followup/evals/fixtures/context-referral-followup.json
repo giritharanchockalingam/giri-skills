@@ -1,0 +1,14 @@
+{
+  "_note": "fictional fixture — follow-up to a referral ask already sent, for the outreach-and-followup evals",
+  "recipient": "Priya Nair",
+  "company": "Helix Logistics (fictional)",
+  "role": "VP, Enterprise Applications",
+  "channel": "LinkedIn",
+  "last_touch_date": "2026-10-01",
+  "relationship": "warm",
+  "sender": "Morgan Adeyemi-Park",
+  "specifics": [
+    "shared history: we ran the claims cutover together at Lakeshore Health Plans",
+    "new detail: the role's posting now lists ERP consolidation, which I led on one S/4HANA tenant [MR-L13]"
+  ]
+}

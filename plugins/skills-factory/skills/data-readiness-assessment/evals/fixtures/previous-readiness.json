@@ -1,0 +1,152 @@
+{
+  "_note": "Fictional fixture: readiness.json produced by scripts/assess.py from evals/fixtures/orders-defects.csv (the extract before the data fix) with requirements.csv, as of 2026-10-01. Invented data.",
+  "source": {
+    "dataset": "orders-defects.csv",
+    "requirements": "requirements.csv",
+    "as_of": "2026-10-01"
+  },
+  "requirements": {
+    "min_rows": 20,
+    "max_null_pct": 10.0,
+    "required_columns": [
+      "order_id",
+      "order_date",
+      "amount",
+      "region"
+    ],
+    "unique_key": [
+      "order_id"
+    ],
+    "max_duplicate_rows": 0,
+    "date_column": "order_date",
+    "max_age_days": 30.0
+  },
+  "verdict": "Not ready",
+  "summary": {
+    "pass": 1,
+    "fail": 5,
+    "TBD": 0,
+    "dimensions": 6
+  },
+  "dimensions": [
+    {
+      "dimension": "volume",
+      "status": "fail",
+      "threshold": 20,
+      "observed": 14,
+      "detail": "14 rows vs minimum 20.",
+      "owner": "Data owner",
+      "marker": null,
+      "missing_keys": []
+    },
+    {
+      "dimension": "completeness",
+      "status": "fail",
+      "threshold": 10.0,
+      "observed": 28.57,
+      "detail": "Over limit: amount (28.57%), region (21.43%).",
+      "owner": "Data steward",
+      "marker": null,
+      "missing_keys": [],
+      "columns_over": [
+        "amount",
+        "region"
+      ]
+    },
+    {
+      "dimension": "schema",
+      "status": "pass",
+      "threshold": 4,
+      "observed": 4,
+      "detail": "All required columns present.",
+      "owner": null,
+      "marker": null,
+      "missing_keys": [],
+      "missing_columns": []
+    },
+    {
+      "dimension": "uniqueness",
+      "status": "fail",
+      "threshold": 0,
+      "observed": 2,
+      "detail": "2 duplicate key rows, 0 rows with a null key on (order_id).",
+      "owner": "Data steward",
+      "marker": null,
+      "missing_keys": [],
+      "null_key_rows": 0
+    },
+    {
+      "dimension": "duplicates",
+      "status": "fail",
+      "threshold": 0,
+      "observed": 1,
+      "detail": "Fully duplicated rows: 1.",
+      "owner": "Data steward",
+      "marker": null,
+      "missing_keys": []
+    },
+    {
+      "dimension": "freshness",
+      "status": "fail",
+      "threshold": 30.0,
+      "observed": 103,
+      "detail": "Newest order_date = 2026-06-20, 103 days before as_of 2026-10-01.",
+      "owner": "Data engineer",
+      "marker": null,
+      "missing_keys": [],
+      "newest_date": "2026-06-20",
+      "future_dated_rows": 0,
+      "unparseable_dates": 0
+    }
+  ],
+  "profile": {
+    "rows": 14,
+    "columns": 6,
+    "duplicate_rows": 1,
+    "column_profile": [
+      {
+        "column": "order_id",
+        "inferred_type": "string",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "distinct": 12
+      },
+      {
+        "column": "customer_segment",
+        "inferred_type": "string",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "distinct": 3
+      },
+      {
+        "column": "order_date",
+        "inferred_type": "date",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "distinct": 13
+      },
+      {
+        "column": "amount",
+        "inferred_type": "float",
+        "nulls": 4,
+        "null_pct": 28.57,
+        "distinct": 9
+      },
+      {
+        "column": "region",
+        "inferred_type": "string",
+        "nulls": 3,
+        "null_pct": 21.43,
+        "distinct": 3
+      },
+      {
+        "column": "notes",
+        "inferred_type": "string",
+        "nulls": 0,
+        "null_pct": 0.0,
+        "distinct": 1
+      }
+    ]
+  },
+  "notes": []
+}

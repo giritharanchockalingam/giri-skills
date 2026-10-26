@@ -1,0 +1,13 @@
+{
+  "_note": "FICTIONAL example repo for evals — not a real project",
+  "name": "harborline-portal",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": { "next": "14.2.35", "react": "18.3.1", "react-dom": "18.3.1" }
+}

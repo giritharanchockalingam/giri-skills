@@ -1,0 +1,15 @@
+order_id,customer_segment,order_date,amount,region,notes
+ORD-2001,retail,2026-06-01,,,fictional fixture
+ORD-2002,wholesale,2026-06-02,51.00,south,fictional fixture
+ORD-2003,online,2026-06-03,92.00,east,fictional fixture
+ORD-2004,retail,2026-06-04,,west,fictional fixture
+ORD-2005,online,2026-06-05,174.00,,fictional fixture
+ORD-2006,retail,2026-06-06,215.00,south,fictional fixture
+ORD-2007,wholesale,2026-06-07,,east,fictional fixture
+ORD-2008,online,2026-06-08,297.00,west,fictional fixture
+ORD-2009,retail,2026-06-09,38.00,,fictional fixture
+ORD-2010,online,2026-06-10,,south,fictional fixture
+ORD-2011,retail,2026-06-11,120.00,east,fictional fixture
+ORD-2012,wholesale,2026-06-12,161.00,west,fictional fixture
+ORD-2003,online,2026-06-03,92.00,east,fictional fixture
+ORD-2006,online,2026-06-20,99.00,east,fictional fixture

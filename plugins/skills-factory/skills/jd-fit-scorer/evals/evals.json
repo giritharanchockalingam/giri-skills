@@ -1,0 +1,113 @@
+{
+  "skill": "jd-fit-scorer",
+  "cases": [
+    {
+      "id": "happy-path-score",
+      "prompt": "Here is a JD (full text below) and my profile keyword file. Should I apply?\n\nJD:\nSenior Director, Enterprise Applications — Harbor Freight Logistics (fictional)\nLocation: Columbus OH (hybrid). Travel up to 20%.\n\nRequirements:\n- 10+ years leading enterprise application teams; must have ERP consolidation experience (SAP S/4HANA preferred)\n- Must have owned a budget of $25M or more\n- Experience with API gateway and partner integration programs is required\n- Cloud cost management (FinOps) experience required\n- Nice to have: healthcare payer or insurance domain\n- Nice to have: Snowflake or Informatica data platform exposure\n- MBA preferred\nWe value ownership, candor and a bias for action.\n\nProfile keyword file:\n# fictional profile for eval fixtures — \"Morgan Adeyemi-Park\"\n!location: Remote, Columbus OH, Chicago IL\n!travel_max: 25\n!comp_floor: 230000\n!clearance: none\nenterprise application development leadership | 2025\nERP consolidation (SAP S/4HANA) | 2024\ncloud cost management (FinOps, Azure) | 2025\nbudget ownership $38M | 2025\nAPI gateway and partner program | 2018\nhealthcare payer systems | 2025\ndata platform (Snowflake, Informatica) | 2024\nMBA | 2016",
+      "expected": [
+        "First line is the verdict with score /100",
+        "Bucket table shows must 60 / nice 25 / culture 15 and the math",
+        "Every MATCH or PARTIAL cites a profile line",
+        "Gap table has a mitigation for every GAP",
+        "Red flags listed with penalties or 'none detected'"
+      ]
+    },
+    {
+      "id": "missing-profile",
+      "prompt": "Score this JD for me: [JD text]. I haven't given you my résumé yet.",
+      "expected": [
+        "Asks once for the profile keyword file or master résumé",
+        "Does not score from memory or from the user's job title",
+        "Does not fabricate experience"
+      ]
+    },
+    {
+      "id": "hard-constraint-override",
+      "prompt": "Score this VP IT JD. It says 'must currently hold active TS/SCI' and travel up to 60%. My profile file says clearance: none, travel_max: 25.",
+      "expected": [
+        "Verdict is NO-GO due to hard constraints even if keyword score is high",
+        "Both hard-constraint hits named explicitly",
+        "Suggests logging in tracker as Passed with reason"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Score my fit for the attached JD against my profile keywords.",
+      "expected": [
+        "Runs scripts/score.py; weighted score, bucket table, go/no-go verdict"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "profile": "evals/fixtures/profile.txt"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "fit.json",
+          "check": "contains:\"verdict\""
+        },
+        {
+          "file": "fit.md",
+          "check": "contains:\"/100\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-profile",
+      "prompt": "Should I apply to this JD?",
+      "expected": [
+        "Asks for the profile keyword file"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:profile"
+      ]
+    },
+    {
+      "id": "agent-threshold-override",
+      "prompt": "Be strict: only count exact matches.",
+      "expected": [
+        "Uses the supplied threshold; verdict still from the script"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "profile": "evals/fixtures/profile.txt",
+        "threshold": "0.9"
+      },
+      "checks": [
+        "exit:0",
+        "exists:fit.json"
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Score this Senior Director JD against my existing résumé; my profile file only has my location and travel limits.",
+      "expected": [
+        "Requirements matched to résumé lines with MR-L ids as evidence (API gateway → MR-L22, MBA → MR-L40); constraints from the profile still applied; verdict computed"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "profile": "evals/fixtures/profile-constraints.txt",
+        "resume": "evals/fixtures/master-resume.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "fit.md",
+          "check": "contains:\"| Experience with API gateway and partner integration programs is required | must | MATCH | MR-L22:\""
+        },
+        {
+          "file": "fit.json",
+          "check": "contains:\"MR-L40: MBA\""
+        },
+        {
+          "file": "fit.md",
+          "check": "contains:\"constraint: location includes Columbus OH\""
+        }
+      ]
+    }
+  ]
+}

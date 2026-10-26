@@ -1,0 +1,6 @@
+criterion,weight,direction,hard_min,hard_max,hard_in,notes
+task_accuracy,0.40,higher,0.75,,,fictional fixture - weights are illustrative
+groundedness,0.20,higher,,,,fictional fixture
+monthly_cost_usd,0.25,lower,,,,fictional fixture - derived from workload.csv
+p95_latency_ms,0.15,lower,,2500,,fictional fixture - latency SLO
+context_tokens,0,,64000,,,fictional fixture - constraint only

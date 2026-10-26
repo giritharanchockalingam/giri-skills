@@ -1,0 +1,5 @@
+# fictional profile for eval fixtures — constraints only; the skills come from the résumé
+!location: Remote, Columbus OH, Chicago IL
+!travel_max: 25
+!comp_floor: 230000
+!clearance: none

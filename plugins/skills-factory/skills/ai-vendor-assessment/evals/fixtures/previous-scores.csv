@@ -1,0 +1,6 @@
+# fictional fixture - scores.csv from the (fictional) 2025 assessment that selected Tailspin; vendor names are invented
+option,weighted_score,rank,complete,red_flags,missing_criteria,risk_unanswered
+Tailspin Models (fictional),4.050,1,yes,none,none,none
+Fabrikam AI (fictional),3.900,2,yes,none,none,TPR-09 [TO BE BASELINED — owner: Third-party risk manager]
+Contoso Copilot (fictional),3.400,3,yes,TPR-05,none,none
+Litware GenAI (fictional),n/a,n/a,no,none,security_compliance [TO BE BASELINED — owner: Procurement lead],none

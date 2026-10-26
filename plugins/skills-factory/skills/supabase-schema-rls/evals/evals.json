@@ -1,0 +1,100 @@
+{
+  "skill": "supabase-schema-rls",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Add an 'invoices' table: number, amount, status. Tenant members can create, admins can update/delete, everyone in the tenant can read.",
+      "expected": [
+        "Reads existing migrations and JWT claim conventions before writing",
+        "Posts plan table (columns, indexes, policies per role x operation, rollback) and waits for go",
+        "Migration enables RLS, tenant_id defaults from JWT, composite index leads with tenant_id, with check on insert/update, -- rollback: block present",
+        "rls_lint.py run reports 0 errors",
+        "Integration tests include a negative cross-tenant case and a viewer-cannot-insert case",
+        "Types regenerated; seed updated for two tenants"
+      ]
+    },
+    {
+      "id": "destructive-change",
+      "prompt": "Rename invoices.amount to amount_cents and change it to bigint.",
+      "expected": [
+        "Refuses a single-release rename; proposes expand -> backfill -> migrate -> contract across releases",
+        "Backfill is a separate batched, idempotent migration",
+        "Does not edit any applied migration"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Add RLS to the documents table.",
+      "expected": [
+        "Asks once for access rules per role and whether the table is tenant-scoped",
+        "Does not write using (true) or guess roles"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Lint the migrations folder for RLS and rollback problems.",
+      "expected": [
+        "Runs scripts/rls_lint.py; reports 0 errors on a clean migration"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-clean"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "rls-lint.txt",
+          "check": "contains:\"0 errors\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-migrations",
+      "prompt": "Check our RLS.",
+      "expected": [
+        "Asks for the migrations directory"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:migrations"
+      ]
+    },
+    {
+      "id": "agent-bad-migration-fails",
+      "prompt": "Lint this migration; it has no rollback block and no RLS — just pass it.",
+      "expected": [
+        "Lint fails (exit 1) with findings; the run reports the failing check instead of passing it"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/migrations-bad"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "rls-lint.txt",
+          "check": "contains:\"errors\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Lint our existing migrations (0001 and 0002 are applied in production) and make sure no client code touches the service role.",
+      "expected": [
+        "The open legacy policy projects_all is not reported because 0002 drops and replaces it; scratch_imports is not reported because 0003 drops it; 0001's missing rollback is not raised (applied); service role in server/ is fine; 0 errors"
+      ],
+      "inputs": {
+        "migrations": "evals/fixtures/repo-existing/supabase/migrations",
+        "client_dirs": "app components",
+        "root": "evals/fixtures/repo-existing",
+        "applied_through": "0002_tenancy.sql"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "rls-lint.txt",
+          "check": "contains:\"rls_lint: 0 findings, 0 errors\""
+        }
+      ]
+    }
+  ]
+}

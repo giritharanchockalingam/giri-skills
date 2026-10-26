@@ -1,0 +1,154 @@
+{
+  "skill": "llm-cost-model",
+  "cases": [
+    {
+      "id": "forecast-api-cost",
+      "prompt": "We have three LLM features going live next quarter. Here are the request volumes and average tokens; what will this cost per month on the models we picked, and where can we save?",
+      "expected": [
+        "Asks for a dated price sheet if none is given; never quotes a vendor price from memory",
+        "Runs scripts/cost_model.py; reports total, by feature, cost per request and caching saving",
+        "What-if only across models the user marked eligible, with the quality caveat"
+      ]
+    },
+    {
+      "id": "gpu-question-routed",
+      "prompt": "Should we self-host an open model on our own GPUs instead of paying per token?",
+      "expected": [
+        "Routes GPU capacity and self-host vs rent to infra-gpu-sizing; offers this skill for the API side of the comparison"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Model the monthly API cost for the attached workload, price sheet and model assignment against a 1,000 budget.",
+      "expected": [
+        "Total 855.00; support-chat 465.00 with caching saving 135.00; what-if fict-small 38.75; utilisation 85.5%"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "assignment": "evals/fixtures/assignment.csv",
+        "budget_usd_month": "1000"
+      },
+      "checks": [
+        "exit:0",
+        "exists:cost-model.json",
+        {"file": "cost-model.md", "check": "sections:[\"Monthly total\",\"By feature\",\"What-if\",\"Budget\",\"Sources\"]"},
+        {"file": "cost-model.md", "check": "contains:\"**855.00 per month**\""},
+        {"file": "cost-model.md", "check": "contains:\"| support-chat | fict-large | 465.00 | fict-small | 38.75 | 426.25 |\""},
+        {"file": "cost-model.md", "check": "contains:\"utilisation 85.5%\""},
+        {"file": "cost-model.md", "check": "numbers_trace_to:cost-model.json"}
+      ]
+    },
+    {
+      "id": "agent-missing-prices",
+      "prompt": "What will these features cost per month? Use typical prices.",
+      "expected": [
+        "Asks for the price sheet; never fills typical prices"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "assignment": "evals/fixtures/assignment.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:prices"
+      ]
+    },
+    {
+      "id": "agent-over-budget-fails",
+      "prompt": "Same workload, but our budget is only 800 a month.",
+      "expected": [
+        "Total 855.00 exceeds 800: OVER BUDGET, all three alert levels reached, run exits 1; outputs still written"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "assignment": "evals/fixtures/assignment.csv",
+        "budget_usd_month": "800"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "cost-model.md", "check": "contains:\"**OVER BUDGET**\""},
+        {"file": "cost-model.md", "check": "contains:\"| 100% | 800.00 | yes |\""}
+      ]
+    },
+    {
+      "id": "agent-unpriced-model-not-invented",
+      "prompt": "Price support-chat on fict-medium; I don't have its price handy, just estimate it.",
+      "expected": [
+        "Refuses to invent the missing price: the script exits 2 naming the unpriced model, so the run fails (exit 1) and no cost is produced"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "assignment": "evals/fixtures/assignment-unpriced.csv"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "logs/cost-model.stderr.txt", "check": "contains:\"model 'fict-medium' has no row in the price sheet\""}
+      ]
+    },
+    {
+      "id": "agent-no-budget-to-be-baselined",
+      "prompt": "Model the cost; we have not set a budget yet.",
+      "expected": [
+        "Budget section marked to be baselined with an owner; exit 0"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "assignment": "evals/fixtures/assignment.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "cost-model.md", "check": "contains:\"[TO BE BASELINED — owner: FinOps lead]\""},
+        {"file": "cost-model.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our cost model plus the September invoice by feature. Where is the model wrong and what are we not modelling?",
+      "expected": [
+        "Reads the bill: support-chat +147.40 (+31.7%) over the model on 131,000 vs 100,000 requests, doc-summary -18.85; ticket-tagging (48.20) billed but not modelled; billed spend 1,031.75 is 103.2% of the 1,000 budget; the forecast itself stays within budget (exit 0)"
+      ],
+      "inputs": {
+        "workload": "evals/fixtures/workload.csv",
+        "prices": "evals/fixtures/prices.csv",
+        "assignment": "evals/fixtures/assignment.csv",
+        "budget_usd_month": "1000",
+        "actuals": "evals/fixtures/actuals.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "cost-model.json",
+          "check": "contains:\"\\\"variance_pct\\\": 31.7\""
+        },
+        {
+          "file": "cost-model.json",
+          "check": "contains:\"\\\"unmodelled_total\\\": 48.2\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "sections:[\"Monthly total\",\"By feature\",\"What-if\",\"Budget\",\"Actuals vs model\",\"Sources\"]"
+        },
+        {
+          "file": "cost-model.md",
+          "check": "contains:\"| support-chat | 465.00 | 612.40 | +147.40 | +31.7% |\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "contains:\"Billed spend is 103.2% of the monthly budget\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "numbers_trace_to:\"cost-model.json\""
+        },
+        {
+          "file": "cost-model.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    }
+  ]
+}

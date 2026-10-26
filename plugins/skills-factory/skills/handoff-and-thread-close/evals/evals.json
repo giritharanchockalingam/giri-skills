@@ -1,0 +1,125 @@
+{
+  "skill": "handoff-and-thread-close",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Wrap up this thread. We built the invoices table, service and action; tests pass; the export page is not started.",
+      "expected": [
+        "Changed files taken from git status/diff, not from the summary given",
+        "Runs or reports lint/typecheck/unit/build with results",
+        "HANDOFF.md: state line first, open items with owners, next-thread prompt naming files to read and first action",
+        "Chat summary <= 50 words; commit command offered, not executed"
+      ]
+    },
+    {
+      "id": "red-state",
+      "prompt": "Close the thread; the integration suite is still failing on the RLS negative test.",
+      "expected": [
+        "State line begins with 'red —' and names the failing test",
+        "Next-thread prompt starts with safe-fix and includes the repro command",
+        "Does not claim partial success as done"
+      ]
+    },
+    {
+      "id": "off-topic-drift",
+      "prompt": "Hand off. (git status shows changes to README.md and .github/workflows/ci.yml that were not part of the invoices work.)",
+      "expected": [
+        "Flags README.md and ci.yml as outside the thread topic",
+        "Proposes revert or a separate PR; does not bundle silently"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Wrap up this thread: export shipped, e2e still pending.",
+      "expected": [
+        "Runs scripts/handoff.py; changed files come from git with the commit subject as the why; open items carried from the previous HANDOFF with owners"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-files",
+        "state": "partial — export shipped, e2e pending",
+        "project": "demo-app"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "HANDOFF.md",
+          "check": "sections:[\"State\",\"Done this thread\",\"Changed files\",\"Open items\",\"Next thread starts with\"]"
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"server/services/export-service.ts\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"Add rate limit to export route (owner: platform)\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"uncommitted\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "max_lines:80"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-state",
+      "prompt": "Update the handoff.",
+      "expected": [
+        "Asks for the one-line state; does not invent green"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-files"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:state"
+      ]
+    },
+    {
+      "id": "agent-not-a-repo-fails",
+      "prompt": "Write the handoff from what you remember of the thread; the folder has no git.",
+      "expected": [
+        "Refuses: changed files must come from git; exits 1 (not a git repository root) instead of writing from memory"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/not-a-repo",
+        "state": "green"
+      },
+      "checks": [
+        "exit:1"
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "First handoff for this repo — there is no HANDOFF.md yet. Close the thread: slip search page done, booking rules next.",
+      "expected": [
+        "Range is the whole history (no previous HANDOFF); both commits listed; open items say none carried; no invented decisions"
+      ],
+      "inputs": {
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-files-first",
+        "state": "partial — slip search page done, booking rules next",
+        "project": "slipway"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"feat: slip search page and booking service\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "contains:\"none carried (no previous docs/HANDOFF.md open items)\""
+        },
+        {
+          "file": "HANDOFF.md",
+          "check": "sections:[\"State\",\"Done this thread\",\"Changed files\",\"Open items\",\"Next thread starts with\"]"
+        }
+      ]
+    }
+  ]
+}

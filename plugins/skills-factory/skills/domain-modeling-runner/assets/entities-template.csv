@@ -1,0 +1,6 @@
+entity,attribute,type,required,notes
+"# One row per attribute. Mark the identifier with an id / <entity>_id name or PK in notes; FK in notes marks a foreign key. Quote values containing commas.",,,,
+<Entity>,id,uuid,yes,PK
+<Entity>,<attribute>,string,yes,<what it means>
+<OtherEntity>,id,uuid,yes,PK
+<OtherEntity>,<entity>_id,uuid,yes,FK references <Entity>

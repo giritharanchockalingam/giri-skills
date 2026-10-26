@@ -1,0 +1,62 @@
+{
+  "_note": "fictional fixture \u2014 retrieval metrics of the last release (dense-only retriever) on the policy-assistant eval set",
+  "overall": {
+    "n": 5,
+    "recall@1": 0.5,
+    "hit@1": 0.6,
+    "precision@1": 0.6,
+    "recall@5": 0.8,
+    "hit@5": 0.8,
+    "precision@5": 0.2,
+    "recall@10": 0.8,
+    "hit@10": 0.8,
+    "precision@10": 0.1,
+    "mrr": 0.6667,
+    "coverage": 0.8
+  },
+  "by_type": {
+    "fact": {
+      "n": 4,
+      "recall@1": 0.5,
+      "hit@1": 0.5,
+      "precision@1": 0.5,
+      "recall@5": 0.75,
+      "hit@5": 0.75,
+      "precision@5": 0.15,
+      "recall@10": 0.75,
+      "hit@10": 0.75,
+      "precision@10": 0.075,
+      "mrr": 0.5833,
+      "coverage": 0.75
+    },
+    "procedure": {
+      "n": 1,
+      "recall@1": 0.5,
+      "hit@1": 1.0,
+      "precision@1": 1.0,
+      "recall@5": 1.0,
+      "hit@5": 1.0,
+      "precision@5": 0.4,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "precision@10": 0.2,
+      "mrr": 1.0,
+      "coverage": 1.0
+    }
+  },
+  "out_of_scope": {
+    "n": 1,
+    "retrieved_nothing_rate": 0.0
+  },
+  "misses_at_max_k": [
+    "Q006"
+  ],
+  "max_k": 10,
+  "in_scope_query_ids": [
+    "Q001",
+    "Q002",
+    "Q003",
+    "Q005",
+    "Q006"
+  ]
+}

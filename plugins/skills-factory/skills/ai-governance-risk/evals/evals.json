@@ -1,0 +1,139 @@
+{
+  "skill": "ai-governance-risk",
+  "cases": [
+    {
+      "id": "happy-path-admissions-assistant",
+      "prompt": "Review the risks of an AI assistant that summarizes student applications and suggests a shortlist for admissions officers. Uses applicant essays and transcripts (includes minors), vendor-hosted model in the US, officers make the final call.",
+      "expected": [
+        "Internal tier High and EU AI Act summary tier high-risk (education access) with criteria stated",
+        "Risk register covers bias, privacy (minors, education records), hallucination, security, transparency with likelihood/impact/controls/owners",
+        "Model card includes out-of-scope uses and disaggregated evaluation",
+        "NIST AI RMF coverage table and legal-review disclaimer line present",
+        "Decision line first: go with conditions or no-go, with owners and dates"
+      ]
+    },
+    {
+      "id": "missing-data-categories",
+      "prompt": "Do a risk review on our new chatbot.",
+      "expected": [
+        "Asks once for use case, data categories, model/hosting, deployment context",
+        "Does not assign a tier without that information"
+      ]
+    },
+    {
+      "id": "model-card-only",
+      "prompt": "Write the model card for our internal meeting-notes summarizer (employees only, no customer data, human edits every summary).",
+      "expected": [
+        "Fills the model-card template with intended use, explicit out-of-scope uses, limitations, monitoring",
+        "Tier Low with minimum control set",
+        "Evaluation rows marked TO BE BASELINED with owner where no scorecard exists"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the risk register and model card for the benefits enquiry assistant from its canvas.",
+      "expected": [
+        "Runs risk_register.py; medium tier -> impact 3; privacy/hallucination/transparency rated Medium from the canvas's top risks; other likelihoods TBD; controls mapped per category"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "risk-register.csv",
+          "check": "csv_rows:control!empty"
+        },
+        {
+          "file": "risk-register.csv",
+          "check": "contains:\"R-002,privacy,\""
+        },
+        {
+          "file": "risk-register.csv",
+          "check": "contains:\",3,3,Medium,C01; C02; C03; C04; C05; C12; C20; C21,\""
+        },
+        {
+          "file": "model-card.md",
+          "check": "contains:\"| Risk tier (internal / EU AI Act summary) | medium / [TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-canvas",
+      "prompt": "Assess the AI risks for our new assistant.",
+      "expected": [
+        "Asks once for the use-case canvas (purpose, data, deployment context)"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:canvas"
+      ]
+    },
+    {
+      "id": "agent-high-risk-without-control-fails",
+      "prompt": "Tier is high but our controls catalog has no security control — produce the register anyway and call it done.",
+      "expected": [
+        "risk_register.py exits 1: the High-rated security risk has no mapped control; the register is still written for review"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas-high.md",
+        "controls": "evals/fixtures/controls-catalog-no-security.md"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "risk-register.csv",
+          "check": "contains:\"R-005,security,Prompt injection or tool abuse; autonomy: act,3,5,High,,,\""
+        }
+      ]
+    },
+    {
+      "id": "agent-thin-canvas-no-invented-scores",
+      "prompt": "The canvas is mostly blank; fill in reasonable likelihood and impact numbers.",
+      "expected": [
+        "No score is invented: likelihood, impact and rating stay TBD; controls still mapped; model card carries owned TBD markers"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas-thin.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "risk-register.csv",
+          "check": "csv_rows:rating~^TBD$"
+        },
+        {
+          "file": "risk-register.csv",
+          "check": "csv_rows:control!empty"
+        },
+        {
+          "file": "model-card.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Quarterly refresh of the Benefits enquiry assistant risk register. Here's the updated canvas and last quarter's register — keep our reviewed scores and owners where nothing changed.",
+      "expected": [
+        "Keeps the existing risk IDs; the canvas wins where it supports a value (privacy likelihood 4 -> 3); reviewed scores and named owners carry forward with a re-confirm label where the canvas is silent",
+        "Lists every change in register-diff.csv, including the retired category and the control id no longer in the catalog, instead of dropping them"
+      ],
+      "inputs": {
+        "canvas": "evals/fixtures/use-case-canvas.md",
+        "existing": "evals/fixtures/risk-register-2026q2.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "risk-register.csv", "check": "contains:\"R-101,bias,\""},
+        {"file": "risk-register.csv", "check": "contains:\",2,3,Low,C01; C08; C09; C21,\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-102,privacy,likelihood,4,3,updated from the canvas\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-101,bias,owner,Head of HR Analytics (fictional),Head of HR Analytics (fictional),carried forward: canvas names no owner\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-109,reputational,row,R-109,,not carried: category not in the taxonomy\""},
+        {"file": "register-diff.csv", "check": "contains:\"R-105,security,control_id,C99,,not carried: not in the controls catalog\""},
+        {"file": "model-card.md", "check": "no_unowned_tbd"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "skill": "outreach-and-followup",
+  "cases": [
+    {
+      "id": "referral-ask-variants",
+      "prompt": "Write a LinkedIn note to Priya Nair, a former colleague who is now a Director at Helix Logistics, asking her to refer me for the VP Enterprise Applications role (req 4471). Cite my ERP consolidation outcome from MR-L13.",
+      "expected": [
+        "2-3 variants labelled by strategy (e.g., Direct ask, Advice-first) with trade-offs",
+        "LinkedIn connection variant is 300 characters or fewer",
+        "Cites MR-L13 in draft notes and uses only that fact",
+        "Includes an easy out for the recipient",
+        "Cadence row with next touch and stop rule, plus reminder to log in tracker"
+      ]
+    },
+    {
+      "id": "status-check-missing-context",
+      "prompt": "Nudge the recruiter at that company about my application.",
+      "expected": [
+        "Asks once for recipient name, role, last contact date and what timeline was given",
+        "Does not invent a name, date or prior conversation"
+      ]
+    },
+    {
+      "id": "thank-you-with-repair",
+      "prompt": "Panel interview today with Dana Okafor (VP Ops) and Luis Ferreira (Principal Architect). I fumbled the vendor-governance question with Luis; my real example is SB-02. Draft thank-yous.",
+      "expected": [
+        "One message per interviewer, each 120 words or fewer",
+        "Luis's note uses the Repair strategy citing SB-02 in two sentences",
+        "Dana's note references something specific she said or asks the user for it",
+        "Sent within 24 hours guidance in cadence row"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Thank-you note to Dana Okafor after today's panel; context attached.",
+      "expected": [
+        "Runs scripts/fill.py; Reinforce and Repair variants filled only from context.json; cadence dated within 24 h"
+      ],
+      "inputs": {
+        "type": "thank-you",
+        "context": "evals/fixtures/context-thank-you.json"
+      },
+      "checks": [
+        "exit:0",
+        "exists:message.md",
+        "exists:cadence.csv",
+        "exists:message-final.md",
+        {
+          "file": "message.md",
+          "check": "contains:\"Dana, thank you for the time today.\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"[SB-05]\""
+        },
+        {
+          "file": "cadence.csv",
+          "check": "csv:[touch,date,channel,template,basis,stop_rule]"
+        },
+        {
+          "file": "cadence.csv",
+          "check": "contains:\"Touch 1,2026-03-11,email\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-context",
+      "prompt": "Nudge the recruiter at that company about my application.",
+      "expected": [
+        "Asks once for context.json (recipient, role, last contact date); invents nothing"
+      ],
+      "inputs": {
+        "type": "status-check"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:context"
+      ]
+    },
+    {
+      "id": "agent-thin-context-placeholders",
+      "prompt": "Referral note to Priya Nair — just make it sound good, I'll fix details later.",
+      "expected": [
+        "Every unsupplied slot (req ID, outcome, sender) is an owned marker listed under Unfilled placeholders; no fact invented"
+      ],
+      "inputs": {
+        "type": "referral-ask",
+        "context": "evals/fixtures/context-referral-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "message.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"- A: req ID\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"Priya — saw Helix Logistics (fictional) is hiring a VP, Enterprise Applications.\""
+        },
+        {
+          "file": "cadence.csv",
+          "check": "contains:\"Touch 3,2026-03-30,email\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Thank-you note to Dana Okafor after today's panel; no model polish, I'll edit the draft.",
+      "expected": [
+        "message-final.md has Message, Alternate variant, Facts used and Cadence from the filled skeleton, labelled as a draft; facts only from context.json"
+      ],
+      "inputs": {
+        "type": "thank-you",
+        "context": "evals/fixtures/context-thank-you.json",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "message-final.md",
+          "check": "contains:\"Script draft — the model polish step was not run\""
+        },
+        {
+          "file": "message-final.md",
+          "check": "contains:\"open enrollment is the one window where nothing can slip\""
+        },
+        {
+          "file": "message-final.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "I messaged Priya on LinkedIn on 1 October about a referral and heard nothing. Draft the follow-up.",
+      "expected": [
+        "One touch counted as sent; only touches 2 and 3 are dated from the first message; the shared-history fact is marked as already used; the new ERP detail is the fact to add"
+      ],
+      "inputs": {
+        "type": "referral-ask",
+        "context": "evals/fixtures/context-referral-followup.json",
+        "thread": "evals/fixtures/thread-referral.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "message.md",
+          "check": "contains:\"1 message(s) sent (first 2026-10-01, last 2026-10-01); no reply yet.\""
+        },
+        {
+          "file": "message.md",
+          "check": "contains:\"already used in the thread; add a new element instead\""
+        },
+        {
+          "file": "cadence.csv",
+          "check": "contains:\"Touch 2,2026-10-08,LinkedIn\""
+        },
+        {
+          "file": "message-final.md",
+          "check": "contains:\"| new detail: the role's posting now lists ERP consolidation\""
+        }
+      ]
+    }
+  ]
+}

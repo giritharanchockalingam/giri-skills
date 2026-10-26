@@ -1,0 +1,116 @@
+{
+  "skill": "webapp-testing-runner",
+  "cases": [
+    {
+      "id": "agent-happy-path",
+      "prompt": "Generate Playwright tests for the sign-in and add-to-cart flows in this file.",
+      "expected": [
+        "Runs scripts/gen_tests.py; two test functions, networkidle after each goto, get_by_label/get_by_role/get_by_test_id locators",
+        "Warns on the nth-child selector; states the tests were generated and compiled, not executed"
+      ],
+      "inputs": {
+        "flows": "evals/fixtures/flows.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "test_flows.py",
+          "check": "contains:\"def test_sign_in(page: Page)\""
+        },
+        {
+          "file": "test_flows.py",
+          "check": "contains:\"networkidle\""
+        },
+        {
+          "file": "flows-report.md",
+          "check": "sections:[\"Flows\",\"Generated tests\",\"Warnings\",\"How to run\"]"
+        },
+        {
+          "file": "flows-report.md",
+          "check": "contains:\"nth-child\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-flows",
+      "prompt": "Write e2e tests for my app.",
+      "expected": [
+        "Asks once for the flows JSON instead of inventing pages and selectors"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:flows"
+      ]
+    },
+    {
+      "id": "agent-invalid-flows-fail",
+      "prompt": "Generate tests from these flows (one uses hover, some steps miss fields).",
+      "expected": [
+        "Unknown action, missing selector/value, duplicate name and empty steps are reported; no test file; run fails"
+      ],
+      "inputs": {
+        "flows": "evals/fixtures/flows-invalid.json"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "flows-report.md",
+          "check": "contains:\"unknown action 'hover'\""
+        },
+        {
+          "file": "flows-report.md",
+          "check": "contains:\"No tests were generated\""
+        }
+      ]
+    },
+    {
+      "id": "agent-narrative-dry",
+      "prompt": "Generate the tests and review the plan and selectors.",
+      "expected": [
+        "Review step fills the test-plan template from the report and the upstream method; no pass/fail claimed"
+      ],
+      "inputs": {
+        "flows": "evals/fixtures/flows.json",
+        "narrative": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "test-plan-review.md",
+          "check": "sections:[\"Reconnaissance plan\",\"Selector review\",\"Gaps\"]"
+        },
+        {
+          "file": "test-plan-review.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We already have Playwright tests for login. Generate tests only for the flows we don't cover yet.",
+      "expected": [
+        "Sign in is matched to the existing 'sign in with email and password' test and not regenerated; only Add item to cart is generated; the nth-child selector warning still reported"
+      ],
+      "inputs": {
+        "flows": "evals/fixtures/flows.json",
+        "existing": "evals/fixtures/existing-e2e"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "flows-report.md",
+          "check": "sections:[\"Existing suite\",\"Generated tests\",\"Warnings\"]"
+        },
+        {
+          "file": "flows-report.md",
+          "check": "contains:\"| Sign in | `auth.spec.ts` — sign in with email and password | kept (existing test) |\""
+        },
+        {
+          "file": "test_flows.py",
+          "check": "contains:\"def test_add_item_to_cart\""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "_note": "fictional fixture — invented user flows for the webapp-testing-runner evals; no real app",
+  "base_url": "${BASE_URL}",
+  "flows": [
+    {
+      "name": "Sign in",
+      "steps": [
+        {"action": "goto", "value": "/login"},
+        {"action": "fill", "selector": "label=Email", "value": "pat@example.test"},
+        {"action": "fill", "selector": "label=Password", "value": "fixture-only-password"},
+        {"action": "click", "selector": "role=button[name=\"Sign in\"]"},
+        {"action": "expect_url", "value": "/dashboard"},
+        {"action": "expect_text", "value": "Welcome back"}
+      ]
+    },
+    {
+      "name": "Add item to cart",
+      "steps": [
+        {"action": "goto", "value": "/products"},
+        {"action": "click", "selector": "ul.products > li:nth-child(2) button"},
+        {"action": "click", "selector": "testid=cart-link"},
+        {"action": "expect_text", "selector": "testid=cart-count", "value": "1"}
+      ]
+    }
+  ]
+}

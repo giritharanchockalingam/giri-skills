@@ -1,0 +1,90 @@
+---
+name: multi-tenant-saas-patterns
+description: Use when designing or changing tenant isolation, roles/permissions, plans and feature flags, billing entitlements, or audit logging in a multi-tenant SaaS on Supabase + Next.js. Produces the tenant model (tables, claims, invitation flow), an RBAC matrix (CSV + enforcement points), plan/feature-flag model with entitlement checks, and an audit-log design, each with migration and code touchpoints. Design-level; hand off to supabase-schema-rls for SQL and security-review for verification. Not for single-tenant apps.
+license: MIT
+metadata:
+  domain: build
+  adlc_stage: architecture
+  version: 0.2.0
+  author: giri-skills
+  agent:
+    inputs:
+      - {name: migrations, type: dir, required: true, from: "supabase/migrations directory (or one .sql file) to audit for tenant_id / RLS / tenant-leading index"}
+      - {name: rbac, type: csv, required: false, default: assets/rbac-matrix.csv, from: "RBAC matrix in the assets/rbac-matrix.csv layout (default: the starter matrix)"}
+      - {name: exempt, type: string, required: false, from: "comma-separated global tables exempt from tenant_id (default: tenants,plans,feature_flags,profiles)"}
+      - {name: tenant_column, type: string, required: false, from: "the tenancy key column (default tenant_id); auto = the one the schema uses (tenant_id, workspace_id, organization_id, org_id, account_id, team_id)"}
+    run:
+      - {step: policies, kind: script, cmd: "python3 -I scripts/rbac_to_sql.py {rbac} --out {out}/policies.sql"}
+      - {step: audit, kind: script, cmd: "python3 -I scripts/tenancy_audit.py --migrations {migrations} [--exempt {exempt}] [--tenant-column {tenant_column}] --rbac {rbac} --out {out}/audit.csv --report {out}/audit.md"}
+    outputs:
+      - {path: "{out}/policies.sql", checks: [exists, contains:"create policy", contains:"-- rollback:"]}
+      - {path: "{out}/audit.csv", checks: [exists, csv:[table,file,has_tenant_id,rls_enabled,tenant_index,policies,exempt,status,findings], csv_rows:status~^(ok|finding)$]}
+      - {path: "{out}/audit.md", checks: [exists, sections:["Tables","Rules"]]}
+    modes:
+      new: {case: agent-happy-path, bring: "your first migration; the starter role matrix is used"}
+      existing: {case: agent-mode-existing, bring: "your existing migrations folder and current role matrix"}
+---
+
+# multi-tenant-saas-patterns
+
+## How to run
+This skill is executable. Collect the inputs below, then run `python3 scripts/run_skill.py build/multi-tenant-saas-patterns --input <name>=<value> … --out <dir>` (see `--explain build/multi-tenant-saas-patterns`). Report the `run.json` results; do not hand-write the deliverables the scripts produce. The audit step exits 1 when a non-exempt table lacks tenant_id, RLS or a tenant-leading index; hand the findings and `policies.sql` to supabase-schema-rls for the migration.
+
+## Starting points
+- **New** — your first migration is audited for tenant_id, RLS, policies and a tenant-leading index, and RLS policies are generated from the starter RBAC matrix.
+- **Existing** — your whole migrations folder is replayed in order (columns and keys added later by `alter table`, tables dropped later), each table that still exists is audited, your own RBAC matrix is cross-checked against those tables, and policies are generated from it.
+
+## When to use
+- "Add organisations/workspaces", "who can do what", "plans and limits", "feature flags per customer", "audit trail", "invite users", "switch tenant".
+- Before the first migration of a multi-tenant app; before adding billing.
+- NOT for: writing the SQL (`supabase-schema-rls` does that from this design), security verification (`security-review`), single-tenant apps.
+
+## Inputs required
+| Input | Required | Source |
+|---|---|---|
+| Tenant concept (org / workspace / account) and whether users belong to many | yes | user — ask once |
+| Roles needed and the actions that matter (≤ 20 actions) | yes | `docs/SPEC.md` / user |
+| Plans / tiers and the limits/features that differ | yes if billing | user |
+| Compliance needs for audit (retention, immutability, export) | no | user; default 1 year, append-only |
+| Existing schema | yes if present | repo |
+
+If a required input is missing, ask for it once; do not guess.
+
+## Procedure
+1. Read `../../shared/stack-conventions.md` (Multi-tenant, Auth rows) and `../../shared/quality-bar.md`.
+2. **Plan.** Decide the four models with the user using `references/tenant-model.md` decision table: tenancy shape, membership, claims, invitation. Post a one-page design summary; wait for "go". *(gate: plan→approve)*
+3. **Tenant model.** Produce the table list (tenants, tenant_members, invitations), JWT claim strategy (`app_metadata.tenant_id`, `role`; refresh on switch), tenant-switch flow, and the `requireUser()` contract.
+4. **RBAC matrix.** Fill `assets/rbac-matrix.csv` (role × action → allow/deny/own) following `references/rbac.md`; define enforcement points: RLS (data), `requireRole()` (actions), UI (hide only). Each action maps to a policy and a service check.
+5. **Plans and feature flags.** From `references/plans-and-flags.md`: `plans`, `tenant_subscriptions`, `tenant_features` (overrides), `entitlements` resolution order, limit checks in services (not UI), flag naming `feature.<name>`.
+6. **Audit log.** From `references/audit-log.md`: `audit_log` table (append-only, RLS read by admin, no update/delete), `app.audit_row()` trigger, application-level events for non-row actions, retention and export.
+7. **Hand off to build.** Produce the migration task list for `supabase-schema-rls` and the service/action list for `nextjs-enterprise-conventions`; include negative tests for `test-strategy-tdd`. *(gate: build via those skills → test)*
+8. **Verify.** Walk the checklist: every tenant table has `tenant_id` + RLS; every RBAC action has an enforcement point; every limit is checked in a service; every sensitive action is audited. *(gate: verify)*
+9. Record decisions as ADRs (`project-bootstrap/assets/adr-template.md`); update `docs/HANDOFF.md`.
+
+## Output
+| Artifact | Path |
+|---|---|
+| Design doc | `docs/tenancy.md` (tenant model, claims, flows) |
+| RBAC matrix | `docs/rbac-matrix.csv` (from `assets/rbac-matrix.csv`) |
+| Plans/flags design | `docs/tenancy.md` §Plans |
+| Audit design | `docs/tenancy.md` §Audit |
+| ADRs | `docs/adr/NNNN-tenancy.md`, `NNNN-rbac.md` |
+| Build task list | for `supabase-schema-rls` / `nextjs-enterprise-conventions` |
+
+## Self-check
+- [ ] Tenant id comes only from the JWT (`app_metadata`), never from client input
+- [ ] Role change or tenant switch forces a token refresh; stale-claim window stated
+- [ ] RBAC matrix: every action has RLS + service enforcement; UI is hide-only
+- [ ] Limits enforced in services with a `Result` error code (`PLAN_LIMIT_REACHED`)
+- [ ] Audit log append-only; actor, tenant, entity, action, before/after, requestId
+- [ ] Cross-tenant unique constraints scoped by `tenant_id`
+- [ ] Deleting a tenant: cascade plan + export + retention stated
+
+## References
+- `references/tenant-model.md` — tenancy shapes, membership, claims, invitation and switch flows, deletion
+- `references/rbac.md` — role design, matrix method, enforcement points, testing
+- `references/plans-and-flags.md` — plans, entitlements, overrides, flag lifecycle
+- `references/audit-log.md` — schema, trigger, app events, retention, access
+- `assets/rbac-matrix.csv` — starter matrix
+- `assets/tenancy-schema.sql` — reference DDL for the core tables (hand to supabase-schema-rls)
+- `scripts/tenancy_audit.py` — migrations → tenant_id / RLS / leading-index audit (exit 1 on findings); `scripts/rbac_to_sql.py` — matrix → policies.sql

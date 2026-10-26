@@ -1,0 +1,341 @@
+{
+  "skill": "test-strategy-tdd",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "We're adding invoice creation (validator, service, server action, page). Set up the tests first.",
+      "expected": [
+        "Pyramid table maps each acceptance criterion to unit/integration/e2e with file paths and fixtures",
+        "Negative cases included: invalid input, viewer forbidden, cross-tenant, duplicate number",
+        "Tests written and run red before implementation; full suite run after green",
+        "Coverage >= 80% on server/ reported",
+        "Only I/O boundaries mocked; service under test not mocked"
+      ]
+    },
+    {
+      "id": "no-test-setup",
+      "prompt": "This repo has no vitest or playwright. Add testing for the login flow.",
+      "expected": [
+        "Scaffolds vitest.config.ts, playwright.config.ts, tests/setup.ts, auth.setup.ts from assets without overwriting anything existing",
+        "Adds package.json scripts test / test:e2e",
+        "Login e2e uses accessible selectors and storageState, no waitForTimeout"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Write tests.",
+      "expected": [
+        "Asks once for the feature/change and its acceptance criteria",
+        "Does not generate generic tests"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Scaffold the tests for the invoice export feature before we implement it.",
+      "expected": [
+        "Runs scripts/scaffold_tests.py; vitest stub per service/action, Playwright spec for the page, component listed for manual test; pyramid table in test-plan.md"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature.md",
+        "files": "server/services/export-service.ts,server/actions/request-export.ts,app/(app)/invoices/page.tsx,components/features/invoices/ExportButton.tsx",
+        "target": "{out}/repo"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/unit/server-services-export-service.test.ts",
+        "exists:repo/tests/e2e/app-app-invoices-page.spec.ts",
+        {
+          "file": "repo/tests/unit/server-services-export-service.test.ts",
+          "check": "contains:\"it.todo(\\\"The export contains only the caller's tenant rows\\\")\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"tests/unit/components-features-invoices-exportbutton.test.tsx\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "sections:[\"Pyramid\",\"Criteria map\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-feature",
+      "prompt": "Write the tests for these files.",
+      "expected": [
+        "Asks for the feature description with acceptance criteria"
+      ],
+      "inputs": {
+        "files": "server/services/export-service.ts",
+        "target": "{out}/repo"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:feature"
+      ]
+    },
+    {
+      "id": "agent-never-overwrites",
+      "prompt": "There is already a test for the export service; regenerate it from the template.",
+      "expected": [
+        "The existing test file is kept and listed under skipped; nothing written in dry run"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature.md",
+        "files": "server/services/export-service.ts",
+        "target": "evals/fixtures/repo-existing",
+        "dry_run": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"tests/unit/server-services-export-service.test.ts\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"written\\\": []\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"would_write\\\": []\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"exists — kept\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We already have a unit test file for the export service. Plan the tests for the export feature against what exists.",
+      "expected": [
+        "The existing export-service test is kept and read: criterion 3 (tenant rows) is covered, criteria 1 and 2 are listed to add; a red stub is written only for the server action"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature.md",
+        "files": "server/services/export-service.ts,server/actions/request-export.ts",
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing-suite"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/unit/server-actions-request-export.test.ts",
+        {
+          "file": "repo/tests/unit/server-services-export-service.test.ts",
+          "check": "contains:\"builds the CSV header row\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"criteria_missing\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"| `tests/unit/server-services-export-service.test.ts` | 2 | #3 |\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing-js",
+      "prompt": "This is a JavaScript Next.js repo (page.js, components/*.js, vitest + playwright already set up as .js). Scaffold the tests for the coach nudges bell against what exists.",
+      "expected": [
+        "Reads the repo first: JavaScript flavour (no tsconfig, .js sources), vitest from package.json, tests/unit from vitest.config.js and tests/e2e from playwright.config.js, @/ alias from jsconfig.json",
+        "app/portal/page.js is a page (Playwright spec tests/e2e/app-portal-page.spec.js), components/AppShell.js is listed for a manual component test, the existing tests/unit/lib-coach.test.js is kept and read (criterion 3 covered, 1 and 2 to add); no .test.ts / .spec.ts is written into the JS repo"
+      ],
+      "inputs": {
+        "feature": "evals/fixtures/feature-coach.md",
+        "files": "app/portal/page.js,components/AppShell.js,lib/coach.js,app/api/health/route.js",
+        "target": "{out}/repo",
+        "seed": "evals/fixtures/repo-existing-js"
+      },
+      "checks": [
+        "exit:0",
+        "exists:repo/tests/e2e/app-portal-page.spec.js",
+        "exists:repo/tests/unit/app-api-health-route.test.js",
+        {
+          "file": "repo/tests/e2e/app-portal-page.spec.js",
+          "check": "contains:\"await page.goto(\\\"/portal\\\");\""
+        },
+        {
+          "file": "repo/tests/unit/app-api-health-route.test.js",
+          "check": "contains:\"from \\\"vitest\\\"\""
+        },
+        {
+          "file": "repo/tests/unit/lib-coach.test.js",
+          "check": "contains:\"written by the team before the bell feature\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"\\\"flavour\\\": \\\"js\\\"\""
+        },
+        {
+          "file": "scaffold-report.json",
+          "check": "contains:\"tests/unit/components-appshell.test.jsx\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "contains:\"| `tests/unit/lib-coach.test.js` | 1 | #3 |\""
+        },
+        {
+          "file": "test-plan.md",
+          "check": "sections:[\"Repo (read before write)\",\"Pyramid\",\"Criteria map\"]"
+        }
+      ]
+    },
+    {
+      "id": "x-password-reset-feature",
+      "prompt": "Feature: password reset — token validator, reset service, server action, /reset page. ACs: 1) valid token sets a new password; 2) expired token is rejected; 3) token is single-use. Tests first.",
+      "expected": [
+        "Pyramid table maps each AC to layer, test file and fixture (validator unit, service unit + integration, action unit, page e2e)",
+        "Negative cases as rows: invalid input, expired token, reused token, not-found",
+        "Red test code plus the npx vitest run command, stating it must fail on the assertion, not an import error",
+        "Coverage gate >= 80% on server/ with npm test -- --coverage"
+      ]
+    },
+    {
+      "id": "x-webhook-route-handler",
+      "prompt": "We're adding a Stripe webhook route handler that updates a tenant's subscription status. How should we test it before writing it?",
+      "expected": [
+        "Mocks only the I/O boundary (Stripe/network, DB client); the subscription service under test stays real",
+        "Negative cases include invalid signature/input, unknown or cross-tenant subscription, and duplicate event delivery",
+        "Writes red tests first with the command to run them"
+      ]
+    },
+    {
+      "id": "x-scaffold-files-given",
+      "prompt": "feature.md: '# Bulk user import' with ACs (1) CSV rows create users (2) invalid rows are reported (3) admins only. Files: server/import/service.ts, app/(app)/import/page.tsx, components/ImportDropzone.tsx. Target: repo root.",
+      "expected": [
+        "Gives the scaffold_tests.py command with feature.md, --files and --target",
+        "The server file gets a vitest it.todo stub per criterion under tests/unit/; the page gets a Playwright test.fixme spec under tests/e2e/",
+        "components/ImportDropzone.tsx is listed for a manual component test with nothing written"
+      ]
+    },
+    {
+      "id": "x-overdue-query-integration",
+      "prompt": "New query: list overdue invoices for the current tenant (server/queries/overdue.ts). Plan the tests.",
+      "expected": [
+        "Query maps to an integration test against the DB, with DB state reset between tests",
+        "Includes a cross-tenant case where RLS denies another tenant's invoices",
+        "Every criterion maps to at least one test and every test to a criterion"
+      ]
+    },
+    {
+      "id": "x-archive-action-terse",
+      "prompt": "TDD the archiveProject server action. ACs: owner/admin can archive; archived projects disappear from the list; viewer gets forbidden.",
+      "expected": [
+        "Server action covered by unit tests with the viewer forbidden case and a cross-tenant case",
+        "One or two red tests in code before any implementation, with the command and expected failure",
+        "Green then refactor, finishing with the full suite (npm test), not just the new file"
+      ]
+    },
+    {
+      "id": "x-vp-eng-definition-of-done",
+      "prompt": "As VP Engineering I want the team to do TDD on the new reporting module. What does 'done' look like for testing?",
+      "expected": [
+        "Every acceptance criterion maps to at least one test; tests written and seen failing before implementation",
+        "Full suite green and coverage >= 80% on server/, reported as criterion -> test -> status",
+        "Negative cases (invalid input, forbidden role, cross-tenant, not-found) are part of done"
+      ]
+    },
+    {
+      "id": "x-priority-column-feature",
+      "prompt": "Adding a 'priority' column to tasks plus a priority filter on the tasks page. ACs: priority is low/medium/high; filter shows only the chosen priority.",
+      "expected": [
+        "Pyramid: validator unit test for allowed values, integration test for the filtered query, e2e spec for the page filter",
+        "Negative case for an invalid priority value and a cross-tenant case",
+        "Playwright spec uses accessible selectors (getByRole/getByLabel), no waitForTimeout"
+      ]
+    },
+    {
+      "id": "x-quote-pdf-export-verbose",
+      "prompt": "Before anyone writes code for the quote-to-PDF export, I'd like the testing approach agreed. It touches a pricing service, a server action that kicks off generation, and the quote page's Export button. ACs: totals match the quote; only members of the tenant can export; failures show an error toast.",
+      "expected": [
+        "Posts the pyramid table mapping each AC to unit/integration/e2e with file paths, and waits for go before writing tests",
+        "Negative cases include forbidden role and cross-tenant export",
+        "Mocks only I/O boundaries (e.g. PDF/network, DB client), not the pricing service under test"
+      ]
+    },
+    {
+      "id": "x-missing-reporting-module",
+      "prompt": "Add tests for the reporting module.",
+      "expected": [
+        "Asks once for the feature/change and its acceptance criteria",
+        "Does not generate generic tests"
+      ]
+    },
+    {
+      "id": "x-missing-feature-type",
+      "prompt": "ACs: 1) the user sees a monthly total; 2) the total excludes refunds. Write the tests.",
+      "expected": [
+        "Asks which files / feature types are involved (service, query, page) or states its inference explicitly before mapping layers",
+        "Maps both ACs to tests once the layer is known, including a negative case"
+      ]
+    },
+    {
+      "id": "x-missing-file-list-scaffold",
+      "prompt": "Scaffold the red stubs for the export feature. feature.md has the ACs.",
+      "expected": [
+        "Asks for the comma-separated list of source files the feature touches and the target repo",
+        "Does not guess file paths"
+      ]
+    },
+    {
+      "id": "x-missing-code-no-acs",
+      "prompt": "Write tests for this function:\nexport function applyDiscount(total: number, code: string) {\n  if (code === 'VIP') return total * 0.8;\n  return total;\n}",
+      "expected": [
+        "Asks once for the acceptance criteria / intended behaviour rather than deriving tests only from the current code",
+        "Does not produce a generic test suite without the criteria"
+      ]
+    },
+    {
+      "id": "x-adv-mock-service-under-test",
+      "prompt": "Mock InvoiceService inside InvoiceService's own tests so they run fast.",
+      "expected": [
+        "Declines to mock the service under test",
+        "Mocks only I/O at the boundary (DB client, network, clock) instead"
+      ]
+    },
+    {
+      "id": "x-adv-replace-vitest-config",
+      "prompt": "Our vitest.config.ts is messy. Overwrite it with your template.",
+      "expected": [
+        "Does not overwrite the existing vitest.config.ts: keeps and reads it and lists it as skipped",
+        "Diffs it against the template and proposes merging only what is missing"
+      ]
+    },
+    {
+      "id": "x-adv-css-and-timeouts",
+      "prompt": "Write the checkout e2e. Our devs use page.click('.btn-primary') and waitForTimeout(2000) everywhere, so match that style.",
+      "expected": [
+        "Declines CSS-class selectors and waitForTimeout",
+        "Uses getByRole/getByLabel and web-first assertions, with storageState for signed-in cases"
+      ]
+    },
+    {
+      "id": "x-boundary-failing-ci-test",
+      "routes_to": "safe-fix",
+      "prompt": "tests/unit/invoice.test.ts has failed in CI since yesterday's merge: 'expected 3, received 2'. Fix it.",
+      "expected": [
+        "Routes to safe-fix for diagnosing and fixing the failing test",
+        "Says this skill plans and writes tests before implementation, not debugging"
+      ]
+    },
+    {
+      "id": "x-boundary-pr-pipeline",
+      "routes_to": "ci-cd-vercel-github",
+      "prompt": "Add a GitHub Actions workflow that runs vitest and Playwright on every PR with Vercel preview deploys.",
+      "expected": [
+        "Routes to ci-cd-vercel-github for pipeline work",
+        "Says this skill provides the tests and test scripts the pipeline runs"
+      ]
+    },
+    {
+      "id": "x-existing-partial-coverage",
+      "prompt": "We already have tests/unit/server-orders-service.test.ts covering AC1 (refund amount) and AC2 (refund reason required). Plan the rest of the order-refund feature: AC3 partial refunds, AC4 viewers are forbidden.",
+      "expected": [
+        "The existing test file is kept and read, never overwritten, and listed as covering AC1 and AC2",
+        "AC3 and AC4 listed as to add, with new tests or stubs only where no test exists",
+        "AC4 includes the viewer-forbidden negative case and a cross-tenant case"
+      ]
+    }
+  ]
+}

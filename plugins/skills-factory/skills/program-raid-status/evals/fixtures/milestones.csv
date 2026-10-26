@@ -1,0 +1,10 @@
+# fictional fixture — Northwind Billing Assistant delivery program (invented dates and owners)
+id,milestone,baseline_date,forecast_date,duration_days,depends_on,status,owner
+M1,Discovery and use-case sign-off,2026-07-31,2026-07-31,20,,done,Product owner
+M2,Billing data extract and PII review,2026-08-28,2026-09-11,25,M1,done,Data lead
+M3,RAG index on billing knowledge base,2026-09-25,2026-10-23,20,M2,in_progress,Platform lead
+M4,Guardrails and prompt spec,2026-09-30,2026-10-07,10,M1,done,AI engineer lead
+M5,Offline eval gate,2026-10-30,2026-11-13,10,M3|M4,not_started,Eval lead
+M6,Agent desktop integration,2026-10-30,2026-11-06,15,M2,in_progress,Integration lead
+M7,Pilot go-live (Customer Operations),2026-11-20,2026-12-04,10,M5|M6,not_started,
+M8,Training wave complete,2026-11-13,2026-11-13,5,M1,not_started,Change lead

@@ -1,0 +1,4 @@
+feature,actual_requests,actual_cost,period,source,notes
+support-chat,131000,612.40,2026-09,fictional September API invoice,fictional fixture
+doc-summary,18900,371.15,2026-09,fictional September API invoice,fictional fixture
+ticket-tagging,42000,48.20,2026-09,fictional September API invoice,fictional fixture: feature launched without a cost model

@@ -1,0 +1,17 @@
+key,value,unit,source,as_of_date,notes
+daily_active_users,1200,count,fictional product plan,2026-09-01,
+requests_per_user_per_day,15,count,fictional product plan,2026-09-01,
+tokens_in_per_request,1800,tokens,fictional log sample,2026-09-01,
+tokens_out_per_request,350,tokens,fictional log sample,2026-09-01,
+active_hours_per_day,10,hours,fictional,2026-09-01,
+peak_factor,2.5,multiplier,fictional,2026-09-01,assumption
+calls_per_request,2,count,fictional,2026-09-01,agentic multiplier
+decode_tokens_per_s_per_gpu,1400,tokens/s,fictional benchmark run,2026-09-01,
+prefill_tokens_per_s_per_gpu,9000,tokens/s,fictional benchmark run,2026-09-01,
+utilization_target,0.6,fraction,,,
+spare_gpus,1,count,,,
+gpus_per_replica,1,count,,,
+rental_usd_per_gpu_hour,2.10,USD,fictional rental price list,2026-09-01,
+rental_hours_per_month,730,hours,,,
+api_usd_per_1m_input_tokens,0.80,USD,fictional API price list,2026-09-01,
+api_usd_per_1m_output_tokens,3.20,USD,fictional API price list,2026-09-01,

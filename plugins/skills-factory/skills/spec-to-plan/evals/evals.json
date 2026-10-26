@@ -1,0 +1,134 @@
+{
+  "skill": "spec-to-plan",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Plan the 'invoice CSV export' feature from SPEC section 3.4. Tenant admins export their own invoices; must be audited.",
+      "expected": [
+        "Reads SPEC, CLAUDE.md and HANDOFF before planning",
+        "Asks at most 5 clarifying questions, each with a default, in one round",
+        "Produces docs/plans/<date>-invoice-csv-export.md with file table, ordered tasks, acceptance criteria, tests, risks, rollback",
+        "Audit-log write and RLS negative test appear as tasks",
+        "Stops and waits for 'go' before writing code"
+      ]
+    },
+    {
+      "id": "too-big",
+      "prompt": "Plan the whole billing module: plans, Stripe, invoices, dunning, admin UI.",
+      "expected": [
+        "Splits into multiple plans/threads rather than one >8-task plan",
+        "States the split order and which plan comes first",
+        "Does not start building"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Make a plan for the new feature.",
+      "expected": [
+        "Asks once which feature / SPEC section",
+        "Does not fabricate scope"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Plan SPEC section 'Invoice export' before we write any code.",
+      "expected": [
+        "Runs scripts/plan.py; four tasks with acceptance, test and rollback from the SPEC; gates block present"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md",
+        "section": "Invoice export"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "plan.md",
+          "check": "sections:[\"Tasks\",\"Gates\",\"Rollback\"]"
+        },
+        {
+          "file": "plan.md",
+          "check": "contains:\"T3 — Server action `requestExport`\""
+        },
+        {
+          "file": "tasks.csv",
+          "check": "csv_rows:test!empty"
+        },
+        {
+          "file": "tasks.csv",
+          "check": "contains:\"tests/integration/rls/export_jobs.test.ts\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-section",
+      "prompt": "Make a plan from the SPEC.",
+      "expected": [
+        "Asks which SPEC section to plan"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:section"
+      ]
+    },
+    {
+      "id": "agent-thin-section-not-invented",
+      "prompt": "The 'Audit log' section is just two bullets — fill in sensible tests and rollbacks yourself.",
+      "expected": [
+        "Acceptance, tests and rollback are [TO BE BASELINED — owner: Tech lead], never invented; tasks still listed"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md",
+        "section": "Audit log"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tasks.csv",
+          "check": "csv_rows:test~^(\\[TO BE BASELINED|\\S)"
+        },
+        {
+          "file": "tasks.csv",
+          "check": "contains:\"[TO BE BASELINED — owner: Tech lead]\""
+        },
+        {
+          "file": "plan.md",
+          "check": "contains:\"Acceptance: [TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Plan SPEC section 'Invoice export' against our existing repo — some of this code already exists.",
+      "expected": [
+        "The invoices page is marked modify, the action and migration create; the new 0007 migration collides with the existing 0007_payment_links and is flagged for renumbering"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/SPEC.md",
+        "section": "Invoice export",
+        "repo": "evals/fixtures/repo-existing"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "plan.md",
+          "check": "sections:[\"Repo check\",\"Tasks\",\"Gates\",\"Rollback\"]"
+        },
+        {
+          "file": "plan.md",
+          "check": "contains:\"- T4: app/(app)/invoices/page.tsx: modify\""
+        },
+        {
+          "file": "plan.md",
+          "check": "contains:\"numbered at or before the latest existing one (0007)\""
+        },
+        {
+          "file": "tasks.csv",
+          "check": "csv_rows:repo_check!empty"
+        }
+      ]
+    }
+  ]
+}

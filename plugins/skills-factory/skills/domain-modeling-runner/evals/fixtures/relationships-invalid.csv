@@ -1,0 +1,5 @@
+from,to,cardinality,name,notes
+"# fictional fixture — deliberately invalid relationships for the domain-modeling-runner evals",,,,
+Student,Course,N:M,enrolls in,
+Course,Instructor,1:N,is taught by,
+Term,Offering,many,schedules,

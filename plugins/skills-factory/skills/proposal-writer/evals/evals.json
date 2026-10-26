@@ -1,0 +1,164 @@
+{
+  "skill": "proposal-writer",
+  "cases": [
+    {
+      "id": "happy-path-write",
+      "prompt": "Write the proposal for Harbor Community College's integration modernization. Attached: discovery synthesis (with quotes), the architecture doc, and the estimate output (P80 = 14 months, 9 FTE blended, onshore/offshore 30/70). No RFP; 25-page limit requested by the CIO. Incumbent is their SIS vendor's services arm.",
+      "expected": [
+        "Win-theme worksheet completed first with quoted hot buttons, discriminators passing the four tests, cleared proof, ghost lines",
+        "Executive summary <= 1 page, opens with the outcome in the client's KPI terms",
+        "Duration and team numbers match the estimate file; price shown as [TO BE BASELINED — owner: ___] unless provided",
+        "Ghosts the vendor-services alternative without naming it",
+        "Risk register rows have likelihood, impact, mitigation, owner; assumptions state consequence if false",
+        "Sections follow assets/section-library.md; 3+ item lists are tables; headings are assertions",
+        "Submission checklist present and marked internal"
+      ]
+    },
+    {
+      "id": "missing-input-no-problem-statement",
+      "prompt": "Draft a proposal for a retail client for API platform work. Make it compelling.",
+      "expected": [
+        "Asks once for the problem statement/evidence, scope outline, and estimate (or confirmation to use placeholders)",
+        "Does not write an 'understanding of needs' section from imagination",
+        "Offers to start from the win-theme worksheet once inputs arrive"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-benefit-percentage",
+      "prompt": "In the exec summary say we will reduce their integration run cost by 40% and cut incident recovery time by 75%. Those are typical numbers for this kind of program and it reads stronger.",
+      "expected": [
+        "Declines to state the percentages as commitments; outcome table shows baseline and target as [TO BE BASELINED — owner: ___]",
+        "Explains in one line that outcome numbers must come from the value case or the client's own baseline",
+        "Offers the compliant alternative: state the outcome as a hypothesis with baselining as a phase-1 deliverable and the measurement method",
+        "Does not add the numbers anywhere else in the document"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Assemble the Northwind Order Hub proposal from the win themes, discovery pack and estimate memo.",
+      "expected": [
+        "Runs scripts/assemble.py; win themes threaded into the executive summary; every <slot> registered"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes.json",
+        "discovery": "evals/fixtures/discovery-pack.md",
+        "estimate": "evals/fixtures/estimate-memo.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:proposal.md",
+        "exists:proposal-final.md",
+        {
+          "file": "proposal.md",
+          "check": "sections:[\"Executive summary\",\"Pricing\",\"Why\"]"
+        },
+        {
+          "file": "proposal.md",
+          "check": "contains:\"T1 Peak-proof order orchestration\""
+        },
+        {
+          "file": "proposal.md",
+          "check": "numbers_trace_to:sources.md"
+        },
+        {
+          "file": "placeholders.csv",
+          "check": "csv:[placeholder,section,owner]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-win-themes",
+      "prompt": "Write the proposal.",
+      "expected": [
+        "Asks once for win-themes.json"
+      ],
+      "inputs": {
+        "discovery": "evals/fixtures/discovery-pack.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:win_themes"
+      ]
+    },
+    {
+      "id": "agent-no-proof-no-invented-figures",
+      "prompt": "One theme, no proof, no estimate — fill in typical numbers so it reads well.",
+      "expected": [
+        "Every unfilled slot is [TO BE BASELINED — owner: ___] and listed in placeholders.csv; no numbers invented"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes-thin.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "proposal.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "placeholders.csv",
+          "check": "csv_rows:placeholder!empty"
+        },
+        {
+          "file": "proposal.md",
+          "check": "numbers_trace_to:sources.md"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Assemble the Northwind Order Hub proposal from the win themes, discovery pack and estimate memo; no model step.",
+      "expected": [
+        "proposal-final.md is the assembled draft, labelled; every number traces to sources.md"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes.json",
+        "discovery": "evals/fixtures/discovery-pack.md",
+        "estimate": "evals/fixtures/estimate-memo.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "proposal-final.md",
+          "check": "contains:\"Script draft — the model sharpen step was not run\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "numbers_trace_to:sources.md"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our proposal draft v0.4 for Northwind — tighten it against the win themes and the estimate, keep our storyline.",
+      "expected": [
+        "Team sections kept; missing sections added; executive summary sharpened for the two missing themes; the unsourced 40% cost cut replaced by an owned marker; USD 1,472,000 kept because the estimate memo backs it"
+      ],
+      "inputs": {
+        "win_themes": "evals/fixtures/win-themes.json",
+        "estimate": "evals/fixtures/estimate-memo.md",
+        "existing": "evals/fixtures/proposal-draft.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "proposal-redline.md",
+          "check": "contains:\"| Executive summary | [TBD] | figure 40% is in no input file\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "contains:\"cut integration run cost by [TO BE BASELINED — owner: Bid manager]\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "contains:\"Fixed price per wave; total USD 1,472,000 at P80.\""
+        },
+        {
+          "file": "proposal-final.md",
+          "check": "numbers_trace_to:sources.md"
+        }
+      ]
+    }
+  ]
+}

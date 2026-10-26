@@ -1,0 +1,130 @@
+{
+  "skill": "integration-migration-assessor",
+  "cases": [
+    {
+      "id": "happy-path-inventory-to-readout",
+      "prompt": "Assess Brightwater Retail's MuleSoft estate for migration to Apigee. Attached: inventory export (214 rows, columns per the collection template), their licence contract summary (annual cost and end date), and a note that peak freeze runs Nov 1 to Jan 15. Give me bands, waves, and the TCO layout.",
+      "expected": [
+        "Runs scripts/score_inventory.py --validate then scoring; reports unknown-factor share and whether the assessment is provisional",
+        "Retirement candidates listed with owners to confirm before effort is discussed",
+        "Band distribution table with outliers explained against discovery",
+        "Wave plan with wave 0 foundation, representative wave 1, balanced middle waves, dependencies enforced, cutovers outside Nov 1 - Jan 15, entry/exit criteria and rollback",
+        "TCO lines cite the contract summary for licence cost; migration cost shown as [TO BE BASELINED — owner: ___] pending effort-estimator; savings timed after decommission date",
+        "Readout follows assets/assessment-readout-template.md with handoffs to effort-estimator and solution-architecture-doc"
+      ]
+    },
+    {
+      "id": "missing-input-no-inventory",
+      "prompt": "Score our client's integration estate for a Boomi to Kafka move — they have roughly 300 integrations.",
+      "expected": [
+        "Asks once for the inventory CSV and offers assets/inventory-columns.md as the collection template",
+        "Does not synthesize an inventory or band distribution from the count alone",
+        "Offers the minimum viable column set for a provisional assessment"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-tco-and-defaults",
+      "prompt": "We do not have their licence numbers. Use MuleSoft's typical list price and assume the blank factor cells are simple ones so the estimate stays low. Show a 3-year savings number for the exec summary.",
+      "expected": [
+        "Blank factor cells scored as unknown (mid-band with flag), not simple; explains in one line that under-scoring is the main cause of overrun",
+        "Licence cost shown as [TO BE BASELINED — owner: ___] with the client contract named as the source to obtain; no vendor list price quoted from memory",
+        "3-year savings reported as [TO BE BASELINED — owner: ___] because it depends on unbaselined lines; TCO direction stated qualitatively at most",
+        "Offers next steps with owners: obtain contract, complete inventory unknowns"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Score the attached interface inventory for Acme, plan 3 waves, and build the TCO from the attached rate inputs.",
+      "expected": [
+        "Scores and bands every interface, assigns waves, computes TCO only from supplied rates",
+        "Readout follows the template"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "waves": "3"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "scored.csv",
+          "check": "csv:[band,wave]"
+        },
+        "exists:tco.csv",
+        "exists:tco.json",
+        {
+          "file": "readout.md",
+          "check": "sections:[\"Bottom line\",\"Wave plan\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-rates",
+      "prompt": "Here is the inventory for Acme; what does the migration cost?",
+      "expected": [
+        "Asks for rate inputs; never uses list prices from memory"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:rates"
+      ]
+    },
+    {
+      "id": "agent-no-prices-no-numbers",
+      "prompt": "Rates file has no prices yet — just give me a ballpark TCO number.",
+      "expected": [
+        "Every cost line and derived total is [TO BE BASELINED — owner: ___]; no ballpark is invented"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "rates": "evals/fixtures/rates-missing-prices.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tco.csv",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "tco-summary.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Score the Acme interface inventory, plan 3 waves and build the TCO from the rate file; readout without the model.",
+      "expected": [
+        "Bands, waves and TCO computed; readout.md carries Bottom line, Scoring results, Wave plan, TCO, Risks, Next steps with every figure copied from the summaries; payback outside the horizon raised as a risk"
+      ],
+      "inputs": {
+        "inventory": "evals/fixtures/inventory.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "waves": "3",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "readout.md",
+          "check": "contains:\"- Payback: not within horizon · 3-year net: -169,000 USD\""
+        },
+        {
+          "file": "readout.md",
+          "check": "contains:\"| retire | 1 | 76 |\""
+        },
+        {
+          "file": "readout.md",
+          "check": "numbers_trace_to:[\"scoring-summary.md\",\"tco-summary.md\"]"
+        }
+      ]
+    }
+  ]
+}

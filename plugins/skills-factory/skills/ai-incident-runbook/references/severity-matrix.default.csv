@@ -1,0 +1,14 @@
+rule_id,conditions,severity,reason
+D01,data_exposed=yes;regulated_data=yes,SEV1,Regulated data confirmed exposed
+D02,data_exposed=yes;regulated_data=unknown,SEV1,Data confirmed exposed and regulated status unknown — unknown escalates
+D03,data_exposed=unknown;regulated_data in yes|unknown,SEV2,Exposure not ruled out and regulated data possible — unknown escalates
+D04,data_exposed=yes,SEV2,Data exposed (non-regulated)
+D05,category=data-leak,SEV2,Data-leak category
+D06,category=harmful-output,SEV2,Harmful output reached users
+D07,users_affected>=1000,SEV2,Broad blast radius (>= 1000 users)
+D08,category=prompt-injection,SEV3,Prompt injection (escalates via data rows if data is touched)
+D09,category=outage,SEV3,Service unavailable or degraded
+D10,category=hallucination,SEV3,Incorrect or unsupported output reached users
+D11,users_affected>=100,SEV3,Material blast radius (>= 100 users)
+D12,users_affected=unknown,SEV3,Blast radius unknown — unknown escalates
+D13,always,SEV4,Baseline: every AI incident is at least SEV4

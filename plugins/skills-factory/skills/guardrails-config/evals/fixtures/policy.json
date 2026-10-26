@@ -1,0 +1,9 @@
+{
+  "_fixture": "fictional fixture — a made-up retail support assistant policy",
+  "blocked_topics": ["medical diagnosis", "competitor pricing"],
+  "pii_handling": {"email": "mask", "phone": "mask", "card": "block", "ssn": "block"},
+  "max_input_chars": 200,
+  "max_output_chars": 400,
+  "allowed_tools": ["search_kb", "get_order_status"],
+  "injection_markers": ["switch to admin persona"]
+}

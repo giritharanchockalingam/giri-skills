@@ -1,0 +1,6 @@
+role,grade,location,cost_rate,bill_rate,currency,valid_until,notes
+Engagement Manager,M3,onshore,900,1400,USD,2027-06-30,fictional fixture rate
+Integration Architect,M2,onshore,800,1250,USD,2027-06-30,fictional fixture rate
+Integration Engineer,S2,offshore,300,520,USD,2027-06-30,fictional fixture rate
+Test Lead,S3,offshore,320,560,USD,2027-06-30,fictional fixture rate
+DevOps Engineer,S2,offshore,310,540,USD,2027-06-30,fictional fixture rate

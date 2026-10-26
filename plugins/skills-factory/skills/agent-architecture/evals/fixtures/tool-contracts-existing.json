@@ -1,0 +1,26 @@
+{
+  "_note": "fictional fixture: tool contracts of an invented agent already in production (Invoice dispute agent v1.4); tests only",
+  "tools": [
+    {
+      "name": "lookup_invoice",
+      "description": "Read one invoice with its lines and payment status. Use before proposing any resolution. Do not use to change an invoice.",
+      "inputSchema": {"type": "object", "additionalProperties": false, "required": ["invoice_id"],
+        "properties": {"invoice_id": {"type": "string", "pattern": "^INV-[0-9]{7}$"}}},
+      "outputSchema": {"type": "object", "required": ["status"],
+        "properties": {"status": {"type": "string", "enum": ["ok", "error"]}, "data": {"type": "object"}}},
+      "failure_modes": ["NOT_FOUND: unknown invoice id", "TIMEOUT: ledger slow -> retryable"],
+      "x-contract": {"version": "1.2.0", "side_effect": "read", "idempotent": true, "scopes": ["invoices:read"], "timeout_ms": 5000}
+    },
+    {
+      "name": "issue_credit_note",
+      "description": "Post one approved credit note to the ledger. Irreversible; requires a prepare token from prepare_credit_note and analyst approval.",
+      "inputSchema": {"type": "object", "additionalProperties": false, "required": ["invoice_id", "prepare_token"],
+        "properties": {"invoice_id": {"type": "string", "pattern": "^INV-[0-9]{7}$"}, "prepare_token": {"type": "string"}}},
+      "outputSchema": {"type": "object", "required": ["status"],
+        "properties": {"status": {"type": "string", "enum": ["ok", "error"]}, "error": {"type": "object"}}},
+      "failure_modes": ["INVALID_ARGUMENT: commit without prepare token", "CONFLICT: token expired or already used"],
+      "x-contract": {"version": "1.4.0", "side_effect": "irreversible", "idempotent": true, "idempotency_key_input": "prepare_token",
+        "two_phase": true, "scopes": ["credits:write"], "timeout_ms": 8000}
+    }
+  ]
+}

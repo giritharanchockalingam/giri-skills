@@ -1,0 +1,2 @@
+prompt,completion,system,notes
+"<user prompt>","<ideal assistant reply>","<optional system prompt>","<source / provenance; ignored by the script>"

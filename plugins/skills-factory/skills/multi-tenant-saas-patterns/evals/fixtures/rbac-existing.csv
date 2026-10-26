@@ -1,0 +1,8 @@
+action,resource,viewer,member,admin,owner,enforcement_rls,enforcement_service,ui,audited
+"# fictional fixture — the team's current RBAC matrix for the multi-tenant-saas-patterns evals",,,,,,,,,
+tenant.read,tenants,allow,allow,allow,allow,tenants_select_member,requireUser,show,no
+project.read,projects,allow,allow,allow,allow,projects_select_tenant,requireUser,show,no
+project.create,projects,deny,allow,allow,allow,projects_insert_member,requireRole(member),show,yes
+project.delete,projects,deny,deny,allow,allow,projects_delete_admin,requireRole(admin),hide,yes
+member.list,tenant_members,allow,allow,allow,allow,members_select_tenant,requireUser,show,no
+task.read,tasks,allow,allow,allow,allow,tasks_select_tenant,requireUser,show,no

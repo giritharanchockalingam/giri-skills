@@ -1,0 +1,141 @@
+{
+  "skill": "discovery-interview",
+  "cases": [
+    {
+      "id": "happy-path-prep",
+      "prompt": "Prep me for a 45-minute discovery call Thursday with the CIO and VP Supply Chain of a regional grocery retailer. Trigger: their integration platform contract renews in 9 months and they had two outages last holiday peak. Attendees: CIO, VP Supply Chain, an enterprise architect.",
+      "expected": [
+        "Output follows assets/discovery-pack-template.md prep section",
+        "3-5 hypotheses in a table, each with confirm/kill evidence and mapped questions",
+        "12-18 questions drawn from references/question-banks/retail.md, ordered situation -> pain -> impact -> urgency -> decision -> constraints",
+        "Each question tagged with persona and hypothesis ID",
+        "Five closes present (decision owner, budget state, timeline driver, incumbents, success measure)",
+        "No question opens with a technology/vendor comparison",
+        "Time budget allocates ~20% to the client's questions"
+      ]
+    },
+    {
+      "id": "missing-input-mode-and-vertical",
+      "prompt": "Help me with the discovery call for Northwind.",
+      "expected": [
+        "Asks once for mode (prep or synthesize), vertical, and opportunity context",
+        "Does not generate a question list before receiving the vertical",
+        "Does not invent attendees, trigger events, or pains"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication",
+      "prompt": "Here are my call notes: 'VP Ops said reconciliation between MES and ERP is manual at all three plants and it is a huge pain. CIO wants it fixed before the S/4 go-live next year.' Synthesize this and put the annual cost of the manual reconciliation in the impact column so I can use it in the proposal.",
+      "expected": [
+        "Impact column shows [TO BE BASELINED — owner: ___] rather than a dollar figure",
+        "Pain scored with evidence (verbatim quotes); Impact scored 2 or lower given no stated figure",
+        "Gaps list includes a row for the reconciliation cost with a likely client holder and our owner",
+        "Urgency references the S/4 go-live as the forcing event without inventing a date",
+        "Qualification call stated on line 1",
+        "Response explains in one line that the figure was not in the notes and must be baselined"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Prep the 45-minute Northwind discovery call with the CIO and VP Digital, then synthesize my notes.",
+      "expected": [
+        "Runs build_pack.py and synthesize.py; 20% reserved; five closes present; every pain row cites verbatim evidence"
+      ],
+      "inputs": {
+        "vertical": "retail",
+        "personas": "CIO,VP Digital",
+        "minutes": "45",
+        "notes": "evals/fixtures/notes.md",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "discovery-pack.md",
+          "check": "sections:[\"Time budget\",\"Question plan\",\"Five closes\"]"
+        },
+        {
+          "file": "discovery-pack.md",
+          "check": "contains:\"20% reserved\""
+        },
+        {
+          "file": "five-closes.md",
+          "check": "sections:[\"Five closes\"]"
+        },
+        {
+          "file": "pain-matrix.csv",
+          "check": "csv_rows:evidence!empty"
+        },
+        {
+          "file": "five-closes.md",
+          "check": "contains:\"Peak freeze starts\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-vertical",
+      "prompt": "Prep me for a discovery call with their CIO.",
+      "expected": [
+        "Asks once for the vertical"
+      ],
+      "inputs": {
+        "personas": "CIO"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:vertical"
+      ]
+    },
+    {
+      "id": "agent-thin-notes-closes-marked-tbd",
+      "prompt": "Here are two lines of notes — fill in their budget and decision owner from what retailers usually do.",
+      "expected": [
+        "Closes not in the notes are TBD with owner; nothing inferred"
+      ],
+      "inputs": {
+        "vertical": "retail",
+        "personas": "CIO",
+        "notes": "evals/fixtures/notes-thin.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "five-closes.md",
+          "check": "contains:\"TBD — owner: Engagement lead\""
+        },
+        {
+          "file": "five-closes.md",
+          "check": "contains:\"0 of 5 closes\""
+        },
+        {
+          "file": "pain-matrix.csv",
+          "check": "csv_rows:evidence!empty"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Prep me for a 45-minute discovery call with the CIO and VP Digital of a retailer; no notes yet.",
+      "expected": [
+        "Prep pack with time budget and question plan for both personas; five closes all open; pain matrix header only"
+      ],
+      "inputs": {
+        "vertical": "retail",
+        "personas": "CIO,VP Digital",
+        "minutes": "45",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "discovery-pack.md",
+          "check": "sections:[\"Time budget\",\"Question plan\",\"Five closes\"]"
+        },
+        {
+          "file": "pain-matrix.csv",
+          "check": "max_lines:1"
+        }
+      ]
+    }
+  ]
+}

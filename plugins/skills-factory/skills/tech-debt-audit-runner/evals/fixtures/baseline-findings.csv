@@ -1,0 +1,8 @@
+rule,file,line,snippet,severity,status
+"# fictional fixture — the debt recorded by an earlier tech-debt audit of repo-violations (tech-debt-audit-runner evals)",,,,,
+TD4,app/reports/page.tsx,2,app/ imports a sibling route folder: ../dashboard/helpers,high,new
+TD4,lib/analytics.ts,2,lib/ imports components/: @/components/Chart,high,new
+TD4,lib/old-widget.ts,3,lib/ imports components/: @/components/OldWidget,high,new
+TD3,server/services/invoice-service.ts,2,cycle: server/services/invoice-service.ts -> server/services/payment-service.ts -> server/services/invoice-service.ts,high,new
+TD2,lib/utils.ts,1,"61 lines, 13 exported symbols",medium,new
+TD1,server/services/quote-service.ts,6,computeQuoteTotals() duplicates computeTotals() in lib/pricing.ts (2 copies),medium,new

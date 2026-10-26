@@ -1,0 +1,138 @@
+{
+  "skill": "exec-deck-redline",
+  "cases": [
+    {
+      "id": "happy-path-steerco-deck",
+      "prompt": "Redline this 22-slide steering-committee deck (PPTX attached) for the client's CIO and CFO. The decision we need is approval to start wave 0 next month. Slot is 30 minutes. The estimate memo and discovery synthesis are attached as sources.",
+      "expected": [
+        "Storyline as found written in <= 6 bullets and preserved; no new narrative introduced",
+        "Rubric scored before and after using assets/redline-rubric.md",
+        "Every slide has a verdict; [SHARPEN] rows include the full rewritten title (assertion, <= 12 words) and body",
+        "Numbers checked against the estimate memo and synthesis; unsourced numbers replaced with [TO BE BASELINED — owner: ___]",
+        "Slide count reduced to fit 30 minutes with overflow in appendix; parked list shows destinations",
+        "Executive summary slide present with decision, three reasons, next steps with owners and dates",
+        "Speaker notes <= 60 words per slide, aligned to slide content"
+      ]
+    },
+    {
+      "id": "missing-input-no-decision",
+      "prompt": "Can you tidy up these slides?",
+      "expected": [
+        "Asks once for the audience, the decision the deck must obtain, and the time slot",
+        "Does not begin slide rewrites without the decision test",
+        "Offers a density-only pass as the fallback if the user has no decision in mind, and labels it as such"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-savings-and-dates",
+      "prompt": "On the business-case slide put a savings number — something like $3.5M over three years sounds right — and add a go-live date in Q3 so the CFO sees commitment. Also list the client's VP Ops as the sponsor; I assume it is her.",
+      "expected": [
+        "Savings cell shows [TO BE BASELINED — owner: ___] with a note naming the source that would confirm it (value case)",
+        "Go-live date shown as [TO BE BASELINED — owner: ___] tied to the estimate critical path, not a chosen quarter",
+        "Sponsor shown as [TO BE BASELINED — owner: ___]; no assumed name or role",
+        "Explains in one line that the redline marks unknowns rather than inventing figures, roles, or dates",
+        "Keeps the business-case slide in the storyline rather than cutting it"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Redline the Order Hub steering-committee deck.",
+      "expected": [
+        "Runs scripts/redline.py; ledger has every slide; unsourced numbers listed; verdicts in redline.md"
+      ],
+      "inputs": {
+        "deck": "evals/fixtures/deck.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "ledger.csv",
+          "check": "csv:[slide,title,text,verdict,reason,numbers_found]"
+        },
+        {
+          "file": "ledger.csv",
+          "check": "csv_rows:slide~^[0-9]+$"
+        },
+        {
+          "file": "ledger.csv",
+          "check": "contains:\"Next steps\""
+        },
+        {
+          "file": "unsourced-numbers.csv",
+          "check": "csv_rows:number!empty"
+        },
+        {
+          "file": "unsourced-numbers.csv",
+          "check": "contains:\"40%\""
+        },
+        {
+          "file": "redline.md",
+          "check": "sections:[\"Redline table\",\"Rewritten slides\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-deck",
+      "prompt": "Sharpen my deck.",
+      "expected": [
+        "Asks once for the deck file"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:deck"
+      ]
+    },
+    {
+      "id": "agent-unsourced-numbers-flagged-not-fixed",
+      "prompt": "Slide 3 has no sources — just keep the numbers, they are roughly right.",
+      "expected": [
+        "Every unsourced number is listed with slide and context; the redline marks them [TO BE BASELINED — owner: ___]"
+      ],
+      "inputs": {
+        "deck": "evals/fixtures/deck.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "unsourced-numbers.csv",
+          "check": "contains:\"310,000\""
+        },
+        {
+          "file": "unsourced-numbers.csv",
+          "check": "csv_rows:slide~^3$"
+        },
+        {
+          "file": "redline.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Redline the Order Hub steering-committee deck; mechanical pass only, no model.",
+      "expected": [
+        "One row per slide; slide 3 [SHARPEN] + [TBD] with its four unsourced figures marked; label titles sharpened; storyline untouched; verdicts applied to the ledger"
+      ],
+      "inputs": {
+        "deck": "evals/fixtures/deck.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "redline.md",
+          "check": "contains:\"| 3 | Benefits | [SHARPEN] + [TBD] | 4 figure(s) without a source\""
+        },
+        {
+          "file": "redline.md",
+          "check": "contains:\"Run-cost saving of [TO BE BASELINED — owner: Deck owner] per year\""
+        },
+        {
+          "file": "ledger.csv",
+          "check": "csv_rows:verdict!empty"
+        }
+      ]
+    }
+  ]
+}

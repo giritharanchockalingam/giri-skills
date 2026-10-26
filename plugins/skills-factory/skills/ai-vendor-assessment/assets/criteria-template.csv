@@ -1,0 +1,3 @@
+criterion,weight,description
+answer_quality,40,Accuracy on our golden eval set
+total_cost,30,Three-year total cost of ownership

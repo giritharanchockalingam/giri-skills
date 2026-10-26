@@ -1,0 +1,135 @@
+{
+  "skill": "orals-prep",
+  "cases": [
+    {
+      "id": "happy-path-shortlist-orals",
+      "prompt": "We are shortlisted for the Riverbend Health integration RFP; orals are next Thursday: 60 minutes, 25 presenting, 35 Q&A, evaluators are the CIO, CFO, procurement lead, and the integration manager. Presenting: our sponsor, engagement lead, lead architect. Attached: final proposal, deck, compliance matrix (three partials in security), battle card vs the incumbent.",
+      "expected": [
+        "Evaluation map links each stated criterion (or proposal structure if criteria unknown) to slides and speakers",
+        "Timed script fits 25 minutes with scripted handoffs; opening <= 90 s and close <= 60 s written verbatim; airtime check present",
+        "Question bank includes one question per security partial, per [TBD], per estimate assumption, plus battle-card objections and the standard evaluator set; answers <= 75 words with evidence pointers",
+        "Hard three identified (likely price, security partials, incumbent continuity) with honest answers stating gaps and mitigations",
+        "Red-team protocol and rehearsal plan with three dated dry runs and the rubric",
+        "No competitor named in any answer; number sheet lists every figure with proposal page"
+      ]
+    },
+    {
+      "id": "missing-input-no-format",
+      "prompt": "Help us get ready for the pitch.",
+      "expected": [
+        "Asks once for the format (duration, split, attendees, criteria), the presenting team, and the proposal/deck files",
+        "Does not produce a timed script without duration and team",
+        "Offers the question-bank generation from the proposal as a parallel first step if the proposal is available"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-answers-with-new-numbers",
+      "prompt": "For the 'why are you more expensive' question, have the lead say we deliver 30% faster than the incumbent and that our last three clients saw 40% cost reduction. Also name the incumbent's failed upgrade so the CFO remembers it.",
+      "expected": [
+        "Rejects the new percentages unless they exist in the proposal with sources; answer rewritten around basis of estimate, P80 contingency, and like-for-like comparison",
+        "Replaces the client claims with cleared references only, in their cleared form, or omits them",
+        "Removes the competitor mention; offers a ghost line in consequence language instead",
+        "Explains in one line that new numbers and competitor naming in orals create credibility and compliance risk"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Prep the 60-minute Northwind orals for Giri, Priya and Alex from the proposal.",
+      "expected": [
+        "Runs scripts/orals.py; timed script; every number traces to the registry; likely questions from the bank"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md",
+        "minutes": "60",
+        "speakers": "Giri,Priya,Alex"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "orals-script.md",
+          "check": "sections:[\"Timed script\",\"Airtime check\",\"Number sheet\",\"Handoffs\"]"
+        },
+        {
+          "file": "orals-script.md",
+          "check": "numbers_trace_to:number-registry.csv"
+        },
+        {
+          "file": "number-registry.csv",
+          "check": "contains:\"180,000\""
+        },
+        {
+          "file": "likely-questions.md",
+          "check": "contains:\"What is the biggest risk\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-speakers",
+      "prompt": "Prep the orals from the proposal.",
+      "expected": [
+        "Asks once for the speakers"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:speakers"
+      ]
+    },
+    {
+      "id": "agent-unbaselined-numbers-become-questions",
+      "prompt": "The proposal has TBDs — just say 'about 99.9%' in the script.",
+      "expected": [
+        "Script carries [TO BE BASELINED — owner: ___], and each marker becomes a likely question; no number outside the proposal"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal-thin.md",
+        "speakers": "Giri"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "orals-script.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "orals-script.md",
+          "check": "numbers_trace_to:number-registry.csv"
+        },
+        {
+          "file": "likely-questions.md",
+          "check": "contains:\"What is the number for\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is our current orals talk track for Northwind — check it against the proposal and the 60-minute slot.",
+      "expected": [
+        "The $2.1M licence saving is flagged as not in the proposal; 6.2%, 3% and 118 trace; Sam is listed as a speaker without a slot; airtime compared per speaker"
+      ],
+      "inputs": {
+        "proposal": "evals/fixtures/proposal.md",
+        "minutes": "60",
+        "speakers": "Giri,Priya,Alex",
+        "talk_track": "evals/fixtures/talk-track.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "talk-track-check.md",
+          "check": "contains:\"| 7 | Alex | $2.1M | cut it, or source it in the proposal first\""
+        },
+        {
+          "file": "talk-track-check.md",
+          "check": "contains:\"- Sam: has lines in the track but is not in --speakers\""
+        },
+        {
+          "file": "talk-track-check.md",
+          "check": "sections:[\"Figures not in the proposal\",\"Airtime vs spoken length\"]"
+        }
+      ]
+    }
+  ]
+}

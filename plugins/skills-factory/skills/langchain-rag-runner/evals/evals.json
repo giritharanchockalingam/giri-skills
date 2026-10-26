@@ -1,0 +1,109 @@
+{
+  "skill": "langchain-rag-runner",
+  "cases": [
+    {
+      "id": "happy-path-size-and-scaffold",
+      "prompt": "We have 1,200 policy docs (~3k chars), 400 FAQs and 250 long contracts. Chunk 1000/200, top 5 with a reranker, Chroma. Our embedding quote is $0.02 per 1M tokens. What will it cost and give me the LangChain code.",
+      "expected": [
+        "Runs scripts/plan_rag.py; chunk counts per source with the ceil formula; tokens labelled as chars/4 estimates",
+        "One-time and monthly re-embedding cost from the quoted price only",
+        "Retrieval budget vs context; rag_pipeline.py described as syntax-checked, not executed"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Size and cost the corpus in the attached profile with the attached RAG config, and generate the pipeline scaffold.",
+      "expected": ["Sizing, cost and budget computed from the inputs; scaffold generated and syntax-checked"],
+      "inputs": {"corpus": "evals/fixtures/corpus.csv", "config": "evals/fixtures/rag-config.json"},
+      "checks": [
+        "exit:0",
+        "exists:rag_pipeline.py",
+        {"file": "rag-plan.md", "check": "sections:[\"Sizing\",\"Cost\",\"Retrieval budget\",\"Warnings\",\"Scaffold\"]"},
+        {"file": "rag-plan.md", "check": "contains:\"| policies | 1,200 | 3,000 | 4 | 4,800 | 1,080,000 | monthly |\""},
+        {"file": "rag-plan.md", "check": "contains:\"| contracts | 250 | 24,000 | 30 | 7,500 | 1,862,500 | quarterly |\""},
+        {"file": "rag-plan.md", "check": "numbers_trace_to:rag-plan.json"},
+        {"file": "rag-plan.json", "check": "contains:\"\\\"per_query_context_tokens\\\": 1250\""}
+      ]
+    },
+    {
+      "id": "agent-missing-config",
+      "prompt": "How much will embedding our corpus cost?",
+      "expected": ["Asks for the RAG config (incl. the embedding price) instead of assuming one"],
+      "inputs": {"corpus": "evals/fixtures/corpus.csv"},
+      "checks": ["exit:2", "needs_input:config"]
+    },
+    {
+      "id": "agent-no-price-no-guess",
+      "prompt": "We don't have a price quote; just use the usual embedding price.",
+      "expected": ["Blocks with the missing price named; no price assumed, no scaffold"],
+      "inputs": {"corpus": "evals/fixtures/corpus.csv", "config": "evals/fixtures/rag-config-no-price.json"},
+      "checks": [
+        "exit:1",
+        {"file": "rag-plan.json", "check": "contains:\"embedding_price_per_1m_tokens is missing (no default is assumed)\""},
+        {"file": "rag-plan.md", "check": "contains:\"BLOCKED\""}
+      ]
+    },
+    {
+      "id": "agent-context-overflow-blocked",
+      "prompt": "Retrieve the top 20 chunks of 2000 characters into a 4000-token context.",
+      "expected": ["Blocks: 10000 est. tokens exceed the 4000 budget; warns about zero overlap and the in-memory store"],
+      "inputs": {"corpus": "evals/fixtures/corpus.csv", "config": "evals/fixtures/rag-config-overflow.json"},
+      "checks": [
+        "exit:1",
+        {"file": "rag-plan.json", "check": "contains:\"exceeds the context budget\""},
+        {"file": "rag-plan.md", "check": "contains:\"NO — blocking\""},
+        {"file": "rag-plan.md", "check": "contains:\"in-memory\""}
+      ]
+    },
+    {
+      "id": "agent-with-review",
+      "prompt": "Plan the pipeline and review it against the LangChain RAG guidance.",
+      "expected": ["Script outputs plus rag-review.md on the review template with the upstream skill as context"],
+      "inputs": {"corpus": "evals/fixtures/corpus.csv", "config": "evals/fixtures/rag-config.json", "review": "yes"},
+      "checks": [
+        "exit:0",
+        {"file": "rag-review.md", "check": "sections:[\"Upstream conformance\",\"Cost and budget risks\",\"Next changes\"]"},
+        {"file": "rag-review.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Our live index uses 1500/150 chunks, top 4, no reranker. We want 1000/200 with top 5 and a reranker. What changes, do we have to re-index, and what does it cost?",
+      "expected": [
+        "Reads the live config, lists 5 changed keys (2 index-affecting), says a full re-index is required at 3,022,500 est. tokens (0.0605 USD one-off), and shows chunks 8,500 -> 12,700 and context per query 1,500 -> 1,250 tokens"
+      ],
+      "inputs": {
+        "corpus": "evals/fixtures/corpus.csv",
+        "config": "evals/fixtures/rag-config.json",
+        "current_config": "evals/fixtures/rag-config-live.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "rag-plan.json",
+          "check": "contains:\"\\\"reindex_required\\\": true\""
+        },
+        {
+          "file": "rag-plan.json",
+          "check": "contains:\"\\\"delta_chunks\\\": 4200\""
+        },
+        {
+          "file": "rag-plan.md",
+          "check": "sections:[\"Sizing\",\"Cost\",\"Retrieval budget\",\"Change vs current index\",\"Warnings\",\"Scaffold\"]"
+        },
+        {
+          "file": "rag-plan.md",
+          "check": "contains:\"| chunk_size_chars | 1500 | 1000 | index |\""
+        },
+        {
+          "file": "rag-plan.md",
+          "check": "contains:\"| reranker | no | yes | query |\""
+        },
+        {
+          "file": "rag-plan.md",
+          "check": "numbers_trace_to:\"rag-plan.json\""
+        }
+      ]
+    }
+  ]
+}

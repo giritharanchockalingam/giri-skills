@@ -1,0 +1,75 @@
+{
+  "description": "Issue taxonomy for feedback-improvement-loop. Buckets are tried in this order; the first whose tag alias equals a row tag wins, else the first whose keyword occurs in the lower-cased comment (or eval failure_reason), else 'other'. Edit keywords to fit your product; keep ids stable.",
+  "buckets": [
+    {
+      "id": "hallucination",
+      "label": "Hallucination / factually wrong",
+      "tag_aliases": ["hallucination", "incorrect", "factual", "wrong-answer", "made-up"],
+      "keywords": ["made up", "made-up", "hallucinat", "fabricat", "invented", "not true", "incorrect", "inaccurate", "wrong answer", "doesn't exist", "does not exist", "false", "wrong policy", "wrong number", "wrong date"],
+      "fix_type": "retrieval",
+      "owner_role": "Retrieval lead",
+      "hypothesis": "Answers are not grounded: retrieval misses or stale sources let the model fill gaps.",
+      "expected": ["Every factual claim is supported by a retrieved source or the answer says it does not know", "No invented entities, numbers, dates or policies"]
+    },
+    {
+      "id": "wrong-format",
+      "label": "Wrong format",
+      "tag_aliases": ["format", "wrong-format", "formatting"],
+      "keywords": ["format", "table", "json", "bullet", "markdown", "layout", "too long", "too short", "wall of text", "structure"],
+      "fix_type": "prompt",
+      "owner_role": "Prompt owner",
+      "hypothesis": "Output format instructions or examples are missing or ambiguous for this feature.",
+      "expected": ["Output follows the feature's required format exactly", "Length within the feature's stated limit"]
+    },
+    {
+      "id": "too-slow",
+      "label": "Too slow",
+      "tag_aliases": ["latency", "slow", "too-slow", "performance"],
+      "keywords": ["slow", "took forever", "timeout", "timed out", "waiting", "latency", "loading", "lag"],
+      "fix_type": "model",
+      "owner_role": "Platform lead",
+      "hypothesis": "Latency is driven by model size, prompt length or sequential tool calls on this path.",
+      "expected": ["Response completes within the feature's latency SLO (llm-observability)", "Answer quality not reduced versus the current eval baseline"]
+    },
+    {
+      "id": "refusal",
+      "label": "Unwarranted refusal",
+      "tag_aliases": ["refusal", "refused", "over-refusal"],
+      "keywords": ["refuse", "refused", "won't answer", "will not answer", "can't help", "cannot help", "not able to help", "declined", "unable to assist", "as an ai"],
+      "fix_type": "guardrail",
+      "owner_role": "Safety lead",
+      "hypothesis": "Guardrails or safety instructions block legitimate requests on this feature.",
+      "expected": ["Legitimate in-scope request is answered, not refused", "Out-of-scope or unsafe variants are still refused"]
+    },
+    {
+      "id": "missing-info",
+      "label": "Missing information",
+      "tag_aliases": ["missing-info", "incomplete", "missing"],
+      "keywords": ["missing", "didn't include", "did not include", "left out", "incomplete", "no mention", "out of date", "outdated", "couldn't find", "could not find", "not covered"],
+      "fix_type": "data",
+      "owner_role": "Content owner",
+      "hypothesis": "The knowledge source lacks or has outdated content for these questions.",
+      "expected": ["Answer includes the information the user needed, sourced from current content", "If the content does not exist, the answer says so and routes to a human"]
+    },
+    {
+      "id": "tone",
+      "label": "Tone",
+      "tag_aliases": ["tone", "rude", "style"],
+      "keywords": ["rude", "tone", "condescending", "robotic", "cold", "patronising", "patronizing", "unfriendly", "too casual", "preachy"],
+      "fix_type": "prompt",
+      "owner_role": "Prompt owner",
+      "hypothesis": "Voice and tone guidance is missing or inconsistent in the system prompt.",
+      "expected": ["Tone matches the product voice guide", "No condescending or preachy phrasing"]
+    },
+    {
+      "id": "other",
+      "label": "Other / needs triage",
+      "tag_aliases": ["other"],
+      "keywords": [],
+      "fix_type": "UX",
+      "owner_role": "Product owner",
+      "hypothesis": "Not matched to a known bucket; needs human triage before a fix is chosen.",
+      "expected": ["Behaviour the user expected, as written in their comment, is met"]
+    }
+  ]
+}

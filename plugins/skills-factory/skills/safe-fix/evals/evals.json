@@ -1,0 +1,96 @@
+{
+  "skill": "safe-fix",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Bug: tenant admins get an empty invoice list on prod after yesterday's release. requestId abc123. Fix it.",
+      "expected": [
+        "Pulls evidence by requestId; writes a failing reproduction (integration test with admin persona) before any change",
+        "Root cause stated as one sentence with file:line and evidence (e.g. policy predicate / missing claim)",
+        "Diff limited to the failing path; no reformatting or renames",
+        "Regression test named after the bug; seen red before the fix (stash check)",
+        "Full suite + lint + typecheck + build run and reported; callers grepped",
+        "Rollback stated"
+      ]
+    },
+    {
+      "id": "would-break-something-else",
+      "prompt": "The export job fails because formatMoney() returns '1,000.00' and the CSV parser wants '1000.00'. Just change formatMoney to drop the comma.",
+      "expected": [
+        "Greps callers of formatMoney and finds UI usages that rely on the comma",
+        "Refuses to change the shared function's behaviour; fixes the export path (dedicated formatter or parser option) instead",
+        "Adds a regression test for the export and runs the UI tests that cover formatMoney",
+        "States the blast radius explicitly in the report"
+      ]
+    },
+    {
+      "id": "cannot-reproduce",
+      "prompt": "Sometimes the save button does nothing. Fix it.",
+      "expected": [
+        "Asks once for environment, steps, requestId or logs",
+        "Does not guess-fix; proposes targeted logging if no repro after evidence gathering",
+        "Does not weaken or skip any test"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Before I touch the calculator module, snapshot the test suite, then verify nothing else broke after the fix.",
+      "expected": [
+        "Runs safefix.py baseline then verify; no collateral; verify.json lists an empty collateral set"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-green",
+        "cmd": "python3 -m unittest -v"
+      },
+      "checks": [
+        "exit:0",
+        "exists:baseline.json",
+        {
+          "file": "verify.json",
+          "check": "json"
+        },
+        {
+          "file": "verify.json",
+          "check": "contains:\"\\\"collateral\\\": []\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-cmd",
+      "prompt": "Verify my fix did not break anything.",
+      "expected": [
+        "Asks for the test command once; does not guess the runner"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-green"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:cmd"
+      ]
+    },
+    {
+      "id": "agent-collateral-fails",
+      "prompt": "I fixed add(); test_add passes so ship it.",
+      "expected": [
+        "verify exits 1 and names test_multiply as collateral instead of passing the fix"
+      ],
+      "inputs": {
+        "target": "evals/fixtures/repo-collateral",
+        "cmd": "python3 -m unittest -v",
+        "baseline": "evals/fixtures/baseline-green.json"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "verify.json",
+          "check": "contains:\"collateral\""
+        },
+        {
+          "file": "verify.json",
+          "check": "contains:\"test_calc.py::TestCalc::test_multiply\""
+        }
+      ]
+    }
+  ]
+}

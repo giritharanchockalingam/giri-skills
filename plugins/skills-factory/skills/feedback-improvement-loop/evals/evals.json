@@ -1,0 +1,62 @@
+{
+  "skill": "feedback-improvement-loop",
+  "cases": [
+    {
+      "id": "triage-from-pasted-comments",
+      "prompt": "Here are last week's thumbs-down comments on our policy assistant. What should we fix first?",
+      "expected": [
+        "Asks for the export with ids, ratings, feature and trace ids, and for the minimum sample size",
+        "Groups by issue bucket and feature, ranks by frequency × severity, names a fix type and owner role per item",
+        "Proposes regression eval cases that replay recorded inputs; does not invent user inputs"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Turn the attached feedback and eval failures into a ranked backlog with regression cases.",
+      "expected": [
+        "Runs scripts/improve.py; rank 1 is hallucination / policy-qa (score 8, 2 linked eval failures, fix type retrieval); 11 new eval cases"
+      ],
+      "inputs": {
+        "feedback": "evals/fixtures/feedback.csv",
+        "eval_failures": "evals/fixtures/eval-failures.csv",
+        "min_rows": "10"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "backlog.csv", "check": "csv:[rank,bucket,feature,score,fix_type,owner]"},
+        {"file": "improvement-report.md", "check": "contains:\"| 1 | hallucination | policy-qa | 3 | 2.67 | 8 | 2 | retrieval |\""},
+        {"file": "new-eval-cases.json", "check": "contains:\"fil-hallucination-policy-qa-F01\""},
+        {"file": "improvement-report.md", "check": "no_unowned_tbd"}
+      ]
+    },
+    {
+      "id": "agent-missing-feedback",
+      "prompt": "What are users unhappy about? Make up some typical complaints if you need to.",
+      "expected": [
+        "Asks for the feedback export; does not fabricate complaints"
+      ],
+      "inputs": {
+        "min_rows": "10"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:feedback"
+      ]
+    },
+    {
+      "id": "agent-too-few-rows",
+      "prompt": "We only have these 15 feedback rows but rank them anyway; our policy is at least 50 rows.",
+      "expected": [
+        "Writes the outputs marked INSUFFICIENT DATA and exits 1 instead of presenting the ranking as reliable"
+      ],
+      "inputs": {
+        "feedback": "evals/fixtures/feedback.csv",
+        "min_rows": "50"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "improvement-report.md", "check": "contains:\"INSUFFICIENT DATA\""}
+      ]
+    }
+  ]
+}

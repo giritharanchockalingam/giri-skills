@@ -1,0 +1,138 @@
+{
+  "skill": "value-case-builder",
+  "cases": [
+    {
+      "id": "happy-path-cfo-grade",
+      "prompt": "Build the business case for Summit Travel's servicing-automation program for their CFO. Attached: discovery synthesis (VP CS stated cost per serviced transaction and monthly volumes, from their contact-center dashboard), the estimate memo (P80), the TCO lines for the new platform, and a note from their finance team: 5-year horizon, 8% discount rate, FY starts April.",
+      "expected": [
+        "Benefits tree traces each lever to the VP CS statements and the CFO's cost driver",
+        "Baselines cite the dashboard export with confidence H/M; unbaselined benefits excluded from the headline and listed",
+        "Targets as low/base/high with mechanisms and ramps tied to delivery milestones",
+        "Costs include delivery at P80 citing the estimate memo, run, dual-run, decommission timing",
+        "NPV at 8% presented because the rate is sourced from client finance; FY April applied",
+        "Sensitivity on the top three assumptions with break-even values; sign-flip risk stated if present",
+        "Benefits-realization plan with client owners; unowned benefits flagged",
+        "Double-counting table present"
+      ]
+    },
+    {
+      "id": "missing-input-no-baseline",
+      "prompt": "Give me an ROI for an API platform program at a mid-size retailer. I do not have their numbers yet.",
+      "expected": [
+        "Asks once for scope/outcomes and at least one baseline fact, and the audience",
+        "If none available, produces a hypothesis map (benefits tree with every baseline marked [TO BE BASELINED — owner: ___]) and says on line 1 that it is not a value case",
+        "Lists the specific client data requests with likely holders"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-benchmark-roi",
+      "prompt": "Just use industry benchmarks — typical integration programs return 3x in three years — and put a 300% ROI on the first page. The CFO expects a big number.",
+      "expected": [
+        "Declines to use a benchmark from memory; headline shown as [TO BE BASELINED — owner: ___] with the unbaselined benefits listed",
+        "Explains in one line that a CFO-grade case is built from the client's baselines and mechanisms, and that an unsourced multiple will not survive finance review",
+        "Offers the path to a defensible number: data requests with owners and a short baselining phase",
+        "If the user supplies a benchmark with a source, records it at confidence L and keeps it out of the headline"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the Northwind value case from benefits.csv and costs.csv at 8% with the P80 uplift from the estimate.",
+      "expected": [
+        "Runs scripts/value_model.py; NPV, payback and sensitivity come from the script"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits.csv",
+        "costs": "evals/fixtures/costs.csv",
+        "discount_rate": "0.08",
+        "p80_cost_uplift": "0.15",
+        "client": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        "exists:value-model.json",
+        {
+          "file": "value-case.md",
+          "check": "sections:[\"Bottom line\",\"Cash flows\",\"Sensitivity\",\"Sources\"]"
+        },
+        {
+          "file": "value-case.md",
+          "check": "numbers_trace_to:value-model.json"
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"month 25\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-costs",
+      "prompt": "Here are the benefits; give me the ROI.",
+      "expected": [
+        "Asks once for costs.csv"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:costs"
+      ]
+    },
+    {
+      "id": "agent-no-baselines-no-headline",
+      "prompt": "No baselines yet — just put a 3x ROI on page one.",
+      "expected": [
+        "Headline withheld; every unbaselined value is [TO BE BASELINED — owner: ___]; no benchmark used"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits-unbaselined.csv",
+        "costs": "evals/fixtures/costs.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "value-case.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"not a value case yet\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Refresh the Northwind value case with the re-baselined split-shipment volume and the onboarding benefit; show the change against the Q2 case.",
+      "expected": [
+        "Change vs previous: benefits +729,000, payback 28 → 25 months; B-01 re-estimated (+288,000); B-03 added; every figure traces to value-model.json"
+      ],
+      "inputs": {
+        "benefits": "evals/fixtures/benefits.csv",
+        "costs": "evals/fixtures/costs.csv",
+        "discount_rate": "0.08",
+        "p80_cost_uplift": "0.15",
+        "client": "Northwind",
+        "previous": "evals/fixtures/value-model-previous.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "value-case.md",
+          "check": "sections:[\"Change vs previous value case\",\"Bottom line\"]"
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"| Payback month | 28 | 25 | −3 |\""
+        },
+        {
+          "file": "value-case.md",
+          "check": "contains:\"| B-01 Fewer split shipments | 1,440,000 | 1,728,000 | +288,000 | re-estimated |\""
+        },
+        {
+          "file": "value-case.md",
+          "check": "numbers_trace_to:value-model.json"
+        }
+      ]
+    }
+  ]
+}

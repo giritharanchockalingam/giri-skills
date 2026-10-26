@@ -1,0 +1,13 @@
+# Hourly uptime probe; the default hostname is the old Vercel preview and is NOT a deploy step.
+name: uptime
+on:
+  schedule:
+    - cron: "17 * * * *"
+env:
+  SITE: ${{ vars.UPTIME_URL || 'https://harborline-portal.vercel.app' }}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: curl -fsS "$SITE/api/health"

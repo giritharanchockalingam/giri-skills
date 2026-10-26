@@ -1,0 +1,41 @@
+# fictional fixture — invented diff for the code-review-runner evals: the first commit of a brand-new module
+diff --git a/src/loyalty/points.ts b/src/loyalty/points.ts
+new file mode 100644
+index 0000000..5555555
+--- /dev/null
++++ b/src/loyalty/points.ts
+@@ -0,0 +1,14 @@
++export interface Purchase {
++  amountCents: number;
++  tier: "standard" | "gold";
++}
++
++const RATE: Record<Purchase["tier"], number> = { standard: 1, gold: 2 };
++
++export function pointsFor(p: Purchase): number {
++  if (!Number.isInteger(p.amountCents) || p.amountCents < 0) {
++    throw new RangeError("amountCents must be a non-negative integer");
++  }
++  return Math.floor(p.amountCents / 100) * RATE[p.tier];
++}
++
+diff --git a/src/loyalty/__tests__/points.test.ts b/src/loyalty/__tests__/points.test.ts
+new file mode 100644
+index 0000000..6666666
+--- /dev/null
++++ b/src/loyalty/__tests__/points.test.ts
+@@ -0,0 +1,14 @@
++import { describe, it, expect } from "vitest";
++import { pointsFor } from "../points";
++
++describe("pointsFor", () => {
++  it("earns one point per whole dollar on standard", () => {
++    expect(pointsFor({ amountCents: 1999, tier: "standard" })).toBe(19);
++  });
++  it("doubles points on gold", () => {
++    expect(pointsFor({ amountCents: 1000, tier: "gold" })).toBe(20);
++  });
++  it("rejects a negative amount", () => {
++    expect(() => pointsFor({ amountCents: -1, tier: "gold" })).toThrow(RangeError);
++  });
++});

@@ -1,0 +1,35 @@
+# fictional fixture - invented vendor answers for test only
+option,question_id,answer,evidence
+Fabrikam AI (fictional),TPR-01,yes,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-02,30,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-03,yes,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-04,yes,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-05,yes,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-06,yes,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-07,in_progress,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-08,90,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-09,48,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-10,yes,Vendor response (fictional)
+Fabrikam AI (fictional),TPR-11,yes,Vendor response (fictional)
+Tailspin Models (fictional),TPR-01,no,Vendor response (fictional)
+Tailspin Models (fictional),TPR-02,90,Vendor response (fictional)
+Tailspin Models (fictional),TPR-03,yes,Vendor response (fictional)
+Tailspin Models (fictional),TPR-04,yes,Vendor response (fictional)
+Tailspin Models (fictional),TPR-05,yes,Vendor response (fictional)
+Tailspin Models (fictional),TPR-06,yes,Vendor response (fictional)
+Tailspin Models (fictional),TPR-07,unknown,Vendor response (fictional)
+Tailspin Models (fictional),TPR-08,90,Vendor response (fictional)
+Tailspin Models (fictional),TPR-09,48,Vendor response (fictional)
+Tailspin Models (fictional),TPR-10,yes,Vendor response (fictional)
+Tailspin Models (fictional),TPR-11,yes,Vendor response (fictional)
+Build in-house,TPR-01,n/a,Internal build - no third party
+Build in-house,TPR-02,n/a,Internal build - no third party
+Build in-house,TPR-03,n/a,Internal build - no third party
+Build in-house,TPR-04,n/a,Internal build - no third party
+Build in-house,TPR-05,n/a,Internal build - no third party
+Build in-house,TPR-06,n/a,Internal build - no third party
+Build in-house,TPR-07,n/a,Internal build - no third party
+Build in-house,TPR-08,n/a,Internal build - no third party
+Build in-house,TPR-09,n/a,Internal build - no third party
+Build in-house,TPR-10,n/a,Internal build - no third party
+Build in-house,TPR-11,n/a,Internal build - no third party

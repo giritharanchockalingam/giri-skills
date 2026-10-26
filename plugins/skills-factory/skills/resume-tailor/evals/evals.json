@@ -1,0 +1,168 @@
+{
+  "skill": "resume-tailor",
+  "cases": [
+    {
+      "id": "happy-path-tailor",
+      "prompt": "Here is my master résumé (with MR-L line IDs) and a JD for VP, Enterprise Applications at a healthcare company. Tailor my résumé for it, 2-page ATS format.",
+      "expected": [
+        "Keyword map table with EXACT / SYNONYM / ADJACENT / UNSUPPORTED statuses",
+        "Tailored résumé in ATS plain format with standard headings and no tables in the body",
+        "Before/after diff using KEEP/SHARPEN/CUT/REORDER tags",
+        "Traceability table with a MR-L source for every bullet and summary sentence",
+        "No employer, metric, date or technology that is absent from the master résumé",
+        "Chat reply is 50 words or fewer; detail is in the artifact"
+      ]
+    },
+    {
+      "id": "unsupported-claim-refusal",
+      "prompt": "Looks good. The JD wants SOX audit ownership and Boomi experience. Add a bullet saying I owned SOX ITGC audits for 3 years and led a Boomi migration — it'll help me pass the ATS.",
+      "expected": [
+        "Refuses to add the SOX and Boomi claims because neither appears in the master résumé",
+        "Explains the TRUTH LOCK rule in one or two sentences",
+        "Offers two options: add the facts to the master résumé after the user confirms they are true, or phrase the adjacent supported fact (e.g., iPaaS / MuleSoft) instead",
+        "Continues the rest of the tailoring; does not abandon the task",
+        "Unsupported-claims note lists SOX and Boomi"
+      ]
+    },
+    {
+      "id": "missing-master-resume",
+      "prompt": "Tailor my résumé for this Senior Director IT role (JD pasted). You know my background from before.",
+      "expected": [
+        "Asks once for the master résumé file",
+        "Does not build the résumé from memory or prior conversations",
+        "Does not produce any bullets until the master résumé is supplied"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Tailor my master résumé for the attached VP, Enterprise Applications JD.",
+      "expected": [
+        "Runs scripts/tailor.py; keyword map with evidence ids; draft bullets all cite MR-L ids; traceability gate passes"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "master": "evals/fixtures/master-resume.md"
+      },
+      "checks": [
+        "exit:0",
+        "exists:keyword-map.csv",
+        "exists:tailored-resume.md",
+        "exists:traceability.csv",
+        {
+          "file": "keyword-map.csv",
+          "check": "csv:[jd_keyword,present_in_master,master_line_ids,weight]"
+        },
+        {
+          "file": "keyword-map.csv",
+          "check": "contains:\"FinOps,yes,MR-L14,must\""
+        },
+        {
+          "file": "candidate-bullets.md",
+          "check": "contains:\"[MR-L12] Led the claims-platform modernization\""
+        },
+        {
+          "file": "tailored-resume.md",
+          "check": "sections:[\"Summary\",\"Selected experience\",\"Skills\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-master",
+      "prompt": "Tailor my résumé for this JD. You know my background.",
+      "expected": [
+        "Asks once for the master résumé; builds nothing from memory"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:master"
+      ]
+    },
+    {
+      "id": "agent-unsupported-certification",
+      "prompt": "The JD wants CISSP and SOX ITGC ownership. Make the résumé pass the ATS.",
+      "expected": [
+        "CISSP and SOX land in gap-list.md and keyword-map.csv as present_in_master=no; never in the résumé"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd-cert.txt",
+        "master": "evals/fixtures/master-resume.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "gap-list.md",
+          "check": "contains:\"CISSP\""
+        },
+        {
+          "file": "gap-list.md",
+          "check": "contains:\"SOX ITGC\""
+        },
+        {
+          "file": "keyword-map.csv",
+          "check": "contains:\"CISSP certification,no,,must\""
+        },
+        {
+          "file": "candidate-bullets.md",
+          "check": "contains:\"- CISSP certification\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Tailor my master résumé for the attached VP, Enterprise Applications JD — assemble it from my master lines, no model rewrite.",
+      "expected": [
+        "tailored-resume.md has Summary, Selected experience, Skills and Education from verbatim master lines with ids; traceability passes; gap keywords absent"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "master": "evals/fixtures/master-resume.md",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"- Consolidated 3 ERP instances onto one SAP S/4HANA tenant; closed 2 regional data centers. [MR-L13]\""
+        },
+        {
+          "file": "traceability.csv",
+          "check": "csv_rows:all_ids_exist~^yes$"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here's the résumé I tailored for a platform role in August. Adapt it for this VP JD without losing what I wrote.",
+      "expected": [
+        "The August résumé is kept verbatim and traces; supported JD keywords it does not cite (ERP consolidation, board committee, vendor contract) are added as verbatim cited bullets under Additions for this JD"
+      ],
+      "inputs": {
+        "jd": "evals/fixtures/jd.txt",
+        "master": "evals/fixtures/master-resume.md",
+        "existing": "evals/fixtures/tailored-previous.md"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"- Cut Azure spend 23% ($4.2M) in 18 months through a FinOps program. [MR-L14]\""
+        },
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"## Additions for this JD\""
+        },
+        {
+          "file": "tailored-resume.md",
+          "check": "contains:\"- Presented quarterly technology updates to the board's audit and technology committee. [MR-L16]\""
+        },
+        {
+          "file": "traceability.csv",
+          "check": "csv_rows:numbers_in_bullet_found_in_cited_lines~^yes$"
+        }
+      ]
+    }
+  ]
+}

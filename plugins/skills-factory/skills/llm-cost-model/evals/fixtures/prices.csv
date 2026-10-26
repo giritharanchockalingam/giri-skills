@@ -1,0 +1,3 @@
+model,price_in_per_1m,price_out_per_1m,cached_in_per_1m,source,as_of,notes
+fict-large,3.00,15.00,0.30,fictional price sheet (not a real vendor),2026-09-01,fictional fixture
+fict-small,0.25,1.25,0.025,fictional price sheet (not a real vendor),2026-09-01,fictional fixture

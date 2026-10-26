@@ -1,0 +1,131 @@
+{
+  "skill": "ai-strategy-coe",
+  "cases": [
+    {
+      "id": "happy-path-midsize-enterprise",
+      "prompt": "We are a 6,000-person higher-education company with a Snowflake warehouse, Azure OpenAI access in one team, no AI policy, and 12 candidate ideas from a hackathon. Build our AI strategy and a 12-month roadmap for the CIO.",
+      "expected": [
+        "Maturity table scores all five dimensions with evidence lines or TO BE BASELINED markers",
+        "Overall level stated as the minimum dimension and the constraining dimension is named",
+        "Operating model recommended with the two rejected options and reasons",
+        "All 12 ideas scored on V, F, D, R with a numeric priority and a Now/Next/Later/Stop band",
+        "Roadmap has four quarters each with an exit criterion and owner",
+        "No invented industry benchmark figures"
+      ]
+    },
+    {
+      "id": "missing-current-state",
+      "prompt": "Write us an AI strategy. We are a retailer.",
+      "expected": [
+        "Asks once for current-state evidence (data platforms, cloud, existing AI, team) and strategic priorities",
+        "Does not assign maturity scores from industry assumptions",
+        "Offers the inputs table so the user can fill it"
+      ]
+    },
+    {
+      "id": "operating-model-only",
+      "prompt": "We have 4 business units, a working model gateway, and 3 production AI apps built by a central team that is now a bottleneck. Which operating model should we move to?",
+      "expected": [
+        "Recommends hub-and-spoke with transition triggers",
+        "States the design decisions (reporting line, funding, intake, risk gate, build/buy)",
+        "Flags talent per spoke as the precondition",
+        "Response is concise and table-based"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Rank our nine candidate use cases and assess maturity for Northwind.",
+      "expected": [
+        "Runs score_portfolio.py and maturity.py; ranked portfolio with bands; overall level = minimum dimension; one roadmap item per gap"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases.csv",
+        "scorecard": "evals/fixtures/maturity-scorecard.csv",
+        "org": "Northwind"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "portfolio.csv",
+          "check": "csv_rows:score!empty"
+        },
+        {
+          "file": "portfolio.md",
+          "check": "contains:\"| 1 | UC-001 | Invoice extraction and three-way match | AP Manager | 4 | 5 | 4 | 2 | 40.0 | Now |\""
+        },
+        {
+          "file": "maturity.md",
+          "check": "contains:\"Level 1 (Ad hoc) overall; constraining dimension: governance\""
+        },
+        {
+          "file": "roadmap.md",
+          "check": "sections:[\"Gap closure items\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-scorecard",
+      "prompt": "Build our AI roadmap from the use-case list.",
+      "expected": [
+        "Asks once for the maturity scorecard; does not infer maturity from industry averages"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:scorecard"
+      ]
+    },
+    {
+      "id": "agent-unscored-rows-not-ranked",
+      "prompt": "Some use cases are not fully scored and two maturity scores have no evidence — rank them anyway.",
+      "expected": [
+        "Rows missing an axis go to the unscored bucket, not the ranking; unevidenced maturity scores become [TO BE BASELINED — owner: …]"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases-partial.csv",
+        "scorecard": "evals/fixtures/maturity-scorecard-thin.csv"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "unscored.csv",
+          "check": "csv_rows:reason!empty"
+        },
+        {
+          "file": "portfolio.md",
+          "check": "contains:\"| UC-003 | Internal policy assistant (RAG) | HR Ops | missing score(s): V, F, D, R |\""
+        },
+        {
+          "file": "maturity.md",
+          "check": "contains:\"[TO BE BASELINED — owner: CDO]\""
+        },
+        {
+          "file": "maturity.md",
+          "check": "contains:\"score given without evidence\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is this quarter's re-scored backlog for Northwind and last quarter's ranked portfolio. Re-rank it and show what moved.",
+      "expected": [
+        "Reads the earlier portfolio: UC-009 and UC-005 new; UC-003 drops from Now to Next; UC-010 listed as no longer in the list; nothing carried over from earlier scores"
+      ],
+      "inputs": {
+        "use_cases": "evals/fixtures/use-cases.csv",
+        "scorecard": "evals/fixtures/maturity-scorecard.csv",
+        "org": "Northwind",
+        "previous_portfolio": "evals/fixtures/previous-portfolio.csv"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "portfolio.md", "check": "sections:[\"Ranked portfolio\",\"Band summary\",\"Changes since last review\"]"},
+        {"file": "portfolio.md", "check": "contains:\"| UC-003 | Internal policy assistant (RAG) | 2 | 4 | down 2 | Now | Next |\""},
+        {"file": "portfolio.md", "check": "contains:\"| UC-010 | Field service visit summariser | 5 | — | no longer in the list | Later | — |\""},
+        {"file": "portfolio.csv", "check": "csv:[rank,id,band,previous_rank,previous_band,movement]"}
+      ]
+    }
+  ]
+}

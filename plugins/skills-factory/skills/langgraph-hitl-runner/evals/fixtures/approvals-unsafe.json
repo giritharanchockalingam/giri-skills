@@ -1,0 +1,24 @@
+{
+  "_note": "fictional fixture — deliberately unsafe: no checkpointer, irreversible action auto-approves on timeout, high-impact gate without timeout, missing approver role",
+  "graph": "payout_agent",
+  "interrupts": [
+    {
+      "before_node": "wire_payment",
+      "reason": "Wire transfer to a supplier",
+      "approver_role": "Treasury approver",
+      "timeout_minutes": 30,
+      "on_timeout": "auto-approve",
+      "editable_fields": ["amount"],
+      "high_impact": true,
+      "irreversible": true
+    },
+    {
+      "before_node": "close_account",
+      "reason": "Closes the supplier account",
+      "approver_role": "",
+      "on_timeout": "reject",
+      "editable_fields": [],
+      "high_impact": true
+    }
+  ]
+}

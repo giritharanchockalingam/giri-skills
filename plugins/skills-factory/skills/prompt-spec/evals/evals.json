@@ -1,0 +1,115 @@
+{
+  "skill": "prompt-spec",
+  "cases": [
+    {
+      "id": "prompt-from-chat",
+      "prompt": "Here's the prompt we use for ticket triage, can you make it production-ready?",
+      "expected": [
+        "Converts it into the spec format (id, semver version, role, task with {{variables}}, declared variables, output schema, constraints, examples, max_input_tokens)",
+        "Asks the owner for the token budget and owner-approved examples instead of inventing them"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Lint and render this prompt spec and give me the regression cases.",
+      "expected": [
+        "Runs scripts/prompt_spec.py; lint passes; prompt.md v1.2.0 with three regression cases in prompt-tests.jsonl"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/prompt-spec.json"
+      },
+      "checks": [
+        "exit:0",
+        "exists:prompt.md",
+        {"file": "prompt-lint.json", "check": "contains:\"status\": \"pass\""},
+        {"file": "prompt.md", "check": "contains:\"# Prompt ticket-triage — v1.2.0\""},
+        {"file": "prompt.md", "check": "sections:[\"System\",\"User\",\"Variables\"]"},
+        {"file": "prompt-tests.jsonl", "check": "contains:\"ticket-triage@1.2.0#ex-03\""},
+        {"file": "prompt-tests.jsonl", "check": "cmd:\"python3 -I scripts/prompt_spec.py --verify-tests {path}\""}
+      ]
+    },
+    {
+      "id": "agent-missing-spec",
+      "prompt": "Version our triage prompt.",
+      "expected": [
+        "Asks for the prompt spec JSON"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:spec"
+      ]
+    },
+    {
+      "id": "agent-broken-spec-blocks-render",
+      "prompt": "Ship this prompt spec.",
+      "expected": [
+        "Lint fails: undeclared {{language}}, unused channel, example missing customer_tier, example output outside the enum and wrong type, non-semver version; nothing rendered"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/prompt-spec-broken.json"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "prompt-lint.json", "check": "contains:\"E-VAR-UNDECLARED\""},
+        {"file": "prompt-lint.json", "check": "contains:\"E-VAR-UNUSED\""},
+        {"file": "prompt-lint.json", "check": "contains:\"E-EX-MISSING-VAR\""},
+        {"file": "prompt-lint.json", "check": "contains:\"$.needs_human: expected type boolean\""},
+        {"file": "prompt-lint.json", "check": "contains:\"E-VERSION\""}
+      ]
+    },
+    {
+      "id": "agent-over-budget",
+      "prompt": "Render this prompt; budget is 60 input tokens.",
+      "expected": [
+        "Lint fails on the chars/4 estimate exceeding max_input_tokens; the estimate is labelled as an estimate"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/prompt-spec-over-budget.json"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "prompt-lint.json", "check": "contains:\"E-BUDGET\""},
+        {"file": "prompt-lint.json", "check": "contains:\"an estimate, not a tokenizer count\""}
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Here is v1.2.0 of the triage prompt and the v1.1.0 spec that runs in production. Lint it, list what changed and confirm the version bump is right.",
+      "expected": [
+        "Diffs v1.2.0 against production v1.1.0: task text, a new safety constraint, optional channel variable and optional entities output property (minor) plus examples (patch); required bump minor equals the actual bump; renders"
+      ],
+      "inputs": {
+        "spec": "evals/fixtures/prompt-spec.json",
+        "previous": "evals/fixtures/prompt-spec-v1.1.0.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "prompt-lint.json",
+          "check": "contains:\"\\\"required_bump\\\": \\\"minor\\\"\""
+        },
+        {
+          "file": "prompt-lint.json",
+          "check": "contains:\"\\\"status\\\": \\\"pass\\\"\""
+        },
+        {
+          "file": "prompt.md",
+          "check": "sections:[\"System\",\"User\",\"Variables\",\"Regression cases\",\"Changes since v1.1.0\"]"
+        },
+        {
+          "file": "prompt.md",
+          "check": "contains:\"| output_schema | `$.entities` | property added | minor |\""
+        },
+        {
+          "file": "prompt.md",
+          "check": "contains:\"| variables | `channel` | optional variable added | minor |\""
+        },
+        {
+          "file": "prompt-tests.jsonl",
+          "check": "cmd:\"python3 -I scripts/prompt_spec.py --verify-tests {path}\""
+        }
+      ]
+    }
+  ]
+}

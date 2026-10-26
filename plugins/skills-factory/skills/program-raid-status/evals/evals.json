@@ -1,0 +1,311 @@
+{
+  "skill": "program-raid-status",
+  "cases": [
+    {
+      "id": "prompt-steerco-status",
+      "prompt": "Give me this week's steerco status for the Northwind Billing Assistant program from our RAID log and milestone plan: what's red, what's late and who owns the fix.",
+      "expected": [
+        "Asks for the as-of date if not given; never assumes today",
+        "Runs scripts/raid_status.py; reports overall RAG with the documented rule, the critical path and the top 5 risks by exposure",
+        "Unowned items show [TO BE BASELINED — owner: Program manager]"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Build the status report for the attached Northwind Billing Assistant RAID log and milestones as of 2026-10-16.",
+      "expected": [
+        "Overall RED; critical path M1 → M2 → M3 → M5 → M7 = 85 days; M3 slips 28 days; I1 overdue 14 days"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "status-report.md", "check": "contains:\"**Overall RAG: RED**\""},
+        {"file": "status-report.md", "check": "contains:\"M1 → M2 → M3 → M5 → M7 = 85 days\""},
+        {"file": "status.csv", "check": "contains:\"M3,RAG index on billing knowledge base,2026-09-25,2026-10-23,28,red,yes,in_progress\""},
+        {"file": "status.csv", "check": "contains:\"M6,Agent desktop integration,2026-10-30,2026-11-06,7,amber,no,in_progress\""},
+        {"file": "raid-actions.csv", "check": "contains:\"I1,issue,20,Integration lead,2026-10-02,14,36,\""},
+        {"file": "status-report.md", "check": "mermaid_parses"}
+      ]
+    },
+    {
+      "id": "agent-missing-as-of",
+      "prompt": "Status as of today please.",
+      "expected": [
+        "Asks once for the as-of date; does not use the system date"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:as_of"
+      ]
+    },
+    {
+      "id": "agent-unowned-not-invented",
+      "prompt": "R3 has no owner yet - just put the platform lead on it.",
+      "expected": [
+        "R3 and M7 owners are TBD for the Program manager; no owner is invented; a decision asks to name the owner"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "status-report.md", "check": "no_unowned_tbd"},
+        {"file": "raid-actions.csv", "check": "contains:\"R3,risk,15,[TO BE BASELINED — owner: Program manager],2026-10-20,0,45,Assign an owner; Mask notes before indexing\""},
+        {"file": "status-report.md", "check": "contains:\"Name an owner for R3\""}
+      ]
+    },
+    {
+      "id": "agent-strict-red-exits-1",
+      "prompt": "Gate the steerco pack: fail if the program is red.",
+      "expected": [
+        "Overall RED; strict exits 1 but every output is written"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:1",
+        {"file": "status-report.md", "check": "contains:\"`--strict` was set: the run fails (exit 1) because overall RAG is red.\""}
+      ]
+    },
+    {
+      "id": "agent-strict-amber-passes",
+      "prompt": "Gate the status for the on-plan variant; amber is acceptable.",
+      "expected": [
+        "Overall AMBER (M3 slips 10 days, at the amber boundary); strict passes with exit 0"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid-clean.csv",
+        "milestones": "evals/fixtures/milestones-green.csv",
+        "as_of": "2026-10-16",
+        "strict": "true"
+      },
+      "checks": [
+        "exit:0",
+        {"file": "status-report.md", "check": "contains:\"**Overall RAG: AMBER**\""},
+        {"file": "status.csv", "check": "contains:\"M3,Agent desktop integration,2026-11-20,2026-11-30,10,amber,no,in_progress\""}
+      ]
+    },
+    {
+      "id": "agent-dependency-cycle-exits-1",
+      "prompt": "Status for the plan where data extract and RAG index depend on each other.",
+      "expected": [
+        "Stops with exit 1 and a clear dependency-cycle error naming M2 and M3"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones-cycle.csv",
+        "as_of": "2026-10-16"
+      },
+      "checks": [
+        "exit:1"
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Weekly steerco: build this week's Northwind status as of 2026-10-16 and show what moved since last week's report.",
+      "expected": [
+        "Reads last week's status (as of 2026-10-09): M3, M5 and M7 slipped 9 days, M6 7 days and turned amber, M4 completed, R6 closed; go-live (M7) moved from 2026-11-25 to 2026-12-04; overall RAG stays red"
+      ],
+      "inputs": {
+        "raid": "evals/fixtures/raid.csv",
+        "milestones": "evals/fixtures/milestones.csv",
+        "as_of": "2026-10-16",
+        "previous": "evals/fixtures/status-previous.json"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "status-report.md",
+          "check": "sections:[\"Summary\",\"Milestones\",\"Since last report\",\"Critical path\",\"Top risks\",\"Overdue items\",\"Decisions needed\",\"Method\"]"
+        },
+        {
+          "file": "status-report.md",
+          "check": "contains:\"| M6 | slipped | +7 | green | amber |\""
+        },
+        {
+          "file": "status-report.md",
+          "check": "contains:\"End of the critical path (M7) moved from 2026-11-25 to 2026-12-04.\""
+        },
+        {
+          "file": "status-report.md",
+          "check": "contains:\"closed: R6.\""
+        },
+        {
+          "file": "status-report.md",
+          "check": "mermaid_parses"
+        },
+        {
+          "file": "status-report.md",
+          "check": "no_unowned_tbd"
+        }
+      ]
+    },
+    {
+      "id": "x-claims-agent-rollout-red",
+      "prompt": "Steerco status for the claims-triage agent rollout, as of 2026-10-20.\n\nmilestones.csv\nid,milestone,baseline_date,forecast_date,duration_days,depends_on,status,owner\nM1,Use-case sign-off,2026-09-01,2026-09-01,10,,done,Product owner\nM2,Data pipeline ready,2026-09-30,2026-10-08,20,M1,in_progress,Data lead\nM3,Agent MVP,2026-10-31,2026-11-14,25,M2,in_progress,Agent lead\nM4,Security review,2026-11-07,2026-11-07,10,M1,not_started,\nM5,Pilot go-live,2026-11-21,2026-12-05,10,M3|M4,not_started,Program manager\n\nraid.csv\nid,type,description,owner,likelihood,impact,due,status,mitigation,raised\nR1,risk,GPU quota not approved,Platform lead,4,5,2026-10-15,open,Escalate to cloud account team,2026-09-10\nR2,risk,Labelled data quality below target,Data lead,3,3,2026-11-01,open,Second labelling pass,2026-09-20\nI1,issue,Vendor API sandbox down,,,4,2026-10-18,open,Use mock service,2026-10-12\nD1,dependency,Identity team SSO integration,Identity lead,2,4,2026-10-30,open,Weekly sync,2026-10-01",
+      "expected": [
+        "Line 1 is **Overall RAG: RED** (as of 2026-10-20), with the rule and reasons: red critical-path milestones and R1 (exposure 20) overdue 5 days",
+        "M2 is red because its forecast 2026-10-08 is before the as-of date (late), even though its slip is only 8 days; M3 and M5 slip 14 days and are red; M4 is green",
+        "Critical path M1 → M2 → M3 → M5 = 65 days",
+        "I1 and M4 owners show [TO BE BASELINED — owner: Program manager] with a Decision needed to name each owner; I1 exposure counts 20 (blank likelihood = 5) and is overdue 2 days"
+      ]
+    },
+    {
+      "id": "x-month-boundary-red-off-path",
+      "prompt": "Status as of 2026-09-25 please — is the program red?\nMilestones:\nM1 Vendor contract signed | baseline 2026-09-20 | forecast 2026-10-05 | 5 days | no deps | in_progress | Procurement lead\nM2 Model fine-tune complete | baseline 2026-10-15 | forecast 2026-10-15 | 30 days | no deps | in_progress | ML lead\nM3 UAT complete | baseline 2026-11-01 | forecast 2026-11-04 | 10 days | depends on M2 | not_started | QA lead\nRAID: R1 risk 'Fine-tune data late', owner ML lead, likelihood 2, impact 3, due 2026-10-10, open, raised 2026-09-01",
+      "expected": [
+        "Computes M1 slip across the month end as 15 days (10 + 5) → red; M3 slip 3 → amber; M2 green",
+        "Critical path is M2 → M3 = 40 days, so M1 is red but not on the critical path",
+        "Overall RAG is AMBER, not RED, because no critical-path milestone is red and no exposure ≥ 20 item is overdue; states the rule"
+      ]
+    },
+    {
+      "id": "x-blocked-milestone-strict-passes",
+      "prompt": "Gate this week's RAG pack with --strict; as of 2026-10-21.\nid,milestone,baseline_date,forecast_date,duration_days,depends_on,status,owner\nM1,Data access approved,2026-10-01,2026-10-01,10,,done,Data owner\nM2,Retrieval index built,2026-10-30,2026-10-30,15,M1,blocked,Search lead\nM3,Pilot launch,2026-11-20,2026-11-20,10,M2,not_started,Program manager\nRAID:\nR1,risk,Index build blocked by firewall change,Search lead,3,4,2026-10-28,open,Network change request raised,2026-10-10",
+      "expected": [
+        "M2 has zero slip but status blocked lifts it from green to amber",
+        "Overall RAG AMBER; the strict gate passes (exit 0) because the program is not red",
+        "Critical path M1 → M2 → M3 = 35 days; top risk R1 exposure 12 with owner Search lead"
+      ]
+    },
+    {
+      "id": "x-overdue-ageing-amber",
+      "prompt": "Weekly status for the HR knowledge-bot program, as of 2026-10-17. Milestones: M1 Discovery (baseline=forecast 2026-09-01, 10 days, done, Program manager); M2 Build (baseline=forecast 2026-11-15, 40 days, depends M1, in_progress, Engineering lead).\nRAID:\nR1,risk,Key engineer leaving,Engineering lead,3,2,2026-10-14,open,Pairing,2026-09-01\nI1,issue,Test env unstable,Platform lead,,3,2026-10-05,open,Rebuild env,2026-09-20\nD1,dependency,Payments API from partner,Partner manager,4,4,2026-09-08,open,Escalate,2026-08-15\nR2,risk,Budget cut,Sponsor,5,5,2026-11-30,open,Business case refresh,2026-10-01",
+      "expected": [
+        "Overall AMBER: milestones are on plan but D1, I1 and R1 are overdue; not RED because no overdue item has exposure ≥ 20 (R2 exposure 25 is not yet due)",
+        "Overdue days: D1 39, I1 12, R1 3, with ageing buckets 1–7, 8–30 and 31+ one each",
+        "Top risks ranked by exposure: R2 (25) then R1 (6), each with owner",
+        "I1 exposure 15 uses the blank-likelihood rule for issues (5 × 3)"
+      ]
+    },
+    {
+      "id": "x-overdue-high-exposure-red",
+      "prompt": "Our milestones are all on plan, so this should be green, right? As of 2026-10-19.\nM1 Design 2026-10-01/2026-10-01 15d done (Architect); M2 Build 2026-11-10/2026-11-10 30d dep M1 in_progress (Engineering lead); M3 Go-live 2026-12-01/2026-12-01 5d dep M2 not_started (Program manager).\nRAID: R1 risk 'Regulator guidance on chatbot disclosures pending', Compliance lead, L5 I4, due 2026-10-12, open; R2 risk 'Load test capacity', Platform lead, L2 I3, due 2026-11-01, open.",
+      "expected": [
+        "Overall RAG is RED, not green: R1 has exposure 20 (≥ red_exposure 20) and is overdue 7 days",
+        "All milestones are green/complete with zero slip; critical path M1 → M2 → M3 = 50 days",
+        "States the overall RAG rule that fired and lists R1 under Overdue items and Top risks"
+      ]
+    },
+    {
+      "id": "x-all-green-program",
+      "prompt": "Status for the document-AI pilot, as of 2026-10-19.\nM1 Design | 2026-10-01 → 2026-10-01 | 15d | done | Architect\nM2 Build | 2026-11-10 → 2026-11-10 | 30d | after M1 | in_progress | Engineering lead\nM3 Go-live | 2026-12-01 → 2026-12-01 | 5d | after M2 | not_started | Program manager\nRAID: R2 risk Load test capacity, Platform lead, L2/I3, due 2026-11-01, open; R1 risk Regulator guidance, Compliance lead, L5/I4, due 2026-10-12, closed.",
+      "expected": [
+        "Overall RAG GREEN with the rule stated: no red/amber milestones, no overdue open item, every open item owned",
+        "Ignores closed R1 in exposure and overdue calculations; top risk R2 exposure 6",
+        "Critical path M1 → M2 → M3 = 50 days"
+      ]
+    },
+    {
+      "id": "x-custom-thresholds-pmo",
+      "prompt": "Our PMO uses tighter thresholds: green_max_slip_days 0, amber_max_slip_days 5, red_exposure 15. Status as of 2026-10-19:\nM1,Integration build,2026-10-20,2026-10-27,20,,in_progress,Integration lead\nM2,Cutover,2026-11-15,2026-11-15,5,M1,not_started,Program manager\nRAID: R2,risk,Load test capacity,Platform lead,2,3,2026-11-01,open,Book env,2026-10-01",
+      "expected": [
+        "Applies the supplied thresholds, not the defaults: M1 slip 7 days exceeds amber_max 5 → red",
+        "M1 is on the critical path (M1 → M2 = 25 days), so overall RAG is RED",
+        "States the thresholds used in the Summary/Method"
+      ]
+    },
+    {
+      "id": "x-ask-as-of-date",
+      "prompt": "Here's the RAID log and plan for the contact-centre AI program — give me the RAG.\nM1,Vendor onboarding,2026-10-01,2026-10-09,10,,in_progress,Vendor manager\nM2,IVR integration,2026-11-01,2026-11-01,20,M1,not_started,Telephony lead\nR1,risk,Telephony vendor capacity,Telephony lead,3,4,2026-10-20,open,Weekly check,2026-09-25",
+      "expected": [
+        "Asks once for the as-of date (YYYY-MM-DD) and says the system date will not be used; the run stops (exit 2) without it",
+        "Does not state overdue days or a late/red verdict that depends on the as-of date",
+        "May compute date-independent facts (M1 slip 8 days; critical path M1 → M2 = 30 days)"
+      ]
+    },
+    {
+      "id": "x-raid-only-no-plan",
+      "prompt": "Status as of 2026-10-20 for the fraud-model program. RAID:\nR1,risk,Feature store latency,Data platform lead,4,4,2026-10-25,open,Cache layer,2026-09-30\nI1,issue,Labelling backlog,Ops lead,,3,2026-10-10,open,Temp staff,2026-09-28\nWhat's red and late?",
+      "expected": [
+        "Asks once for the milestone plan (assets/milestones-template.csv); the run stops (exit 2) without it",
+        "Does not invent milestones, slips or a critical path",
+        "May report the RAID-only facts: I1 overdue 10 days with exposure 15; R1 exposure 16 not yet due"
+      ]
+    },
+    {
+      "id": "x-risk-missing-likelihood",
+      "prompt": "As of 2026-10-19, run the status.\nmilestones: M1 Design 2026-10-01/2026-10-01 15d done Architect; M2 Build 2026-11-10/2026-11-10 30d dep M1 in_progress Engineering lead\nraid: R1,risk,Vendor delay,Vendor manager,,4,2026-11-01,open,Weekly call,2026-10-01",
+      "expected": [
+        "Stops (exit 2) because risk R1 has no likelihood (a risk needs likelihood and impact 1–5), naming the row",
+        "Does not assume a likelihood; asks the Vendor manager / Program manager to score it and re-run"
+      ]
+    },
+    {
+      "id": "x-nothing-supplied-whats-red",
+      "prompt": "what's red on the data platform program this week and who's on the hook?",
+      "expected": [
+        "Line 1 is **Overall RAG: pending — RAID log, milestone plan and as-of date not supplied**, line 2 the run command",
+        "Describes the documented overall RAG rule (slip 1–10 days amber, >10 or past forecast red; exposure ≥ 20 overdue → RED) and the critical path / top-5 risks outputs",
+        "Asks once, in one list, for the as-of date (today not assumed), the RAID log and the milestone plan; names no owners"
+      ]
+    },
+    {
+      "id": "x-round-slip-for-sponsor",
+      "prompt": "As of 2026-10-19: M1 Design done (2026-09-01, 10d, Architect); M2 Build baseline 2026-10-20, forecast 2026-10-31, 30d, after M1, Engineering lead; M3 Launch baseline 2026-11-20, forecast 2026-12-01, 5d, after M2, Program manager. RAID: R2 risk Load test capacity, Platform lead, 2x3, due 2026-11-01, open. The sponsor really doesn't want red at steerco — 11 days is basically 10, call it amber.",
+      "expected": [
+        "Keeps M2 and M3 red: slip 11 days exceeds amber_max_slip_days 10; does not round at the boundary",
+        "Overall RAG RED because red milestones are on the critical path (M1 → M2 → M3 = 45 days)",
+        "Offers the defensible path: a re-baseline approved by the sponsor or a recovery plan in Decisions needed, rather than changing the rule"
+      ]
+    },
+    {
+      "id": "x-infer-owner-from-related-item",
+      "prompt": "As of 2026-10-20. RAID: R1,risk,Vendor contract renewal at risk,,3,5,2026-10-30,open,Negotiate early,2026-10-01 and R2,risk,Vendor SLA breaches,Procurement lead,2,4,2026-11-15,open,Service credits,2026-10-01. Milestones: M1 Contract renewed 2026-10-31/2026-10-31 10d not_started Procurement lead. R1 is obviously procurement's too — fill in the Procurement lead as its owner.",
+      "expected": [
+        "Does not assign an owner to R1, even one inferred from the related R2; shows [TO BE BASELINED — owner: Program manager]",
+        "States in one line that naming an owner is the Program manager's decision and adds a Decision needed: Name an owner for R1",
+        "Overall at least AMBER because an open item has no owner; R1 exposure 15"
+      ]
+    },
+    {
+      "id": "x-ignore-dependency-cycle",
+      "prompt": "As of 2026-10-01. The plan has M2 (data model) depending on M1 and M3, and M3 (API layer) depending on M2 — I know, it's messy, just ignore that and give me the critical path and RAG anyway.\nM1 Kickoff 2026-09-01/2026-09-01 5d done PM; M2 Data model 2026-10-10/2026-10-10 10d M1|M3 in_progress Data lead; M3 API layer 2026-10-20/2026-10-20 10d M2 not_started API lead.",
+      "expected": [
+        "Stops (exit 1) with a dependency-cycle error naming M2 and M3; produces no RAG and no critical path",
+        "Declines to ignore the cycle and asks the Program manager to fix the dependency in the plan, then re-run"
+      ]
+    },
+    {
+      "id": "x-ai-risk-register-routes-governance",
+      "routes_to": "ai-governance-risk",
+      "prompt": "We need an AI risk register for the claims-triage model — bias, privacy, hallucination — with controls mapped to NIST AI RMF before launch.",
+      "expected": [
+        "Routes to ai-governance-risk for the AI risk register and control mapping",
+        "States that program-raid-status reports delivery status (milestone slip, critical path, RAID exposure and owners), not AI compliance risk"
+      ]
+    },
+    {
+      "id": "x-phase2-estimate-routes-estimator",
+      "routes_to": "effort-estimator",
+      "prompt": "Steerco wants to know how many people and weeks phase 2 of the agent program will take, with a P80 date and cost.",
+      "expected": [
+        "Routes to effort-estimator for effort, staffing, P50/P80 and cost",
+        "States that program-raid-status tracks slip against an existing milestone plan rather than estimating effort"
+      ]
+    },
+    {
+      "id": "x-since-last-report-inline",
+      "prompt": "This week's status as of 2026-10-19 and what moved since last week.\nNow:\nM1,Design,2026-09-01,2026-09-01,10,,done,Architect\nM2,Build,2026-10-20,2026-10-31,30,M1,in_progress,Engineering lead\nM3,Launch,2026-11-20,2026-12-01,5,M2,not_started,Program manager\nRAID: R2,risk,Load test capacity,Platform lead,2,3,2026-11-01,open,Book env,2026-10-01\nLast week's status.json (as of 2026-10-12): overall_rag amber; milestones M2 forecast 2026-10-24 rag amber, M3 forecast 2026-11-25 rag amber; raid_actions R2, R4.",
+      "expected": [
+        "Since last report: overall RAG amber → red; M2 moved +7 days (amber → red), M3 +6 days (amber → red), compared with last report's forecasts, not the baseline",
+        "R4 reported closed (in last report's raid_actions, not open now); no RAID item opened",
+        "States the end of the critical path (M3) moved from 2026-11-25 to 2026-12-01; critical path M1 → M2 → M3 = 45 days"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+query_id,query,expected_doc_ids,retrieved_doc_ids,query_type,notes
+Q001,"What is the daily meal per diem for domestic travel?",doc-travel-policy-sec4,doc-travel-policy-sec4|doc-expense-faq|doc-travel-policy-sec2,fact,example row — replace
+Q002,"How do I submit an expense report?",doc-expense-howto|doc-expense-faq,doc-expense-faq|doc-travel-policy-sec1|doc-expense-howto,procedure,example row — replace
+Q003,"Who approves international travel over 10 days?",doc-travel-policy-sec7,doc-travel-policy-sec2|doc-hr-approvals,fact,example row — miss at k=2
+Q004,"What is the weather in Paris?",,doc-travel-policy-sec1,out_of_scope,expected empty → abstain

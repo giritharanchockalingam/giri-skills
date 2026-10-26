@@ -1,0 +1,5 @@
+option,criterion,score,source
+Vendor A,answer_quality,4,Eval run 2026-09 on our golden set
+Vendor A,total_cost,3,Price sheet dated 2026-09-01
+Build,answer_quality,3,Prototype eval 2026-09
+Build,total_cost,4,Internal estimate v2

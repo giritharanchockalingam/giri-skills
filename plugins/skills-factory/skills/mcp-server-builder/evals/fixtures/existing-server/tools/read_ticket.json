@@ -1,0 +1,43 @@
+{
+  "name": "read_ticket",
+  "description": "Read one ticket by id.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "ticket_id"
+    ],
+    "properties": {
+      "ticket_id": {
+        "type": "string",
+        "pattern": "^T[0-9]{6}$"
+      }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "required": [
+      "status"
+    ],
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "error"
+        ]
+      },
+      "data": {
+        "type": "object"
+      }
+    }
+  },
+  "x-contract": {
+    "side_effect": "read",
+    "idempotent": true,
+    "scopes": [
+      "tickets:read"
+    ],
+    "timeout_ms": 3000
+  }
+}

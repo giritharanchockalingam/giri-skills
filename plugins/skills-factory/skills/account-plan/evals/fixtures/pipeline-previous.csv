@@ -1,0 +1,5 @@
+opportunity,stage,value,close_date,owner,next_step
+"# fictional fixture — last quarter's Northwind pipeline for the account-plan evals; invented",,,,,
+Order Hub wave 1,discovery,1200000,2026-10-31,Priya,discovery workshop
+Data platform assessment,qualify,180000,2026-12-10,Priya,qualify budget
+Legacy EDI support renewal,negotiate,90000,2026-08-31,Giri,renewal paper

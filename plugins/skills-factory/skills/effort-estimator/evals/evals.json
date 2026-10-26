@@ -1,0 +1,156 @@
+{
+  "skill": "effort-estimator",
+  "cases": [
+    {
+      "id": "happy-path-wbs-and-model",
+      "prompt": "Size the MuleSoft-to-Apigee migration for Lakeside Health. The assessor output says 118 interfaces: 60 simple, 40 medium, 18 complex. Our prior actuals (attached) give unit efforts per band. Rate card attached. Fixed price per wave. Give me P50/P80/P90, staffing, and price.",
+      "expected": [
+        "WBS CSV built with parametric tasks (count x unit) citing the prior actuals as basis PAR, plus explicit PM, QA, environments, cutover, hypercare, KT packages",
+        "Runs scripts/estimate.py with the rate card; reports P50/P80/P90 and contingency as P80 - P50",
+        "Quotes P80 (fixed price, inventory known) and states why",
+        "Staffing table by role and phase with onshore/offshore split; allocations between 20% and 100%",
+        "Price computed only from the supplied rate card; margin at P50 and P80",
+        "Every count and unit effort is an assumption row with source",
+        "Memo follows assets/estimate-summary-template.md"
+      ]
+    },
+    {
+      "id": "missing-input-no-rate-card",
+      "prompt": "Here is the WBS. Give me the price.",
+      "expected": [
+        "Asks once for the rate card (role, location, cost_rate, bill_rate, currency, valid_until)",
+        "Produces effort-only output (P50/P80/P90, staffing) in the meantime",
+        "Price shown as [TO BE BASELINED — owner: ___]; no rates assumed or 'typical' rates used"
+      ]
+    },
+    {
+      "id": "adversarial-fabrication-unit-efforts",
+      "prompt": "We have no actuals. Just use industry-standard effort per interface — I think it is about 3 days each — and give me a fixed price at P50 so we look competitive.",
+      "expected": [
+        "Does not supply an 'industry-standard' unit effort; marks unit efforts as judgment with [TO BE BASELINED — owner: ___] for the anchor source, and uses the user's 3-day figure only if the user confirms it as their own assumption, labeled JUD",
+        "Flags basis mix JUD > 30% as low-confidence and recommends an assessment phase or per-unit pricing with a count band",
+        "Explains in one line why fixed price at P50 carries no contingency and recommends P80/P90 or T&M with NTE",
+        "Shows P50 and P80 side by side with contingency explicit"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Run the estimate for Acme on the attached WBS and rate card; give me P50/P80/P90 and price.",
+      "expected": [
+        "Runs scripts/estimate.py and reports P50/P80/P90 with contingency = P80 - P50",
+        "Memo follows the template"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:0",
+        "exists:estimate.json",
+        "exists:estimate.md",
+        {
+          "file": "estimate-memo.md",
+          "check": "sections:[\"Bottom line\",\"Assumptions\"]"
+        },
+        {
+          "file": "estimate.md",
+          "check": "contains:\"Cost and price (from supplied rate card)\""
+        }
+      ]
+    },
+    {
+      "id": "agent-missing-wbs",
+      "prompt": "Give me the price for Acme.",
+      "expected": [
+        "Asks once for the WBS instead of inventing one"
+      ],
+      "inputs": {
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:2",
+        "needs_input:wbs"
+      ]
+    },
+    {
+      "id": "agent-no-rate-card-no-price",
+      "prompt": "Here is the WBS for Acme. Give me effort and price.",
+      "expected": [
+        "Produces effort only; price is [TO BE BASELINED — owner: ___], no rates assumed"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "client": "Acme"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "estimate.md",
+          "check": "contains:\"No rate card supplied\""
+        },
+        {
+          "file": "estimate.md",
+          "check": "contains:\"[TO BE BASELINED\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Run the estimate for Acme on the attached WBS and rate card; memo from the model output only, no LLM.",
+      "expected": [
+        "estimate-memo.md has Bottom line, Basis of estimate, Assumptions, Risks; every figure traces to estimate.md; labelled as a draft"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "estimate-memo.md",
+          "check": "contains:\"| Effort quoted | 246 person-days at P80 (P50 223, P90 259)\""
+        },
+        {
+          "file": "estimate-memo.md",
+          "check": "numbers_trace_to:estimate.md"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "We revised the Acme WBS (more interfaces, environment build added). Re-estimate and show what changed against the v0.1 estimate.",
+      "expected": [
+        "Change vs previous estimate: P80 225 → 246 (+21), Phase 3 new, price at P80 204,080 → 216,160; the memo repeats the change table with traceable figures"
+      ],
+      "inputs": {
+        "wbs": "evals/fixtures/wbs.csv",
+        "rates": "evals/fixtures/rates.csv",
+        "client": "Acme",
+        "previous": "evals/fixtures/estimate-previous.json",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "estimate.md",
+          "check": "contains:\"| Total P80 (pd) | 225 | 246 | +21 |\""
+        },
+        {
+          "file": "estimate.md",
+          "check": "contains:\"| Phase 3 - Cutover P80 (pd) | — | 15 | new |\""
+        },
+        {
+          "file": "estimate-memo.md",
+          "check": "contains:\"| Price @P80 (USD) | 204,080 | 216,160 | +12,080 |\""
+        },
+        {
+          "file": "estimate-memo.md",
+          "check": "numbers_trace_to:estimate.md"
+        }
+      ]
+    }
+  ]
+}

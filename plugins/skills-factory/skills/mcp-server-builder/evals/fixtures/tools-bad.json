@@ -1,0 +1,4 @@
+[
+  {"name": "Search Tickets", "description": "Search support tickets.", "input_schema": {"type": "object"}, "output_schema": {"type": "object"}},
+  {"name": "read_ticket", "description": "Read one ticket.", "input_schema": "string"}
+]

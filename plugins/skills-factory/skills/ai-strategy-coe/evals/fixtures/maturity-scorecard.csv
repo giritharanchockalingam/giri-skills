@@ -1,0 +1,7 @@
+dimension,score_1_to_5,evidence,gap_to_next_level,owner,baseline_status
+data,2,Partial catalog covers finance and HR; lineage absent; PII handled manually (fictional data audit 2026-08),Enterprise catalog with owners; role-based access; PII classified,CDO,baselined
+platform,3,Approved gateway with logging; dev/test/prod; one orchestration standard (fictional platform review),Observability per call; prompt versioning; spend limits per team,Platform Lead,baselined
+talent,2,Four-person data science team; no training path for business users (fictional org chart),Defined roles and training path,CHRO,baselined
+governance,1,No AI policy published; shadow usage unknown (fictional CISO memo),Acceptable-use policy; model inventory,CISO,baselined
+value,2,Two pilots with anecdotal benefit; no baselines (fictional portfolio review),Baseline and owner per use case,CFO,baselined
+overall_min,,= minimum of the five dimension scores,,,

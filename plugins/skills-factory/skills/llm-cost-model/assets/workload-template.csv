@@ -1,0 +1,2 @@
+feature,requests_per_month,input_tokens,output_tokens,cached_input_share,notes
+,,,,,input/output tokens are averages per request incl. system prompt and retrieved context; cached share 0..1 (blank = no caching)

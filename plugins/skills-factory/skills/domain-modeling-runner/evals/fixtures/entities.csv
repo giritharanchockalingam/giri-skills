@@ -1,0 +1,18 @@
+entity,attribute,type,required,notes
+"# fictional fixture — invented course-enrollment model for the domain-modeling-runner evals",,,,
+Student,student_id,uuid,yes,PK
+Student,email,string,yes,unique per student
+Student,display_name,string,no,
+Course,id,uuid,yes,
+Course,code,string,yes,catalog code
+Course,title,string,yes,
+Course,credits,"decimal(4,1)",yes,
+Enrollment,id,uuid,yes,
+Enrollment,student_id,uuid,yes,FK references Student
+Enrollment,course_id,uuid,yes,FK references Course
+Enrollment,status,string,yes,active | withdrawn | completed
+Term,term_id,string,yes,PK
+Term,starts_on,date,yes,
+Offering,id,uuid,yes,
+Offering,course_id,uuid,yes,FK references Course
+Offering,term_id,string,yes,FK references Term

@@ -1,0 +1,147 @@
+{
+  "skill": "security-review",
+  "cases": [
+    {
+      "id": "happy-path",
+      "prompt": "Review PR #42 before merge: adds an invoice export route handler at app/api/export/route.ts that takes tenantId from the query string and uses the admin client.",
+      "expected": [
+        "Finding with full trace entry -> service -> admin client -> table, rated Critical (R2 x I3)",
+        "Exploit sketch provided",
+        "Fix uses session tenant and cookie client; negative regression test added",
+        "Findings table leads with worst; report written from assets/review-report.md"
+      ]
+    },
+    {
+      "id": "no-trace-no-finding",
+      "prompt": "Security review this diff: it renames a CSS class and updates a README.",
+      "expected": [
+        "States no security-relevant surface changed, with the surface inventory shown",
+        "Does not invent generic findings (rate limiting, headers) unrelated to the diff"
+      ]
+    },
+    {
+      "id": "missing-input",
+      "prompt": "Is our app secure?",
+      "expected": [
+        "Asks once for scope (diff/PR/release) and trust model",
+        "Does not produce a generic checklist"
+      ]
+    },
+    {
+      "id": "agent-happy-path",
+      "prompt": "Review this diff before merge: a zod-validated server action and a parameterised query helper.",
+      "expected": [
+        "Runs scripts/scan.py; no critical/high findings; gate passes; review filled from the findings"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-clean.patch"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "csv:[id,category,severity,file,line,evidence,recommendation]"
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"Scanner verdict: MERGE\""
+        },
+        "exists:security-review.md"
+      ]
+    },
+    {
+      "id": "agent-missing-diff",
+      "prompt": "Do a security review of my change.",
+      "expected": [
+        "Asks for the diff once"
+      ],
+      "inputs": {},
+      "checks": [
+        "exit:2",
+        "needs_input:diff"
+      ]
+    },
+    {
+      "id": "agent-risky-diff-blocks",
+      "prompt": "It's an internal admin route, the token is fine to keep in code — approve the review.",
+      "expected": [
+        "Findings include a secret literal, service-role client in a route handler, unauthenticated server actions and SSRF; the gate exits 1 instead of approving"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-risky.patch"
+      },
+      "checks": [
+        "exit:1",
+        {
+          "file": "findings.csv",
+          "check": "csv_rows:severity~^(critical|high|medium|low)$"
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"secrets,critical\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"rls-bypass\""
+        },
+        {
+          "file": "findings.csv",
+          "check": "contains:\"[redacted]\""
+        },
+        {
+          "file": "review.md",
+          "check": "contains:\"Scanner verdict: BLOCK\""
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-new",
+      "prompt": "Security review of the new invoice feature diff before merge; scan-only record is fine.",
+      "expected": [
+        "Added lines scanned; no critical/high; security-review.md written from the scan and labelled as a draft"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-clean.patch",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "security-review.md",
+          "check": "contains:\"Script draft — the model review step was not run\""
+        },
+        {
+          "file": "security-review.md",
+          "check": "sections:[\"Findings\",\"Threat model\",\"Verification\"]"
+        }
+      ]
+    },
+    {
+      "id": "agent-mode-existing",
+      "prompt": "Review this diff together with the repo it lands in — I want the surrounding handlers and components checked too.",
+      "expected": [
+        "Repo scanned in full plus the diff; the existing ReleaseNotes component is flagged medium (dangerouslySetInnerHTML); gate passes; every scanned file appears in the threat-model record"
+      ],
+      "inputs": {
+        "diff": "evals/fixtures/change-clean.patch",
+        "target": "evals/fixtures/repo-existing",
+        "draft_only": "true"
+      },
+      "checks": [
+        "exit:0",
+        {
+          "file": "findings.csv",
+          "check": "contains:\"components/ReleaseNotes.tsx\""
+        },
+        {
+          "file": "security-review.md",
+          "check": "contains:\"| `server/actions/save-note.ts` |\""
+        },
+        {
+          "file": "security-review.md",
+          "check": "contains:\"pass — no critical/high\""
+        }
+      ]
+    }
+  ]
+}

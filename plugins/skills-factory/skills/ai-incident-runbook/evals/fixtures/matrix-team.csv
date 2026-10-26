@@ -1,0 +1,9 @@
+# fictional fixture — a team's own severity matrix (invented "Northwind AI platform" policy, adopted 2026-06); tests only
+rule_id,conditions,severity,reason
+NW-01,data_exposed=yes,SEV1,Any confirmed data exposure is SEV1 in this team's policy
+NW-02,data_exposed=unknown;regulated_data in yes|unknown,SEV2,Exposure not ruled out — unknown escalates
+NW-03,category=harmful-output,SEV2,Harmful output reached users
+NW-04,users_affected>=500,SEV2,Broad blast radius (>= 500 users)
+NW-05,category=cost-spike;users_affected=0,SEV3,Spend runaway with no user impact — FinOps on-call owns it
+NW-06,category in outage|hallucination|prompt-injection,SEV3,User-facing degradation
+NW-07,always,SEV4,Baseline: every AI incident is at least SEV4

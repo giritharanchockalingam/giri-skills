@@ -1,0 +1,19 @@
+{
+  "name": "Contract clause finder",
+  "owner": "Legal Ops Lead",
+  "problem_user": "Legal ops analysts search contracts for clauses by hand; 40/week (fictional)",
+  "decision": "Which clause governs a renewal; the analyst drafts the advice",
+  "capability": {"pattern": "retrieve-and-answer", "autonomy": "suggest"},
+  "data": {"sources": "contract repository", "owner": "", "access": "", "sensitivity": "confidential", "freshness": ""},
+  "value": {"type": "cost", "mechanism": "cuts search time", "estimate": "", "baseline_signed_by": "Legal Ops Lead"},
+  "scores": {
+    "value": {"score": 3, "evidence": "timesheets (fictional)"},
+    "feasibility": {"score": 3, "evidence": "known pattern"},
+    "risk": {"score": 2, "evidence": "internal decision support"}
+  },
+  "build_buy": {
+    "differentiation": {"favors": "buy", "note": "clause search is a commodity"},
+    "product_fit": {"favors": "buy", "note": "CLM vendor offers it"},
+    "team_capability": {"favors": "partner"}
+  }
+}

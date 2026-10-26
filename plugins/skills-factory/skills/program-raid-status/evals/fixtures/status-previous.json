@@ -1,0 +1,296 @@
+{
+  "_note": "fictional fixture — last week's status.json (as of 2026-10-09) for the made-up Northwind Billing Assistant program",
+  "as_of": "2026-10-09",
+  "counts": {
+    "closed_raid": 0,
+    "milestones": 8,
+    "open_raid": 9,
+    "rag": {
+      "amber": 2,
+      "complete": 2,
+      "green": 2,
+      "red": 2
+    }
+  },
+  "critical_path": [
+    "M1",
+    "M2",
+    "M3",
+    "M5",
+    "M7"
+  ],
+  "critical_path_days": 85,
+  "critical_path_ties": [],
+  "decisions": [
+    "Recover or re-baseline M3 RAG index on billing knowledge base (forecast slips 19 days; critical path) — owner: Platform lead",
+    "Fund, accept or escalate I1 (exposure 20) — owner: Integration lead",
+    "Fund, accept or escalate R1 (exposure 20) — owner: Content lead",
+    "Name an owner for R3 — [TO BE BASELINED — owner: Program manager]"
+  ],
+  "milestones": [
+    {
+      "baseline": "2026-07-31",
+      "depends_on": [],
+      "duration_days": 20,
+      "forecast": "2026-07-31",
+      "id": "M1",
+      "late": false,
+      "milestone": "Discovery and use-case sign-off",
+      "on_critical_path": "yes",
+      "owner": "Product owner",
+      "rag": "complete",
+      "slip_days": 0,
+      "status": "done"
+    },
+    {
+      "baseline": "2026-08-28",
+      "depends_on": [
+        "M1"
+      ],
+      "duration_days": 25,
+      "forecast": "2026-09-11",
+      "id": "M2",
+      "late": false,
+      "milestone": "Billing data extract and PII review",
+      "on_critical_path": "yes",
+      "owner": "Data lead",
+      "rag": "complete",
+      "slip_days": 14,
+      "status": "done"
+    },
+    {
+      "baseline": "2026-09-25",
+      "depends_on": [
+        "M2"
+      ],
+      "duration_days": 20,
+      "forecast": "2026-10-14",
+      "id": "M3",
+      "late": false,
+      "milestone": "RAG index on billing knowledge base",
+      "on_critical_path": "yes",
+      "owner": "Platform lead",
+      "rag": "red",
+      "slip_days": 19,
+      "status": "in_progress"
+    },
+    {
+      "baseline": "2026-09-30",
+      "depends_on": [
+        "M1"
+      ],
+      "duration_days": 10,
+      "forecast": "2026-10-07",
+      "id": "M4",
+      "late": true,
+      "milestone": "Guardrails and prompt spec",
+      "on_critical_path": "no",
+      "owner": "AI engineer lead",
+      "rag": "red",
+      "slip_days": 7,
+      "status": "in_progress"
+    },
+    {
+      "baseline": "2026-10-30",
+      "depends_on": [
+        "M3",
+        "M4"
+      ],
+      "duration_days": 10,
+      "forecast": "2026-11-04",
+      "id": "M5",
+      "late": false,
+      "milestone": "Offline eval gate",
+      "on_critical_path": "yes",
+      "owner": "Eval lead",
+      "rag": "amber",
+      "slip_days": 5,
+      "status": "not_started"
+    },
+    {
+      "baseline": "2026-10-30",
+      "depends_on": [
+        "M2"
+      ],
+      "duration_days": 15,
+      "forecast": "2026-10-30",
+      "id": "M6",
+      "late": false,
+      "milestone": "Agent desktop integration",
+      "on_critical_path": "no",
+      "owner": "Integration lead",
+      "rag": "green",
+      "slip_days": 0,
+      "status": "in_progress"
+    },
+    {
+      "baseline": "2026-11-20",
+      "depends_on": [
+        "M5",
+        "M6"
+      ],
+      "duration_days": 10,
+      "forecast": "2026-11-25",
+      "id": "M7",
+      "late": false,
+      "milestone": "Pilot go-live (Customer Operations)",
+      "on_critical_path": "yes",
+      "owner": "[TO BE BASELINED — owner: Program manager]",
+      "rag": "amber",
+      "slip_days": 5,
+      "status": "not_started"
+    },
+    {
+      "baseline": "2026-11-13",
+      "depends_on": [
+        "M1"
+      ],
+      "duration_days": 5,
+      "forecast": "2026-11-13",
+      "id": "M8",
+      "late": false,
+      "milestone": "Training wave complete",
+      "on_critical_path": "no",
+      "owner": "Change lead",
+      "rag": "green",
+      "slip_days": 0,
+      "status": "not_started"
+    }
+  ],
+  "overall_rag": "red",
+  "overall_reasons": [
+    "critical-path milestone M3 is red",
+    "I1 (exposure 20) is overdue 7 days"
+  ],
+  "overdue": [
+    "R6",
+    "I1"
+  ],
+  "overdue_ageing": {
+    "1-7 days": 1,
+    "8-30 days": 1
+  },
+  "raid_actions": [
+    {
+      "age_days": 60,
+      "description": "Eval set too small for the gate",
+      "due": "2026-09-30",
+      "exposure": 9,
+      "id": "R6",
+      "mitigation": "Added 200 labelled cases",
+      "next_action": "Overdue 9 days: close or re-plan at the next review; Added 200 labelled cases",
+      "overdue_days": 9,
+      "owner": "Eval lead",
+      "type": "risk"
+    },
+    {
+      "age_days": 29,
+      "description": "Billing system API rate limit blocks bulk extract",
+      "due": "2026-10-02",
+      "exposure": 20,
+      "id": "I1",
+      "mitigation": "Negotiate temporary limit increase",
+      "next_action": "Overdue 7 days: close or re-plan at the next review; Negotiate temporary limit increase",
+      "overdue_days": 7,
+      "owner": "Integration lead",
+      "type": "issue"
+    },
+    {
+      "age_days": 67,
+      "description": "Knowledge-base articles out of date reduce answer accuracy",
+      "due": "2026-10-09",
+      "exposure": 20,
+      "id": "R1",
+      "mitigation": "Content refresh sprint before index build",
+      "next_action": "Content refresh sprint before index build",
+      "overdue_days": 0,
+      "owner": "Content lead",
+      "type": "risk"
+    },
+    {
+      "age_days": 38,
+      "description": "PII in ticket notes reaches the model",
+      "due": "2026-10-20",
+      "exposure": 15,
+      "id": "R3",
+      "mitigation": "Mask notes before indexing",
+      "next_action": "Assign an owner; Mask notes before indexing",
+      "overdue_days": 0,
+      "owner": "[TO BE BASELINED — owner: Program manager]",
+      "type": "risk"
+    },
+    {
+      "age_days": 53,
+      "description": "Billing agents distrust AI suggestions and do not adopt",
+      "due": "2026-11-13",
+      "exposure": 12,
+      "id": "R2",
+      "mitigation": "Champions network in each team",
+      "next_action": "Champions network in each team",
+      "overdue_days": 0,
+      "owner": "Change lead",
+      "type": "risk"
+    },
+    {
+      "age_days": 38,
+      "description": "Identity team provisions SSO groups for pilot users",
+      "due": "2026-10-14",
+      "exposure": 9,
+      "id": "D1",
+      "mitigation": "",
+      "next_action": "Define a mitigation",
+      "overdue_days": 0,
+      "owner": "Identity team lead",
+      "type": "dependency"
+    },
+    {
+      "age_days": 67,
+      "description": "Agent desktop vendor ships plugin API by end October",
+      "due": "2026-10-31",
+      "exposure": 8,
+      "id": "A1",
+      "mitigation": "Confirm in vendor QBR",
+      "next_action": "Validate the assumption (Confirm in vendor QBR)",
+      "overdue_days": 0,
+      "owner": "Integration lead",
+      "type": "assumption"
+    },
+    {
+      "age_days": 19,
+      "description": "Vendor model deprecation during pilot",
+      "due": "2026-12-15",
+      "exposure": 8,
+      "id": "R5",
+      "mitigation": "Pin model version and test fallback",
+      "next_action": "Pin model version and test fallback",
+      "overdue_days": 0,
+      "owner": "Platform lead",
+      "type": "risk"
+    },
+    {
+      "age_days": 24,
+      "description": "Token cost exceeds budget at full rollout",
+      "due": "2026-11-30",
+      "exposure": 6,
+      "id": "R4",
+      "mitigation": "",
+      "next_action": "Define a mitigation",
+      "overdue_days": 0,
+      "owner": "Finance controller",
+      "type": "risk"
+    }
+  ],
+  "strict": false,
+  "thresholds": {
+    "amber_max_slip_days": 10,
+    "green_max_slip_days": 0,
+    "red_exposure": 20
+  },
+  "top_risks": [
+    "R1",
+    "R3",
+    "R2",
+    "R6",
+    "R5"
+  ]
+}
