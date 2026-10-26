@@ -29,12 +29,32 @@ resolved. Without --baseline every finding is `new`. Static only: nothing is exe
 from __future__ import annotations
 
 import argparse
+import subprocess
 import csv
 import re
 import sys
 from pathlib import Path
 
 SKIP_DIRS = {"node_modules", ".next", "out", "dist", "build", "coverage", ".git", "tests", "test", "__tests__"}
+
+_GIT_VISIBLE: dict = {}
+
+
+def git_ignored(root: Path, rel: Path) -> bool:
+    """True for a file git ignores in a repository: build output under any name (a custom distDir such as `bo11/`,
+    `.next-*`), caches, local env files. Found on a real repo where 1,500 findings came from a build folder the fixed
+    SKIP_DIRS list did not name. Outside a git repository nothing is filtered beyond SKIP_DIRS."""
+    key = str(root.resolve())
+    if key not in _GIT_VISIBLE:
+        try:
+            r = subprocess.run(["git", "-C", key, "ls-files", "-co", "--exclude-standard", "-z"],
+                               capture_output=True, text=True, timeout=120)
+            _GIT_VISIBLE[key] = (set(r.stdout.split("\0")) - {""}) if r.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError):
+            _GIT_VISIBLE[key] = None
+    visible = _GIT_VISIBLE[key]
+    return visible is not None and rel.as_posix() not in visible
+
 EXTS = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
 JSX_EXTS = {".tsx", ".jsx"}
 RULES = {
@@ -89,7 +109,7 @@ def source_files(root: Path):
         if p.suffix not in EXTS or not p.is_file():
             continue
         rel = p.relative_to(root)
-        if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+        if any(part in SKIP_DIRS for part in rel.parts[:-1]) or git_ignored(root, rel):
             continue
         yield p, rel.as_posix()
 

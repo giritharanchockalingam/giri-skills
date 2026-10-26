@@ -29,6 +29,7 @@ trace, regression test — is an owned to-be-baselined marker.
 from __future__ import annotations
 
 import argparse
+import subprocess
 import csv
 import re
 import sys
@@ -36,6 +37,25 @@ from pathlib import Path
 
 EXTS = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".sql"}
 SKIP_DIRS = {"node_modules", ".next", "dist", "build", "coverage", ".git"}
+
+_GIT_VISIBLE: dict = {}
+
+
+def git_ignored(root: Path, rel: Path) -> bool:
+    """True for a file git ignores in a repository: build output under any name (a custom distDir such as `bo11/`,
+    `.next-*`), caches, local env files. Found on a real repo where 1,500 findings came from a build folder the fixed
+    SKIP_DIRS list did not name. Outside a git repository nothing is filtered beyond SKIP_DIRS."""
+    key = str(root.resolve())
+    if key not in _GIT_VISIBLE:
+        try:
+            r = subprocess.run(["git", "-C", key, "ls-files", "-co", "--exclude-standard", "-z"],
+                               capture_output=True, text=True, timeout=120)
+            _GIT_VISIBLE[key] = (set(r.stdout.split("\0")) - {""}) if r.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError):
+            _GIT_VISIBLE[key] = None
+    visible = _GIT_VISIBLE[key]
+    return visible is not None and rel.as_posix() not in visible
+
 SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
 USE_SERVER = re.compile(r"^\s*['\"]use server['\"]")
@@ -106,7 +126,7 @@ def walk_repo(root: Path) -> dict[str, dict]:
         if not p.is_file() or p.suffix not in EXTS:
             continue
         rel = p.relative_to(root)
-        if any(part in SKIP_DIRS for part in rel.parts[:-1]):
+        if any(part in SKIP_DIRS for part in rel.parts[:-1]) or git_ignored(root, rel):
             continue
         lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
         files[rel.as_posix()] = {"added": list(enumerate(lines, 1)), "all": lines}

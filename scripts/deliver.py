@@ -2408,6 +2408,21 @@ def baseline_commit(repo: Path) -> None:
         git(repo, "commit", "-q", "-m", "baseline: working copy for a dry delivery run")
 
 
+def commit_preexisting_work(repo: Path) -> None:
+    """A FRESH dry copy only (never on --resume, when the copy may already carry the builder's change): commit the
+    person's own uncommitted work, so the code step's diff holds only the builder's change. Found on a real repo whose
+    untracked docs/ from an earlier session were charged to the builder as out-of-plan files."""
+    if not shutil.which("git") or not is_git_root(repo):
+        return
+    code, _ = git(repo, "rev-parse", "--verify", "-q", "HEAD", ok=(0, 1))
+    if code != 0:
+        return                                   # commit-less copy: baseline_commit takes all of it
+    _, dirty = git(repo, "status", "--porcelain")
+    if dirty.strip():
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "--no-verify", "-m", "baseline: uncommitted work already in the checkout before the run")
+
+
 def prepare_repo(run: Run) -> None:
     src = Path(run.inputs["repo"]).expanduser()
     if run.args.dry:
@@ -2415,6 +2430,7 @@ def prepare_repo(run: Run) -> None:
         if not work.exists():
             if src.is_dir():
                 shutil.copytree(src, work, ignore=COPY_IGNORE, symlinks=True)
+                commit_preexisting_work(work)
             else:
                 work.mkdir(parents=True)
         run.repo = work.resolve()
