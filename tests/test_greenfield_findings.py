@@ -147,3 +147,23 @@ def test_no_bench_script_is_recorded_as_not_run(tmp_path):
     (t / "package.json").write_text('{"scripts": {"test": "vitest"}}', encoding="utf-8")
     rec = {}
     assert _run_for(tmp_path).run_bench(t, tmp_path, rec) is False and "no bench script" in rec["bench"]["skipped"]
+
+
+def test_a_benchmark_that_breaks_the_suite_fails_at_once_with_a_precise_message(tmp_path):
+    """R7 run: re-measuring rewrote docs/benchmarks/*.md and an R6 test pinned the summary to the old numbers."""
+    import json as _json
+    import subprocess as sp
+    import pytest
+    t = tmp_path / "app"
+    t.mkdir()
+    (t / "bench.js").write_text("require('fs').writeFileSync('results.md', 'p95 ' + Date.now() + ' ms\\n')\n", encoding="utf-8")
+    (t / "check.js").write_text("const fs = require('fs'); if (fs.existsSync('results.md') && !fs.readFileSync('results.md', 'utf8').includes('p95 1 ms')) process.exit(1)\n", encoding="utf-8")
+    (t / "package.json").write_text(_json.dumps({"scripts": {"bench": "node bench.js", "test": "node check.js"}}), encoding="utf-8")
+    for c in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"]):
+        sp.run(["git", *c], cwd=t, check=True, capture_output=True)
+    run = _run_for(tmp_path)
+    run.args.visual, run.args.acceptance = "off", "off"
+    run.record = {}
+    (tmp_path / "s").mkdir()
+    with pytest.raises(d.StepError, match="tests fail after the pipeline ran `npm run bench`, which rewrote results.md"):
+        run.verify("npm test", "", t, tmp_path / "s", {})

@@ -1769,7 +1769,20 @@ class Run:
         """What judges the builder's code: the project's tests, then (when they pass) its benchmark, then a look at
         the running app."""
         self.run_tests(cmd, reason, target, sdir, rec)
-        self.run_bench(target, sdir, rec)
+        before = git(target, "status", "--porcelain")[1] if is_git_root(target) else ""
+        if self.run_bench(target, sdir, rec) and cmd and is_git_root(target):
+            after = git(target, "status", "--porcelain")[1]
+            if after != before:
+                # the benchmark rewrote files (its results): the suite must still hold with real numbers. Found on the
+                # R7 run: an R6 test pins docs/benchmarks/summary.md to the measured values, so every re-measurement
+                # broke it — and only the acceptance reviewer noticed, after the repair turns were spent elsewhere.
+                changed = sorted({ln[3:] for ln in after.splitlines()} - {ln[3:] for ln in before.splitlines()})
+                try:
+                    self.run_tests(cmd, reason, target, sdir, rec)
+                except StepError as e:
+                    raise StepError(f"tests fail after the pipeline ran `npm run bench`, which rewrote {', '.join(changed[:6]) or 'files'}: "
+                                    f"make whatever quotes the benchmark's results derive from its results file (re-measuring must "
+                                    f"never break the suite). {e}") from None
         self.run_visual(target, sdir, rec)
         self.run_acceptance(target, sdir, rec)
 
