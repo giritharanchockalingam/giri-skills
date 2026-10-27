@@ -1684,7 +1684,9 @@ def test_code_step_installs_once_and_executes_the_tests_on_the_real_checkout(tmp
                                "manifest_sha": code["install"]["manifest_sha"],              # a later manifest change reinstalls
                                "excluded_from_git": ["node_modules", ".venv"]}             # the fixture has no .gitignore
     assert re.fullmatch(r"[0-9a-f]{64}", code["install"]["manifest_sha"])
-    assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed", "log": "tests.log"}
+    stubs = ["tests/unit/app-api-orders-export-route.test.js", "tests/unit/lib-orders.test.js"]   # the fixture patch fills none
+    assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed", "log": "tests.log",
+                             "unfilled_stubs": stubs}
     sdir = out / "evidence" / "03-build" / "code"
     assert "added 3 packages" in (sdir / "install.log").read_text() and "Tests  3 passed" in (sdir / "tests.log").read_text()
     tj = json.loads((sdir / "tests.json").read_text())
@@ -1699,7 +1701,8 @@ def test_code_step_installs_once_and_executes_the_tests_on_the_real_checkout(tmp
     assert "node_modules" not in tree and "lib/orders.js" in tree
     # evidence: the Tests line and the build row carry tests.json / tests.log / install.log
     md = (out / "evidence" / "EVIDENCE.md").read_text()
-    assert "Tests (after the change): `npm test` exit 0 — tests: 3 passed — [tests.log](03-build/code/tests.log); install `npm ci` exit 0." in md
+    assert ("Tests (after the change): `npm test` exit 0 — tests: 3 passed — [tests.log](03-build/code/tests.log); install `npm ci` exit 0. "
+            "UNFILLED: 2 scaffolded test file(s) still hold only todo stubs") in md     # a manual diff is not sent back; it is flagged
     build_row = next(ln for ln in md.splitlines() if ln.startswith("| build |"))
     assert "[tests.json](03-build/code/tests.json)" in build_row and "[tests.log](03-build/code/tests.log)" in build_row and "[install.log](03-build/code/install.log)" in build_row
     files = run_json(out)["files"]

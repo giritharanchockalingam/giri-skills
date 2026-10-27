@@ -101,3 +101,13 @@ def test_judge_unstyled_rule(font, rules, expect):
     v = load("visual_check")
     m = {"text": 500, "rules": rules, "inline": 1, "bgs": 3, "sizes": 4, "bodyFont": font, "scrollW": 390, "innerW": 390}
     assert any("unstyled" in f for f in v.judge(m, 200, "phone", [])) is expect
+
+
+def test_pages_linked_from_the_home_page_are_checked_too(tmp_path):
+    """Found on greenfield G2: /progress alone was "student not found"; the real page needs ?student=…"""
+    app = static_app(tmp_path, STYLED.replace("</main>", "<a href='/detail.html?student=s1'>Ada</a> <a href='/detail.html?student=s2'>Bo</a></main>"))
+    (app / "detail.html").write_text("<!doctype html><html><head><meta name=viewport content='width=device-width'></head><body>"
+                                     + TEXT + "</body></html>", encoding="utf-8")          # the linked page is unstyled
+    code, res = check(app, tmp_path)
+    assert "/detail.html?student=s1" in res["routes"] and "/detail.html?student=s2" not in res["routes"], res["routes"]
+    assert code == 1 and any(f.startswith("/detail.html?student=s1") and "unstyled" in f for f in res["failures"]), res["failures"]

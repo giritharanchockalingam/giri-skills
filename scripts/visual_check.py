@@ -6,7 +6,9 @@
 Why it exists: on the CAPE greenfield run every test passed (85/85) and every gate passed, and the page was plain
 black-on-white HTML with no styling at all. Unit tests and linters never open the page. This does.
 
-What it does, per route × viewport (desktop 1440×900, phone 390×844):
+What it does, per route × viewport (desktop 1440×900, phone 390×844) — the given routes plus same-site pages linked
+from the pages it opens (breadth-first, one per path + query-parameter names, at most 8 pages; found on greenfield G2: /progress alone was a
+"student not found" page and the dashboard behind /progress?student=… was never seen):
   - loads the page in Chromium (Playwright), full-page screenshot to <out>/visual-<route>-<viewport>.png
   - FAILS on: HTTP status >= 400 or no response; an empty page (< 40 characters of visible text); an UNSTYLED page
     (no stylesheet rules reach it, or the body is still in the browser's default serif font — form controls carry
@@ -39,6 +41,8 @@ from pathlib import Path
 
 VIEWPORTS = {"desktop": (1440, 900), "phone": (390, 844)}
 MIN_TEXT = 40
+MAX_PAGES = 8          # the given routes plus pages linked from opened pages (breadth-first), one per path + query-parameter names
+LINKS_JS = "() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)"
 
 PROBE_JS = r"""() => {
   const vis = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
@@ -143,7 +147,7 @@ def run(target: Path, out: Path, routes: list[str], override: str | None, timeou
     out.mkdir(parents=True, exist_ok=True)
     port = free_port()
     cmd, reason = start_command(target, port, override)
-    result: dict = {"applicable": cmd is not None, "start_cmd": cmd, "start_reason": reason, "routes": routes,
+    result: dict = {"applicable": cmd is not None, "start_cmd": cmd, "start_reason": reason, "routes": list(routes),
                     "checks": [], "failures": [], "warnings": [], "screenshots": []}
 
     def finish(verdict: str, code: int) -> int:
@@ -173,9 +177,15 @@ def run(target: Path, out: Path, routes: list[str], override: str | None, timeou
         if why:
             result["failures"].append(f"the app did not start: {why} (log: visual-server.log)")
             return finish("fail", 1)
+        from urllib.parse import urlsplit, parse_qsl
+        def key(r: str) -> tuple:
+            u = urlsplit(r)
+            return (u.path.rstrip("/") or "/", tuple(sorted(k for k, _ in parse_qsl(u.query))))
+        queue, seen = list(routes), {key(r) for r in routes}
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            for route in routes:
+            while queue:
+                route = queue.pop(0)
                 for vp, (w, h) in VIEWPORTS.items():
                     page = browser.new_page(viewport={"width": w, "height": h})
                     console, errors = [], []
@@ -191,7 +201,18 @@ def run(target: Path, out: Path, routes: list[str], override: str | None, timeou
                     shot = out / f"visual-{slug(route)}-{vp}.png"
                     page.screenshot(path=str(shot), full_page=True)
                     m = page.evaluate(PROBE_JS)
+                    if vp == "desktop" and len(seen) < MAX_PAGES:     # follow links: /progress alone showed only "not found"
+                        for href in page.evaluate(LINKS_JS):
+                            u = urlsplit(href)
+                            if f"{u.scheme}://{u.netloc}" != base or u.path.startswith(("/api/", "/_next/")):
+                                continue
+                            r = u.path + (f"?{u.query}" if u.query else "")
+                            if key(r) not in seen and len(seen) < MAX_PAGES:
+                                seen.add(key(r))
+                                queue.append(r)
                     fails = judge(m, status, vp, errors)
+                    if route not in result["routes"]:
+                        result["routes"].append(route)
                     result["checks"].append({"route": route, "viewport": vp, "status": status, "metrics": m,
                                              "failures": fails, "console_errors": console[:5], "screenshot": shot.name})
                     result["screenshots"].append(shot.name)
