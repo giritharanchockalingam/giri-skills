@@ -137,6 +137,7 @@ sys.path.insert(0, str(HERE))
 import check_output  # noqa: E402
 import llm_builder  # noqa: E402
 import skillmeta  # noqa: E402
+import sandbox as sbx  # noqa: E402
 import telemetry  # noqa: E402
 import validate_pipelines as vp  # noqa: E402
 
@@ -1271,6 +1272,8 @@ class Run:
         repairs = sum(len(st.get("repairs") or []) for s in self.record.get("stages", []) for st in s.get("steps", []))
         if repairs:
             notes.append(f"the builder needed {repairs} repair turn(s) after failing tests")
+        sb = (self.record.get("sandbox") or {}).get("summary")
+        notes.append(sb or "NOT SANDBOXED: project code ran on the host")
         llm = self.record.get("llm") or {}
         budget = getattr(self.args, "budget_usd", None)
         if llm.get("calls"):
@@ -1355,13 +1358,33 @@ class Run:
                 added.append(d)
         return added
 
-    @staticmethod
-    def _sh(cmd: str, cwd: Path, timeout_s: float) -> tuple[int, str]:
-        env = {**os.environ, "CI": os.environ.get("CI") or "1"}   # watch-mode runners (vitest, jest) run once under CI
+    @property
+    def sandbox(self) -> "sbx.Sandbox":
+        """docs/HARNESS.md layer 3: where project code runs (--sandbox docker|none)."""
+        if getattr(self, "_sandbox", None) is None:
+            a = self.args
+            self._sandbox = sbx.Sandbox(getattr(a, "sandbox", "none") or "none", getattr(a, "sandbox_image", "hostroot") or "hostroot",
+                                        getattr(a, "sandbox_cpus", "2") or "2", getattr(a, "sandbox_memory", "4g") or "4g")
+            os.environ.update(self._sandbox.env_vars())          # child processes (the reviewer's sandbox exec) get the same box
+            if not hasattr(self, "record"):
+                self.record = {}
+            self.record["sandbox"] = {"mode": self._sandbox.mode, "image": self._sandbox.image, "cpus": self._sandbox.cpus,
+                                      "memory": self._sandbox.memory, "summary": self._sandbox.describe()}
+        return self._sandbox
+
+    def _sh(self, cmd: str, cwd: Path, timeout_s: float, network: str = "none") -> tuple[int, str]:
+        """Project code (install, tests, benchmark): in the sandbox when one is configured. Only the install gets a
+        network (the package registry); tests and benchmarks run with none."""
+        env = {"CI": os.environ.get("CI") or "1"}   # watch-mode runners (vitest, jest) run once under CI
         try:
-            r = subprocess.run(cmd, shell=True, cwd=str(cwd), capture_output=True, text=True, timeout=timeout_s, env=env)
+            argv, full_env = self.sandbox.wrap(cmd, cwd, writable=[cwd], network=network, env=env)
+        except sbx.SandboxError as e:
+            raise StepError(str(e)) from None
+        try:
+            r = subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True, timeout=timeout_s, env=full_env)
             return r.returncode, (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired as e:
+            sbx.kill(argv)
             partial = (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
             return 124, f"timed out after {timeout_s:.0f}s\n{partial}"
 
@@ -1380,7 +1403,7 @@ class Run:
             write_json(sdir / INSTALL_JSON, rec["install"])
             return
         t0 = time.time()
-        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S, network="host")   # the registry only
         (sdir / INSTALL_LOG).write_text(output, encoding="utf-8")
         info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG,
                 "manifest_sha": manifest_sha(target)}
@@ -1402,7 +1425,7 @@ class Run:
         if cmd.startswith("npm ci"):
             cmd = "npm install --no-audit --no-fund"     # the lockfile is behind package.json: ci would refuse
         t0 = time.time()
-        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S, network="host")   # the registry only
         (sdir / "reinstall.log").write_text(output, encoding="utf-8")
         info = {**prev, "reinstall": {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": "reinstall.log"},
                 "manifest_sha": manifest_sha(target)}
@@ -1486,9 +1509,18 @@ class Run:
         cmd = [sys.executable, str(HERE / "visual_check.py"), "--target", str(target), "--out", str(out)]
         for r in self.visual_routes(target):
             cmd += ["--route", r]
+        if self.sandbox.mode != "none":   # the app AND the browser run in the box (network none, loopback only)
+            cmd = ["python3", "-I", *cmd[1:]]
+            try:
+                argv, venv = self.sandbox.wrap(shlex.join(cmd), target, writable=[target, out], readonly=[HERE])
+            except sbx.SandboxError as e:
+                raise StepError(str(e)) from None
+        else:
+            argv, venv = cmd, None
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=VISUAL_TIMEOUT_S)
+            r = subprocess.run(argv, capture_output=True, text=True, timeout=VISUAL_TIMEOUT_S, env=venv)
         except subprocess.TimeoutExpired:
+            sbx.kill(argv)
             rec["visual"] = {"verdict": "fail", "detail": f"the visual check did not finish in {VISUAL_TIMEOUT_S} s"}
             raise StepError(rec["visual"]["detail"])
         res = read_json(out / "visual.json") if (out / "visual.json").is_file() else {}
@@ -3065,6 +3097,11 @@ def build_args(argv=None):
     ap.add_argument("--builder", choices=["none", "manual", "claude-code", "openai-compat"], default="none")
     ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
     ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
+    ap.add_argument("--sandbox", choices=["none", "docker"], default="none",
+                    help="where project code (install, tests, benchmark, the app) runs: docker = isolated box; none = the host, recorded as NOT SANDBOXED")
+    ap.add_argument("--sandbox-image", default="hostroot", help="docker image (default hostroot: the host toolchain mounted read-only)")
+    ap.add_argument("--sandbox-cpus", default="2")
+    ap.add_argument("--sandbox-memory", default="4g")
     ap.add_argument("--budget-usd", type=float, default=None, metavar="USD",
                     help="circuit breaker: stop the run when its model calls have cost this much (each call gets --max-budget-usd = what is left)")
     ap.add_argument("--visual", choices=["auto", "off"], default="auto",
@@ -3529,6 +3566,12 @@ def main(argv=None) -> int:
     run.record["repo"] = str(run.repo)
     run.record["base_sha"] = (prev_record or {}).get("base_sha") or head_sha(run.repo)   # the pre-change commit, kept across resumes
     run.load_baseline()
+    try:
+        run.sandbox.prepare()            # --sandbox docker without a reachable daemon stops here, never falls back silently
+    except sbx.SandboxError as e:
+        print(f"error: {e}", file=sys.stderr)
+        run.save("failed", EXIT_FAIL)
+        return EXIT_FAIL
 
     prev_stages = {s["id"]: s for s in run.record["stages"]}
     # restore step dirs of stages already passed (references into them must resolve on resume)
