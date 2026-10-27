@@ -307,7 +307,7 @@ def cmd_run(a) -> int:
         left = None if a.budget_usd is None else round(a.budget_usd - spent, 4)
         argv = [sys.executable, "-I", str(DELIVER), *pipeline, "--request", s["brief"]["feature"], "--brief", str(d / "briefs" / f"{sid}.json"),
                 "--goal", str(goal), "--builder", "claude-code", "--provider", "none", "--out", str(out),
-                "--sandbox", a.sandbox, "--acceptance", "on", *(["--model", a.model] if a.model else []),
+                "--sandbox", a.sandbox, "--acceptance", "on", "--rounds", str(a.rounds), *(["--model", a.model] if a.model else []),
                 *(["--budget-usd", f"{left:.4f}"] if left is not None else []), *(["--dry"] if a.dry else []),
                 *(["--approve-all"] if a.approve_all else []), *(["--resume"] if resume else [])]
         st.update(status="running", out=str(out), started_at=st.get("started_at") or now(), argv=argv)
@@ -401,6 +401,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sandbox", choices=["docker", "none"], default="docker")
     p.add_argument("--budget-usd", type=float)
     p.add_argument("--model")
+    p.add_argument("--rounds", type=int, default=4, help="repair turns per slice (tests, benchmark, visual and acceptance all draw on them; "
+                   "found on the R7 run: 2 were spent before the acceptance fix could be re-tested)")
     p.add_argument("--approve-all", action="store_true", help="AUTO-approve the slice plan and every plan approval (recorded as such)")
     for name in ("status", "report"):
         p = sub.add_parser(name)
