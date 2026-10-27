@@ -69,9 +69,10 @@ def test_box_blocks_network_and_system_writes_and_keeps_project_writes(tmp_path)
 
 @needs_docker
 def test_box_enforces_the_timeout_and_removes_the_container(tmp_path):
-    env = {**os.environ, "SF_SANDBOX": "docker"}
+    tag = f"t{os.getpid()}"
+    env = {**os.environ, "SF_SANDBOX": "docker", "SF_SANDBOX_TAG": tag}     # only this test's container is checked
     r = subprocess.run([sys.executable, str(REPO / "scripts" / "sandbox.py"), "exec", "--dir", str(tmp_path), "--timeout", "5",
                         "--", "sleep", "60"], capture_output=True, text=True, env=env, timeout=120)
     assert r.returncode == 124
-    left = subprocess.run(["docker", "ps", "-q", "--filter", "name=sf-sbx-"], capture_output=True, text=True).stdout.strip()
+    left = subprocess.run(["docker", "ps", "-q", "--filter", f"name=sf-sbx-{tag}-"], capture_output=True, text=True).stdout.strip()
     assert left == "", "the container outlived its timeout"

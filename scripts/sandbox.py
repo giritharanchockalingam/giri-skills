@@ -124,7 +124,8 @@ class Sandbox:
             return ["bash", "-c", cmd], base_env
         self.prepare()
         cwd = Path(cwd).resolve()
-        self.last_name = f"sf-sbx-{uuid.uuid4().hex[:12]}"
+        tag = "".join(ch for ch in os.environ.get("SF_SANDBOX_TAG", "") if ch.isalnum())[:20]
+        self.last_name = f"sf-sbx-{tag + '-' if tag else ''}{uuid.uuid4().hex[:12]}"
         argv = ["docker", "run", "--rm", "-i", "--name", self.last_name, *([] if self.image == "hostroot" else ["--init"]), "--network", "host" if network == "host" else "none",
                 "--cpus", self.cpus, "--memory", self.memory, "--pids-limit", self.pids, "--shm-size", "1g",
                 "--read-only", "--tmpfs", "/tmp:exec,size=2g", "--tmpfs", "/home:exec,size=2g",
