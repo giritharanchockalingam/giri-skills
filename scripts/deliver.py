@@ -1672,6 +1672,13 @@ class Run:
         shutil.copytree(target, copy, ignore=shutil.ignore_patterns("node_modules", ".next", ".git", "coverage"), symlinks=True)
         if (target / "node_modules").is_dir():
             (copy / "node_modules").symlink_to((target / "node_modules").resolve())
+        change = adir / f"round-{round_no}-change.diff"
+        if is_git_root(target):
+            # the copy has no .git: the reviewer gets the change itself (found on R7 S4: "logic unchanged" could not be
+            # verified "by diff" and stayed PARTLY)
+            base = str(self.record.get("base_sha") or "HEAD")
+            git(target, "add", "-A")
+            change.write_text(git(target, "diff", "--cached", base)[1], encoding="utf-8")
         result = adir / f"round-{round_no}-{ACCEPT_JSON}"
         result.unlink(missing_ok=True)
         # the copy links node_modules to the checkout's; that folder must be visible (read-only) inside the box, or
@@ -1679,6 +1686,8 @@ class Run:
         nm = (target / "node_modules").resolve()
         sb = f"python3 {HERE / 'sandbox.py'} exec --dir {copy}" + (f" --ro {nm}" if nm.is_dir() else "")
         crit = "\n".join(f"- {label}: {path}" for label, path in sources)
+        if change.is_file():
+            crit += f"\n- THE CHANGE under review, as a diff against the code before it: {change}"
         prev = read_json(sdir / ACCEPT_JSON) if round_no > 1 and (sdir / ACCEPT_JSON).is_file() else None
         fixed_ids = list((prev or {}).get("fixed_ids") or [str(c.get("id")) for c in (prev or {}).get("criteria") or []])
         recheck = ""
