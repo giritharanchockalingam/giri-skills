@@ -87,6 +87,25 @@ Reading: the gate stopped the defective slice every time, for real defects backe
 It does **not** reliably find the single most important defect (1 of 3). Next steps for this layer: two independent
 reviewers per round (union of findings), and reviewer probes written from the goal's non-negotiables before review.
 
+## First end-to-end run (CAPE R7 fix goal on the R6 code, Oct 27 2026)
+
+Goal written from the independent review's findings; the harness planned 5 slices ($0.29); Giri approved the plan;
+every slice ran dry, in the docker sandbox, with the acceptance gate and a goal budget. Stopped after S4 by the
+owner's spend decision (the CLI signs in with the account's OAuth token; spend is plan usage at API-rate equivalent).
+
+| Slice | Result | Tests | Acceptance (experiments) | Repairs | Cost |
+|---|---|---|---|---|---|
+| S1 contracts, domain | PASS | 557 | PASS 9/10 MET (6) | 3 | $2.89 |
+| S2 PS mock with own state | PASS (2nd resume) | 589 | PASS 8/8 MET (6) | 1 | $4.63 + $4.18 first attempt |
+| S3 data-carrying propagation, exact versions, stale commit rejected | PASS (2nd resume) | 620 | PASS 8/9 MET (12); the critical stale-data defect fixed and proven: the reviewer put the old behaviour back in its copy and the regression test failed | 2 | $12.60 |
+| S4 auth / FERPA | FAIL: routes open when NODE_ENV=test and the auth flag is unset (found by experiment) | 691 | FAIL 6 MET, 2 PARTLY | 4 | $4.85 |
+| S5 transcript, paging drift | not run | | | | |
+
+Real spend $29.44 (the counter showed $25.26 until the resume bug was fixed). Harness defects the run exposed, each
+fixed in code and committed: repair turns too few for 4 verification layers (`--rounds`), benchmark re-measuring broke a
+consistency test (re-run tests after the benchmark), spend lost on resume, acceptance criteria moving between rounds,
+reviewer could not diff the change.
+
 ## Known limits
 
 | Limit | Consequence |
