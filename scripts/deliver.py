@@ -180,6 +180,10 @@ NONINTERACTIVE_RULES = ("You are running non-interactively inside a delivery pip
                         "creates, migrates and seeds whatever it needs from the environment, e.g. DATABASE_URL) and writes its "
                         "own results file; never write results you did not measure. "
                         "Finish by writing the files, then reply with one short summary.")
+REVIEWER_RULES = ("You are an independent reviewer running non-interactively inside a delivery pipeline. You did not write "
+                  "this code and you have not seen its author's notes. Judge whether it meets the acceptance criteria. Be "
+                  "skeptical: verify by reading code and running things, never by trusting docs, comments, test names or "
+                  "commit messages. Nobody can answer questions. Finish by writing the JSON file you are asked for.")
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
@@ -199,6 +203,8 @@ TEST_TAIL = 4 * 1024                                # tests.json carries the las
 TEST_TAIL_IN_ERROR = 400                            # how much of that the step error (the gate detail) quotes
 INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
 TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
+ACCEPT_DIR, ACCEPT_JSON, ACCEPT_MD, ACCEPT_TIMEOUT_S = "acceptance", "acceptance.json", "acceptance.md", 2400
+VERDICTS = ("MET", "PARTLY", "NOT_MET", "UNVERIFIED")
 BENCH_LOG, BENCH_TIMEOUT_S = "bench.log", 900                       # `npm run bench`, run by the pipeline (see run_bench)
 VISUAL_DIR, VISUAL_TIMEOUT_S, VISUAL_MAX_ROUTES = "visual", 900, 6   # scripts/visual_check.py: a person's first look
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
@@ -405,6 +411,10 @@ def new_high_detail(count: int, listed: list[str]) -> str:
     more = count - len(shown)
     return (f"{count} new high finding(s) against the baseline: " + "; ".join(shown)
             + (f" … and {more} more" if more > 0 else ""))
+
+
+class ReviewerError(StepError):
+    """The acceptance reviewer itself failed (no valid acceptance.json): never sent to the builder as a repair."""
 
 
 class WiringError(StepError):
@@ -1557,12 +1567,128 @@ class Run:
             raise StepError(f"benchmark failed: `npm run bench` exit {code}; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
         return True
 
+    def acceptance_sources(self, target: Path) -> list[tuple[str, Path]]:
+        """What the reviewer judges against: the goal document (--goal, or docs/*GOAL*.md in the repo), the brief, the
+        product manager's PRD (acceptance criteria) and the architect's plan (per-task acceptance)."""
+        out: list[tuple[str, Path]] = []
+        goal = getattr(self.args, "goal", None)
+        if goal and Path(goal).is_file():
+            out.append(("goal document", Path(goal)))
+        else:
+            for g in sorted((target / "docs").glob("*GOAL*.md")) if (target / "docs").is_dir() else []:
+                out.append(("goal document", g))
+        if self.inputs.get("brief") and Path(str(self.inputs["brief"])).is_file():
+            out.append(("brief (goals and constraints for THIS change)", Path(str(self.inputs["brief"]))))
+        for sid, name, label in (("prd-refine", PRD_MD, "PRD with acceptance criteria"), ("plan-refine", TASKS_CSV, "plan tasks with acceptance"),
+                                 ("plan-refine", PLAN_MD, "plan")):
+            d = self.step_dirs.get(sid)
+            if d and (d / name).is_file():
+                out.append((label, d / name))
+        return out
+
+    def run_acceptance(self, target: Path, sdir: Path, rec: dict) -> None:
+        """docs/HARNESS.md layer 1 — the requirements verification gate. Found on the CAPE 2.0 chain: 486 tests and
+        every gate passed while the goal's one non-negotiable (no stale data) was NOT met; an independent reviewer
+        found it in 4 minutes. A fresh claude session (never the builder's summary) reviews a disposable copy of the
+        code against the acceptance sources, may run commands only through the sandbox, and must give every criterion
+        a verdict with evidence it produced. NOT_MET, PARTLY on a must-have, or a critical/high defect fails the
+        step (the findings become the builder's repair turn); a reviewer that produces no valid result is a
+        ReviewerError (never charged to the builder)."""
+        mode = getattr(self.args, "acceptance", "auto") or "auto"
+        if mode == "off" or (mode == "auto" and self.args.builder not in ("claude-code", "openai-compat")):
+            rec["acceptance"] = {"verdict": "not_run", "detail": "switched off (--acceptance off)" if mode == "off"
+                                 else f"--acceptance auto runs for model builders; the {self.args.builder} builder's diff was not reviewed"}
+            return
+        exe = shutil.which("claude")
+        if not exe:
+            rec["acceptance"] = {"verdict": "not_run", "detail": "`claude` is not on PATH: no reviewer available"}
+            return
+        sources = self.acceptance_sources(target)
+        if not sources:
+            rec["acceptance"] = {"verdict": "not_run", "detail": "no acceptance criteria found (no goal document, brief, PRD or plan)"}
+            return
+        adir = sdir / ACCEPT_DIR
+        round_no = len(rec.get("acceptance_rounds") or []) + 1
+        copy = adir / f"review-copy-{round_no}"
+        shutil.rmtree(copy, ignore_errors=True)
+        shutil.copytree(target, copy, ignore=shutil.ignore_patterns("node_modules", ".next", ".git", "coverage"), symlinks=True)
+        if (target / "node_modules").is_dir():
+            (copy / "node_modules").symlink_to((target / "node_modules").resolve())
+        result = adir / f"round-{round_no}-{ACCEPT_JSON}"
+        result.unlink(missing_ok=True)
+        sb = f"python3 {HERE / 'sandbox.py'} exec --dir {copy}"
+        crit = "\n".join(f"- {label}: {path}" for label, path in sources)
+        prompt = (
+            f"Review the application in the current folder ({copy}) against these acceptance sources (read every one first):\n{crit}\n\n"
+            f"Run any command ONLY as `{sb} -- <command>` (e.g. `{sb} -- npx vitest run tests/x.test.ts`); it runs in the "
+            f"project's sandbox ({self.sandbox.describe()}). DATABASE_URL, if the tests need one, is already set. You may write "
+            f"experiment files (e.g. tests/zz-acceptance/*.test.ts) in this folder: it is a disposable copy.\n\n"
+            f"Write {result} as JSON: {{\"criteria\": [{{\"id\": \"C1\", \"source\": \"which document and section\", \"text\": \"the criterion\", "
+            f"\"must\": true, \"verdict\": \"MET|PARTLY|NOT_MET|UNVERIFIED\", \"evidence\": \"what you ran or read (file:line, command and its result)\"}}], "
+            f"\"defects\": [{{\"severity\": \"critical|high|medium|low\", \"title\": \"...\", \"location\": \"file:line\", \"confirmed_by\": \"how\"}}], "
+            f"\"summary\": \"three sentences\"}}.\n"
+            "Rules: one criterion per testable requirement of THIS change (the brief and PRD; use the goal document for the "
+            "non-negotiables this change touches); must=true for requirements the sources state as mandatory. MET needs evidence "
+            "you produced; anything you could not verify is UNVERIFIED, never MET. A defect needs a concrete confirmation "
+            "(a failing experiment or a reasoned scenario through named code). Do not change files outside this folder and "
+            "never edit the application to make it pass.")
+        (adir / f"round-{round_no}-prompt.txt").write_text(prompt, encoding="utf-8")
+        model = ["--model", self.args.review_model] if getattr(self.args, "review_model", None) else \
+                (["--model", self.args.model] if getattr(self.args, "model", None) else [])
+        cmd = [exe, *model, "--permission-mode", "acceptEdits", "--add-dir", str(adir.resolve()),
+               *[x for _, pth in sources for x in ("--add-dir", str(pth.parent.resolve()))],
+               "--allowedTools", "Read", "Write", "Edit", "Glob", "Grep", "LS", f"Bash({sb}:*)",
+               "--append-system-prompt", REVIEWER_RULES, "-p", prompt, "--output-format", "json"]
+        r = self.run_claude(cmd, copy, ACCEPT_TIMEOUT_S, f"acceptance review {round_no}")
+        (adir / f"round-{round_no}-reply.txt").write_text((r.stdout or "") + "\n--- stderr ---\n" + (r.stderr or ""), encoding="utf-8")
+        try:
+            data = json.loads(result.read_text(encoding="utf-8"))
+            crits = [c for c in data.get("criteria") or [] if isinstance(c, dict)]
+            if not crits:
+                raise ValueError("no criteria")
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            raise ReviewerError(f"acceptance reviewer produced no valid {result.name} ({e}); exit {r.returncode}") from None
+        for c in crits:
+            v = str(c.get("verdict", "")).upper().replace(" ", "_")
+            c["verdict"] = v if v in VERDICTS else "UNVERIFIED"
+            if c["verdict"] == "MET" and not str(c.get("evidence") or "").strip():
+                c["verdict"], c["downgraded"] = "UNVERIFIED", "MET without evidence"
+        defects = [x for x in data.get("defects") or [] if isinstance(x, dict)]
+        blocking = [c for c in crits if c["verdict"] == "NOT_MET" or (c["verdict"] == "PARTLY" and c.get("must"))]
+        severe = [x for x in defects if str(x.get("severity", "")).lower() in ("critical", "high")]
+        counts = {v: sum(c["verdict"] == v for c in crits) for v in VERDICTS}
+        verdict = "fail" if (blocking or severe) else "pass"
+        summary = {"round": round_no, "verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe),
+                   "file": str(result.relative_to(sdir))}
+        rec.setdefault("acceptance_rounds", []).append(summary)
+        write_json(sdir / ACCEPT_JSON, {"criteria": crits, "defects": defects, "summary": data.get("summary", ""), "round": round_no,
+                                        "verdict": verdict, "sources": [{"label": l, "path": str(p_)} for l, p_ in sources]})
+        lines = [f"# Acceptance review — round {round_no}: {verdict.upper()}", "",
+                 "Independent reviewer (a fresh model session that never saw the builder's notes); every MET carries evidence it produced.", "",
+                 f"MET {counts['MET']} · PARTLY {counts['PARTLY']} · NOT MET {counts['NOT_MET']} · UNVERIFIED {counts['UNVERIFIED']} · "
+                 f"defects {len(defects)} ({len(severe)} critical/high)", "", "| ID | Must | Verdict | Criterion | Evidence |", "|---|---|---|---|---|"]
+        lines += [f"| {c.get('id', '')} | {'yes' if c.get('must') else ''} | {c['verdict']} | {str(c.get('text', '')).replace('|', '¦')[:200]} | "
+                  f"{str(c.get('evidence', '')).replace('|', '¦')[:300]} |" for c in crits]
+        if defects:
+            lines += ["", "| Severity | Defect | Location | Confirmed by |", "|---|---|---|---|"]
+            lines += [f"| {x.get('severity', '')} | {str(x.get('title', '')).replace('|', '¦')[:160]} | {x.get('location', '')} | "
+                      f"{str(x.get('confirmed_by', '')).replace('|', '¦')[:200]} |" for x in defects]
+        lines += ["", f"Summary: {data.get('summary', '')}"]
+        (sdir / ACCEPT_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        rec["acceptance"] = {"verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe), "md": ACCEPT_MD,
+                             "rounds": round_no}
+        if verdict == "fail":
+            items = [f"{c.get('id')} {c['verdict']}: {c.get('text', '')} — {c.get('evidence', '')}"[:400] for c in blocking[:8]]
+            items += [f"{x.get('severity')} defect: {x.get('title')} at {x.get('location')} — {x.get('confirmed_by')}"[:400] for x in severe[:6]]
+            raise StepError("acceptance review failed: " + " | ".join(items) + f" — full review in {sdir / ACCEPT_MD}")
+
     def verify(self, cmd: str | None, reason: str, target: Path, sdir: Path, rec: dict) -> None:
         """What judges the builder's code: the project's tests, then (when they pass) its benchmark, then a look at
         the running app."""
         self.run_tests(cmd, reason, target, sdir, rec)
         self.run_bench(target, sdir, rec)
         self.run_visual(target, sdir, rec)
+        self.run_acceptance(target, sdir, rec)
 
     def record_llm_tests(self, cmd: str, sdir: Path, rec: dict) -> None:
         """openai-compat: the repair command IS the test command, already run by the builder after each round — the
@@ -2204,8 +2330,26 @@ class Run:
                         capture(r.stdout)                         # the results file the benchmark wrote joins the diff
                     break
                 except StepError as failure:
-                    if turn == repairs or (not tcmd and not str(failure).startswith("visual check")):
+                    if isinstance(failure, ReviewerError) or turn == repairs or \
+                            (not tcmd and not str(failure).startswith(("visual check", "acceptance review"))):
                         raise
+                    if str(failure).startswith("acceptance review"):
+                        ask = (f"An independent reviewer checked your change against the acceptance criteria and it does not meet them. "
+                               f"Read {sdir / ACCEPT_MD} (and {sdir / ACCEPT_JSON}) first. Fix the code so every NOT MET / PARTLY "
+                               f"criterion is met and every critical/high defect is gone; add a test for each one that fails "
+                               f"without your fix (a test that passes with the feature removed does not count). Prefer the files the "
+                               f"plan names; files outside it are recorded. Keep `{tcmd}` passing. Do not weaken existing tests.\n\n"
+                               f"Findings:\n{failure}")
+                        (sdir / f"repair-{turn + 1}-prompt.txt").write_text(ask, encoding="utf-8")
+                        t1 = time.time()
+                        rr = self.run_claude(self.claude_cmd(exe, ask), target, 3600, f"{step['id']} repair {turn + 1}")
+                        (sdir / f"repair-{turn + 1}-stderr.txt").write_text(rr.stderr, encoding="utf-8")
+                        rec.setdefault("repairs", []).append({"turn": turn + 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
+                                                              "reason": str(failure)[:300]})
+                        if rr.returncode != 0:
+                            raise StepError(f"claude -p (repair {turn + 1}) exited {rr.returncode}: {rr.stderr.strip().splitlines()[-1:] or ''}"[:300])
+                        capture(rr.stdout)
+                        continue
                     what = ("The running app failed the visual check (a browser opened each page at 1440 and 390 px wide; "
                             f"screenshots and visual.json are in {sdir / VISUAL_DIR}). Fix the UI so every page is styled, "
                             "not empty, loads without errors and does not scroll sideways on a phone; keep `" + str(tcmd) + "` passing"
@@ -2393,6 +2537,7 @@ class Run:
                 self.baseline_row(), "",
                 self.tests_row(), "",
                 self.bench_row(), "",
+                self.acceptance_row(), "",
                 self.visual_row(), "",
                 self.honesty_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
@@ -2523,6 +2668,23 @@ class Run:
         stubs = t.get("unfilled_stubs") or []
         warn = f" UNFILLED: {len(stubs)} scaffolded test file(s) still hold only todo stubs ({', '.join(stubs[:4])})." if stubs else ""
         return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}.{warn}"
+
+    def acceptance_row(self) -> str:
+        """The Acceptance line of EVIDENCE.md: did an independent reviewer find the change meets its requirements."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "acceptance" in st), None)
+        if not code:
+            return "Acceptance review (independent reviewer vs the requirements): NOT RUN — no code step reached it."
+        a = code["acceptance"]
+        if a.get("verdict") == "not_run":
+            return f"Acceptance review (independent reviewer vs the requirements): NOT RUN ({a.get('detail')})."
+        c = a.get("counts") or {}
+        sdir = self.step_dirs.get(code["id"])
+        md = sdir / ACCEPT_MD if sdir else None
+        link = f" — [{ACCEPT_MD}]({md.relative_to(self.evidence)})" if md and md.is_file() else ""
+        return (f"Acceptance review (independent reviewer vs the requirements, round {a.get('rounds')}): {str(a.get('verdict')).upper()} — "
+                f"MET {c.get('MET', 0)}, PARTLY {c.get('PARTLY', 0)}, NOT MET {c.get('NOT_MET', 0)}, UNVERIFIED {c.get('UNVERIFIED', 0)}; "
+                f"defects {a.get('defects', 0)} ({a.get('severe', 0)} critical/high){link}.")
 
     def bench_row(self) -> str:
         """The Benchmark line of EVIDENCE.md: whether the pipeline ran `npm run bench`, and its result."""
@@ -3102,6 +3264,10 @@ def build_args(argv=None):
     ap.add_argument("--sandbox-image", default="hostroot", help="docker image (default hostroot: the host toolchain mounted read-only)")
     ap.add_argument("--sandbox-cpus", default="2")
     ap.add_argument("--sandbox-memory", default="4g")
+    ap.add_argument("--acceptance", choices=["auto", "on", "off"], default="auto",
+                    help="independent requirements review after tests/visual pass (auto: for model builders)")
+    ap.add_argument("--review-model", default=None, help="model for the acceptance reviewer (default: --model)")
+    ap.add_argument("--goal", default=None, help="goal document the acceptance reviewer judges against (default: docs/*GOAL*.md in the repo)")
     ap.add_argument("--budget-usd", type=float, default=None, metavar="USD",
                     help="circuit breaker: stop the run when its model calls have cost this much (each call gets --max-budget-usd = what is left)")
     ap.add_argument("--visual", choices=["auto", "off"], default="auto",
