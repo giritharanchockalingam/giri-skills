@@ -1,0 +1,15 @@
+{
+  "title": "Supabase auth + row-level security, policies proven on Postgres",
+  "name": "advisor-notes",
+  "database": true,
+  "request": "Build advisor notes on Supabase with magic-link auth and row-level security: students see only shared notes about themselves, advisors only their assigned students and their own private notes, admins read-only, with policy tests for every rule, using fictional sample data.",
+  "pipeline": "greenfield-app",
+  "stack": "nextjs-ts",
+  "tier": "core",
+  "expect": {
+    "exit": 0,
+    "acceptance": "pass",
+    "visual": "pass",
+    "min_stages_passed": 6
+  }
+}
