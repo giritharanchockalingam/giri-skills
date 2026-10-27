@@ -90,21 +90,22 @@ reviewers per round (union of findings), and reviewer probes written from the go
 ## First end-to-end run (CAPE R7 fix goal on the R6 code, Oct 27 2026)
 
 Goal written from the independent review's findings; the harness planned 5 slices ($0.29); Giri approved the plan;
-every slice ran dry, in the docker sandbox, with the acceptance gate and a goal budget. Stopped after S4 by the
-owner's spend decision (the CLI signs in with the account's OAuth token; spend is plan usage at API-rate equivalent).
+every slice ran dry, in the docker sandbox, with the acceptance gate (experiments required) and a goal budget.
+Per-slice architecture plans were AUTO-approved (labelled). Builder and reviewer: claude-sonnet-5-5.
 
 | Slice | Result | Tests | Acceptance (experiments) | Repairs | Cost |
 |---|---|---|---|---|---|
-| S1 contracts, domain | PASS | 557 | PASS 9/10 MET (6) | 3 | $2.89 |
-| S2 PS mock with own state | PASS (2nd resume) | 589 | PASS 8/8 MET (6) | 1 | $4.63 + $4.18 first attempt |
-| S3 data-carrying propagation, exact versions, stale commit rejected | PASS (2nd resume) | 620 | PASS 8/9 MET (12); the critical stale-data defect fixed and proven: the reviewer put the old behaviour back in its copy and the regression test failed | 2 | $12.60 |
-| S4 auth / FERPA | FAIL: routes open when NODE_ENV=test and the auth flag is unset (found by experiment) | 691 | FAIL 6 MET, 2 PARTLY | 4 | $4.85 |
-| S5 transcript, paging drift | not run | | | | |
+| S1 contracts, domain | PASS | 557 | MET 9, PARTLY 1 (6) | 3 | $2.89 |
+| S2 PS mock with its own state | PASS (2 resumes) | 589 | MET 8/8 (6) | 1 | $4.63 + $4.18 lost on resume |
+| S3 data-carrying propagation, exact versions, stale commit rejected | PASS (2 resumes) | 620 | MET 8, PARTLY 1 (12). The critical stale-data defect is fixed and proven: the reviewer restored the old behaviour in its copy and the regression test failed | 2 | $12.60 |
+| S4 auth / FERPA | PASS (1 resume) | 693 | MET 7/7 (3); the first attempt was stopped for routes open when NODE_ENV=test and the auth flag unset | 1 | $6.61 |
+| S5 transcript prerequisites, drift alerts that page | PASS (1 resume) | 748 | MET 10/10 (6) | 3 | $7.19 |
 
-Real spend $29.44 (the counter showed $25.26 until the resume bug was fixed). Harness defects the run exposed, each
-fixed in code and committed: repair turns too few for 4 verification layers (`--rounds`), benchmark re-measuring broke a
-consistency test (re-run tests after the benchmark), spend lost on resume, acceptance criteria moving between rounds,
-reviewer could not diff the change.
+Real spend $38.39 (the counter shows $34.21; $4.18 was lost before the resume fix). Open, non-blocking (medium):
+S3 a second learner's event at the same record version is dropped; S4 recommendation/AI routes lack 401 handling.
+Harness defects the run exposed, each fixed in code and committed: too few repair turns for four verification layers
+(`--rounds`); re-measuring the benchmark broke a consistency test (re-run the tests after the benchmark); spend lost on
+resume; acceptance criteria moving between rounds; the reviewer could not see the change as a diff.
 
 ## Known limits
 
