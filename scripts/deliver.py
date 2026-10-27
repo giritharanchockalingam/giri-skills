@@ -137,6 +137,7 @@ sys.path.insert(0, str(HERE))
 import check_output  # noqa: E402
 import llm_builder  # noqa: E402
 import skillmeta  # noqa: E402
+import telemetry  # noqa: E402
 import validate_pipelines as vp  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_ARGS, EXIT_APPROVAL, EXIT_BUILDER = 0, 1, 2, 3, 4
@@ -720,6 +721,31 @@ class Run:
         self.profile_posted = False
         self.baseline: dict = {}          # run.json `baseline`: {status, target, checks: {check: {skill, source, findings, high, path}}}
         self.spec_path: Path | None = None   # the pipeline file this run executes (hashed into provenance.json)
+        self._tracer: telemetry.Tracer | None = None   # docs/HARNESS.md layer 5 (see the tracer property)
+        self._stage_span = self._step_span = None
+        self._exported = ""
+
+    @property
+    def tracer(self) -> "telemetry.Tracer":
+        """One OTLP trace per run invocation: a span per stage, step and model call (evidence/trace.json)."""
+        if self._tracer is None:
+            self._tracer = telemetry.Tracer("deliver", self.run_id or "pending", **{"pipeline": self.spec.get("name", ""),
+                                            "builder": getattr(self.args, "builder", ""), "dry": bool(getattr(self.args, "dry", False))})
+        return self._tracer
+
+    def _close_step_span(self, rec: dict | None) -> None:
+        if self._step_span is not None:
+            r = rec or {}
+            self.tracer.end(self._step_span, error=(str(r.get("error"))[:300] if r.get("status") == "failed" else None),
+                            **{"step.status": r.get("status"), "step.repairs": len(r.get("repairs") or [])})
+            self._step_span = None
+
+    def export_telemetry(self) -> str:
+        """trace.json is written on every save; the OTLP export (OTEL_EXPORTER_OTLP_ENDPOINT) happens once, at exit."""
+        if not self._exported:
+            self._exported = self.tracer.export()
+            self.record["telemetry"] = {"trace": "evidence/trace.json", "export": self._exported}
+        return self._exported
 
     # ---- references
     def resolve(self, value, where: str = ""):
@@ -1245,6 +1271,11 @@ class Run:
         repairs = sum(len(st.get("repairs") or []) for s in self.record.get("stages", []) for st in s.get("steps", []))
         if repairs:
             notes.append(f"the builder needed {repairs} repair turn(s) after failing tests")
+        llm = self.record.get("llm") or {}
+        budget = getattr(self.args, "budget_usd", None)
+        if llm.get("calls"):
+            notes.append(f"model spend ${llm['cost_usd']:.2f} across {llm['calls']} call(s)"
+                         + (f" of a ${float(budget):.2f} budget" if budget is not None else " (no --budget-usd cap)"))
         model = self.args.model or ("Claude Code's default model" if self.args.builder == "claude-code" else None)
         if model:
             notes.append(f"builder model: {model}")
@@ -1622,8 +1653,7 @@ class Run:
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # prompt.txt is the packet: one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=1800)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 1800, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
@@ -1728,7 +1758,49 @@ class Run:
         return [exe, *model, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
                 "--allowedTools", "Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "LS",
                 "--disallowedTools", "Bash",
-                "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "text"]
+                "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "json"]
+
+    def run_claude(self, cmd: list[str], cwd: Path, timeout: float, label: str) -> subprocess.CompletedProcess:
+        """Every model call goes through here (budget circuit breaker + telemetry, docs/HARNESS.md layers 4 and 5).
+        The call runs with --output-format json; its cost, tokens, turns and duration are recorded on the current
+        step span and in run.json `llm` totals. With --budget-usd the call gets --max-budget-usd = what the run has
+        left; a run already over budget does not start the call. Returns a CompletedProcess whose stdout is the
+        model's reply text (what callers used before), so every caller keeps working."""
+        budget = getattr(self.args, "budget_usd", None)
+        spent = float((self.record.get("llm") or {}).get("cost_usd") or 0)
+        if budget is not None:
+            left = round(float(budget) - spent, 4)
+            if left <= 0:
+                raise StepError(f"budget exceeded: this run has spent ${spent:.2f} of its ${float(budget):.2f} budget "
+                                f"(--budget-usd); {label} was not started")
+            cmd = [cmd[0], "--max-budget-usd", f"{left:.4f}", *cmd[1:]]
+        t0 = time.time_ns()
+        r = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout)
+        meta: dict = {}
+        try:
+            meta = json.loads(r.stdout) if r.stdout.strip().startswith("{") else {}
+        except json.JSONDecodeError:
+            meta = {}
+        usage = meta.get("usage") or {}
+        cost = float(meta.get("total_cost_usd") or 0)
+        tok_in = int(usage.get("input_tokens") or 0) + int(usage.get("cache_creation_input_tokens") or 0) + int(usage.get("cache_read_input_tokens") or 0)
+        tok_out = int(usage.get("output_tokens") or 0)
+        tot = self.record.setdefault("llm", {"calls": 0, "cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0})
+        tot["calls"] += 1
+        tot["cost_usd"] = round(tot["cost_usd"] + cost, 4)
+        tot["input_tokens"] += tok_in
+        tot["output_tokens"] += tok_out
+        self.tracer.record(f"llm {label}", t0, time.time_ns(), parent=getattr(self, "_step_span", None),
+                           **{"llm.call": True, "llm.label": label, "llm.model": getattr(self.args, "model", None) or "claude-code default",
+                              "llm.cost_usd": cost, "llm.input_tokens": tok_in, "llm.output_tokens": tok_out,
+                              "llm.turns": int(meta.get("num_turns") or 0), "llm.exit": r.returncode,
+                              "llm.subtype": str(meta.get("subtype") or "")})
+        sub = str(meta.get("subtype") or "")
+        if "budget" in sub:
+            raise StepError(f"budget exceeded during {label}: the model stopped at the --budget-usd limit "
+                            f"(run total now ${tot['cost_usd']:.2f} of ${float(budget or 0):.2f})")
+        text = str(meta.get("result") or "") if meta else r.stdout
+        return subprocess.CompletedProcess(cmd, r.returncode if not meta.get("is_error") else (r.returncode or 1), text, r.stderr)
 
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
@@ -1782,8 +1854,7 @@ class Run:
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             target = self.repo if self.repo and self.repo.is_dir() else self.out   # reads the checkout, writes only the PRD
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=1800)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 1800, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
@@ -1879,8 +1950,7 @@ class Run:
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=1800)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 1800, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
@@ -1900,7 +1970,7 @@ class Run:
                          "directories listed in the repository layout. Change nothing else and do not touch the repository.")
                 (sdir / "repair-1-prompt.txt").write_text(ask, encoding="utf-8")
                 t1 = time.time()
-                rr = subprocess.run(self.claude_cmd(exe, ask), cwd=str(target), capture_output=True, text=True, timeout=1800)
+                rr = self.run_claude(self.claude_cmd(exe, ask), target, 1800, f"{step['id']} repair 1")
                 (sdir / "repair-1-stderr.txt").write_text(rr.stderr, encoding="utf-8")
                 rec.setdefault("repairs", []).append({"turn": 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
                                                       "reason": "; ".join(misfit[:4])[:300]})
@@ -2076,8 +2146,7 @@ class Run:
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             self.install_deps(target, sdir, rec)                  # before the agent: it may run the tests itself
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=3600)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 3600, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             if r.returncode != 0:
@@ -2115,7 +2184,7 @@ class Run:
                            f"{sdir / TESTS_LOG}.\n\nFailure:\n{failure}")
                     (sdir / f"repair-{turn + 1}-prompt.txt").write_text(ask, encoding="utf-8")
                     t1 = time.time()
-                    rr = subprocess.run(self.claude_cmd(exe, ask), cwd=str(target), capture_output=True, text=True, timeout=3600)
+                    rr = self.run_claude(self.claude_cmd(exe, ask), target, 3600, f"{step['id']} repair {turn + 1}")
                     (sdir / f"repair-{turn + 1}-stderr.txt").write_text(rr.stderr, encoding="utf-8")
                     rec.setdefault("repairs", []).append({"turn": turn + 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
                                                           "reason": str(failure)[:300]})
@@ -2471,6 +2540,8 @@ class Run:
 
     def save(self, status: str, exit_code: int) -> None:
         self.record.update(status=status, exit_code=exit_code, finished_at=now())
+        if self.evidence.is_dir():
+            self.tracer.write(self.evidence / "trace.json")
         self.write_evidence_md()
         self.record["files"] = self.hash_files()
         write_json(self.out / "run.json", self.record)
@@ -2542,6 +2613,7 @@ class Run:
         stage_dir.mkdir(parents=True, exist_ok=True)
         srec = {"id": stage["id"], "adlc_stage": stage.get("adlc_stage"), "role": stage.get("role"), "dir": str(stage_dir.relative_to(self.out)),
                 "status": "running", "started_at": now(), "steps": []}
+        self._stage_span = self.tracer.start(f"stage {stage['id']}", **{"stage.id": stage["id"], "stage.role": stage.get("role") or ""})
         # Steps are kept across a resume only when the stage STOPPED (waiting for an approval or a builder): the work
         # before the stop stands. A stage whose gate FAILED runs every step again — the gate must judge fresh outputs
         # (found by the first real run: the fixed reviewer and security skills were never re-run; the resume re-judged
@@ -2579,6 +2651,9 @@ class Run:
                 srec["steps"].append(rec)
                 continue
             rec = {"id": sid, "kind": step.get("kind"), "stage": stage["id"], "status": "ok"}
+            self._close_step_span(srec["steps"][-1] if srec["steps"] else None)
+            self._step_span = self.tracer.start(f"step {sid}", parent=self._stage_span, **{"step.id": sid, "step.kind": step.get("kind") or "",
+                                                                                            "step.skill": step.get("skill") or ""})
             t0 = time.time()
             try:
                 if halted:
@@ -2660,6 +2735,12 @@ class Run:
         return srec["status"], (EXIT_OK if srec["status"] == "passed" else EXIT_FAIL)
 
     def _finish_stage(self, srec: dict, stage: dict) -> None:
+        self._close_step_span(srec["steps"][-1] if srec.get("steps") else None)
+        if self._stage_span is not None:
+            g = srec.get("gate") or {}
+            self.tracer.end(self._stage_span, **{"stage.status": srec.get("status"), "gate.verdict": g.get("verdict"),
+                                                  "gate.kind": g.get("kind"), "gate.detail": str(g.get("detail") or "")[:300]})
+            self._stage_span = None
         files = []
         for ref in stage.get("evidence") or []:
             try:
@@ -2984,6 +3065,8 @@ def build_args(argv=None):
     ap.add_argument("--builder", choices=["none", "manual", "claude-code", "openai-compat"], default="none")
     ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
     ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
+    ap.add_argument("--budget-usd", type=float, default=None, metavar="USD",
+                    help="circuit breaker: stop the run when its model calls have cost this much (each call gets --max-budget-usd = what is left)")
     ap.add_argument("--visual", choices=["auto", "off"], default="auto",
                     help="after the tests pass, open the built web app in a browser and fail an empty or unstyled page (default auto)")
     ap.add_argument("--rounds", type=int, default=2, metavar="N", help="openai-compat builder: model turns per step including repair turns (default 2)")
@@ -3469,6 +3552,8 @@ def main(argv=None) -> int:
         if prev and prev.get("status") == "passed":
             continue
         status, code = run.run_stage(n, stage, prev, approvals)
+        if code != EXIT_OK:
+            run.export_telemetry()          # the run stops here: export once, before the final save writes trace.json
         run.save(status, code)
         run.post_stage_result(next(st for st in run.record["stages"] if st["id"] == stage["id"]))
         if code != EXIT_OK:
@@ -3495,6 +3580,7 @@ def main(argv=None) -> int:
                 run.post_stage({"id": stage["id"], "status": "failed", "error": f"stack profile: {e}"[:4000]}, finished_at=now())
                 return EXIT_FAIL
         print(f"  stage {stage['id']}: {status} — {run.record['stages'][-1]['gate']['detail'][:120]}")
+    run.export_telemetry()
     run.save("passed", EXIT_OK)
     verdicts = [(st.get("gate") or {}).get("verdict") for st in run.record.get("stages", [])]
     passed, not_run = sum(v == "pass" for v in verdicts), sum(v == "not_run" for v in verdicts)
