@@ -75,3 +75,33 @@ def test_sec1_sees_an_auth_check_one_import_away(tmp_path):
 def test_sec1_still_flags_a_helper_that_checks_nothing(tmp_path):
     helper = "export async function getSessionUser() {\n  return { id: 'anyone' };\n}\nexport function other() { return auth.getUser(); }\n"
     assert len(sec1(tmp_path, helper)) == 1      # the auth call in a DIFFERENT function does not count
+
+
+def ssrf(tmp: Path, name: str, src: str) -> list[str]:
+    f = tmp / name
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(src, encoding="utf-8")
+    subprocess.run([sys.executable, "-I", str(SCAN), "--target", str(tmp), "--findings", str(tmp / "f.csv"), "--report", str(tmp / "r.md")],
+                   capture_output=True, text=True, cwd=tmp)
+    return [ln for ln in (tmp / "f.csv").read_text(encoding="utf-8").splitlines() if ",ssrf," in ln]
+
+
+def test_sec4_ignores_a_browser_fetch_of_a_same_origin_path(tmp_path):
+    """CAPE R1: planner-client.tsx ("use client") fetch(draftUrl) with draftUrl = `/api/staging/drafts/${id}`."""
+    src = '"use client";\nexport async function f(id: string) {\n  const draftUrl = `/api/staging/drafts/${id}`;\n  return fetch(draftUrl);\n}\n'
+    assert ssrf(tmp_path, "app/planner/planner-client.tsx", src) == []
+
+
+def test_sec4_ignores_a_server_fetch_of_a_same_origin_path_built_in_the_file(tmp_path):
+    src = 'export async function GET() {\n  const url = "/api/health";\n  return fetch(url);\n}\n'
+    assert ssrf(tmp_path, "app/api/x/route.ts", src) == []
+
+
+def test_sec4_still_flags_server_code_fetching_a_url_from_input(tmp_path):
+    src = 'export async function POST(req: Request) {\n  const { target } = await req.json();\n  return fetch(target);\n}\n'
+    assert len(ssrf(tmp_path, "app/api/proxy/route.ts", src)) == 1
+
+
+def test_sec4_still_flags_a_protocol_relative_url(tmp_path):
+    src = 'export async function GET() {\n  const url = "//evil.example/x";\n  return fetch(url);\n}\n'
+    assert len(ssrf(tmp_path, "app/api/y/route.ts", src)) == 1

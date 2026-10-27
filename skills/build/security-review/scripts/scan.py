@@ -13,7 +13,8 @@ Detectors (file:line evidence; secrets are redacted in the evidence column):
   SEC2 raw-sql-interpolation    critical  sql`…${plain}` (a ${helper(x)} call is treated as parameterised),
                                           query(`…${…}`), "select … " + variable
   SEC3 secret-in-code           critical  sk-…, JWT (eyJ….), AWS AKIA… literals
-  SEC4 ssrf-user-url            high      fetch(<identifier>) — URL is a variable, not a literal (heuristic)
+  SEC4 ssrf-user-url            high      fetch(<identifier>) in server code — URL is a variable, not a literal
+                                          or a same-origin path built in the file (heuristic; "use client" skipped)
   SEC5 dangerous-html           medium    dangerouslySetInnerHTML
   SEC6 rls-bypass-in-handler    high      service-role client used in a route handler or server action; a line that
                                           carries `// rls-lint: allow — <reason>` (the marker rls_lint.py honours, e.g.
@@ -67,6 +68,8 @@ def git_ignored(root: Path, rel: Path) -> bool:
 SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
 USE_SERVER = re.compile(r"^\s*['\"]use server['\"]")
+USE_CLIENT = re.compile(r"\A(?:\s*(?://[^\n]*|/\*.*?\*/))*\s*['\"]use client['\"]", re.S)   # the directive must come first
+SAME_ORIGIN = r"\s*=\s*(?:`/(?!/)|'/(?!/)|\"/(?!/))"   # const url = `/api/...` — a path on this origin, never another host
 EXPORT_FN = re.compile(r"^[ \t]*export\s+(?:default\s+)?async\s+function\b|^[ \t]*export\s+const\s+\w+\s*=\s*async\b")
 AUTH_CHECK = re.compile(r"auth\.getUser\(|getSession\(|requireUser\(|requireRole\(|getClaims\(")
 RAW_SQL = re.compile(r"sql`[^`]*\$\{\s*[^}(]*\}|\.(?:query|execute|raw|unsafe)\(\s*`[^`]*\$\{|"
@@ -229,7 +232,11 @@ def scan_file(path: str, info: dict, files: dict | None = None, root: Path | Non
                 add("SEC3", ln, text.replace(m.group(0), redact(m.group(0))))
         if ext != ".sql":
             m = FETCH_VAR.search(text)
-            if m and not m.group(1).startswith("process.env"):
+            # SSRF is the SERVER fetching an attacker-chosen URL. A browser fetch ("use client") cannot reach the
+            # server's network, and a variable built in this file from a same-origin path ("/api/…") is not
+            # user-chosen. Found on the CAPE R1 run: a client component's fetch(draftUrl) was a high finding.
+            if m and not m.group(1).startswith("process.env") and not USE_CLIENT.search(full) \
+                    and not re.search(rf"\b(?:const|let|var)\s+{re.escape(m.group(1))}{SAME_ORIGIN}", full):
                 add("SEC4", ln, text)
             if DANGEROUS_HTML.search(text):
                 add("SEC5", ln, text)
