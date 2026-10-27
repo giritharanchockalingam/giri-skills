@@ -105,7 +105,7 @@ def test_the_reviewer_reviews_a_copy_and_may_run_commands_only_through_the_sandb
     argv = json.loads((tmp_path / "bin" / "argv.json").read_text())
     allowed = argv[argv.index("--allowedTools") + 1: argv.index("--append-system-prompt")]
     bash = [t for t in allowed if t.startswith("Bash")]
-    assert bash == [f"Bash(python3 {REPO / 'scripts' / 'sandbox.py'} exec --dir {sdir / 'acceptance' / 'review-copy-1'}:*)"]
+    assert bash == [f"Bash(python3 {REPO / 'scripts' / 'sandbox.py'} exec --dir {sdir / 'acceptance' / 'review-copy-1'}:*)"]   # no node_modules here
     assert (sdir / "acceptance" / "review-copy-1" / "server.ts").is_file()          # a disposable copy, not the checkout
     prompt = argv[argv.index("-p") + 1]
     assert "CAPE-2.0-GOAL.md" in prompt and "never edit the application to make it pass" in prompt

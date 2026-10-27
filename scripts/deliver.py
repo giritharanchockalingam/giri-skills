@@ -1674,7 +1674,10 @@ class Run:
             (copy / "node_modules").symlink_to((target / "node_modules").resolve())
         result = adir / f"round-{round_no}-{ACCEPT_JSON}"
         result.unlink(missing_ok=True)
-        sb = f"python3 {HERE / 'sandbox.py'} exec --dir {copy}"
+        # the copy links node_modules to the checkout's; that folder must be visible (read-only) inside the box, or
+        # every test command fails there (found on the second R3 calibration: 8 commands, "test tooling unavailable")
+        nm = (target / "node_modules").resolve()
+        sb = f"python3 {HERE / 'sandbox.py'} exec --dir {copy}" + (f" --ro {nm}" if nm.is_dir() else "")
         crit = "\n".join(f"- {label}: {path}" for label, path in sources)
         prompt = (
             f"Review the application in the current folder ({copy}) against these acceptance sources (read every one first):\n{crit}\n\n"
