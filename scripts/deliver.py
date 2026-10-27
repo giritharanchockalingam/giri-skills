@@ -1679,6 +1679,19 @@ class Run:
         nm = (target / "node_modules").resolve()
         sb = f"python3 {HERE / 'sandbox.py'} exec --dir {copy}" + (f" --ro {nm}" if nm.is_dir() else "")
         crit = "\n".join(f"- {label}: {path}" for label, path in sources)
+        prev = read_json(sdir / ACCEPT_JSON) if round_no > 1 and (sdir / ACCEPT_JSON).is_file() else None
+        fixed_ids = list((prev or {}).get("fixed_ids") or [str(c.get("id")) for c in (prev or {}).get("criteria") or []])
+        recheck = ""
+        if prev:
+            # the goalposts stay put: round N re-verifies round 1's criteria (found on the R7 run: every round wrote new
+            # criteria, so each repair met a different target and the loop could not converge)
+            recheck = ("\n\nThis is review round " + str(round_no) + ". Re-verify EXACTLY these criteria (same id and text) and the "
+                       "earlier defects, with fresh evidence; the builder has tried to fix them. You may add new defects; new "
+                       "criteria you add are recorded but do not decide this round.\n" +
+                       "\n".join(f"- {c.get('id')} (must={bool(c.get('must'))}): {c.get('text')} [last round: {c.get('verdict')}]"
+                                 for c in prev.get("criteria") or [] if str(c.get("id")) in fixed_ids) +
+                       ("\nEarlier defects:\n" + "\n".join(f"- {x.get('severity')}: {x.get('title')} at {x.get('location')}"
+                                                          for x in prev.get("defects") or []) if prev.get("defects") else ""))
         prompt = (
             f"Review the application in the current folder ({copy}) against these acceptance sources (read every one first):\n{crit}\n\n"
             f"Run any command ONLY as `{sb} -- <command>` (e.g. `{sb} -- npx vitest run tests/x.test.ts`); it runs in the "
@@ -1696,7 +1709,7 @@ class Run:
             "learner or the system takes) and check that tests named for a behaviour would fail without it. MET needs evidence "
             "you produced; anything you could not verify is UNVERIFIED, never MET. A defect needs a concrete confirmation (a "
             "failing experiment or a reasoned scenario through named code). Do not change files outside this folder and never "
-            "edit the application to make it pass.")
+            "edit the application to make it pass." + recheck)
         (adir / f"round-{round_no}-prompt.txt").write_text(prompt, encoding="utf-8")
         model = ["--model", self.args.review_model] if getattr(self.args, "review_model", None) else \
                 (["--model", self.args.model] if getattr(self.args, "model", None) else [])
@@ -1736,7 +1749,12 @@ class Run:
             if c["verdict"] == "MET" and not str(c.get("evidence") or "").strip():
                 c["verdict"], c["downgraded"] = "UNVERIFIED", "MET without evidence"
         defects = [x for x in data.get("defects") or [] if isinstance(x, dict)]
-        blocking = [c for c in crits if c["verdict"] == "NOT_MET" or (c["verdict"] == "PARTLY" and c.get("must"))]
+        if fixed_ids:   # criteria first written after round 1 are recorded, not blocking
+            for c in crits:
+                if str(c.get("id")) not in fixed_ids:
+                    c["added_in_round"] = round_no
+        blocking = [c for c in crits if not c.get("added_in_round") and
+                    (c["verdict"] == "NOT_MET" or (c["verdict"] == "PARTLY" and c.get("must")))]
         severe = [x for x in defects if str(x.get("severity", "")).lower() in ("critical", "high")]
         counts = {v: sum(c["verdict"] == v for c in crits) for v in VERDICTS}
         verdict = "fail" if (blocking or severe) else "pass"
@@ -1744,6 +1762,7 @@ class Run:
                    "file": str(result.relative_to(sdir))}
         rec.setdefault("acceptance_rounds", []).append(summary)
         write_json(sdir / ACCEPT_JSON, {"criteria": crits, "defects": defects, "summary": data.get("summary", ""), "round": round_no,
+                                        "fixed_ids": fixed_ids or [str(c.get("id")) for c in crits],
                                         "verdict": verdict, "sources": [{"label": l, "path": str(p_)} for l, p_ in sources]})
         lines = [f"# Acceptance review — round {round_no}: {verdict.upper()}", "",
                  "Independent reviewer (a fresh model session that never saw the builder's notes); every MET carries evidence it produced; "
@@ -3800,6 +3819,10 @@ def main(argv=None) -> int:
                   "repo_input": repo_key, "out": str(out), "started_at": (prev_record or {}).get("started_at") or now(),
                   "resumed": bool(prev_record), "stages": list((prev_record or {}).get("stages") or []),
                   "argv": base_argv, "cwd": os.getcwd(), "resume_command": resume_command(base_argv)}
+    if (prev_record or {}).get("llm"):
+        # model spend accumulates across resumes (found on the R7 harness run: a resumed slice reported only the spend
+        # since the resume, and the goal budget under-counted by $4)
+        run.record["llm"] = dict(prev_record["llm"])
     rejection = active_rejection(out, approvals, bool(args.approve_all))
     if rejection:
         # `deliver.py reject` stands until the same step is approved again (an approval recorded after it, or --approve-all)

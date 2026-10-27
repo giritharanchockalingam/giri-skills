@@ -134,3 +134,22 @@ def test_a_reviewer_that_experiments_after_the_nudge_is_accepted_and_counted(tmp
     rec = {}
     run.run_acceptance(target, sdir, rec)
     assert rec["acceptance"]["verdict"] == "pass" and rec["acceptance"]["experiments"] == 1
+
+
+def test_later_rounds_re_verify_round_one_criteria_and_new_ones_do_not_block(tmp_path, monkeypatch):
+    """R7 run: each round wrote new criteria, so the repair loop chased a moving target."""
+    first = {"criteria": [{"id": "C1", "text": "PS wins", "must": True, "verdict": "NOT_MET", "evidence": "E1 failed"}], "defects": [], "summary": ""}
+    run, target, sdir = setup(tmp_path, monkeypatch, first)
+    rec = {}
+    with pytest.raises(d.StepError):
+        run.run_acceptance(target, sdir, rec)
+    second = {"criteria": [{"id": "C1", "text": "PS wins", "must": True, "verdict": "MET", "evidence": "E1 passes now"},
+                           {"id": "C9", "text": "a new idea", "must": True, "verdict": "NOT_MET", "evidence": "E9"}], "defects": [], "summary": ""}
+    fake_reviewer(tmp_path / "bin", second)
+    run.run_acceptance(target, sdir, rec)                                   # C9 is recorded, not blocking
+    assert rec["acceptance"]["verdict"] == "pass"
+    saved = json.loads((sdir / "acceptance.json").read_text())
+    assert saved["fixed_ids"] == ["C1"] and next(c for c in saved["criteria"] if c["id"] == "C9")["added_in_round"] == 2
+    prompt = json.loads((tmp_path / "bin" / "argv.json").read_text())
+    prompt = prompt[prompt.index("-p") + 1]
+    assert "Re-verify EXACTLY these criteria" in prompt and "C1 (must=True): PS wins [last round: NOT_MET]" in prompt
