@@ -173,7 +173,11 @@ NONINTERACTIVE_RULES = ("You are running non-interactively inside a delivery pip
                         "anything. Shell commands are not available. Inspect with Read, Grep and Glob; create and change files "
                         "only with Write and Edit, writing every file the task asks for at the exact paths given. Do not write "
                         "helper scripts. Where something is unknown, record it in the file as the task's rules say instead of "
-                        "asking. Finish by writing the files, then reply with one short summary.")
+                        "asking. The pipeline itself runs the project's tests, then `npm run bench` when package.json "
+                        "defines a `bench` script, then opens the app in a browser: a benchmark must be self-contained (it "
+                        "creates, migrates and seeds whatever it needs from the environment, e.g. DATABASE_URL) and writes its "
+                        "own results file; never write results you did not measure. "
+                        "Finish by writing the files, then reply with one short summary.")
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
@@ -193,6 +197,7 @@ TEST_TAIL = 4 * 1024                                # tests.json carries the las
 TEST_TAIL_IN_ERROR = 400                            # how much of that the step error (the gate detail) quotes
 INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
 TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
+BENCH_LOG, BENCH_TIMEOUT_S = "bench.log", 900                       # `npm run bench`, run by the pipeline (see run_bench)
 VISUAL_DIR, VISUAL_TIMEOUT_S, VISUAL_MAX_ROUTES = "visual", 900, 6   # scripts/visual_check.py: a person's first look
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # local mode (docs/DELIVERY-PIPELINES.md → Local mode): the run registry and the local approval files, no portal needed
@@ -1465,9 +1470,35 @@ class Run:
             raise StepError("visual check failed: " + "; ".join(rec["visual"]["failures"][:6] or [rec["visual"]["detail"]])
                             + f" — screenshots in {out}")
 
+    def run_bench(self, target: Path, sdir: Path, rec: dict) -> bool:
+        """After the tests pass: `npm run bench` when package.json defines it. Found on the CAPE 2.0 chain (R1): the
+        brief asked for p50/p95/p99 and the builder, which has no shell, honestly wrote "not yet measured" — nothing in
+        the pipeline ever ran it. The output goes to <step>/bench.log, the record to bench.json and run.json `bench`;
+        a non-zero exit fails the step (a repair turn for claude-code). Returns True when a benchmark ran."""
+        pkg = target / "package.json"
+        try:
+            scripts = (json.loads(pkg.read_text(encoding="utf-8")).get("scripts") or {}) if pkg.is_file() else {}
+        except json.JSONDecodeError:
+            scripts = {}
+        if "bench" not in scripts:
+            rec["bench"] = {"skipped": "package.json defines no bench script"}
+            return False
+        t0 = time.time()
+        code, output = self._sh("npm run bench", target, BENCH_TIMEOUT_S)
+        (sdir / BENCH_LOG).write_text(output, encoding="utf-8")
+        info = {"cmd": "npm run bench", "exit": code, "duration_s": round(time.time() - t0, 3), "tail": output_tail(output, TEST_TAIL),
+                "log": BENCH_LOG}
+        write_json(sdir / "bench.json", info)
+        rec["bench"] = {k: v for k, v in info.items() if k != "tail"}
+        if code != 0:
+            raise StepError(f"benchmark failed: `npm run bench` exit {code}; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+        return True
+
     def verify(self, cmd: str | None, reason: str, target: Path, sdir: Path, rec: dict) -> None:
-        """What judges the builder's code: the project's tests, then (when they pass) a look at the running app."""
+        """What judges the builder's code: the project's tests, then (when they pass) its benchmark, then a look at
+        the running app."""
         self.run_tests(cmd, reason, target, sdir, rec)
+        self.run_bench(target, sdir, rec)
         self.run_visual(target, sdir, rec)
 
     def record_llm_tests(self, cmd: str, sdir: Path, rec: dict) -> None:
@@ -2068,6 +2099,8 @@ class Run:
             for turn in range(repairs + 1):
                 try:
                     self.verify(tcmd, treason, target, sdir, rec)
+                    if (rec.get("bench") or {}).get("cmd"):
+                        capture(r.stdout)                         # the results file the benchmark wrote joins the diff
                     break
                 except StepError as failure:
                     if turn == repairs or (not tcmd and not str(failure).startswith("visual check")):
@@ -2258,6 +2291,7 @@ class Run:
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
                 self.baseline_row(), "",
                 self.tests_row(), "",
+                self.bench_row(), "",
                 self.visual_row(), "",
                 self.honesty_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
@@ -2388,6 +2422,20 @@ class Run:
         stubs = t.get("unfilled_stubs") or []
         warn = f" UNFILLED: {len(stubs)} scaffolded test file(s) still hold only todo stubs ({', '.join(stubs[:4])})." if stubs else ""
         return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}.{warn}"
+
+    def bench_row(self) -> str:
+        """The Benchmark line of EVIDENCE.md: whether the pipeline ran `npm run bench`, and its result."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "bench" in st), None)
+        if not code:
+            return "Benchmark (run by the pipeline): NOT RUN — no code step reached it."
+        b = code["bench"]
+        if b.get("skipped"):
+            return f"Benchmark (run by the pipeline): NOT RUN ({b['skipped']})."
+        sdir = self.step_dirs.get(code["id"])
+        log = sdir / str(b.get("log") or "") if sdir else None
+        link = f" — [{log.name}]({log.relative_to(self.evidence)})" if log and log.is_file() else ""
+        return f"Benchmark (run by the pipeline): `{b.get('cmd')}` exit {b.get('exit')} in {b.get('duration_s')} s{link}."
 
     def visual_row(self) -> str:
         """The Visual line of EVIDENCE.md: what a browser saw when it opened the built app (scripts/visual_check.py)."""

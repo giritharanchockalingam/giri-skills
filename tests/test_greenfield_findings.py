@@ -105,3 +105,45 @@ def test_sec4_still_flags_server_code_fetching_a_url_from_input(tmp_path):
 def test_sec4_still_flags_a_protocol_relative_url(tmp_path):
     src = 'export async function GET() {\n  const url = "//evil.example/x";\n  return fetch(url);\n}\n'
     assert len(ssrf(tmp_path, "app/api/y/route.ts", src)) == 1
+
+
+class _Args:
+    builder = "claude-code"
+
+
+def _run_for(tmp: Path):
+    r = d.Run.__new__(d.Run)
+    r.args = _Args()
+    return r
+
+
+def test_the_pipeline_runs_a_declared_benchmark_and_records_it(tmp_path):
+    """CAPE R1: the brief asked for p50/p95/p99; the builder (no shell) wrote 'not yet measured' and nothing ran it."""
+    import json as _json
+    t = tmp_path / "app"
+    t.mkdir()
+    (t / "bench.js").write_text("require('fs').writeFileSync('bench.md', 'p95 1 ms\\n'); console.log('p95 1 ms')\n", encoding="utf-8")
+    (t / "package.json").write_text(_json.dumps({"scripts": {"bench": "node bench.js"}}), encoding="utf-8")
+    sdir, rec = tmp_path / "s", {}
+    sdir.mkdir()
+    assert _run_for(tmp_path).run_bench(t, sdir, rec) is True
+    assert rec["bench"]["exit"] == 0 and (t / "bench.md").read_text() == "p95 1 ms\n" and "p95 1 ms" in (sdir / "bench.log").read_text()
+
+
+def test_a_failing_benchmark_fails_the_step(tmp_path):
+    import json as _json
+    import pytest
+    t = tmp_path / "app"
+    t.mkdir()
+    (t / "package.json").write_text(_json.dumps({"scripts": {"bench": "node -e \"process.exit(3)\""}}), encoding="utf-8")
+    (tmp_path / "s").mkdir()
+    with pytest.raises(d.StepError, match="benchmark failed"):
+        _run_for(tmp_path).run_bench(t, tmp_path / "s", {})
+
+
+def test_no_bench_script_is_recorded_as_not_run(tmp_path):
+    t = tmp_path / "app"
+    t.mkdir()
+    (t / "package.json").write_text('{"scripts": {"test": "vitest"}}', encoding="utf-8")
+    rec = {}
+    assert _run_for(tmp_path).run_bench(t, tmp_path, rec) is False and "no bench script" in rec["bench"]["skipped"]
