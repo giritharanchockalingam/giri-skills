@@ -1043,10 +1043,68 @@ class Run:
                         if (row.get("severity") or "") == "high" and (row.get("status") or "new") != "known"]
             rec["new_high_count"] = len(new_high)
             rec["new_high"] = new_high[:NEW_HIGH_LISTED]
+        if r.returncode == 1 and step.get("gate") and fcsv.is_file() and self.apply_waivers(step, fcsv, sdir, rec):
+            return                               # every finding that failed the gate is waived, with a reason and an owner
         if r.returncode == 1 and step.get("gate"):
             why = (new_high_detail(rec["new_high_count"], rec["new_high"]) if rec.get("new_high_count")
                    else "; ".join(rec.get("failed_checks") or ["see report"]))
             raise StepError(f"gate step {step['skill']} said no (exit 1): {why}"[:GATE_DETAIL_LIMIT])
+
+    def load_waivers(self) -> tuple[list[dict], list[str]]:
+        """docs/HARNESS.md layer 8: --waivers FILE, else <repo>/.factory/waivers.json. A waiver needs rule, file,
+        reason and by; an expired or incomplete one is refused (and listed)."""
+        path = Path(self.args.waivers) if getattr(self.args, "waivers", None) else (self.repo / ".factory" / "waivers.json" if self.repo else None)
+        if not path or not path.is_file():
+            return [], []
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            return [], [f"{path}: not JSON ({e})"]
+        items = raw.get("waivers", raw) if isinstance(raw, dict) else raw
+        ok, refused, today = [], [], time.strftime("%Y-%m-%d")
+        for w in items if isinstance(items, list) else []:
+            missing = [k for k in ("rule", "file", "reason", "by") if not str((w or {}).get(k) or "").strip()]
+            if missing:
+                refused.append(f"{w}: missing {', '.join(missing)}")
+            elif w.get("expires") and str(w["expires"]) < today:
+                refused.append(f"{w.get('rule')} {w.get('file')}: expired {w['expires']}")
+            else:
+                ok.append(w)
+        return ok, refused
+
+    def apply_waivers(self, step: dict, fcsv: Path, sdir: Path, rec: dict) -> bool:
+        """A gate skill said no. True when every finding that can fail it (new high/critical) is covered by a valid
+        waiver: the step then passes as WAIVED and waived.csv records each finding with its reason and owner.
+        Critical findings are never waivable. Found on greenfield G3 and CAPE R1: two lexical false positives
+        hard-stopped whole runs with no way to dispute them except editing the skill."""
+        waivers, refused = self.load_waivers()
+        if refused:
+            rec["waivers_refused"] = refused[:10]
+        if not waivers:
+            return False
+        rows = [row for row in csv.DictReader(io.StringIO(fcsv.read_text(encoding="utf-8-sig")))
+                if (row.get("rule") or "").strip() and not (row.get("rule") or "").startswith("#")]
+        blocking = [row for row in rows if (row.get("severity") or "").lower() in ("high", "critical") and (row.get("status") or "new") != "known"]
+        if not blocking or any((row.get("severity") or "").lower() == "critical" for row in blocking):
+            return False
+        def match(row: dict) -> dict | None:
+            for w in waivers:
+                if w["rule"] == row.get("rule") and w["file"] == row.get("file") and \
+                        (not str(w.get("line") or "").strip() or str(w.get("line")) == str(row.get("line"))):
+                    return w
+            return None
+        pairs = [(row, match(row)) for row in blocking]
+        if any(w is None for _, w in pairs):
+            rec["waived_partial"] = sum(w is not None for _, w in pairs)
+            return False
+        with open(sdir / "waived.csv", "w", encoding="utf-8", newline="") as fh:
+            wr = csv.writer(fh)
+            wr.writerow(["rule", "severity", "file", "line", "reason", "by", "expires"])
+            for row, w in pairs:
+                wr.writerow([row.get("rule"), row.get("severity"), row.get("file"), row.get("line"), w["reason"], w["by"], w.get("expires", "")])
+        rec["waived"] = [f"{row.get('rule')} {row.get('file')}:{row.get('line')} — {w['reason']} (by {w['by']})" for row, w in pairs][:10]
+        rec["skill_exit"], rec["exit"] = rec.get("exit"), 0     # the skill said no; the waivers answer every finding it named
+        return True
 
     def step_compose(self, step: dict, sdir: Path, rec: dict) -> None:
         fn = DERIVE.get(str(step.get("derive")))
@@ -2511,7 +2569,8 @@ class Run:
             if not s or s.get("status") != "ok":
                 return "fail", f"step '{gate['step']}' did not complete: {s.get('error', '') if s else 'not run'}"
             ok = s.get("exit") == 0
-            return ("pass" if ok else "fail"), f"step '{gate['step']}' exit {s.get('exit')}" + ("" if ok else ": " + "; ".join(s.get("failed_checks") or ["see its report"]))
+            waived = f" — WAIVED {len(s['waived'])}: " + "; ".join(s["waived"][:3]) if s.get("waived") else ""
+            return ("pass" if ok else "fail"), f"step '{gate['step']}' exit {s.get('exit')}{waived}" + ("" if ok else ": " + "; ".join(s.get("failed_checks") or ["see its report"]))
         if kind == "approval":
             s = steps.get(gate["step"])
             ok = bool(s and s.get("status") == "approved")
@@ -3264,6 +3323,7 @@ def build_args(argv=None):
     ap.add_argument("--sandbox-image", default="hostroot", help="docker image (default hostroot: the host toolchain mounted read-only)")
     ap.add_argument("--sandbox-cpus", default="2")
     ap.add_argument("--sandbox-memory", default="4g")
+    ap.add_argument("--waivers", default=None, help="gate waivers file (default: <repo>/.factory/waivers.json); rule, file, reason, by[, line, expires]")
     ap.add_argument("--acceptance", choices=["auto", "on", "off"], default="auto",
                     help="independent requirements review after tests/visual pass (auto: for model builders)")
     ap.add_argument("--review-model", default=None, help="model for the acceptance reviewer (default: --model)")
