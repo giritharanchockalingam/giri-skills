@@ -72,6 +72,21 @@ python3 scripts/pipeline_eval.py compare --out runs/eval-$(date +%F)
 Requirements: Docker for `--sandbox docker`; with a local Postgres, the box reaches it through its unix socket, so the
 database user needs password (not peer) authentication on the socket (`local all <user> scram-sha-256` in pg_hba.conf).
 
+## Calibration of the acceptance gate (live, Oct 27 2026)
+
+Three runs of the gate on the CAPE R3 build, which an independent review had found to violate the goal's
+non-negotiable (revalidation stamps the newest version on a result computed from older data; the commit is accepted).
+
+| Run | Gate change | Verdict | Experiments | Critical defect found | Other real defects | Cost |
+|---|---|---|---|---|---|---|
+| 1 | reviewer may experiment | FAIL | 0 (read only) | no | dead cache (high), handler does not revalidate, global over-invalidation | $0.60 |
+| 2 | experiments required (one nudge, then refused) | FAIL | 8, all broken by a mount bug (fixed) | **yes** (as medium) | + per-learner versions ignore a second learner (high) | ~$0.70 |
+| 3 | node_modules visible in the box | FAIL | 3 working | no | + a PS event breaks idempotent retry of a committed plan (verified by experiment) | $0.78 |
+
+Reading: the gate stopped the defective slice every time, for real defects backed by evidence, at under $1 a review.
+It does **not** reliably find the single most important defect (1 of 3). Next steps for this layer: two independent
+reviewers per round (union of findings), and reviewer probes written from the goal's non-negotiables before review.
+
 ## Known limits
 
 | Limit | Consequence |
@@ -80,3 +95,4 @@ database user needs password (not peer) authentication on the socket (`local all
 | The openai-compat builder's repair command runs through its own module, not the sandbox | Use `--builder claude-code` with `--sandbox docker` |
 | Slices run one at a time | Independent slices are not yet forked in parallel |
 | Docs (C4, ADRs, rollout) are judged only by the acceptance reviewer, not by a dedicated gate | A document can pass with generic content if the criteria do not ask for specifics |
+| One reviewer per round is non-deterministic | It stops defective work reliably but may miss the worst defect (calibration above) |
