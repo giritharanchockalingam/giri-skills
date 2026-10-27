@@ -19,13 +19,18 @@ sys.modules["deliver_acc"] = d
 spec.loader.exec_module(d)
 
 
-def fake_reviewer(bin_dir: Path, review: dict | None) -> None:
+def fake_reviewer(bin_dir: Path, review: dict | None, experiments: str = "always") -> None:
+    """experiments: 'always' runs one sandboxed command per call, 'never' none, 'when-nudged' only on the retry."""
     bin_dir.mkdir(parents=True, exist_ok=True)
     exe = bin_dir / "claude"
     exe.write_text(
-        f"#!{sys.executable}\nimport sys, json, re\n"
+        f"#!{sys.executable}\nimport sys, json, re, subprocess\n"
         f"open({str(bin_dir / 'argv.json')!r}, 'w').write(json.dumps(sys.argv))\n"
         "prompt = sys.argv[sys.argv.index('-p') + 1]\n"
+        f"mode = {experiments!r}\n"
+        "if mode == 'always' or (mode == 'when-nudged' and 'without running a single experiment' in prompt):\n"
+        "    sb = re.search(r'`(python3 \\S+sandbox\\.py exec --dir \\S+) -- ', prompt).group(1)\n"
+        "    subprocess.run(sb.split() + ['--', 'true'], check=True)\n"
         "path = re.search(r'Write (\\S+acceptance\\.json) as JSON', prompt).group(1)\n"
         f"review = {review!r}\n"
         "if review is not None:\n    open(path, 'w').write(json.dumps(review))\n"
@@ -112,3 +117,20 @@ def test_manual_builders_are_not_reviewed_by_default_and_say_so(tmp_path, monkey
     rec = {}
     run.run_acceptance(target, sdir, rec)
     assert rec["acceptance"]["verdict"] == "not_run" and "manual builder's diff was not reviewed" in rec["acceptance"]["detail"]
+
+
+def test_a_review_with_no_experiment_is_sent_back_once_then_refused(tmp_path, monkeypatch):
+    """CAPE R3 calibration: a reviewer that only read code missed the critical stale-data defect."""
+    run, target, sdir = setup(tmp_path, monkeypatch, GOOD)
+    fake_reviewer(tmp_path / "bin", GOOD, experiments="never")
+    with pytest.raises(d.ReviewerError, match="ran no experiment"):
+        run.run_acceptance(target, sdir, {})
+    assert run.record["llm"]["calls"] == 2                     # the nudge was tried before refusing
+
+
+def test_a_reviewer_that_experiments_after_the_nudge_is_accepted_and_counted(tmp_path, monkeypatch):
+    run, target, sdir = setup(tmp_path, monkeypatch, GOOD)
+    fake_reviewer(tmp_path / "bin", GOOD, experiments="when-nudged")
+    rec = {}
+    run.run_acceptance(target, sdir, rec)
+    assert rec["acceptance"]["verdict"] == "pass" and rec["acceptance"]["experiments"] == 1

@@ -1686,10 +1686,14 @@ class Run:
             f"\"defects\": [{{\"severity\": \"critical|high|medium|low\", \"title\": \"...\", \"location\": \"file:line\", \"confirmed_by\": \"how\"}}], "
             f"\"summary\": \"three sentences\"}}.\n"
             "Rules: one criterion per testable requirement of THIS change (the brief and PRD; use the goal document for the "
-            "non-negotiables this change touches); must=true for requirements the sources state as mandatory. MET needs evidence "
-            "you produced; anything you could not verify is UNVERIFIED, never MET. A defect needs a concrete confirmation "
-            "(a failing experiment or a reasoned scenario through named code). Do not change files outside this folder and "
-            "never edit the application to make it pass.")
+            "non-negotiables this change touches); must=true for requirements the sources state as mandatory. For every must "
+            "criterion about behaviour, write and RUN an experiment that would fail if the criterion were not met, and cite the "
+            "command and its result; reading code is not enough. Hunt end to end for violations of the goal's non-negotiables "
+            "(drive the real services: e.g. change data the way the outside world would, then follow it through every path the "
+            "learner or the system takes) and check that tests named for a behaviour would fail without it. MET needs evidence "
+            "you produced; anything you could not verify is UNVERIFIED, never MET. A defect needs a concrete confirmation (a "
+            "failing experiment or a reasoned scenario through named code). Do not change files outside this folder and never "
+            "edit the application to make it pass.")
         (adir / f"round-{round_no}-prompt.txt").write_text(prompt, encoding="utf-8")
         model = ["--model", self.args.review_model] if getattr(self.args, "review_model", None) else \
                 (["--model", self.args.model] if getattr(self.args, "model", None) else [])
@@ -1697,8 +1701,25 @@ class Run:
                *[x for _, pth in sources for x in ("--add-dir", str(pth.parent.resolve()))],
                "--allowedTools", "Read", "Write", "Edit", "Glob", "Grep", "LS", f"Bash({sb}:*)",
                "--append-system-prompt", REVIEWER_RULES, "-p", prompt, "--output-format", "json"]
-        r = self.run_claude(cmd, copy, ACCEPT_TIMEOUT_S, f"acceptance review {round_no}")
+        cmdlog = adir / f"round-{round_no}-commands.jsonl"
+        cmdlog.unlink(missing_ok=True)
+        os.environ["SF_SANDBOX_LOG"] = str(cmdlog)     # sandbox.py exec appends every command the reviewer runs
+        try:
+            r = self.run_claude(cmd, copy, ACCEPT_TIMEOUT_S, f"acceptance review {round_no}")
+            ran = cmdlog.read_text(encoding="utf-8").splitlines() if cmdlog.is_file() else []
+            if not ran and result.is_file():
+                # a review that only read code missed the CAPE R3 critical defect (stale data committed): one more turn
+                nudge = (f"You wrote {result.name} without running a single experiment. Reading code is not enough: run the "
+                         f"experiments the rules ask for through `{sb} -- <command>`, then rewrite {result} with what they showed.")
+                cmd2 = cmd[:cmd.index("-p") + 1] + [prompt + "\n\n" + nudge] + cmd[cmd.index("-p") + 2:]
+                r = self.run_claude(cmd2, copy, ACCEPT_TIMEOUT_S, f"acceptance review {round_no} (experiments)")
+                ran = cmdlog.read_text(encoding="utf-8").splitlines() if cmdlog.is_file() else []
+        finally:
+            os.environ.pop("SF_SANDBOX_LOG", None)
         (adir / f"round-{round_no}-reply.txt").write_text((r.stdout or "") + "\n--- stderr ---\n" + (r.stderr or ""), encoding="utf-8")
+        if not ran:
+            raise ReviewerError(f"acceptance reviewer ran no experiment in the sandbox (round {round_no}): a review from reading "
+                                f"alone is not accepted")
         try:
             data = json.loads(result.read_text(encoding="utf-8"))
             crits = [c for c in data.get("criteria") or [] if isinstance(c, dict)]
@@ -1716,13 +1737,14 @@ class Run:
         severe = [x for x in defects if str(x.get("severity", "")).lower() in ("critical", "high")]
         counts = {v: sum(c["verdict"] == v for c in crits) for v in VERDICTS}
         verdict = "fail" if (blocking or severe) else "pass"
-        summary = {"round": round_no, "verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe),
+        summary = {"round": round_no, "verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe), "experiments": len(ran),
                    "file": str(result.relative_to(sdir))}
         rec.setdefault("acceptance_rounds", []).append(summary)
         write_json(sdir / ACCEPT_JSON, {"criteria": crits, "defects": defects, "summary": data.get("summary", ""), "round": round_no,
                                         "verdict": verdict, "sources": [{"label": l, "path": str(p_)} for l, p_ in sources]})
         lines = [f"# Acceptance review — round {round_no}: {verdict.upper()}", "",
-                 "Independent reviewer (a fresh model session that never saw the builder's notes); every MET carries evidence it produced.", "",
+                 "Independent reviewer (a fresh model session that never saw the builder's notes); every MET carries evidence it produced; "
+                 f"{len(ran)} experiment command(s) run in the sandbox (round-{round_no}-commands.jsonl).", "",
                  f"MET {counts['MET']} · PARTLY {counts['PARTLY']} · NOT MET {counts['NOT_MET']} · UNVERIFIED {counts['UNVERIFIED']} · "
                  f"defects {len(defects)} ({len(severe)} critical/high)", "", "| ID | Must | Verdict | Criterion | Evidence |", "|---|---|---|---|---|"]
         lines += [f"| {c.get('id', '')} | {'yes' if c.get('must') else ''} | {c['verdict']} | {str(c.get('text', '')).replace('|', '¦')[:200]} | "
@@ -1733,7 +1755,7 @@ class Run:
                       f"{str(x.get('confirmed_by', '')).replace('|', '¦')[:200]} |" for x in defects]
         lines += ["", f"Summary: {data.get('summary', '')}"]
         (sdir / ACCEPT_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
-        rec["acceptance"] = {"verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe), "md": ACCEPT_MD,
+        rec["acceptance"] = {"verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe), "md": ACCEPT_MD, "experiments": len(ran),
                              "rounds": round_no}
         if verdict == "fail":
             items = [f"{c.get('id')} {c['verdict']}: {c.get('text', '')} — {c.get('evidence', '')}"[:400] for c in blocking[:8]]

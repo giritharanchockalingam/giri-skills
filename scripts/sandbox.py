@@ -25,12 +25,14 @@ SF_SANDBOX (docker|none), SF_SANDBOX_IMAGE, SF_SANDBOX_CPUS, SF_SANDBOX_MEMORY, 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
@@ -192,12 +194,19 @@ def main(argv: list[str] | None = None) -> int:
     except SandboxError as e:
         print(f"sandbox: {e}", file=sys.stderr)
         return 2
+    log = os.environ.get("SF_SANDBOX_LOG")
+    t0, code = time.time(), 124
     try:
-        return subprocess.run(argv2, env=env, timeout=a.timeout).returncode
+        code = subprocess.run(argv2, env=env, timeout=a.timeout).returncode
+        return code
     except subprocess.TimeoutExpired:
         kill(argv2)
         print(f"sandbox: timed out after {a.timeout:.0f}s", file=sys.stderr)
         return 124
+    finally:
+        if log:                                 # the acceptance gate counts what the reviewer actually ran
+            with open(log, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"cmd": rest, "exit": code, "seconds": round(time.time() - t0, 1)}) + "\n")
 
 
 if __name__ == "__main__":

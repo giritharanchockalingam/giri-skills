@@ -41,15 +41,42 @@ requirements → architecture → build → evaluate → deploy → operate) and
 | The model never grades its own work | the reviewer is a separate session without the builder's narrative |
 | Limits are explicit | rounds, turns, budget, time, CPU, memory are recorded in the evidence header |
 
-## Status
+## Status (branch `harness-1`)
 
-| # | Layer | Status |
-|---|---|---|
-| 1 | Requirements verification gate | see git log on branch `harness-1` |
-| 2 | Goal decomposer + run DAG | |
-| 3 | Sandbox | |
-| 4 | Budget | |
-| 5 | Telemetry | |
-| 6 | Eval set | |
-| 7 | Human gate | |
-| 8 | Waivers | |
+| # | Layer | Status | Commit | Proven by |
+|---|---|---|---|---|
+| 1 | Requirements verification gate | Built | `deliver.py run_acceptance` | `tests/test_harness_acceptance.py` (7) + live calibration on the CAPE R3 build (see below) |
+| 2 | Goal decomposer + run DAG | Built | `scripts/harness.py` | `tests/test_harness_dag.py` (9): validation, order, crash-resume, approvals, budget |
+| 3 | Sandbox | Built (docker, hostroot image) | `scripts/sandbox.py` | `tests/test_harness_sandbox.py` (7, real containers); G1's 73 tests incl. 50-concurrent Postgres and its visual check pass inside |
+| 4 | Budget | Built | `deliver.py run_claude` | `tests/test_harness_budget_telemetry.py` |
+| 5 | Telemetry | Built (OTLP/JSON file + export) | `scripts/telemetry.py` | same file; export to a real local HTTP collector |
+| 6 | Eval set | Built (G1–G3 core) | `scripts/pipeline_eval.py`, `evals/pipeline/` | `tests/test_pipeline_eval.py` on the real G1 run records; baseline written by the first full eval run |
+| 7 | Human gate | Built | `harness.py approve`, `deliver.py approve` | `tests/test_harness_dag.py` |
+| 8 | Waivers | Built | `deliver.py apply_waivers` | `tests/test_harness_waivers.py` (5) |
+
+## Operating it
+
+```bash
+# one goal, end to end (dry: local copies; drop --dry to open real PRs that a person merges)
+python3 scripts/harness.py plan    --goal docs/GOAL.md --dir runs/goal-1 --name myapp --budget-usd 3
+python3 scripts/harness.py approve --dir runs/goal-1 --by "<your name>"
+python3 scripts/harness.py run     --dir runs/goal-1 --dry --sandbox docker --budget-usd 60 --model claude-sonnet-5-5
+python3 scripts/harness.py status  --dir runs/goal-1          # where it stopped and why; `approve --slice` when a slice waits
+
+# the pipeline's own regression check (before merging a pipeline or skill change)
+EVAL_DATABASE_URL_TEMPLATE='postgresql://u:p@127.0.0.1:5432/{db}' EVAL_DATABASE_ADMIN_URL='postgresql://u:p@127.0.0.1:5432/postgres' \
+  python3 scripts/pipeline_eval.py run --out runs/eval-$(date +%F) --tier core --sandbox docker --budget-usd 15
+python3 scripts/pipeline_eval.py compare --out runs/eval-$(date +%F)
+```
+
+Requirements: Docker for `--sandbox docker`; with a local Postgres, the box reaches it through its unix socket, so the
+database user needs password (not peer) authentication on the socket (`local all <user> scram-sha-256` in pg_hba.conf).
+
+## Known limits
+
+| Limit | Consequence |
+|---|---|
+| The builder (`claude -p`) runs on the host; only its file tools are allowed (no shell) | Its own process is not in the box; the code it writes never runs outside the box |
+| The openai-compat builder's repair command runs through its own module, not the sandbox | Use `--builder claude-code` with `--sandbox docker` |
+| Slices run one at a time | Independent slices are not yet forked in parallel |
+| Docs (C4, ADRs, rollout) are judged only by the acceptance reviewer, not by a dedicated gate | A document can pass with generic content if the criteria do not ask for specifics |
