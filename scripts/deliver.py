@@ -137,6 +137,8 @@ sys.path.insert(0, str(HERE))
 import check_output  # noqa: E402
 import llm_builder  # noqa: E402
 import skillmeta  # noqa: E402
+import sandbox as sbx  # noqa: E402
+import telemetry  # noqa: E402
 import validate_pipelines as vp  # noqa: E402
 
 EXIT_OK, EXIT_FAIL, EXIT_ARGS, EXIT_APPROVAL, EXIT_BUILDER = 0, 1, 2, 3, 4
@@ -157,6 +159,11 @@ STAGE_STATUS = {"passed": "succeeded", "failed": "blocked", "awaiting_approval":
                 "awaiting_builder": "blocked", "wiring_error": "blocked", "running": "running"}
 FILES_TXT = "files.txt"
 PLAN_MD, TASKS_CSV = "plan.md", "tasks.csv"
+# Top-level directories shared/stack-conventions.md defines (plus the test folders test-strategy-tdd writes): a plan may
+# create them even when the checkout does not have them yet. Found on greenfield G1/G3: server/services and
+# supabase/migrations were refused as "invented layout" although they are this stack's own conventions. src/ stays
+# out — in an app-router repo it IS the invented layout this check exists for.
+CONVENTION_DIRS = frozenset({"app", "components", "lib", "server", "supabase", "tests", "e2e", "public", "scripts", "docs", "types", "hooks", "styles"})
 PLAN_FILES = (PLAN_MD, TASKS_CSV)                   # what the plan-refine step produces (see step_plan_refine)
 PRD_MD = "prd-final.md"                              # what the prd-refine step produces (see step_prd_refine)
 PLAN_COLUMNS = ["id", "task", "acceptance", "test", "rollback", "files", "size", "repo_check"]   # spec-to-plan's tasks.csv
@@ -168,7 +175,15 @@ NONINTERACTIVE_RULES = ("You are running non-interactively inside a delivery pip
                         "anything. Shell commands are not available. Inspect with Read, Grep and Glob; create and change files "
                         "only with Write and Edit, writing every file the task asks for at the exact paths given. Do not write "
                         "helper scripts. Where something is unknown, record it in the file as the task's rules say instead of "
-                        "asking. Finish by writing the files, then reply with one short summary.")
+                        "asking. The pipeline itself runs the project's tests, then `npm run bench` when package.json "
+                        "defines a `bench` script, then opens the app in a browser: a benchmark must be self-contained (it "
+                        "creates, migrates and seeds whatever it needs from the environment, e.g. DATABASE_URL) and writes its "
+                        "own results file; never write results you did not measure. "
+                        "Finish by writing the files, then reply with one short summary.")
+REVIEWER_RULES = ("You are an independent reviewer running non-interactively inside a delivery pipeline. You did not write "
+                  "this code and you have not seen its author's notes. Judge whether it meets the acceptance criteria. Be "
+                  "skeptical: verify by reading code and running things, never by trusting docs, comments, test names or "
+                  "commit messages. Nobody can answer questions. Finish by writing the JSON file you are asked for.")
 BASELINE_DIR = "00-baseline"                        # <out>/evidence/00-baseline/<skill>/findings.csv — the pre-change findings
 NEW_HIGH_LISTED = 10                                # gate detail: the full count, the first 10 findings, "… and M more"
 GATE_DETAIL_LIMIT = 1200                            # the count comes first, so a long list never hides it
@@ -188,6 +203,10 @@ TEST_TAIL = 4 * 1024                                # tests.json carries the las
 TEST_TAIL_IN_ERROR = 400                            # how much of that the step error (the gate detail) quotes
 INSTALL_DIRS = ("node_modules", ".venv")            # never part of the diff or the PR: excluded via .git/info/exclude when .gitignore does not
 TESTS_JSON, TESTS_LOG, INSTALL_JSON, INSTALL_LOG = "tests.json", "tests.log", "install.json", "install.log"
+ACCEPT_DIR, ACCEPT_JSON, ACCEPT_MD, ACCEPT_TIMEOUT_S = "acceptance", "acceptance.json", "acceptance.md", 2400
+VERDICTS = ("MET", "PARTLY", "NOT_MET", "UNVERIFIED")
+BENCH_LOG, BENCH_TIMEOUT_S = "bench.log", 900                       # `npm run bench`, run by the pipeline (see run_bench)
+VISUAL_DIR, VISUAL_TIMEOUT_S, VISUAL_MAX_ROUTES = "visual", 900, 6   # scripts/visual_check.py: a person's first look
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 # local mode (docs/DELIVERY-PIPELINES.md → Local mode): the run registry and the local approval files, no portal needed
 REGISTRY_JSONL = "registry.jsonl"                   # <runs dir>/registry.jsonl — one line per status change of every run
@@ -286,6 +305,19 @@ def gate_rules_section(spec: dict) -> str:
                 lines.append(f"\n**{skill}** (high blocks the run; medium is reported):")
                 lines += [f"- {rid} {name} ({sev}): {desc.replace(chr(92) + chr(34), chr(34))}" for rid, name, sev, desc in rows]
                 break
+    review = ROOT / "skills" / "build" / "code-review-runner" / "scripts" / "review.py"
+    if review.is_file():   # the review gate: "CR-X": ("blocking"|"warning"|"info", "what", "fix")
+        rows = re.findall(r'^\s*"(CR-[A-Z-]+)":\s*\("(blocking|warning|info)",\s*"([^"]+)",\s*"([^"]+)"', review.read_text(encoding="utf-8"), re.M)
+        if rows:
+            lines.append("\n**build/code-review-runner** (blocking fails the run):")
+            lines += [f"- {rid} ({sev}): {what} — {fix}" for rid, sev, what, fix in rows]
+    lines.append("\n**build/security-review** (critical/high fail the run): authorization on every route; no SQL text built "
+                 "from variables; secrets only from the environment; no server fetch to a caller-supplied URL; no raw HTML from "
+                 "data; no service-role access from client code.")
+    lines.append("\n**SQL text is never assembled from variables, not even an allow-listed table name.** Both the review "
+                 "(CR-SQL-CONCAT) and the security scan (SEC2) block a template literal such as `select * from ${table}`. When a "
+                 "statement must vary by table, keep one constant SQL string per table in a map keyed by the allow-listed name "
+                 "and look it up (found on the CAPE sync spike: 9 blocking findings on allow-listed identifiers).")
     if not lines:
         return ""
     return ("\n\n## Rules the gates will apply to your change\n\nAfter you finish, these checks run on the lines you add or "
@@ -379,6 +411,10 @@ def new_high_detail(count: int, listed: list[str]) -> str:
     more = count - len(shown)
     return (f"{count} new high finding(s) against the baseline: " + "; ".join(shown)
             + (f" … and {more} more" if more > 0 else ""))
+
+
+class ReviewerError(StepError):
+    """The acceptance reviewer itself failed (no valid acceptance.json): never sent to the builder as a repair."""
 
 
 class WiringError(StepError):
@@ -696,6 +732,31 @@ class Run:
         self.profile_posted = False
         self.baseline: dict = {}          # run.json `baseline`: {status, target, checks: {check: {skill, source, findings, high, path}}}
         self.spec_path: Path | None = None   # the pipeline file this run executes (hashed into provenance.json)
+        self._tracer: telemetry.Tracer | None = None   # docs/HARNESS.md layer 5 (see the tracer property)
+        self._stage_span = self._step_span = None
+        self._exported = ""
+
+    @property
+    def tracer(self) -> "telemetry.Tracer":
+        """One OTLP trace per run invocation: a span per stage, step and model call (evidence/trace.json)."""
+        if self._tracer is None:
+            self._tracer = telemetry.Tracer("deliver", self.run_id or "pending", **{"pipeline": self.spec.get("name", ""),
+                                            "builder": getattr(self.args, "builder", ""), "dry": bool(getattr(self.args, "dry", False))})
+        return self._tracer
+
+    def _close_step_span(self, rec: dict | None) -> None:
+        if self._step_span is not None:
+            r = rec or {}
+            self.tracer.end(self._step_span, error=(str(r.get("error"))[:300] if r.get("status") == "failed" else None),
+                            **{"step.status": r.get("status"), "step.repairs": len(r.get("repairs") or [])})
+            self._step_span = None
+
+    def export_telemetry(self) -> str:
+        """trace.json is written on every save; the OTLP export (OTEL_EXPORTER_OTLP_ENDPOINT) happens once, at exit."""
+        if not self._exported:
+            self._exported = self.tracer.export()
+            self.record["telemetry"] = {"trace": "evidence/trace.json", "export": self._exported}
+        return self._exported
 
     # ---- references
     def resolve(self, value, where: str = ""):
@@ -982,10 +1043,68 @@ class Run:
                         if (row.get("severity") or "") == "high" and (row.get("status") or "new") != "known"]
             rec["new_high_count"] = len(new_high)
             rec["new_high"] = new_high[:NEW_HIGH_LISTED]
+        if r.returncode == 1 and step.get("gate") and fcsv.is_file() and self.apply_waivers(step, fcsv, sdir, rec):
+            return                               # every finding that failed the gate is waived, with a reason and an owner
         if r.returncode == 1 and step.get("gate"):
             why = (new_high_detail(rec["new_high_count"], rec["new_high"]) if rec.get("new_high_count")
                    else "; ".join(rec.get("failed_checks") or ["see report"]))
             raise StepError(f"gate step {step['skill']} said no (exit 1): {why}"[:GATE_DETAIL_LIMIT])
+
+    def load_waivers(self) -> tuple[list[dict], list[str]]:
+        """docs/HARNESS.md layer 8: --waivers FILE, else <repo>/.factory/waivers.json. A waiver needs rule, file,
+        reason and by; an expired or incomplete one is refused (and listed)."""
+        path = Path(self.args.waivers) if getattr(self.args, "waivers", None) else (self.repo / ".factory" / "waivers.json" if self.repo else None)
+        if not path or not path.is_file():
+            return [], []
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            return [], [f"{path}: not JSON ({e})"]
+        items = raw.get("waivers", raw) if isinstance(raw, dict) else raw
+        ok, refused, today = [], [], time.strftime("%Y-%m-%d")
+        for w in items if isinstance(items, list) else []:
+            missing = [k for k in ("rule", "file", "reason", "by") if not str((w or {}).get(k) or "").strip()]
+            if missing:
+                refused.append(f"{w}: missing {', '.join(missing)}")
+            elif w.get("expires") and str(w["expires"]) < today:
+                refused.append(f"{w.get('rule')} {w.get('file')}: expired {w['expires']}")
+            else:
+                ok.append(w)
+        return ok, refused
+
+    def apply_waivers(self, step: dict, fcsv: Path, sdir: Path, rec: dict) -> bool:
+        """A gate skill said no. True when every finding that can fail it (new high/critical) is covered by a valid
+        waiver: the step then passes as WAIVED and waived.csv records each finding with its reason and owner.
+        Critical findings are never waivable. Found on greenfield G3 and CAPE R1: two lexical false positives
+        hard-stopped whole runs with no way to dispute them except editing the skill."""
+        waivers, refused = self.load_waivers()
+        if refused:
+            rec["waivers_refused"] = refused[:10]
+        if not waivers:
+            return False
+        rows = [row for row in csv.DictReader(io.StringIO(fcsv.read_text(encoding="utf-8-sig")))
+                if (row.get("rule") or "").strip() and not (row.get("rule") or "").startswith("#")]
+        blocking = [row for row in rows if (row.get("severity") or "").lower() in ("high", "critical") and (row.get("status") or "new") != "known"]
+        if not blocking or any((row.get("severity") or "").lower() == "critical" for row in blocking):
+            return False
+        def match(row: dict) -> dict | None:
+            for w in waivers:
+                if w["rule"] == row.get("rule") and w["file"] == row.get("file") and \
+                        (not str(w.get("line") or "").strip() or str(w.get("line")) == str(row.get("line"))):
+                    return w
+            return None
+        pairs = [(row, match(row)) for row in blocking]
+        if any(w is None for _, w in pairs):
+            rec["waived_partial"] = sum(w is not None for _, w in pairs)
+            return False
+        with open(sdir / "waived.csv", "w", encoding="utf-8", newline="") as fh:
+            wr = csv.writer(fh)
+            wr.writerow(["rule", "severity", "file", "line", "reason", "by", "expires"])
+            for row, w in pairs:
+                wr.writerow([row.get("rule"), row.get("severity"), row.get("file"), row.get("line"), w["reason"], w["by"], w.get("expires", "")])
+        rec["waived"] = [f"{row.get('rule')} {row.get('file')}:{row.get('line')} — {w['reason']} (by {w['by']})" for row, w in pairs][:10]
+        rec["skill_exit"], rec["exit"] = rec.get("exit"), 0     # the skill said no; the waivers answer every finding it named
+        return True
 
     def step_compose(self, step: dict, sdir: Path, rec: dict) -> None:
         fn = DERIVE.get(str(step.get("derive")))
@@ -1210,6 +1329,29 @@ class Run:
                 raise StepError(f"builder openai-compat: {e}") from None
         return self._llm
 
+    def honesty_row(self) -> str:
+        """What this run did NOT prove, stated where nobody can miss it (found: a dry run with --approve-all read as
+        "7 stages passed" though no person approved anything, no PR was opened and no CI ran)."""
+        notes = []
+        if self.args.dry:
+            notes.append("DRY RUN on a copy: no pull request, no CI, nothing deployed")
+        if self.args.approve_all:
+            notes.append("every approval AUTO-APPROVED (--approve-all): no person reviewed the requirements or the plan")
+        repairs = sum(len(st.get("repairs") or []) for s in self.record.get("stages", []) for st in s.get("steps", []))
+        if repairs:
+            notes.append(f"the builder needed {repairs} repair turn(s) after failing tests")
+        sb = (self.record.get("sandbox") or {}).get("summary")
+        notes.append(sb or "NOT SANDBOXED: project code ran on the host")
+        llm = self.record.get("llm") or {}
+        budget = getattr(self.args, "budget_usd", None)
+        if llm.get("calls"):
+            notes.append(f"model spend ${llm['cost_usd']:.2f} across {llm['calls']} call(s)"
+                         + (f" of a ${float(budget):.2f} budget" if budget is not None else " (no --budget-usd cap)"))
+        model = self.args.model or ("Claude Code's default model" if self.args.builder == "claude-code" else None)
+        if model:
+            notes.append(f"builder model: {model}")
+        return ("**What this run does not prove:** " + "; ".join(notes) + ".") if notes else ""
+
     def builder_label(self) -> str:
         """`openai-compat (<model> @ <host>)` for the evidence header; the builder name otherwise."""
         if self.args.builder != "openai-compat":
@@ -1284,13 +1426,33 @@ class Run:
                 added.append(d)
         return added
 
-    @staticmethod
-    def _sh(cmd: str, cwd: Path, timeout_s: float) -> tuple[int, str]:
-        env = {**os.environ, "CI": os.environ.get("CI") or "1"}   # watch-mode runners (vitest, jest) run once under CI
+    @property
+    def sandbox(self) -> "sbx.Sandbox":
+        """docs/HARNESS.md layer 3: where project code runs (--sandbox docker|none)."""
+        if getattr(self, "_sandbox", None) is None:
+            a = self.args
+            self._sandbox = sbx.Sandbox(getattr(a, "sandbox", "none") or "none", getattr(a, "sandbox_image", "hostroot") or "hostroot",
+                                        getattr(a, "sandbox_cpus", "2") or "2", getattr(a, "sandbox_memory", "4g") or "4g")
+            os.environ.update(self._sandbox.env_vars())          # child processes (the reviewer's sandbox exec) get the same box
+            if not hasattr(self, "record"):
+                self.record = {}
+            self.record["sandbox"] = {"mode": self._sandbox.mode, "image": self._sandbox.image, "cpus": self._sandbox.cpus,
+                                      "memory": self._sandbox.memory, "summary": self._sandbox.describe()}
+        return self._sandbox
+
+    def _sh(self, cmd: str, cwd: Path, timeout_s: float, network: str = "none") -> tuple[int, str]:
+        """Project code (install, tests, benchmark): in the sandbox when one is configured. Only the install gets a
+        network (the package registry); tests and benchmarks run with none."""
+        env = {"CI": os.environ.get("CI") or "1"}   # watch-mode runners (vitest, jest) run once under CI
         try:
-            r = subprocess.run(cmd, shell=True, cwd=str(cwd), capture_output=True, text=True, timeout=timeout_s, env=env)
+            argv, full_env = self.sandbox.wrap(cmd, cwd, writable=[cwd], network=network, env=env)
+        except sbx.SandboxError as e:
+            raise StepError(str(e)) from None
+        try:
+            r = subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True, timeout=timeout_s, env=full_env)
             return r.returncode, (r.stdout or "") + (r.stderr or "")
         except subprocess.TimeoutExpired as e:
+            sbx.kill(argv)
             partial = (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
             return 124, f"timed out after {timeout_s:.0f}s\n{partial}"
 
@@ -1309,15 +1471,36 @@ class Run:
             write_json(sdir / INSTALL_JSON, rec["install"])
             return
         t0 = time.time()
-        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S)
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S, network="host")   # the registry only
         (sdir / INSTALL_LOG).write_text(output, encoding="utf-8")
-        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG}
+        info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": INSTALL_LOG,
+                "manifest_sha": manifest_sha(target)}
         if excluded:
             info["excluded_from_git"] = excluded
         write_json(sdir / INSTALL_JSON, info)
         rec["install"] = info
         if code != 0:
             raise StepError(f"install failed: `{cmd}` exit {code} (see {INSTALL_LOG}); tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+
+    def reinstall_if_manifest_changed(self, target: Path, sdir: Path, rec: dict) -> None:
+        """The code step may add dependencies (package.json, requirements…): install again before the tests when the
+        manifests changed since the install. Found on the CAPE sync spike: the builder added `pg`, the install had run
+        before the code landed, and 7 test files failed with "Failed to load url pg" through three repair turns."""
+        prev = read_json(sdir / INSTALL_JSON) if (sdir / INSTALL_JSON).is_file() else {}
+        if prev.get("exit") != 0 or not prev.get("cmd") or prev.get("manifest_sha") == manifest_sha(target):
+            return
+        cmd = str(prev["cmd"])
+        if cmd.startswith("npm ci"):
+            cmd = "npm install --no-audit --no-fund"     # the lockfile is behind package.json: ci would refuse
+        t0 = time.time()
+        code, output = self._sh(cmd, target, INSTALL_TIMEOUT_S, network="host")   # the registry only
+        (sdir / "reinstall.log").write_text(output, encoding="utf-8")
+        info = {**prev, "reinstall": {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "log": "reinstall.log"},
+                "manifest_sha": manifest_sha(target)}
+        write_json(sdir / INSTALL_JSON, info)
+        rec["install"] = info
+        if code != 0:
+            raise StepError(f"reinstall after a dependency change failed: `{cmd}` exit {code}; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
 
     def record_tests(self, sdir: Path, rec: dict, info: dict) -> None:
         write_json(sdir / TESTS_JSON, info)
@@ -1330,15 +1513,306 @@ class Run:
         if not cmd:
             self.record_tests(sdir, rec, {"skipped": reason})
             return
+        self.reinstall_if_manifest_changed(target, sdir, rec)
         t0 = time.time()
         code, output = self._sh(cmd, target, TEST_TIMEOUT_S)
         (sdir / TESTS_LOG).write_text(output, encoding="utf-8")
         info = {"cmd": cmd, "exit": code, "duration_s": round(time.time() - t0, 3), "summary": test_summary(output),
                 "tail": output_tail(output, TEST_TAIL), "log": TESTS_LOG}
+        stubs = self.unfilled_test_stubs(target)
+        if stubs:
+            info["unfilled_stubs"] = stubs
         self.record_tests(sdir, rec, info)
         if code != 0:
             raise StepError(f"tests failed: `{cmd}` exit {code}" + (f" ({info['summary']})" if info["summary"] else "")
                             + f"; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+        # found on greenfield G2: "56 passed, 11 skipped" passed the gate with 11 scaffold files still all todo. A model
+        # builder is sent back to fill them (repair turn); a hand-supplied diff (--builder manual) keeps them listed in
+        # tests.json and on the evidence Tests line, where the reviewer of that diff sees them
+        if stubs and getattr(self.args, "builder", "") in ("claude-code", "openai-compat"):
+            raise StepError(f"tests: {len(stubs)} test file(s) scaffolded by test-strategy-tdd still hold only todo stubs, so the "
+                            f"acceptance criteria they name are untested: {', '.join(stubs[:8])}. Replace each todo with a real "
+                            "test of that criterion (or move the criterion's real test into that file and delete the stub file)")
+
+    @staticmethod
+    def unfilled_test_stubs(target: Path) -> list[str]:
+        """Test files test-strategy-tdd scaffolded (its "Red first: generated by test-strategy-tdd" header) that still
+        contain `.todo(` / `.fixme(` — criteria nobody tested. A file whose todos were all replaced does not count."""
+        out = []
+        for d in ("tests", "e2e", "__tests__"):
+            base = target / d
+            if base.is_dir():
+                for f in sorted(base.rglob("*")):
+                    if f.is_file() and f.suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs") and "node_modules" not in f.parts:
+                        txt = f.read_text(encoding="utf-8", errors="replace")
+                        if "generated by test-strategy-tdd" in txt and re.search(r"\b(it|test)\.(todo|fixme)\(", txt):
+                            out.append(f.relative_to(target).as_posix())
+        return out
+
+    @staticmethod
+    def visual_routes(target: Path) -> list[str]:
+        """The pages a person would open: Next.js app/ (or src/app/) page files without dynamic segments, / first."""
+        routes = []
+        for base in (target / "app", target / "src" / "app"):
+            if base.is_dir():
+                for page in sorted(base.rglob("page.*")):
+                    if page.suffix not in (".tsx", ".jsx", ".ts", ".js") or "node_modules" in page.parts:
+                        continue
+                    parts = [x for x in page.parent.relative_to(base).parts if not (x.startswith("(") or x.startswith("@"))]
+                    if any(x.startswith("[") or x.startswith("_") for x in parts):
+                        continue
+                    routes.append("/" + "/".join(parts))
+        routes = sorted(set(routes), key=lambda r: (r != "/", r.count("/"), r))
+        return routes[:VISUAL_MAX_ROUTES] or ["/"]
+
+    def run_visual(self, target: Path, sdir: Path, rec: dict) -> None:
+        """After the tests pass: scripts/visual_check.py starts the app and looks at every page at desktop and phone
+        width. Found on the CAPE greenfield run: 85/85 tests and every gate passed on a page with no styling at all.
+        A failure is a StepError (so a claude-code builder gets a repair turn); no web UI is recorded as not
+        applicable, never as a pass; --visual off records that it was switched off."""
+        if getattr(self.args, "visual", "auto") == "off":
+            rec["visual"] = {"verdict": "off", "detail": "switched off with --visual off"}
+            return
+        out = sdir / VISUAL_DIR
+        cmd = [sys.executable, str(HERE / "visual_check.py"), "--target", str(target), "--out", str(out)]
+        for r in self.visual_routes(target):
+            cmd += ["--route", r]
+        if self.sandbox.mode != "none":   # the app AND the browser run in the box (network none, loopback only)
+            cmd = ["python3", "-I", *cmd[1:]]
+            try:
+                argv, venv = self.sandbox.wrap(shlex.join(cmd), target, writable=[target, out], readonly=[HERE])
+            except sbx.SandboxError as e:
+                raise StepError(str(e)) from None
+        else:
+            argv, venv = cmd, None
+        try:
+            r = subprocess.run(argv, capture_output=True, text=True, timeout=VISUAL_TIMEOUT_S, env=venv)
+        except subprocess.TimeoutExpired:
+            sbx.kill(argv)
+            rec["visual"] = {"verdict": "fail", "detail": f"the visual check did not finish in {VISUAL_TIMEOUT_S} s"}
+            raise StepError(rec["visual"]["detail"])
+        res = read_json(out / "visual.json") if (out / "visual.json").is_file() else {}
+        verdict = res.get("verdict") or ("error" if r.returncode == 2 else "fail")
+        rec["visual"] = {"verdict": verdict, "routes": res.get("routes"), "start_cmd": res.get("start_cmd"), "reason": res.get("start_reason"),
+                         "failures": (res.get("failures") or [])[:12], "warnings": (res.get("warnings") or [])[:6],
+                         "screenshots": [f"{VISUAL_DIR}/{x}" for x in res.get("screenshots") or []],
+                         "detail": (r.stdout.strip() or r.stderr.strip())[-400:]}
+        if verdict in ("fail", "error"):
+            raise StepError("visual check failed: " + "; ".join(rec["visual"]["failures"][:6] or [rec["visual"]["detail"]])
+                            + f" — screenshots in {out}")
+
+    def run_bench(self, target: Path, sdir: Path, rec: dict) -> bool:
+        """After the tests pass: `npm run bench` when package.json defines it. Found on the CAPE 2.0 chain (R1): the
+        brief asked for p50/p95/p99 and the builder, which has no shell, honestly wrote "not yet measured" — nothing in
+        the pipeline ever ran it. The output goes to <step>/bench.log, the record to bench.json and run.json `bench`;
+        a non-zero exit fails the step (a repair turn for claude-code). Returns True when a benchmark ran."""
+        pkg = target / "package.json"
+        try:
+            scripts = (json.loads(pkg.read_text(encoding="utf-8")).get("scripts") or {}) if pkg.is_file() else {}
+        except json.JSONDecodeError:
+            scripts = {}
+        if "bench" not in scripts:
+            rec["bench"] = {"skipped": "package.json defines no bench script"}
+            return False
+        t0 = time.time()
+        code, output = self._sh("npm run bench", target, BENCH_TIMEOUT_S)
+        (sdir / BENCH_LOG).write_text(output, encoding="utf-8")
+        info = {"cmd": "npm run bench", "exit": code, "duration_s": round(time.time() - t0, 3), "tail": output_tail(output, TEST_TAIL),
+                "log": BENCH_LOG}
+        write_json(sdir / "bench.json", info)
+        rec["bench"] = {k: v for k, v in info.items() if k != "tail"}
+        if code != 0:
+            raise StepError(f"benchmark failed: `npm run bench` exit {code}; tail: {output_tail(output, TEST_TAIL_IN_ERROR)!r}")
+        return True
+
+    def acceptance_sources(self, target: Path) -> list[tuple[str, Path]]:
+        """What the reviewer judges against: the goal document (--goal, or docs/*GOAL*.md in the repo), the brief, the
+        product manager's PRD (acceptance criteria) and the architect's plan (per-task acceptance)."""
+        out: list[tuple[str, Path]] = []
+        goal = getattr(self.args, "goal", None)
+        if goal and Path(goal).is_file():
+            out.append(("goal document", Path(goal)))
+        else:
+            for g in sorted((target / "docs").glob("*GOAL*.md")) if (target / "docs").is_dir() else []:
+                out.append(("goal document", g))
+        if self.inputs.get("brief") and Path(str(self.inputs["brief"])).is_file():
+            out.append(("brief (goals and constraints for THIS change)", Path(str(self.inputs["brief"]))))
+        for sid, name, label in (("prd-refine", PRD_MD, "PRD with acceptance criteria"), ("plan-refine", TASKS_CSV, "plan tasks with acceptance"),
+                                 ("plan-refine", PLAN_MD, "plan")):
+            d = self.step_dirs.get(sid)
+            if d and (d / name).is_file():
+                out.append((label, d / name))
+        return out
+
+    def run_acceptance(self, target: Path, sdir: Path, rec: dict) -> None:
+        """docs/HARNESS.md layer 1 — the requirements verification gate. Found on the CAPE 2.0 chain: 486 tests and
+        every gate passed while the goal's one non-negotiable (no stale data) was NOT met; an independent reviewer
+        found it in 4 minutes. A fresh claude session (never the builder's summary) reviews a disposable copy of the
+        code against the acceptance sources, may run commands only through the sandbox, and must give every criterion
+        a verdict with evidence it produced. NOT_MET, PARTLY on a must-have, or a critical/high defect fails the
+        step (the findings become the builder's repair turn); a reviewer that produces no valid result is a
+        ReviewerError (never charged to the builder)."""
+        mode = getattr(self.args, "acceptance", "auto") or "auto"
+        if mode == "off" or (mode == "auto" and self.args.builder not in ("claude-code", "openai-compat")):
+            rec["acceptance"] = {"verdict": "not_run", "detail": "switched off (--acceptance off)" if mode == "off"
+                                 else f"--acceptance auto runs for model builders; the {self.args.builder} builder's diff was not reviewed"}
+            return
+        exe = shutil.which("claude")
+        if not exe:
+            rec["acceptance"] = {"verdict": "not_run", "detail": "`claude` is not on PATH: no reviewer available"}
+            return
+        sources = self.acceptance_sources(target)
+        if not sources:
+            rec["acceptance"] = {"verdict": "not_run", "detail": "no acceptance criteria found (no goal document, brief, PRD or plan)"}
+            return
+        adir = sdir / ACCEPT_DIR
+        round_no = len(rec.get("acceptance_rounds") or []) + 1
+        copy = adir / f"review-copy-{round_no}"
+        shutil.rmtree(copy, ignore_errors=True)
+        shutil.copytree(target, copy, ignore=shutil.ignore_patterns("node_modules", ".next", ".git", "coverage"), symlinks=True)
+        if (target / "node_modules").is_dir():
+            (copy / "node_modules").symlink_to((target / "node_modules").resolve())
+        change = adir / f"round-{round_no}-change.diff"
+        if is_git_root(target):
+            # the copy has no .git: the reviewer gets the change itself (found on R7 S4: "logic unchanged" could not be
+            # verified "by diff" and stayed PARTLY)
+            base = str(self.record.get("base_sha") or "HEAD")
+            git(target, "add", "-A")
+            change.write_text(git(target, "diff", "--cached", base)[1], encoding="utf-8")
+        result = adir / f"round-{round_no}-{ACCEPT_JSON}"
+        result.unlink(missing_ok=True)
+        # the copy links node_modules to the checkout's; that folder must be visible (read-only) inside the box, or
+        # every test command fails there (found on the second R3 calibration: 8 commands, "test tooling unavailable")
+        nm = (target / "node_modules").resolve()
+        sb = f"python3 {HERE / 'sandbox.py'} exec --dir {copy}" + (f" --ro {nm}" if nm.is_dir() else "")
+        crit = "\n".join(f"- {label}: {path}" for label, path in sources)
+        if change.is_file():
+            crit += f"\n- THE CHANGE under review, as a diff against the code before it: {change}"
+        prev = read_json(sdir / ACCEPT_JSON) if round_no > 1 and (sdir / ACCEPT_JSON).is_file() else None
+        fixed_ids = list((prev or {}).get("fixed_ids") or [str(c.get("id")) for c in (prev or {}).get("criteria") or []])
+        recheck = ""
+        if prev:
+            # the goalposts stay put: round N re-verifies round 1's criteria (found on the R7 run: every round wrote new
+            # criteria, so each repair met a different target and the loop could not converge)
+            recheck = ("\n\nThis is review round " + str(round_no) + ". Re-verify EXACTLY these criteria (same id and text) and the "
+                       "earlier defects, with fresh evidence; the builder has tried to fix them. You may add new defects; new "
+                       "criteria you add are recorded but do not decide this round.\n" +
+                       "\n".join(f"- {c.get('id')} (must={bool(c.get('must'))}): {c.get('text')} [last round: {c.get('verdict')}]"
+                                 for c in prev.get("criteria") or [] if str(c.get("id")) in fixed_ids) +
+                       ("\nEarlier defects:\n" + "\n".join(f"- {x.get('severity')}: {x.get('title')} at {x.get('location')}"
+                                                          for x in prev.get("defects") or []) if prev.get("defects") else ""))
+        prompt = (
+            f"Review the application in the current folder ({copy}) against these acceptance sources (read every one first):\n{crit}\n\n"
+            f"Run any command ONLY as `{sb} -- <command>` (e.g. `{sb} -- npx vitest run tests/x.test.ts`); it runs in the "
+            f"project's sandbox ({self.sandbox.describe()}). DATABASE_URL, if the tests need one, is already set. You may write "
+            f"experiment files (e.g. tests/zz-acceptance/*.test.ts) in this folder: it is a disposable copy.\n\n"
+            f"Write {result} as JSON: {{\"criteria\": [{{\"id\": \"C1\", \"source\": \"which document and section\", \"text\": \"the criterion\", "
+            f"\"must\": true, \"verdict\": \"MET|PARTLY|NOT_MET|UNVERIFIED\", \"evidence\": \"what you ran or read (file:line, command and its result)\"}}], "
+            f"\"defects\": [{{\"severity\": \"critical|high|medium|low\", \"title\": \"...\", \"location\": \"file:line\", \"confirmed_by\": \"how\"}}], "
+            f"\"summary\": \"three sentences\"}}.\n"
+            "Rules: one criterion per testable requirement of THIS change (the brief and PRD; use the goal document for the "
+            "non-negotiables this change touches); must=true for requirements the sources state as mandatory. For every must "
+            "criterion about behaviour, write and RUN an experiment that would fail if the criterion were not met, and cite the "
+            "command and its result; reading code is not enough. Hunt end to end for violations of the goal's non-negotiables "
+            "(drive the real services: e.g. change data the way the outside world would, then follow it through every path the "
+            "learner or the system takes) and check that tests named for a behaviour would fail without it. MET needs evidence "
+            "you produced; anything you could not verify is UNVERIFIED, never MET. A defect needs a concrete confirmation (a "
+            "failing experiment or a reasoned scenario through named code). Do not change files outside this folder and never "
+            "edit the application to make it pass." + recheck)
+        (adir / f"round-{round_no}-prompt.txt").write_text(prompt, encoding="utf-8")
+        model = ["--model", self.args.review_model] if getattr(self.args, "review_model", None) else \
+                (["--model", self.args.model] if getattr(self.args, "model", None) else [])
+        cmd = [exe, *model, "--permission-mode", "acceptEdits", "--add-dir", str(adir.resolve()),
+               *[x for _, pth in sources for x in ("--add-dir", str(pth.parent.resolve()))],
+               "--allowedTools", "Read", "Write", "Edit", "Glob", "Grep", "LS", f"Bash({sb}:*)",
+               "--append-system-prompt", REVIEWER_RULES, "-p", prompt, "--output-format", "json"]
+        cmdlog = adir / f"round-{round_no}-commands.jsonl"
+        cmdlog.unlink(missing_ok=True)
+        os.environ["SF_SANDBOX_LOG"] = str(cmdlog)     # sandbox.py exec appends every command the reviewer runs
+        try:
+            r = self.run_claude(cmd, copy, ACCEPT_TIMEOUT_S, f"acceptance review {round_no}")
+            ran = cmdlog.read_text(encoding="utf-8").splitlines() if cmdlog.is_file() else []
+            if not ran and result.is_file():
+                # a review that only read code missed the CAPE R3 critical defect (stale data committed): one more turn
+                nudge = (f"You wrote {result.name} without running a single experiment. Reading code is not enough: run the "
+                         f"experiments the rules ask for through `{sb} -- <command>`, then rewrite {result} with what they showed.")
+                cmd2 = cmd[:cmd.index("-p") + 1] + [prompt + "\n\n" + nudge] + cmd[cmd.index("-p") + 2:]
+                r = self.run_claude(cmd2, copy, ACCEPT_TIMEOUT_S, f"acceptance review {round_no} (experiments)")
+                ran = cmdlog.read_text(encoding="utf-8").splitlines() if cmdlog.is_file() else []
+        finally:
+            os.environ.pop("SF_SANDBOX_LOG", None)
+        (adir / f"round-{round_no}-reply.txt").write_text((r.stdout or "") + "\n--- stderr ---\n" + (r.stderr or ""), encoding="utf-8")
+        if not ran:
+            raise ReviewerError(f"acceptance reviewer ran no experiment in the sandbox (round {round_no}): a review from reading "
+                                f"alone is not accepted")
+        try:
+            data = json.loads(result.read_text(encoding="utf-8"))
+            crits = [c for c in data.get("criteria") or [] if isinstance(c, dict)]
+            if not crits:
+                raise ValueError("no criteria")
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            raise ReviewerError(f"acceptance reviewer produced no valid {result.name} ({e}); exit {r.returncode}") from None
+        for c in crits:
+            v = str(c.get("verdict", "")).upper().replace(" ", "_")
+            c["verdict"] = v if v in VERDICTS else "UNVERIFIED"
+            if c["verdict"] == "MET" and not str(c.get("evidence") or "").strip():
+                c["verdict"], c["downgraded"] = "UNVERIFIED", "MET without evidence"
+        defects = [x for x in data.get("defects") or [] if isinstance(x, dict)]
+        if fixed_ids:   # criteria first written after round 1 are recorded, not blocking
+            for c in crits:
+                if str(c.get("id")) not in fixed_ids:
+                    c["added_in_round"] = round_no
+        blocking = [c for c in crits if not c.get("added_in_round") and
+                    (c["verdict"] == "NOT_MET" or (c["verdict"] == "PARTLY" and c.get("must")))]
+        severe = [x for x in defects if str(x.get("severity", "")).lower() in ("critical", "high")]
+        counts = {v: sum(c["verdict"] == v for c in crits) for v in VERDICTS}
+        verdict = "fail" if (blocking or severe) else "pass"
+        summary = {"round": round_no, "verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe), "experiments": len(ran),
+                   "file": str(result.relative_to(sdir))}
+        rec.setdefault("acceptance_rounds", []).append(summary)
+        write_json(sdir / ACCEPT_JSON, {"criteria": crits, "defects": defects, "summary": data.get("summary", ""), "round": round_no,
+                                        "fixed_ids": fixed_ids or [str(c.get("id")) for c in crits],
+                                        "verdict": verdict, "sources": [{"label": l, "path": str(p_)} for l, p_ in sources]})
+        lines = [f"# Acceptance review — round {round_no}: {verdict.upper()}", "",
+                 "Independent reviewer (a fresh model session that never saw the builder's notes); every MET carries evidence it produced; "
+                 f"{len(ran)} experiment command(s) run in the sandbox (round-{round_no}-commands.jsonl).", "",
+                 f"MET {counts['MET']} · PARTLY {counts['PARTLY']} · NOT MET {counts['NOT_MET']} · UNVERIFIED {counts['UNVERIFIED']} · "
+                 f"defects {len(defects)} ({len(severe)} critical/high)", "", "| ID | Must | Verdict | Criterion | Evidence |", "|---|---|---|---|---|"]
+        lines += [f"| {c.get('id', '')} | {'yes' if c.get('must') else ''} | {c['verdict']} | {str(c.get('text', '')).replace('|', '¦')[:200]} | "
+                  f"{str(c.get('evidence', '')).replace('|', '¦')[:300]} |" for c in crits]
+        if defects:
+            lines += ["", "| Severity | Defect | Location | Confirmed by |", "|---|---|---|---|"]
+            lines += [f"| {x.get('severity', '')} | {str(x.get('title', '')).replace('|', '¦')[:160]} | {x.get('location', '')} | "
+                      f"{str(x.get('confirmed_by', '')).replace('|', '¦')[:200]} |" for x in defects]
+        lines += ["", f"Summary: {data.get('summary', '')}"]
+        (sdir / ACCEPT_MD).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        rec["acceptance"] = {"verdict": verdict, "counts": counts, "defects": len(defects), "severe": len(severe), "md": ACCEPT_MD, "experiments": len(ran),
+                             "rounds": round_no}
+        if verdict == "fail":
+            items = [f"{c.get('id')} {c['verdict']}: {c.get('text', '')} — {c.get('evidence', '')}"[:400] for c in blocking[:8]]
+            items += [f"{x.get('severity')} defect: {x.get('title')} at {x.get('location')} — {x.get('confirmed_by')}"[:400] for x in severe[:6]]
+            raise StepError("acceptance review failed: " + " | ".join(items) + f" — full review in {sdir / ACCEPT_MD}")
+
+    def verify(self, cmd: str | None, reason: str, target: Path, sdir: Path, rec: dict) -> None:
+        """What judges the builder's code: the project's tests, then (when they pass) its benchmark, then a look at
+        the running app."""
+        self.run_tests(cmd, reason, target, sdir, rec)
+        before = git(target, "status", "--porcelain")[1] if is_git_root(target) else ""
+        if self.run_bench(target, sdir, rec) and cmd and is_git_root(target):
+            after = git(target, "status", "--porcelain")[1]
+            if after != before:
+                # the benchmark rewrote files (its results): the suite must still hold with real numbers. Found on the
+                # R7 run: an R6 test pins docs/benchmarks/summary.md to the measured values, so every re-measurement
+                # broke it — and only the acceptance reviewer noticed, after the repair turns were spent elsewhere.
+                changed = sorted({ln[3:] for ln in after.splitlines()} - {ln[3:] for ln in before.splitlines()})
+                try:
+                    self.run_tests(cmd, reason, target, sdir, rec)
+                except StepError as e:
+                    raise StepError(f"tests fail after the pipeline ran `npm run bench`, which rewrote {', '.join(changed[:6]) or 'files'}: "
+                                    f"make whatever quotes the benchmark's results derive from its results file (re-measuring must "
+                                    f"never break the suite). {e}") from None
+        self.run_visual(target, sdir, rec)
+        self.run_acceptance(target, sdir, rec)
 
     def record_llm_tests(self, cmd: str, sdir: Path, rec: dict) -> None:
         """openai-compat: the repair command IS the test command, already run by the builder after each round — the
@@ -1461,8 +1935,7 @@ class Run:
             prompt = self.write_packet(step, sdir, need, packet_inputs)   # prompt.txt is the packet: one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=1800)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 1800, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
@@ -1524,7 +1997,8 @@ class Run:
         lines = [f"Stack profile: {facts or 'unknown'}", f"Top-level entries: {', '.join(tops) or '(empty repository)'}",
                  f"Tracked files ({len(paths)}{', first ' + str(limit) + ' shown' if len(paths) > limit else ''}):"] + [f"  {p}" for p in shown]
         lines.append("Rule: every file a task names is a path in THIS layout — an existing file to modify, or a new file in an "
-                     "existing directory with the repository's language and framework conventions (same extension as its neighbours).")
+                     "existing directory with the repository's language and framework conventions (same extension as its neighbours). "
+                     f"These stack-convention directories may be created when absent: {', '.join(sorted(CONVENTION_DIRS))}/.")
         return "\n".join(lines)
 
     @staticmethod
@@ -1550,7 +2024,7 @@ class Run:
                     problems.append(f"{r.get('id') or '?'}: {f} is JavaScript but the repository is TypeScript (flavour ts)")
                 if has_any and not p.exists():
                     top = f.split("/")[0]
-                    if "/" in f and not (target / top).is_dir():
+                    if "/" in f and not (target / top).is_dir() and top not in CONVENTION_DIRS:
                         problems.append(f"{r.get('id') or '?'}: {f} is under {top}/, which does not exist in the repository (invented layout)")
         return problems
 
@@ -1562,10 +2036,53 @@ class Run:
         # No shell: a non-interactive run cannot approve one, and a model that reaches for a helper script then stops to
         # ask (seen live at plan-refine: "the shell keeps asking for approval … tell me whether to approve"). The file
         # tools are allowed outright and the run is told so; the executor itself runs installs and tests.
-        return [exe, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
+        model = ["--model", self.args.model] if getattr(self.args, "model", None) else []
+        return [exe, *model, "--permission-mode", "acceptEdits", "--add-dir", str(self.out.resolve()),
                 "--allowedTools", "Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "LS",
                 "--disallowedTools", "Bash",
-                "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "text"]
+                "--append-system-prompt", NONINTERACTIVE_RULES, "-p", prompt, "--output-format", "json"]
+
+    def run_claude(self, cmd: list[str], cwd: Path, timeout: float, label: str) -> subprocess.CompletedProcess:
+        """Every model call goes through here (budget circuit breaker + telemetry, docs/HARNESS.md layers 4 and 5).
+        The call runs with --output-format json; its cost, tokens, turns and duration are recorded on the current
+        step span and in run.json `llm` totals. With --budget-usd the call gets --max-budget-usd = what the run has
+        left; a run already over budget does not start the call. Returns a CompletedProcess whose stdout is the
+        model's reply text (what callers used before), so every caller keeps working."""
+        budget = getattr(self.args, "budget_usd", None)
+        spent = float((self.record.get("llm") or {}).get("cost_usd") or 0)
+        if budget is not None:
+            left = round(float(budget) - spent, 4)
+            if left <= 0:
+                raise StepError(f"budget exceeded: this run has spent ${spent:.2f} of its ${float(budget):.2f} budget "
+                                f"(--budget-usd); {label} was not started")
+            cmd = [cmd[0], "--max-budget-usd", f"{left:.4f}", *cmd[1:]]
+        t0 = time.time_ns()
+        r = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout)
+        meta: dict = {}
+        try:
+            meta = json.loads(r.stdout) if r.stdout.strip().startswith("{") else {}
+        except json.JSONDecodeError:
+            meta = {}
+        usage = meta.get("usage") or {}
+        cost = float(meta.get("total_cost_usd") or 0)
+        tok_in = int(usage.get("input_tokens") or 0) + int(usage.get("cache_creation_input_tokens") or 0) + int(usage.get("cache_read_input_tokens") or 0)
+        tok_out = int(usage.get("output_tokens") or 0)
+        tot = self.record.setdefault("llm", {"calls": 0, "cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0})
+        tot["calls"] += 1
+        tot["cost_usd"] = round(tot["cost_usd"] + cost, 4)
+        tot["input_tokens"] += tok_in
+        tot["output_tokens"] += tok_out
+        self.tracer.record(f"llm {label}", t0, time.time_ns(), parent=getattr(self, "_step_span", None),
+                           **{"llm.call": True, "llm.label": label, "llm.model": getattr(self.args, "model", None) or "claude-code default",
+                              "llm.cost_usd": cost, "llm.input_tokens": tok_in, "llm.output_tokens": tok_out,
+                              "llm.turns": int(meta.get("num_turns") or 0), "llm.exit": r.returncode,
+                              "llm.subtype": str(meta.get("subtype") or "")})
+        sub = str(meta.get("subtype") or "")
+        if "budget" in sub:
+            raise StepError(f"budget exceeded during {label}: the model stopped at the --budget-usd limit "
+                            f"(run total now ${tot['cost_usd']:.2f} of ${float(budget or 0):.2f})")
+        text = str(meta.get("result") or "") if meta else r.stdout
+        return subprocess.CompletedProcess(cmd, r.returncode if not meta.get("is_error") else (r.returncode or 1), text, r.stderr)
 
     def step_prd_refine(self, step: dict, sdir: Path, rec: dict) -> bool:
         """The product manager's step (agent step producing prd-final.md): the PRD draft from the brief is taken as
@@ -1619,8 +2136,7 @@ class Run:
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             target = self.repo if self.repo and self.repo.is_dir() else self.out   # reads the checkout, writes only the PRD
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=1800)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 1800, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
@@ -1716,8 +2232,7 @@ class Run:
             prompt = self.write_packet(step, sdir, need, packet_inputs, PACKET_SKILLS[TASKS_CSV])   # one source for every builder
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=1800)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 1800, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             (sdir / "agent-stdout.txt").write_text(r.stdout, encoding="utf-8")
@@ -1726,6 +2241,21 @@ class Run:
             absent = [f for f in PLAN_FILES if not expected[f].is_file()]
             if absent:
                 raise StepError(f"builder claude-code did not write {', '.join(str(expected[f]) for f in absent)}")
+            # one repair turn when the plan names files that do not fit the checkout (the openai-compat builder has had
+            # this through extra_check); found on greenfield G1/G3: a single refusal ended the whole run
+            misfit = self.plan_fits_repo(str(expected[TASKS_CSV]), target, self.record.get("stack_profile") or self.profile or {})
+            if misfit:
+                ask = (f"The plan you wrote at {expected[TASKS_CSV]} names files that do not fit this repository:\n"
+                       + "\n".join(f"- {m}" for m in misfit[:12])
+                       + f"\n\nRewrite {expected[TASKS_CSV]} (and {expected[PLAN_MD]} where it names the same files) so every file "
+                         "is an existing file, a new file in an existing directory, or a new file in one of the stack-convention "
+                         "directories listed in the repository layout. Change nothing else and do not touch the repository.")
+                (sdir / "repair-1-prompt.txt").write_text(ask, encoding="utf-8")
+                t1 = time.time()
+                rr = self.run_claude(self.claude_cmd(exe, ask), target, 1800, f"{step['id']} repair 1")
+                (sdir / "repair-1-stderr.txt").write_text(rr.stderr, encoding="utf-8")
+                rec.setdefault("repairs", []).append({"turn": 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
+                                                      "reason": "; ".join(misfit[:4])[:300]})
             if is_git_root(target) and shutil.which("git"):
                 _, dirty = git(target, "status", "--porcelain")
                 if dirty.strip():
@@ -1882,7 +2412,7 @@ class Run:
                 else:              # the real checkout: the diff is what the gates and the PR must see
                     note = self._apply_manual(manual_patch, target, allowed, allowed_source, sdir, rec)
                 self._record_diff(manual_patch, sdir, rec, plan, f"Diff supplied at build/diff.patch (builder: {builder}); {note}", files)
-                self.run_tests(*self.resolve_tests(target), target, sdir, rec)   # the project's tests judge the diff
+                self.verify(*self.resolve_tests(target), target, sdir, rec)   # the tests, then a look at the running app, judge the diff
                 return True
             rec["status"] = "awaiting_builder"
             self.write_packet(step, sdir, need, packet_inputs)
@@ -1898,8 +2428,7 @@ class Run:
             (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
             self.install_deps(target, sdir, rec)                  # before the agent: it may run the tests itself
             t0 = time.time()
-            r = subprocess.run(self.claude_cmd(exe, prompt), cwd=str(target), capture_output=True,
-                               text=True, timeout=3600)
+            r = self.run_claude(self.claude_cmd(exe, prompt), target, 3600, step["id"])
             rec["agent_exit"], rec["agent_duration_s"] = r.returncode, round(time.time() - t0, 3)
             (sdir / "agent-stderr.txt").write_text(r.stderr, encoding="utf-8")
             if r.returncode != 0:
@@ -1920,18 +2449,42 @@ class Run:
             repairs = max(1, int(getattr(self.args, "rounds", 2) or 2))
             for turn in range(repairs + 1):
                 try:
-                    self.run_tests(tcmd, treason, target, sdir, rec)
+                    self.verify(tcmd, treason, target, sdir, rec)
+                    if (rec.get("bench") or {}).get("cmd"):
+                        capture(r.stdout)                         # the results file the benchmark wrote joins the diff
                     break
                 except StepError as failure:
-                    if turn == repairs or not tcmd:
+                    if isinstance(failure, ReviewerError) or turn == repairs or \
+                            (not tcmd and not str(failure).startswith(("visual check", "acceptance review"))):
                         raise
-                    ask = (f"The project's tests fail after your change. Fix the code so `{tcmd}` passes: change only the files "
+                    if str(failure).startswith("acceptance review"):
+                        ask = (f"An independent reviewer checked your change against the acceptance criteria and it does not meet them. "
+                               f"Read {sdir / ACCEPT_MD} (and {sdir / ACCEPT_JSON}) first. Fix the code so every NOT MET / PARTLY "
+                               f"criterion is met and every critical/high defect is gone; add a test for each one that fails "
+                               f"without your fix (a test that passes with the feature removed does not count). Prefer the files the "
+                               f"plan names; files outside it are recorded. Keep `{tcmd}` passing. Do not weaken existing tests.\n\n"
+                               f"Findings:\n{failure}")
+                        (sdir / f"repair-{turn + 1}-prompt.txt").write_text(ask, encoding="utf-8")
+                        t1 = time.time()
+                        rr = self.run_claude(self.claude_cmd(exe, ask), target, 3600, f"{step['id']} repair {turn + 1}")
+                        (sdir / f"repair-{turn + 1}-stderr.txt").write_text(rr.stderr, encoding="utf-8")
+                        rec.setdefault("repairs", []).append({"turn": turn + 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
+                                                              "reason": str(failure)[:300]})
+                        if rr.returncode != 0:
+                            raise StepError(f"claude -p (repair {turn + 1}) exited {rr.returncode}: {rr.stderr.strip().splitlines()[-1:] or ''}"[:300])
+                        capture(rr.stdout)
+                        continue
+                    what = ("The running app failed the visual check (a browser opened each page at 1440 and 390 px wide; "
+                            f"screenshots and visual.json are in {sdir / VISUAL_DIR}). Fix the UI so every page is styled, "
+                            "not empty, loads without errors and does not scroll sideways on a phone; keep `" + str(tcmd) + "` passing"
+                            if str(failure).startswith("visual check") else f"The project's tests fail after your change. Fix the code so `{tcmd}` passes")
+                    ask = (f"{what}: change only the files "
                            f"the plan allows and their tests. Do not delete or weaken a test unless it contradicts the plan's "
                            f"acceptance criteria; if one does, fix the test and say why in one line. The full test log is at "
                            f"{sdir / TESTS_LOG}.\n\nFailure:\n{failure}")
                     (sdir / f"repair-{turn + 1}-prompt.txt").write_text(ask, encoding="utf-8")
                     t1 = time.time()
-                    rr = subprocess.run(self.claude_cmd(exe, ask), cwd=str(target), capture_output=True, text=True, timeout=3600)
+                    rr = self.run_claude(self.claude_cmd(exe, ask), target, 3600, f"{step['id']} repair {turn + 1}")
                     (sdir / f"repair-{turn + 1}-stderr.txt").write_text(rr.stderr, encoding="utf-8")
                     rec.setdefault("repairs", []).append({"turn": turn + 1, "exit": rr.returncode, "duration_s": round(time.time() - t1, 3),
                                                           "reason": str(failure)[:300]})
@@ -1967,6 +2520,7 @@ class Run:
                 self.record_llm_tests(cmd, sdir, rec)             # the repair loop already ran the tests (exit 0 here)
             else:                                                 # --repair-cmd none or an override: the tests run once, now
                 self.run_tests(tcmd, treason, target, sdir, rec)
+            self.run_visual(target, sdir, rec)
             return True
         raise StepError(f"unknown builder {builder!r}")
 
@@ -2081,7 +2635,8 @@ class Run:
             if not s or s.get("status") != "ok":
                 return "fail", f"step '{gate['step']}' did not complete: {s.get('error', '') if s else 'not run'}"
             ok = s.get("exit") == 0
-            return ("pass" if ok else "fail"), f"step '{gate['step']}' exit {s.get('exit')}" + ("" if ok else ": " + "; ".join(s.get("failed_checks") or ["see its report"]))
+            waived = f" — WAIVED {len(s['waived'])}: " + "; ".join(s["waived"][:3]) if s.get("waived") else ""
+            return ("pass" if ok else "fail"), f"step '{gate['step']}' exit {s.get('exit')}{waived}" + ("" if ok else ": " + "; ".join(s.get("failed_checks") or ["see its report"]))
         if kind == "approval":
             s = steps.get(gate["step"])
             ok = bool(s and s.get("status") == "approved")
@@ -2092,7 +2647,9 @@ class Run:
             ok = all(v == "pass" for v in verdicts) if kind == "all" else any(v == "pass" for v in verdicts)
             return ("pass" if ok else "fail"), " | ".join(f"[{v}] {d}" for v, d in results)
         if kind == "external":
-            return "recorded", f"satisfied outside the run: {gate.get('what', '')}"
+            if self.args.dry:   # nothing outside the run happened: never report a dry run's deploy as satisfied
+                return "not_run", f"dry run: no pull request was opened and CI never ran ({gate.get('what', '')} was not checked)"
+            return "recorded", f"to be confirmed outside the run: {gate.get('what', '')}"
         return "fail", f"unknown gate kind {kind!r}"
 
     # ---- evidence
@@ -2104,11 +2661,19 @@ class Run:
                 "Stack profile: " + ", ".join(f"{k}={v}" for k, v in (self.record.get("stack_profile") or {}).items()), "",
                 self.baseline_row(), "",
                 self.tests_row(), "",
+                self.bench_row(), "",
+                self.acceptance_row(), "",
+                self.visual_row(), "",
+                self.honesty_row(), "",
                 "| Stage | Role | Gate | Verdict | Evidence |", "|---|---|---|---|---|"]
         for s in self.record.get("stages", []):
             g = s.get("gate") or {}
             ev = ", ".join(f"[{Path(p).name}]({p})" for p in s.get("evidence_files") or []) or "—"
-            verdict = {"pass": "PASS", "fail": "FAIL", "recorded": "RECORDED"}.get(g.get("verdict", ""), s.get("status", "").upper())
+            verdict = {"pass": "PASS", "fail": "FAIL", "recorded": "RECORDED (not verified)", "not_run": "NOT RUN"}.get(
+                g.get("verdict", ""), s.get("status", "").upper())
+            auto = [st["id"] for st in s.get("steps", []) if st.get("kind") == "approval" and st.get("approved_by") == "--approve-all"]
+            if auto and verdict == "PASS":
+                verdict = "PASS (approval AUTO-APPROVED, no person reviewed)"
             rows.append(f"| {s['id']} | {s['role']} | {g.get('kind', '')} | {verdict} | {ev} |")
         rows += ["", "Gate detail per stage is in `<stage>/gate.json`; step logs in `<stage>/<step>/`.", ""]
         rows += self.provenance_rows()
@@ -2225,7 +2790,58 @@ class Run:
         install = code.get("install") or {}
         inst = (f"; install `{install['cmd']}` exit {install['exit']}" if install.get("cmd") else
                 f"; install skipped ({install['skipped']})" if install.get("skipped") else "")
-        return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}."
+        stubs = t.get("unfilled_stubs") or []
+        warn = f" UNFILLED: {len(stubs)} scaffolded test file(s) still hold only todo stubs ({', '.join(stubs[:4])})." if stubs else ""
+        return f"Tests (after the change): `{t.get('cmd')}` exit {t.get('exit')} — {verdict}{link}{inst}.{warn}"
+
+    def acceptance_row(self) -> str:
+        """The Acceptance line of EVIDENCE.md: did an independent reviewer find the change meets its requirements."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "acceptance" in st), None)
+        if not code:
+            return "Acceptance review (independent reviewer vs the requirements): NOT RUN — no code step reached it."
+        a = code["acceptance"]
+        if a.get("verdict") == "not_run":
+            return f"Acceptance review (independent reviewer vs the requirements): NOT RUN ({a.get('detail')})."
+        c = a.get("counts") or {}
+        sdir = self.step_dirs.get(code["id"])
+        md = sdir / ACCEPT_MD if sdir else None
+        link = f" — [{ACCEPT_MD}]({md.relative_to(self.evidence)})" if md and md.is_file() else ""
+        return (f"Acceptance review (independent reviewer vs the requirements, round {a.get('rounds')}): {str(a.get('verdict')).upper()} — "
+                f"MET {c.get('MET', 0)}, PARTLY {c.get('PARTLY', 0)}, NOT MET {c.get('NOT_MET', 0)}, UNVERIFIED {c.get('UNVERIFIED', 0)}; "
+                f"defects {a.get('defects', 0)} ({a.get('severe', 0)} critical/high){link}.")
+
+    def bench_row(self) -> str:
+        """The Benchmark line of EVIDENCE.md: whether the pipeline ran `npm run bench`, and its result."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "bench" in st), None)
+        if not code:
+            return "Benchmark (run by the pipeline): NOT RUN — no code step reached it."
+        b = code["bench"]
+        if b.get("skipped"):
+            return f"Benchmark (run by the pipeline): NOT RUN ({b['skipped']})."
+        sdir = self.step_dirs.get(code["id"])
+        log = sdir / str(b.get("log") or "") if sdir else None
+        link = f" — [{log.name}]({log.relative_to(self.evidence)})" if log and log.is_file() else ""
+        return f"Benchmark (run by the pipeline): `{b.get('cmd')}` exit {b.get('exit')} in {b.get('duration_s')} s{link}."
+
+    def visual_row(self) -> str:
+        """The Visual line of EVIDENCE.md: what a browser saw when it opened the built app (scripts/visual_check.py)."""
+        code = next((st for s in self.record.get("stages", []) for st in s.get("steps", [])
+                     if st.get("kind") == "agent" and "visual" in st), None)
+        if not code:
+            return "Visual check (the running app): NOT RUN — no code step reached it."
+        v = code["visual"]
+        label = {"pass": "PASS", "fail": "FAIL", "error": "FAIL (could not run)", "not_applicable": "NOT APPLICABLE (no web UI)",
+                 "off": "NOT RUN (switched off)",
+                 "not_run": f"NOT RUN ({v.get('reason') or 'see visual.json'})"}.get(v.get("verdict"), str(v.get("verdict")).upper())
+        sdir = self.step_dirs.get(code["id"])
+        shots = [f"[{Path(x).name}]({(sdir / x).relative_to(self.evidence)})" for x in v.get("screenshots") or []
+                 if sdir and (sdir / x).is_file()]
+        routes = ", ".join(v.get("routes") or [])
+        fails = ("; failures: " + "; ".join(v["failures"][:4])) if v.get("failures") else ""
+        return (f"Visual check (the running app, desktop 1440 px and phone 390 px): {label}" + (f" — pages {routes}" if routes else "")
+                + fails + (f"; screenshots: {', '.join(shots)}" if shots else "") + ".")
 
     def hash_files(self) -> dict:
         files = {}
@@ -2243,6 +2859,8 @@ class Run:
 
     def save(self, status: str, exit_code: int) -> None:
         self.record.update(status=status, exit_code=exit_code, finished_at=now())
+        if self.evidence.is_dir():
+            self.tracer.write(self.evidence / "trace.json")
         self.write_evidence_md()
         self.record["files"] = self.hash_files()
         write_json(self.out / "run.json", self.record)
@@ -2314,6 +2932,7 @@ class Run:
         stage_dir.mkdir(parents=True, exist_ok=True)
         srec = {"id": stage["id"], "adlc_stage": stage.get("adlc_stage"), "role": stage.get("role"), "dir": str(stage_dir.relative_to(self.out)),
                 "status": "running", "started_at": now(), "steps": []}
+        self._stage_span = self.tracer.start(f"stage {stage['id']}", **{"stage.id": stage["id"], "stage.role": stage.get("role") or ""})
         # Steps are kept across a resume only when the stage STOPPED (waiting for an approval or a builder): the work
         # before the stop stands. A stage whose gate FAILED runs every step again — the gate must judge fresh outputs
         # (found by the first real run: the fixed reviewer and security skills were never re-run; the resume re-judged
@@ -2351,6 +2970,9 @@ class Run:
                 srec["steps"].append(rec)
                 continue
             rec = {"id": sid, "kind": step.get("kind"), "stage": stage["id"], "status": "ok"}
+            self._close_step_span(srec["steps"][-1] if srec["steps"] else None)
+            self._step_span = self.tracer.start(f"step {sid}", parent=self._stage_span, **{"step.id": sid, "step.kind": step.get("kind") or "",
+                                                                                            "step.skill": step.get("skill") or ""})
             t0 = time.time()
             try:
                 if halted:
@@ -2426,12 +3048,18 @@ class Run:
         srec["gate"] = {"verdict": verdict, "kind": stage["gate"]["kind"], "detail": detail, "role": stage.get("role"),
                         "approved_by": approved, "at": now()}
         write_json(stage_dir / "gate.json", srec["gate"])
-        srec["status"] = "passed" if verdict in ("pass", "recorded") else "failed"
+        srec["status"] = "passed" if verdict in ("pass", "recorded", "not_run") else "failed"
         srec["duration_s"] = round(time.time() - t_stage, 3)
         self._finish_stage(srec, stage)
         return srec["status"], (EXIT_OK if srec["status"] == "passed" else EXIT_FAIL)
 
     def _finish_stage(self, srec: dict, stage: dict) -> None:
+        self._close_step_span(srec["steps"][-1] if srec.get("steps") else None)
+        if self._stage_span is not None:
+            g = srec.get("gate") or {}
+            self.tracer.end(self._stage_span, **{"stage.status": srec.get("status"), "gate.verdict": g.get("verdict"),
+                                                  "gate.kind": g.get("kind"), "gate.detail": str(g.get("detail") or "")[:300]})
+            self._stage_span = None
         files = []
         for ref in stage.get("evidence") or []:
             try:
@@ -2502,6 +3130,20 @@ def load_approvals(path: str | None) -> dict:
     if items is None and isinstance(data, dict):
         return {k: (v if isinstance(v, dict) else {"by": str(v)}) for k, v in data.items()}
     return {str(a.get("step")): a for a in (items or []) if isinstance(a, dict) and a.get("step")}
+
+
+MANIFESTS = ("package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "requirements.txt",
+             "pyproject.toml", "poetry.lock", "uv.lock")
+
+
+def manifest_sha(repo: Path) -> str:
+    """Hash of the dependency manifests present in the checkout (what an install depends on)."""
+    h = hashlib.sha256()
+    for name in MANIFESTS:
+        f = repo / name
+        if f.is_file():
+            h.update(name.encode() + b"\0" + f.read_bytes() + b"\0")
+    return h.hexdigest()
 
 
 def baseline_commit(repo: Path) -> None:
@@ -2742,6 +3384,20 @@ def build_args(argv=None):
     ap.add_argument("--builder", choices=["none", "manual", "claude-code", "openai-compat"], default="none")
     ap.add_argument("--model", help="openai-compat builder: the model name (default: env OPENAI_MODEL)")
     ap.add_argument("--base-url", help="openai-compat builder: the endpoint base, e.g. http://localhost:11434/v1 (default: env OPENAI_BASE_URL, else api.openai.com)")
+    ap.add_argument("--sandbox", choices=["none", "docker"], default="none",
+                    help="where project code (install, tests, benchmark, the app) runs: docker = isolated box; none = the host, recorded as NOT SANDBOXED")
+    ap.add_argument("--sandbox-image", default="hostroot", help="docker image (default hostroot: the host toolchain mounted read-only)")
+    ap.add_argument("--sandbox-cpus", default="2")
+    ap.add_argument("--sandbox-memory", default="4g")
+    ap.add_argument("--waivers", default=None, help="gate waivers file (default: <repo>/.factory/waivers.json); rule, file, reason, by[, line, expires]")
+    ap.add_argument("--acceptance", choices=["auto", "on", "off"], default="auto",
+                    help="independent requirements review after tests/visual pass (auto: for model builders)")
+    ap.add_argument("--review-model", default=None, help="model for the acceptance reviewer (default: --model)")
+    ap.add_argument("--goal", default=None, help="goal document the acceptance reviewer judges against (default: docs/*GOAL*.md in the repo)")
+    ap.add_argument("--budget-usd", type=float, default=None, metavar="USD",
+                    help="circuit breaker: stop the run when its model calls have cost this much (each call gets --max-budget-usd = what is left)")
+    ap.add_argument("--visual", choices=["auto", "off"], default="auto",
+                    help="after the tests pass, open the built web app in a browser and fail an empty or unstyled page (default auto)")
     ap.add_argument("--rounds", type=int, default=2, metavar="N", help="openai-compat builder: model turns per step including repair turns (default 2)")
     ap.add_argument("--repair-cmd", default="auto", metavar="CMD", help="openai-compat builder: shell command run on the checkout after each round of the code step's files; a failure is sent back as a repair turn. Default auto: the resolved --tests command; `none` runs no repair loop (the tests still run once after the last reply)")
     ap.add_argument("--install", default="auto", metavar="auto|none|CMD", help="code step, every builder: install the checkout's dependencies once per run before the code lands (output in <step>/install.log). auto (default): from the stack profile — `npm ci` with a package-lock.json else `npm install --no-audit --no-fund`, pnpm/yarn/bun, pip/uv/poetry for Python; nothing in --dry. `none` skips; any other value runs as given")
@@ -3172,6 +3828,10 @@ def main(argv=None) -> int:
                   "repo_input": repo_key, "out": str(out), "started_at": (prev_record or {}).get("started_at") or now(),
                   "resumed": bool(prev_record), "stages": list((prev_record or {}).get("stages") or []),
                   "argv": base_argv, "cwd": os.getcwd(), "resume_command": resume_command(base_argv)}
+    if (prev_record or {}).get("llm"):
+        # model spend accumulates across resumes (found on the R7 harness run: a resumed slice reported only the spend
+        # since the resume, and the goal budget under-counted by $4)
+        run.record["llm"] = dict(prev_record["llm"])
     rejection = active_rejection(out, approvals, bool(args.approve_all))
     if rejection:
         # `deliver.py reject` stands until the same step is approved again (an approval recorded after it, or --approve-all)
@@ -3202,6 +3862,12 @@ def main(argv=None) -> int:
     run.record["repo"] = str(run.repo)
     run.record["base_sha"] = (prev_record or {}).get("base_sha") or head_sha(run.repo)   # the pre-change commit, kept across resumes
     run.load_baseline()
+    try:
+        run.sandbox.prepare()            # --sandbox docker without a reachable daemon stops here, never falls back silently
+    except sbx.SandboxError as e:
+        print(f"error: {e}", file=sys.stderr)
+        run.save("failed", EXIT_FAIL)
+        return EXIT_FAIL
 
     prev_stages = {s["id"]: s for s in run.record["stages"]}
     # restore step dirs of stages already passed (references into them must resolve on resume)
@@ -3225,6 +3891,8 @@ def main(argv=None) -> int:
         if prev and prev.get("status") == "passed":
             continue
         status, code = run.run_stage(n, stage, prev, approvals)
+        if code != EXIT_OK:
+            run.export_telemetry()          # the run stops here: export once, before the final save writes trace.json
         run.save(status, code)
         run.post_stage_result(next(st for st in run.record["stages"] if st["id"] == stage["id"]))
         if code != EXIT_OK:
@@ -3251,8 +3919,13 @@ def main(argv=None) -> int:
                 run.post_stage({"id": stage["id"], "status": "failed", "error": f"stack profile: {e}"[:4000]}, finished_at=now())
                 return EXIT_FAIL
         print(f"  stage {stage['id']}: {status} — {run.record['stages'][-1]['gate']['detail'][:120]}")
+    run.export_telemetry()
     run.save("passed", EXIT_OK)
-    print(f"{spec['name']} run {run.run_id}: {len(spec['stages'])} stages passed — evidence in {run.evidence / 'EVIDENCE.md'}")
+    verdicts = [(st.get("gate") or {}).get("verdict") for st in run.record.get("stages", [])]
+    passed, not_run = sum(v == "pass" for v in verdicts), sum(v == "not_run" for v in verdicts)
+    auto = sum(1 for st in run.record.get("stages", []) for x in st.get("steps", []) if x.get("approved_by") == "--approve-all")
+    extra = (f", {not_run} not run (dry)" if not_run else "") + (f", {auto} approval(s) auto-approved" if auto else "")
+    print(f"{spec['name']} run {run.run_id}: {passed} of {len(spec['stages'])} stages passed{extra} — evidence in {run.evidence / 'EVIDENCE.md'}")
     return EXIT_OK
 
 

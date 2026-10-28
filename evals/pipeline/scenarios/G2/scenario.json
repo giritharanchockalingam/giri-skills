@@ -1,0 +1,15 @@
+{
+  "title": "Student-facing UI: degree-progress dashboard, phone first",
+  "name": "degree-progress",
+  "database": false,
+  "request": "Build a student-facing degree-progress dashboard: overall and per-requirement-group progress, a take-next panel with reasons, a what-if toggle, polished and responsive for phones, using fictional sample data.",
+  "pipeline": "greenfield-app",
+  "stack": "nextjs-ts",
+  "tier": "core",
+  "expect": {
+    "exit": 0,
+    "acceptance": "pass",
+    "visual": "pass",
+    "min_stages_passed": 6
+  }
+}

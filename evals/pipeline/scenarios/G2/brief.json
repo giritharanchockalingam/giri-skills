@@ -1,0 +1,42 @@
+{
+  "_note": "Greenfield scenario for the unattended pipeline batch. All data is FICTIONAL sample data; no client data, code or vendor names. G2: student-facing UI.",
+  "feature": "Student degree-progress dashboard: where I stand, what is left, and what to take next",
+  "problem": "Students cannot see their degree progress in one place; they piece it together from transcripts and catalog pages, mostly on their phones",
+  "users": [
+    "Student (undergraduate, mostly on a phone)"
+  ],
+  "goals": [
+    "Home page / lists three fictional sample students; choosing one opens /progress?student=<id>",
+    "Progress page: overall percent complete and credits earned of 120, one card per requirement group (General Education, Business Core, Major, Electives) with a progress bar, completed / in progress / remaining courses, and the credits each needs",
+    "A 'Take next' panel suggesting up to 5 eligible remaining courses whose prerequisites are complete, with the reason each is suggested",
+    "A what-if toggle: mark an in-progress course as failed and see the progress and suggestions change immediately",
+    "Polished, consistent visual design: a clear type scale, spacing system and colour palette defined once (CSS variables or a CSS module system), good contrast, focus styles; it must look like a product a university would ship, not unstyled HTML",
+    "Works on a phone (390 px wide) with no sideways scrolling, and on a desktop (1440 px) with a sensible max width",
+    "Accessible: semantic headings, labelled controls, progress bars with text equivalents, keyboard operable",
+    "Loading, empty and error states for every data view"
+  ],
+  "non_goals": [
+    "Real student data or any back-end integration (fictional in-memory data)",
+    "Login",
+    "Registration"
+  ],
+  "metrics": [
+    {
+      "name": "Time to answer 'what should I take next'",
+      "baseline": "minutes across several pages",
+      "target": "one page, under 10 seconds"
+    }
+  ],
+  "constraints": [
+    "Next.js App Router with TypeScript; no UI framework is required, plain CSS modules are fine",
+    "Progress and suggestion logic is a pure, unit-tested module"
+  ],
+  "phases": [
+    {
+      "name": "v1",
+      "scope": [
+        "Everything in goals"
+      ]
+    }
+  ]
+}

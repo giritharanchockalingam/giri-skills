@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -230,7 +231,8 @@ def test_evidence_md_has_one_row_per_stage(happy):
     rows = [ln for ln in md.splitlines() if ln.startswith("| ") and not ln.startswith("| Stage")]
     assert [r.split("|")[1].strip() for r in rows] == STAGES
     assert "| Stage | Role | Gate | Verdict | Evidence |" in md
-    assert md.count("PASS") >= 5 and "RECORDED" in md     # deploy gate is external: recorded, not judged
+    assert md.count("PASS") >= 5 and "NOT RUN" in md      # dry: no PR opened, CI never ran; never shown as passed
+    assert "AUTO-APPROVED" in md and "DRY RUN" in md      # the header says who did (not) review and that nothing shipped
     assert str(out) not in md                              # relative links only: the bundle travels
 
 
@@ -241,7 +243,7 @@ def test_evidence_bundle_layout_and_hashes(happy):
     for n, sid in enumerate(STAGES, 1):
         gate = json.loads((ev / f"{n:02d}-{sid}" / "gate.json").read_text())
         assert set(gate) == {"verdict", "kind", "detail", "role", "approved_by", "at"}
-        assert gate["verdict"] in ("pass", "recorded")
+        assert gate["verdict"] in ("pass", "recorded", "not_run")
     assert (ev / "02-architecture" / "plan-approval" / "approval.json").is_file()
     assert (ev / "03-build" / "code" / "diff.patch").read_text() == PATCH.read_text()
     assert json.loads((ev / "05-deploy" / "pr" / "pr.json").read_text())["dry"] is True
@@ -632,7 +634,7 @@ def test_portal_receives_the_profile_then_one_record_per_stage(tmp_path, monkeyp
         assert len(e["sha256"]) == 64 and e["bytes"] > 0
         assert e["sha256"] == run_json(out)["files"]["evidence/" + e["path"]]
     deploy = portal.posts[5]
-    assert deploy["gate"]["verdict"] == "pass" and "pr" not in deploy       # dry: no PR to report
+    assert deploy["gate"]["verdict"] == "pending" and "pr" not in deploy    # dry: CI never ran, so the portal never sees "pass"
     for p in portal.posts:
         assert p["started_at"].endswith("Z") and p.get("finished_at", "Z").endswith("Z")
     log = (out / "callback.log").read_text()
@@ -1679,8 +1681,12 @@ def test_code_step_installs_once_and_executes_the_tests_on_the_real_checkout(tmp
     assert npm_calls(npm_log) == ["ci", "test"]                                             # once each, in the checkout
     code = code_step(out)
     assert code["install"] == {"cmd": "npm ci", "exit": 0, "duration_s": code["install"]["duration_s"], "log": "install.log",
+                               "manifest_sha": code["install"]["manifest_sha"],              # a later manifest change reinstalls
                                "excluded_from_git": ["node_modules", ".venv"]}             # the fixture has no .gitignore
-    assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed", "log": "tests.log"}
+    assert re.fullmatch(r"[0-9a-f]{64}", code["install"]["manifest_sha"])
+    stubs = ["tests/unit/app-api-orders-export-route.test.js", "tests/unit/lib-orders.test.js"]   # the fixture patch fills none
+    assert code["tests"] == {"cmd": "npm test", "exit": 0, "duration_s": code["tests"]["duration_s"], "summary": "3 passed", "log": "tests.log",
+                             "unfilled_stubs": stubs}
     sdir = out / "evidence" / "03-build" / "code"
     assert "added 3 packages" in (sdir / "install.log").read_text() and "Tests  3 passed" in (sdir / "tests.log").read_text()
     tj = json.loads((sdir / "tests.json").read_text())
@@ -1695,7 +1701,8 @@ def test_code_step_installs_once_and_executes_the_tests_on_the_real_checkout(tmp
     assert "node_modules" not in tree and "lib/orders.js" in tree
     # evidence: the Tests line and the build row carry tests.json / tests.log / install.log
     md = (out / "evidence" / "EVIDENCE.md").read_text()
-    assert "Tests (after the change): `npm test` exit 0 — tests: 3 passed — [tests.log](03-build/code/tests.log); install `npm ci` exit 0." in md
+    assert ("Tests (after the change): `npm test` exit 0 — tests: 3 passed — [tests.log](03-build/code/tests.log); install `npm ci` exit 0. "
+            "UNFILLED: 2 scaffolded test file(s) still hold only todo stubs") in md     # a manual diff is not sent back; it is flagged
     build_row = next(ln for ln in md.splitlines() if ln.startswith("| build |"))
     assert "[tests.json](03-build/code/tests.json)" in build_row and "[tests.log](03-build/code/tests.log)" in build_row and "[install.log](03-build/code/install.log)" in build_row
     files = run_json(out)["files"]
@@ -1952,7 +1959,7 @@ def test_provenance_json_records_every_skill_with_version_and_sha_and_the_approv
     assert prov["approvals"] == [{"stage": "architecture", "step": "plan-approval", "by": "--approve-all", "note": "approved on the command line",
                                   "at": prov["approvals"][0]["at"], "source": "cli"}] and prov["approvals"][0]["at"]
     assert prov["rejections"] == []
-    assert [(g["stage"], g["verdict"]) for g in prov["gates"]] == [(s, "pass") for s in STAGES[:4]] + [("deploy", "recorded"), ("operate", "pass")]
+    assert [(g["stage"], g["verdict"]) for g in prov["gates"]] == [(s, "pass") for s in STAGES[:4]] + [("deploy", "not_run"), ("operate", "pass")]
     assert all(g["at"] and g["kind"] for g in prov["gates"])
     assert "evidence/provenance.json" in rj["files"]
     md = (out / "evidence" / "EVIDENCE.md").read_text()

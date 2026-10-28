@@ -8,11 +8,13 @@
 
 Detectors (file:line evidence; secrets are redacted in the evidence column):
   SEC1 action-without-auth      high      "use server" file exporting async functions with no
-                                          auth.getUser / getSession / requireUser / requireRole anywhere in the file
+                                          auth.getUser / getSession / requireUser / requireRole in the file or in
+                                          an imported project helper it calls (one hop)
   SEC2 raw-sql-interpolation    critical  sql`…${plain}` (a ${helper(x)} call is treated as parameterised),
                                           query(`…${…}`), "select … " + variable
   SEC3 secret-in-code           critical  sk-…, JWT (eyJ….), AWS AKIA… literals
-  SEC4 ssrf-user-url            high      fetch(<identifier>) — URL is a variable, not a literal (heuristic)
+  SEC4 ssrf-user-url            high      fetch(<identifier>) in server code — URL is a variable, not a literal
+                                          or a same-origin path built in the file (heuristic; "use client" skipped)
   SEC5 dangerous-html           medium    dangerouslySetInnerHTML
   SEC6 rls-bypass-in-handler    high      service-role client used in a route handler or server action; a line that
                                           carries `// rls-lint: allow — <reason>` (the marker rls_lint.py honours, e.g.
@@ -66,6 +68,8 @@ def git_ignored(root: Path, rel: Path) -> bool:
 SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
 USE_SERVER = re.compile(r"^\s*['\"]use server['\"]")
+USE_CLIENT = re.compile(r"\A(?:\s*(?://[^\n]*|/\*.*?\*/))*\s*['\"]use client['\"]", re.S)   # the directive must come first
+SAME_ORIGIN = r"\s*=\s*(?:`/(?!/)|'/(?!/)|\"/(?!/))"   # const url = `/api/...` — a path on this origin, never another host
 EXPORT_FN = re.compile(r"^[ \t]*export\s+(?:default\s+)?async\s+function\b|^[ \t]*export\s+const\s+\w+\s*=\s*async\b")
 AUTH_CHECK = re.compile(r"auth\.getUser\(|getSession\(|requireUser\(|requireRole\(|getClaims\(")
 RAW_SQL = re.compile(r"sql`[^`]*\$\{\s*[^}(]*\}|\.(?:query|execute|raw|unsafe)\(\s*`[^`]*\$\{|"
@@ -152,7 +156,62 @@ def is_handler(path: str, full: str) -> bool:
         path.startswith("server/actions/") or bool(USE_SERVER.search(full)) or bool(HTTP_EXPORT.search(full))
 
 
-def scan_file(path: str, info: dict) -> list[dict]:
+IMPORT_NAMED = re.compile(r"import\s*(?:type\s+)?\{([^}]*)\}\s*from\s*[\"']([^\"']+)[\"']")
+SRC_EXTS = (".ts", ".tsx", ".js", ".jsx", ".mjs")
+
+
+def _module_text(spec: str, importer: str, files: dict, root: Path | None) -> str | None:
+    """Text of a project module imported as @/x or ./x (one hop), from the scanned files or the repo on disk."""
+    if spec.startswith("@/"):
+        base = spec[2:]
+    elif spec.startswith("."):
+        base = str(Path(importer).parent.joinpath(spec)).replace("\\", "/")
+        base = "/".join(x for x in Path(base).as_posix().split("/") if x != ".")
+        parts: list[str] = []
+        for x in base.split("/"):
+            if x == "..":
+                parts = parts[:-1]
+            else:
+                parts.append(x)
+        base = "/".join(parts)
+    else:
+        return None
+    for cand in [base] + [base + e for e in SRC_EXTS] + [f"{base}/index{e}" for e in SRC_EXTS]:
+        if cand in files:
+            return "\n".join(files[cand]["all"])
+        if root is not None and (root / cand).is_file():
+            return (root / cand).read_text(encoding="utf-8", errors="replace")
+    return None
+
+
+def auth_via_helper(path: str, full: str, files: dict, root: Path | None) -> bool:
+    """A "use server" file that calls an imported project helper whose definition does the auth check — e.g.
+    getSessionUser() in server/services/auth.ts wrapping supabase.auth.getUser(). Found on greenfield G3: the gate
+    failed a correctly authenticated action because the check lived one import away. One hop only, by name."""
+    for names, spec in IMPORT_NAMED.findall(full):
+        called = []
+        for n in names.split(","):
+            n = n.strip().replace("type ", "")
+            if not n:
+                continue
+            orig, _, local = n.partition(" as ")
+            if re.search(rf"\b{re.escape((local or orig).strip())}\s*\(", full):
+                called.append(orig.strip())
+        if not called:
+            continue
+        text = _module_text(spec, path, files, root)
+        if not text:
+            continue
+        for name in called:
+            m = re.search(rf"(?:function\s+{re.escape(name)}\b|(?:const|let)\s+{re.escape(name)}\s*=)", text)
+            if m:
+                end = text.find("\nexport ", m.end())
+                if AUTH_CHECK.search(text[m.start(): end if end != -1 else len(text)]):
+                    return True
+    return False
+
+
+def scan_file(path: str, info: dict, files: dict | None = None, root: Path | None = None) -> list[dict]:
     out = []
     full = "\n".join(info["all"])
     ext = Path(path).suffix
@@ -161,7 +220,7 @@ def scan_file(path: str, info: dict) -> list[dict]:
         out.append({"id": "", "category": CATEGORY[rule], "rule": rule, "severity": SEVERITY[rule], "file": path,
                     "line": ln, "evidence": evidence.strip()[:140], "recommendation": RECOMMEND[rule]})
 
-    server_action = bool(USE_SERVER.search(full)) and not AUTH_CHECK.search(full)
+    server_action = bool(USE_SERVER.search(full)) and not AUTH_CHECK.search(full) and not auth_via_helper(path, full, files or {}, root)
     handler = is_handler(path, full) if ext != ".sql" else False
     for ln, text in info["added"]:
         if server_action and EXPORT_FN.search(text):
@@ -173,7 +232,11 @@ def scan_file(path: str, info: dict) -> list[dict]:
                 add("SEC3", ln, text.replace(m.group(0), redact(m.group(0))))
         if ext != ".sql":
             m = FETCH_VAR.search(text)
-            if m and not m.group(1).startswith("process.env"):
+            # SSRF is the SERVER fetching an attacker-chosen URL. A browser fetch ("use client") cannot reach the
+            # server's network, and a variable built in this file from a same-origin path ("/api/…") is not
+            # user-chosen. Found on the CAPE R1 run: a client component's fetch(draftUrl) was a high finding.
+            if m and not m.group(1).startswith("process.env") and not USE_CLIENT.search(full) \
+                    and not re.search(rf"\b(?:const|let|var)\s+{re.escape(m.group(1))}{SAME_ORIGIN}", full):
                 add("SEC4", ln, text)
             if DANGEROUS_HTML.search(text):
                 add("SEC5", ln, text)
@@ -212,7 +275,7 @@ def write_outputs(findings: list[dict], fpath: Path, rpath: Path, scope: str, n_
     lines += ["", "## Method and limits", "",
               "- Pattern scan on added lines (diff mode) or all source lines (repo mode); every finding carries file:line.",
               "- Findings are candidates: the review step must trace entry → sink before rating them final.",
-              "- SEC1 checks the whole visible file for an auth call; a helper in another file is not seen — confirm manually.",
+              "- SEC1 checks the file for an auth call, and follows imported project helpers one hop (@/ or relative imports); deeper indirection is not seen — confirm manually.",
               "- SEC4 is a heuristic (fetch of a variable); confirm whether the variable is user-controlled.",
               "- Not covered: IDOR, mass assignment, missing RLS policies (run supabase-schema-rls/rls_lint.py), logic flaws."]
     rpath.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -297,7 +360,7 @@ def main() -> int:
         return gate(Path(a.gate))
     if not a.diff and not a.target:
         die("give --diff <patch> and/or --target <repo>")
-    files, scopes = {}, []
+    files, scopes, root = {}, [], None
     if a.diff:
         p = Path(a.diff)
         if not p.is_file():
@@ -319,7 +382,7 @@ def main() -> int:
     findings = []
     for path, info in files.items():
         if Path(path).suffix in EXTS:
-            findings += scan_file(path, info)
+            findings += scan_file(path, info, files, root)
     write_outputs(findings, Path(a.findings), Path(a.report), scope, len(files))
     if a.draft_only and a.final:
         write_final(findings, Path(a.final), scope, len(files), sorted(files))

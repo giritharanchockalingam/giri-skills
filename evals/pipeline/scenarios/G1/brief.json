@@ -1,0 +1,45 @@
+{
+  "_note": "Greenfield scenario for the unattended pipeline batch. All data is FICTIONAL sample data; no client data, code or vendor names. G1: API + Postgres.",
+  "feature": "Course section enrollment API backed by Postgres: catalog search, enroll and drop with seat capacity and waitlist",
+  "problem": "Students and the advising front end need a reliable enrollment API; today seat counts drift because enrollment is not transactional and two students can take the last seat",
+  "users": [
+    "Student (through a front end that calls the API)",
+    "Advisor (reads rosters)"
+  ],
+  "goals": [
+    "Schema as plain SQL migration files (numbered, applied in order by a small script): terms, courses, sections (capacity), students, enrollments (status enrolled|waitlisted|dropped, created_at), with foreign keys, unique (student, section) for active rows and the indexes the queries need",
+    "Seed script with fictional data: 1 term, 40 courses, 80 sections, 300 students",
+    "GET /api/sections?term=&q=&limit=&cursor= : search sections by course code or title, keyset pagination, limit capped at 100, returns seats_taken and seats_left",
+    "POST /api/enrollments {student_id, section_id}: enrolls when a seat is free, otherwise waitlists; never oversells under concurrent requests (row lock or equivalent in one transaction); 409 when already enrolled or waitlisted",
+    "DELETE /api/enrollments/:id : drops; the earliest waitlisted student is promoted in the same transaction",
+    "GET /api/sections/:id/roster : enrolled then waitlisted students in order",
+    "Every request body and query string validated with zod; errors return {error:{code,message}} with 400/404/409, never a stack trace; SQL is parameterised only",
+    "A small home page at / that documents the endpoints and shows live counts (styled, readable on a phone)"
+  ],
+  "non_goals": [
+    "Authentication (a later phase)",
+    "Payments, holds, prerequisites",
+    "Deployment"
+  ],
+  "metrics": [
+    {
+      "name": "Oversell under concurrency",
+      "baseline": "possible today",
+      "target": "0: 50 concurrent enrolls into a 10-seat section give exactly 10 enrolled and 40 waitlisted"
+    }
+  ],
+  "constraints": [
+    "Next.js App Router route handlers with TypeScript and the `pg` package; no ORM",
+    "Integration tests run with `npm test` against the Postgres at the DATABASE_URL environment variable (it is set when tests run); each test file creates its own schema, applies the migrations into it and drops it afterwards",
+    "Unit tests for validation and pure logic need no database"
+  ],
+  "phases": [
+    {
+      "name": "v1",
+      "scope": [
+        "Everything in goals",
+        "Integration tests for every endpoint including the 50-concurrent-enrollment test"
+      ]
+    }
+  ]
+}

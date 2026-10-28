@@ -1,0 +1,15 @@
+{
+  "title": "API + Postgres: enrollment with capacity, waitlist, no overselling",
+  "name": "enrollment-api",
+  "database": true,
+  "request": "Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data.",
+  "pipeline": "greenfield-app",
+  "stack": "nextjs-ts",
+  "tier": "core",
+  "expect": {
+    "exit": 0,
+    "acceptance": "pass",
+    "visual": "pass",
+    "min_stages_passed": 6
+  }
+}

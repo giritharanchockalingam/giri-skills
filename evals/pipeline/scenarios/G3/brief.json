@@ -1,0 +1,44 @@
+{
+  "_note": "Greenfield scenario for the unattended pipeline batch. All data is FICTIONAL sample data; no client data, code or vendor names. G3: Supabase auth + row-level security.",
+  "feature": "Advisor notes with Supabase authentication and row-level security",
+  "problem": "Advisors keep student meeting notes in spreadsheets; students cannot see notes meant for them and nothing stops one advisor reading another advisor's private notes",
+  "users": [
+    "Student",
+    "Advisor",
+    "Advising admin"
+  ],
+  "goals": [
+    "Supabase SQL migrations: profiles (id = auth.users id, role student|advisor|admin, display_name), advisor_assignments (advisor_id, student_id), notes (id, student_id, author_id, body, visibility shared|private, created_at, updated_at)",
+    "Row-level security enabled on every table, with policies: a student reads only notes about themself with visibility shared; an advisor reads and writes notes only for students assigned to them, and reads private notes only they authored; an admin reads everything and writes nothing; nobody can change author_id or student_id after insert; anon has no access",
+    "Policies use auth.uid() and are written so the role lookup cannot recurse (security definer helper in a private schema, or equivalent)",
+    "Next.js pages: /login (Supabase email magic link via @supabase/ssr), /notes listing the notes the signed-in user may see, and a form for advisors to add a note; the service-role key is never used in browser code",
+    "Tests prove each policy rule with an allowed and a denied case for every role",
+    "Pages are styled and readable on a phone"
+  ],
+  "non_goals": [
+    "Real users or data (fictional seed only)",
+    "Email delivery (magic link sending is Supabase's job)",
+    "Deployment"
+  ],
+  "metrics": [
+    {
+      "name": "Unauthorised note reads",
+      "baseline": "possible (spreadsheets)",
+      "target": "0, proven by policy tests"
+    }
+  ],
+  "constraints": [
+    "A Supabase project is NOT available when tests run. Policy tests run with `npm test` against the plain Postgres at the DATABASE_URL environment variable (set when tests run): before applying the migrations, the test setup creates what Supabase provides \u2014 roles anon, authenticated and service_role, schema auth with table auth.users(id uuid primary key) and function auth.uid() returning (current_setting('request.jwt.claims', true)::json->>'sub')::uuid \u2014 then checks each policy by SET ROLE authenticated and set_config('request.jwt.claims', ...) inside a transaction",
+    "Each test file uses its own database schema or transaction and cleans up",
+    "Next.js App Router with TypeScript; @supabase/ssr and @supabase/supabase-js for the app; `pg` for the policy tests",
+    "NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY come from the environment; the pages must render a clear 'not configured' message instead of crashing when they are absent"
+  ],
+  "phases": [
+    {
+      "name": "v1",
+      "scope": [
+        "Everything in goals"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,756 @@
+{
+  "run_id": "d2f8e2eb87",
+  "pipeline": "greenfield-app",
+  "version": "0.1.0",
+  "mode": "greenfield",
+  "dry": true,
+  "builder": "claude-code",
+  "provider": "none",
+  "inputs": {
+    "name": "enrollment-api",
+    "stack": "nextjs-ts",
+    "repo": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/app",
+    "request": "Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data.",
+    "brief": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1-brief.json"
+  },
+  "repo_input": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/app",
+  "out": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run",
+  "started_at": "2026-10-26T19:15:27",
+  "resumed": false,
+  "stages": [
+    {
+      "id": "bootstrap",
+      "adlc_stage": "build",
+      "role": "full-stack-engineer",
+      "dir": "evidence/01-bootstrap",
+      "status": "passed",
+      "started_at": "2026-10-26T19:15:27",
+      "steps": [
+        {
+          "id": "scaffold",
+          "kind": "skill",
+          "stage": "bootstrap",
+          "status": "ok",
+          "skill": "build/project-bootstrap",
+          "inputs": {
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo",
+            "name": "enrollment-api",
+            "stack": "nextjs-ts"
+          },
+          "exit": 0,
+          "checks_passed": 13,
+          "checks_total": 13,
+          "duration_s": 0.091
+        }
+      ],
+      "gate": {
+        "verdict": "pass",
+        "kind": "output",
+        "detail": "bootstrap-report.json: json \u2014 valid JSON",
+        "role": "full-stack-engineer",
+        "approved_by": "",
+        "at": "2026-10-26T19:15:27"
+      },
+      "duration_s": 0.092,
+      "evidence_files": [
+        "01-bootstrap/scaffold/bootstrap-report.json"
+      ]
+    },
+    {
+      "id": "requirements",
+      "adlc_stage": "requirements",
+      "role": "ai-product-manager",
+      "dir": "evidence/02-requirements",
+      "status": "passed",
+      "started_at": "2026-10-26T19:15:27",
+      "steps": [
+        {
+          "id": "brief",
+          "kind": "compose",
+          "stage": "requirements",
+          "status": "ok",
+          "derive": "brief-from-request",
+          "inputs": {
+            "request": "Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data.",
+            "brief": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1-brief.json"
+          },
+          "exit": 0,
+          "outputs": [
+            "brief.json"
+          ],
+          "duration_s": 0.0
+        },
+        {
+          "id": "prd",
+          "kind": "skill",
+          "stage": "requirements",
+          "status": "ok",
+          "skill": "build/product-spec-prd",
+          "inputs": {
+            "brief": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/02-requirements/brief/brief.json",
+            "draft_only": "true"
+          },
+          "exit": 0,
+          "checks_passed": 5,
+          "checks_total": 5,
+          "duration_s": 0.086
+        },
+        {
+          "id": "prd-refine",
+          "kind": "agent",
+          "stage": "requirements",
+          "status": "ok",
+          "builder": "claude-code",
+          "agent_exit": 0,
+          "agent_duration_s": 35.264,
+          "exit": 0,
+          "prd_source": "claude-code",
+          "duration_s": 35.266
+        }
+      ],
+      "gate": {
+        "verdict": "pass",
+        "kind": "all",
+        "detail": "[pass] prd-final.md: sections:[\"Acceptance criteria\"] \u2014 found ['Acceptance criteria'] | [pass] prd-final.md: section_filled:\"user stories\" \u2014 section 'user stories': 27 line(s), no placeholders",
+        "role": "ai-product-manager",
+        "approved_by": "",
+        "at": "2026-10-26T19:16:02"
+      },
+      "duration_s": 35.354,
+      "evidence_files": [
+        "02-requirements/brief/brief.json",
+        "02-requirements/prd/prd-final.md",
+        "02-requirements/prd-refine/prd-final.md"
+      ]
+    },
+    {
+      "id": "architecture",
+      "adlc_stage": "architecture",
+      "role": "ai-solution-architect",
+      "dir": "evidence/03-architecture",
+      "status": "passed",
+      "started_at": "2026-10-26T19:16:02",
+      "steps": [
+        {
+          "id": "spec",
+          "kind": "compose",
+          "stage": "architecture",
+          "status": "ok",
+          "derive": "spec-from-prd",
+          "inputs": {
+            "brief": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/02-requirements/brief/brief.json",
+            "prd": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/02-requirements/prd-refine/prd-final.md",
+            "request": "Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data."
+          },
+          "exit": 0,
+          "outputs": [
+            "spec.md",
+            "spec.json"
+          ],
+          "duration_s": 0.001
+        },
+        {
+          "id": "plan",
+          "kind": "skill",
+          "stage": "architecture",
+          "status": "ok",
+          "skill": "build/spec-to-plan",
+          "inputs": {
+            "spec": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/03-architecture/spec/spec.md",
+            "section": "Course section enrollment API backed by Postgres: catalog search, enroll and drop with seat capacity and waitlist",
+            "repo": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo"
+          },
+          "exit": 0,
+          "checks_passed": 6,
+          "checks_total": 6,
+          "duration_s": 0.093
+        },
+        {
+          "id": "plan-refine",
+          "kind": "agent",
+          "stage": "architecture",
+          "status": "ok",
+          "builder": "claude-code",
+          "agent_exit": 0,
+          "agent_duration_s": 78.758,
+          "exit": 0,
+          "plan_source": "claude-code",
+          "skipped": false,
+          "tasks": 7,
+          "gaps": 0,
+          "duration_s": 78.77
+        },
+        {
+          "id": "plan-approval",
+          "kind": "approval",
+          "stage": "architecture",
+          "status": "approved",
+          "role": "ai-solution-architect",
+          "note": "Approve the refined plan before any code is written: every task names its files, acceptance, test and rollback (the gate refuses a plan with TBD cells)",
+          "approved_by": "--approve-all",
+          "at": "2026-10-26T19:17:21",
+          "exit": 0,
+          "approval_source": "cli",
+          "duration_s": 0.001
+        }
+      ],
+      "gate": {
+        "verdict": "pass",
+        "kind": "all",
+        "detail": "[pass] tasks.csv: csv_rows:files!empty \u2014 0 of 7 rows empty in 'files' | [pass] tasks.csv: csv_rows:acceptance!empty \u2014 0 of 7 rows empty in 'acceptance' | [pass] tasks.csv: csv_rows:files!tbd \u2014 0 of 7 rows still [TO BE BASELINED] in 'files' | [pass] tasks.csv: csv_rows:acceptance!tbd \u2014 0 of 7 rows still [TO BE BASELINED] in 'acceptance' | [pass] tasks.csv: csv_rows:test!tbd \u2014 0 of 7 rows still [TO BE BASELINED] in 'test' | [pass] approved by --approve-all",
+        "role": "ai-solution-architect",
+        "approved_by": "--approve-all",
+        "at": "2026-10-26T19:17:21"
+      },
+      "duration_s": 78.867,
+      "evidence_files": [
+        "03-architecture/plan/plan.md",
+        "03-architecture/plan/tasks.csv",
+        "03-architecture/plan-refine/plan.md",
+        "03-architecture/plan-refine/tasks.csv"
+      ]
+    },
+    {
+      "id": "build",
+      "adlc_stage": "build",
+      "role": "full-stack-engineer",
+      "dir": "evidence/04-build",
+      "status": "passed",
+      "started_at": "2026-10-26T19:17:21",
+      "steps": [
+        {
+          "id": "feature",
+          "kind": "compose",
+          "stage": "build",
+          "status": "ok",
+          "derive": "feature-from-plan",
+          "inputs": {
+            "plan": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/03-architecture/plan-refine/plan.md",
+            "tasks": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/03-architecture/plan-refine/tasks.csv",
+            "brief": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/02-requirements/brief/brief.json"
+          },
+          "exit": 0,
+          "outputs": [
+            "feature.md",
+            "feature.json"
+          ],
+          "duration_s": 0.0
+        },
+        {
+          "id": "files",
+          "kind": "agent",
+          "stage": "build",
+          "status": "ok",
+          "builder": "claude-code",
+          "exit": 0,
+          "files": 33,
+          "files_source": "tasks.csv",
+          "duration_s": 0.001
+        },
+        {
+          "id": "tests",
+          "kind": "skill",
+          "stage": "build",
+          "status": "ok",
+          "skill": "build/test-strategy-tdd",
+          "inputs": {
+            "feature": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/04-build/feature/feature.md",
+            "files": "lib/http.ts,server/validators/sections.ts,server/services/sections.ts,app/api/sections/route.ts,tests/unit/sections-validator.test.ts,tests/integration/sections.test.ts,server/validators/enrollments.ts,server/services/enrollments.ts,app/api/enrollments/route.ts,tests/unit/enrollments-validator.test.ts,tests/integration/enroll.test.ts,tests/integration/enroll-concurrency.test.ts,app/api/enrollments/[id]/route.ts,tests/integration/drop.test.ts,server/services/roster.ts,app/api/sections/[id]/roster/route.ts,tests/integration/roster.test.ts,supabase/migrations/0001_init.sql,lib/db/pool.ts,lib/db/migrate.ts,lib/db/seed.ts,scripts/db.ts,tests/helpers/db.ts,tests/integration/migrate.test.ts,tests/integration/seed.test.ts,package.json,vitest.config.ts,.env.example,app/page.tsx,app/home.css,server/services/stats.ts,tests/integration/stats.test.ts,tests/unit/home-page.test.ts",
+            "tasks": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/03-architecture/plan-refine/tasks.csv",
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo",
+            "flavour": "ts"
+          },
+          "exit": 0,
+          "checks_passed": 5,
+          "checks_total": 5,
+          "duration_s": 0.098
+        },
+        {
+          "id": "code",
+          "kind": "agent",
+          "stage": "build",
+          "status": "ok",
+          "baseline": "skipped",
+          "builder": "claude-code",
+          "allowed_files": [
+            "lib/http.ts",
+            "server/validators/sections.ts",
+            "server/services/sections.ts",
+            "app/api/sections/route.ts",
+            "tests/unit/sections-validator.test.ts",
+            "tests/integration/sections.test.ts",
+            "server/validators/enrollments.ts",
+            "server/services/enrollments.ts",
+            "app/api/enrollments/route.ts",
+            "tests/unit/enrollments-validator.test.ts",
+            "tests/integration/enroll.test.ts",
+            "tests/integration/enroll-concurrency.test.ts",
+            "app/api/enrollments/[id]/route.ts",
+            "tests/integration/drop.test.ts",
+            "server/services/roster.ts",
+            "app/api/sections/[id]/roster/route.ts",
+            "tests/integration/roster.test.ts",
+            "supabase/migrations/0001_init.sql",
+            "lib/db/pool.ts",
+            "lib/db/migrate.ts",
+            "lib/db/seed.ts",
+            "scripts/db.ts",
+            "tests/helpers/db.ts",
+            "tests/integration/migrate.test.ts",
+            "tests/integration/seed.test.ts",
+            "package.json",
+            "vitest.config.ts",
+            ".env.example",
+            "app/page.tsx",
+            "app/home.css",
+            "server/services/stats.ts",
+            "tests/integration/stats.test.ts",
+            "tests/unit/home-page.test.ts"
+          ],
+          "install": {
+            "cmd": "npm install --no-audit --no-fund",
+            "exit": 0,
+            "duration_s": 35.33,
+            "log": "install.log",
+            "manifest_sha": "24383b3683c6c0b09d1e525c7f771a3bdc3e54f1bd1704b0bc721554f215cc5e",
+            "excluded_from_git": [
+              "node_modules",
+              ".venv"
+            ],
+            "reinstall": {
+              "cmd": "npm install --no-audit --no-fund",
+              "exit": 0,
+              "duration_s": 9.709,
+              "log": "reinstall.log"
+            }
+          },
+          "agent_exit": 0,
+          "agent_duration_s": 550.655,
+          "exit": 0,
+          "files_changed": 36,
+          "outside_plan": [
+            "next-env.d.ts",
+            "package-lock.json"
+          ],
+          "tests": {
+            "cmd": "npm test",
+            "exit": 0,
+            "duration_s": 5.503,
+            "summary": "73 passed",
+            "log": "tests.log"
+          },
+          "visual": {
+            "verdict": "pass",
+            "routes": [
+              "/"
+            ],
+            "start_cmd": "./node_modules/.bin/next dev -p 49681",
+            "reason": "Next.js app",
+            "failures": [],
+            "warnings": [],
+            "screenshots": [
+              "visual/visual-home-desktop.png",
+              "visual/visual-home-phone.png"
+            ],
+            "detail": "visual check: PASS"
+          },
+          "repairs": [
+            {
+              "turn": 1,
+              "exit": 0,
+              "duration_s": 20.158,
+              "reason": "visual check failed: / (desktop): unstyled: the page uses the browser's default font (\"Times New Roman\"); no design system reached it; / (phone): unstyled: the page uses the browser's default font (\"Times New Roman\"); no design system reached it \u2014 screenshots in /tmp/claude-0/-home-claude/5830b054-d"
+            }
+          ],
+          "duration_s": 647.447
+        },
+        {
+          "id": "conventions",
+          "kind": "skill",
+          "stage": "build",
+          "status": "ok",
+          "skill": "build/nextjs-enterprise-conventions",
+          "inputs": {
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo"
+          },
+          "exit": 0,
+          "checks_passed": 4,
+          "checks_total": 4,
+          "findings": 0,
+          "known": 0,
+          "new_high_count": 0,
+          "new_high": [],
+          "duration_s": 0.779
+        }
+      ],
+      "gate": {
+        "verdict": "pass",
+        "kind": "exit",
+        "detail": "step 'conventions' exit 0",
+        "role": "full-stack-engineer",
+        "approved_by": "",
+        "at": "2026-10-26T19:28:09"
+      },
+      "duration_s": 648.325,
+      "evidence_files": [
+        "04-build/files/files.txt",
+        "04-build/tests/test-plan.md",
+        "04-build/tests/scaffold-report.json",
+        "04-build/code/diff.patch",
+        "04-build/code/agent-summary.md",
+        "04-build/conventions/report.md",
+        "04-build/code/tests.json",
+        "04-build/code/tests.log",
+        "04-build/code/install.json",
+        "04-build/code/install.log"
+      ]
+    },
+    {
+      "id": "evaluate",
+      "adlc_stage": "evaluate",
+      "role": "ai-quality-red-team",
+      "dir": "evidence/05-evaluate",
+      "status": "passed",
+      "started_at": "2026-10-26T19:28:09",
+      "steps": [
+        {
+          "id": "review",
+          "kind": "skill",
+          "stage": "evaluate",
+          "status": "ok",
+          "skill": "build/code-review-runner",
+          "inputs": {
+            "diff": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/04-build/code/diff.patch",
+            "spec": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/02-requirements/prd-refine/prd-final.md"
+          },
+          "exit": 0,
+          "checks_passed": 6,
+          "checks_total": 6,
+          "duration_s": 0.176
+        },
+        {
+          "id": "security",
+          "kind": "skill",
+          "stage": "evaluate",
+          "status": "ok",
+          "skill": "build/security-review",
+          "inputs": {
+            "diff": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/04-build/code/diff.patch",
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo",
+            "draft_only": "true"
+          },
+          "exit": 0,
+          "checks_passed": 7,
+          "checks_total": 7,
+          "findings": 0,
+          "known": 0,
+          "new_high_count": 0,
+          "new_high": [],
+          "duration_s": 0.826
+        },
+        {
+          "id": "perf",
+          "kind": "skill",
+          "stage": "evaluate",
+          "status": "ok",
+          "skill": "build/perf-review-runner",
+          "inputs": {
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo"
+          },
+          "exit": 0,
+          "checks_passed": 5,
+          "checks_total": 5,
+          "findings": 2,
+          "known": 0,
+          "new_high_count": 0,
+          "new_high": [],
+          "duration_s": 0.75
+        },
+        {
+          "id": "ui",
+          "kind": "skill",
+          "stage": "evaluate",
+          "status": "ok",
+          "skill": "build/ui-component-quality",
+          "inputs": {
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo"
+          },
+          "exit": 0,
+          "checks_passed": 8,
+          "checks_total": 8,
+          "findings": 0,
+          "known": 0,
+          "new_high_count": 0,
+          "new_high": [],
+          "duration_s": 0.684
+        }
+      ],
+      "gate": {
+        "verdict": "pass",
+        "kind": "all",
+        "detail": "[pass] review.md: contains:\"Verdict: **PASS**\" \u2014 found: Verdict: **PASS** | [pass] step 'security' exit 0 | [pass] step 'perf' exit 0 | [pass] step 'ui' exit 0",
+        "role": "ai-quality-red-team",
+        "approved_by": "",
+        "at": "2026-10-26T19:28:12"
+      },
+      "duration_s": 2.438,
+      "evidence_files": [
+        "05-evaluate/review/review.md",
+        "05-evaluate/security/security-review.md",
+        "05-evaluate/perf/report.md",
+        "05-evaluate/ui/report.md"
+      ]
+    },
+    {
+      "id": "deploy",
+      "adlc_stage": "deploy",
+      "role": "mlops-platform-engineer",
+      "dir": "evidence/06-deploy",
+      "status": "passed",
+      "started_at": "2026-10-26T19:28:12",
+      "steps": [
+        {
+          "id": "ci",
+          "kind": "skill",
+          "stage": "deploy",
+          "status": "ok",
+          "skill": "build/ci-cd-vercel-github",
+          "inputs": {
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo"
+          },
+          "exit": 0,
+          "checks_passed": 9,
+          "checks_total": 9,
+          "duration_s": 0.118
+        },
+        {
+          "id": "pr",
+          "kind": "pr",
+          "stage": "deploy",
+          "status": "ok",
+          "branch": "deliver/d2f8e2eb87",
+          "title": "Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data.",
+          "exit": 0,
+          "duration_s": 0.001
+        }
+      ],
+      "gate": {
+        "verdict": "not_run",
+        "kind": "external",
+        "detail": "dry run: no pull request was opened and CI never ran (CI green on the pull request was not checked)",
+        "role": "mlops-platform-engineer",
+        "approved_by": "",
+        "at": "2026-10-26T19:28:12"
+      },
+      "duration_s": 0.119,
+      "evidence_files": [
+        "06-deploy/ci/ci-report.md",
+        "06-deploy/pr/pr.json"
+      ]
+    },
+    {
+      "id": "operate",
+      "adlc_stage": "operate",
+      "role": "ai-ops-sre",
+      "dir": "evidence/07-operate",
+      "status": "passed",
+      "started_at": "2026-10-26T19:28:12",
+      "steps": [
+        {
+          "id": "handoff",
+          "kind": "skill",
+          "stage": "operate",
+          "status": "ok",
+          "skill": "build/handoff-and-thread-close",
+          "inputs": {
+            "target": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo",
+            "state": "green \u2014 greenfield-app run d2f8e2eb87: 6 of 7 stages passed \u00b7 PR dry (not opened)"
+          },
+          "exit": 0,
+          "checks_passed": 3,
+          "checks_total": 3,
+          "duration_s": 0.128
+        }
+      ],
+      "gate": {
+        "verdict": "pass",
+        "kind": "output",
+        "detail": "HANDOFF.md: exists \u2014 /tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/evidence/07-operate/handoff/HANDOFF.md exists",
+        "role": "ai-ops-sre",
+        "approved_by": "",
+        "at": "2026-10-26T19:28:12"
+      },
+      "duration_s": 0.129,
+      "evidence_files": [
+        "07-operate/handoff/HANDOFF.md"
+      ]
+    }
+  ],
+  "argv": [
+    "greenfield-app",
+    "--repo",
+    "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/app",
+    "--input",
+    "name=enrollment-api",
+    "--input",
+    "stack=nextjs-ts",
+    "--request",
+    "Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data.",
+    "--brief",
+    "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1-brief.json",
+    "--builder",
+    "claude-code",
+    "--model",
+    "claude-sonnet-5-5",
+    "--provider",
+    "none",
+    "--approve-all",
+    "--dry",
+    "--out",
+    "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run"
+  ],
+  "cwd": "/home/claude/giri-skills",
+  "resume_command": "/usr/bin/python3 /home/claude/giri-skills/scripts/deliver.py greenfield-app --repo /tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/app --input name=enrollment-api --input stack=nextjs-ts --request 'Build a course section enrollment API on Postgres: section search with pagination, enroll with seat capacity and waitlist that never oversells under concurrency, drop with waitlist promotion, rosters, and a small styled home page documenting the endpoints, using fictional sample data.' --brief /tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1-brief.json --builder claude-code --model claude-sonnet-5-5 --provider none --approve-all --dry --out /tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run --resume",
+  "repo": "/tmp/claude-0/-home-claude/5830b054-d7d1-5086-993e-203facee06f8/scratchpad/gf/G1/run/repo",
+  "base_sha": "",
+  "status": "passed",
+  "exit_code": 0,
+  "finished_at": "2026-10-26T19:28:12",
+  "files": {
+    "evidence/00-baseline/baseline.json": "eb0f08572759c9b12bbe769b89ba9c099636a2b65840a1a6dd392785f68f81f5",
+    "evidence/01-bootstrap/gate.json": "34247c20afdf64506277c913e0e14b37a5316529fc36d81a5a9854602c58536a",
+    "evidence/01-bootstrap/scaffold/bootstrap-report.json": "53bef839ad58a381e8d3b8a352cbbb65908d6d80c3b3fca501d2ddd0a557bbad",
+    "evidence/01-bootstrap/scaffold/deliver-step.log": "a979f5fc09e3fc7ef8d98b16a3cb226135260eafb00eedff24a298bf61d962fb",
+    "evidence/01-bootstrap/scaffold/logs/scaffold.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/01-bootstrap/scaffold/logs/scaffold.stdout.txt": "36da92a44c815fadc6a8221c5a081b3d219f1d14633236d18f6d26fe60b5df6b",
+    "evidence/01-bootstrap/scaffold/run.json": "062c623d48a284b916642163404978d4ca8f165303b4b3548551dd635e669cd6",
+    "evidence/01-bootstrap/scaffold/scaffold.log": "36da92a44c815fadc6a8221c5a081b3d219f1d14633236d18f6d26fe60b5df6b",
+    "evidence/02-requirements/brief/brief.json": "1e7a79b15b0b673bc715094618bd921c4c4247cfb4c165f1157469a1923016bf",
+    "evidence/02-requirements/gate.json": "a899cd22cc3b1f880bc9d0bbee887adb14b8d8719c7bc3d0f0d9bd4aba555002",
+    "evidence/02-requirements/prd/PRD.md": "561a5fdd343d092443b429ec9444744625eeef45086701491ff387af3e7e62de",
+    "evidence/02-requirements/prd/deliver-step.log": "99268b0eabc746666b16e7e8d83ac3f781674e34b076a5a72e01d461390798b1",
+    "evidence/02-requirements/prd/logs/prd.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/02-requirements/prd/logs/prd.stdout.txt": "1c7eaa6fceef2c91e6fb584d20d2c0214126390cfbe52536f858f48f9cdd6bed",
+    "evidence/02-requirements/prd/prd-final.md": "6ee23967d51fbe95494adedb13d9fa5f722405794f29f01c445256b9836ff326",
+    "evidence/02-requirements/prd/run.json": "178fc7f98323c0119d5f8db7039e0eb7c5ffde5840f4326350202fd2fdbb2ca8",
+    "evidence/02-requirements/prd-refine/PROMPT.md": "eb627ca6d479abfa42989ece6b769bd923a94ee28792037a09bcb2f57b20fd8c",
+    "evidence/02-requirements/prd-refine/agent-stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/02-requirements/prd-refine/agent-stdout.txt": "5b5b7316998efbe1f5e04151124f12b47ddecd3a6b8d30662acd0741ac64495e",
+    "evidence/02-requirements/prd-refine/prd-final.md": "0e0caa592089b2fd954ce84e321851fa520ec09b7272dd5083c1314a9f005315",
+    "evidence/02-requirements/prd-refine/prd-refine.json": "97cc15b5e496a61dcbef3d199ec042f2e829b86df37cfe03a9fb0689bd1b87d9",
+    "evidence/02-requirements/prd-refine/prompt.txt": "eb627ca6d479abfa42989ece6b769bd923a94ee28792037a09bcb2f57b20fd8c",
+    "evidence/03-architecture/gate.json": "7cf8882f721f18e2cb6e52807221c6f319fbc4a2f7e19758a8c1866de7007098",
+    "evidence/03-architecture/plan/deliver-step.log": "012b59adfdcfea0a4469eb6b82d04bab98e28e2854c0f604bcceb4405e691562",
+    "evidence/03-architecture/plan/logs/plan.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/03-architecture/plan/logs/plan.stdout.txt": "248c90f0c211c42ee267ec55879102c015d014ce8c8b3f6b63a262de56271396",
+    "evidence/03-architecture/plan/plan.md": "3288f6352fc42d21dc713524d5af6c684972731000ae15437a8791c76d226e8a",
+    "evidence/03-architecture/plan/run.json": "18c25b54da9aa2df5a1303d3e52011a4e7b61d5dd3896db0a2db0ce35d21b3cd",
+    "evidence/03-architecture/plan/tasks.csv": "e01aaf05ddcd9c3fcd2a76da473b355eac762baeb8e9998f628b54caae035018",
+    "evidence/03-architecture/plan-approval/approval.json": "cf4457cb50bbb53aa75874bae7e08b7cfe5ca61f855a10cda5856fe636296335",
+    "evidence/03-architecture/plan-refine/PROMPT.md": "1b7039b5ad8796b7011453dd6229bd21f06a1bcdebabf5b920123e018f00367b",
+    "evidence/03-architecture/plan-refine/agent-stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/03-architecture/plan-refine/agent-stdout.txt": "d5bb35f759dc558468c082c04a072daf2688b0c27b1868c82b621e06bbed9e5f",
+    "evidence/03-architecture/plan-refine/plan-refine.json": "65d5514a0387315c12769c206cf06cb28de5296c429d5e3bbc37c738bcd0d974",
+    "evidence/03-architecture/plan-refine/plan.md": "e303a897786cfa5c556dacf167f9716380a56e820d09f2ae01684f77974cb32b",
+    "evidence/03-architecture/plan-refine/prompt.txt": "1b7039b5ad8796b7011453dd6229bd21f06a1bcdebabf5b920123e018f00367b",
+    "evidence/03-architecture/plan-refine/tasks.csv": "a50f6d40d85d18970956e1d2d613ba53328337450e2213f6bd75bfb391c30202",
+    "evidence/03-architecture/spec/spec.json": "a8ad91421706d9af370aa4914a4b559244cb323307c3b0bb352091c12e51b492",
+    "evidence/03-architecture/spec/spec.md": "27dbaa5292630664155f97f7bcc3c059aeac514e956249c587b7167e171f043d",
+    "evidence/04-build/code/PROMPT.md": "c5040769b6bdc4bde437d42f7a9913f749a4eb8d0660b2f9ff0addbcd03e8899",
+    "evidence/04-build/code/agent-stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/04-build/code/agent-summary.md": "02fa1607dd43eeac37c74d4cbf2cdd06c51f3bb6ebf472aeb89945a42ac4398c",
+    "evidence/04-build/code/diff.patch": "555df25203a62588fd796d388f4d1fc39a6f1f50a7e98fa41683220fa975e373",
+    "evidence/04-build/code/files-changed.json": "e1e90e0eb15386fa431cd9ee4f35d1dbd7e1864d2cccc892ac242eced6f5b8e2",
+    "evidence/04-build/code/install.json": "6ea8eddef6df55b3079a94caeb0e9ba767436fc39f586816e71ddfdc7bbaec3a",
+    "evidence/04-build/code/install.log": "2a2419467d4b2ca33d38a84e0064cb91fb09fef0b1d5b5f5287ad821b6bec5c1",
+    "evidence/04-build/code/prompt.txt": "c5040769b6bdc4bde437d42f7a9913f749a4eb8d0660b2f9ff0addbcd03e8899",
+    "evidence/04-build/code/reinstall.log": "6caccd726b470baf62a78322b795dba14f59ccafc8482cd6a8baf12594571212",
+    "evidence/04-build/code/repair-1-prompt.txt": "5f2631d9dfb8e67798fcc6859b9bc62577dbec199a3144c86eb91eac10b62e7a",
+    "evidence/04-build/code/repair-1-stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/04-build/code/tests.json": "b446158e76b2bde6354d6f489df9213982a68c46db4fbd42b698916e5b22b750",
+    "evidence/04-build/code/tests.log": "ebb97d35c2e630aaf4312eafd11873dba643022b2233a23e5c492b5edb6a2329",
+    "evidence/04-build/code/visual/visual-home-desktop.png": "aee8b3741f9339923cc855566dc5bd474d1e7c8dadcdb2377f4febc60bad8ae6",
+    "evidence/04-build/code/visual/visual-home-phone.png": "03a933e2d256548f81d0e1cfcae839252c3a83d328584917a91c87a71c1ad78a",
+    "evidence/04-build/code/visual/visual-server.log": "612bda48c47f4c1dc7b53d86c6bef6d41db9d224d8d510ff0e22a3582e58dfbd",
+    "evidence/04-build/code/visual/visual.json": "6151947029bbb060b0794477b30bcc3f5f13c5b198f0b0233fc66b32b24e41b4",
+    "evidence/04-build/conventions/deliver-step.log": "65d569102c2674a010af05b13e541282d4a463d50192216e17b6126bffb2fc7b",
+    "evidence/04-build/conventions/findings.csv": "7f93f351951f5d43d319645c1d9fe40c9de0c7099e58fbbaee4f74e17e360424",
+    "evidence/04-build/conventions/logs/lint.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/04-build/conventions/logs/lint.stdout.txt": "c935700045d1f6b482c2927413f826cb3406e5782dc40461418e43cb2805302f",
+    "evidence/04-build/conventions/report.md": "f3965876a16dd246373d13fa4b5fc6bf201a5caec456fc64e22bbcefcc0df320",
+    "evidence/04-build/conventions/run.json": "28a4f83550cf8173762c0080d11ff02698f83c56b3508d6e4ba39d38b8afd4b6",
+    "evidence/04-build/feature/feature.json": "d86da8dc78dba8f6df57dd74e86c62d10e0c7ecd201fa53b0d3bfa93b6017493",
+    "evidence/04-build/feature/feature.md": "0e54dfa46d763a1334027f2713b88ba0f4f558bbc52b28d67a1a242f72952fdb",
+    "evidence/04-build/files/files.json": "2acabc24465ff4ca60addb65b22c32841287a10326caed3ddccc81d350cc965e",
+    "evidence/04-build/files/files.txt": "d21809b21be7b4c64e0afe4d827d0be6e10b4b878765a4aad4321a8d743ba898",
+    "evidence/04-build/gate.json": "22917983e9bf68af58f0e0d86ac99056dddde13fe79bbae1cce69f94714162b2",
+    "evidence/04-build/tests/deliver-step.log": "5bb5117bd3a3c72df5c7a0dfa4d6f7447a7330febb2a9ea1970ad45263cc6f97",
+    "evidence/04-build/tests/logs/scaffold.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/04-build/tests/logs/scaffold.stdout.txt": "da43ca41913fde19be5efb81bb85d73cfb1e903a4f087c26ce352e99491ed5ff",
+    "evidence/04-build/tests/run.json": "48b96db13546692a6a106a75b7ad2875b75c9ebe57c8c32b6a46707bb3aa5b5c",
+    "evidence/04-build/tests/scaffold-report.json": "73a4ad67aa27a51846e80057012ccb4c5cfabe18f0940a381b53d9efc980e9b8",
+    "evidence/04-build/tests/test-plan.md": "d7cf26c513c4d2b654fe130a64644dd9e9905ad8b59bbd985d18714c6cf6f8a7",
+    "evidence/05-evaluate/gate.json": "57b9dc007e3edd18812dbfed5c3b7a72467aa825511a960ad77beab43771b615",
+    "evidence/05-evaluate/perf/deliver-step.log": "7bcae118b43863b46b4e065d4176a141b31b064908a543f63a16244db8649f45",
+    "evidence/05-evaluate/perf/findings.csv": "5078516d6349123184a37248a034811714304c6e96bd8ced0f44bbec729dcb31",
+    "evidence/05-evaluate/perf/logs/review.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/05-evaluate/perf/logs/review.stdout.txt": "8ecb66901f0f814f0d444c7ad537e6db3132584771bd52166c92399530493dcc",
+    "evidence/05-evaluate/perf/report.md": "dc73063139558c66dec1cded6da2acd71b99c1e4c72c98345d4ba6c42a9a0da6",
+    "evidence/05-evaluate/perf/run.json": "3051258d791ab702096b43b68c35506d38091471bef3e322c10fd3c03393857f",
+    "evidence/05-evaluate/review/deliver-step.log": "342587b4e826d8ed7b5599c52a9bcaebd0b6d023f40d9b426ab96a0e5ca5def4",
+    "evidence/05-evaluate/review/logs/review.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/05-evaluate/review/logs/review.stdout.txt": "0b242c78af21dc854fffe0d917d76a71182311253ba079c6db62c2b2c4f8341b",
+    "evidence/05-evaluate/review/review.json": "fe4931c4794b61e9e50d1b63e93d09d96f889edb3f818a168404926abe7d2c64",
+    "evidence/05-evaluate/review/review.md": "64b2358e5c63eeda8ab91e4400de165abdfc51bf376757df132f5247762ea106",
+    "evidence/05-evaluate/review/run.json": "b9a40f43010f117a60157a234a22b7de1cf120adad54769f4b68f489f9d7638a",
+    "evidence/05-evaluate/security/deliver-step.log": "bb6eb8c9a08ead3615f8e46105cd7e9771945322621618d5eb98a32cff10858c",
+    "evidence/05-evaluate/security/findings.csv": "5c2dbc51ead2d77bb3b076bc11ed49655d5aaded5a32a9f44a7c8d9d191454f6",
+    "evidence/05-evaluate/security/logs/scan.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/05-evaluate/security/logs/scan.stdout.txt": "56586c499eb196713ec37fc6fe7466cc81d5354dec417d682e757d6a4c094d87",
+    "evidence/05-evaluate/security/review.md": "1d9ae01e5805b57ca76e519c5cf407c766a194e40c6d4721cd871280576dbf34",
+    "evidence/05-evaluate/security/run.json": "d7e66a3f9bea773c16f245d98c6da7b2ba2c7b96a64b68937564c9e9715c56d8",
+    "evidence/05-evaluate/security/security-review.md": "ba9c56d060f3fc8a918a4e264d9e0db90247ca0f8c5d8c98787bd4c0ab612098",
+    "evidence/05-evaluate/ui/a11y-checklist.md": "0f0edc2938d9d930d28310db57f5d8368a61eb16fb91a867f6d1a63739ce726e",
+    "evidence/05-evaluate/ui/deliver-step.log": "ffcd7e902ed93cabc33a30b7213ef80ecfd39fc6c64e91af1d42227bd96122da",
+    "evidence/05-evaluate/ui/findings.csv": "7f93f351951f5d43d319645c1d9fe40c9de0c7099e58fbbaee4f74e17e360424",
+    "evidence/05-evaluate/ui/logs/lint.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/05-evaluate/ui/logs/lint.stdout.txt": "c2fba688a29fe34a9f3db1698aa5b819a611fcc82808997c33ee01d50f0713a2",
+    "evidence/05-evaluate/ui/report.md": "667186db5b423240849f7eec009e597504065ad35018dc224b551f41a993893c",
+    "evidence/05-evaluate/ui/run.json": "6eb45eefa6db60ce4342d1ed03bf32503a8336bb2a9147a651eee7dfe5215db3",
+    "evidence/06-deploy/ci/ci-report.json": "b1e258336d73f8d5ef166e23d25962ba6fe6de6c8d72f9dfde5a7d229270e663",
+    "evidence/06-deploy/ci/ci-report.md": "5445e4769f4c4457d4d874401020bc8d69b2264ea38e686ed4f71246402438a1",
+    "evidence/06-deploy/ci/deliver-step.log": "cedee7d4e121c7bdf91693f18a05126ea4b3f68701e44abbca1b7c90279cef85",
+    "evidence/06-deploy/ci/logs/install.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/06-deploy/ci/logs/install.stdout.txt": "038f4e6d00351918d0fdbeec876bfa34fc669a7a9a6893b2724b8900522c96e0",
+    "evidence/06-deploy/ci/run.json": "caa7b21c68561644d5316dfe424bd5c6b7e667c1b93dbaeaefccbdb1d899420f",
+    "evidence/06-deploy/gate.json": "e50449ec63e0350346cf17654d637d79c2997e55b1e8987707892ad88058eab3",
+    "evidence/06-deploy/pr/pr.json": "a8cd0bf899d0b28220e108fec182e5f7dcc11d498ef7e5ed761f3541304425a4",
+    "evidence/07-operate/gate.json": "596e544044644d138d75b81a23feea543c178ffe2806a74f9756d208584ef55f",
+    "evidence/07-operate/handoff/HANDOFF.md": "4423ebec2964069a58624cbd726c488c094459d469d40f4e4c5a73cf1d7cdc2a",
+    "evidence/07-operate/handoff/deliver-step.log": "af7eca4e3a6932bbb06b02e190ad2f4352b76962bccf446787ac531b7943d508",
+    "evidence/07-operate/handoff/logs/handoff.stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence/07-operate/handoff/logs/handoff.stdout.txt": "8b16828e4108b425f8a7d22d65a66bfc7e653dee7592455089ff31fc02d3f4a6",
+    "evidence/07-operate/handoff/run.json": "51b5911de372a79c1d201abb518f09a1bc6957522f167bdf17946505de003236",
+    "evidence/EVIDENCE.md": "9b2676a0145256715190c2f54d9b7872ff75c27c87a33d8bac17edd312658a92",
+    "evidence/provenance.json": "0cf7fda4fbfe299e31ee29246795eb8c239372e90abcb4fd511e6ef9c958afaa",
+    "evidence/stack-profile.json": "23e0c85d3c235bd941867f164f3661b68918198af6940405c996568c0e9e5ba8",
+    "build/diff.patch": "533214547f5198bd891880ad0d729170bf7feede84b69131cfc66da3774735a7"
+  },
+  "stack_profile": {
+    "flavour": "ts",
+    "framework": "nextjs",
+    "package_manager": "npm",
+    "test_runner": "vitest",
+    "e2e": "none",
+    "deploy_target": "vercel",
+    "migrations_dir": null,
+    "monorepo_root": null
+  },
+  "baseline": {
+    "dir": "evidence/00-baseline",
+    "at": "2026-10-26T19:17:21",
+    "checks": {},
+    "status": "skipped",
+    "reason": "greenfield: the repository is created by this run, there is nothing before the change"
+  }
+}
